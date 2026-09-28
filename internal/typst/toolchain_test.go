@@ -46,7 +46,7 @@ func TestLocateUsesEnvironment(t *testing.T) {
 	}
 }
 
-func TestLocateRejectsRelativePath(t *testing.T) {
+func TestLocateRejectsRelativeOverride(t *testing.T) {
 	getenv := func(key string) string {
 		if key == "KCR_TYPST" {
 			return "bin/typst"
@@ -60,7 +60,7 @@ func TestLocateRejectsRelativePath(t *testing.T) {
 	}
 }
 
-func TestLocateRejectsMissingFile(t *testing.T) {
+func TestLocateRejectsMissingOverride(t *testing.T) {
 	getenv := func(key string) string {
 		if key == "KCR_TYPST" {
 			return "/nonexistent/typst"
@@ -69,12 +69,12 @@ func TestLocateRejectsMissingFile(t *testing.T) {
 	}
 
 	_, err := Locate(getenv, unreachableLookPath)
-	if err == nil || !strings.Contains(err.Error(), "must be an absolute path") {
-		t.Fatalf("Locate() error = %v, want it to contain %q", err, "must be an absolute path")
+	if err == nil || !strings.Contains(err.Error(), "names no file") {
+		t.Fatalf("Locate() error = %v, want it to contain %q", err, "names no file")
 	}
 }
 
-func TestLocateRejectsDirectory(t *testing.T) {
+func TestLocateRejectsFolderOverride(t *testing.T) {
 	dir := t.TempDir()
 	getenv := func(key string) string {
 		if key == "KCR_TYPST" {
@@ -84,8 +84,8 @@ func TestLocateRejectsDirectory(t *testing.T) {
 	}
 
 	_, err := Locate(getenv, unreachableLookPath)
-	if err == nil || !strings.Contains(err.Error(), "must be an absolute path") {
-		t.Fatalf("Locate() error = %v, want it to contain %q", err, "must be an absolute path")
+	if err == nil || !strings.Contains(err.Error(), "is not a regular file") {
+		t.Fatalf("Locate() error = %v, want it to contain %q", err, "is not a regular file")
 	}
 }
 
@@ -347,7 +347,7 @@ func TestLocateMakesRelativeLookupAbsolute(t *testing.T) {
 	}
 }
 
-func TestLocateAcceptsSymlinkToBinary(t *testing.T) {
+func TestLocateAcceptsSymbolicLinkOverride(t *testing.T) {
 	target := writeScript(t, "#!/bin/sh\nexit 0\n")
 	link := filepath.Join(t.TempDir(), "typst-link")
 	if err := os.Symlink(target, link); err != nil {

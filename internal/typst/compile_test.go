@@ -184,8 +184,9 @@ func TestArgsRejectsPagesForPDF(t *testing.T) {
 	job := validJob(t)
 	job.Pages = "1,2"
 	_, err := Args(job)
-	if err == nil {
-		t.Fatalf("Args() error = nil, want error")
+	want := "pages applies only to PNG"
+	if err == nil || err.Error() != want {
+		t.Fatalf("Args() error = %v, want %q", err, want)
 	}
 }
 
@@ -193,8 +194,20 @@ func TestArgsRejectsPPIForPDF(t *testing.T) {
 	job := validJob(t)
 	job.PPI = 144
 	_, err := Args(job)
-	if err == nil {
-		t.Fatalf("Args() error = nil, want error")
+	want := "ppi applies only to PNG"
+	if err == nil || err.Error() != want {
+		t.Fatalf("Args() error = %v, want %q", err, want)
+	}
+}
+
+func TestArgsRejectsPagesBeforePPI(t *testing.T) {
+	job := validJob(t)
+	job.Pages = "1,2"
+	job.PPI = 144
+	_, err := Args(job)
+	want := "pages applies only to PNG"
+	if err == nil || err.Error() != want {
+		t.Fatalf("Args() error = %v, want %q", err, want)
 	}
 }
 

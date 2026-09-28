@@ -100,8 +100,11 @@ func Args(job Job) ([]string, error) {
 	if job.Format == PNG && !strings.Contains(job.Output, "{p}") {
 		return nil, fmt.Errorf("PNG output must contain %q: %q", "{p}", job.Output)
 	}
-	if job.Format == PDF && (job.Pages != "" || job.PPI != 0) {
-		return nil, errors.New("pages and ppi apply only to PNG")
+	if job.Format == PDF && job.Pages != "" {
+		return nil, errors.New("pages applies only to PNG")
+	}
+	if job.Format == PDF && job.PPI != 0 {
+		return nil, errors.New("ppi applies only to PNG")
 	}
 	if job.PPI < 0 {
 		return nil, fmt.Errorf("ppi must not be negative: %d", job.PPI)

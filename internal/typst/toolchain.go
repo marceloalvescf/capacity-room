@@ -26,9 +26,15 @@ type Toolchain struct {
 // environment or PATH.
 func Locate(getenv func(string) string, lookPath func(string) (string, error)) (Toolchain, error) {
 	if override := getenv("KCR_TYPST"); override != "" {
+		if !filepath.IsAbs(override) {
+			return Toolchain{}, fmt.Errorf("KCR_TYPST must be an absolute path: %q", override)
+		}
 		info, err := os.Stat(override)
-		if !filepath.IsAbs(override) || err != nil || !info.Mode().IsRegular() {
-			return Toolchain{}, fmt.Errorf("KCR_TYPST must be an absolute path to the typst binary: %q", override)
+		if err != nil {
+			return Toolchain{}, fmt.Errorf("KCR_TYPST names no file: %q", override)
+		}
+		if !info.Mode().IsRegular() {
+			return Toolchain{}, fmt.Errorf("KCR_TYPST is not a regular file: %q", override)
 		}
 		return Toolchain{Binary: override}, nil
 	}
@@ -39,7 +45,7 @@ func Locate(getenv func(string) string, lookPath func(string) (string, error)) (
 	}
 	abs, err := filepath.Abs(found)
 	if err != nil {
-		return Toolchain{}, fmt.Errorf("typst not found: set KCR_TYPST or add typst to PATH")
+		return Toolchain{}, fmt.Errorf("typst found at %q, which could not be made absolute: %w", found, err)
 	}
 	return Toolchain{Binary: abs}, nil
 }
