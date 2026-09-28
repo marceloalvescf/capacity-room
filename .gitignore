@@ -1,0 +1,6 @@
+# Original projects kept as local reference only; never tracked.
+/older/
+# Working record of findings; a tool, not a deliverable.
+/ROADMAP.md
+# Build output.
+/bin/
