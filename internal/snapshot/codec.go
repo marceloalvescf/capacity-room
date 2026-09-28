@@ -63,15 +63,19 @@ func Encode(s Snapshot) ([]byte, error) {
 // Decode reads exactly one snapshot of schema_version "1.0" from data and
 // checks it, in this order: the JSON is well formed and holds no unknown
 // key, nothing follows the document, the file holds every key of the
-// contract, schema_version is present, it equals "1.0", and Check passes.
+// contract and none of them is null, schema_version is present, it equals
+// "1.0", and Check passes.
 //
 // encoding/json reads a missing key as the zero value, and zero is a valid
 // threshold, a valid boolean, and a valid empty list, so a decoded Snapshot
-// alone cannot tell "the run wrote this" from "the key was left out". The
-// key-presence check below reads data a second time, into a plain
-// map[string]any, and compares it against Snapshot's own fields by
-// reflect, so that a field added to a type is covered without a second
-// list to keep.
+// alone cannot tell "the run wrote this" from "the key was left out" —
+// and a key written as JSON null decodes exactly the same way, since
+// encoding/json leaves a non-pointer field at its zero value on a null
+// literal instead of erroring. The check below reads data a second time,
+// into a plain map[string]any, and walks it against Snapshot's own fields
+// by reflect, so that a field added to a type is covered without a second
+// list to keep, and so that a missing key and a null value are refused
+// alike, by their own distinct messages.
 func Decode(data []byte) (Snapshot, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
@@ -92,8 +96,8 @@ func Decode(data []byte) (Snapshot, error) {
 	if err := json.Unmarshal(data, &tree); err != nil {
 		return Snapshot{}, fmt.Errorf("snapshot is not valid JSON: %s", err)
 	}
-	if path, missing := firstMissingKey(reflect.TypeOf(Snapshot{}), tree, ""); missing {
-		return Snapshot{}, fmt.Errorf("snapshot lacks the key %s", path)
+	if err := checkKeys(reflect.TypeOf(Snapshot{}), tree, ""); err != nil {
+		return Snapshot{}, err
 	}
 
 	if snap.SchemaVersion == "" {
@@ -109,31 +113,60 @@ func Decode(data []byte) (Snapshot, error) {
 	return snap, nil
 }
 
-// jsonName returns the name a struct field's json tag holds, ignoring any
-// option after a comma (such as omitempty; no field of this package uses
-// one, but a bare split keeps this correct if one is ever added).
-func jsonName(f reflect.StructField) string {
-	name, _, _ := strings.Cut(f.Tag.Get("json"), ",")
-	return name
-}
+// unsupportedKeyFmt is the message checkKeys and supportedKey give for a
+// field of a shape the walk does not know how to check: a fault of the
+// program, not of a file, so it names the type and the field rather than a
+// path of a document.
+const unsupportedKeyFmt = "snapshot type %s has a field the key walk does not support: %s"
 
-// firstMissingKey walks t's fields in their declared order, following tree
-// (the generic decoding of the same document) at each level, and reports
-// the path of the first key t declares that tree does not hold. A struct
-// field is followed into its own object; a slice field whose element is
-// itself a struct (only quality.capabilities) is followed into as many
-// elements as tree actually holds, each named by its index, so a short or
-// long array is checked exactly as far as it goes. schema_version is
-// skipped: its absence keeps the dedicated message Decode already gives it.
-func firstMissingKey(t reflect.Type, tree any, prefix string) (string, bool) {
-	obj, ok := tree.(map[string]any)
-	if !ok {
+// supportedKey returns the plain name of field's json tag, and whether the
+// walk knows how to check a field shaped like it: exported, not embedded,
+// tagged with a bare name (no "-", no option such as omitempty), and of a
+// kind whose JSON value the walk can look at on its own — a string, a
+// bool, a float, a struct, or a slice of strings or of structs. Anything
+// else (a pointer, a map, an interface, an embedded struct, a field with
+// no json tag, a "-" tag, or a tag carrying an option) would let the walk
+// say yes without ever having looked, so the caller refuses it instead.
+func supportedKey(field reflect.StructField) (string, bool) {
+	if field.Anonymous {
+		return "", false
+	}
+	tag, hasTag := field.Tag.Lookup("json")
+	if !hasTag || tag == "-" || strings.Contains(tag, ",") {
 		return "", false
 	}
 
+	switch field.Type.Kind() {
+	case reflect.String, reflect.Bool, reflect.Float32, reflect.Float64, reflect.Struct:
+		return tag, true
+	case reflect.Slice:
+		switch field.Type.Elem().Kind() {
+		case reflect.String, reflect.Struct:
+			return tag, true
+		}
+	}
+	return "", false
+}
+
+// checkKeys walks t's fields in their declared order, following obj (the
+// generic decoding of the same document) at each level, and reports the
+// first problem: a key t declares that obj does not hold, a key present
+// with the JSON value null (the writer never writes one), or a field of t
+// the walk does not know how to check at all. A struct field is followed
+// into its own object; a slice field whose element is itself a struct
+// (only quality.capabilities) is followed into each element obj actually
+// holds, named by its index, and an element that is itself null is
+// refused without being treated as an object. schema_version is skipped:
+// its absence or its null both leave the string at "", which Decode
+// already turns into its own dedicated message.
+func checkKeys(t reflect.Type, obj map[string]any, prefix string) error {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
-		name := jsonName(field)
+
+		name, ok := supportedKey(field)
+		if !ok {
+			return fmt.Errorf(unsupportedKeyFmt, t.Name(), field.Name)
+		}
 		if name == "schema_version" {
 			continue
 		}
@@ -145,31 +178,46 @@ func firstMissingKey(t reflect.Type, tree any, prefix string) (string, bool) {
 
 		value, present := obj[name]
 		if !present {
-			return path, true
+			return fmt.Errorf("snapshot lacks the key %s", path)
+		}
+		if value == nil {
+			return fmt.Errorf("snapshot holds null at %s", path)
 		}
 
 		switch field.Type.Kind() {
 		case reflect.Struct:
-			if p, found := firstMissingKey(field.Type, value, path); found {
-				return p, true
+			child, ok := value.(map[string]any)
+			if !ok {
+				return fmt.Errorf(unsupportedKeyFmt, t.Name(), field.Name)
+			}
+			if err := checkKeys(field.Type, child, path); err != nil {
+				return err
 			}
 		case reflect.Slice:
-			if field.Type.Elem().Kind() != reflect.Struct {
-				continue
-			}
 			arr, ok := value.([]any)
 			if !ok {
-				continue
+				return fmt.Errorf(unsupportedKeyFmt, t.Name(), field.Name)
 			}
+			elemType := field.Type.Elem()
 			for idx, elem := range arr {
 				elemPath := fmt.Sprintf("%s[%d]", path, idx)
-				if p, found := firstMissingKey(field.Type.Elem(), elem, elemPath); found {
-					return p, true
+				if elem == nil {
+					return fmt.Errorf("snapshot holds null at %s", elemPath)
+				}
+				if elemType.Kind() != reflect.Struct {
+					continue
+				}
+				elemObj, ok := elem.(map[string]any)
+				if !ok {
+					return fmt.Errorf(unsupportedKeyFmt, t.Name(), field.Name)
+				}
+				if err := checkKeys(elemType, elemObj, elemPath); err != nil {
+					return err
 				}
 			}
 		}
 	}
-	return "", false
+	return nil
 }
 
 // Time reads one of the time fields of a snapshot: RFC 3339, with an

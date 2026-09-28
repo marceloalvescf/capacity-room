@@ -358,15 +358,18 @@ func TestDecodeAcceptsZeroAndFalse(t *testing.T) {
 	}
 }
 
-// typePaths walks t as Decode's firstMissingKey does, but statically, with
-// no decoded data behind it: at a slice whose element is a struct, it stops
+// typePaths walks t as Decode's checkKeys does, but statically, with no
+// decoded data behind it: at a slice whose element is a struct, it stops
 // at the slice field's own path, since the number of elements a real file
-// holds is a property of the data, not of the type.
+// holds is a property of the data, not of the type. Every field of every
+// snapshot type is supported, so the ok of supportedKey is not checked
+// here; TestKeyWalkRefusesWhatItDoesNotKnow exercises the case where it is
+// false, directly against checkKeys.
 func typePaths(t reflect.Type, prefix string) []string {
 	var paths []string
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
-		name := jsonName(field)
+		name, _ := supportedKey(field)
 		if name == "schema_version" {
 			continue
 		}
@@ -463,6 +466,56 @@ func removeJSONKey(t *testing.T, good []byte, path string) []byte {
 	return data
 }
 
+// setKeyNull sets the key named by path (dot-separated, with an optional
+// "[N]" on a segment that names an array) to JSON null in tree, the
+// generic decoding of a document, in place of removeKey's delete.
+func setKeyNull(tree map[string]any, path string) {
+	segments := strings.Split(path, ".")
+	var cur any = tree
+
+	for i, seg := range segments {
+		name, idx, hasIdx := splitIndex(seg)
+		m, ok := cur.(map[string]any)
+		if !ok {
+			return
+		}
+		if i == len(segments)-1 {
+			m[name] = nil
+			return
+		}
+
+		next, ok := m[name]
+		if !ok {
+			return
+		}
+		if hasIdx {
+			arr, ok := next.([]any)
+			if !ok || idx >= len(arr) {
+				return
+			}
+			cur = arr[idx]
+		} else {
+			cur = next
+		}
+	}
+}
+
+// nullJSONKey decodes good into a generic tree, sets the value at path to
+// null, and re-encodes it.
+func nullJSONKey(t *testing.T, good []byte, path string) []byte {
+	t.Helper()
+	var tree map[string]any
+	if err := json.Unmarshal(good, &tree); err != nil {
+		t.Fatalf("Unmarshal(good): %v", err)
+	}
+	setKeyNull(tree, path)
+	data, err := json.Marshal(tree)
+	if err != nil {
+		t.Fatalf("Marshal(tree): %v", err)
+	}
+	return data
+}
+
 func TestDecodeRefusesAMissingKey(t *testing.T) {
 	snap := validSnapshot(t)
 	good, err := Encode(snap)
@@ -470,7 +523,7 @@ func TestDecodeRefusesAMissingKey(t *testing.T) {
 		t.Fatalf("Encode() error = %v", err)
 	}
 
-	for _, path := range contractKeyPaths(3) {
+	for _, path := range contractPaths {
 		t.Run(path, func(t *testing.T) {
 			data := removeJSONKey(t, good, path)
 
@@ -486,19 +539,70 @@ func TestDecodeRefusesAMissingKey(t *testing.T) {
 	}
 }
 
-// TestDecodeMissingKeyTableCoversEveryField guards against a field added to
-// a snapshot type without a corresponding row in TestDecodeRefusesAMissingKey:
-// both are built from the same reflect walk, so they can never drift apart
-// by hand.
-func TestDecodeMissingKeyTableCoversEveryField(t *testing.T) {
-	tableRows := contractKeyPaths(3)
+// contractPaths is the 45 key paths of the snapshot contract, written by
+// hand, in the order the types declare them. TestKeyPathsAreTheContract
+// compares it against contractKeyPaths(3), the same list built by walking
+// the types with reflect, so that the two can actually drift apart if a
+// field is ever added to a type without a matching entry here — unlike
+// comparing contractKeyPaths against itself, which could never fail.
+var contractPaths = []string{
+	"report",
+	"report.id",
+	"report.generator_version",
+	"report.emitted_at",
+	"report.period",
+	"report.period_start",
+	"report.period_end",
+	"report.timezone",
+	"report.profile",
+	"report.min_severity",
+	"report.organization",
+	"report.classification",
+	"report.author",
+	"report.thresholds",
+	"report.thresholds.warning_percent",
+	"report.thresholds.critical_percent",
+	"report.thresholds.low_utilization_percent",
+	"report.thresholds.autoscaler_near_max_percent",
+	"report.thresholds.nodepool_spread_points",
+	"report.thresholds.bursty_gap_percent",
+	"report.thresholds.hpa_replica_divergence",
+	"report.settings",
+	"report.settings.endpoint_type",
+	"report.settings.tls_verify",
+	"report.settings.timeout_seconds",
+	"report.settings.node_autoscaling",
+	"report.settings.nodepool_label",
+	"scope",
+	"scope.cluster_name",
+	"scope.cluster_label",
+	"scope.filter_mode",
+	"scope.matcher_enabled",
+	"scope.confidence",
+	"scope.discovered_values",
+	"scope.namespaces",
+	"scope.excluded_containers",
+	"quality",
+	"quality.capabilities",
+	"quality.collection_started_at",
+	"quality.collection_completed_at",
+	"quality.capabilities[3].name",
+	"quality.capabilities[3].state",
+	"quality.capabilities[3].strategy",
+	"quality.capabilities[3].evidence",
+	"quality.capabilities[3].reasons",
+}
+
+// TestKeyPathsAreTheContract compares contractPaths, written by hand, with
+// the same list built by walking the types with reflect. This replaces
+// TestDecodeMissingKeyTableCoversEveryField, which compared the walk with
+// itself and so could never catch a field added to a type without a
+// matching row somewhere else.
+func TestKeyPathsAreTheContract(t *testing.T) {
 	byReflection := contractKeyPaths(3)
 
-	if len(tableRows) < 40 {
-		t.Fatalf("contractKeyPaths() returned %d paths, want at least 40", len(tableRows))
-	}
-	if !reflect.DeepEqual(tableRows, byReflection) {
-		t.Fatalf("the paths of the test table and of the types differ:\n%v\nvs\n%v", tableRows, byReflection)
+	if !reflect.DeepEqual(contractPaths, byReflection) {
+		t.Fatalf("contractPaths and the walk of the types differ:\nhand-written: %v\nby reflect:   %v", contractPaths, byReflection)
 	}
 }
 
@@ -527,5 +631,170 @@ func TestDecodeReportsTheFirstMissingKey(t *testing.T) {
 	}
 	if err.Error() != want {
 		t.Fatalf("Decode() = %q, want %q", err.Error(), want)
+	}
+}
+
+// TestDecodeRefusesNull mirrors TestDecodeRefusesAMissingKey exactly, but
+// leaves every key in place and sets its value to JSON null instead of
+// removing it: the writer never writes null, so a snapshot holding one at
+// any of the 45 paths of the contract must be refused, by its own message.
+func TestDecodeRefusesNull(t *testing.T) {
+	snap := validSnapshot(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	for _, path := range contractPaths {
+		t.Run(path, func(t *testing.T) {
+			data := nullJSONKey(t, good, path)
+
+			_, err := Decode(data)
+			want := fmt.Sprintf("snapshot holds null at %s", path)
+			if err == nil {
+				t.Fatalf("Decode() = nil, want error %q", want)
+			}
+			if err.Error() != want {
+				t.Fatalf("Decode() = %q, want %q", err.Error(), want)
+			}
+		})
+	}
+}
+
+func TestDecodeRefusesNullListElement(t *testing.T) {
+	snap := validSnapshot(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	t.Run("scope.discovered_values[1]", func(t *testing.T) {
+		var tree map[string]any
+		if err := json.Unmarshal(good, &tree); err != nil {
+			t.Fatalf("Unmarshal(good): %v", err)
+		}
+		tree["scope"].(map[string]any)["discovered_values"] = []any{"prod", nil}
+		data, err := json.Marshal(tree)
+		if err != nil {
+			t.Fatalf("Marshal(tree): %v", err)
+		}
+
+		_, err = Decode(data)
+		want := "snapshot holds null at scope.discovered_values[1]"
+		if err == nil {
+			t.Fatalf("Decode() = nil, want error %q", want)
+		}
+		if err.Error() != want {
+			t.Fatalf("Decode() = %q, want %q", err.Error(), want)
+		}
+	})
+
+	t.Run("quality.capabilities[0].evidence[0]", func(t *testing.T) {
+		var tree map[string]any
+		if err := json.Unmarshal(good, &tree); err != nil {
+			t.Fatalf("Unmarshal(good): %v", err)
+		}
+		capabilities := tree["quality"].(map[string]any)["capabilities"].([]any)
+		capabilities[0].(map[string]any)["evidence"] = []any{nil}
+		data, err := json.Marshal(tree)
+		if err != nil {
+			t.Fatalf("Marshal(tree): %v", err)
+		}
+
+		_, err = Decode(data)
+		want := "snapshot holds null at quality.capabilities[0].evidence[0]"
+		if err == nil {
+			t.Fatalf("Decode() = nil, want error %q", want)
+		}
+		if err.Error() != want {
+			t.Fatalf("Decode() = %q, want %q", err.Error(), want)
+		}
+	})
+}
+
+func TestDecodeRefusesNullCapability(t *testing.T) {
+	snap := validSnapshot(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	var tree map[string]any
+	if err := json.Unmarshal(good, &tree); err != nil {
+		t.Fatalf("Unmarshal(good): %v", err)
+	}
+	capabilities := tree["quality"].(map[string]any)["capabilities"].([]any)
+	capabilities[0] = nil
+	data, err := json.Marshal(tree)
+	if err != nil {
+		t.Fatalf("Marshal(tree): %v", err)
+	}
+
+	_, err = Decode(data)
+	want := "snapshot holds null at quality.capabilities[0]"
+	if err == nil {
+		t.Fatalf("Decode() = nil, want error %q", want)
+	}
+	if err.Error() != want {
+		t.Fatalf("Decode() = %q, want %q", err.Error(), want)
+	}
+}
+
+// The test types below exist only to give TestKeyWalkRefusesWhatItDoesNotKnow
+// a field of a shape checkKeys does not support: a pointer, a map, a
+// missing tag, a "-" tag, a tag with an option, and an embedded struct.
+type keyWalkPointerField struct {
+	Foo *string `json:"foo"`
+}
+
+type keyWalkMapField struct {
+	Foo map[string]string `json:"foo"`
+}
+
+type keyWalkNoTag struct {
+	Foo string
+}
+
+type keyWalkDashTag struct {
+	Foo string `json:"-"`
+}
+
+type keyWalkOptionTag struct {
+	Foo string `json:"foo,omitempty"`
+}
+
+type keyWalkEmbeddedPart struct {
+	Bar string `json:"bar"`
+}
+
+type keyWalkEmbedded struct {
+	keyWalkEmbeddedPart
+}
+
+func TestKeyWalkRefusesWhatItDoesNotKnow(t *testing.T) {
+	tests := []struct {
+		name  string
+		typ   reflect.Type
+		field string
+	}{
+		{"pointer field", reflect.TypeOf(keyWalkPointerField{}), "Foo"},
+		{"map field", reflect.TypeOf(keyWalkMapField{}), "Foo"},
+		{"no json tag", reflect.TypeOf(keyWalkNoTag{}), "Foo"},
+		{"a \"-\" tag", reflect.TypeOf(keyWalkDashTag{}), "Foo"},
+		{"a tag with an option", reflect.TypeOf(keyWalkOptionTag{}), "Foo"},
+		{"an embedded struct", reflect.TypeOf(keyWalkEmbedded{}), "keyWalkEmbeddedPart"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := checkKeys(tt.typ, map[string]any{}, "")
+			want := fmt.Sprintf(unsupportedKeyFmt, tt.typ.Name(), tt.field)
+			if err == nil {
+				t.Fatalf("checkKeys() = nil, want error %q", want)
+			}
+			if err.Error() != want {
+				t.Fatalf("checkKeys() = %q, want %q", err.Error(), want)
+			}
+		})
 	}
 }
