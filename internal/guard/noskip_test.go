@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -53,6 +54,60 @@ func TestSkipCallsFindsSkipfAndSkipNow(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("SkipCalls = %v, want %v", got, want)
 		}
+	}
+}
+
+const methodValueSkipSource = `package sample
+
+import "testing"
+
+func TestSomething(t *testing.T) {
+	skip := t.Skip
+	skip("x")
+}
+`
+
+func TestSkipCallsFindsMethodValue(t *testing.T) {
+	got, err := SkipCalls("sample_test.go", []byte(methodValueSkipSource))
+	if err != nil {
+		t.Fatalf("SkipCalls returned error: %v", err)
+	}
+	want := []string{"sample_test.go:6: Skip is forbidden; a skipped gate is not a checked gate"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("SkipCalls = %v, want %v", got, want)
+	}
+}
+
+const anyReceiverSkipSource = `package sample
+
+import "testing"
+func TestSomething(t *testing.T, s *suite, tb testing.TB) {
+	s.T().SkipNow()
+	tb.Skipf("x")
+}
+`
+
+func TestSkipCallsFindsAnyReceiver(t *testing.T) {
+	got, err := SkipCalls("sample_test.go", []byte(anyReceiverSkipSource))
+	if err != nil {
+		t.Fatalf("SkipCalls returned error: %v", err)
+	}
+	want := []string{
+		"sample_test.go:5: SkipNow is forbidden; a skipped gate is not a checked gate",
+		"sample_test.go:6: Skipf is forbidden; a skipped gate is not a checked gate",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("SkipCalls = %v, want %v", got, want)
+	}
+}
+
+func TestSkipCallsReportsACallOnce(t *testing.T) {
+	got, err := SkipCalls("sample_test.go", []byte(skipSource))
+	if err != nil {
+		t.Fatalf("SkipCalls returned error: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("SkipCalls = %v, want exactly one entry", got)
 	}
 }
 

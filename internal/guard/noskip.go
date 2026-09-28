@@ -17,9 +17,14 @@ var forbiddenSkipSelectors = map[string]bool{
 }
 
 // SkipCalls parses source as a Go file named filename and returns one entry
-// per call whose selector is Skip, Skipf, or SkipNow, in source order. The
-// receiver of the call is irrelevant: "t.Skip", "b.Skip", "s.T().Skip" all
-// match, since only the selected method name distinguishes a skip.
+// per selector expression whose selected name is Skip, Skipf, or SkipNow,
+// in source order. The receiver is irrelevant: "t.Skip", "b.Skip",
+// "s.T().Skip" all match, since only the selected method name distinguishes
+// a skip. Matching the selector expression directly, rather than only a
+// call expression, also catches the method taken as a value and invoked
+// later ("skip := t.Skip; skip(...)"), since that still genuinely skips the
+// test. A call such as "t.Skip(...)" contains exactly one such selector
+// expression (its Fun), so it still yields exactly one entry.
 func SkipCalls(filename string, source []byte) ([]string, error) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, filename, source, 0)
@@ -29,15 +34,11 @@ func SkipCalls(filename string, source []byte) ([]string, error) {
 
 	var found []string
 	ast.Inspect(file, func(n ast.Node) bool {
-		call, ok := n.(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-		sel, ok := call.Fun.(*ast.SelectorExpr)
+		sel, ok := n.(*ast.SelectorExpr)
 		if !ok || !forbiddenSkipSelectors[sel.Sel.Name] {
 			return true
 		}
-		line := fset.Position(call.Pos()).Line
+		line := fset.Position(sel.Pos()).Line
 		found = append(found, fmt.Sprintf("%s:%d: %s is forbidden; a skipped gate is not a checked gate", filename, line, sel.Sel.Name))
 		return true
 	})
