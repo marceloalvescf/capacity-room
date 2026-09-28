@@ -156,6 +156,50 @@ func TestImportViolationsAllowsImportOfRoot(t *testing.T) {
 	}
 }
 
+func TestImportViolationsEdgeFromUnclassifiedSource(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/internal/mystery": {testModule + "/internal/mystery2"},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	want := []string{
+		testModule + "/internal/mystery imports " + testModule + "/internal/mystery2: " + testModule + "/internal/mystery2 is not classified in guard.Layers",
+		testModule + "/internal/mystery: not classified in guard.Layers",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ImportViolations = %v, want %v", got, want)
+	}
+}
+
+func TestImportViolationsUnclassifiedSourceImportingCmd(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/internal/mystery": {testModule + "/cmd/tool"},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	want := []string{
+		testModule + "/internal/mystery imports " + testModule + "/cmd/tool: packages under cmd/ are not importable",
+		testModule + "/internal/mystery: not classified in guard.Layers",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ImportViolations = %v, want %v", got, want)
+	}
+}
+
+func TestImportViolationsUnclassifiedSourceImportingClassified(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/internal/mystery": {testModule + "/internal/cli"},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	want := []string{
+		testModule + "/internal/mystery: not classified in guard.Layers",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ImportViolations = %v, want %v", got, want)
+	}
+}
+
 func TestImportViolationsReportsEdgeToUnclassified(t *testing.T) {
 	imports := map[string][]string{
 		testModule + "/internal/cli": {testModule + "/internal/mystery"},

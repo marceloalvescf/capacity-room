@@ -79,23 +79,29 @@ func matchLayer(pkg, module string, layers []Layer) (Layer, bool) {
 // ImportViolations checks every package of module in imports against
 // layers and returns the sorted set of violations.
 //
-// Packages under cmd/ are free to import anything of this module, including
-// each other, and are not classified into a layer or reported as
-// unclassified themselves: they wire the program together and sit above
-// every layer. The module's root package must not import any package of
-// this module, so a lower layer cannot reach a higher one by routing
-// through it; any other package may import the root package. A regular,
-// layered package must match a known layer, may not import a package under
-// cmd/ (that would be the same reverse route through a different door), and
-// otherwise follows the rank rule: an import must go to a strictly lower
-// rank, or within the same layer.
+// Packages under cmd/ are free to import the root package, another package
+// under cmd/, and any classified layer; they are not classified into a
+// layer or reported as unclassified themselves, since they wire the program
+// together and sit above every layer. The module's root package must not
+// import any package of this module, so a lower layer cannot reach a higher
+// one by routing through it; any other package may import the root package.
+// A regular, layered package must match a known layer, may not import a
+// package under cmd/ (that would be the same reverse route through a
+// different door), and otherwise follows the rank rule: an import must go
+// to a strictly lower rank, or within the same layer. A source that itself
+// matches no layer is reported on its own line and skips the rank rule (it
+// has no rank to compare with), but every other check below still applies
+// to its imports.
 //
 // Every source, whatever kind it is, is also checked edge by edge: an
 // import that is not the root package, not under cmd/, and matches no layer
 // is reported at that edge, naming both the source and the target. This
 // holds even when the target is never itself a key of imports (an import
 // path with no package behind it in this scan), since a violation attributed
-// only to a visited source package would never fire for such a target.
+// only to a visited source package would never fire for such a target — and
+// it holds even when the source itself is unclassified, since a violation
+// attributed to the source's own line names only the source, never the
+// target it imports.
 func ImportViolations(module string, layers []Layer, imports map[string][]string) []string {
 	violations := make(map[string]struct{})
 
@@ -127,10 +133,9 @@ func ImportViolations(module string, layers []Layer, imports map[string][]string
 			}
 
 		default:
-			srcLayer, ok := matchLayer(pkg, module, layers)
-			if !ok {
+			srcLayer, srcOK := matchLayer(pkg, module, layers)
+			if !srcOK {
 				violations[fmt.Sprintf("%s: not classified in guard.Layers", pkg)] = struct{}{}
-				continue
 			}
 
 			for _, imp := range pkgImports {
@@ -149,6 +154,13 @@ func ImportViolations(module string, layers []Layer, imports map[string][]string
 				tgtLayer, ok := matchLayer(imp, module, layers)
 				if !ok {
 					unclassifiedEdge(pkg, imp)
+					continue
+				}
+
+				if !srcOK {
+					// The source itself has no rank to compare against; its
+					// own line already reported it, and a classified target
+					// is not itself a further violation.
 					continue
 				}
 
