@@ -181,6 +181,7 @@ of them when reviewing this plan.
 | F-35 | Recorded by Task 0: no limit on the size of a response body; assigned to part 2.2 |
 | F-36 | Recorded by Task 0: the original lists two of the three raw node metrics as evidence and names no exact recording rule; this port lists exact names (R9) |
 | F-37 | Recorded by Task 0 and closed by Task 8: the preflight rule of the original for insufficient capabilities can never fire (R16) |
+| F-40 | Recorded during Task 5: the scenario file `value-edge-cases.json` of the original is byte for byte `direct-complete.json`, so it holds no value at an edge; assigned to part 2.2, which prints the first numbers |
 
 ---
 
@@ -812,6 +813,9 @@ type Scenario struct {
     APIRoot      string // path to add to the server address
     EndpointType string
     Token        string // empty when the scenario needs none
+    // NodeAutoscaling is the value of analysis.node_autoscaling the
+    // original tests ran the scenario with.
+    NodeAutoscaling string
 }
 
 var Scenarios = []Scenario{ /* the six, in the order of the table below */ }
@@ -821,14 +825,18 @@ var Scenarios = []Scenario{ /* the six, in the order of the table below */ }
 func Path(name string) (string, error)
 ```
 
-| Scenario | API root | Endpoint type | Token |
-|---|---|---|---|
-| `direct-complete` | `/api/v1` | `prometheus` | none |
-| `grafana-authenticated` | `/api/datasources/uid/prom/resources/api/v1` | `grafana` | `fixture-token` |
-| `thanos-multicluster` | `/api/v1` | `prometheus` | none |
-| `raw-fallback` | `/api/v1` | `prometheus` | none |
-| `partial-data` | `/api/v1` | `prometheus` | none |
-| `value-edge-cases` | `/api/v1` | `prometheus` | none |
+| Scenario | API root | Endpoint type | Token | Node autoscaling |
+|---|---|---|---|---|
+| `direct-complete` | `/api/v1` | `prometheus` | none | `auto` |
+| `grafana-authenticated` | `/api/datasources/uid/prom/resources/api/v1` | `grafana` | `fixture-token` | `auto` |
+| `thanos-multicluster` | `/api/v1` | `prometheus` | none | `auto` |
+| `raw-fallback` | `/api/v1` | `prometheus` | none | `auto` |
+| `partial-data` | `/api/v1` | `prometheus` | none | `auto` |
+| `value-edge-cases` | `/api/v1` | `prometheus` | none | `disabled` |
+
+The file `value-edge-cases.json` of the original is byte for byte the file
+`direct-complete.json` (F-40). The original ran it with node autoscaling
+`disabled`, and that setting is all that tells the two scenarios apart.
 
 Every scenario runs with cluster `prod`, namespaces `payments`, filter mode
 `required`, period `24h`, zone `America/Sao_Paulo`, and the clock at
@@ -1417,7 +1425,8 @@ Scenario results. Every capability that is not listed is available.
 
 | Scenario | Differences |
 |---|---|
-| `direct-complete`, `grafana-authenticated`, `thanos-multicluster`, `value-edge-cases` | none; `workload_usage` and `node_utilization` use `recording_rule` |
+| `direct-complete`, `grafana-authenticated`, `thanos-multicluster` | none; `workload_usage` and `node_utilization` use `recording_rule` |
+| `value-edge-cases` | as `direct-complete`, but `node_autoscaling` is available with strategy `configured` and no evidence |
 | `raw-fallback` | `workload_usage` partial, `raw_metrics`, `WORKLOAD_HISTORY_INEXACT`; `workloads_without_hpa` available with the two `replicas` names; `node_utilization` available, `raw_metrics`; `node_autoscaling` partial, `NODE_AUTOSCALING_UNDETERMINED` |
 | `partial-data` | `hpa_history` unavailable, `METRICS_NOT_FOUND`; `workloads_without_hpa` partial, `WORKLOAD_INVENTORY_INCOMPLETE`; `nodepool_discovery` partial, `NODEPOOL_LABELS_NOT_FOUND`; `node_utilization` unavailable, `METRICS_NOT_FOUND`; `node_autoscaling` partial, `NODE_AUTOSCALING_UNDETERMINED` |
 
@@ -2188,7 +2197,7 @@ git commit -m "test(guard): keep reader text in the catalog"
 - Create: `cmd/update-testdata/main.go`
 - Create: `testdata/snapshot/<scenario>.json`, six files
 - Create: `template/tests/capacity/fixtures/command/<scenario>.<language>.json`,
-  six files
+  eight files
 - Modify: `template/capacity_test.go:29-60`, so that
   `TestCapacityFixturesCompileCleanly` also compiles every file of
   `fixtures/command/`
@@ -2203,8 +2212,10 @@ git commit -m "test(guard): keep reader text in the catalog"
 package goldentest
 
 // DataFileScenarios names the scenarios that have golden data files. The
-// other three give, in this part, the same document as direct-complete.
-var DataFileScenarios = []string{"direct-complete", "partial-data", "raw-fallback"}
+// other two give, in this part, the same document as direct-complete.
+var DataFileScenarios = []string{
+    "direct-complete", "partial-data", "raw-fallback", "value-edge-cases",
+}
 
 // Snapshot serves the scenario in this process, runs the connection, the
 // scope, and the capabilities against it with the fixed input, and returns
@@ -2232,12 +2243,12 @@ Fixed input:
 | Cluster, namespaces, filter mode, period | `prod`, `payments`, `required`, `24h` |
 | Organization, classification, author | `ACME`, `Uso interno`, `Time SRE` |
 | Excluded containers | `istio-proxy` |
-| Endpoint type, API root, token | those of the scenario |
+| Endpoint type, API root, token, node autoscaling | those of the scenario |
 | Everything else | the defaults |
 
 **Requirements:**
 
-- `go run ./cmd/update-testdata` rewrites the twelve files and prints one
+- `go run ./cmd/update-testdata` rewrites the fourteen files and prints one
   line for each: `written`, or `unchanged`. `make update-testdata` runs it.
 - A test never writes a golden file. A missing or different file fails the
   test, and the message names `make update-testdata`.
@@ -2248,10 +2259,10 @@ Fixed input:
 | Test | Input | Expected |
 |---|---|---|
 | `TestGoldenSnapshots` (table) | each of the six scenarios | the bytes equal the file |
-| `TestGoldenDataFiles` (table) | each of the three scenarios, each language | the bytes equal the file |
+| `TestGoldenDataFiles` (table) | each of the four scenarios, each language | the bytes equal the file |
 | `TestGoldenFoldersHoldNoStranger` | the two folders | every file is named by the lists |
 | `TestSnapshotIsTheSameTwice` | `direct-complete`, run twice | equal bytes |
-| `TestOtherScenariosGiveTheSameDocument` | `grafana-authenticated`, `thanos-multicluster`, `value-edge-cases` | their documents equal that of `direct-complete` in each language, which is why they have no file of their own; the snapshots differ only in `scope.discovered_values` and `settings.endpoint_type` |
+| `TestOtherScenariosGiveTheSameDocument` | `grafana-authenticated`, `thanos-multicluster` | their documents equal that of `direct-complete` in each language, which is why they have no file of their own; the snapshots differ only in `scope.discovered_values` and `settings.endpoint_type` |
 | `TestGoldenFailureNamesTheCommand` | a golden file replaced, in a temporary copy, by another text | the failure text holds `make update-testdata` |
 
 - [ ] **Step 1:** Write the tests.
@@ -2263,18 +2274,18 @@ Fixed input:
   `TestGoldenSnapshots` and `TestGoldenDataFiles` fail, because the files do
   not exist, and the failure names the command.
 - [ ] **Step 5 (main thread):** Run `make update-testdata`. Read each of the
-  twelve files whole. For each snapshot, confirm the nine capabilities
+  fourteen files whole. For each snapshot, confirm the nine capabilities
   against the table of Task 8 and look for any address or host name. For
   each data file, read every sentence in both languages. A value that
   cannot be explained is a defect, not a golden file.
-- [ ] **Step 6 (main thread):** Compile the six data files with the native
+- [ ] **Step 6 (main thread):** Compile the eight data files with the native
   tools. The PDFs to open come in Task 15.
 
 ```bash
 go test -count=1 -tags=template ./template/ -run TestCapacityFixturesCompileCleanly -v
 ```
 
-Expected: pass, and the output names the six files of `fixtures/command/`.
+Expected: pass, and the output names the eight files of `fixtures/command/`.
 
 - [ ] **Step 7:** Run `make test` and `make lint`, then commit.
 
@@ -2284,7 +2295,7 @@ git add internal/goldentest/ cmd/update-testdata/ testdata/snapshot/ \
 git commit -m "test(golden): pin snapshots and data files"
 ```
 
-**Done when:** the tests pass, the twelve files were read by the main
+**Done when:** the tests pass, the fourteen files were read by the main
 thread, and the review is recorded in
 `.cache/phase-2/part-1/golden-review.md`.
 
