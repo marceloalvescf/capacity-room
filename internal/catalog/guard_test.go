@@ -1,7 +1,12 @@
 package catalog
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io/fs"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -478,6 +483,131 @@ func TestNoBannedTerm(t *testing.T) {
 			if found := findBannedTerms(lang, text); len(found) > 0 {
 				t.Errorf("locales/%s.toml: entry %q contains banned term(s) %v: %q", lang, key, found, text)
 			}
+		}
+	}
+}
+
+// keyDeclarations parses keys.go itself, so that a constant or a key
+// function added later is covered without a list of names kept here too.
+// constants holds every exported constant declared with the explicit type
+// Key; functions holds every exported top-level function whose one result
+// is a Key (Keys, whose result is []Key, is not one of them).
+func keyDeclarations(t *testing.T) (constants, functions []string) {
+	t.Helper()
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "keys.go", nil, 0)
+	if err != nil {
+		t.Fatalf("parsing keys.go: %v", err)
+	}
+
+	for _, decl := range file.Decls {
+		switch d := decl.(type) {
+		case *ast.GenDecl:
+			if d.Tok != token.CONST {
+				continue
+			}
+			for _, spec := range d.Specs {
+				vs, ok := spec.(*ast.ValueSpec)
+				if !ok {
+					continue
+				}
+				ident, ok := vs.Type.(*ast.Ident)
+				if !ok || ident.Name != "Key" {
+					continue
+				}
+				for _, name := range vs.Names {
+					if name.IsExported() {
+						constants = append(constants, name.Name)
+					}
+				}
+			}
+		case *ast.FuncDecl:
+			if d.Recv != nil || !d.Name.IsExported() {
+				continue
+			}
+			if d.Type.Results == nil || len(d.Type.Results.List) != 1 {
+				continue
+			}
+			ident, ok := d.Type.Results.List[0].Type.(*ast.Ident)
+			if !ok || ident.Name != "Key" {
+				continue
+			}
+			functions = append(functions, d.Name.Name)
+		}
+	}
+	return constants, functions
+}
+
+// documentSelectors parses every non-test Go file of internal/document and
+// collects every selector of the form catalog.<Name>, once each.
+func documentSelectors(t *testing.T) map[string]bool {
+	t.Helper()
+
+	dir := filepath.Join("..", "document")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading %s: %v", dir, err)
+	}
+
+	fset := token.NewFileSet()
+	selectors := make(map[string]bool)
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		path := filepath.Join(dir, name)
+		file, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		ast.Inspect(file, func(n ast.Node) bool {
+			sel, ok := n.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			ident, ok := sel.X.(*ast.Ident)
+			if !ok || ident.Name != "catalog" {
+				return true
+			}
+			selectors[sel.Sel.Name] = true
+			return true
+		})
+	}
+	return selectors
+}
+
+// TestEveryKeyIsUsed proves that internal/document, which is the only
+// non-test, non-catalog reader of these keys in this part of the project,
+// leaves no key of the catalog unused: every exported Key constant of
+// keys.go is either called directly (catalog.CoverTitle) or reached
+// through one of its key functions (a name such as CapabilityNameFoo is
+// reached through catalog.CapabilityName), and every key function is
+// called at least once.
+func TestEveryKeyIsUsed(t *testing.T) {
+	constants, functions := keyDeclarations(t)
+	selectors := documentSelectors(t)
+
+	for _, fn := range functions {
+		if !selectors[fn] {
+			t.Errorf("internal/document never calls the key function catalog.%s", fn)
+		}
+	}
+
+	for _, name := range constants {
+		if selectors[name] {
+			continue
+		}
+		coveredByFunction := false
+		for _, fn := range functions {
+			if strings.HasPrefix(name, fn) {
+				coveredByFunction = true
+				break
+			}
+		}
+		if !coveredByFunction {
+			t.Errorf("internal/document never uses catalog.%s, directly or through a key function", name)
 		}
 	}
 }
