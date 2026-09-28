@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -928,8 +929,97 @@ func TestDetectScenario(t *testing.T) {
 	}
 }
 
+// requestMatchesScripted replays promtest's own matching rule (documented
+// on promtest.Server.ServeHTTP): a scripted request matches a seen one when
+// its method is equal (a missing method means GET), its path is equal, its
+// query_contains is empty or held by the seen query, and its authorization
+// is empty or equal to the seen one. It is reimplemented here, rather than
+// exported from promtest, because internal/promtest is not to be touched
+// while its own reviewer reads it live.
+func requestMatchesScripted(c promtest.Request, s promtest.Seen) bool {
+	method := c.Method
+	if method == "" {
+		method = "GET"
+	}
+	if method != s.Method {
+		return false
+	}
+	if c.Path != s.Path {
+		return false
+	}
+	if c.QueryContains != "" && !strings.Contains(s.Query, c.QueryContains) {
+		return false
+	}
+	if c.Authorization != "" && c.Authorization != s.Authorization {
+		return false
+	}
+	return true
+}
+
+// unusedScriptedRequests replays the server's own consumption order against
+// the requests it actually saw, and returns the query_contains text of
+// every one of the first windowLen scripted requests that no seen request
+// ever consumed. This is computed from data promtest already exposes
+// (Fixture.Requests and Server.Seen(), which records every request
+// received, matched or not, in the order it arrived) rather than from a
+// change to promtest itself: a scripted request is consumed by the first
+// still-pending one it structurally matches, exactly as
+// promtest.Server.consume does, so replaying that order here reproduces
+// which scripted requests promtest itself left on the table.
+func unusedScriptedRequests(scripted []promtest.Request, seen []promtest.Seen, windowLen int) []string {
+	pending := make([]int, len(scripted))
+	for i := range scripted {
+		pending[i] = i
+	}
+	consumed := make(map[int]bool, len(scripted))
+	for _, s := range seen {
+		for pi, idx := range pending {
+			if !requestMatchesScripted(scripted[idx], s) {
+				continue
+			}
+			consumed[idx] = true
+			pending = append(pending[:pi:pi], pending[pi+1:]...)
+			break
+		}
+	}
+
+	unused := []string{}
+	for i := 0; i < windowLen && i < len(scripted); i++ {
+		if !consumed[i] {
+			unused = append(unused, scripted[i].QueryContains)
+		}
+	}
+	return unused
+}
+
 func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 	want := map[string]int{
+		"direct-complete":       29,
+		"grafana-authenticated": 29,
+		"thanos-multicluster":   29,
+		// the CPU rule (instance:node_cpu_utilisation:rate5m) is present but
+		// the memory rule (instance:node_memory_utilisation:ratio) answers
+		// absent; node_utilization still falls back to raw_metrics, so no
+		// further probe is skipped.
+		"raw-fallback": 30,
+		// the CPU rule (instance:node_cpu_utilisation:rate5m) is absent, so
+		// the memory rule (instance:node_memory_utilisation:ratio) is left
+		// out; node_cpu_seconds_total is also absent, so the other two raw
+		// node metrics (node_memory_MemAvailable_bytes,
+		// node_memory_MemTotal_bytes) are left out too.
+		"partial-data":     26,
+		"value-edge-cases": 29,
+	}
+
+	// windowLen is how many of the fixture's own scripted requests (in its
+	// own order, smoke test and scope query included) hold the capability
+	// block for that scenario: 29 for every scenario whose last capability
+	// probe (cluster_autoscaler_) is scripted at index 28, and 31 for
+	// raw-fallback, whose block is two probes longer because neither
+	// kube_deployment_labels nor kube_statefulset_labels is present there
+	// (so the short-circuited *_spec_replicas probes are not skipped), which
+	// pushes its own cluster_autoscaler_ entry to index 31.
+	windowLen := map[string]int{
 		"direct-complete":       29,
 		"grafana-authenticated": 29,
 		"thanos-multicluster":   29,
@@ -937,6 +1027,24 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 		"partial-data":          29,
 		"value-edge-cases":      29,
 	}
+
+	// wantUnused is the query_contains text of every scripted request within
+	// windowLen that Detect's run never asked for, in the fixture's own
+	// order. Besides the metric each scenario's short cut leaves out, every
+	// fixture also scripts a collection-phase request or two inside this
+	// same window (kube_pod_status_phase; a second
+	// namespace_workload_pod:kube_pod_owner:relabel) that Detect, which only
+	// ever asks for it once, never consumes either — real, verified facts of
+	// the fixture files, not something this test's code chooses to ignore.
+	wantUnused := map[string][]string{
+		"direct-complete":       {},
+		"grafana-authenticated": {},
+		"thanos-multicluster":   {},
+		"raw-fallback":          {"kube_pod_status_phase", "instance:node_memory_utilisation:ratio"},
+		"partial-data":          {"instance:node_memory_utilisation:ratio", "node_memory_MemAvailable_bytes", "node_memory_MemTotal_bytes"},
+		"value-edge-cases":      {},
+	}
+
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
 			path, err := promtest.Path(scenario.Name)
@@ -981,6 +1089,11 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 			}
 			if used != want[scenario.Name] {
 				t.Errorf("used = %d, want %d", used, want[scenario.Name])
+			}
+
+			unused := unusedScriptedRequests(fixture.Requests, server.Seen(), windowLen[scenario.Name])
+			if !slices.Equal(unused, wantUnused[scenario.Name]) {
+				t.Errorf("unused (within the first %d scripted requests) = %v, want %v", windowLen[scenario.Name], unused, wantUnused[scenario.Name])
 			}
 		})
 	}
