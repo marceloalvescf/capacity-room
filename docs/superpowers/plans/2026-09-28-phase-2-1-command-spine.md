@@ -2158,7 +2158,9 @@ func ReaderText(filename string, source []byte, strict bool) ([]string, error)
 - Never reported: an import path; a struct tag; an argument of `errors.New`,
   of `fmt.Errorf`, or of a call whose function name ends in `Errorf`; a
   literal on a line that ends with the comment
-  `// wording: not reader text, <reason>`, where the reason is not empty.
+  `// wording: not reader text, <reason>`, where the reason is not empty; the key
+  of an element of a composite literal written as `catalog.Params`, which is
+  the name of a parameter. The value of such an element is still read.
 - Rule for every package: a literal that holds a letter outside ASCII.
 - Rules added by `strict`, applied after every `%` verb is removed:
   - two words of two or more letters each, with one space between them;
