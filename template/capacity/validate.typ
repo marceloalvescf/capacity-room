@@ -237,7 +237,13 @@
 
   expect-array(place + ".headers", block.headers)
   for (i, header) in block.headers.enumerate() {
-    expect-string(place + ".headers[" + str(i) + "]", header)
+    let header-path = place + ".headers[" + str(i) + "]"
+    expect-string(header-path, header)
+    // A header of only white space is indistinguishable, on the page,
+    // from one that lost its label entirely.
+    if header.trim() == "" {
+      fail("wrong-type", header-path + "` must be a non-empty string; received " + repr(header))
+    }
   }
   if block.headers.len() != columns {
     fail(
