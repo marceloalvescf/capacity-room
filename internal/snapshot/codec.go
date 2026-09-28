@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -13,17 +15,35 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 )
 
-// The values report.profile, report.min_severity, scope.filter_mode,
-// scope.confidence, and report.settings.endpoint_type may hold. The
-// snapshot keeps this list of its own, distinct from config's and
-// discovery's, because a stored file must keep the same meaning even if
-// those packages change later.
+// periodRe matches report.period: a positive integer with no leading zero,
+// followed by m, h, or d. internal/config carries the same rule for the
+// configuration; this copy is deliberate, not a shortcut: the snapshot is a
+// stored contract and must be able to judge a file that no configuration of
+// this version produced.
+var periodRe = regexp.MustCompile(`^[1-9][0-9]*[mhd]$`)
+
+// validProfiles, validSeverities, validFilterModes, validEndpointTypes, and
+// validNodeAutoscaling are the values of the configuration that report and
+// settings may hold. They are written here as literals, not read from
+// internal/config, so that a stored file keeps its meaning even if config's
+// own rules change later.
+//
+// validConfidences is the one list that is not a literal: discovery keeps
+// no list of the confidences, only the three constants ConfidenceExact,
+// ConfidenceInferred, and ConfidenceUnknown, so this is the closest a list
+// of its own can come. It is grouped here with the other four registries of
+// discovery's this file reuses (Names, States, Strategies, ReasonCodes, in
+// checkCapabilityNames and checkCapability below): spec 7.2 makes
+// discovery's registry the single list of codes for what discovery itself
+// decides, and confidence is one such code, not a value of the
+// configuration.
 var (
-	validProfiles      = []string{"detailed", "executive"}
-	validSeverities    = []string{"all", "attention", "critical"}
-	validFilterModes   = []string{"required", "auto", "none"}
-	validConfidences   = []string{discovery.ConfidenceExact, discovery.ConfidenceInferred, discovery.ConfidenceUnknown}
-	validEndpointTypes = []string{"prometheus", "grafana"}
+	validProfiles        = []string{"detailed", "executive"}
+	validSeverities      = []string{"all", "attention", "critical"}
+	validFilterModes     = []string{"required", "auto", "none"}
+	validEndpointTypes   = []string{"prometheus", "grafana"}
+	validNodeAutoscaling = []string{"auto", "enabled", "disabled"}
+	validConfidences     = []string{discovery.ConfidenceExact, discovery.ConfidenceInferred, discovery.ConfidenceUnknown}
 )
 
 // Encode writes s with two spaces of indentation and one line break at the
@@ -42,8 +62,16 @@ func Encode(s Snapshot) ([]byte, error) {
 
 // Decode reads exactly one snapshot of schema_version "1.0" from data and
 // checks it, in this order: the JSON is well formed and holds no unknown
-// key, nothing follows the document, schema_version is present, it equals
-// "1.0", and Check passes.
+// key, nothing follows the document, the file holds every key of the
+// contract, schema_version is present, it equals "1.0", and Check passes.
+//
+// encoding/json reads a missing key as the zero value, and zero is a valid
+// threshold, a valid boolean, and a valid empty list, so a decoded Snapshot
+// alone cannot tell "the run wrote this" from "the key was left out". The
+// key-presence check below reads data a second time, into a plain
+// map[string]any, and compares it against Snapshot's own fields by
+// reflect, so that a field added to a type is covered without a second
+// list to keep.
 func Decode(data []byte) (Snapshot, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
@@ -60,6 +88,14 @@ func Decode(data []byte) (Snapshot, error) {
 		return Snapshot{}, errors.New("snapshot holds data after the document")
 	}
 
+	var tree map[string]any
+	if err := json.Unmarshal(data, &tree); err != nil {
+		return Snapshot{}, fmt.Errorf("snapshot is not valid JSON: %s", err)
+	}
+	if path, missing := firstMissingKey(reflect.TypeOf(Snapshot{}), tree, ""); missing {
+		return Snapshot{}, fmt.Errorf("snapshot lacks the key %s", path)
+	}
+
 	if snap.SchemaVersion == "" {
 		return Snapshot{}, errors.New("snapshot has no schema_version")
 	}
@@ -71,6 +107,69 @@ func Decode(data []byte) (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	return snap, nil
+}
+
+// jsonName returns the name a struct field's json tag holds, ignoring any
+// option after a comma (such as omitempty; no field of this package uses
+// one, but a bare split keeps this correct if one is ever added).
+func jsonName(f reflect.StructField) string {
+	name, _, _ := strings.Cut(f.Tag.Get("json"), ",")
+	return name
+}
+
+// firstMissingKey walks t's fields in their declared order, following tree
+// (the generic decoding of the same document) at each level, and reports
+// the path of the first key t declares that tree does not hold. A struct
+// field is followed into its own object; a slice field whose element is
+// itself a struct (only quality.capabilities) is followed into as many
+// elements as tree actually holds, each named by its index, so a short or
+// long array is checked exactly as far as it goes. schema_version is
+// skipped: its absence keeps the dedicated message Decode already gives it.
+func firstMissingKey(t reflect.Type, tree any, prefix string) (string, bool) {
+	obj, ok := tree.(map[string]any)
+	if !ok {
+		return "", false
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		name := jsonName(field)
+		if name == "schema_version" {
+			continue
+		}
+
+		path := name
+		if prefix != "" {
+			path = prefix + "." + name
+		}
+
+		value, present := obj[name]
+		if !present {
+			return path, true
+		}
+
+		switch field.Type.Kind() {
+		case reflect.Struct:
+			if p, found := firstMissingKey(field.Type, value, path); found {
+				return p, true
+			}
+		case reflect.Slice:
+			if field.Type.Elem().Kind() != reflect.Struct {
+				continue
+			}
+			arr, ok := value.([]any)
+			if !ok {
+				continue
+			}
+			for idx, elem := range arr {
+				elemPath := fmt.Sprintf("%s[%d]", path, idx)
+				if p, found := firstMissingKey(field.Type.Elem(), elem, elemPath); found {
+					return p, true
+				}
+			}
+		}
+	}
+	return "", false
 }
 
 // Time reads one of the time fields of a snapshot: RFC 3339, with an
@@ -144,6 +243,44 @@ func (s Snapshot) Check() error {
 		if err := checkCapability(i, c); err != nil {
 			return err
 		}
+	}
+
+	if !periodRe.MatchString(s.Report.Period) {
+		return fmt.Errorf("report.period has an unknown value: %q", s.Report.Period)
+	}
+	if err := checkEnum("report.settings.node_autoscaling", s.Report.Settings.NodeAutoscaling, validNodeAutoscaling); err != nil {
+		return err
+	}
+	if s.Report.Timezone == "" {
+		return errors.New("report.timezone is empty")
+	}
+	if s.Scope.ClusterLabel == "" {
+		return errors.New("scope.cluster_label is empty")
+	}
+	if s.Report.Settings.TimeoutSeconds <= 0 {
+		return errors.New("report.settings.timeout_seconds must be positive")
+	}
+
+	percents := []float64{
+		s.Report.Thresholds.WarningPercent,
+		s.Report.Thresholds.CriticalPercent,
+		s.Report.Thresholds.LowUtilizationPercent,
+		s.Report.Thresholds.AutoscalerNearMaxPercent,
+		s.Report.Thresholds.NodepoolSpreadPoints,
+	}
+	for _, p := range percents {
+		if p < 0 || p > 100 {
+			return errors.New("report.thresholds values must be within 0..100")
+		}
+	}
+	if s.Report.Thresholds.BurstyGapPercent < 0 {
+		return errors.New("report.thresholds.bursty_gap_percent must not be negative")
+	}
+	if s.Report.Thresholds.HPAReplicaDivergence < 0 {
+		return errors.New("report.thresholds.hpa_replica_divergence must not be negative")
+	}
+	if s.Report.Thresholds.WarningPercent >= s.Report.Thresholds.CriticalPercent {
+		return errors.New("report.thresholds.warning_percent must be lower than critical_percent")
 	}
 
 	return nil
