@@ -7,11 +7,14 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // versionHeadingPattern matches a well-formed Keep a Changelog release
-// heading: "## [MAJOR.MINOR.PATCH] - YYYY-MM-DD".
-var versionHeadingPattern = regexp.MustCompile(`^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$`)
+// heading: "## [MAJOR.MINOR.PATCH] - YYYY-MM-DD". It only constrains digit
+// count per group, not their range, so a heading that matches still needs
+// its date checked with time.Parse before it is accepted.
+var versionHeadingPattern = regexp.MustCompile(`^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$`)
 
 // versionHeadingPrefix matches any line that looks like it is attempting a
 // version heading (a top-level heading opening on a digit), whether or not
@@ -33,6 +36,13 @@ func NewestVersionHeading(changelog string) (version string, found bool, err err
 		line := scanner.Text()
 
 		if match := versionHeadingPattern.FindStringSubmatch(line); match != nil {
+			// The pattern only checks digit count, not range, so a
+			// shape like "2026-99-99" matches syntactically; parsing
+			// catches an impossible calendar date and treats it the same
+			// as any other malformed heading.
+			if _, err := time.Parse("2006-01-02", match[2]); err != nil {
+				return "", false, fmt.Errorf("malformed changelog heading on line %d: %q", lineNum, line)
+			}
 			return match[1], true, nil
 		}
 

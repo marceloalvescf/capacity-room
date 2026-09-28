@@ -89,6 +89,34 @@ func TestNewestVersionHeadingMalformed(t *testing.T) {
 	}
 }
 
+func TestNewestVersionHeadingRejectsImpossibleDate(t *testing.T) {
+	cases := []struct {
+		name string
+		line string
+	}{
+		{"month out of range", "## [1.0.0] - 2026-99-99"},
+		{"day out of range", "## [1.0.0] - 2026-02-30"},
+		{"zero month", "## [1.0.0] - 2026-00-10"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Put the impossible-date heading on line 2 so the test also
+			// proves line numbers are tracked, not hard-coded to 1.
+			changelog := "## [Unreleased]\n" + tc.line + "\n"
+
+			_, _, err := NewestVersionHeading(changelog)
+			if err == nil {
+				t.Fatalf("NewestVersionHeading(%q) returned no error, want error", changelog)
+			}
+			want := fmt.Sprintf("malformed changelog heading on line 2: %q", tc.line)
+			if err.Error() != want {
+				t.Fatalf("NewestVersionHeading(%q) error = %q, want %q", changelog, err.Error(), want)
+			}
+		})
+	}
+}
+
 func TestNewestVersionHeadingIgnoresDeeperHeadings(t *testing.T) {
 	changelog := "### [0.9.9] - 2026-01-01\n## [0.1.0] - 2026-09-30\n"
 
