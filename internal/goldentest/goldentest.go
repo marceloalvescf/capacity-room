@@ -1,0 +1,210 @@
+// Package goldentest runs the whole chain — connect, resolve the scope,
+// detect the capabilities, build a snapshot, build a document — against one
+// of the six recorded scenarios of internal/promtest, with one fixed input
+// held constant across every run. It is not a test file: golden_test.go
+// uses it to compare against the golden files, and cmd/update-testdata uses
+// it to rewrite them. Neither the production binary nor any package outside
+// this chain of tests may import it; internal/guard enforces that.
+package goldentest
+
+import (
+	"context"
+	"fmt"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+)
+
+// DataFileScenarios names the scenarios that have golden data files. The
+// other two give, in this part, the same document as direct-complete.
+var DataFileScenarios = []string{
+	"direct-complete", "partial-data", "raw-fallback", "value-edge-cases",
+}
+
+// The fixed input every scenario runs with, held constant so that only the
+// scenario itself can change a byte of the result.
+const (
+	reportID         = "00000000-0000-4000-8000-000000000001"
+	generatorVersion = "0.0.0-golden"
+	clusterName      = "prod"
+	organization     = "ACME"
+	classification   = "Uso interno"
+	author           = "Time SRE"
+	collectionSpan   = 42 * time.Second
+)
+
+// namespaces and excludedContainers are the fixed list values of the input;
+// they are declared separately because config.Cluster.Namespaces and
+// config.Analysis.ExcludedContainers each take a slice.
+var (
+	namespaces         = []string{"payments"}
+	excludedContainers = []string{"istio-proxy"}
+)
+
+// fixedEmittedAt returns 2026-07-15 14:30:00 in America/Sao_Paulo, the
+// "emitted at" of the fixed input.
+func fixedEmittedAt() (time.Time, error) {
+	loc, err := time.LoadLocation("America/Sao_Paulo")
+	if err != nil {
+		return time.Time{}, fmt.Errorf("loading America/Sao_Paulo: %w", err)
+	}
+	return time.Date(2026, time.July, 15, 14, 30, 0, 0, loc), nil
+}
+
+// fixedConfig starts from config.Default and sets the fields of the fixed
+// input, plus the ones the scenario itself carries. The metrics URL is the
+// only field that ever holds the test server's address; snapshot.Build
+// never reads it into the stored snapshot.
+func fixedConfig(scenario promtest.Scenario, serverURL string) config.Config {
+	cfg := config.Default()
+	cfg.Metrics.URL = serverURL + scenario.APIRoot
+	cfg.Metrics.EndpointType = scenario.EndpointType
+	cfg.Cluster.Name = clusterName
+	cfg.Cluster.Namespaces = namespaces
+	cfg.Analysis.NodeAutoscaling = scenario.NodeAutoscaling
+	cfg.Analysis.ExcludedContainers = excludedContainers
+	cfg.Report.Organization = organization
+	cfg.Report.Classification = classification
+	cfg.Report.Author = author
+	return cfg
+}
+
+// Snapshot serves the scenario in this process, runs the connection, the
+// scope, and the capabilities against it with the fixed input, and returns
+// the encoded snapshot.
+func Snapshot(ctx context.Context, scenario promtest.Scenario) ([]byte, error) {
+	path, err := promtest.Path(scenario.Name)
+	if err != nil {
+		return nil, fmt.Errorf("%s: locating fixture: %w", scenario.Name, err)
+	}
+	fixture, err := promtest.Load(path)
+	if err != nil {
+		return nil, fmt.Errorf("%s: loading fixture: %w", scenario.Name, err)
+	}
+
+	server := httptest.NewServer(promtest.NewServer(fixture))
+	defer server.Close()
+
+	emittedAt, err := fixedEmittedAt()
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", scenario.Name, err)
+	}
+	cfg := fixedConfig(scenario, server.URL)
+
+	client, err := prom.Connect(ctx, prom.Options{
+		Metrics: cfg.Metrics,
+		Token:   scenario.Token,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%s: connecting: %w", scenario.Name, err)
+	}
+
+	scope, err := discovery.ResolveScope(ctx, client, cfg.Cluster, emittedAt)
+	if err != nil {
+		return nil, fmt.Errorf("%s: resolving the scope: %w", scenario.Name, err)
+	}
+
+	capabilities, err := discovery.Detect(ctx, client, scope, cfg.Analysis, emittedAt)
+	if err != nil {
+		return nil, fmt.Errorf("%s: detecting the capabilities: %w", scenario.Name, err)
+	}
+
+	if err := discovery.CheckSufficient(capabilities); err != nil {
+		return nil, fmt.Errorf("%s: checking the capabilities: %w", scenario.Name, err)
+	}
+
+	snap, err := snapshot.Build(snapshot.Input{
+		ID:                  reportID,
+		GeneratorVersion:    generatorVersion,
+		EmittedAt:           emittedAt,
+		Config:              cfg,
+		EndpointKind:        client.Kind(),
+		Scope:               scope,
+		Capabilities:        capabilities,
+		CollectionStarted:   emittedAt,
+		CollectionCompleted: emittedAt.Add(collectionSpan),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%s: building the snapshot: %w", scenario.Name, err)
+	}
+
+	data, err := snapshot.Encode(snap)
+	if err != nil {
+		return nil, fmt.Errorf("%s: encoding the snapshot: %w", scenario.Name, err)
+	}
+	return data, nil
+}
+
+// DataFile decodes an encoded snapshot and returns the encoded document in
+// one language, with the profile and the severity stored in the snapshot.
+func DataFile(snap []byte, lang catalog.Language) ([]byte, error) {
+	decoded, err := snapshot.Decode(snap)
+	if err != nil {
+		return nil, fmt.Errorf("decoding the snapshot: %w", err)
+	}
+
+	cat, err := catalog.Load(lang)
+	if err != nil {
+		return nil, fmt.Errorf("loading the %s catalog: %w", lang, err)
+	}
+
+	doc, err := document.Build(decoded, cat, document.Options{})
+	if err != nil {
+		return nil, fmt.Errorf("building the document: %w", err)
+	}
+
+	data, err := document.Encode(doc)
+	if err != nil {
+		return nil, fmt.Errorf("encoding the document: %w", err)
+	}
+	return data, nil
+}
+
+// SnapshotPath returns the place of a scenario's golden snapshot file, from
+// the folder that holds go.mod.
+func SnapshotPath(scenario string) (string, error) {
+	root, err := moduleRoot()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "testdata", "snapshot", scenario+".json"), nil
+}
+
+// DataFilePath returns the place of a scenario's golden data file, in one
+// language.
+func DataFilePath(scenario string, lang catalog.Language) (string, error) {
+	root, err := moduleRoot()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "template", "tests", "capacity", "fixtures", "command", scenario+"."+string(lang)+".json"), nil
+}
+
+// moduleRoot walks up from the working directory to the folder that holds
+// go.mod. It is duplicated from internal/promtest, whose own moduleRoot is
+// unexported.
+func moduleRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("getting working directory: %w", err)
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("go.mod not found above %s", dir)
+		}
+		dir = parent
+	}
+}

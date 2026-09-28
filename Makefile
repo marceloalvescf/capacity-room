@@ -36,7 +36,7 @@ RUN_TEST_IMAGE := docker run $(RUN_TEST_IMAGE_FLAGS) $(TEST_IMAGE)
 GOLDEN_OUT := .cache/template
 
 .PHONY: build test lint image test-toolchain test-template test-golden \
-	update-golden check-runtime gate
+	update-golden update-testdata check-runtime gate
 
 build:
 	go build -o bin/k8s-capacity-report ./cmd/k8s-capacity-report
@@ -87,6 +87,12 @@ update-golden: $(IMAGE_DEP)
 	docker run $(RUN_TEST_IMAGE_FLAGS) \
 		--volume "$(CURDIR)/template/tests/golden:/src/template/tests/golden" \
 		$(TEST_IMAGE) go run ./template/golden/cmd/update-golden
+
+# Rewrites the golden snapshot files under testdata/snapshot/ and the golden
+# data files under template/tests/capacity/fixtures/command/. It needs no
+# image. Read every changed file before committing it.
+update-testdata:
+	go run ./cmd/update-testdata
 
 check-runtime: $(IMAGE_DEP)
 	test "$$(docker run --rm $(IMAGE) --version)" = "k8s-capacity-report $(VERSION)"

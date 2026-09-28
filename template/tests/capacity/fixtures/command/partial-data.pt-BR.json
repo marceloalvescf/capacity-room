@@ -1,0 +1,614 @@
+{
+  "schema": "1",
+  "language": "pt-BR",
+  "theme": {
+    "lang": "pt",
+    "region": "BR"
+  },
+  "labels": {
+    "note": "Nota",
+    "info": "Informação",
+    "warning": "Atenção"
+  },
+  "cover": {
+    "title": "LEVANTAMENTO DE CAPACIDADE",
+    "cluster_label": "Cluster:",
+    "cluster": "prod",
+    "author_label": "ELABORADO POR:",
+    "author": "Time SRE",
+    "issued_label": "EMITIDO EM:",
+    "issued": "15/07/2026 14:30"
+  },
+  "footer": {
+    "classification": "Uso interno",
+    "page_label": "Página"
+  },
+  "blocks": [
+    {
+      "type": "front",
+      "blocks": [
+        {
+          "type": "outline",
+          "title": "Sumário",
+          "depth": 2
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Metadados do relatório"
+            }
+          ]
+        },
+        {
+          "type": "table",
+          "id": "report-metadata",
+          "headers": [
+            "Campo",
+            "Valor"
+          ],
+          "rows": [
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Ambiente"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "prod"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Período analisado"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "14/07/2026 14:30 a 15/07/2026 14:30"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Namespaces"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Containers excluídos"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "istio-proxy"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Organização"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "ACME"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Classificação"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Uso interno"
+                }
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Legenda de status"
+            }
+          ]
+        },
+        {
+          "type": "table",
+          "id": "status-legend",
+          "headers": [
+            "Status",
+            "Interpretação"
+          ],
+          "rows": [
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "healthy",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Saudável"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "attention",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Atenção / prioridade alta"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Crítico / prioridade crítica"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "unavailable",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Dado indisponível"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "undefined",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Sem base de cálculo"
+                }
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Qualidade dos dados"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            [
+              {
+                "kind": "strong",
+                "text": "Disponíveis:"
+              },
+              {
+                "kind": "text",
+                "text": " 4"
+              }
+            ],
+            [
+              {
+                "kind": "strong",
+                "text": "Parciais:"
+              },
+              {
+                "kind": "text",
+                "text": " 3"
+              }
+            ],
+            [
+              {
+                "kind": "strong",
+                "text": "Indisponíveis:"
+              },
+              {
+                "kind": "text",
+                "text": " 2"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "pagebreak",
+      "weak": false
+    },
+    {
+      "type": "pagebreak",
+      "weak": true
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Apêndice técnico de qualidade"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "quality-appendix",
+      "headers": [
+        "Capacidade",
+        "Cobertura",
+        "Fonte",
+        "Observação",
+        "Evidência técnica"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Uso por namespace"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Disponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Métricas brutas"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Sem observação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados de utilização de CPU e memória por namespace estão disponíveis para o período analisado."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Uso por carga de trabalho"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Disponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Regra de gravação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Sem observação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados de utilização por carga de trabalho estão disponíveis para o período analisado."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Solicitações e limites"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Disponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Métricas brutas"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Sem observação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados de solicitações e limites de recursos estão disponíveis para o período analisado."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Histórico de HPA"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Sem fonte"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "As métricas necessárias não foram encontradas."
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados históricos e de configuração dos HPAs não foram localizados para o período analisado."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Cobertura de cargas de trabalho sem HPA"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Métricas brutas"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "O inventário de cargas de trabalho ou alvos de HPA está incompleto."
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados de cobertura das cargas de trabalho sem HPA estão disponíveis parcialmente para o período analisado."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Associação entre endereço e nó"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Disponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Métricas brutas"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Sem observação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados de associação entre endereço e nó estão disponíveis para o período analisado."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Identificação de pools de nós"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Métricas brutas"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os rótulos de pools de nós não foram encontrados."
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados de identificação dos pools de nós estão disponíveis parcialmente para o período analisado."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Utilização dos nós"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Sem fonte"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "As métricas necessárias não foram encontradas."
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados de utilização dos nós não foram localizados para o período analisado."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Escalonamento automático de nós"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Sem fonte"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "O estado do escalonamento automático de nós não pôde ser determinado."
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados de escalonamento automático dos nós estão disponíveis parcialmente para o período analisado."
+            }
+          ]
+        ]
+      ]
+    }
+  ]
+}

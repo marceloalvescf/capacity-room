@@ -26,16 +26,44 @@ func capacityFixture(ws, stem string) string {
 	return filepath.Join(ws, "tests", "capacity", "fixtures", stem+".json")
 }
 
+// commandFixtureStems reads tests/capacity/fixtures/command/ under ws and
+// returns the stem of every ".json" file there, prefixed with "command/" so
+// that capacityFixture finds it. It fails the test when the folder holds no
+// file: a golden data file that failed to be written must not silently
+// leave this test covering nothing.
+func commandFixtureStems(t *testing.T, ws string) []string {
+	t.Helper()
+	dir := filepath.Join(ws, "tests", "capacity", "fixtures", "command")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading %s: %v", dir, err)
+	}
+	var stems []string
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+		stems = append(stems, "command/"+strings.TrimSuffix(entry.Name(), ".json"))
+	}
+	if len(stems) == 0 {
+		t.Fatalf("%s holds no fixture", dir)
+	}
+	return stems
+}
+
 // TestCapacityFixturesCompileCleanly checks the five positive fixtures that
-// have no test of their own dedicated to a compile failure: each must
-// compile without a diagnostic and produce a non-empty PDF. detailed.pt-BR
-// and detailed.en, identifiers.pt-BR, minimal.pt-BR, and literal.pt-BR are
-// each also exercised, more specifically, by the tests below; literal.pt-BR
-// is covered there instead of here since its own tests already assert a
-// clean compile.
+// have no test of their own dedicated to a compile failure, plus every
+// golden data file under fixtures/command/: each must compile without a
+// diagnostic and produce a non-empty PDF. detailed.pt-BR and detailed.en,
+// identifiers.pt-BR, minimal.pt-BR, and literal.pt-BR are each also
+// exercised, more specifically, by the tests below; literal.pt-BR is
+// covered there instead of here since its own tests already assert a clean
+// compile.
 func TestCapacityFixturesCompileCleanly(t *testing.T) {
 	ws := workspace(t)
-	for _, stem := range []string{"base.pt-BR", "detailed.pt-BR", "detailed.en", "identifiers.pt-BR", "minimal.pt-BR"} {
+	stems := []string{"base.pt-BR", "detailed.pt-BR", "detailed.en", "identifiers.pt-BR", "minimal.pt-BR"}
+	stems = append(stems, commandFixtureStems(t, ws)...)
+	for _, stem := range stems {
 		t.Run(stem, func(t *testing.T) {
 			pdf, stderr, err := compileCapacityData(t, ws, capacityFixture(ws, stem))
 			assertCleanCompile(t, stderr, err)

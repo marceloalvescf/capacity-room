@@ -1,0 +1,145 @@
+{
+  "schema_version": "1.0",
+  "report": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "generator_version": "0.0.0-golden",
+    "emitted_at": "2026-07-15T14:30:00-03:00",
+    "period": "24h",
+    "period_start": "2026-07-14T14:30:00-03:00",
+    "period_end": "2026-07-15T14:30:00-03:00",
+    "timezone": "America/Sao_Paulo",
+    "profile": "detailed",
+    "min_severity": "all",
+    "organization": "ACME",
+    "classification": "Uso interno",
+    "author": "Time SRE",
+    "thresholds": {
+      "warning_percent": 70,
+      "critical_percent": 85,
+      "low_utilization_percent": 30,
+      "autoscaler_near_max_percent": 80,
+      "nodepool_spread_points": 30,
+      "bursty_gap_percent": 100,
+      "hpa_replica_divergence": 1
+    },
+    "settings": {
+      "endpoint_type": "prometheus",
+      "tls_verify": true,
+      "timeout_seconds": 90,
+      "node_autoscaling": "disabled",
+      "nodepool_label": ""
+    }
+  },
+  "scope": {
+    "cluster_name": "prod",
+    "cluster_label": "cluster",
+    "filter_mode": "required",
+    "matcher_enabled": true,
+    "confidence": "exact",
+    "discovered_values": [
+      "prod"
+    ],
+    "namespaces": [
+      "payments"
+    ],
+    "excluded_containers": [
+      "istio-proxy"
+    ]
+  },
+  "quality": {
+    "capabilities": [
+      {
+        "name": "namespace_usage",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "container_cpu_usage_seconds_total",
+          "container_memory_working_set_bytes"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "workload_usage",
+        "state": "available",
+        "strategy": "recording_rule",
+        "evidence": [
+          "namespace_workload_pod:kube_pod_owner:relabel",
+          "container_cpu_usage_seconds_total",
+          "container_memory_working_set_bytes"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "requests_limits",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_pod_container_resource_requests",
+          "kube_pod_container_resource_limits"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "hpa_history",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_horizontalpodautoscaler_info",
+          "kube_horizontalpodautoscaler_spec_min_replicas",
+          "kube_horizontalpodautoscaler_spec_max_replicas",
+          "kube_horizontalpodautoscaler_status_current_replicas",
+          "kube_horizontalpodautoscaler_status_desired_replicas"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "workloads_without_hpa",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_deployment_labels",
+          "kube_statefulset_labels",
+          "kube_horizontalpodautoscaler_info"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "ip_node_mapping",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_node_info"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "nodepool_discovery",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_node_labels"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "node_utilization",
+        "state": "available",
+        "strategy": "recording_rule",
+        "evidence": [
+          "instance:node_cpu_utilisation:rate5m",
+          "instance:node_memory_utilisation:ratio"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "node_autoscaling",
+        "state": "available",
+        "strategy": "configured",
+        "evidence": [],
+        "reasons": []
+      }
+    ],
+    "collection_started_at": "2026-07-15T14:30:00-03:00",
+    "collection_completed_at": "2026-07-15T14:30:42-03:00"
+  }
+}
