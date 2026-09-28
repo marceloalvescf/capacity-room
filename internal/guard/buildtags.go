@@ -14,7 +14,7 @@ import (
 // scan passes these to `go list` so a gated file's imports are not invisible
 // to the layering rule, and the build-tag scan below rejects any tag not
 // named here, so a new tag cannot go unnoticed by either.
-var BuildTags = []string{"toolchain"}
+var BuildTags = []string{"template", "toolchain"}
 
 // buildConstraintLine returns the first "//go:build" line in source, if
 // any. Per the language spec such a line must appear only among the

@@ -260,6 +260,50 @@ func TestVersionUsesEmptyEnvironment(t *testing.T) {
 	}
 }
 
+func TestLocateMakesRelativeLookupAbsolute(t *testing.T) {
+	// lookPath can return a relative path (e.g. found via a relative PATH
+	// entry); Locate must resolve it against the working directory before
+	// handing it back, since a later os/exec call needs an absolute path.
+	relative := filepath.Join("bin", "typst")
+	getenv := func(string) string { return "" }
+	lookPath := func(string) (string, error) {
+		return relative, nil
+	}
+
+	got, err := Locate(getenv, lookPath)
+	if err != nil {
+		t.Fatalf("Locate() error = %v", err)
+	}
+	if !filepath.IsAbs(got.Binary) {
+		t.Fatalf("Binary = %q, want an absolute path", got.Binary)
+	}
+	if !strings.HasSuffix(got.Binary, relative) {
+		t.Fatalf("Binary = %q, want it to end in %q", got.Binary, relative)
+	}
+}
+
+func TestLocateAcceptsSymlinkToBinary(t *testing.T) {
+	real := writeScript(t, "#!/bin/sh\nexit 0\n")
+	link := filepath.Join(t.TempDir(), "typst-link")
+	if err := os.Symlink(real, link); err != nil {
+		t.Fatalf("Symlink: %v", err)
+	}
+	getenv := func(key string) string {
+		if key == "KCR_TYPST" {
+			return link
+		}
+		return ""
+	}
+
+	got, err := Locate(getenv, unreachableLookPath)
+	if err != nil {
+		t.Fatalf("Locate() error = %v", err)
+	}
+	if got.Binary != link {
+		t.Fatalf("Binary = %q, want %q", got.Binary, link)
+	}
+}
+
 func TestProbeAcceptsRequiredVersion(t *testing.T) {
 	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\necho 'typst 0.15.1 (x)'\n")}
 
