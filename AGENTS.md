@@ -40,8 +40,9 @@ go test ./internal/guard/ -run TestForbiddenModules -v
 
 ## Rules enforced by a guard
 
-Each of these fails `make test` when broken. The guards live in
-`internal/guard`.
+Each of these fails `make test` or `make image` when broken. The guards live
+in `internal/guard`, except the Typst pin, which `internal/typst` and the
+image build enforce.
 
 - **No test skips.** `Skip`, `Skipf`, and `SkipNow` are forbidden in test
   files and in any file that imports `testing`. A test that needs a tool
