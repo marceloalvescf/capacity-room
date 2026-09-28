@@ -194,3 +194,106 @@ func TestLoadDoesNotFallBackBetweenLanguages(t *testing.T) {
 		t.Fatal("en Text(only_in_portuguese) = nil error; the English catalog must not fall back to Portuguese")
 	}
 }
+
+// tomlString renders value as a TOML basic string, escaping the backslashes
+// and double quotes the fix-round-1 test inputs contain.
+func tomlString(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, `"`, `\"`)
+	return `"` + value + `"`
+}
+
+// fsWithEntry builds a one-language, one-entry test file system, as
+// TestLoadDoesNotFallBackBetweenLanguages does, so load can be pointed at a
+// single entry without disturbing the real locale files.
+func fsWithEntry(text string) fstest.MapFS {
+	return fstest.MapFS{
+		"locales/en.toml": &fstest.MapFile{Data: []byte("value = " + tomlString(text) + "\n")},
+	}
+}
+
+// TestLoadRefusesOtherTemplateForms proves that Load rejects every
+// {{...}} span that is not the exact plain form {{.Name}}: a space inside
+// the braces, a pipeline, a condition, a nested field, an empty reference,
+// an unterminated "{{", a stray "}}", and one bad span among otherwise good
+// ones. Each case is checked against templateSpan directly, so the test
+// also pins what Load's error names as the offending span.
+func TestLoadRefusesOtherTemplateForms(t *testing.T) {
+	tests := []struct {
+		name string
+		text string
+	}{
+		{"spaces inside the braces", "{{ .Start }}"},
+		{"a pipeline", `{{.Start | printf "%s"}}`},
+		{"a condition", "{{if .Start}}x{{end}}"},
+		{"a nested field", "{{.start.end}}"},
+		{"an empty reference", "{{.}}"},
+		{"an unterminated open", "{{.Start}"},
+		{"a stray close", "Start}}"},
+		{"one bad span among good ones", "{{.Start}} and {{ .End}}"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wantSpan, bad := templateSpan(tt.text)
+			if !bad {
+				t.Fatalf("test setup: templateSpan(%q) found nothing wrong", tt.text)
+			}
+
+			_, err := load(fsWithEntry(tt.text), English)
+			if err == nil {
+				t.Fatalf("load() with entry %q = nil error, want one", tt.text)
+			}
+			if !strings.Contains(err.Error(), "value") {
+				t.Errorf("error %q does not name the key", err)
+			}
+			if !strings.Contains(err.Error(), wantSpan) {
+				t.Errorf("error %q does not name the span %q", err, wantSpan)
+			}
+		})
+	}
+}
+
+// TestLoadAcceptsThePlainForm proves that Load still accepts every entry
+// this catalog actually needs: two plain parameters, the same parameter
+// referenced twice, no brace at all, and a single unpaired brace character,
+// which is not a {{ or }} marker at all.
+func TestLoadAcceptsThePlainForm(t *testing.T) {
+	tests := []struct {
+		name string
+		text string
+	}{
+		{"two parameters", "{{.Start}} a {{.End}}"},
+		{"the same parameter twice, adjacent", "{{.Start}}{{.Start}}"},
+		{"no brace at all", "Plain text with no braces."},
+		{"one open brace alone", "Value: {approx}"},
+		{"one close brace alone", "Value: approx}"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := load(fsWithEntry(tt.text), English); err != nil {
+				t.Fatalf("load() with entry %q: %v", tt.text, err)
+			}
+		})
+	}
+}
+
+// TestTextWithTheSameParameterTwice proves that an entry may reference the
+// same parameter more than once: Text still requires it exactly once from
+// the caller, and fills every occurrence.
+func TestTextWithTheSameParameterTwice(t *testing.T) {
+	cat, err := load(fsWithEntry("{{.A}} and {{.A}}"), English)
+	if err != nil {
+		t.Fatalf("load(): %v", err)
+	}
+
+	got, err := cat.Text(Key("value"), Params{"A": "x"})
+	if err != nil {
+		t.Fatalf("Text(value): %v", err)
+	}
+	want := "x and x"
+	if got != want {
+		t.Errorf("Text(value) = %q, want %q", got, want)
+	}
+}

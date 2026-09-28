@@ -481,3 +481,18 @@ func TestNoBannedTerm(t *testing.T) {
 		}
 	}
 }
+
+// TestEntriesUseThePlainFormOnly reads every entry of both embedded files,
+// parsed independently of Load, and fails on the same condition Load
+// itself refuses a file for: a {{...}} span that is not the plain form
+// {{.Name}}. This is what turns a future mistake into a make test failure
+// rather than a run-time surprise the first time such an entry is read.
+func TestEntriesUseThePlainFormOnly(t *testing.T) {
+	for _, lang := range Languages() {
+		for key, text := range fileEntries(t, lang) {
+			if span, bad := templateSpan(text); bad {
+				t.Errorf("locales/%s.toml: entry %q uses a template form that is not {{.Name}}: %s", lang, key, span)
+			}
+		}
+	}
+}

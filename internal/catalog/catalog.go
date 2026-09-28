@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"regexp"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -72,6 +73,52 @@ func paramNames(text string) []string {
 	return names
 }
 
+// namePattern is a parameter reference in the one form the catalog accepts
+// inside a pair of braces: a dot, then a letter, then letters and digits,
+// with no space anywhere inside the braces.
+var namePattern = regexp.MustCompile(`^\.[A-Za-z][A-Za-z0-9]*$`)
+
+// templateSpan finds the first span of text that keeps this catalog from
+// holding only the plain template form {{.Name}}: a pair of braces whose
+// content is a pipeline, a condition, a nested field, a space, or an empty
+// reference; an opening "{{" with no closing "}}" after it; or a closing
+// "}}" with no opening "{{" before it. It returns the offending span,
+// braces included where both exist, and true. It returns "", false once
+// every {{ in text is paired with a following }} and every span between
+// them matches namePattern.
+func templateSpan(text string) (string, bool) {
+	i := 0
+	for {
+		rest := text[i:]
+		open := strings.Index(rest, "{{")
+		closeIdx := strings.Index(rest, "}}")
+
+		switch {
+		case open == -1 && closeIdx == -1:
+			return "", false
+		case open == -1:
+			// A "}}" remains, but no "{{" follows i: a stray close.
+			return "}}", true
+		case closeIdx != -1 && closeIdx < open:
+			// The next marker is a "}}", before the next "{{": a stray
+			// close that comes ahead of the next open.
+			return "}}", true
+		default:
+			afterOpen := i + open + 2
+			closeInContent := strings.Index(text[afterOpen:], "}}")
+			if closeInContent == -1 {
+				// This "{{" is never closed.
+				return "{{", true
+			}
+			content := text[afterOpen : afterOpen+closeInContent]
+			if !namePattern.MatchString(content) {
+				return "{{" + content + "}}", true
+			}
+			i = afterOpen + closeInContent + 2
+		}
+	}
+}
+
 // flatten walks a TOML document already unmarshalled into a generic map and
 // returns every leaf string, keyed by its dotted path. A leaf that is not a
 // string is an error, since the catalog holds no plural forms.
@@ -126,6 +173,15 @@ func load(fsys fs.FS, lang Language) (*Catalog, error) {
 	entries, err := flatten(data)
 	if err != nil {
 		return nil, fmt.Errorf("catalog: %s: %w", lang, err)
+	}
+
+	// A catalog that loads holds only the plain template form {{.Name}}, so
+	// Text never needs to ask what syntax an entry used: this is the only
+	// place that asks.
+	for key, text := range entries {
+		if span, bad := templateSpan(text); bad {
+			return nil, fmt.Errorf("catalog %s: entry %s uses a template form that is not {{.Name}}: %s", lang, key, span)
+		}
 	}
 
 	// Each language gets its own bundle, with that language as its only and
