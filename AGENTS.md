@@ -101,7 +101,9 @@ looks.
 - Every diagnostic of the generic layer starts with `graphite-report: `, and
   every diagnostic of the report layer with `capacity-report: `. All of the
   report layer's diagnostics live in one dictionary in `validate.typ`, and
-  each has a fixture that triggers it.
+  each has a fixture that triggers it. A data file that is not valid JSON
+  stops with Typst's own message, because Typst cannot catch a parse
+  error; the command that writes the file answers for its syntax.
 - No page may contain a coloured pixel.
 - The public surface of the generic layer is frozen: `graphite-report`,
   `callout`, `keep-together`, with the keys its README documents.

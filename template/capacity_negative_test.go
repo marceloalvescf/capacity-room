@@ -169,6 +169,50 @@ func TestCapacityHeaderWithVisibleTextCompiles(t *testing.T) {
 	assertNonEmptyPDF(t, pdf)
 }
 
+func capacityMalformedDir(ws string) string {
+	return filepath.Join(ws, "tests", "capacity", "malformed")
+}
+
+// TestCapacityStopsOnDataThatIsNotJSON pins the one place this layer's own
+// "every diagnostic carries the `capacity-report: ` prefix" invariant does
+// not hold: a data file that fails to parse as JSON at all never reaches
+// validate.typ, so Typst's own parser stops the compile with its own
+// message first. This is not a bug to fix — see
+// TestCapacityNeverFailsWithoutItsPrefix's comment and AGENTS.md — but the
+// behaviour must stay pinned, for every file under
+// tests/capacity/malformed/.
+func TestCapacityStopsOnDataThatIsNotJSON(t *testing.T) {
+	ws := workspace(t)
+	dir := capacityMalformedDir(ws)
+	matches, err := filepath.Glob(filepath.Join(dir, "*.json"))
+	if err != nil {
+		t.Fatalf("globbing %s: %v", dir, err)
+	}
+	if len(matches) == 0 {
+		t.Fatalf("no malformed fixtures found in %s", dir)
+	}
+
+	for _, file := range matches {
+		t.Run(filepath.Base(file), func(t *testing.T) {
+			pdf, stderr, err := compileCapacityData(t, ws, file)
+
+			var compileErr *typst.CompileError
+			if !errors.As(err, &compileErr) {
+				t.Fatalf("Compile() error = %v, want *typst.CompileError", err)
+			}
+			if !strings.Contains(compileErr.Stderr, "failed to parse JSON") {
+				t.Fatalf("stderr = %q, want it to contain %q", stderr, "failed to parse JSON")
+			}
+			if strings.Contains(compileErr.Stderr, "capacity-report: ") {
+				t.Fatalf("stderr = %q, want it to NOT contain %q", stderr, "capacity-report: ")
+			}
+			if _, statErr := os.Stat(pdf); !os.IsNotExist(statErr) {
+				t.Fatalf("stat %s: err = %v, want it to not exist", pdf, statErr)
+			}
+		})
+	}
+}
+
 func TestCapacityMissingInputFails(t *testing.T) {
 	ws := workspace(t)
 	_, stderr, err := compilePDF(t, ws, capacityEntry, nil)
@@ -288,7 +332,10 @@ func TestCapacityEveryDiagnosticIsCovered(t *testing.T) {
 // the fixture expected: even when a fixture's own .expect names a
 // different diagnostic, the compiler's stderr must start (once compiler
 // noise is set aside) with a diagnostic from this layer or from the
-// generic one underneath it, never a bare Typst error message.
+// generic one underneath it, never a bare Typst error message. This covers
+// every data file that is valid JSON; a file that is not valid JSON at
+// all is the other class, and TestCapacityStopsOnDataThatIsNotJSON covers
+// it instead, with the opposite expectation.
 func TestCapacityNeverFailsWithoutItsPrefix(t *testing.T) {
 	ws := workspace(t)
 	dir := capacityNegativeDir(ws)
