@@ -58,49 +58,104 @@ func TestUnpackWritesEveryEmbeddedFile(t *testing.T) {
 	assertUnpackedMatchesEmbedded(t, dir)
 }
 
-// TestUnpackIntoExistingFolder proves the second Unpack actually overwrites
-// and does not merely find its files already present. Calling Unpack twice
-// with nothing changed in between would pass even if Unpack skipped files
-// that already exist, so this test disturbs the folder first: it corrupts
-// one unpacked file and adds one file the template does not have.
-func TestUnpackIntoExistingFolder(t *testing.T) {
+// TestUnpackRefusesFolderThatIsNotEmpty proves Unpack never reuses a folder
+// that already holds something: a stale file from a previous run, or a
+// planted symbolic link, must never be written through. It leaves the
+// folder exactly as it found it.
+func TestUnpackRefusesFolderThatIsNotEmpty(t *testing.T) {
+	dir := t.TempDir()
+	existing := filepath.Join(dir, "already-here.txt")
+	if err := os.WriteFile(existing, []byte("leftover"), 0o644); err != nil {
+		t.Fatalf("writing %s: %v", existing, err)
+	}
+
+	err := Unpack(dir)
+	if err == nil || !strings.Contains(err.Error(), "is not empty") {
+		t.Fatalf("Unpack() error = %v, want it to contain %q", err, "is not empty")
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading %s: %v", dir, err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "already-here.txt" {
+		t.Fatalf("dir entries = %v, want exactly the one pre-existing file", entries)
+	}
+	got, err := os.ReadFile(existing)
+	if err != nil {
+		t.Fatalf("reading %s: %v", existing, err)
+	}
+	if string(got) != "leftover" {
+		t.Fatalf("%s = %q, want it unchanged", existing, got)
+	}
+}
+
+// TestUnpackNeverWritesThroughSymbolicLink proves Unpack refuses a folder
+// that holds a symbolic link rather than following it: a link planted at a
+// path the embedded tree occupies (here, "graphite") must never cause a
+// write outside the target folder.
+func TestUnpackNeverWritesThroughSymbolicLink(t *testing.T) {
+	dir := t.TempDir()
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(dir, "graphite")); err != nil {
+		t.Fatalf("creating symbolic link: %v", err)
+	}
+
+	if err := Unpack(dir); err == nil {
+		t.Fatalf("Unpack() error = nil, want an error")
+	}
+
+	entries, err := os.ReadDir(outside)
+	if err != nil {
+		t.Fatalf("reading %s: %v", outside, err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("outside folder entries = %v, want it to stay empty", entries)
+	}
+}
+
+// TestUnpackRefusesPathThatIsAFile proves Unpack refuses a dir argument
+// that names an existing regular file instead of a folder, and leaves that
+// file untouched.
+func TestUnpackRefusesPathThatIsAFile(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "not-a-folder")
+	if err := os.WriteFile(target, []byte("a plain file"), 0o644); err != nil {
+		t.Fatalf("writing %s: %v", target, err)
+	}
+
+	err := Unpack(target)
+	if err == nil || !strings.Contains(err.Error(), "is not a folder") {
+		t.Fatalf("Unpack() error = %v, want it to contain %q", err, "is not a folder")
+	}
+
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("reading %s: %v", target, err)
+	}
+	if string(got) != "a plain file" {
+		t.Fatalf("%s = %q, want it unchanged", target, got)
+	}
+}
+
+// TestUnpackIntoEmptyExistingFolder proves an empty pre-existing folder is
+// accepted: Unpack does not require dir to be absent.
+func TestUnpackIntoEmptyExistingFolder(t *testing.T) {
 	dir := t.TempDir()
 	if err := Unpack(dir); err != nil {
-		t.Fatalf("first Unpack() error = %v", err)
+		t.Fatalf("Unpack() error = %v", err)
 	}
-
-	var target string
-	walkEmbeddedFiles(t, func(path string) error {
-		if target == "" {
-			target = path
-		}
-		return nil
-	})
-	if target == "" {
-		t.Fatalf("no embedded file found to overwrite")
-	}
-	overwritten := filepath.Join(dir, target)
-	if err := os.WriteFile(overwritten, []byte("not the real content"), 0o644); err != nil {
-		t.Fatalf("overwriting %s: %v", overwritten, err)
-	}
-
-	extra := filepath.Join(dir, "extra-file-not-in-template.txt")
-	if err := os.WriteFile(extra, []byte("leftover from a previous run"), 0o644); err != nil {
-		t.Fatalf("writing %s: %v", extra, err)
-	}
-
-	if err := Unpack(dir); err != nil {
-		t.Fatalf("second Unpack() error = %v", err)
-	}
-
-	// The corrupted file must be restored to the embedded bytes.
 	assertUnpackedMatchesEmbedded(t, dir)
+}
 
-	// The extra file must still be there: Unpack writes what it knows
-	// about, it does not delete what it does not.
-	if _, err := os.Stat(extra); err != nil {
-		t.Fatalf("extra file %s should still exist after Unpack: %v", extra, err)
+// TestUnpackCreatesMissingFolder proves Unpack creates dir, with any
+// missing parents, when nothing exists at that path yet.
+func TestUnpackCreatesMissingFolder(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "a", "b", "c")
+	if err := Unpack(dir); err != nil {
+		t.Fatalf("Unpack() error = %v", err)
 	}
+	assertUnpackedMatchesEmbedded(t, dir)
 }
 
 // embedRootsFromSource reads the //go:embed line out of the given Go
