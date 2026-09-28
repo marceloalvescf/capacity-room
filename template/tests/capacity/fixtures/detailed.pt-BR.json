@@ -2664,7 +2664,7 @@
           [
             {
               "kind": "text",
-              "text": "Eventos de throttling não instrumentados no período."
+              "text": "Eventos de limitação de CPU não instrumentados no período."
             }
           ]
         ]
