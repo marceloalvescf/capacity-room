@@ -208,6 +208,55 @@ func f() {
 	}
 }
 
+// TestReaderTextIgnoresPunctuatedPairs covers task 12's second re-review:
+// the two-word gap must hold only spaces and percent signs, not any
+// non-letter punctuation, so a MIME type, a key/value pair, or a
+// comma-joined list of real words is not mistaken for a sentence.
+func TestReaderTextIgnoresPunctuatedPairs(t *testing.T) {
+	cases := []string{
+		"text/plain; charset=utf-8",
+		"key: value",
+		"nodes, pods",
+		"kube_node_info, kube_node_labels",
+		"healthy / attention",
+		"a - b",
+		"first; second",
+	}
+
+	for _, value := range cases {
+		t.Run(value, func(t *testing.T) {
+			source := "package sample\n\nfunc f() {\n\tx := " + strconv.Quote(value) + "\n\t_ = x\n}\n"
+			got, err := ReaderText("sample.go", []byte(source), true)
+			if err != nil {
+				t.Fatalf("ReaderText returned error: %v", err)
+			}
+			if len(got) != 0 {
+				t.Fatalf("ReaderText(%q) = %v, want empty", value, got)
+			}
+		})
+	}
+}
+
+// TestReaderTextFindsTwoSpaces confirms the narrowed gap rule still allows
+// more than one space, not only exactly one.
+func TestReaderTextFindsTwoSpaces(t *testing.T) {
+	const source = `package sample
+
+func f() {
+	x := "no  remark"
+	_ = x
+}
+`
+	got, err := ReaderText("sample.go", []byte(source), true)
+	if err != nil {
+		t.Fatalf("ReaderText returned error: %v", err)
+	}
+	want := []string{`sample.go:4: "no  remark"`}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ReaderText = %v, want %v", got, want)
+	}
+}
+
 func TestReaderTextIgnoresDiagnostics(t *testing.T) {
 	cases := []struct {
 		name   string

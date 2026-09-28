@@ -193,12 +193,14 @@ func wordRuns(value string) []wordRun {
 }
 
 // hasTwoAdjacentWords reports whether value holds two words of two or more
-// letters each, with a space between them. The gap between them may also
-// hold other punctuation that is not itself a letter — most commonly a
-// stray percent sign that did not form a verb, as in "rate % change" — so
-// that an ordinary sentence still reads as one even when it happens to
-// carry a percent sign; wordRuns already guarantees the gap holds no letter
-// of its own.
+// letters each, with a gap between them that holds only spaces and percent
+// signs, and at least one space. The percent sign is allowed, and nothing
+// else is, so that "rate % change" (a plain sentence that happens to carry
+// a stray percent sign that did not form a verb) still reads as one, while
+// a MIME type ("text/plain; charset=utf-8"), a key/value pair ("key:
+// value"), or a comma-joined list of real words ("nodes, pods") does not:
+// a semicolon, a colon, a comma, and a slash each disqualify the gap.
+// wordRuns already guarantees the gap holds no letter of its own.
 func hasTwoAdjacentWords(value string) bool {
 	runes := []rune(value)
 	runs := wordRuns(value)
@@ -207,21 +209,28 @@ func hasTwoAdjacentWords(value string) bool {
 		if len(a.runes) < 2 || len(b.runes) < 2 {
 			continue
 		}
-		if hasSpace(runes[a.end:b.start]) {
+		if isSpaceAndPercentGap(runes[a.end:b.start]) {
 			return true
 		}
 	}
 	return false
 }
 
-// hasSpace reports whether runes holds at least one ASCII space.
-func hasSpace(runes []rune) bool {
-	for _, r := range runes {
-		if r == ' ' {
-			return true
+// isSpaceAndPercentGap reports whether gap holds only ' ' and '%' runes,
+// with at least one ' ' among them. Any other rune disqualifies the gap.
+func isSpaceAndPercentGap(gap []rune) bool {
+	sawSpace := false
+	for _, r := range gap {
+		switch r {
+		case ' ':
+			sawSpace = true
+		case '%':
+			// Allowed alongside a space; see hasTwoAdjacentWords.
+		default:
+			return false
 		}
 	}
-	return false
+	return sawSpace
 }
 
 // hasWordOfTwoLetters reports whether value holds at least one word of two
