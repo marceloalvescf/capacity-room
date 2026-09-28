@@ -1420,7 +1420,7 @@ present. It records every query.
 | `TestEveryReasonIsInTheRegistry` | all the tables above | each code given is in `ReasonCodes`, and each code of `ReasonCodes` was given by some row |
 | `TestCheckSufficient` (table) | all nine available; the five unavailable and autoscaling partial; the five unavailable and autoscaling available; four unavailable and one partial | nil; `ErrInsufficient`; nil; nil |
 | `TestDetectScenario` (table) | each entry of `promtest.Scenarios`, through `prom.Connect` and `ResolveScope` | the table of scenario results below; `Seen()` holds no unmatched request |
-| `TestDetectScenarioUsesTheExpectedRequests` (table) | the same | scripted requests used, probe and scope included: 31 for `raw-fallback`, 29 for each of the others |
+| `TestDetectScenarioUsesTheExpectedRequests` (table) | the same | scripted requests used, probe and scope included: 30 for `raw-fallback`, 26 for `partial-data`, 29 for each of the others. The files hold an answer for every probe; the short cuts leave the memory rule unasked in both, and the two raw memory metrics unasked in `partial-data` |
 
 Scenario results. Every capability that is not listed is available.
 
