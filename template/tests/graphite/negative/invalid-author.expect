@@ -1,0 +1,1 @@
+graphite-report: `author` must be a string, array of strings, or none

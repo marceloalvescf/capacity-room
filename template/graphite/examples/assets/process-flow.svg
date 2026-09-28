@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="260" viewBox="0 0 900 260" role="img" aria-labelledby="title desc">
+  <title id="title">Fluxo corporativo em três etapas</title>
+  <desc id="desc">Planejar, executar e revisar conectados da esquerda para a direita.</desc>
+  <rect width="900" height="260" fill="#ffffff"/>
+  <g fill="#f2f2f2" stroke="#000000" stroke-width="3">
+    <rect x="30" y="70" width="220" height="120" rx="8"/>
+    <rect x="340" y="70" width="220" height="120" rx="8"/>
+    <rect x="650" y="70" width="220" height="120" rx="8"/>
+  </g>
+  <g stroke="#000000" stroke-width="4" fill="none">
+    <path d="M250 130h80"/>
+    <path d="m320 120 10 10-10 10"/>
+    <path d="M560 130h80"/>
+    <path d="m630 120 10 10-10 10"/>
+  </g>
+  <g fill="#000000" font-family="Liberation Sans, Arial, sans-serif" font-size="28" text-anchor="middle">
+    <text x="140" y="140">Planejar</text>
+    <text x="450" y="140">Executar</text>
+    <text x="760" y="140">Revisar</text>
+  </g>
+</svg>
