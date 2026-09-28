@@ -1,6 +1,7 @@
 package guard
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -89,7 +90,6 @@ func TestReaderTextIgnoresIdentifiers(t *testing.T) {
 		"%s: %d",
 		"—",
 		"●",
-		"100%% of %s",
 	}
 
 	for _, value := range cases {
@@ -103,6 +103,108 @@ func TestReaderTextIgnoresIdentifiers(t *testing.T) {
 				t.Fatalf("ReaderText(%q) = %v, want empty", value, got)
 			}
 		})
+	}
+}
+
+// TestReaderTextFindsPercentSentences covers task 12's second review round,
+// Ruling A: fixing the verb-removal regex (space is not a flag) must not
+// stop an ordinary sentence that happens to carry a percent sign from
+// being read as one.
+func TestReaderTextFindsPercentSentences(t *testing.T) {
+	cases := []string{
+		"50% of nodes",
+		"100%% of %s",
+		"rate % change",
+		"usage above 80%",
+	}
+
+	for _, value := range cases {
+		t.Run(value, func(t *testing.T) {
+			source := "package sample\n\nfunc f() {\n\tx := " + strconv.Quote(value) + "\n\t_ = x\n}\n"
+			got, err := ReaderText("sample.go", []byte(source), true)
+			if err != nil {
+				t.Fatalf("ReaderText returned error: %v", err)
+			}
+			want := []string{fmt.Sprintf("sample.go:4: %s", strconv.Quote(value))}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("ReaderText(%q) = %v, want %v", value, got, want)
+			}
+		})
+	}
+}
+
+// TestReaderTextFindsFormatWithAWord covers Ruling B: a literal that holds
+// a genuine verb and a word of two or more letters is a sentence the reader
+// sees filled in.
+func TestReaderTextFindsFormatWithAWord(t *testing.T) {
+	cases := []string{
+		"%d nodes",
+		"nodes: %d",
+		"%.1f%% used",
+		"%s (%d pods)",
+	}
+
+	for _, value := range cases {
+		t.Run(value, func(t *testing.T) {
+			source := "package sample\n\nfunc f() {\n\tx := " + strconv.Quote(value) + "\n\t_ = x\n}\n"
+			got, err := ReaderText("sample.go", []byte(source), true)
+			if err != nil {
+				t.Fatalf("ReaderText returned error: %v", err)
+			}
+			want := []string{fmt.Sprintf("sample.go:4: %s", strconv.Quote(value))}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("ReaderText(%q) = %v, want %v", value, got, want)
+			}
+		})
+	}
+}
+
+// TestReaderTextIgnoresFormatWithoutAWord covers the other half of Ruling
+// B: a literal that holds only verbs, no word of two or more letters left
+// beside them, is not reported.
+func TestReaderTextIgnoresFormatWithoutAWord(t *testing.T) {
+	cases := []string{
+		"%s: %d",
+		"%s, %s",
+		"%d%%",
+		"%.2f",
+		"%-10s",
+		"%+d",
+		"%05d",
+		"%#x",
+		"%%",
+	}
+
+	for _, value := range cases {
+		t.Run(value, func(t *testing.T) {
+			source := "package sample\n\nfunc f() {\n\tx := " + strconv.Quote(value) + "\n\t_ = x\n}\n"
+			got, err := ReaderText("sample.go", []byte(source), true)
+			if err != nil {
+				t.Fatalf("ReaderText returned error: %v", err)
+			}
+			if len(got) != 0 {
+				t.Fatalf("ReaderText(%q) = %v, want empty", value, got)
+			}
+		})
+	}
+}
+
+// TestReaderTextFormatRuleNeedsStrict confirms Ruling B's third rule, like
+// the other two strict-only rules, does not apply outside strict.
+func TestReaderTextFormatRuleNeedsStrict(t *testing.T) {
+	const source = `package sample
+
+func f() {
+	x := "%d nodes"
+	_ = x
+}
+`
+	got, err := ReaderText("sample.go", []byte(source), false)
+	if err != nil {
+		t.Fatalf("ReaderText returned error: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("ReaderText(not strict) = %v, want empty", got)
 	}
 }
 
@@ -373,30 +475,109 @@ func TestReaderTextRejectsBrokenSource(t *testing.T) {
 	}
 }
 
-// TestRepositoryHoldsNoReaderTextOutsideTheCatalog reads every Go file that
-// git tracks under internal/ and cmd/, test files left out, and asks
-// ReaderText whether it holds a sentence for a reader. internal/catalog and
-// internal/guard are left out: the catalog is where such text belongs, and
-// this package's own tests hold Portuguese and English text as fixtures.
-// internal/document is read with strict, since it is closest to composing a
-// report and so most exposed to acquiring wording of its own; every other
-// package is read under the plain rule that holds everywhere.
-func TestRepositoryHoldsNoReaderTextOutsideTheCatalog(t *testing.T) {
-	root := moduleRoot(t)
+// repositoryGoFiles runs `git ls-files --cached --others --exclude-standard`
+// from root, restricted to the given pathspecs (the whole repository when
+// none are given), and returns each path git reports, relative to root.
+// --cached lists tracked files, and --others --exclude-standard adds
+// untracked files that are not ignored, so a file just created and not yet
+// `git add`-ed is still seen, while a file matched by .gitignore never is —
+// the same combination the Makefile already uses to list files for gofmt.
+// Plain `git ls-files` (tracked files only, this guard's first version)
+// misses exactly the file an implementer is most likely to be looking at:
+// one just written, before its first commit.
+func repositoryGoFiles(t *testing.T, root string, pathspecs ...string) []string {
+	t.Helper()
 
-	cmd := exec.Command("git", "ls-files", "--", "internal", "cmd")
+	args := []string{"ls-files", "--cached", "--others", "--exclude-standard"}
+	if len(pathspecs) > 0 {
+		args = append(args, "--")
+		args = append(args, pathspecs...)
+	}
+	cmd := exec.Command("git", args...)
 	cmd.Dir = root
 	out, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("git ls-files: %v", err)
+		t.Fatalf("git %s: %v", strings.Join(args, " "), err)
 	}
+
+	var files []string
+	for _, rel := range strings.Split(strings.TrimRight(string(out), "\n"), "\n") {
+		if rel != "" {
+			files = append(files, rel)
+		}
+	}
+	return files
+}
+
+// TestRepositoryTestSeesANewFile confirms repositoryGoFiles sees a file
+// that was just created and never `git add`-ed, and still leaves out a
+// file matched by .gitignore — the class of gap the plain `git ls-files`
+// this guard's first version used could not close, since a new file is
+// invisible to it until it is staged, which an implementer running
+// `make test` before a commit has not yet done.
+func TestRepositoryTestSeesANewFile(t *testing.T) {
+	root := t.TempDir()
+
+	runGit := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = root
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	writeFile := func(name, content string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(root, name), []byte(content), 0o644); err != nil {
+			t.Fatalf("writing %s: %v", name, err)
+		}
+	}
+
+	runGit("init")
+
+	writeFile("tracked.go", "package sample\n")
+	writeFile("new.go", "package sample\n\nvar x = \"Sem observação\"\n")
+	writeFile("ignored.go", "package sample\n\nvar y = \"Sem observação\"\n")
+	writeFile(".gitignore", "ignored.go\n")
+
+	runGit("add", "tracked.go")
+
+	got := repositoryGoFiles(t, root)
+
+	has := func(name string) bool {
+		for _, f := range got {
+			if f == name {
+				return true
+			}
+		}
+		return false
+	}
+	if !has("tracked.go") {
+		t.Fatalf("repositoryGoFiles(%v) is missing tracked.go", got)
+	}
+	if !has("new.go") {
+		t.Fatalf("repositoryGoFiles(%v) is missing new.go", got)
+	}
+	if has("ignored.go") {
+		t.Fatalf("repositoryGoFiles(%v) should not hold ignored.go", got)
+	}
+}
+
+// TestRepositoryHoldsNoReaderTextOutsideTheCatalog reads every Go file
+// repositoryGoFiles finds under internal/ and cmd/, test files left out,
+// and asks ReaderText whether it holds a sentence for a reader.
+// internal/catalog and internal/guard are left out: the catalog is where
+// such text belongs, and this package's own tests hold Portuguese and
+// English text as fixtures. internal/document is read with strict, since
+// it is closest to composing a report and so most exposed to acquiring
+// wording of its own; every other package is read under the plain rule
+// that holds everywhere.
+func TestRepositoryHoldsNoReaderTextOutsideTheCatalog(t *testing.T) {
+	root := moduleRoot(t)
 
 	var violations []string
 	filesScanned := 0
-	for _, rel := range strings.Split(strings.TrimRight(string(out), "\n"), "\n") {
-		if rel == "" {
-			continue
-		}
+	for _, rel := range repositoryGoFiles(t, root, "internal", "cmd") {
 		if !strings.HasSuffix(rel, ".go") || strings.HasSuffix(rel, "_test.go") {
 			continue
 		}

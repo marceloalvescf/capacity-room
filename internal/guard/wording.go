@@ -18,20 +18,60 @@ import (
 // be empty.
 const wordingExemptPrefix = "// wording: not reader text,"
 
-// verbPattern matches one printf verb: '%', then optional flags and width,
-// then one letter. It never matches "%%", because neither '%' of that pair
-// can start a match: from the first '%', the next character ('%') is not a
-// flag, a digit, or a letter; from the second '%', nothing follows to supply
-// the required letter. So "%%" is removed by neither branch and is kept
-// as-is, which is how this guard treats it as a literal percent sign rather
-// than a verb.
-var verbPattern = regexp.MustCompile(`%[-+ 0#]*[0-9]*[A-Za-z]`)
+// verbOrEscape matches, at each position, one of two things, tried in this
+// order: "%%", an escaped literal percent sign, or one printf verb: '%',
+// then any of the flags -, +, 0, #, then an optional width of digits, then
+// an optional '.' with optional digits, then one ASCII letter. A space is
+// deliberately not a flag (unlike Go's own fmt package), so a literal
+// percent sign followed by a space and an ordinary word — "50% of nodes",
+// this program's daily bread — is never mistaken for a verb. Trying "%%"
+// first, and consuming both its characters as one match, is what keeps the
+// second '%' of that pair from ever starting a further match of its own;
+// without that, "100%% of %s" would let the second '%' combine with " o"
+// (the space plus the 'o' of "of") into a bogus match, exactly the bug this
+// pattern replaces.
+var verbOrEscape = regexp.MustCompile(`%%|%[-+0#]*[0-9]*(?:\.[0-9]*)?[A-Za-z]`)
+
+// removeVerbs returns value with every printf verb removed. "%%" collapses
+// to a single '%', kept in the result rather than deleted, since it denotes
+// a literal percent sign; that lone '%' is never read again as the start of
+// a further verb, because removeVerbs tokenizes value with verbOrEscape in
+// one left-to-right pass, so the second '%' of an escaped pair is already
+// spent as part of that match and is never offered to the verb branch.
+func removeVerbs(value string) string {
+	return verbOrEscape.ReplaceAllStringFunc(value, func(match string) string {
+		if match == "%%" {
+			return "%"
+		}
+		return ""
+	})
+}
+
+// hasVerb reports whether value holds at least one genuine printf verb, in
+// the sense of verbOrEscape's second alternative — not merely a '%'
+// character, and not "%%", which denotes a literal percent sign rather than
+// a verb. Used only together with hasWordOfTwoLetters, for the rule that a
+// literal mixing a verb with a word, such as "%d nodes", is a sentence a
+// reader sees filled in (e.g. "3 nodes"), even though "%d" alone, or a verb
+// left beside no word at all (e.g. "%s: %d"), is not.
+func hasVerb(value string) bool {
+	for _, match := range verbOrEscape.FindAllString(value, -1) {
+		if match != "%%" {
+			return true
+		}
+	}
+	return false
+}
 
 // ReaderText parses source as a Go file and returns one entry for each
 // string literal that looks like text for a reader, in source order, as
 // "<file>:<line>: <literal>". With strict false it applies the rule that
 // holds for every package; with strict true it adds the rules that hold
-// for internal/document.
+// for internal/document: two adjacent words of two or more letters, a
+// capitalised word, and — of a literal that holds at least one genuine
+// printf verb — at least one word of two or more letters left beside it
+// once every verb is removed, so that "%d nodes" is caught as the sentence
+// it becomes ("3 nodes") while "%s: %d", which holds no word at all, is not.
 //
 // Never reported: an import path; a struct tag; an argument of
 // errors.New, of fmt.Errorf, or of a call whose function name ends in
@@ -94,9 +134,10 @@ func ReaderText(filename string, source []byte, strict bool) ([]string, error) {
 }
 
 // looksLikeReaderText applies the rule that holds for every package (value
-// holds a letter outside ASCII), and, when strict is true, the two further
+// holds a letter outside ASCII), and, when strict is true, the further
 // rules that hold for internal/document, read after every printf verb is
-// removed from value.
+// removed from value: two adjacent words, a capitalised word, or a verb
+// left beside a word (see hasVerb).
 func looksLikeReaderText(value string, strict bool) bool {
 	if hasNonASCIILetter(value) {
 		return true
@@ -105,8 +146,11 @@ func looksLikeReaderText(value string, strict bool) bool {
 		return false
 	}
 
-	stripped := verbPattern.ReplaceAllString(value, "")
-	return hasTwoAdjacentWords(stripped) || hasCapitalisedWord(stripped)
+	stripped := removeVerbs(value)
+	if hasTwoAdjacentWords(stripped) || hasCapitalisedWord(stripped) {
+		return true
+	}
+	return hasVerb(value) && hasWordOfTwoLetters(stripped)
 }
 
 // hasNonASCIILetter reports whether value holds a rune that is a letter
@@ -149,7 +193,12 @@ func wordRuns(value string) []wordRun {
 }
 
 // hasTwoAdjacentWords reports whether value holds two words of two or more
-// letters each, with exactly one space between them.
+// letters each, with a space between them. The gap between them may also
+// hold other punctuation that is not itself a letter — most commonly a
+// stray percent sign that did not form a verb, as in "rate % change" — so
+// that an ordinary sentence still reads as one even when it happens to
+// carry a percent sign; wordRuns already guarantees the gap holds no letter
+// of its own.
 func hasTwoAdjacentWords(value string) bool {
 	runes := []rune(value)
 	runs := wordRuns(value)
@@ -158,7 +207,29 @@ func hasTwoAdjacentWords(value string) bool {
 		if len(a.runes) < 2 || len(b.runes) < 2 {
 			continue
 		}
-		if b.start-a.end == 1 && runes[a.end] == ' ' {
+		if hasSpace(runes[a.end:b.start]) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasSpace reports whether runes holds at least one ASCII space.
+func hasSpace(runes []rune) bool {
+	for _, r := range runes {
+		if r == ' ' {
+			return true
+		}
+	}
+	return false
+}
+
+// hasWordOfTwoLetters reports whether value holds at least one word of two
+// or more letters, with no requirement that a second one sit next to it.
+// Used only together with hasVerb.
+func hasWordOfTwoLetters(value string) bool {
+	for _, run := range wordRuns(value) {
+		if len(run.runes) >= 2 {
 			return true
 		}
 	}
