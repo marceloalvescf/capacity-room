@@ -21,8 +21,13 @@ var forbiddenModulePrefixes = []string{
 
 // hasForbiddenPrefix reports whether module matches prefix on path
 // segments: module equals prefix, or module starts with prefix + "/".
-// This keeps "k8s.io" from matching "k8s.iox".
+// This keeps "k8s.io" from matching "k8s.iox". The comparison is
+// case-insensitive, since a module path spelled with different letter case
+// (or replaced to a locally vendored copy under that spelling) is the same
+// forbidden dependency to the Go toolchain.
 func hasForbiddenPrefix(module, prefix string) bool {
+	module = strings.ToLower(module)
+	prefix = strings.ToLower(prefix)
 	return module == prefix || strings.HasPrefix(module, prefix+"/")
 }
 

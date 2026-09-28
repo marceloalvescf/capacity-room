@@ -63,6 +63,32 @@ func TestForbiddenModulesReplace(t *testing.T) {
 	}
 }
 
+func TestForbiddenModulesIgnoresCase(t *testing.T) {
+	gomod := baseGoMod + "require K8s.io/client-go v0.30.0\n"
+
+	got, err := ForbiddenModules([]byte(gomod))
+	if err != nil {
+		t.Fatalf("ForbiddenModules returned error: %v", err)
+	}
+	want := []string{"K8s.io/client-go"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ForbiddenModules = %v, want %v", got, want)
+	}
+}
+
+func TestForbiddenModulesIgnoresCaseInPrefixList(t *testing.T) {
+	gomod := baseGoMod + "require github.com/azure/azure-sdk-for-go v1.0.0\n"
+
+	got, err := ForbiddenModules([]byte(gomod))
+	if err != nil {
+		t.Fatalf("ForbiddenModules returned error: %v", err)
+	}
+	want := []string{"github.com/azure/azure-sdk-for-go"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ForbiddenModules = %v, want %v", got, want)
+	}
+}
+
 func TestForbiddenModulesSegmentBoundary(t *testing.T) {
 	gomod := baseGoMod + "require k8s.iox/thing v1.0.0\n"
 
