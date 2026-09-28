@@ -538,8 +538,12 @@ Rules:
   template. An unknown identifier stops the compile.
 - The template never evaluates a value as markup. A test forbids `eval` in
   the template.
-- `report.json` also carries the theme values that depend on language:
-  `lang`, `region`, and the date format.
+- `report.json` also carries the theme values that depend on language,
+  `lang` and `region`, which drive hyphenation. Dates arrive already
+  formatted, as text.
+- The data file is strict in both directions: an unknown key is an error, and
+  so is a field that no page uses. A field enters the contract with the
+  feature that prints it.
 
 ### 10.3 Content
 
@@ -586,8 +590,10 @@ reports. Installing it is a plain copy into the local package folder. One test
 proves it: it copies the folder to a scratch package path and compiles the
 starter document through the package name.
 
-The layer keeps its Portuguese default labels. `capacity/` always passes every
-label and the language keys, and a test confirms none is left to the default.
+The layer keeps its Portuguese default labels. `capacity/` always passes the
+language keys and every label that can reach the page, which are the three
+that a callout without a title prints. A test confirms none of them is left
+to the default.
 
 Known limits, carried over and documented in the template README:
 
@@ -944,6 +950,8 @@ Run in the Linux image with `typst` 0.15.1, the project fonts, and
 - The report layer adds golden pages in both languages.
 - One list declares the golden pages. Tests and the update command both read
   it.
+- A snapshot covers every page of its document, or states which pages it
+  leaves out and why. A test compares the list with the page count.
 - Golden images are compared by SHA-256. When a page differs, the harness
   writes a difference image.
 - A test never updates a golden image. `make update-golden` does, and every

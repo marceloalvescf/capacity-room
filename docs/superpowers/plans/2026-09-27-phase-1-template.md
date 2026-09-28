@@ -1138,6 +1138,23 @@ not numbered, a bullet list, and bold labels inside a sentence. The contract
 gained the block types `front` and `list`, the heading field `numbered`, and
 the run kind `strong`. Spec section 10.2 was updated to match.
 
+## Changes after the adversarial review of 2026-09-28
+
+The text of Tasks 4, 6, and 8 above is kept as it was written. These changes
+win where they disagree with it.
+
+- `theme` holds `lang` and `region` only. `labels` holds `note`, `info`, and
+  `warning` only. `date_format` and the labels `author`, `date`,
+  `classification`, and `outline` were required and reached no page.
+- Three diagnostics were added: `duplicate-outline`, `trailing-pagebreak`,
+  and an empty or blank table header under `wrong-type`. With the three of
+  the contract extension, the report layer has twenty-one.
+- `Snapshot` has a field `Data`, the data file of a report snapshot, and a
+  field `Omits`, which says which pages a snapshot leaves out and why.
+- `capacity-pt` and `capacity-en` cover every page of their documents.
+- A fifth report snapshot, `capacity-parity`, renders an exact transcription
+  of the original report.
+
 ## Self-review against the spec
 
 | Spec | Task |
