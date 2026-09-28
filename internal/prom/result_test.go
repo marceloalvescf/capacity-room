@@ -179,6 +179,30 @@ func TestQueryFailures(t *testing.T) {
 			wantKind: KindQuery,
 			wantMsg:  "Prometheus response contains an invalid sample",
 		},
+		{
+			name:     "the first member is a non-numeric string",
+			body:     `{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":["nope","2"]}]}}`,
+			wantKind: KindQuery,
+			wantMsg:  "Prometheus response contains an invalid sample",
+		},
+		{
+			name:     "the first member is an object",
+			body:     `{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[{},"2"]}]}}`,
+			wantKind: KindQuery,
+			wantMsg:  "Prometheus response contains an invalid sample",
+		},
+		{
+			name:     "the first member is null",
+			body:     `{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[null,"2"]}]}}`,
+			wantKind: KindQuery,
+			wantMsg:  "Prometheus response contains an invalid sample",
+		},
+		{
+			name:     "the first member is a boolean",
+			body:     `{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[true,"2"]}]}}`,
+			wantKind: KindQuery,
+			wantMsg:  "Prometheus response contains an invalid sample",
+		},
 	}
 
 	for _, tc := range cases {
@@ -186,6 +210,45 @@ func TestQueryFailures(t *testing.T) {
 			client := connectedClient(t, func(int32) (int, string) { return http.StatusOK, tc.body })
 			_, err := client.Query(context.Background(), "up", time.Unix(1000, 0))
 			assertPromError(t, err, tc.wantKind, tc.wantMsg)
+		})
+	}
+}
+
+// TestQueryAcceptsTimeAsNumberOrText checks that a sample's first member,
+// the time, is read whether Prometheus sent it as a JSON number (whole or
+// fractional) or as a JSON string strconv.ParseFloat can read.
+func TestQueryAcceptsTimeAsNumberOrText(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "whole number",
+			body: `{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1784136600,"2"]}]}}`,
+		},
+		{
+			name: "fractional number",
+			body: `{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1784136600.5,"2"]}]}}`,
+		},
+		{
+			name: "text",
+			body: `{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":["1784136600","2"]}]}}`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			client := connectedClient(t, func(int32) (int, string) { return http.StatusOK, tc.body })
+			samples, err := client.Query(context.Background(), "up", time.Unix(1000, 0))
+			if err != nil {
+				t.Fatalf("Query: %v", err)
+			}
+			if len(samples) != 1 {
+				t.Fatalf("len(samples) = %d, want 1", len(samples))
+			}
+			if !samples[0].Valid || samples[0].Value != 2 {
+				t.Errorf("sample = %+v, want Valid true, Value 2", samples[0])
+			}
 		})
 	}
 }

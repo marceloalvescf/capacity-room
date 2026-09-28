@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -627,9 +628,209 @@ func TestTimeoutCoversTheBody(t *testing.T) {
 	_, err := Connect(context.Background(), opts)
 	elapsed := time.Since(start)
 
-	assertPromError(t, err, KindMetrics, "could not connect to the metrics endpoint")
+	assertPromError(t, err, KindMetrics, errCouldNotConnect)
 	if elapsed > 5*time.Second {
 		t.Fatalf("Connect took %v, want it to fail quickly rather than hang", elapsed)
+	}
+}
+
+// hangingServer starts a server whose handler never answers on its own. It
+// waits for the request's own context to end (the client gave up), but
+// bounds the wait: detecting that a client dropped its side of the
+// connection is not instant, and httptest.Server.Close blocks until every
+// handler has returned, so an unbounded wait here would leave a slow
+// detection holding the whole test open rather than the 50ms the tests
+// that use this actually need.
+func hangingServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-time.After(300 * time.Millisecond):
+		}
+	}))
+	t.Cleanup(server.Close)
+	return server
+}
+
+// TestCancelledContextCarriesNoAddress checks that a context the caller
+// cancels mid-request — not merely one whose deadline passed — is reported
+// without the endpoint's address anywhere in the message.
+func TestCancelledContextCarriesNoAddress(t *testing.T) {
+	server := hangingServer(t)
+
+	opts := baseOptions(server.URL + "/api/v1")
+	opts.Token = "s3cr3t-value"
+	// opts.Sleep left nil: no retry is expected, so it is never called.
+
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(50*time.Millisecond, cancel)
+
+	_, err := Connect(ctx, opts)
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("err = %v, want it to wrap context.Canceled", err)
+	}
+	host := hostOf(server.URL)
+	if strings.Contains(err.Error(), host) {
+		t.Errorf("message %q holds the host %q", err.Error(), host)
+	}
+	if strings.Contains(err.Error(), opts.Token) {
+		t.Errorf("message %q holds the token", err.Error())
+	}
+}
+
+// TestDeadlineOfTheCallCarriesNoAddress is the same, but with a context
+// deadline rather than an explicit cancel, and a per-attempt timeout far
+// longer than that deadline, so the caller's own context is what ends the
+// call.
+func TestDeadlineOfTheCallCarriesNoAddress(t *testing.T) {
+	server := hangingServer(t)
+
+	opts := baseOptions(server.URL + "/api/v1")
+	opts.Metrics.TimeoutSeconds = 30
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := Connect(ctx, opts)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("err = %v, want it to wrap context.DeadlineExceeded", err)
+	}
+	if strings.Contains(err.Error(), hostOf(server.URL)) {
+		t.Errorf("message %q holds the host", err.Error())
+	}
+}
+
+// TestTimeoutOfOneAttemptIsRetried checks that a per-attempt timeout
+// (Metrics.TimeoutSeconds, not the caller's own context) is a plain,
+// retried connection failure: the caller's context here has no deadline at
+// all, so only the three attempts' own budgets ever expire.
+func TestTimeoutOfOneAttemptIsRetried(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-time.After(500 * time.Millisecond):
+		}
+	}))
+	defer server.Close()
+
+	sleep, waits := recordingSleep()
+	opts := baseOptions(server.URL + "/api/v1")
+	opts.Sleep = sleep
+	opts.Metrics.TimeoutSeconds = 0.1
+
+	_, err := Connect(context.Background(), opts)
+	assertPromError(t, err, KindMetrics, errCouldNotConnect)
+	want := []time.Duration{time.Second, 2 * time.Second}
+	if !reflect.DeepEqual(*waits, want) {
+		t.Errorf("waits = %v, want %v", *waits, want)
+	}
+}
+
+// TestBodyReadFailureIsClassified checks that a failure reading the
+// response body — not sending the request — goes through the same
+// classification as a connection failure, and is retried the same way.
+// The brief's own text says the TLS equivalent is not needed: a body-read
+// failure already exercises the shared classifier; a TLS handshake failure
+// happens before any body exists to read.
+func TestBodyReadFailureIsClassified(t *testing.T) {
+	cases := []struct {
+		name    string
+		handler http.HandlerFunc
+	}{
+		{
+			name: "connection closes mid-body",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				hijacker, ok := w.(http.Hijacker)
+				if !ok {
+					http.Error(w, "no hijack support", http.StatusInternalServerError)
+					return
+				}
+				conn, buf, err := hijacker.Hijack()
+				if err != nil {
+					return
+				}
+				defer func() { _ = conn.Close() }()
+				// Promise 100 bytes, deliver a few, then close: the client
+				// reads a truncated body and fails before finishing it.
+				_, _ = buf.WriteString("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{\"stat")
+				_ = buf.Flush()
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(tc.handler)
+			defer server.Close()
+
+			sleep, waits := recordingSleep()
+			opts := baseOptions(server.URL + "/api/v1")
+			opts.Sleep = sleep
+
+			_, err := Connect(context.Background(), opts)
+			assertPromError(t, err, KindMetrics, errCouldNotConnect)
+			want := []time.Duration{time.Second, 2 * time.Second}
+			if !reflect.DeepEqual(*waits, want) {
+				t.Errorf("waits = %v, want %v", *waits, want)
+			}
+		})
+	}
+}
+
+// TestKeepAlivesStayOn checks that the built transport leaves keep-alives
+// on: a report run asks about 70 questions of one endpoint, and each
+// deserves to reuse a connection rather than pay a fresh handshake.
+func TestKeepAlivesStayOn(t *testing.T) {
+	transport, err := buildTransport(config.Metrics{TLSVerify: true, TimeoutSeconds: 5})
+	if err != nil {
+		t.Fatalf("buildTransport: %v", err)
+	}
+	if transport.DisableKeepAlives {
+		t.Error("DisableKeepAlives is true, want false")
+	}
+}
+
+// TestConnectionIsReused checks, end to end, that a bound Client's
+// sequential requests actually share a connection rather than each paying
+// a fresh handshake: fewer distinct remote addresses (as the server sees
+// them) than requests.
+func TestConnectionIsReused(t *testing.T) {
+	var mu sync.Mutex
+	remoteAddrs := map[string]bool{}
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		remoteAddrs[r.RemoteAddr] = true
+		mu.Unlock()
+		atomic.AddInt32(&calls, 1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(emptySuccessVector))
+	}))
+	defer server.Close()
+
+	sleep, _ := recordingSleep()
+	opts := baseOptions(server.URL + "/api/v1")
+	opts.Sleep = sleep
+	client, err := Connect(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+
+	for i := 0; i < 3; i++ {
+		if _, err := client.Query(context.Background(), "up", time.Unix(1000, 0)); err != nil {
+			t.Fatalf("Query %d: %v", i, err)
+		}
+	}
+
+	mu.Lock()
+	distinct := len(remoteAddrs)
+	mu.Unlock()
+	if int(calls) != 4 {
+		t.Fatalf("requests = %d, want 4", calls)
+	}
+	if distinct >= int(calls) {
+		t.Errorf("distinct remote addresses = %d, want fewer than %d requests", distinct, calls)
 	}
 }
 
@@ -733,11 +934,50 @@ func TestForeignTransportErrorIsReturnedOnce(t *testing.T) {
 	if !errors.Is(err, sentinel) {
 		t.Errorf("err = %v, want it to be sentinel by errors.Is", err)
 	}
+	if err.Error() != sentinel.Error() {
+		t.Errorf("err.Error() = %q, want exactly %q (no Post \"...\": prefix)", err.Error(), sentinel.Error())
+	}
 	if transport.calls != 1 {
 		t.Errorf("calls = %d, want 1", transport.calls)
 	}
 	if len(*waits) != 0 {
 		t.Errorf("waits = %v, want none", *waits)
+	}
+}
+
+// TestForeignTransportConnectionErrorIsRetried checks that a caller-supplied
+// transport failing with an ordinary network error (here a *net.OpError) is
+// not treated as foreign: it is retried like any other connection failure,
+// and reported with this package's own fixed message.
+func TestForeignTransportConnectionErrorIsRetried(t *testing.T) {
+	networkErr := &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}
+	transport := &countingRoundTripper{err: networkErr}
+
+	sleep, waits := recordingSleep()
+	opts := baseOptions("https://prom.example/api/v1")
+	opts.Sleep = sleep
+	opts.Transport = transport
+
+	_, err := Connect(context.Background(), opts)
+	assertPromError(t, err, KindMetrics, errCouldNotConnect)
+	if transport.calls != 3 {
+		t.Errorf("calls = %d, want 3", transport.calls)
+	}
+	want := []time.Duration{time.Second, 2 * time.Second}
+	if !reflect.DeepEqual(*waits, want) {
+		t.Errorf("waits = %v, want %v", *waits, want)
+	}
+}
+
+// TestUnknownTransportErrorOfBuiltTransportIsAConnectionFailure checks the
+// classifying function directly: without a caller-supplied transport, any
+// error at all — however unfamiliar — is a plain connection failure. This
+// is the point of classifying by exclusion rather than by an ever-growing
+// list of known errors.
+func TestUnknownTransportErrorOfBuiltTransportIsAConnectionFailure(t *testing.T) {
+	class, _ := classifyAttemptFailure(context.Background(), errors.New("something new"), false)
+	if class != failureConnection {
+		t.Errorf("class = %v, want failureConnection", class)
 	}
 }
 
@@ -850,6 +1090,41 @@ func TestErrorsNeverRepeatTheAddressOrToken(t *testing.T) {
 		{"invalid sample", func(t *testing.T) (string, error) {
 			return queryAfterConnect(t, http.StatusOK,
 				`{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1,"nope"]}]}}`)
+		}},
+		{"cancelled context", func(t *testing.T) (string, error) {
+			server := hangingServer(t)
+			opts := baseOptions(server.URL + "/api/v1")
+			opts.Token = token
+			ctx, cancel := context.WithCancel(context.Background())
+			time.AfterFunc(50*time.Millisecond, cancel)
+			_, err := Connect(ctx, opts)
+			return hostOf(server.URL), err
+		}},
+		{"deadline", func(t *testing.T) (string, error) {
+			server := hangingServer(t)
+			opts := baseOptions(server.URL + "/api/v1")
+			opts.Token = token
+			opts.Metrics.TimeoutSeconds = 30
+			ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+			defer cancel()
+			_, err := Connect(ctx, opts)
+			return hostOf(server.URL), err
+		}},
+		{"refused connection to a closed port", func(*testing.T) (string, error) {
+			sleep, _ := recordingSleep()
+			opts := baseOptions("http://127.0.0.1:1/api/v1")
+			opts.Sleep = sleep
+			opts.Token = token
+			_, err := Connect(context.Background(), opts)
+			return "127.0.0.1:1", err
+		}},
+		{"a DNS name that does not resolve", func(*testing.T) (string, error) {
+			sleep, _ := recordingSleep()
+			opts := baseOptions("http://no-such-host.invalid/api/v1")
+			opts.Sleep = sleep
+			opts.Token = token
+			_, err := Connect(context.Background(), opts)
+			return "no-such-host.invalid", err
 		}},
 	}
 

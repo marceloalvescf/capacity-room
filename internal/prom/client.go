@@ -26,6 +26,14 @@ const attempts = 3
 // Retry-After header asks for.
 const maxRetryAfter = 60 * time.Second
 
+// errCouldNotConnect is the fixed message of a connection failure or a
+// timeout, once every attempt has been used.
+const errCouldNotConnect = "could not connect to the metrics endpoint"
+
+// midCollectionSuffix marks a failure that came after a good probe: the
+// candidate was the right one, something just went wrong along the way.
+const midCollectionSuffix = " mid-collection"
+
 // Kind says which class of failure an Error is.
 type Kind int
 
@@ -70,6 +78,11 @@ type Client struct {
 	token      string
 	sleep      func(ctx context.Context, d time.Duration) error
 	answered   bool
+	// foreignTransport is true when the caller supplied Options.Transport.
+	// The built-in transport's own errors are never treated as foreign,
+	// whatever shape they take; only a transport the caller controls gets
+	// its errors passed through.
+	foreignTransport bool
 }
 
 // Root returns the API root that answered.
@@ -85,20 +98,22 @@ func Connect(ctx context.Context, opts Options) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	foreignTransport := opts.Transport != nil
 
 	roots, kind := Candidates(opts.Metrics.URL, opts.Metrics.EndpointType)
 
 	for _, root := range roots {
 		answered := false
-		_, err := runQuery(ctx, httpClient, root, opts.Token, opts.Sleep, "vector(1)", nil, &answered)
+		_, err := runQuery(ctx, httpClient, root, opts.Token, opts.Sleep, "vector(1)", nil, &answered, foreignTransport)
 		if err == nil {
 			return &Client{
-				httpClient: httpClient,
-				root:       root,
-				kind:       kind,
-				token:      opts.Token,
-				sleep:      opts.Sleep,
-				answered:   true,
+				httpClient:       httpClient,
+				root:             root,
+				kind:             kind,
+				token:            opts.Token,
+				sleep:            opts.Sleep,
+				answered:         true,
+				foreignTransport: foreignTransport,
 			}, nil
 		}
 
@@ -115,7 +130,7 @@ func Connect(ctx context.Context, opts Options) (*Client, error) {
 // Query asks an instant query at the given time.
 func (c *Client) Query(ctx context.Context, query string, at time.Time) ([]Sample, error) {
 	answered := c.answered
-	samples, err := runQuery(ctx, c.httpClient, c.root, c.token, c.sleep, query, &at, &answered)
+	samples, err := runQuery(ctx, c.httpClient, c.root, c.token, c.sleep, query, &at, &answered, c.foreignTransport)
 	c.answered = answered
 	return samples, err
 }
@@ -142,9 +157,11 @@ func buildHTTPClient(opts Options) (*http.Client, error) {
 }
 
 // buildTransport builds the transport a Client uses when Options.Transport
-// is nil: no proxy, whatever the environment holds, and TLS trust from
-// Metrics.CABundle when it is set, the system roots otherwise, with
-// Metrics.TLSVerify false turning the check off.
+// is nil: no proxy, whatever the environment holds; TLS trust from
+// Metrics.CABundle when it is set, the system roots otherwise; and
+// keep-alives left on, since one report run asks a bound Client dozens of
+// questions and each deserves to reuse the same connection rather than pay
+// a fresh handshake.
 func buildTransport(m config.Metrics) (*http.Transport, error) {
 	tlsConfig := &tls.Config{}
 	if !m.TLSVerify {
@@ -164,11 +181,6 @@ func buildTransport(m config.Metrics) (*http.Transport, error) {
 	return &http.Transport{
 		Proxy:           nil,
 		TLSClientConfig: tlsConfig,
-		// Every attempt is its own connection. Reusing a pooled one would
-		// let a connection a server closed while idle surface as its own
-		// distinct net/http error, one classified as neither a connection
-		// failure nor a TLS failure, and whose text holds the address.
-		DisableKeepAlives: true,
 	}, nil
 }
 
@@ -184,24 +196,21 @@ func secondsToDuration(seconds float64) time.Duration {
 // is set to true the moment that happens, which turns a later 404, 405, or
 // unparsable body from a "wrong candidate" signal into a mid-collection
 // failure.
-func runQuery(ctx context.Context, httpClient *http.Client, root, token string, sleep func(context.Context, time.Duration) error, query string, at *time.Time, answered *bool) ([]Sample, error) {
+func runQuery(
+	ctx context.Context,
+	httpClient *http.Client,
+	root, token string,
+	sleep func(context.Context, time.Duration) error,
+	query string,
+	at *time.Time,
+	answered *bool,
+	foreignTransport bool,
+) ([]Sample, error) {
 	for attempt := 0; attempt < attempts; attempt++ {
 		resp, err := postQuery(ctx, httpClient, root, token, query, at)
 		if err != nil {
-			if isTLSFailure(err) {
-				return nil, &Error{Kind: KindTLS, Message: "TLS validation failed"}
-			}
-			if !isConnectionFailure(err) {
-				// Foreign: Options.Transport failed with its own error,
-				// which is neither a connection failure, a timeout, nor a
-				// TLS failure. It is returned as it is, after one call.
-				return nil, err
-			}
-			if attempt == attempts-1 {
-				return nil, &Error{Kind: KindMetrics, Message: withMidCollection("could not connect to the metrics endpoint", *answered)}
-			}
-			if waitErr := wait(ctx, sleep, retryDelay(attempt)); waitErr != nil {
-				return nil, waitErr
+			if done, failErr := attemptFailed(ctx, sleep, err, foreignTransport, *answered, attempt); done {
+				return nil, failErr
 			}
 			continue
 		}
@@ -209,11 +218,8 @@ func runQuery(ctx context.Context, httpClient *http.Client, root, token string, 
 		body, readErr := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
 		if readErr != nil {
-			if attempt == attempts-1 {
-				return nil, &Error{Kind: KindMetrics, Message: withMidCollection("could not connect to the metrics endpoint", *answered)}
-			}
-			if waitErr := wait(ctx, sleep, retryDelay(attempt)); waitErr != nil {
-				return nil, waitErr
+			if done, failErr := attemptFailed(ctx, sleep, readErr, foreignTransport, *answered, attempt); done {
+				return nil, failErr
 			}
 			continue
 		}
@@ -237,7 +243,7 @@ func runQuery(ctx context.Context, httpClient *http.Client, root, token string, 
 			}
 			delay := retryAfterDelay(resp.Header.Get("Retry-After"), retryDelay(attempt))
 			if waitErr := wait(ctx, sleep, delay); waitErr != nil {
-				return nil, waitErr
+				return nil, fmt.Errorf("metrics request stopped: %w", waitErr)
 			}
 			continue
 
@@ -256,7 +262,39 @@ func runQuery(ctx context.Context, httpClient *http.Client, root, token string, 
 	// Every branch above either returns or continues, and the branches that
 	// continue always return instead on the last attempt, so this line is
 	// never reached; it satisfies the compiler's need for a final return.
-	return nil, &Error{Kind: KindMetrics, Message: withMidCollection("could not connect to the metrics endpoint", *answered)}
+	return nil, &Error{Kind: KindMetrics, Message: withMidCollection(errCouldNotConnect, *answered)}
+}
+
+// attemptFailed classifies one attempt's failure — from sending the
+// request or from reading its body, the same classification either way —
+// and decides what runQuery does next. When done is true, runQuery returns
+// err immediately. When done is false, the attempt is retried: a wait has
+// already happened, unless this was the last attempt, in which case done
+// is always true.
+func attemptFailed(
+	ctx context.Context,
+	sleep func(context.Context, time.Duration) error,
+	failure error,
+	foreignTransport bool,
+	answered bool,
+	attempt int,
+) (done bool, err error) {
+	switch class, cause := classifyAttemptFailure(ctx, failure, foreignTransport); class {
+	case failureStopped:
+		return true, cause
+	case failureTLS:
+		return true, &Error{Kind: KindTLS, Message: "TLS validation failed"}
+	case failureForeign:
+		return true, cause
+	}
+
+	if attempt == attempts-1 {
+		return true, &Error{Kind: KindMetrics, Message: withMidCollection(errCouldNotConnect, answered)}
+	}
+	if waitErr := wait(ctx, sleep, retryDelay(attempt)); waitErr != nil {
+		return true, fmt.Errorf("metrics request stopped: %w", waitErr)
+	}
+	return false, nil
 }
 
 // postQuery sends the POST /query request: form-encoded body, no query
@@ -311,11 +349,13 @@ func decodeAPIResponse(body []byte, answered bool) (map[string]interface{}, erro
 	return data, nil
 }
 
-// endpointError builds the error for a signal that, before any answer, means
-// "try the next candidate", and after one, means a mid-collection failure.
+// endpointError builds the error for a signal that, before any answer,
+// means "try the next candidate", and after one, means a mid-collection
+// failure. It is withMidCollection's only other caller, so the two never
+// drift apart on what "after one" means.
 func endpointError(message string, answered bool) *Error {
 	if answered {
-		return &Error{Kind: KindMetrics, Message: message + " mid-collection"}
+		return &Error{Kind: KindMetrics, Message: withMidCollection(message, answered)}
 	}
 	return &Error{Kind: KindEndpointNotFound, Message: message}
 }
@@ -324,7 +364,7 @@ func endpointError(message string, answered bool) *Error {
 // answered is true.
 func withMidCollection(message string, answered bool) string {
 	if answered {
-		return message + " mid-collection"
+		return message + midCollectionSuffix
 	}
 	return message
 }
@@ -380,6 +420,93 @@ func wait(ctx context.Context, sleep func(context.Context, time.Duration) error,
 	}
 }
 
+// failureClass is what classifyAttemptFailure sorts one attempt's error
+// into.
+type failureClass int
+
+const (
+	// failureConnection is everything classifyAttemptFailure did not sort
+	// into one of the other three classes: retried, and after the last
+	// attempt, reported as errCouldNotConnect.
+	failureConnection failureClass = iota
+	// failureStopped means the caller's own context ended. Not retried.
+	failureStopped
+	// failureTLS means a TLS handshake or certificate failure. Not
+	// retried.
+	failureTLS
+	// failureForeign means the caller's own Options.Transport failed with
+	// something this package does not recognise as an ordinary network
+	// problem. Returned as it is, after one call.
+	failureForeign
+)
+
+// classifyAttemptFailure sorts err — from sending a request or from
+// reading its body — into one of four classes, by exclusion rather than by
+// an ever-growing list of known errors: has the caller's own context
+// ended; is the cause a TLS failure; if the caller supplied its own
+// transport, is the cause something other than a plain network error; and
+// failing all of those, an ordinary connection failure, the same whether
+// its exact shape is a timeout, a refused connection, a DNS failure, or
+// anything else net/http might produce, known or not.
+//
+// http.Client.Do wraps every transport error in a *url.Error, whose text
+// holds the request's address; the cause inside it is unwrapped first, and
+// classification and every message built from cause work only with that —
+// the *url.Error itself is never returned or formatted. ctx is the context
+// given to Connect or Query, not the timeout of one attempt: an attempt
+// that merely used up its own share of Metrics.TimeoutSeconds is a plain
+// connection failure, tried again: only ctx itself ending stops the
+// retries outright.
+//
+// foreignTransport is true only when the caller supplied its own
+// Options.Transport: the built-in transport's own errors are never treated
+// as foreign, whatever shape they take, so this package's own connection
+// failures need no list of known network error types at all.
+func classifyAttemptFailure(ctx context.Context, err error, foreignTransport bool) (failureClass, error) {
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return failureStopped, fmt.Errorf("metrics request stopped: %w", ctxErr)
+	}
+
+	cause := unwrapURLError(err)
+
+	if isTLSFailure(cause) {
+		return failureTLS, nil
+	}
+
+	if foreignTransport && !isNetworkFailure(cause) {
+		return failureForeign, cause
+	}
+
+	return failureConnection, nil
+}
+
+// unwrapURLError returns the cause inside a *url.Error — what
+// http.Client.Do always wraps a transport failure in — or err itself when
+// it is not one. A *url.Error's own text holds the request's address, so
+// this package looks only at what is inside it.
+func unwrapURLError(err error) error {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return urlErr.Err
+	}
+	return err
+}
+
+// isNetworkFailure reports whether cause is a plain network problem: a
+// net.Error (a timeout, a refused connection, a DNS failure, and so on) or
+// a peer that closed the connection without finishing its answer (io.EOF
+// or io.ErrUnexpectedEOF, which net.Error does not always cover). It is
+// consulted only for a caller-supplied Options.Transport, to decide
+// whether that transport's error is an ordinary network failure or
+// something foreign this package must return untouched.
+func isNetworkFailure(cause error) bool {
+	var netErr net.Error
+	if errors.As(cause, &netErr) {
+		return true
+	}
+	return errors.Is(cause, io.EOF) || errors.Is(cause, io.ErrUnexpectedEOF)
+}
+
 // isTLSFailure reports whether err is a TLS handshake or certificate
 // failure: a *tls.CertificateVerificationError, an
 // x509.UnknownAuthorityError, an x509.HostnameError, an
@@ -404,37 +531,4 @@ func isTLSFailure(err error) bool {
 	}
 	var recordHeader tls.RecordHeaderError
 	return errors.As(err, &recordHeader)
-}
-
-// isConnectionFailure reports whether err is a connection failure or a
-// timeout: a *net.OpError or *net.DNSError anywhere in its chain, a
-// deadline that was exceeded, a peer that closed the connection without
-// answering (io.EOF or io.ErrUnexpectedEOF), a net.Error that reports
-// itself as a timeout, or net/http's own unexported signal for a pooled
-// connection the peer closed while it sat idle (net/http gives no exported
-// error for it to match with errors.Is, so its fixed text is matched
-// instead; this package never repeats that text onward, since the message
-// this function's caller then uses is one of this package's own fixed
-// sentences). It is checked only after isTLSFailure, so a TLS cause is
-// never mistaken for a plain connection failure.
-func isConnectionFailure(err error) bool {
-	var opErr *net.OpError
-	if errors.As(err, &opErr) {
-		return true
-	}
-	var dnsErr *net.DNSError
-	if errors.As(err, &dnsErr) {
-		return true
-	}
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
-		return true
-	}
-	var netErr net.Error
-	if errors.As(err, &netErr) && netErr.Timeout() {
-		return true
-	}
-	if strings.Contains(err.Error(), "server closed idle connection") {
-		return true
-	}
-	return false
 }

@@ -97,14 +97,21 @@ func parseLabels(raw interface{}) (map[string]string, error) {
 }
 
 // parseSampleValue reads a vector result's "value" pair: [timestamp,
-// encoded]. encoded is a JSON string, read by strconv.ParseFloat, which
-// reads "1", "NaN", and "+Inf" alike. valid is false for a non-finite
-// value, which means "no data" rather than a failure.
+// encoded]. Both members are read: the timestamp must be a JSON number or
+// a JSON string strconv.ParseFloat can read, and encoded is a JSON string,
+// read by strconv.ParseFloat, which reads "1", "NaN", and "+Inf" alike.
+// valid is false for a non-finite value, which means "no data" rather than
+// a failure. The parsed timestamp itself is not returned: Sample carries no
+// timestamp field, since an instant query has only the one moment it was
+// asked for.
 func parseSampleValue(raw interface{}) (value float64, valid bool, err error) {
 	invalid := &Error{Kind: KindQuery, Message: "Prometheus response contains an invalid sample"}
 
 	pair, ok := raw.([]interface{})
 	if !ok || len(pair) != 2 {
+		return 0, false, invalid
+	}
+	if !isReadableSampleNumber(pair[0]) {
 		return 0, false, invalid
 	}
 	encoded, ok := pair[1].(string)
@@ -116,4 +123,20 @@ func parseSampleValue(raw interface{}) (value float64, valid bool, err error) {
 		return 0, false, invalid
 	}
 	return value, !math.IsNaN(value) && !math.IsInf(value, 0), nil
+}
+
+// isReadableSampleNumber reports whether v is a JSON number (already a
+// float64, however encoding/json decoded it) or a JSON string
+// strconv.ParseFloat can read — the two shapes a sample's timestamp or
+// value member is allowed to arrive in.
+func isReadableSampleNumber(v interface{}) bool {
+	switch value := v.(type) {
+	case float64:
+		return true
+	case string:
+		_, err := strconv.ParseFloat(value, 64)
+		return err == nil
+	default:
+		return false
+	}
 }
