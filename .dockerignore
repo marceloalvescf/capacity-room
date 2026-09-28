@@ -1,0 +1,8 @@
+older/
+.cache/
+.git/
+.claude/
+.superpowers/
+bin/
+ROADMAP.md
+web/node_modules/

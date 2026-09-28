@@ -1,0 +1,25 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - gocritic
+    - govet
+    - ineffassign
+    - misspell
+    - revive
+    - staticcheck
+    - unused
+  exclusions:
+    paths:
+      - older
+      - .cache
+
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    paths:
+      - older
+      - .cache
