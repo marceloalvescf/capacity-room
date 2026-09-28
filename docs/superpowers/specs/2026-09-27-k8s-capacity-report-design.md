@@ -505,10 +505,11 @@ Go decides what is said. The template decides how it looks.
 
 | Block | Content |
 |---|---|
-| `cover` | Title, cluster, author, emission date |
+| `front` | The opening matter, set in smaller type; holds other blocks |
 | `outline` | Title and depth |
-| `heading` | Level and text |
+| `heading` | Level, text, and whether it is numbered |
 | `paragraph` | Runs of text |
+| `list` | Items, each made of runs |
 | `table` | Table identifier, header texts, rows of cells |
 | `callout` | Kind, optional title, runs of text |
 | `pagebreak` | Weak or not |
@@ -518,9 +519,17 @@ A cell or paragraph is a list of runs. Each run has a kind:
 | Kind | Rendering |
 |---|---|
 | `text` | Plain prose in the document language |
+| `strong` | Prose in bold, for a label inside a sentence |
 | `ident` | A real name: slightly smaller, no hyphenation, tagged as English |
 | `placeholder` | A prose stand-in such as *Indeterminado*, in the document language |
 | `status` | A status mark followed by its label |
+
+The cover and the footer are not blocks. They are top-level parts of the data
+file, because the generic layer receives them as arguments.
+
+A heading that is not numbered is also left out of the outline. The original
+numbers its sections and leaves unnumbered the headings that repeat per
+namespace or per node pool.
 
 Rules:
 

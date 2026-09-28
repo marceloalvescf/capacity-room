@@ -769,12 +769,14 @@ git commit -m "test(template): add generic golden pages"
 | `footer` | Exactly two keys; `classification` is a string or null |
 | `blocks` | An array, at least one block |
 | Block `outline` | `title` string; `depth` 1, 2, or 3 |
-| Block `heading` | `level` 1, 2, or 3; `runs` not empty |
+| Block `front` | `blocks` not empty; holds any block except `front` and `pagebreak`; only as the first block |
+| Block `heading` | `level` 1, 2, or 3; `numbered` boolean; `runs` not empty |
+| Block `list` | `items` not empty; each item is an array of runs, not empty |
 | Block `paragraph` | `runs` not empty |
 | Block `table` | `id` known; `headers` strings, as many as the columns; `rows` not empty; every row has as many cells as the columns; a cell is an array of runs and may be empty |
 | Block `callout` | `kind` is `note`, `info`, or `warning`; `title` is null or runs; `runs` not empty |
 | Block `pagebreak` | `weak` boolean |
-| Run | `kind` is `text`, `ident`, `placeholder`, or `status`; `text` is a string |
+| Run | `kind` is `text`, `strong`, `ident`, `placeholder`, or `status`; `text` is a string |
 | Run `status` | Also `status`, one of `healthy`, `attention`, `critical`, `undefined`, `unavailable`; `text` may be null |
 
 An unknown key anywhere is an error.
@@ -811,8 +813,14 @@ An unknown key anywhere is an error.
   justified with leading `0.45em` and spacing `0.4em`, inset `x: 3pt` and the
   layout's `y`, stroke `0.5pt`, alignment `left + top`, header cells bold,
   `table.header(repeat: true, ...)`.
+- Block `front` reproduces the opening block of the original: its content is
+  set with text size `8pt` and paragraph leading `0.45em` and spacing `0.4em`.
+- A heading with `numbered` false is set with `numbering: none` and
+  `outlined: false`.
+- Block `list` is a bullet list.
 - Runs:
   - `text`: the string as plain text;
+  - `strong`: the string in bold;
   - `ident`: `text(size: 0.92em, hyphenate: false, lang: "en", value)`;
   - `placeholder`: `text(size: 0.92em, value)`;
   - `status`: the mark, then `h(2pt)` and the label when there is one, inside
@@ -847,6 +855,9 @@ An unknown key anywhere is an error.
 | Unknown run kind | `unknown run kind "<value>" at <path>` |
 | Unknown status | `unknown status "<value>" at <path>` |
 | Empty runs | `` `runs` must not be empty at <path> `` |
+| Empty list | `` `items` must not be empty at blocks[<i>] `` |
+| Misplaced front | `block "front" is allowed only as the first block` |
+| Nested block | `block "<type>" is not allowed inside "front" at blocks[0].blocks[<j>]` |
 
 Row numbers start at 1. `<place>` is `report`, `theme`, `labels`, `cover`,
 `footer`, or `blocks[<i>]`.
@@ -1118,6 +1129,14 @@ git branch -d feat/template
 - Text that looks like markup is printed as written.
 - The embedded template produces the same PDF as the source tree.
 - The package installs by copy and compiles through its name.
+
+## Contract extension of 2026-09-28
+
+The first rendered pages, compared with the original, showed four things the
+contract lacked: the opening block set in smaller type, headings that are
+not numbered, a bullet list, and bold labels inside a sentence. The contract
+gained the block types `front` and `list`, the heading field `numbered`, and
+the run kind `strong`. Spec section 10.2 was updated to match.
 
 ## Self-review against the spec
 
