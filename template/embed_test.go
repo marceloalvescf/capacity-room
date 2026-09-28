@@ -225,12 +225,12 @@ func TestUnpackRefusesFolderThatIsASymbolicLink(t *testing.T) {
 // link, such as /tmp on macOS, is accepted rather than refused.
 func TestUnpackAcceptsParentThatIsASymbolicLink(t *testing.T) {
 	parent := t.TempDir()
-	real := filepath.Join(parent, "real")
-	if err := os.Mkdir(real, 0o755); err != nil {
-		t.Fatalf("creating %s: %v", real, err)
+	actual := filepath.Join(parent, "real")
+	if err := os.Mkdir(actual, 0o755); err != nil {
+		t.Fatalf("creating %s: %v", actual, err)
 	}
 	alias := filepath.Join(parent, "alias")
-	if err := os.Symlink(real, alias); err != nil {
+	if err := os.Symlink(actual, alias); err != nil {
 		t.Fatalf("creating symbolic link: %v", err)
 	}
 
