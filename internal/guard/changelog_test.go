@@ -175,6 +175,77 @@ func TestNewestVersionHeadingIgnoresNonHeadingLines(t *testing.T) {
 	}
 }
 
+func TestNewestVersionHeadingRejectsSetextUnderline(t *testing.T) {
+	cases := []struct {
+		name      string
+		changelog string
+		wantLine  int
+		wantText  string
+	}{
+		{
+			name:      "dash underline hides a newer version below",
+			changelog: "[1.1.0] - 2026-10-01\n--------\n\n## [1.0.0] - 2026-09-28\n",
+			wantLine:  2,
+			wantText:  "--------",
+		},
+		{
+			name:      "equals underline under a bare title",
+			changelog: "Changelog\n=========\n## [1.0.0] - 2026-09-28\n",
+			wantLine:  2,
+			wantText:  "=========",
+		},
+		{
+			name:      "a single dash underline",
+			changelog: "1.1.0\n-\n",
+			wantLine:  2,
+			wantText:  "-",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, _, err := NewestVersionHeading(tc.changelog)
+			if err == nil {
+				t.Fatalf("NewestVersionHeading(%q) returned no error, want error", tc.changelog)
+			}
+			want := fmt.Sprintf("malformed changelog heading on line %d: %q", tc.wantLine, tc.wantText)
+			if err.Error() != want {
+				t.Fatalf("NewestVersionHeading(%q) error = %q, want %q", tc.changelog, err.Error(), want)
+			}
+		})
+	}
+}
+
+// TestNewestVersionHeadingIgnoresDashLinesThatAreNotUnderlines proves the
+// setext check does not over-reject: a thematic break, a list, a table
+// separator row, and a dash-led line of prose all look superficially like a
+// run of "-" or "=" characters but are not a setext underline, and must not
+// stop the well-formed heading below them from being found.
+func TestNewestVersionHeadingIgnoresDashLinesThatAreNotUnderlines(t *testing.T) {
+	cases := []struct {
+		name      string
+		changelog string
+	}{
+		{"thematic break with blank lines around it", "\n---\n\n## [0.9.0] - 2026-01-01\n"},
+		{"thematic break as the first line of the file", "---\n## [0.9.0] - 2026-01-01\n"},
+		{"a list", "- item one\n- item two\n## [0.9.0] - 2026-01-01\n"},
+		{"a table separator row", "| a | b |\n|---|---|\n## [0.9.0] - 2026-01-01\n"},
+		{"a dash-led line of prose", "some text\n--- text\n## [0.9.0] - 2026-01-01\n"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			version, found, err := NewestVersionHeading(tc.changelog)
+			if err != nil {
+				t.Fatalf("NewestVersionHeading(%q) returned error: %v", tc.changelog, err)
+			}
+			if !found || version != "0.9.0" {
+				t.Fatalf("NewestVersionHeading(%q) = (%q, %v), want (\"0.9.0\", true)", tc.changelog, version, found)
+			}
+		})
+	}
+}
+
 func TestNewestVersionHeadingIgnoresDeeperHeadings(t *testing.T) {
 	changelog := "### [0.9.9] - 2026-01-01\n## [0.1.0] - 2026-09-30\n"
 

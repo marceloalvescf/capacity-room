@@ -16,6 +16,14 @@ import (
 // its date checked with time.Parse before it is accepted.
 var versionHeadingPattern = regexp.MustCompile(`^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$`)
 
+// setextUnderlinePattern matches a line that consists solely of a run of
+// "=" or of "-" characters (with up to three leading spaces and only
+// trailing white space allowed). Markdown reads such a line, together with
+// the non-blank line right above it, as a setext heading — a second way to
+// write a level-one ("=") or level-two ("-") heading that an ATX-only scan
+// for a leading "##" would never see.
+var setextUnderlinePattern = regexp.MustCompile(`^ {0,3}(=+|-+)[ \t]*$`)
+
 // isLevelTwoHeading reports whether line is a level-two Markdown heading:
 // after removing leading and trailing white space it starts with "##" and
 // its third character is not "#". This is deliberately loose about what
@@ -31,16 +39,25 @@ func isLevelTwoHeading(line string) bool {
 // release heading in changelog, scanning from the top. Keep a Changelog
 // lists releases newest first, so the first match is the newest version.
 // "## [Unreleased]" is allowed and ignored. Every level-two heading is
-// checked: one that is not exactly "## [Unreleased]" and does not match
-// the strict version form is reported as an error immediately, rather than
-// skipped, so a malformed heading cannot hide behind an older, well-formed
-// one further down.
+// checked, in both of Markdown's forms — "##" (ATX) and a non-blank line
+// followed by a line of dashes (setext) — and one that is not exactly
+// "## [Unreleased]" and does not match the strict version form is reported
+// as an error immediately, rather than skipped, so a malformed heading
+// cannot hide behind an older, well-formed one further down.
 func NewestVersionHeading(changelog string) (version string, found bool, err error) {
 	scanner := bufio.NewScanner(strings.NewReader(changelog))
 	lineNum := 0
+	var prevLine string
+	havePrev := false
 	for scanner.Scan() {
 		lineNum++
 		line := scanner.Text()
+
+		if havePrev && strings.TrimSpace(prevLine) != "" && setextUnderlinePattern.MatchString(line) {
+			return "", false, fmt.Errorf("malformed changelog heading on line %d: %q", lineNum, line)
+		}
+		prevLine = line
+		havePrev = true
 
 		if match := versionHeadingPattern.FindStringSubmatch(line); match != nil {
 			// The pattern only checks digit count, not range, so a
