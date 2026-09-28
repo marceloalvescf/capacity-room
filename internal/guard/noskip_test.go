@@ -147,10 +147,94 @@ func TestSkipCallsIgnoresOtherSelectors(t *testing.T) {
 	}
 }
 
-// noSkipScanExcludedDirs mirrors SkipCalls' real-scan exclusion list: build
-// output and vendored history under these names holds no test the project
-// gates on.
-var noSkipScanExcludedDirs = map[string]bool{
+const testFileNoImportsSource = `package sample
+
+func helper() {}
+`
+
+func TestScannedForSkipsTestFile(t *testing.T) {
+	got, err := ScannedForSkips("a_test.go", []byte(testFileNoImportsSource))
+	if err != nil {
+		t.Fatalf("ScannedForSkips returned error: %v", err)
+	}
+	if !got {
+		t.Fatalf("ScannedForSkips = false, want true")
+	}
+}
+
+const importsTestingSource = `package sample
+
+import "testing"
+
+func SkipIfFlaky(t *testing.T) {
+	t.Skip("flaky in CI")
+}
+`
+
+func TestScannedForSkipsHelperImportingTesting(t *testing.T) {
+	got, err := ScannedForSkips("helper.go", []byte(importsTestingSource))
+	if err != nil {
+		t.Fatalf("ScannedForSkips returned error: %v", err)
+	}
+	if !got {
+		t.Fatalf("ScannedForSkips = false, want true")
+	}
+}
+
+const importsTestingAliasedSource = `package sample
+
+import tt "testing"
+
+func SkipIfFlaky(t *tt.T) {
+	t.Skip("flaky in CI")
+}
+`
+
+func TestScannedForSkipsHelperWithAlias(t *testing.T) {
+	got, err := ScannedForSkips("helper.go", []byte(importsTestingAliasedSource))
+	if err != nil {
+		t.Fatalf("ScannedForSkips returned error: %v", err)
+	}
+	if !got {
+		t.Fatalf("ScannedForSkips = false, want true")
+	}
+}
+
+const plainFileSource = `package sample
+
+import "fmt"
+
+type options struct {
+	Skip bool
+}
+
+func describe(opts options) string {
+	return fmt.Sprintf("skip=%v", opts.Skip)
+}
+`
+
+func TestScannedForSkipsPlainFile(t *testing.T) {
+	got, err := ScannedForSkips("model.go", []byte(plainFileSource))
+	if err != nil {
+		t.Fatalf("ScannedForSkips returned error: %v", err)
+	}
+	if got {
+		t.Fatalf("ScannedForSkips = true, want false")
+	}
+}
+
+func TestScannedForSkipsUnparsable(t *testing.T) {
+	_, err := ScannedForSkips("bad.go", []byte("packag x"))
+	if err == nil {
+		t.Fatalf("ScannedForSkips returned no error, want error")
+	}
+}
+
+// scanExcludedDirs lists folders that hold no source this project gates on:
+// build output, vendored history, and scratch. The skip scan and the
+// build-tag scan both walk the same tree, so they share this list and the
+// walkGoFiles helper below.
+var scanExcludedDirs = map[string]bool{
 	"older":        true,
 	".cache":       true,
 	"web":          true,
@@ -159,26 +243,25 @@ var noSkipScanExcludedDirs = map[string]bool{
 	"node_modules": true,
 }
 
-// TestRepositoryHasNoSkippedTest walks every *_test.go file below the
-// module root and parses it directly from disk with SkipCalls, rather than
-// asking `go list` to enumerate files, so a test hidden behind a build tag
-// is still read and checked.
-func TestRepositoryHasNoSkippedTest(t *testing.T) {
-	root := moduleRoot(t)
+// walkGoFiles walks every .go file below root, skipping scanExcludedDirs,
+// and calls visit with each file's path relative to root and its contents.
+// It returns the number of files visited, since a repository test whose
+// walk silently visits nothing would protect nothing while still passing.
+func walkGoFiles(t *testing.T, root string, visit func(rel string, source []byte) error) int {
+	t.Helper()
 
-	var violations []string
-	filesRead := 0
+	visited := 0
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() {
-			if noSkipScanExcludedDirs[d.Name()] {
+			if scanExcludedDirs[d.Name()] {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if !strings.HasSuffix(d.Name(), "_test.go") {
+		if !strings.HasSuffix(d.Name(), ".go") {
 			return nil
 		}
 
@@ -190,20 +273,48 @@ func TestRepositoryHasNoSkippedTest(t *testing.T) {
 		if err != nil {
 			return err
 		}
-
-		found, err := SkipCalls(rel, source)
-		if err != nil {
-			return fmt.Errorf("parsing %s: %w", rel, err)
+		if err := visit(rel, source); err != nil {
+			return err
 		}
-		filesRead++
-		violations = append(violations, found...)
+		visited++
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("walking repository: %v", err)
 	}
-	if filesRead == 0 {
-		t.Fatalf("no test files were read; a scan that finds nothing protects nothing")
+	return visited
+}
+
+// TestRepositoryHasNoSkippedTest walks every .go file below the module
+// root and parses it directly from disk, rather than asking `go list` to
+// enumerate files, so a file hidden behind a build tag is still read. Each
+// file is asked ScannedForSkips first, so a non-test helper that imports
+// testing (and so can call t.Skip on a *testing.T handed to it) is checked
+// too, not just files named *_test.go.
+func TestRepositoryHasNoSkippedTest(t *testing.T) {
+	root := moduleRoot(t)
+
+	var violations []string
+	filesScanned := 0
+	walkGoFiles(t, root, func(rel string, source []byte) error {
+		scan, err := ScannedForSkips(rel, source)
+		if err != nil {
+			return fmt.Errorf("parsing %s: %w", rel, err)
+		}
+		if !scan {
+			return nil
+		}
+
+		found, err := SkipCalls(rel, source)
+		if err != nil {
+			return fmt.Errorf("parsing %s: %w", rel, err)
+		}
+		filesScanned++
+		violations = append(violations, found...)
+		return nil
+	})
+	if filesScanned == 0 {
+		t.Fatalf("no files were scanned for skips; a scan that finds nothing protects nothing")
 	}
 	if len(violations) != 0 {
 		t.Fatalf("skipped tests found:\n%s", strings.Join(violations, "\n"))

@@ -5,6 +5,8 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"strconv"
+	"strings"
 )
 
 // forbiddenSkipSelectors are the testing.TB methods that bypass a test
@@ -43,4 +45,33 @@ func SkipCalls(filename string, source []byte) ([]string, error) {
 		return true
 	})
 	return found, nil
+}
+
+// ScannedForSkips reports whether filename should be scanned for skip
+// calls: either its name ends in "_test.go", or it imports the package
+// "testing" (a plain helper file cannot itself be a test, but it can still
+// hold a *testing.T handed to it by a real test and call Skip on it). Only
+// the import block is parsed, so a file with an unparsable body past its
+// imports does not block the check.
+func ScannedForSkips(filename string, source []byte) (bool, error) {
+	if strings.HasSuffix(filename, "_test.go") {
+		return true, nil
+	}
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, filename, source, parser.ImportsOnly)
+	if err != nil {
+		return false, err
+	}
+
+	for _, imp := range file.Imports {
+		path, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			return false, err
+		}
+		if path == "testing" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
