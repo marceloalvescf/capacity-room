@@ -91,6 +91,84 @@ func TestUndeclaredBuildTagsMalformed(t *testing.T) {
 	}
 }
 
+const legacyOnlyBuildLineSource = `// +build hidden
+
+package sample
+
+func helper() {}
+`
+
+func TestUndeclaredBuildTagsLegacyOnly(t *testing.T) {
+	got, err := UndeclaredBuildTags("legacy.go", []byte(legacyOnlyBuildLineSource), BuildTags)
+	if err != nil {
+		t.Fatalf("UndeclaredBuildTags returned error: %v", err)
+	}
+	want := []string{`legacy.go: legacy "// +build" line is forbidden; use //go:build`}
+	if len(got) != 1 || got[0] != want[0] {
+		t.Fatalf("UndeclaredBuildTags = %v, want %v", got, want)
+	}
+}
+
+const legacyAlongsideGoBuildSource = `//go:build template
+// +build template
+
+package sample
+
+func helper() {}
+`
+
+func TestUndeclaredBuildTagsLegacyAlongsideGoBuild(t *testing.T) {
+	got, err := UndeclaredBuildTags("both.go", []byte(legacyAlongsideGoBuildSource), []string{"template"})
+	if err != nil {
+		t.Fatalf("UndeclaredBuildTags returned error: %v", err)
+	}
+	want := []string{`both.go: legacy "// +build" line is forbidden; use //go:build`}
+	if len(got) != 1 || got[0] != want[0] {
+		t.Fatalf("UndeclaredBuildTags = %v, want %v", got, want)
+	}
+}
+
+const twoLegacyBuildLinesSource = `// +build a
+// +build b
+
+package sample
+
+func helper() {}
+`
+
+func TestUndeclaredBuildTagsTwoLegacyLines(t *testing.T) {
+	got, err := UndeclaredBuildTags("two.go", []byte(twoLegacyBuildLinesSource), BuildTags)
+	if err != nil {
+		t.Fatalf("UndeclaredBuildTags returned error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("UndeclaredBuildTags = %v, want 2 entries", got)
+	}
+	want := `two.go: legacy "// +build" line is forbidden; use //go:build`
+	if got[0] != want || got[1] != want {
+		t.Fatalf("UndeclaredBuildTags = %v, want both entries %q", got, want)
+	}
+}
+
+const legacyLookalikesAfterPackageSource = `package sample
+
+// see +build docs
+func helper() {
+	s := "// +build x"
+	_ = s
+}
+`
+
+func TestUndeclaredBuildTagsIgnoresLegacyLookalikes(t *testing.T) {
+	got, err := UndeclaredBuildTags("lookalike.go", []byte(legacyLookalikesAfterPackageSource), BuildTags)
+	if err != nil {
+		t.Fatalf("UndeclaredBuildTags returned error: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("UndeclaredBuildTags = %v, want empty", got)
+	}
+}
+
 // TestRepositoryDeclaresEveryBuildTag walks every .go file below the module
 // root, the same walk TestRepositoryHasNoSkippedTest uses, and fails if any
 // file names a build tag that guard.BuildTags does not declare.

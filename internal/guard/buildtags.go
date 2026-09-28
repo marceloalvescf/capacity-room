@@ -16,11 +16,14 @@ import (
 // named here, so a new tag cannot go unnoticed by either.
 var BuildTags = []string{"golden", "template", "toolchain"}
 
-// buildConstraintLine returns the first "//go:build" line in source, if
-// any. Per the language spec such a line must appear only among the
-// blank lines and other line comments that precede the package clause, so
-// scanning stops at the first line that is neither.
-func buildConstraintLine(source []byte) (string, error) {
+// buildConstraintLines returns the first "//go:build" line in source, if
+// any, and every "// +build" line found alongside it. Per the language spec
+// such lines must appear only among the blank lines and other line comments
+// that precede the package clause, so scanning stops at the first line that
+// is neither. The legacy "// +build" form is collected regardless of
+// whether a "//go:build" line is also present: it is forbidden outright,
+// not merely superseded.
+func buildConstraintLines(source []byte) (goBuild string, plusBuild []string, err error) {
 	scanner := bufio.NewScanner(bytes.NewReader(source))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -30,14 +33,17 @@ func buildConstraintLine(source []byte) (string, error) {
 		if !strings.HasPrefix(line, "//") {
 			break
 		}
-		if constraint.IsGoBuild(line) {
-			return line, nil
+		if goBuild == "" && constraint.IsGoBuild(line) {
+			goBuild = line
+		}
+		if constraint.IsPlusBuild(line) {
+			plusBuild = append(plusBuild, line)
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return "", err
+		return "", nil, err
 	}
-	return "", nil
+	return goBuild, plusBuild, nil
 }
 
 // collectTags walks a build constraint expression and records every tag
@@ -58,41 +64,49 @@ func collectTags(expr constraint.Expr, tags map[string]bool) {
 	}
 }
 
-// UndeclaredBuildTags reads the //go:build line of the file named filename,
-// if any, and returns one entry for every tag it names that is not in
-// declared, sorted. A file with no such line returns nothing. A tag that
-// happens to be a Go-recognized operating system or architecture (linux,
-// darwin, arm64, and so on) is not special-cased: it is reported unless it
-// is declared, the same as any other tag.
+// UndeclaredBuildTags reads the build constraint lines of the file named
+// filename and returns, sorted, one entry for every tag its //go:build line
+// names that is not in declared, plus one entry for every legacy
+// "// +build" line found, whatever tags it names and whether or not a
+// //go:build line is also present: the legacy form is forbidden outright,
+// not merely a second place to declare a tag. A file with neither kind of
+// line returns nothing. A tag that happens to be a Go-recognized operating
+// system or architecture (linux, darwin, arm64, and so on) is not
+// special-cased: it is reported unless it is declared, the same as any
+// other tag.
 func UndeclaredBuildTags(filename string, source []byte, declared []string) ([]string, error) {
-	line, err := buildConstraintLine(source)
+	goBuild, plusBuild, err := buildConstraintLines(source)
 	if err != nil {
 		return nil, err
 	}
-	if line == "" {
-		return nil, nil
-	}
-
-	expr, err := constraint.Parse(line)
-	if err != nil {
-		return nil, err
-	}
-
-	declaredSet := make(map[string]bool, len(declared))
-	for _, tag := range declared {
-		declaredSet[tag] = true
-	}
-
-	tags := make(map[string]bool)
-	collectTags(expr, tags)
 
 	var undeclared []string
-	for tag := range tags {
-		if declaredSet[tag] {
-			continue
-		}
-		undeclared = append(undeclared, fmt.Sprintf("%s: build tag %q is not declared in guard.BuildTags", filename, tag))
+	for range plusBuild {
+		undeclared = append(undeclared, fmt.Sprintf("%s: legacy \"// +build\" line is forbidden; use //go:build", filename))
 	}
+
+	if goBuild != "" {
+		expr, err := constraint.Parse(goBuild)
+		if err != nil {
+			return nil, err
+		}
+
+		declaredSet := make(map[string]bool, len(declared))
+		for _, tag := range declared {
+			declaredSet[tag] = true
+		}
+
+		tags := make(map[string]bool)
+		collectTags(expr, tags)
+
+		for tag := range tags {
+			if declaredSet[tag] {
+				continue
+			}
+			undeclared = append(undeclared, fmt.Sprintf("%s: build tag %q is not declared in guard.BuildTags", filename, tag))
+		}
+	}
+
 	sort.Strings(undeclared)
 	return undeclared, nil
 }
