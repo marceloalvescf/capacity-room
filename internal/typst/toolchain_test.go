@@ -303,9 +303,9 @@ func TestLocateMakesRelativeLookupAbsolute(t *testing.T) {
 }
 
 func TestLocateAcceptsSymlinkToBinary(t *testing.T) {
-	real := writeScript(t, "#!/bin/sh\nexit 0\n")
+	target := writeScript(t, "#!/bin/sh\nexit 0\n")
 	link := filepath.Join(t.TempDir(), "typst-link")
-	if err := os.Symlink(real, link); err != nil {
+	if err := os.Symlink(target, link); err != nil {
 		t.Fatalf("Symlink: %v", err)
 	}
 	getenv := func(key string) string {

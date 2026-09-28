@@ -12,9 +12,10 @@ import (
 	"time"
 )
 
-// Format is a Typst compiler output format.
+// Format names an output format of the compiler.
 type Format string
 
+// The output formats Compile can produce.
 const (
 	PDF Format = "pdf"
 	PNG Format = "png"

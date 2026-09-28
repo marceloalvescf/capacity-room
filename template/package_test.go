@@ -92,7 +92,7 @@ func TestPackageInstallsByCopy(t *testing.T) {
 	assertCleanCompile(t, stderr, err)
 
 	text := pdfText(t, output)
-	want := "Relatório corporativo" //nolint:misspell // Portuguese text from the fixture, not a typo.
+	want := "Relatório corporativo"
 	if !strings.Contains(text, want) {
 		t.Fatalf("pdf text = %q, want it to contain %q", text, want)
 	}
