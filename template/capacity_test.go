@@ -513,14 +513,21 @@ func balancedCall(afterOpenParen string) (string, error) {
 	return "", fmt.Errorf("unbalanced parentheses")
 }
 
-// TestCapacityPassesEveryLabel reads capacity/main.typ as text and checks
-// the call to graphite-report.with(...): it must pass both `labels` and
-// `theme`, and theme's three keys (`lang`, `region`, `date-format`) are
+// TestCapacityPassesEveryLabelThatReachesThePage reads capacity/main.typ
+// as text and checks the call to graphite-report.with(...): it must pass
+// both `labels` and `theme`, and theme's two keys (`lang`, `region`) are
 // written inline there. main.typ does not build `labels` inline, though:
-// it assembles the seven label keys into `report-labels` first, and passes
-// that variable, so those seven keys are checked against the text of the
+// it assembles the three label keys into `report-labels` first, and passes
+// that variable, so those three keys are checked against the text of the
 // file that precedes the call instead of the call's own argument list.
-func TestCapacityPassesEveryLabel(t *testing.T) {
+//
+// Only `lang`, `region`, `note`, `info`, and `warning` are checked here:
+// `date-format` and the labels `author`, `date`, `classification`, and
+// `outline` were removed from the contract because they never reached the
+// generic layer's rendered page (main.typ never passes `author`, `date`,
+// `classification`, or `outline: true` to `graphite-report`, the only
+// place that would print them) — see the fix report for this round.
+func TestCapacityPassesEveryLabelThatReachesThePage(t *testing.T) {
 	ws := workspace(t)
 	raw, err := os.ReadFile(filepath.Join(ws, "capacity", "main.typ"))
 	if err != nil {
@@ -543,14 +550,14 @@ func TestCapacityPassesEveryLabel(t *testing.T) {
 			t.Errorf("graphite-report.with(...) does not pass an argument named %q", arg)
 		}
 	}
-	for _, key := range []string{"lang", "region", "date-format"} {
+	for _, key := range []string{"lang", "region"} {
 		if !strings.Contains(call, key) {
 			t.Errorf("graphite-report.with(...)'s theme does not set %q", key)
 		}
 	}
 
 	before := source[:markerAt]
-	for _, key := range []string{"author", "date", "classification", "outline", "note", "info", "warning"} {
+	for _, key := range []string{"note", "info", "warning"} {
 		if !strings.Contains(before, key+":") {
 			t.Errorf("main.typ does not build a %q label before calling graphite-report.with(...)", key)
 		}

@@ -94,7 +94,11 @@
 }
 
 #let allowed-top-keys = ("schema", "language", "theme", "labels", "cover", "footer", "blocks")
-#let label-keys = ("author", "date", "classification", "outline", "note", "info", "warning")
+// `author`, `date`, `classification`, and `outline` were removed: the
+// report layer never passes them (or `outline: true`) to `graphite-report`,
+// the only place that would render them, so they reached no page. See the
+// final review fix report for this round.
+#let label-keys = ("note", "info", "warning")
 #let cover-keys = (
   "title",
   "cluster_label",
@@ -373,10 +377,12 @@
     fail("unknown-language", " \"" + data.language + "\"; allowed: pt-BR, en")
   }
 
-  check-exact-keys("theme", data.theme, ("lang", "region", "date_format"))
+  // `date_format` was removed: the report layer never passes a `date:`
+  // value to `graphite-report`, so no page ever reads it. See the final
+  // review fix report for this round.
+  check-exact-keys("theme", data.theme, ("lang", "region"))
   expect-string("theme.lang", data.theme.lang)
   expect-string("theme.region", data.theme.region)
-  expect-string("theme.date_format", data.theme.date_format)
   if data.theme.lang.match(regex("^[a-z]{2,3}$")) == none {
     fail(
       "wrong-type",
@@ -389,12 +395,6 @@
       "wrong-type",
       "theme.region` must be a region code of two upper-case letters; received "
         + repr(data.theme.region),
-    )
-  }
-  if data.theme.date_format == "" {
-    fail(
-      "wrong-type",
-      "theme.date_format` must be a non-empty string; received " + repr(data.theme.date_format),
     )
   }
 

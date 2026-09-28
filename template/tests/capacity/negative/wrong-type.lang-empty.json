@@ -3,14 +3,9 @@
   "language": "pt-BR",
   "theme": {
     "lang": "",
-    "region": "BR",
-    "date_format": "[day padding:zero]/[month padding:zero]/[year]"
+    "region": "BR"
   },
   "labels": {
-    "author": "Responsável",
-    "date": "Emissão",
-    "classification": "Classificação",
-    "outline": "Sumário",
     "note": "Nota",
     "info": "Informação",
     "warning": "Atenção"

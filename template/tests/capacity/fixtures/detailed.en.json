@@ -3,14 +3,9 @@
   "language": "en",
   "theme": {
     "lang": "en",
-    "region": "US",
-    "date_format": "[month padding:zero]/[day padding:zero]/[year]"
+    "region": "US"
   },
   "labels": {
-    "author": "Owner",
-    "date": "Issued",
-    "classification": "Classification",
-    "outline": "Contents",
     "note": "Note",
     "info": "Information",
     "warning": "Attention"

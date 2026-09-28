@@ -15,13 +15,12 @@
 
 #let data = validate(json(sys.inputs.at("data")))
 
-// The seven label strings become content once, here, rather than inside
-// `graphite-report`, which only accepts content values for `labels`.
+// Only the three labels the generic layer actually renders become
+// content: `graphite-report` is never given `author`, `date`,
+// `classification`, or `outline: true` below, so its own labels for them
+// would never reach a page. `note`/`info`/`warning` back a callout's
+// default title.
 #let report-labels = (
-  author: text(data.labels.author),
-  date: text(data.labels.date),
-  classification: text(data.labels.classification),
-  outline: text(data.labels.outline),
   note: text(data.labels.note),
   info: text(data.labels.info),
   warning: text(data.labels.warning),
@@ -47,7 +46,6 @@
   theme: (
     lang: data.theme.lang,
     region: data.theme.region,
-    date-format: data.theme.date_format,
   ),
 )
 
