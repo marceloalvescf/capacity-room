@@ -1,0 +1,137 @@
+[labels]
+note = "Note"
+info = "Information"
+warning = "Warning"
+
+[cover]
+title = "CAPACITY REPORT"
+cluster_label = "Cluster:"
+author_label = "PREPARED BY:"
+issued_label = "ISSUED ON:"
+
+[footer]
+page_label = "Page"
+
+[front]
+outline_title = "Contents"
+
+[front.metadata]
+heading = "Report metadata"
+header_field = "Field"
+header_value = "Value"
+environment = "Environment"
+period = "Analysis period"
+period_range = "{{.Start}} to {{.End}}"
+namespaces = "Namespaces"
+excluded_containers = "Excluded containers"
+no_excluded_containers = "None"
+organization = "Organization"
+classification = "Classification"
+
+[front.legend]
+heading = "Status legend"
+header_status = "Status"
+header_meaning = "Meaning"
+healthy = "Healthy"
+attention = "Attention / high priority"
+critical = "Critical / critical priority"
+unavailable = "Data unavailable"
+undefined = "No base for the ratio"
+
+[front.quality]
+heading = "Data quality"
+available = "Available:"
+partial = "Partial:"
+unavailable = "Unavailable:"
+
+[appendix]
+heading = "Technical quality appendix"
+header_capability = "Capability"
+header_coverage = "Coverage"
+header_source = "Source"
+header_remark = "Remark"
+header_evidence = "Technical evidence"
+no_remark = "No remark"
+empty = "No technical evidence is available for the current filters."
+
+[state]
+available = "Available"
+partial = "Partial"
+unavailable = "Unavailable"
+
+[strategy]
+recording_rule = "Recording rule"
+raw_metrics = "Raw metrics"
+configured = "Configuration"
+none = "No source"
+
+[capability.name]
+namespace_usage = "Usage by namespace"
+workload_usage = "Usage by workload"
+requests_limits = "Requests and limits"
+hpa_history = "HPA history"
+workloads_without_hpa = "Coverage of workloads without HPA"
+ip_node_mapping = "Mapping between address and node"
+nodepool_discovery = "Identification of node pools"
+node_utilization = "Node utilization"
+node_autoscaling = "Node autoscaling"
+
+[capability.reason]
+METRICS_NOT_FOUND = "The required metrics were not found."
+CPU_USAGE_METRIC_NOT_FOUND = "The CPU usage metric was not found."
+MEMORY_USAGE_METRIC_NOT_FOUND = "The memory usage metric was not found."
+USAGE_METRICS_NOT_FOUND = "The CPU and memory usage metrics were not found."
+WORKLOAD_HISTORY_INEXACT = "The history of which pod belonged to which workload could not be rebuilt exactly."
+WORKLOAD_ASSOCIATION_UNAVAILABLE = "Pods cannot be matched to workloads; coverage is limited to pods."
+REQUESTS_LIMITS_INCOMPLETE = "The coverage of requests and limits is incomplete for CPU or memory."
+LEGACY_METRICS_PARTIAL = "The legacy metrics give partial coverage of resources."
+HPA_HISTORY_INCOMPLETE = "The historical coverage of the HPAs is incomplete."
+WORKLOAD_INVENTORY_INCOMPLETE = "The inventory of workloads or of HPA targets is incomplete."
+NODE_ADDRESS_MAPPING_INCOMPLETE = "The mapping between addresses and nodes may be incomplete."
+NODEPOOL_LABELS_NOT_FOUND = "The node pool labels were not found."
+NODE_AUTOSCALING_UNDETERMINED = "The state of node autoscaling could not be determined."
+
+[capability.evidence.namespace_usage]
+available = "CPU and memory usage data by namespace is available for the analysis period."
+partial = "CPU and memory usage data by namespace is partly available for the analysis period."
+unavailable = "CPU and memory usage data by namespace was not found for the analysis period."
+
+[capability.evidence.workload_usage]
+available = "Workload usage data is available for the analysis period."
+partial = "Workload usage data is partly available for the analysis period."
+unavailable = "Workload usage data was not found for the analysis period."
+
+[capability.evidence.requests_limits]
+available = "Data on resource requests and limits is available for the analysis period."
+partial = "Data on resource requests and limits is partly available for the analysis period."
+unavailable = "Data on resource requests and limits was not found for the analysis period."
+
+[capability.evidence.hpa_history]
+available = "HPA history and configuration data is available for the analysis period."
+partial = "HPA history and configuration data is partly available for the analysis period."
+unavailable = "HPA history and configuration data was not found for the analysis period."
+
+[capability.evidence.workloads_without_hpa]
+available = "Coverage data for workloads without HPA is available for the analysis period."
+partial = "Coverage data for workloads without HPA is partly available for the analysis period."
+unavailable = "Coverage data for workloads without HPA was not found for the analysis period."
+
+[capability.evidence.ip_node_mapping]
+available = "Data on the mapping between address and node is available for the analysis period."
+partial = "Data on the mapping between address and node is partly available for the analysis period."
+unavailable = "Data on the mapping between address and node was not found for the analysis period."
+
+[capability.evidence.nodepool_discovery]
+available = "Node pool identification data is available for the analysis period."
+partial = "Node pool identification data is partly available for the analysis period."
+unavailable = "Node pool identification data was not found for the analysis period."
+
+[capability.evidence.node_utilization]
+available = "Node utilization data is available for the analysis period."
+partial = "Node utilization data is partly available for the analysis period."
+unavailable = "Node utilization data was not found for the analysis period."
+
+[capability.evidence.node_autoscaling]
+available = "Node autoscaling data is available for the analysis period."
+partial = "Node autoscaling data is partly available for the analysis period."
+unavailable = "Node autoscaling data was not found for the analysis period."

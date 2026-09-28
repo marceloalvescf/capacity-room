@@ -1,0 +1,137 @@
+[labels]
+note = "Nota"
+info = "Informação"
+warning = "Atenção"
+
+[cover]
+title = "LEVANTAMENTO DE CAPACIDADE"
+cluster_label = "Cluster:"
+author_label = "ELABORADO POR:"
+issued_label = "EMITIDO EM:"
+
+[footer]
+page_label = "Página"
+
+[front]
+outline_title = "Sumário"
+
+[front.metadata]
+heading = "Metadados do relatório"
+header_field = "Campo"
+header_value = "Valor"
+environment = "Ambiente"
+period = "Período analisado"
+period_range = "{{.Start}} a {{.End}}"
+namespaces = "Namespaces"
+excluded_containers = "Containers excluídos"
+no_excluded_containers = "Nenhum"
+organization = "Organização"
+classification = "Classificação"
+
+[front.legend]
+heading = "Legenda de status"
+header_status = "Status"
+header_meaning = "Interpretação"
+healthy = "Saudável"
+attention = "Atenção / prioridade alta"
+critical = "Crítico / prioridade crítica"
+unavailable = "Dado indisponível"
+undefined = "Sem base de cálculo"
+
+[front.quality]
+heading = "Qualidade dos dados"
+available = "Disponíveis:"
+partial = "Parciais:"
+unavailable = "Indisponíveis:"
+
+[appendix]
+heading = "Apêndice técnico de qualidade"
+header_capability = "Capacidade"
+header_coverage = "Cobertura"
+header_source = "Fonte"
+header_remark = "Observação"
+header_evidence = "Evidência técnica"
+no_remark = "Sem observação"
+empty = "Nenhuma evidência técnica está disponível para os filtros atuais."
+
+[state]
+available = "Disponível"
+partial = "Parcial"
+unavailable = "Indisponível"
+
+[strategy]
+recording_rule = "Regra de gravação"
+raw_metrics = "Métricas brutas"
+configured = "Configuração"
+none = "Sem fonte"
+
+[capability.name]
+namespace_usage = "Uso por namespace"
+workload_usage = "Uso por carga de trabalho"
+requests_limits = "Solicitações e limites"
+hpa_history = "Histórico de HPA"
+workloads_without_hpa = "Cobertura de cargas de trabalho sem HPA"
+ip_node_mapping = "Associação entre endereço e nó"
+nodepool_discovery = "Identificação de pools de nós"
+node_utilization = "Utilização dos nós"
+node_autoscaling = "Escalonamento automático de nós"
+
+[capability.reason]
+METRICS_NOT_FOUND = "As métricas necessárias não foram encontradas."
+CPU_USAGE_METRIC_NOT_FOUND = "A métrica de uso de CPU não foi encontrada."
+MEMORY_USAGE_METRIC_NOT_FOUND = "A métrica de uso de memória não foi encontrada."
+USAGE_METRICS_NOT_FOUND = "As métricas de uso de CPU e memória não foram encontradas."
+WORKLOAD_HISTORY_INEXACT = "A associação histórica entre pods e cargas de trabalho não pôde ser reconstruída com exatidão."
+WORKLOAD_ASSOCIATION_UNAVAILABLE = "A associação por carga de trabalho não está disponível; a cobertura está limitada a pods."
+REQUESTS_LIMITS_INCOMPLETE = "A cobertura de solicitações e limites está incompleta para CPU ou memória."
+LEGACY_METRICS_PARTIAL = "As métricas legadas oferecem cobertura parcial de recursos."
+HPA_HISTORY_INCOMPLETE = "A cobertura histórica dos HPAs está incompleta."
+WORKLOAD_INVENTORY_INCOMPLETE = "O inventário de cargas de trabalho ou alvos de HPA está incompleto."
+NODE_ADDRESS_MAPPING_INCOMPLETE = "A associação entre endereços e nós pode estar incompleta."
+NODEPOOL_LABELS_NOT_FOUND = "Os rótulos de pools de nós não foram encontrados."
+NODE_AUTOSCALING_UNDETERMINED = "O estado do escalonamento automático de nós não pôde ser determinado."
+
+[capability.evidence.namespace_usage]
+available = "Os dados de utilização de CPU e memória por namespace estão disponíveis para o período analisado."
+partial = "Os dados de utilização de CPU e memória por namespace estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de utilização de CPU e memória por namespace não foram localizados para o período analisado."
+
+[capability.evidence.workload_usage]
+available = "Os dados de utilização por carga de trabalho estão disponíveis para o período analisado."
+partial = "Os dados de utilização por carga de trabalho estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de utilização por carga de trabalho não foram localizados para o período analisado."
+
+[capability.evidence.requests_limits]
+available = "Os dados de solicitações e limites de recursos estão disponíveis para o período analisado."
+partial = "Os dados de solicitações e limites de recursos estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de solicitações e limites de recursos não foram localizados para o período analisado."
+
+[capability.evidence.hpa_history]
+available = "Os dados históricos e de configuração dos HPAs estão disponíveis para o período analisado."
+partial = "Os dados históricos e de configuração dos HPAs estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados históricos e de configuração dos HPAs não foram localizados para o período analisado."
+
+[capability.evidence.workloads_without_hpa]
+available = "Os dados de cobertura das cargas de trabalho sem HPA estão disponíveis para o período analisado."
+partial = "Os dados de cobertura das cargas de trabalho sem HPA estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de cobertura das cargas de trabalho sem HPA não foram localizados para o período analisado."
+
+[capability.evidence.ip_node_mapping]
+available = "Os dados de associação entre endereço e nó estão disponíveis para o período analisado."
+partial = "Os dados de associação entre endereço e nó estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de associação entre endereço e nó não foram localizados para o período analisado."
+
+[capability.evidence.nodepool_discovery]
+available = "Os dados de identificação dos pools de nós estão disponíveis para o período analisado."
+partial = "Os dados de identificação dos pools de nós estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de identificação dos pools de nós não foram localizados para o período analisado."
+
+[capability.evidence.node_utilization]
+available = "Os dados de utilização dos nós estão disponíveis para o período analisado."
+partial = "Os dados de utilização dos nós estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de utilização dos nós não foram localizados para o período analisado."
+
+[capability.evidence.node_autoscaling]
+available = "Os dados de escalonamento automático dos nós estão disponíveis para o período analisado."
+partial = "Os dados de escalonamento automático dos nós estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de escalonamento automático dos nós não foram localizados para o período analisado."
