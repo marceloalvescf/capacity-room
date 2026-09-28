@@ -192,8 +192,9 @@ func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.
 	// registering it here instead means commandNames' one walk of
 	// cmd.Commands() already sees it before Run's own pre-check
 	// (unknownRootCommand) ever runs, with no need to name it by a literal
-	// string. Calling this twice (cobra calls it again inside Execute) is
-	// harmless: it does nothing once a help command already exists.
+	// string. Cobra calls this again inside Execute, which removes the
+	// help command just added and adds the same one back, leaving exactly
+	// one: calling it twice is harmless.
 	cmd.InitDefaultHelpCmd()
 	return cmd
 }
@@ -230,7 +231,11 @@ func unknownCommandMessage(cmd *cobra.Command) string {
 // subcommands, hidden ones and help included. A first element that starts
 // with "-" is a flag, not a command name, and is left to cobra itself to
 // parse and judge, so that an existing, unrelated flag error (such as a
-// bare --nope, with no command named at all) keeps its own message.
+// bare --nope, with no command named at all) keeps its own message. Cobra
+// also adds two hidden commands of its own, __complete and
+// __completeNoDesc, but only inside Execute; since this check runs before
+// Execute, it rejects those two exactly as it would any other name it does
+// not recognise yet.
 func unknownRootCommand(cmd *cobra.Command, args []string) (string, bool) {
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
 		return "", false

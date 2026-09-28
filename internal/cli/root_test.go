@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"slices"
+	"sort"
 	"strings"
 	"testing"
 
@@ -150,32 +151,100 @@ func commandPaths(cmd *cobra.Command, prefix []string) [][]string {
 	return paths
 }
 
-// TestNoCommandRepeatsAnArgument is the guard the ruling asks for: it walks
-// every command of the root, recursively, and runs each one, by its own
-// path, with one extra argument no command of this program is ever meant
-// to accept. Comparing function values is not possible in Go, so the
-// behaviour is tested directly: whatever a command's own Args produces, no
-// stream may ever hold this argument. help is included in the walk (see
-// newRootCmd's early InitDefaultHelpCmd) and is exempt from having its own
-// Args by construction — its own Run resolves an unrecognised topic to the
-// nearest matching command's help text and never echoes it — but it is
-// still run here, since the ruling asks for every command to be walked,
-// not skipped.
+// walkedCommandNames returns the space-joined path of every command
+// commandPaths finds under root, sorted.
+func walkedCommandNames(root *cobra.Command) []string {
+	paths := commandPaths(root, nil)
+	names := make([]string, len(paths))
+	for i, path := range paths {
+		names[i] = strings.Join(path, " ")
+	}
+	sort.Strings(names)
+	return names
+}
+
+// TestNoCommandRepeatsAnArgument walks every command of the root,
+// recursively, checks that the set of commands found is exactly the
+// expected one, and then runs each command, by its own path, with one
+// extra argument no command of this program accepts: no stream may hold
+// that argument, whatever the command's own Args produces. Comparing
+// function values is not possible in Go, so this is the behaviour itself,
+// tested directly. A command added to the tree later changes the set this
+// test expects, which fails until its name is added here — the moment to
+// look at its Args.
 func TestNoCommandRepeatsAnArgument(t *testing.T) {
 	const marker = "zz-not-an-argument-zz"
 	root := newRootCmd(context.Background(), Env{}, redact.New())
 
-	paths := commandPaths(root, nil)
-	if len(paths) == 0 {
-		t.Fatal("commandPaths found no command; a walk that finds nothing guards nothing")
+	got := walkedCommandNames(root)
+	want := []string{"help", "report"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("walkedCommandNames() = %v, want %v", got, want)
 	}
 
-	for _, path := range paths {
+	for _, path := range commandPaths(root, nil) {
 		t.Run(strings.Join(path, " "), func(t *testing.T) {
 			args := append(append([]string{}, path...), marker)
 			var stdout, stderr bytes.Buffer
 			_ = Run(context.Background(), Env{}, args, &stdout, &stderr)
 			if strings.Contains(stdout.String(), marker) || strings.Contains(stderr.String(), marker) {
+				t.Fatalf("a stream held the argument: stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+// TestGuardNoticesAMissingCommand proves that walkedCommandNames's
+// comparison, the one TestNoCommandRepeatsAnArgument relies on, actually
+// notices a command dropping out of the walk: with "help" removed from a
+// root built the same way, the set walkedCommandNames returns no longer
+// equals the expected set. This test passes precisely because the
+// comparison fails on the altered root; it does not run
+// TestNoCommandRepeatsAnArgument itself, which must keep passing on the
+// real, unaltered root.
+func TestGuardNoticesAMissingCommand(t *testing.T) {
+	root := newRootCmd(context.Background(), Env{}, redact.New())
+	for _, c := range root.Commands() {
+		if c.Name() == "help" {
+			root.RemoveCommand(c)
+		}
+	}
+
+	got := walkedCommandNames(root)
+	want := []string{"help", "report"}
+	if slices.Equal(got, want) {
+		t.Fatalf("walkedCommandNames() = %v, want it to differ from %v now that help is missing", got, want)
+	}
+}
+
+// TestHiddenCompletionIsRefused proves that cobra's own hidden shell-
+// completion commands, __complete and __completeNoDesc, added inside
+// Execute regardless of any option, never reach that point here: the raw
+// pre-check (unknownRootCommand) runs first and rejects them exactly as it
+// would any other name it does not yet recognise.
+func TestHiddenCompletionIsRefused(t *testing.T) {
+	const want = "error: unknown command; the commands are: report\n"
+
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{"__complete with an argument", []string{"__complete", "hunter2"}},
+		{"__completeNoDesc with an argument", []string{"__completeNoDesc", "hunter2"}},
+		{"__complete naming report", []string{"__complete", "report", "hunter2"}},
+		{"__complete naming report and a flag", []string{"__complete", "report", "--token", "hunter2"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			code := Run(context.Background(), Env{}, tt.args, &stdout, &stderr)
+			if code != 2 {
+				t.Fatalf("code = %d, want 2; stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+			}
+			if stderr.String() != want {
+				t.Fatalf("stderr = %q, want %q", stderr.String(), want)
+			}
+			if strings.Contains(stdout.String(), "hunter2") || strings.Contains(stderr.String(), "hunter2") {
 				t.Fatalf("a stream held the argument: stdout=%q stderr=%q", stdout.String(), stderr.String())
 			}
 		})
@@ -204,10 +273,10 @@ func TestRootHelpListsOnlyItsCommands(t *testing.T) {
 	}
 }
 
-// TestHiddenCommandIsStillRun proves Finding 2's ruling: a hidden command
-// is still one the raw pre-check (unknownRootCommand) accepts as a real
-// command to dispatch to, and cobra still runs it by name, even though the
-// message for a genuinely unknown command never names it.
+// TestHiddenCommandIsStillRun proves that a hidden command is still one the
+// raw pre-check (unknownRootCommand) accepts as a real command to dispatch
+// to, and cobra still runs it by name, even though the message for a
+// genuinely unknown command never names it.
 func TestHiddenCommandIsStillRun(t *testing.T) {
 	ran := false
 	hidden := &cobra.Command{
