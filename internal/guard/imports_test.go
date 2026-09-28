@@ -156,6 +156,120 @@ func TestImportViolationsAllowsImportOfRoot(t *testing.T) {
 	}
 }
 
+func TestImportViolationsReportsEdgeToUnclassified(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/internal/cli": {testModule + "/internal/mystery"},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	want := []string{
+		testModule + "/internal/cli imports " + testModule + "/internal/mystery: " + testModule + "/internal/mystery is not classified in guard.Layers",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ImportViolations = %v, want %v", got, want)
+	}
+}
+
+func TestImportViolationsReportsEdgeFromCmd(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/cmd/tool": {testModule + "/internal/mystery"},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	want := []string{
+		testModule + "/cmd/tool imports " + testModule + "/internal/mystery: " + testModule + "/internal/mystery is not classified in guard.Layers",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ImportViolations = %v, want %v", got, want)
+	}
+}
+
+func TestImportViolationsReportsSourceAndEdge(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/internal/cli":     {testModule + "/internal/mystery"},
+		testModule + "/internal/mystery": {},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	want := []string{
+		testModule + "/internal/cli imports " + testModule + "/internal/mystery: " + testModule + "/internal/mystery is not classified in guard.Layers",
+		testModule + "/internal/mystery: not classified in guard.Layers",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ImportViolations = %v, want %v", got, want)
+	}
+}
+
+func TestImportViolationsEdgeIgnoresStandardLibrary(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/internal/cli": {"fmt", "github.com/spf13/cobra"},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	if len(got) != 0 {
+		t.Fatalf("ImportViolations = %v, want empty", got)
+	}
+}
+
+func TestImportViolationsEdgeIgnoresRoot(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/internal/cli": {testModule},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	if len(got) != 0 {
+		t.Fatalf("ImportViolations = %v, want empty", got)
+	}
+}
+
+func TestImportViolationsEdgeAllowsCmdToClassified(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/cmd/tool": {testModule + "/internal/cli"},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	if len(got) != 0 {
+		t.Fatalf("ImportViolations = %v, want empty", got)
+	}
+}
+
+func TestLayersHoldEveryPackageOfThisPart(t *testing.T) {
+	want := map[string]int{
+		"internal/guard":      0,
+		"internal/typst":      0,
+		"internal/redact":     0,
+		"internal/promtest":   0,
+		"template":            0,
+		"template/golden":     10,
+		"internal/config":     20,
+		"internal/prom":       30,
+		"internal/discovery":  40,
+		"internal/snapshot":   70,
+		"internal/catalog":    80,
+		"internal/document":   90,
+		"internal/goldentest": 95,
+		"internal/cli":        100,
+	}
+
+	got := make(map[string]int, len(Layers))
+	for _, layer := range Layers {
+		got[layer.Path] = layer.Rank
+	}
+
+	for path, rank := range want {
+		gotRank, ok := got[path]
+		if !ok {
+			t.Fatalf("Layers is missing %q", path)
+		}
+		if gotRank != rank {
+			t.Fatalf("Layers[%q].Rank = %d, want %d", path, gotRank, rank)
+		}
+	}
+	if len(got) != len(want) {
+		t.Fatalf("Layers has %d entries, want %d", len(got), len(want))
+	}
+}
+
 // goListPackage mirrors the subset of `go list -json` output this guard
 // relies on. TestImports and XTestImports are intentionally absent: an
 // import made only by test files is outside the rule.

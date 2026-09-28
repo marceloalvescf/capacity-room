@@ -13,15 +13,27 @@ type Layer struct {
 	Rank int
 }
 
-// Layers is the table of known layers for this phase. Later phases insert
-// the core packages between rank 0 and rank 100, in the order of spec
-// section 4.1. A layer with no package yet (internal/typst, for now) is
-// not a violation; only a package that matches no layer is.
+// Layers is the table of known layers for this phase. Several of the new
+// layers named here (internal/redact, internal/promtest, internal/config,
+// internal/prom, internal/discovery, internal/snapshot, internal/catalog,
+// internal/document, internal/goldentest) have no package yet; ranks 50 and
+// 60 are kept for collect, resolve, and analysis, added later. A layer with
+// no package yet is not a violation; only a package that matches no layer
+// is.
 var Layers = []Layer{
 	{Path: "internal/guard", Rank: 0},
 	{Path: "internal/typst", Rank: 0},
+	{Path: "internal/redact", Rank: 0},
+	{Path: "internal/promtest", Rank: 0},
 	{Path: "template", Rank: 0},
 	{Path: "template/golden", Rank: 10},
+	{Path: "internal/config", Rank: 20},
+	{Path: "internal/prom", Rank: 30},
+	{Path: "internal/discovery", Rank: 40},
+	{Path: "internal/snapshot", Rank: 70},
+	{Path: "internal/catalog", Rank: 80},
+	{Path: "internal/document", Rank: 90},
+	{Path: "internal/goldentest", Rank: 95},
 	{Path: "internal/cli", Rank: 100},
 }
 
@@ -69,21 +81,42 @@ func matchLayer(pkg, module string, layers []Layer) (Layer, bool) {
 //
 // Packages under cmd/ are free to import anything of this module, including
 // each other, and are not classified into a layer or reported as
-// unclassified: they wire the program together and sit above every layer.
-// The module's root package must not import any package of this module, so
-// a lower layer cannot reach a higher one by routing through it; any other
-// package may import the root package. A regular, layered package must
-// match a known layer, may not import a package under cmd/ (that would be
-// the same reverse route through a different door), and otherwise follows
-// the rank rule: an import must go to a strictly lower rank, or within the
-// same layer.
+// unclassified themselves: they wire the program together and sit above
+// every layer. The module's root package must not import any package of
+// this module, so a lower layer cannot reach a higher one by routing
+// through it; any other package may import the root package. A regular,
+// layered package must match a known layer, may not import a package under
+// cmd/ (that would be the same reverse route through a different door), and
+// otherwise follows the rank rule: an import must go to a strictly lower
+// rank, or within the same layer.
+//
+// Every source, whatever kind it is, is also checked edge by edge: an
+// import that is not the root package, not under cmd/, and matches no layer
+// is reported at that edge, naming both the source and the target. This
+// holds even when the target is never itself a key of imports (an import
+// path with no package behind it in this scan), since a violation attributed
+// only to a visited source package would never fire for such a target.
 func ImportViolations(module string, layers []Layer, imports map[string][]string) []string {
 	violations := make(map[string]struct{})
+
+	unclassifiedEdge := func(pkg, imp string) {
+		violations[fmt.Sprintf("%s imports %s: %s is not classified in guard.Layers", pkg, imp, imp)] = struct{}{}
+	}
 
 	for pkg, pkgImports := range imports {
 		switch {
 		case isCmdPackage(pkg, module):
-			continue
+			for _, imp := range pkgImports {
+				if !isModulePackage(imp, module) {
+					continue
+				}
+				if isRootPackage(imp, module) || isCmdPackage(imp, module) {
+					continue
+				}
+				if _, ok := matchLayer(imp, module, layers); !ok {
+					unclassifiedEdge(pkg, imp)
+				}
+			}
 
 		case isRootPackage(pkg, module):
 			for _, imp := range pkgImports {
@@ -115,9 +148,7 @@ func ImportViolations(module string, layers []Layer, imports map[string][]string
 
 				tgtLayer, ok := matchLayer(imp, module, layers)
 				if !ok {
-					// imp's own violation is reported when it is visited as
-					// a source package; reporting it again here would be
-					// redundant.
+					unclassifiedEdge(pkg, imp)
 					continue
 				}
 
