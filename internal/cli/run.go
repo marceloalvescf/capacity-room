@@ -159,7 +159,7 @@ func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.
 		// closes the same class of leak one level down).
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				return fmt.Errorf("unknown command; the commands are: %s", strings.Join(availableCommands(cmd), ", "))
+				return errors.New(unknownCommandMessage(cmd))
 			}
 			return nil
 		},
@@ -167,8 +167,16 @@ func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.
 		// would otherwise write on its own; turned off, on principle, along
 		// with everything else this package already writes itself.
 		DisableSuggestions: true,
-		SilenceErrors:      true,
-		SilenceUsage:       true,
+		// This program has the commands its design names (report, and for
+		// later phases serve, worker, and admin) and no other. Cobra's
+		// default completion command is not one of them, and it carries
+		// its own unmodified cobra.NoArgs, which repeats a stray argument
+		// verbatim exactly like the root's own did before this task's
+		// fix — the same leak, one command over. Removed outright, rather
+		// than given its own Args, since the design never asked for it.
+		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
+		SilenceErrors:     true,
+		SilenceUsage:      true,
 		Run: func(cmd *cobra.Command, _ []string) {
 			// A Run function is required for cobra to validate Args at all
 			// (an unrunnable command short-circuits straight to help); with
@@ -180,46 +188,58 @@ func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.
 	}
 	cmd.SetVersionTemplate("{{.Name}} {{.Version}}\n")
 	cmd.AddCommand(newReportCmd(ctx, env, redactor))
+	// Cobra only adds its default "help" command lazily, inside Execute();
+	// registering it here instead means commandNames' one walk of
+	// cmd.Commands() already sees it before Run's own pre-check
+	// (unknownRootCommand) ever runs, with no need to name it by a literal
+	// string. Calling this twice (cobra calls it again inside Execute) is
+	// harmless: it does nothing once a help command already exists.
+	cmd.InitDefaultHelpCmd()
 	return cmd
 }
 
-// availableCommands lists the names of cmd's own subcommands, sorted,
-// leaving out the ones cobra adds by itself (help, completion) and any
-// hidden one, so a command added to the program later appears in the
-// message without a change here.
-func availableCommands(cmd *cobra.Command) []string {
-	var names []string
+// commandNames walks cmd's own subcommands once and returns two lists: all
+// of them, by the name cobra dispatches on (hidden commands included, since
+// cobra runs a hidden command by name exactly like any other; help
+// included, since it is always a valid first argument too), and the ones
+// worth naming in a message to the reader (neither hidden nor help). A
+// command added to the program later appears in both lists, as
+// appropriate, without a change here.
+func commandNames(cmd *cobra.Command) (all, listed []string) {
 	for _, c := range cmd.Commands() {
-		if c.Hidden {
-			continue
+		all = append(all, c.Name())
+		if !c.Hidden && c.Name() != "help" {
+			listed = append(listed, c.Name())
 		}
-		switch c.Name() {
-		case "help", "completion":
-			continue
-		}
-		names = append(names, c.Name())
 	}
-	sort.Strings(names)
-	return names
+	sort.Strings(all)
+	sort.Strings(listed)
+	return all, listed
+}
+
+// unknownCommandMessage is the one message every "this is not a command"
+// refusal of this program prints; written once, so root's own Args and
+// unknownRootCommand's raw pre-check can never drift apart.
+func unknownCommandMessage(cmd *cobra.Command) string {
+	_, listed := commandNames(cmd)
+	return fmt.Sprintf("unknown command; the commands are: %s", strings.Join(listed, ", "))
 }
 
 // unknownRootCommand reports the message and true when args names, as its
 // first element, something that is not a command: not one of cmd's own
-// subcommands, and not "help" or "completion", which cobra always provides
-// regardless of whether they have been registered yet at the point this is
-// called. A first element that starts with "-" is a flag, not a command
-// name, and is left to cobra itself to parse and judge, so that an
-// existing, unrelated flag error (such as a bare --nope, with no command
-// named at all) keeps its own message.
+// subcommands, hidden ones and help included. A first element that starts
+// with "-" is a flag, not a command name, and is left to cobra itself to
+// parse and judge, so that an existing, unrelated flag error (such as a
+// bare --nope, with no command named at all) keeps its own message.
 func unknownRootCommand(cmd *cobra.Command, args []string) (string, bool) {
 	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
 		return "", false
 	}
-	known := append(availableCommands(cmd), "help", "completion")
-	if slices.Contains(known, args[0]) {
+	all, _ := commandNames(cmd)
+	if slices.Contains(all, args[0]) {
 		return "", false
 	}
-	return fmt.Sprintf("unknown command; the commands are: %s", strings.Join(availableCommands(cmd), ", ")), true
+	return unknownCommandMessage(cmd), true
 }
 
 // exitStatus is a sentinel error carrying a process exit code chosen by a
