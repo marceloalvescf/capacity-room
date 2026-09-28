@@ -114,6 +114,133 @@ func TestUnpackNeverWritesThroughSymbolicLink(t *testing.T) {
 	}
 }
 
+// TestUnpackRefusesFolderThatIsASymbolicLink proves Unpack checks dir
+// itself with os.Lstat rather than os.Stat: a symbolic link planted at dir
+// must never be followed, whatever it points at, because os.Stat would
+// resolve it and let the embedded template be written through the link
+// into an entirely different location.
+func TestUnpackRefusesFolderThatIsASymbolicLink(t *testing.T) {
+	const wantErr = "is a symbolic link"
+
+	t.Run("link to an empty folder", func(t *testing.T) {
+		parent := t.TempDir()
+		target := filepath.Join(parent, "empty-target")
+		if err := os.Mkdir(target, 0o755); err != nil {
+			t.Fatalf("creating %s: %v", target, err)
+		}
+		link := filepath.Join(parent, "link")
+		if err := os.Symlink(target, link); err != nil {
+			t.Fatalf("creating symbolic link: %v", err)
+		}
+
+		err := Unpack(link)
+		if err == nil || !strings.Contains(err.Error(), wantErr) {
+			t.Fatalf("Unpack() error = %v, want it to contain %q", err, wantErr)
+		}
+
+		entries, err := os.ReadDir(target)
+		if err != nil {
+			t.Fatalf("reading %s: %v", target, err)
+		}
+		if len(entries) != 0 {
+			t.Fatalf("target folder entries = %v, want it to stay empty", entries)
+		}
+	})
+
+	t.Run("link to a non-empty folder", func(t *testing.T) {
+		parent := t.TempDir()
+		target := filepath.Join(parent, "full-target")
+		if err := os.Mkdir(target, 0o755); err != nil {
+			t.Fatalf("creating %s: %v", target, err)
+		}
+		existing := filepath.Join(target, "already-here.txt")
+		if err := os.WriteFile(existing, []byte("leftover"), 0o644); err != nil {
+			t.Fatalf("writing %s: %v", existing, err)
+		}
+		link := filepath.Join(parent, "link")
+		if err := os.Symlink(target, link); err != nil {
+			t.Fatalf("creating symbolic link: %v", err)
+		}
+
+		err := Unpack(link)
+		if err == nil || !strings.Contains(err.Error(), wantErr) {
+			t.Fatalf("Unpack() error = %v, want it to contain %q", err, wantErr)
+		}
+
+		got, err := os.ReadFile(existing)
+		if err != nil {
+			t.Fatalf("reading %s: %v", existing, err)
+		}
+		if string(got) != "leftover" {
+			t.Fatalf("%s = %q, want it unchanged", existing, got)
+		}
+	})
+
+	t.Run("link to a file", func(t *testing.T) {
+		parent := t.TempDir()
+		target := filepath.Join(parent, "a-file")
+		if err := os.WriteFile(target, []byte("a plain file"), 0o644); err != nil {
+			t.Fatalf("writing %s: %v", target, err)
+		}
+		link := filepath.Join(parent, "link")
+		if err := os.Symlink(target, link); err != nil {
+			t.Fatalf("creating symbolic link: %v", err)
+		}
+
+		err := Unpack(link)
+		if err == nil || !strings.Contains(err.Error(), wantErr) {
+			t.Fatalf("Unpack() error = %v, want it to contain %q", err, wantErr)
+		}
+
+		got, err := os.ReadFile(target)
+		if err != nil {
+			t.Fatalf("reading %s: %v", target, err)
+		}
+		if string(got) != "a plain file" {
+			t.Fatalf("%s = %q, want it unchanged", target, got)
+		}
+	})
+
+	t.Run("dangling link", func(t *testing.T) {
+		parent := t.TempDir()
+		missing := filepath.Join(parent, "does-not-exist")
+		link := filepath.Join(parent, "link")
+		if err := os.Symlink(missing, link); err != nil {
+			t.Fatalf("creating symbolic link: %v", err)
+		}
+
+		err := Unpack(link)
+		if err == nil || !strings.Contains(err.Error(), wantErr) {
+			t.Fatalf("Unpack() error = %v, want it to contain %q", err, wantErr)
+		}
+
+		if _, err := os.Lstat(missing); !os.IsNotExist(err) {
+			t.Fatalf("Lstat(%s) error = %v, want it to still report missing", missing, err)
+		}
+	})
+}
+
+// TestUnpackAcceptsParentThatIsASymbolicLink proves Unpack checks only the
+// final path component of dir: a parent folder reached through a symbolic
+// link, such as /tmp on macOS, is accepted rather than refused.
+func TestUnpackAcceptsParentThatIsASymbolicLink(t *testing.T) {
+	parent := t.TempDir()
+	real := filepath.Join(parent, "real")
+	if err := os.Mkdir(real, 0o755); err != nil {
+		t.Fatalf("creating %s: %v", real, err)
+	}
+	alias := filepath.Join(parent, "alias")
+	if err := os.Symlink(real, alias); err != nil {
+		t.Fatalf("creating symbolic link: %v", err)
+	}
+
+	dir := filepath.Join(alias, "work")
+	if err := Unpack(dir); err != nil {
+		t.Fatalf("Unpack() error = %v", err)
+	}
+	assertUnpackedMatchesEmbedded(t, dir)
+}
+
 // TestUnpackRefusesPathThatIsAFile proves Unpack refuses a dir argument
 // that names an existing regular file instead of a folder, and leaves that
 // file untouched.

@@ -17,19 +17,22 @@ var embedded embed.FS
 // Unpack writes the embedded template under dir, into a folder that is
 // either missing or already empty. If dir does not exist, Unpack creates
 // it, with any missing parents, mode 0o755. If dir exists and is an empty
-// folder, Unpack writes into it. If dir exists and holds any entry, or
-// exists and is not a folder, Unpack writes nothing and returns an error.
+// folder, Unpack writes into it. If dir exists and holds any entry, exists
+// and is not a folder, or is itself a symbolic link — to a folder, to a
+// file, or dangling — Unpack writes nothing and returns an error. Only the
+// final path component of dir is checked for a symbolic link this way: a
+// parent folder reached through one, such as /tmp on macOS, is accepted.
 //
 // This refusal is deliberate: writing into a folder that already holds
-// something — including a symbolic link at a path the embedded tree would
-// occupy — is how a previous run's leftovers or a planted link get written
-// through. An empty folder holds no link to follow, so the caller is never
-// asked to inspect one.
+// something, or that is itself reached through a link, is how a previous
+// run's leftovers or a planted link get written through. An empty folder
+// holds no link to follow, so the caller is never asked to inspect one —
+// dir itself excepted, which os.Lstat checks directly, without following it.
 //
 // If Unpack returns a non-nil error, the content of dir afterward is
 // undefined: the caller must discard the folder rather than reuse it.
 func Unpack(dir string) error {
-	info, err := os.Stat(dir)
+	info, err := os.Lstat(dir)
 	switch {
 	case os.IsNotExist(err):
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -37,6 +40,8 @@ func Unpack(dir string) error {
 		}
 	case err != nil:
 		return err
+	case info.Mode()&os.ModeSymlink != 0:
+		return fmt.Errorf("template: %s is a symbolic link", dir)
 	case !info.IsDir():
 		return fmt.Errorf("template: %s is not a folder", dir)
 	default:
