@@ -35,10 +35,10 @@ RUN_TEST_IMAGE := docker run $(RUN_TEST_IMAGE_FLAGS) $(TEST_IMAGE)
 # images.
 GOLDEN_OUT := .cache/template
 
-# The snapshot check-runtime renders inside the runtime image, and the
-# folder of the host its output is written to. A variable, so the
-# controller can point CHECK_SNAPSHOT at a missing file to see the check
-# fail.
+# CHECK_SNAPSHOT is the snapshot check-runtime renders inside the runtime
+# image; it is a variable, rather than written inline below, so a run can
+# point it at a missing file to confirm the check then fails.
+# CHECK_RUNTIME_OUT is the folder of the host its output is written to.
 CHECK_SNAPSHOT := testdata/snapshot/direct-complete.json
 CHECK_RUNTIME_OUT := .cache/check-runtime
 
@@ -105,9 +105,12 @@ check-runtime: $(IMAGE_DEP)
 	test "$$(docker run --rm $(IMAGE) --version)" = "k8s-capacity-report $(VERSION)"
 	test "$$(docker run --rm --entrypoint /usr/local/bin/typst $(IMAGE) --version | cut -d' ' -f2)" = "$(TYPST_VERSION)"
 	test "$$(docker inspect --format '{{.Config.User}}' $(IMAGE))" = "10001:10001"
+	# 1777, not 0777: the sticky bit keeps another local account from
+	# removing or replacing report.pdf between the run below and the
+	# check that reads it, the same protection /tmp itself relies on.
 	rm -rf $(CHECK_RUNTIME_OUT)
 	mkdir -p $(CHECK_RUNTIME_OUT)
-	chmod 0777 $(CHECK_RUNTIME_OUT)
+	chmod 1777 $(CHECK_RUNTIME_OUT)
 	docker run --rm --user "$$(docker inspect --format '{{.Config.User}}' $(IMAGE))" \
 		--read-only --tmpfs /tmp \
 		--volume "$(CURDIR)/$(CHECK_SNAPSHOT):/data/snapshot.json:ro" \

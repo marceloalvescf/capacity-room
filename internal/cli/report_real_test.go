@@ -36,24 +36,27 @@ func realEnv(t *testing.T) Env {
 	return env
 }
 
-// pdfText returns the whole text layer of pdf through plain pdftotext, in
-// its own reading order, page breaks included as form feeds. Plain mode
-// (never -layout) is used everywhere in this file: -layout lays a wide
-// table out row by row, so a cell that wraps onto a second physical line
-// (a long capability name, a long reason sentence) ends up with the
-// neighbouring column's own text landing between the two halves once the
-// whitespace is stripped for a comparison; plain mode instead keeps each
-// cell's own text together, wrapped only within itself. It fails the test
-// (never skips it) when pdftotext is missing or exits non-zero: a machine
-// without it does not get a free pass.
+// pdfText returns the whole text layer of pdf through pdftotext -raw, page
+// breaks included as form feeds. -raw keeps the order the PDF's own content
+// stream writes a page's text runs in, rather than reconstructing a
+// reading order from their positions on the page; -layout does the latter
+// row by row, and even plain mode (pdftotext's default) reorders text into
+// paragraph-like blocks, so both can place a neighbouring table column's
+// own text between the two halves of a cell that wrapped onto a second
+// physical line — confirmed directly against this file's own PDFs: the
+// pt-BR wording of TestRealReportShowsPartialData wraps its reason
+// sentence exactly this way under both of those modes, while -raw keeps it
+// contiguous once whitespace is stripped for a comparison. It fails the
+// test (never skips it) when pdftotext is missing or exits non-zero: a
+// machine without it does not get a free pass.
 func pdfText(t *testing.T, pdf string) string {
 	t.Helper()
-	out, err := exec.Command("pdftotext", pdf, "-").Output()
+	out, err := exec.Command("pdftotext", "-raw", pdf, "-").Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			t.Fatalf("pdftotext %s -: %v, stderr: %s", pdf, exitErr, exitErr.Stderr)
+			t.Fatalf("pdftotext -raw %s -: %v, stderr: %s", pdf, exitErr, exitErr.Stderr)
 		}
-		t.Fatalf("pdftotext %s -: %v", pdf, err)
+		t.Fatalf("pdftotext -raw %s -: %v", pdf, err)
 	}
 	return string(out)
 }
@@ -175,30 +178,49 @@ func TestRealReportHasTwoPages(t *testing.T) {
 	}
 }
 
-// TestRealReportShowsPartialData checks that partial-data, rendered in
-// English, shows both the reason sentence of a capability whose metrics
-// were never found and the coverage status "Unavailable" a capability in
-// that state carries.
+// TestRealReportShowsPartialData checks, in both languages, that
+// partial-data shows both the reason sentence of a capability whose
+// metrics were never found and the coverage status of a capability in the
+// unavailable state, each read from the catalog by key rather than
+// re-typed, the way TestRealReportFromEachScenario reads the cover title
+// and the capability names above it.
 func TestRealReportShowsPartialData(t *testing.T) {
-	server, _, scenario := startScenario(t, "partial-data")
-	defer server.Close()
+	for _, lang := range catalog.Languages() {
+		t.Run(string(lang), func(t *testing.T) {
+			server, _, scenario := startScenario(t, "partial-data")
+			defer server.Close()
 
-	outDir := t.TempDir()
-	cfgPath := writeConfig(t, scenarioConfig(server, scenario, outDir))
-	outPath := filepath.Join(outDir, "r.pdf")
+			outDir := t.TempDir()
+			cfgPath := writeConfig(t, scenarioConfig(server, scenario, outDir))
+			outPath := filepath.Join(outDir, "r.pdf")
 
-	env := realEnv(t)
-	args := scenarioArgs(cfgPath, scenario, "--lang", "en", "--output", outPath)
-	_, stderr, code := runArgs(context.Background(), env, args)
-	if code != 0 {
-		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
-	}
+			env := realEnv(t)
+			args := scenarioArgs(cfgPath, scenario, "--lang", string(lang), "--output", outPath)
+			_, stderr, code := runArgs(context.Background(), env, args)
+			if code != 0 {
+				t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+			}
 
-	text := pdfText(t, outPath)
-	for _, want := range []string{"The required metrics were not found.", "Unavailable"} {
-		if !containsText(text, want) {
-			t.Errorf("text does not contain %q", want)
-		}
+			cat, err := catalog.Load(lang)
+			if err != nil {
+				t.Fatalf("catalog.Load(%s): %v", lang, err)
+			}
+			reason, err := cat.Text(catalog.CapabilityReasonMetricsNotFound, nil)
+			if err != nil {
+				t.Fatalf("METRICS_NOT_FOUND text: %v", err)
+			}
+			unavailable, err := cat.Text(catalog.State(discovery.StateUnavailable), nil)
+			if err != nil {
+				t.Fatalf("state.unavailable text: %v", err)
+			}
+
+			text := pdfText(t, outPath)
+			for _, want := range []string{reason, unavailable} {
+				if !containsText(text, want) {
+					t.Errorf("text does not contain %q", want)
+				}
+			}
+		})
 	}
 }
 
