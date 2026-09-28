@@ -6,8 +6,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -237,6 +240,97 @@ func TestGoldenPagesMatch(t *testing.T) {
 		t.Errorf("%s: rendered digest %s does not match golden digest %s; "+
 			"actual page written to %s, difference image written to %s",
 			name, actualDigest, want, actualOut, diffOut)
+	}
+}
+
+// pdfPageCount returns the page count of the PDF at path, read with
+// pdfinfo (installed alongside pdftotext, per the harness's own
+// requirements). It fails the test, never skips it, when pdfinfo is
+// missing, exits non-zero, or its output has no "Pages:" line.
+func pdfPageCount(t *testing.T, path string) int {
+	t.Helper()
+	out, err := exec.Command("pdfinfo", path).Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			t.Fatalf("pdfinfo %s: %v, stderr: %s", path, exitErr, exitErr.Stderr)
+		}
+		t.Fatalf("pdfinfo %s: %v", path, err)
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		if !strings.HasPrefix(line, "Pages:") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			t.Fatalf("pdfinfo %s: unexpected \"Pages:\" line %q", path, line)
+		}
+		n, err := strconv.Atoi(fields[1])
+		if err != nil {
+			t.Fatalf("pdfinfo %s: parsing page count %q: %v", path, fields[1], err)
+		}
+		return n
+	}
+	t.Fatalf("pdfinfo %s: output has no \"Pages:\" line", path)
+	return 0
+}
+
+// snapshotInputs builds the same Inputs map job() (template/golden/
+// render.go) would, so a direct compile here sees the document exactly as
+// Render does.
+func snapshotInputs(s golden.Snapshot) map[string]string {
+	inputs := make(map[string]string, len(s.Inputs)+1)
+	for k, v := range s.Inputs {
+		inputs[k] = v
+	}
+	if s.Data != "" {
+		inputs["data"] = "/" + s.Data
+	}
+	return inputs
+}
+
+// TestSnapshotsCoverEveryPage guards against a snapshot whose Pages
+// undershoots its document's real page count without saying so: it
+// compiles every snapshot's document in full (not limited to Pages) and
+// reads the true page count with pdfinfo, independent of golden.Render
+// entirely. When Omits is empty, Pages must list every page, 1 to n. When
+// Omits is set, Pages must still be a strict, ascending subset of 1..n,
+// naming no page above n — Omits itself is only ever read by a human, but
+// its presence is what allows Pages to be incomplete at all.
+func TestSnapshotsCoverEveryPage(t *testing.T) {
+	ws := workspace(t)
+	for _, s := range golden.Snapshots {
+		t.Run(s.Name, func(t *testing.T) {
+			pdf, stderr, err := compilePDF(t, ws, s.Source, snapshotInputs(s))
+			assertCleanCompile(t, stderr, err)
+			n := pdfPageCount(t, pdf)
+
+			if s.Omits == "" {
+				if len(s.Pages) != n {
+					t.Fatalf("%s: Pages = %v lists %d page(s), but the document has %d page(s) and Omits is empty; "+
+						"want Pages to list every page", s.Name, s.Pages, len(s.Pages), n)
+				}
+				for i, p := range s.Pages {
+					if p != i+1 {
+						t.Fatalf("%s: Pages = %v is not exactly 1..%d, and Omits is empty", s.Name, s.Pages, n)
+					}
+				}
+				return
+			}
+
+			if len(s.Pages) >= n {
+				t.Fatalf("%s: Pages = %v lists %d of the document's %d page(s), which is not a strict subset, "+
+					"even though Omits is set to %q", s.Name, s.Pages, len(s.Pages), n, s.Omits)
+			}
+			for i, p := range s.Pages {
+				if p < 1 || p > n {
+					t.Fatalf("%s: Pages = %v names page %d, outside 1..%d (the document's page count)",
+						s.Name, s.Pages, p, n)
+				}
+				if i > 0 && s.Pages[i-1] >= p {
+					t.Fatalf("%s: Pages = %v is not strictly ascending", s.Name, s.Pages)
+				}
+			}
+		})
 	}
 }
 

@@ -49,6 +49,28 @@ func TestEverySnapshotStatesWhatItProtects(t *testing.T) {
 	}
 }
 
+// TestSnapshotPagesAreAscendingAndPositive checks Pages' own shape,
+// independent of any real document: every page number is positive, and
+// the list is strictly ascending (so also free of repeats). A snapshot
+// whose Pages is out of order or repeats a page would silently render and
+// compare the same PNG twice while skipping another.
+func TestSnapshotPagesAreAscendingAndPositive(t *testing.T) {
+	for _, s := range Snapshots {
+		if len(s.Pages) == 0 {
+			t.Errorf("%s: Pages is empty", s.Name)
+			continue
+		}
+		for i, page := range s.Pages {
+			if page < 1 {
+				t.Errorf("%s: Pages[%d] = %d, want a positive page number", s.Name, i, page)
+			}
+			if i > 0 && s.Pages[i-1] >= page {
+				t.Errorf("%s: Pages = %v is not strictly ascending at index %d", s.Name, s.Pages, i)
+			}
+		}
+	}
+}
+
 func TestSnapshotNamesAreUnique(t *testing.T) {
 	seen := make(map[string]bool)
 	for _, s := range Snapshots {

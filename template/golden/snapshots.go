@@ -24,9 +24,13 @@ type Snapshot struct {
 	// Render (never a caller) turns it into the "/"-prefixed input value
 	// data.typ expects; a Snapshot must not set both Data and an Inputs
 	// entry named "data".
-	Data     string
-	Pages    []int
-	Inputs   map[string]string
+	Data   string
+	Pages  []int
+	Inputs map[string]string
+	// Omits says which pages of the document Pages leaves out and why the
+	// covered pages are still enough for what Protects describes. Empty
+	// means Pages already covers every page of the document.
+	Omits    string
 	Protects string // the one behaviour this snapshot alone protects
 }
 
@@ -81,6 +85,10 @@ var Snapshots = []Snapshot{
 		Name:   "table",
 		Source: "tests/graphite/positive/multipage-table.typ",
 		Pages:  []int{1, 2},
+		Omits: "pages 3 and 4: the document's 120 rows run to 4 pages, " +
+			"but pages 3 and 4 would only show the same header repeating " +
+			"again as more rows overflow, which pages 1 and 2 already prove " +
+			"it repeats correctly",
 		Protects: "the semantic table header repeating on page 2 after a " +
 			"page break, which is native Typst behaviour the theme must " +
 			"not break",
@@ -96,6 +104,11 @@ var Snapshots = []Snapshot{
 		Name:   "callout-break",
 		Source: "tests/graphite/positive/callout-page-break.typ",
 		Pages:  []int{1},
+		Omits: "page 2: the callout moves there whole rather than " +
+			"splitting, but once relocated it is an ordinary callout " +
+			"render already pinned by the complete snapshot; what this " +
+			"snapshot alone protects — the callout not splitting at the " +
+			"bottom of page 1 — is visible on page 1 alone",
 		Protects: "the default breakable: false on a callout pushed to the " +
 			"page edge: without it the block splits across two pages, and " +
 			"no other snapshot shows this because the callout fits where " +
@@ -130,17 +143,19 @@ var Snapshots = []Snapshot{
 		Name:   "capacity-pt",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/detailed.pt-BR.json",
-		Pages:  []int{1, 2, 3},
-		Protects: "the cover, the opening matter set small, and the first " +
-			"dense tables of the capacity report, in Portuguese",
+		Pages:  []int{1, 2, 3, 4, 5},
+		Protects: "the cover, the opening matter set small, the dense " +
+			"tables, and the executive-summary tables of the capacity " +
+			"report, in Portuguese — every page of the document",
 	},
 	{
 		Name:   "capacity-en",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/detailed.en.json",
-		Pages:  []int{1, 2, 3},
+		Pages:  []int{1, 2, 3, 4, 5},
 		Protects: "the same pages as capacity-pt in English: labels, date " +
-			"order, decimal point, and hyphenation",
+			"order, decimal point, and hyphenation, across every page of " +
+			"the document, including the executive-summary tables",
 	},
 	{
 		Name:   "capacity-minimal",
