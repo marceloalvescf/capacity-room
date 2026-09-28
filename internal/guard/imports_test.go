@@ -92,6 +92,69 @@ func TestImportViolationsIgnoresOutsideModule(t *testing.T) {
 	}
 }
 
+func TestImportViolationsRefusesImportOfCmd(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/internal/typst":  {testModule + "/cmd/tool/helper"},
+		testModule + "/cmd/tool/helper": {},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	want := []string{
+		testModule + "/internal/typst imports " + testModule + "/cmd/tool/helper: packages under cmd/ are not importable",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ImportViolations = %v, want %v", got, want)
+	}
+}
+
+func TestImportViolationsAllowsCmdToImportCmd(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/cmd/tool":        {testModule + "/cmd/tool/helper"},
+		testModule + "/cmd/tool/helper": {},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	if len(got) != 0 {
+		t.Fatalf("ImportViolations = %v, want empty", got)
+	}
+}
+
+func TestImportViolationsAllowsCmdToImportAnyLayer(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/cmd/tool": {testModule + "/internal/cli", testModule + "/internal/typst"},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	if len(got) != 0 {
+		t.Fatalf("ImportViolations = %v, want empty", got)
+	}
+}
+
+func TestImportViolationsRefusesRootImportingModule(t *testing.T) {
+	imports := map[string][]string{
+		testModule: {testModule + "/internal/cli"},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	want := []string{
+		testModule + " imports " + testModule + "/internal/cli: the root package imports nothing of this module",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ImportViolations = %v, want %v", got, want)
+	}
+}
+
+func TestImportViolationsAllowsImportOfRoot(t *testing.T) {
+	imports := map[string][]string{
+		testModule + "/internal/cli": {testModule},
+	}
+
+	got := ImportViolations(testModule, Layers, imports)
+	if len(got) != 0 {
+		t.Fatalf("ImportViolations = %v, want empty", got)
+	}
+}
+
 // goListPackage mirrors the subset of `go list -json` output this guard
 // relies on. TestImports and XTestImports are intentionally absent: an
 // import made only by test files is outside the rule.

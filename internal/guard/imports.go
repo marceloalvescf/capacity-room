@@ -29,13 +29,13 @@ func isModulePackage(pkg, module string) bool {
 	return pkg == module || strings.HasPrefix(pkg, module+"/")
 }
 
-// isOutsideRule reports whether pkg is the module's root package or lives
-// under cmd/: both are excluded from layering, as neither is a library
-// package other packages should reason about in terms of rank.
-func isOutsideRule(pkg, module string) bool {
-	if pkg == module {
-		return true
-	}
+// isRootPackage reports whether pkg is the module's own root package.
+func isRootPackage(pkg, module string) bool {
+	return pkg == module
+}
+
+// isCmdPackage reports whether pkg lives under the module's cmd/ tree.
+func isCmdPackage(pkg, module string) bool {
 	cmdRoot := module + "/cmd"
 	return pkg == cmdRoot || strings.HasPrefix(pkg, cmdRoot+"/")
 }
@@ -63,42 +63,68 @@ func matchLayer(pkg, module string, layers []Layer) (Layer, bool) {
 }
 
 // ImportViolations checks every package of module in imports against
-// layers and returns the sorted set of violations: packages that match no
-// layer, and imports that go from a lower rank to a rank that is not
-// strictly lower (nor the same layer). The module's root package and
-// packages under cmd/ are outside the rule entirely.
+// layers and returns the sorted set of violations.
+//
+// Packages under cmd/ are free to import anything of this module, including
+// each other, and are not classified into a layer or reported as
+// unclassified: they wire the program together and sit above every layer.
+// The module's root package must not import any package of this module, so
+// a lower layer cannot reach a higher one by routing through it; any other
+// package may import the root package. A regular, layered package must
+// match a known layer, may not import a package under cmd/ (that would be
+// the same reverse route through a different door), and otherwise follows
+// the rank rule: an import must go to a strictly lower rank, or within the
+// same layer.
 func ImportViolations(module string, layers []Layer, imports map[string][]string) []string {
 	violations := make(map[string]struct{})
 
 	for pkg, pkgImports := range imports {
-		if isOutsideRule(pkg, module) {
+		switch {
+		case isCmdPackage(pkg, module):
 			continue
-		}
 
-		srcLayer, ok := matchLayer(pkg, module, layers)
-		if !ok {
-			violations[fmt.Sprintf("%s: not classified in guard.Layers", pkg)] = struct{}{}
-			continue
-		}
-
-		for _, imp := range pkgImports {
-			if !isModulePackage(imp, module) || isOutsideRule(imp, module) {
-				continue
+		case isRootPackage(pkg, module):
+			for _, imp := range pkgImports {
+				if !isModulePackage(imp, module) {
+					continue
+				}
+				violations[fmt.Sprintf("%s imports %s: the root package imports nothing of this module", pkg, imp)] = struct{}{}
 			}
 
-			tgtLayer, ok := matchLayer(imp, module, layers)
+		default:
+			srcLayer, ok := matchLayer(pkg, module, layers)
 			if !ok {
-				// imp's own violation is reported when it is visited as
-				// a source package; reporting it again here would be
-				// redundant.
+				violations[fmt.Sprintf("%s: not classified in guard.Layers", pkg)] = struct{}{}
 				continue
 			}
 
-			if tgtLayer.Path == srcLayer.Path || tgtLayer.Rank < srcLayer.Rank {
-				continue
-			}
+			for _, imp := range pkgImports {
+				if !isModulePackage(imp, module) {
+					continue
+				}
+				if isRootPackage(imp, module) {
+					// Any package may import the root package.
+					continue
+				}
+				if isCmdPackage(imp, module) {
+					violations[fmt.Sprintf("%s imports %s: packages under cmd/ are not importable", pkg, imp)] = struct{}{}
+					continue
+				}
 
-			violations[fmt.Sprintf("%s (rank %d) imports %s (rank %d)", pkg, srcLayer.Rank, imp, tgtLayer.Rank)] = struct{}{}
+				tgtLayer, ok := matchLayer(imp, module, layers)
+				if !ok {
+					// imp's own violation is reported when it is visited as
+					// a source package; reporting it again here would be
+					// redundant.
+					continue
+				}
+
+				if tgtLayer.Path == srcLayer.Path || tgtLayer.Rank < srcLayer.Rank {
+					continue
+				}
+
+				violations[fmt.Sprintf("%s (rank %d) imports %s (rank %d)", pkg, srcLayer.Rank, imp, tgtLayer.Rank)] = struct{}{}
+			}
 		}
 	}
 
