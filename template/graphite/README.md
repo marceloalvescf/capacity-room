@@ -416,6 +416,7 @@ Review each generated page, page by page, before committing it.
 - Header and footer content is not exposed to assistive technology, so anything essential must also appear in the body.
 - The package controls only the documented keys. Deeper changes need a change to its API.
 - Pages render the same only under Typst 0.15.1 with the fonts in `assets/fonts`.
+- Liberation Sans has no glyphs for Chinese, Japanese, or Korean characters, among others. A character with no glyph prints as an empty box.
 
 ## Licenses
 
