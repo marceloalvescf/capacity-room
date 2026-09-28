@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"golang.org/x/mod/modfile"
@@ -163,11 +164,14 @@ type goListPackage struct {
 	Imports    []string
 }
 
-// scanImports runs `go list -json ./...` from root and decodes the stream
-// of JSON objects it produces (one per package, not a JSON array).
+// scanImports runs `go list -json -tags=<guard.BuildTags> ./...` from root
+// and decodes the stream of JSON objects it produces (one per package, not
+// a JSON array). Passing every declared build tag makes files that are
+// otherwise gated behind one (e.g. //go:build toolchain) visible to the
+// scan, since go list only reports the imports of files it would compile.
 func scanImports(t *testing.T, root string) map[string][]string {
 	t.Helper()
-	cmd := exec.Command("go", "list", "-json", "./...")
+	cmd := exec.Command("go", "list", "-json", "-tags="+strings.Join(BuildTags, ","), "./...")
 	cmd.Dir = root
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
