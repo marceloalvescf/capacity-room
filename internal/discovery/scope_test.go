@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http/httptest"
+	"slices"
 	"testing"
 	"time"
 
@@ -55,9 +56,13 @@ func TestScope(t *testing.T) {
 	at := time.Unix(1700000000, 0)
 
 	tests := []struct {
-		name       string
-		cluster    config.Cluster
-		primary    []prom.Sample
+		name    string
+		cluster config.Cluster
+		primary []prom.Sample
+		// fallback is the answer to the `up` query. It is only reached when
+		// primary yields no value, and most rows leave it nil because the
+		// primary answer alone already decides the case.
+		fallback   []prom.Sample
 		want       Scope
 		wantErrMsg string
 	}{
@@ -137,12 +142,69 @@ func TestScope(t *testing.T) {
 				DiscoveredValues: []string{},
 			},
 		},
+		{
+			name:       "required rejects when nothing is visible",
+			cluster:    testCluster("prod", "cluster", "required"),
+			primary:    nil,
+			fallback:   nil,
+			wantErrMsg: `cluster "prod" was not found in label "cluster"; visible values: none`,
+		},
+		{
+			name:       "required rejects when only unlabeled series are visible",
+			cluster:    testCluster("prod", "cluster", "required"),
+			primary:    []prom.Sample{series(map[string]string{})},
+			fallback:   []prom.Sample{series(map[string]string{})},
+			wantErrMsg: `cluster "prod" was not found in label "cluster"; visible values: none`,
+		},
+		{
+			name:     "none accepts when nothing is visible",
+			cluster:  testCluster("prod", "cluster", "none"),
+			primary:  nil,
+			fallback: nil,
+			want: Scope{
+				ClusterName:      "prod",
+				ClusterLabel:     "cluster",
+				FilterMode:       "none",
+				MatcherEnabled:   false,
+				Confidence:       ConfidenceExact,
+				DiscoveredValues: []string{},
+			},
+		},
+		{
+			name:     "none accepts when only unlabeled series are visible",
+			cluster:  testCluster("prod", "cluster", "none"),
+			primary:  []prom.Sample{series(map[string]string{})},
+			fallback: []prom.Sample{series(map[string]string{})},
+			want: Scope{
+				ClusterName:      "prod",
+				ClusterLabel:     "cluster",
+				FilterMode:       "none",
+				MatcherEnabled:   false,
+				Confidence:       ConfidenceExact,
+				DiscoveredValues: []string{},
+			},
+		},
+		{
+			name:     "auto infers when only unlabeled series are visible",
+			cluster:  testCluster("prod", "cluster", "auto"),
+			primary:  []prom.Sample{series(map[string]string{})},
+			fallback: []prom.Sample{series(map[string]string{})},
+			want: Scope{
+				ClusterName:      "prod",
+				ClusterLabel:     "cluster",
+				FilterMode:       "auto",
+				MatcherEnabled:   false,
+				Confidence:       ConfidenceInferred,
+				DiscoveredValues: []string{},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			q := &fakeQuerier{answers: map[string][]prom.Sample{
 				"count by (cluster) (kube_node_info)": tt.primary,
+				"count by (cluster) (up)":             tt.fallback,
 			}}
 
 			got, err := ResolveScope(context.Background(), q, tt.cluster, at)
@@ -168,7 +230,7 @@ func TestScope(t *testing.T) {
 				got.Confidence != tt.want.Confidence {
 				t.Errorf("ResolveScope() = %+v, want %+v", got, tt.want)
 			}
-			if !stringSlicesEqual(got.DiscoveredValues, tt.want.DiscoveredValues) {
+			if !slices.Equal(got.DiscoveredValues, tt.want.DiscoveredValues) {
 				t.Errorf("DiscoveredValues = %v, want %v", got.DiscoveredValues, tt.want.DiscoveredValues)
 			}
 			if got.DiscoveredValues == nil {
@@ -212,7 +274,7 @@ func TestScopeFallsBackToUp(t *testing.T) {
 	if len(q.queries) != 2 {
 		t.Fatalf("len(queries) = %d, want 2", len(q.queries))
 	}
-	if !stringSlicesEqual(got.DiscoveredValues, []string{"prod"}) {
+	if !slices.Equal(got.DiscoveredValues, []string{"prod"}) {
 		t.Errorf("DiscoveredValues = %v, want [prod]", got.DiscoveredValues)
 	}
 }
@@ -250,7 +312,7 @@ func TestScopeFallbackReplacesTheFirstResult(t *testing.T) {
 	if got.Confidence != ConfidenceExact {
 		t.Errorf("Confidence = %q, want %q", got.Confidence, ConfidenceExact)
 	}
-	if !stringSlicesEqual(got.DiscoveredValues, []string{"prod"}) {
+	if !slices.Equal(got.DiscoveredValues, []string{"prod"}) {
 		t.Errorf("DiscoveredValues = %v, want [prod]", got.DiscoveredValues)
 	}
 }
@@ -269,7 +331,7 @@ func TestScopeSortsAndDeduplicatesValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolveScope: %v", err)
 	}
-	if !stringSlicesEqual(got.DiscoveredValues, []string{"dev", "prod"}) {
+	if !slices.Equal(got.DiscoveredValues, []string{"dev", "prod"}) {
 		t.Errorf("DiscoveredValues = %v, want [dev prod]", got.DiscoveredValues)
 	}
 }
@@ -392,7 +454,7 @@ func TestScopeScenario(t *testing.T) {
 			if scenario.Name == "thanos-multicluster" {
 				want = []string{"dev", "prod"}
 			}
-			if !stringSlicesEqual(got.DiscoveredValues, want) {
+			if !slices.Equal(got.DiscoveredValues, want) {
 				t.Errorf("DiscoveredValues = %v, want %v", got.DiscoveredValues, want)
 			}
 		})
@@ -435,18 +497,4 @@ func TestScopeScenarioMultipleClusters(t *testing.T) {
 	if scopeErr.Error() != want {
 		t.Errorf("ResolveScope: message = %q, want %q", scopeErr.Error(), want)
 	}
-}
-
-// stringSlicesEqual reports whether a and b hold the same strings in the
-// same order.
-func stringSlicesEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
