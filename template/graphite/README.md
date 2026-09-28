@@ -21,7 +21,7 @@ There is no Markdown conversion, DOCX generation, incident logic, automatic char
 ## Requirements
 
 - Typst CLI `0.15.1`;
-- a full checkout of this repository, including `assets/fonts`.
+- the package folder, including `assets/fonts`.
 
 There is nothing else. The package needs no installation step to be used inside this repository.
 
@@ -30,6 +30,7 @@ There is nothing else. The package needs no installation step to be used inside 
 Compile an example using only the package's own fonts:
 
 ```bash
+mkdir -p build
 typst compile \
   --root "$PWD" \
   --font-path assets/fonts \
@@ -49,7 +50,7 @@ Inside this repository, other Typst files import the package by relative path:
 #import "../lib.typ": graphite-report
 ```
 
-To use the package from another document, copy its files, `typst.toml`, `lib.typ`, `src/`, `assets/`, and `LICENSE`, into `<data folder>/typst/packages/local/graphite-report/<version>/`, then import it by name:
+To use the package from another document, copy the package folder, without `examples/` and `README.md`, into `<data folder>/typst/packages/local/graphite-report/<version>/`. Then import it by name:
 
 ```typst
 #import "@local/graphite-report:0.0.0": graphite-report
@@ -292,7 +293,7 @@ Three outputs that look like they would work and do not, measured before writing
 | wrapping in `box()` | does not prevent the internal break; the output is identical to doing nothing |
 | replacing `-` with `‑` (U+2011) | stops the repetition because it forbids the break, but then the identifier overflows the cell, and whoever copies it from the PDF gets a character that is not part of the real name |
 
-`tests/fixtures/positive/identifier-wrapping.typ` exercises the recipe and the case without it side by side, and the golden `identifiers-1.png` pins both outputs.
+The fixture `template/tests/graphite/positive/identifier-wrapping.typ` exercises the recipe and the case without it side by side, and the golden page `identifiers-1.png` pins both outputs.
 
 Accessible, referenceable figure:
 
@@ -341,7 +342,7 @@ The matching runnable example is [examples/custom-running-elements.typ](examples
 
 A common pattern in corporate reports: the first page stays clean, and from the second page onward the header carries the area and the logo, and the footer carries the classification and the page number.
 
-The recipe below receives the logo as a parameter instead of hard-coding a path, which keeps it independent of the organization and of whoever uses it's directory layout:
+The recipe below receives the logo as a parameter instead of hard-coding a path, which keeps it independent of the organization and of the directory layout of whoever uses it:
 
 ```typst
 #let running-elements(logo, area: [Área responsável], classification: [Uso interno]) = (
@@ -409,9 +410,12 @@ Review each generated page, page by page, before committing it.
 
 ## Known limitations
 
-- text that does not fit in a table cell overflows without any warning;
-- a small table can split at the end of a page unless wrapped in `keep-together`;
-- header and footer content is not exposed to assistive technology, so anything essential also appears in the body.
+- Text that does not fit in a table cell overflows without any warning, and can overwrite the next cell. A long string with no space and no hyphen is the usual case. Size the column for it; nothing checks this for you. The golden page `identifiers-1.png` shows the effect.
+- A small table can split at the end of a page. Wrap it in `keep-together` when it must stay whole.
+- `keep-together` does not measure or split large content.
+- Header and footer content is not exposed to assistive technology, so anything essential must also appear in the body.
+- The package controls only the documented keys. Deeper changes need a change to its API.
+- Pages render the same only under Typst 0.15.1 with the fonts in `assets/fonts`.
 
 ## Licenses
 
