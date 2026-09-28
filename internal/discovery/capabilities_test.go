@@ -3,6 +3,7 @@ package discovery
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"net/http/httptest"
 	"slices"
@@ -63,6 +64,33 @@ func byName(capabilities []Capability, name string) Capability {
 	return Capability{}
 }
 
+// checkCapability compares got against every field of want that the
+// brief's tables pin down: State and Strategy exactly, and Evidence and
+// Reasons exactly, in order, and never nil — an empty list means the
+// evidence or the reasons must be empty, not that the test does not look.
+// want.Name is ignored; the caller already chose got by name.
+func checkCapability(t *testing.T, got Capability, want Capability) {
+	t.Helper()
+	if got.State != want.State {
+		t.Errorf("State = %q, want %q", got.State, want.State)
+	}
+	if got.Strategy != want.Strategy {
+		t.Errorf("Strategy = %q, want %q", got.Strategy, want.Strategy)
+	}
+	if got.Evidence == nil {
+		t.Error("Evidence is nil, want a non-nil slice")
+	}
+	if !slices.Equal(got.Evidence, want.Evidence) {
+		t.Errorf("Evidence = %v, want %v", got.Evidence, want.Evidence)
+	}
+	if got.Reasons == nil {
+		t.Error("Reasons is nil, want a non-nil slice")
+	}
+	if !slices.Equal(got.Reasons, want.Reasons) {
+		t.Errorf("Reasons = %v, want %v", got.Reasons, want.Reasons)
+	}
+}
+
 func TestDetectReturnsNineInOrder(t *testing.T) {
 	answers := map[string][]prom.Sample{
 		"count(container_cpu_usage_seconds_total)":                       present(),
@@ -114,13 +142,14 @@ func TestNamespaceUsage(t *testing.T) {
 		name         string
 		cpu, memory  bool
 		wantState    string
+		wantStrategy string
 		wantEvidence []string
 		wantReasons  []string
 	}{
-		{"both present", true, true, StateAvailable, []string{metricContainerCPUUsageSecondsTotal, metricContainerMemoryWorkingSetBytes}, []string{}},
-		{"CPU only", true, false, StatePartial, []string{metricContainerCPUUsageSecondsTotal}, []string{reasonMemoryUsageMetricNotFound}},
-		{"memory only", false, true, StatePartial, []string{metricContainerMemoryWorkingSetBytes}, []string{reasonCPUUsageMetricNotFound}},
-		{"none", false, false, StateUnavailable, []string{}, []string{reasonUsageMetricsNotFound}},
+		{"both present", true, true, StateAvailable, StrategyRawMetrics, []string{metricContainerCPUUsageSecondsTotal, metricContainerMemoryWorkingSetBytes}, []string{}},
+		{"CPU only", true, false, StatePartial, StrategyRawMetrics, []string{metricContainerCPUUsageSecondsTotal}, []string{reasonMemoryUsageMetricNotFound}},
+		{"memory only", false, true, StatePartial, StrategyRawMetrics, []string{metricContainerMemoryWorkingSetBytes}, []string{reasonCPUUsageMetricNotFound}},
+		{"none", false, false, StateUnavailable, StrategyNone, []string{}, []string{reasonUsageMetricsNotFound}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -138,21 +167,7 @@ func TestNamespaceUsage(t *testing.T) {
 				t.Fatalf("Detect: %v", err)
 			}
 			got := byName(caps, "namespace_usage")
-			if got.State != tt.wantState {
-				t.Errorf("State = %q, want %q", got.State, tt.wantState)
-			}
-			if !slices.Equal(got.Evidence, tt.wantEvidence) {
-				t.Errorf("Evidence = %v, want %v", got.Evidence, tt.wantEvidence)
-			}
-			if !slices.Equal(got.Reasons, tt.wantReasons) {
-				t.Errorf("Reasons = %v, want %v", got.Reasons, tt.wantReasons)
-			}
-			if got.Strategy != StrategyRawMetrics && tt.wantState != StateUnavailable {
-				t.Errorf("Strategy = %q, want %q", got.Strategy, StrategyRawMetrics)
-			}
-			if tt.wantState == StateUnavailable && got.Strategy != StrategyNone {
-				t.Errorf("Strategy = %q, want %q", got.Strategy, StrategyNone)
-			}
+			checkCapability(t, got, Capability{State: tt.wantState, Strategy: tt.wantStrategy, Evidence: tt.wantEvidence, Reasons: tt.wantReasons})
 		})
 	}
 }
@@ -162,14 +177,39 @@ func TestWorkloadUsage(t *testing.T) {
 		name                    string
 		rule, raw, cpu, memory  bool
 		wantState, wantStrategy string
+		wantEvidence            []string
 		wantReasons             []string
 	}{
-		{"rule and both usage", true, false, true, true, StateAvailable, StrategyRecordingRule, []string{}},
-		{"rule and CPU only", true, false, true, false, StatePartial, StrategyRecordingRule, []string{reasonMemoryUsageMetricNotFound}},
-		{"raw owner and both", false, true, true, true, StatePartial, StrategyRawMetrics, []string{reasonWorkloadHistoryInexact}},
-		{"raw owner and CPU only", false, true, true, false, StatePartial, StrategyRawMetrics, []string{reasonWorkloadHistoryInexact, reasonMemoryUsageMetricNotFound}},
-		{"usage and no owner", false, false, true, true, StatePartial, StrategyRawMetrics, []string{reasonWorkloadAssociationUnavailable}},
-		{"owner and no usage", true, false, false, false, StateUnavailable, StrategyNone, []string{reasonUsageMetricsNotFound}},
+		{
+			"rule and both usage", true, false, true, true, StateAvailable, StrategyRecordingRule,
+			[]string{metricNamespaceWorkloadPodKubePodOwnerRelabel, metricContainerCPUUsageSecondsTotal, metricContainerMemoryWorkingSetBytes},
+			[]string{},
+		},
+		{
+			"rule and CPU only", true, false, true, false, StatePartial, StrategyRecordingRule,
+			[]string{metricNamespaceWorkloadPodKubePodOwnerRelabel, metricContainerCPUUsageSecondsTotal},
+			[]string{reasonMemoryUsageMetricNotFound},
+		},
+		{
+			"raw owner and both", false, true, true, true, StatePartial, StrategyRawMetrics,
+			[]string{metricKubePodOwner, metricContainerCPUUsageSecondsTotal, metricContainerMemoryWorkingSetBytes},
+			[]string{reasonWorkloadHistoryInexact},
+		},
+		{
+			"raw owner and CPU only", false, true, true, false, StatePartial, StrategyRawMetrics,
+			[]string{metricKubePodOwner, metricContainerCPUUsageSecondsTotal},
+			[]string{reasonWorkloadHistoryInexact, reasonMemoryUsageMetricNotFound},
+		},
+		{
+			"usage and no owner", false, false, true, true, StatePartial, StrategyRawMetrics,
+			[]string{metricContainerCPUUsageSecondsTotal, metricContainerMemoryWorkingSetBytes},
+			[]string{reasonWorkloadAssociationUnavailable},
+		},
+		{
+			"owner and no usage", true, false, false, false, StateUnavailable, StrategyNone,
+			[]string{metricNamespaceWorkloadPodKubePodOwnerRelabel},
+			[]string{reasonUsageMetricsNotFound},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -193,15 +233,7 @@ func TestWorkloadUsage(t *testing.T) {
 				t.Fatalf("Detect: %v", err)
 			}
 			got := byName(caps, "workload_usage")
-			if got.State != tt.wantState {
-				t.Errorf("State = %q, want %q", got.State, tt.wantState)
-			}
-			if got.Strategy != tt.wantStrategy {
-				t.Errorf("Strategy = %q, want %q", got.Strategy, tt.wantStrategy)
-			}
-			if !slices.Equal(got.Reasons, tt.wantReasons) {
-				t.Errorf("Reasons = %v, want %v", got.Reasons, tt.wantReasons)
-			}
+			checkCapability(t, got, Capability{State: tt.wantState, Strategy: tt.wantStrategy, Evidence: tt.wantEvidence, Reasons: tt.wantReasons})
 		})
 	}
 }
@@ -217,16 +249,33 @@ func TestRequestsLimits(t *testing.T) {
 	legacyLimMem := "count(kube_pod_container_resource_limits_memory_bytes)"
 
 	tests := []struct {
-		name        string
-		present     []string
-		wantState   string
-		wantReasons []string
+		name         string
+		present      []string
+		wantState    string
+		wantEvidence []string
+		wantReasons  []string
 	}{
-		{"four unified", []string{unifiedCPUReq, unifiedMemReq, unifiedCPULim, unifiedMemLim}, StateAvailable, []string{}},
-		{"four legacy", []string{legacyReqCPU, legacyReqMem, legacyLimCPU, legacyLimMem}, StateAvailable, []string{}},
-		{"three unified", []string{unifiedCPUReq, unifiedMemReq, unifiedCPULim}, StatePartial, []string{reasonRequestsLimitsIncomplete}},
-		{"two legacy", []string{legacyReqCPU, legacyReqMem}, StatePartial, []string{reasonLegacyMetricsPartial}},
-		{"none", nil, StateUnavailable, []string{reasonMetricsNotFound}},
+		{
+			"four unified", []string{unifiedCPUReq, unifiedMemReq, unifiedCPULim, unifiedMemLim}, StateAvailable,
+			[]string{metricKubePodContainerResourceRequests, metricKubePodContainerResourceLimits}, []string{},
+		},
+		{
+			"four legacy", []string{legacyReqCPU, legacyReqMem, legacyLimCPU, legacyLimMem}, StateAvailable,
+			[]string{
+				metricKubePodContainerResourceRequestsCPUCores, metricKubePodContainerResourceRequestsMemBytes,
+				metricKubePodContainerResourceLimitsCPUCores, metricKubePodContainerResourceLimitsMemoryBytes,
+			},
+			[]string{},
+		},
+		{
+			"three unified", []string{unifiedCPUReq, unifiedMemReq, unifiedCPULim}, StatePartial,
+			[]string{metricKubePodContainerResourceRequests, metricKubePodContainerResourceLimits}, []string{reasonRequestsLimitsIncomplete},
+		},
+		{
+			"two legacy", []string{legacyReqCPU, legacyReqMem}, StatePartial,
+			[]string{metricKubePodContainerResourceRequestsCPUCores, metricKubePodContainerResourceRequestsMemBytes}, []string{reasonLegacyMetricsPartial},
+		},
+		{"none", nil, StateUnavailable, []string{}, []string{reasonMetricsNotFound}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -241,12 +290,11 @@ func TestRequestsLimits(t *testing.T) {
 				t.Fatalf("Detect: %v", err)
 			}
 			got := byName(caps, "requests_limits")
-			if got.State != tt.wantState {
-				t.Errorf("State = %q, want %q", got.State, tt.wantState)
+			wantStrategy := StrategyRawMetrics
+			if tt.wantState == StateUnavailable {
+				wantStrategy = StrategyNone
 			}
-			if !slices.Equal(got.Reasons, tt.wantReasons) {
-				t.Errorf("Reasons = %v, want %v", got.Reasons, tt.wantReasons)
-			}
+			checkCapability(t, got, Capability{State: tt.wantState, Strategy: wantStrategy, Evidence: tt.wantEvidence, Reasons: tt.wantReasons})
 		})
 	}
 }
@@ -289,15 +337,11 @@ func TestHPAHistory(t *testing.T) {
 				t.Fatalf("Detect: %v", err)
 			}
 			got := byName(caps, "hpa_history")
-			if got.State != tt.wantState {
-				t.Errorf("State = %q, want %q", got.State, tt.wantState)
+			wantStrategy := StrategyRawMetrics
+			if tt.wantState == StateUnavailable {
+				wantStrategy = StrategyNone
 			}
-			if !slices.Equal(got.Reasons, tt.wantReasons) {
-				t.Errorf("Reasons = %v, want %v", got.Reasons, tt.wantReasons)
-			}
-			if tt.count == 3 && !slices.Equal(got.Evidence, names[:3]) {
-				t.Errorf("Evidence = %v, want %v", got.Evidence, names[:3])
-			}
+			checkCapability(t, got, Capability{State: tt.wantState, Strategy: wantStrategy, Evidence: append([]string{}, names[:tt.count]...), Reasons: tt.wantReasons})
 		})
 	}
 }
@@ -330,30 +374,39 @@ func TestHPAMetricsAreProbedOnceEach(t *testing.T) {
 
 func TestWorkloadsWithoutHPA(t *testing.T) {
 	tests := []struct {
-		name        string
-		present     []string
-		wantState   string
-		wantReasons []string
+		name         string
+		present      []string
+		wantState    string
+		wantEvidence []string
+		wantReasons  []string
 	}{
 		{
 			"labels of both and HPA info",
 			[]string{"count(kube_deployment_labels)", "count(kube_statefulset_labels)", "count(kube_horizontalpodautoscaler_info)"},
-			StateAvailable, []string{},
+			StateAvailable,
+			[]string{metricKubeDeploymentLabels, metricKubeStatefulSetLabels, metricKubeHorizontalPodAutoscalerInfo},
+			[]string{},
 		},
 		{
 			"replicas of both and HPA info",
 			[]string{"count(kube_deployment_spec_replicas)", "count(kube_statefulset_replicas)", "count(kube_horizontalpodautoscaler_info)"},
-			StateAvailable, []string{},
+			StateAvailable,
+			[]string{metricKubeDeploymentSpecReplicas, metricKubeStatefulSetReplicas, metricKubeHorizontalPodAutoscalerInfo},
+			[]string{},
 		},
 		{
 			"deployment labels only",
 			[]string{"count(kube_deployment_labels)"},
-			StatePartial, []string{reasonWorkloadInventoryIncomplete},
+			StatePartial,
+			[]string{metricKubeDeploymentLabels},
+			[]string{reasonWorkloadInventoryIncomplete},
 		},
 		{
 			"none",
 			nil,
-			StateUnavailable, []string{reasonMetricsNotFound},
+			StateUnavailable,
+			[]string{},
+			[]string{reasonMetricsNotFound},
 		},
 	}
 	for _, tt := range tests {
@@ -369,12 +422,11 @@ func TestWorkloadsWithoutHPA(t *testing.T) {
 				t.Fatalf("Detect: %v", err)
 			}
 			got := byName(caps, "workloads_without_hpa")
-			if got.State != tt.wantState {
-				t.Errorf("State = %q, want %q", got.State, tt.wantState)
+			wantStrategy := StrategyRawMetrics
+			if tt.wantState == StateUnavailable {
+				wantStrategy = StrategyNone
 			}
-			if !slices.Equal(got.Reasons, tt.wantReasons) {
-				t.Errorf("Reasons = %v, want %v", got.Reasons, tt.wantReasons)
-			}
+			checkCapability(t, got, Capability{State: tt.wantState, Strategy: wantStrategy, Evidence: tt.wantEvidence, Reasons: tt.wantReasons})
 		})
 	}
 }
@@ -429,15 +481,11 @@ func TestIPNodeMapping(t *testing.T) {
 				t.Fatalf("Detect: %v", err)
 			}
 			got := byName(caps, "ip_node_mapping")
-			if got.State != tt.wantState {
-				t.Errorf("State = %q, want %q", got.State, tt.wantState)
+			wantStrategy := StrategyRawMetrics
+			if tt.wantState == StateUnavailable {
+				wantStrategy = StrategyNone
 			}
-			if !slices.Equal(got.Evidence, tt.wantEvidence) {
-				t.Errorf("Evidence = %v, want %v", got.Evidence, tt.wantEvidence)
-			}
-			if !slices.Equal(got.Reasons, tt.wantReasons) {
-				t.Errorf("Reasons = %v, want %v", got.Reasons, tt.wantReasons)
-			}
+			checkCapability(t, got, Capability{State: tt.wantState, Strategy: wantStrategy, Evidence: tt.wantEvidence, Reasons: tt.wantReasons})
 		})
 	}
 }
@@ -467,15 +515,11 @@ func TestNodepoolDiscovery(t *testing.T) {
 				t.Fatalf("Detect: %v", err)
 			}
 			got := byName(caps, "nodepool_discovery")
-			if got.State != tt.wantState {
-				t.Errorf("State = %q, want %q", got.State, tt.wantState)
+			wantStrategy := StrategyRawMetrics
+			if tt.wantState == StateUnavailable {
+				wantStrategy = StrategyNone
 			}
-			if !slices.Equal(got.Evidence, tt.wantEvidence) {
-				t.Errorf("Evidence = %v, want %v", got.Evidence, tt.wantEvidence)
-			}
-			if !slices.Equal(got.Reasons, tt.wantReasons) {
-				t.Errorf("Reasons = %v, want %v", got.Reasons, tt.wantReasons)
-			}
+			checkCapability(t, got, Capability{State: tt.wantState, Strategy: wantStrategy, Evidence: tt.wantEvidence, Reasons: tt.wantReasons})
 		})
 	}
 }
@@ -483,6 +527,8 @@ func TestNodepoolDiscovery(t *testing.T) {
 func TestNodeUtilization(t *testing.T) {
 	bothRules := []string{"count(instance:node_cpu_utilisation:rate5m)", "count(instance:node_memory_utilisation:ratio)"}
 	threeRaw := []string{"count(node_cpu_seconds_total)", "count(node_memory_MemAvailable_bytes)", "count(node_memory_MemTotal_bytes)"}
+	ruleEvidence := []string{metricInstanceNodeCPUUtilisationRate5m, metricInstanceNodeMemoryUtilisationRatio}
+	rawEvidence := []string{metricNodeCPUSecondsTotal, metricNodeMemoryMemAvailableBytes, metricNodeMemoryMemTotalBytes}
 
 	tests := []struct {
 		name         string
@@ -490,16 +536,17 @@ func TestNodeUtilization(t *testing.T) {
 		wantState    string
 		wantStrategy string
 		wantEvidence []string
+		wantReasons  []string
 	}{
-		{"both rules", bothRules, StateAvailable, StrategyRecordingRule, bothRules[:0]},
+		{"both rules", bothRules, StateAvailable, StrategyRecordingRule, ruleEvidence, []string{}},
 		{
 			"one rule and three raw",
 			append([]string{"count(instance:node_cpu_utilisation:rate5m)"}, threeRaw...),
-			StateAvailable, StrategyRawMetrics, nil,
+			StateAvailable, StrategyRawMetrics, rawEvidence, []string{},
 		},
-		{"three raw", threeRaw, StateAvailable, StrategyRawMetrics, []string{metricNodeCPUSecondsTotal, metricNodeMemoryMemAvailableBytes, metricNodeMemoryMemTotalBytes}},
-		{"two raw", threeRaw[:2], StateUnavailable, StrategyNone, []string{}},
-		{"none", nil, StateUnavailable, StrategyNone, []string{}},
+		{"three raw", threeRaw, StateAvailable, StrategyRawMetrics, rawEvidence, []string{}},
+		{"two raw", threeRaw[:2], StateUnavailable, StrategyNone, []string{}, []string{reasonMetricsNotFound}},
+		{"none", nil, StateUnavailable, StrategyNone, []string{}, []string{reasonMetricsNotFound}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -514,15 +561,7 @@ func TestNodeUtilization(t *testing.T) {
 				t.Fatalf("Detect: %v", err)
 			}
 			got := byName(caps, "node_utilization")
-			if got.State != tt.wantState {
-				t.Errorf("State = %q, want %q", got.State, tt.wantState)
-			}
-			if got.Strategy != tt.wantStrategy {
-				t.Errorf("Strategy = %q, want %q", got.Strategy, tt.wantStrategy)
-			}
-			if tt.name == "three raw" && !slices.Equal(got.Evidence, tt.wantEvidence) {
-				t.Errorf("Evidence = %v, want %v", got.Evidence, tt.wantEvidence)
-			}
+			checkCapability(t, got, Capability{State: tt.wantState, Strategy: tt.wantStrategy, Evidence: tt.wantEvidence, Reasons: tt.wantReasons})
 		})
 	}
 }
@@ -569,18 +608,7 @@ func TestNodeAutoscaling(t *testing.T) {
 				t.Fatalf("Detect: %v", err)
 			}
 			got := byName(caps, "node_autoscaling")
-			if got.State != tt.wantState {
-				t.Errorf("State = %q, want %q", got.State, tt.wantState)
-			}
-			if got.Strategy != tt.wantStrategy {
-				t.Errorf("Strategy = %q, want %q", got.Strategy, tt.wantStrategy)
-			}
-			if !slices.Equal(got.Evidence, tt.wantEvidence) {
-				t.Errorf("Evidence = %v, want %v", got.Evidence, tt.wantEvidence)
-			}
-			if !slices.Equal(got.Reasons, tt.wantReasons) {
-				t.Errorf("Reasons = %v, want %v", got.Reasons, tt.wantReasons)
-			}
+			checkCapability(t, got, Capability{State: tt.wantState, Strategy: tt.wantStrategy, Evidence: tt.wantEvidence, Reasons: tt.wantReasons})
 		})
 	}
 }
@@ -767,10 +795,6 @@ func TestEveryReasonIsInTheRegistry(t *testing.T) {
 			"partial nodepool_discovery",
 			map[string][]prom.Sample{"count(kube_node_info)": present()},
 		},
-		{
-			"partial node_autoscaling",
-			map[string][]prom.Sample{},
-		},
 	}
 
 	found := map[string]struct{}{}
@@ -815,13 +839,38 @@ func TestCheckSufficient(t *testing.T) {
 		}
 		return out
 	}
+	namesOf := func(caps []Capability) []string {
+		names := make([]string, len(caps))
+		for i, c := range caps {
+			names[i] = c.Name
+		}
+		return names
+	}
+	listErr := func(names []string) string {
+		found := "none"
+		if len(names) > 0 {
+			found = strings.Join(names, ", ")
+		}
+		return fmt.Sprintf("capabilities must hold the nine capabilities in their order; found: %s", found)
+	}
+
+	eightLessAutoscaling := allAvailable()[:8]
+
+	firstTwoSwapped := allAvailable()
+	firstTwoSwapped[0], firstTwoSwapped[1] = firstTwoSwapped[1], firstTwoSwapped[0]
+
+	nameTwice := allAvailable()
+	nameTwice[1] = Capability{Name: "namespace_usage", State: StateAvailable, Strategy: StrategyRawMetrics, Evidence: []string{}, Reasons: []string{}}
+
+	unknownState := withState(allAvailable(), map[string]string{"namespace_usage": "maybe"})
 
 	tests := []struct {
-		name    string
-		caps    []Capability
-		wantErr bool
+		name             string
+		caps             []Capability
+		wantInsufficient bool
+		wantErrMsg       string
 	}{
-		{"all nine available", allAvailable(), false},
+		{"all nine available", allAvailable(), false, ""},
 		{
 			"the five unavailable and autoscaling partial",
 			withState(allAvailable(), map[string]string{
@@ -829,7 +878,7 @@ func TestCheckSufficient(t *testing.T) {
 				"hpa_history": StateUnavailable, "workloads_without_hpa": StateUnavailable,
 				"node_utilization": StateUnavailable, "node_autoscaling": StatePartial,
 			}),
-			true,
+			true, "",
 		},
 		{
 			"the five unavailable and autoscaling available",
@@ -838,7 +887,7 @@ func TestCheckSufficient(t *testing.T) {
 				"hpa_history": StateUnavailable, "workloads_without_hpa": StateUnavailable,
 				"node_utilization": StateUnavailable, "node_autoscaling": StateAvailable,
 			}),
-			false,
+			false, "",
 		},
 		{
 			"four unavailable and one partial",
@@ -847,18 +896,33 @@ func TestCheckSufficient(t *testing.T) {
 				"hpa_history": StateUnavailable, "workloads_without_hpa": StateUnavailable,
 				"node_utilization": StatePartial,
 			}),
-			false,
+			false, "",
 		},
+		{"empty list", nil, false, listErr(nil)},
+		{"eight capabilities", eightLessAutoscaling, false, listErr(namesOf(eightLessAutoscaling))},
+		{"nine in another order", firstTwoSwapped, false, listErr(namesOf(firstTwoSwapped))},
+		{"a name twice", nameTwice, false, listErr(namesOf(nameTwice))},
+		{"an unknown state", unknownState, false, `capability "namespace_usage" has an unknown state: "maybe"`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := CheckSufficient(tt.caps)
-			if tt.wantErr {
+			switch {
+			case tt.wantInsufficient:
 				if !errors.Is(err, ErrInsufficient) {
 					t.Errorf("CheckSufficient: err = %v, want ErrInsufficient", err)
 				}
-			} else if err != nil {
-				t.Errorf("CheckSufficient: err = %v, want nil", err)
+			case tt.wantErrMsg == "":
+				if err != nil {
+					t.Errorf("CheckSufficient: err = %v, want nil", err)
+				}
+			default:
+				if err == nil || err.Error() != tt.wantErrMsg {
+					t.Errorf("CheckSufficient: err = %v, want %q", err, tt.wantErrMsg)
+				}
+				if errors.Is(err, ErrInsufficient) {
+					t.Error("CheckSufficient: errors.Is(err, ErrInsufficient) = true, want false")
+				}
 			}
 		})
 	}
@@ -917,13 +981,10 @@ func TestDetectScenario(t *testing.T) {
 
 			want := scenarioWant(scenario.Name)
 			for _, wc := range want {
-				got := byName(caps, wc.Name)
-				if got.State != wc.State || got.Strategy != wc.Strategy {
-					t.Errorf("%s: State/Strategy = %s/%s, want %s/%s", wc.Name, got.State, got.Strategy, wc.State, wc.Strategy)
-				}
-				if !slices.Equal(got.Reasons, wc.Reasons) {
-					t.Errorf("%s: Reasons = %v, want %v", wc.Name, got.Reasons, wc.Reasons)
-				}
+				t.Run(wc.Name, func(t *testing.T) {
+					got := byName(caps, wc.Name)
+					checkCapability(t, got, Capability{State: wc.State, Strategy: wc.Strategy, Evidence: wc.Evidence, Reasons: wc.Reasons})
+				})
 			}
 		})
 	}
@@ -1099,31 +1160,53 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 	}
 }
 
-// scenarioCapability is one expected row of a scenario's result, checked
-// against State, Strategy, and Reasons; evidence is left to the unit
-// tests above, which pin it exactly.
+// scenarioCapability is one expected row of a scenario's result: every
+// field task-8-brief.md's scenario table and Evidence (R9) table pin down,
+// checked in full by TestDetectScenario.
 type scenarioCapability struct {
 	Name, State, Strategy string
-	Reasons               []string
+	Evidence, Reasons     []string
 }
 
 // scenarioWant returns the expected result for every one of the nine
-// capabilities of scenario name, from the table of task-8-brief.md.
-// "Every capability that is not listed is available", with the strategy
-// the three baseline scenarios name for workload_usage and
-// node_utilization (recording_rule); every other unlisted capability is
-// raw_metrics, the only strategy its available case can carry.
+// capabilities of scenario name, from the scenario table and the Evidence
+// (R9) table of task-8-brief.md. "Every capability that is not listed is
+// available", with the strategy the three baseline scenarios name for
+// workload_usage and node_utilization (recording_rule); every other
+// unlisted capability is raw_metrics, the only strategy its available case
+// can carry. Evidence values were confirmed against an actual run of
+// Detect for all six scenarios, not derived from the table by hand.
 func scenarioWant(name string) []scenarioCapability {
 	baseline := []scenarioCapability{
-		{"namespace_usage", StateAvailable, StrategyRawMetrics, []string{}},
-		{"workload_usage", StateAvailable, StrategyRecordingRule, []string{}},
-		{"requests_limits", StateAvailable, StrategyRawMetrics, []string{}},
-		{"hpa_history", StateAvailable, StrategyRawMetrics, []string{}},
-		{"workloads_without_hpa", StateAvailable, StrategyRawMetrics, []string{}},
-		{"ip_node_mapping", StateAvailable, StrategyRawMetrics, []string{}},
-		{"nodepool_discovery", StateAvailable, StrategyRawMetrics, []string{}},
-		{"node_utilization", StateAvailable, StrategyRecordingRule, []string{}},
-		{"node_autoscaling", StateAvailable, StrategyRawMetrics, []string{}},
+		{"namespace_usage", StateAvailable, StrategyRawMetrics, []string{metricContainerCPUUsageSecondsTotal, metricContainerMemoryWorkingSetBytes}, []string{}},
+		{
+			"workload_usage", StateAvailable, StrategyRecordingRule,
+			[]string{metricNamespaceWorkloadPodKubePodOwnerRelabel, metricContainerCPUUsageSecondsTotal, metricContainerMemoryWorkingSetBytes},
+			[]string{},
+		},
+		{"requests_limits", StateAvailable, StrategyRawMetrics, []string{metricKubePodContainerResourceRequests, metricKubePodContainerResourceLimits}, []string{}},
+		{
+			"hpa_history", StateAvailable, StrategyRawMetrics,
+			[]string{
+				metricKubeHorizontalPodAutoscalerInfo, metricKubeHorizontalPodAutoscalerSpecMin,
+				metricKubeHorizontalPodAutoscalerSpecMax, metricKubeHorizontalPodAutoscalerStatusCurrent,
+				metricKubeHorizontalPodAutoscalerStatusDesired,
+			},
+			[]string{},
+		},
+		{
+			"workloads_without_hpa", StateAvailable, StrategyRawMetrics,
+			[]string{metricKubeDeploymentLabels, metricKubeStatefulSetLabels, metricKubeHorizontalPodAutoscalerInfo},
+			[]string{},
+		},
+		{"ip_node_mapping", StateAvailable, StrategyRawMetrics, []string{metricKubeNodeInfo}, []string{}},
+		{"nodepool_discovery", StateAvailable, StrategyRawMetrics, []string{metricKubeNodeLabels}, []string{}},
+		{
+			"node_utilization", StateAvailable, StrategyRecordingRule,
+			[]string{metricInstanceNodeCPUUtilisationRate5m, metricInstanceNodeMemoryUtilisationRatio},
+			[]string{},
+		},
+		{"node_autoscaling", StateAvailable, StrategyRawMetrics, []string{"cluster_autoscaler_*"}, []string{}},
 	}
 
 	set := func(caps []scenarioCapability, changes map[string]scenarioCapability) []scenarioCapability {
@@ -1142,22 +1225,38 @@ func scenarioWant(name string) []scenarioCapability {
 		return baseline
 	case "value-edge-cases":
 		return set(baseline, map[string]scenarioCapability{
-			"node_autoscaling": {"node_autoscaling", StateAvailable, StrategyConfigured, []string{}},
+			"node_autoscaling": {"node_autoscaling", StateAvailable, StrategyConfigured, []string{}, []string{}},
 		})
 	case "raw-fallback":
 		return set(baseline, map[string]scenarioCapability{
-			"workload_usage":        {"workload_usage", StatePartial, StrategyRawMetrics, []string{reasonWorkloadHistoryInexact}},
-			"workloads_without_hpa": {"workloads_without_hpa", StateAvailable, StrategyRawMetrics, []string{}},
-			"node_utilization":      {"node_utilization", StateAvailable, StrategyRawMetrics, []string{}},
-			"node_autoscaling":      {"node_autoscaling", StatePartial, StrategyNone, []string{reasonNodeAutoscalingUndetermined}},
+			"workload_usage": {
+				"workload_usage", StatePartial, StrategyRawMetrics,
+				[]string{metricKubePodOwner, metricContainerCPUUsageSecondsTotal, metricContainerMemoryWorkingSetBytes},
+				[]string{reasonWorkloadHistoryInexact},
+			},
+			"workloads_without_hpa": {
+				"workloads_without_hpa", StateAvailable, StrategyRawMetrics,
+				[]string{metricKubeDeploymentSpecReplicas, metricKubeStatefulSetReplicas, metricKubeHorizontalPodAutoscalerInfo},
+				[]string{},
+			},
+			"node_utilization": {
+				"node_utilization", StateAvailable, StrategyRawMetrics,
+				[]string{metricNodeCPUSecondsTotal, metricNodeMemoryMemAvailableBytes, metricNodeMemoryMemTotalBytes},
+				[]string{},
+			},
+			"node_autoscaling": {"node_autoscaling", StatePartial, StrategyNone, []string{}, []string{reasonNodeAutoscalingUndetermined}},
 		})
 	case "partial-data":
 		return set(baseline, map[string]scenarioCapability{
-			"hpa_history":           {"hpa_history", StateUnavailable, StrategyNone, []string{reasonMetricsNotFound}},
-			"workloads_without_hpa": {"workloads_without_hpa", StatePartial, StrategyRawMetrics, []string{reasonWorkloadInventoryIncomplete}},
-			"nodepool_discovery":    {"nodepool_discovery", StatePartial, StrategyRawMetrics, []string{reasonNodepoolLabelsNotFound}},
-			"node_utilization":      {"node_utilization", StateUnavailable, StrategyNone, []string{reasonMetricsNotFound}},
-			"node_autoscaling":      {"node_autoscaling", StatePartial, StrategyNone, []string{reasonNodeAutoscalingUndetermined}},
+			"hpa_history": {"hpa_history", StateUnavailable, StrategyNone, []string{}, []string{reasonMetricsNotFound}},
+			"workloads_without_hpa": {
+				"workloads_without_hpa", StatePartial, StrategyRawMetrics,
+				[]string{metricKubeDeploymentLabels, metricKubeStatefulSetLabels},
+				[]string{reasonWorkloadInventoryIncomplete},
+			},
+			"nodepool_discovery": {"nodepool_discovery", StatePartial, StrategyRawMetrics, []string{metricKubeNodeInfo}, []string{reasonNodepoolLabelsNotFound}},
+			"node_utilization":   {"node_utilization", StateUnavailable, StrategyNone, []string{}, []string{reasonMetricsNotFound}},
+			"node_autoscaling":   {"node_autoscaling", StatePartial, StrategyNone, []string{}, []string{reasonNodeAutoscalingUndetermined}},
 		})
 	default:
 		return baseline

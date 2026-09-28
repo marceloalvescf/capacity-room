@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
@@ -378,8 +380,17 @@ func nodeAutoscalingCapability(configured string, autoscalerMetrics bool) Capabi
 // CheckSufficient reports ErrInsufficient when the endpoint carries too
 // little for the report to say anything: the five capabilities of
 // analyticalForSufficiency are all unavailable, and node_autoscaling itself
-// is not available (R16).
+// is not available (R16). It first requires capabilities to hold exactly
+// the nine capabilities of Names, in that order, each with one of the three
+// known states — a list that is short, reordered, duplicated, or carries an
+// unrecognised state is a caller error, reported as such, and never read as
+// "sufficient" by a lookup that silently treats a missing or malformed
+// entry as "not unavailable".
 func CheckSufficient(capabilities []Capability) error {
+	if err := checkCapabilityList(capabilities); err != nil {
+		return err
+	}
+
 	byName := make(map[string]Capability, len(capabilities))
 	for _, capability := range capabilities {
 		byName[capability.Name] = capability
@@ -394,6 +405,29 @@ func CheckSufficient(capabilities []Capability) error {
 		return nil
 	}
 	return ErrInsufficient
+}
+
+// checkCapabilityList requires capabilities to hold exactly the nine
+// capabilities of Names, in that order, each carrying one of the three
+// known states.
+func checkCapabilityList(capabilities []Capability) error {
+	names := make([]string, len(capabilities))
+	for i, capability := range capabilities {
+		names[i] = capability.Name
+	}
+	if !slices.Equal(names, Names) {
+		found := "none"
+		if len(names) > 0 {
+			found = strings.Join(names, ", ")
+		}
+		return fmt.Errorf("capabilities must hold the nine capabilities in their order; found: %s", found)
+	}
+	for _, capability := range capabilities {
+		if !slices.Contains(States, capability.State) {
+			return fmt.Errorf("capability %q has an unknown state: %q", capability.Name, capability.State)
+		}
+	}
+	return nil
 }
 
 // usagePresent lists the container usage metrics found, CPU before memory.
