@@ -136,6 +136,51 @@ func TestVersionParsesSecondField(t *testing.T) {
 	}
 }
 
+func TestVersionRejectsImpostorProgramName(t *testing.T) {
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\necho 'im-not-typst 0.15.1 (x)'\n")}
+
+	_, err := tc.Version(context.Background())
+	if err == nil {
+		t.Fatalf("Version() error = nil, want an error")
+	}
+	if !strings.Contains(err.Error(), "im-not-typst 0.15.1 (x)") {
+		t.Fatalf("Version() error = %v, want it to contain the line received %q", err, "im-not-typst 0.15.1 (x)")
+	}
+}
+
+func TestProbeRejectsImpostorProgramName(t *testing.T) {
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\necho 'im-not-typst 0.15.1 (x)'\n")}
+
+	err := tc.Probe(context.Background())
+	if err == nil {
+		t.Fatalf("Probe() error = nil, want an error")
+	}
+	if !strings.Contains(err.Error(), "im-not-typst 0.15.1 (x)") {
+		t.Fatalf("Probe() error = %v, want it to contain the line received %q", err, "im-not-typst 0.15.1 (x)")
+	}
+}
+
+func TestVersionRejectsWrongCaseProgramName(t *testing.T) {
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\necho 'Typst 0.15.1'\n")}
+
+	_, err := tc.Version(context.Background())
+	if err == nil {
+		t.Fatalf("Version() error = nil, want an error")
+	}
+}
+
+func TestVersionAcceptsUnknownCommitSuffix(t *testing.T) {
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\necho 'typst 0.15.1 (unknown commit)'\n")}
+
+	got, err := tc.Version(context.Background())
+	if err != nil {
+		t.Fatalf("Version() error = %v", err)
+	}
+	if got != "0.15.1" {
+		t.Fatalf("Version() = %q, want %q", got, "0.15.1")
+	}
+}
+
 func TestVersionFailsOnNonZeroExit(t *testing.T) {
 	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\necho boom >&2\nexit 3\n")}
 

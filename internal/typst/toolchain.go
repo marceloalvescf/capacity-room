@@ -45,8 +45,10 @@ func Locate(getenv func(string) string, lookPath func(string) (string, error)) (
 }
 
 // Version runs "<binary> --version" and returns the second field, e.g.
-// "0.15.1" out of "typst 0.15.1 (unknown commit)". The context deadline is
-// honoured; the caller passes one and this function adds none.
+// "0.15.1" out of "typst 0.15.1 (unknown commit)". The first field must
+// read exactly "typst"; a binary that answers with some other program's
+// name is treated as unreadable output, not as a version. The context
+// deadline is honoured; the caller passes one and this function adds none.
 func (t Toolchain) Version(ctx context.Context) (string, error) {
 	cmd := exec.CommandContext(ctx, t.Binary, "--version")
 	cmd.Env = []string{} // run with an empty environment, not the parent's
@@ -80,7 +82,7 @@ func (t Toolchain) Version(ctx context.Context) (string, error) {
 	}
 
 	fields := strings.Fields(stdout.String())
-	if runErr == nil && len(fields) >= 2 {
+	if runErr == nil && len(fields) >= 2 && fields[0] == "typst" {
 		return fields[1], nil
 	}
 
