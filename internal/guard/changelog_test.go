@@ -117,6 +117,64 @@ func TestNewestVersionHeadingRejectsImpossibleDate(t *testing.T) {
 	}
 }
 
+func TestNewestVersionHeadingRejectsOddSpacing(t *testing.T) {
+	cases := []struct {
+		name string
+		line string
+	}{
+		{"two spaces", "##  [1.0.0] - 2026-09-28"},
+		{"tab", "##\t[1.0.0] - 2026-09-28"},
+		{"leading space", " ## [1.0.0] - 2026-09-28"},
+		{"trailing space", "## [1.0.0] - 2026-09-28 "},
+		{"unreleased no brackets", "## Unreleased"},
+		{"unreleased lowercase", "## [unreleased]"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Put the malformed heading above a well-formed, older heading,
+			// so the test also proves the older heading is not reported as
+			// the newest version instead of raising an error.
+			changelog := tc.line + "\n## [0.9.0] - 2026-01-01\n"
+
+			_, _, err := NewestVersionHeading(changelog)
+			if err == nil {
+				t.Fatalf("NewestVersionHeading(%q) returned no error, want error", changelog)
+			}
+			want := fmt.Sprintf("malformed changelog heading on line 1: %q", tc.line)
+			if err.Error() != want {
+				t.Fatalf("NewestVersionHeading(%q) error = %q, want %q", changelog, err.Error(), want)
+			}
+		})
+	}
+}
+
+func TestNewestVersionHeadingIgnoresNonHeadingLines(t *testing.T) {
+	cases := []struct {
+		name string
+		line string
+	}{
+		{"top heading", "# Changelog"},
+		{"level three", "### Added"},
+		{"level four", "#### note"},
+		{"prose with heading text mid-line", "See section ## [1.0.0] below."},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			changelog := tc.line + "\n## [0.9.0] - 2026-01-01\n"
+
+			version, found, err := NewestVersionHeading(changelog)
+			if err != nil {
+				t.Fatalf("NewestVersionHeading(%q) returned error: %v", changelog, err)
+			}
+			if !found || version != "0.9.0" {
+				t.Fatalf("NewestVersionHeading(%q) = (%q, %v), want (\"0.9.0\", true)", changelog, version, found)
+			}
+		})
+	}
+}
+
 func TestNewestVersionHeadingIgnoresDeeperHeadings(t *testing.T) {
 	changelog := "### [0.9.9] - 2026-01-01\n## [0.1.0] - 2026-09-30\n"
 

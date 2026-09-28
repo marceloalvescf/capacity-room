@@ -16,18 +16,25 @@ import (
 // its date checked with time.Parse before it is accepted.
 var versionHeadingPattern = regexp.MustCompile(`^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$`)
 
-// versionHeadingPrefix matches any line that looks like it is attempting a
-// version heading (a top-level heading opening on a digit), whether or not
-// it is well-formed.
-var versionHeadingPrefix = regexp.MustCompile(`^## \[\d`)
+// isLevelTwoHeading reports whether line is a level-two Markdown heading:
+// after removing leading and trailing white space it starts with "##" and
+// its third character is not "#". This is deliberately loose about what
+// follows "##" so that a heading with odd interior spacing (two spaces, a
+// tab) is still caught by this check, rather than silently falling through
+// as ordinary prose.
+func isLevelTwoHeading(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return strings.HasPrefix(trimmed, "##") && !strings.HasPrefix(trimmed, "###")
+}
 
 // NewestVersionHeading returns the version named by the first well-formed
 // release heading in changelog, scanning from the top. Keep a Changelog
 // lists releases newest first, so the first match is the newest version.
-// "## [Unreleased]" is allowed and ignored. A line that opens like a
-// version heading but does not match the full form is reported as an
-// error immediately, rather than skipped, so a malformed heading cannot
-// hide behind an older, well-formed one further down.
+// "## [Unreleased]" is allowed and ignored. Every level-two heading is
+// checked: one that is not exactly "## [Unreleased]" and does not match
+// the strict version form is reported as an error immediately, rather than
+// skipped, so a malformed heading cannot hide behind an older, well-formed
+// one further down.
 func NewestVersionHeading(changelog string) (version string, found bool, err error) {
 	scanner := bufio.NewScanner(strings.NewReader(changelog))
 	lineNum := 0
@@ -40,7 +47,7 @@ func NewestVersionHeading(changelog string) (version string, found bool, err err
 			// shape like "2026-99-99" matches syntactically; parsing
 			// catches an impossible calendar date and treats it the same
 			// as any other malformed heading.
-			if _, err := time.Parse("2006-01-02", match[2]); err != nil {
+			if _, parseErr := time.Parse("2006-01-02", match[2]); parseErr != nil {
 				return "", false, fmt.Errorf("malformed changelog heading on line %d: %q", lineNum, line)
 			}
 			return match[1], true, nil
@@ -50,12 +57,12 @@ func NewestVersionHeading(changelog string) (version string, found bool, err err
 			continue
 		}
 
-		if versionHeadingPrefix.MatchString(line) {
+		if isLevelTwoHeading(line) {
 			return "", false, fmt.Errorf("malformed changelog heading on line %d: %q", lineNum, line)
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return "", false, err
+	if scanErr := scanner.Err(); scanErr != nil {
+		return "", false, scanErr
 	}
 	return "", false, nil
 }
