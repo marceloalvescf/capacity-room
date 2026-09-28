@@ -181,4 +181,35 @@ var Snapshots = []Snapshot{
 		Protects: "the report layer reproduces the original generated " +
 			"document page for page",
 	},
+	{
+		Name:   "command-complete-pt",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/command/direct-complete.pt-BR.json",
+		Pages:  []int{1, 2},
+		Protects: "the report as the command writes it, from a data file " +
+			"that Go built and no hand wrote: a numbered appendix that " +
+			"follows the opening page with no empty page between, where " +
+			"two page breaks stand in a row",
+	},
+	{
+		Name:   "command-complete-en",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/command/direct-complete.en.json",
+		Pages:  []int{1, 2},
+		Protects: "the same report in English, with the wording of the " +
+			"catalog: the only pages that show the English catalog as " +
+			"the command prints it",
+	},
+	{
+		Name:   "command-partial-en",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/command/partial-data.en.json",
+		Pages:  []int{2},
+		Omits: "page 1: it differs from page 1 of command-complete-en " +
+			"only in the three counts of the data quality list, which " +
+			"are plain text",
+		Protects: "the three states in the coverage column of one table, " +
+			"each with its mark, and a remark that wraps beside an " +
+			"evidence sentence that wraps",
+	},
 }
