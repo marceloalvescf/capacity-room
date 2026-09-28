@@ -25,10 +25,10 @@ func TestSlug(t *testing.T) {
 	}
 }
 
-// TestDefaultOutputName covers the five rows of the brief's
-// TestPDFModeDefaultName table directly against the naming algorithm, with
-// no network dependency: the emission time is fixed at 2026-07-15 14:30:00,
-// as the fixed input of Task 13 also uses.
+// TestDefaultOutputName covers the same five rows as TestPDFModeDefaultName,
+// directly against the naming algorithm, with no network dependency: the
+// emission time is fixed at 2026-07-15 14:30:00, the same instant
+// internal/goldentest.fixedConfig uses.
 func TestDefaultOutputName(t *testing.T) {
 	emittedAt := time.Date(2026, time.July, 15, 14, 30, 0, 0, time.UTC)
 
@@ -221,7 +221,8 @@ func TestWritableCheckReportsAProbeItCannotRemove(t *testing.T) {
 // clears also cleared. It measures the umask indirectly, by creating a
 // throwaway file with 0o666 and reading back what survived, rather than
 // reading or setting the umask itself (umask has no portable read-only
-// accessor in Go, and the brief asks that this package never touch it).
+// accessor in Go: reading it means setting it, if only for an instant,
+// which would race any other goroutine creating a file at the same time).
 // Since 0o644's bits are a subset of 0o666's, ANDing the measured mode with
 // 0o644 gives exactly "0o644 less the same umask", for any umask.
 func expected0644Mode(t *testing.T) os.FileMode {

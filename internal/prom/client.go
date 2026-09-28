@@ -190,12 +190,13 @@ func secondsToDuration(seconds float64) time.Duration {
 	return time.Duration(seconds * float64(time.Second))
 }
 
-// runQuery runs one query to completion, retrying as the brief's table of
-// failures describes. answered tracks whether this client (or this
-// candidate, during Connect) has ever parsed a full, successful answer; it
-// is set to true the moment that happens, which turns a later 404, 405, or
-// unparsable body from a "wrong candidate" signal into a mid-collection
-// failure.
+// runQuery runs one query to completion, retrying a plain connection or
+// timeout failure up to 3 attempts with a growing backoff, while a TLS
+// failure, a foreign-transport error, or a cancelled context stops at once.
+// answered tracks whether this client (or this candidate, during Connect)
+// has ever parsed a full, successful answer; it is set to true the moment
+// that happens, which turns a later 404, 405, or unparsable body from a
+// "wrong candidate" signal into a mid-collection failure.
 func runQuery(
 	ctx context.Context,
 	httpClient *http.Client,

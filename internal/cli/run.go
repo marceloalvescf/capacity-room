@@ -171,9 +171,9 @@ func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.
 		// later phases serve, worker, and admin) and no other. Cobra's
 		// default completion command is not one of them, and it carries
 		// its own unmodified cobra.NoArgs, which repeats a stray argument
-		// verbatim exactly like the root's own did before this task's
-		// fix — the same leak, one command over. Removed outright, rather
-		// than given its own Args, since the design never asked for it.
+		// verbatim — the same leak the root's own Args function above
+		// avoids, one command over. Removed outright, rather than given
+		// its own Args, since the design never asked for it.
 		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
 		SilenceErrors:     true,
 		SilenceUsage:      true,

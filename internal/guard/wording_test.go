@@ -106,10 +106,9 @@ func TestReaderTextIgnoresIdentifiers(t *testing.T) {
 	}
 }
 
-// TestReaderTextFindsPercentSentences covers task 12's second review round,
-// Ruling A: fixing the verb-removal regex (space is not a flag) must not
-// stop an ordinary sentence that happens to carry a percent sign from
-// being read as one.
+// TestReaderTextFindsPercentSentences confirms that the verb-removal regex
+// treats a bare space as not a printf flag, so an ordinary sentence that
+// happens to carry a percent sign is still read as one.
 func TestReaderTextFindsPercentSentences(t *testing.T) {
 	cases := []string{
 		"50% of nodes",
@@ -133,9 +132,9 @@ func TestReaderTextFindsPercentSentences(t *testing.T) {
 	}
 }
 
-// TestReaderTextFindsFormatWithAWord covers Ruling B: a literal that holds
-// a genuine verb and a word of two or more letters is a sentence the reader
-// sees filled in.
+// TestReaderTextFindsFormatWithAWord confirms that a literal holding a
+// genuine printf verb alongside a word of two or more letters is a
+// sentence the reader sees filled in.
 func TestReaderTextFindsFormatWithAWord(t *testing.T) {
 	cases := []string{
 		"%d nodes",
@@ -159,8 +158,8 @@ func TestReaderTextFindsFormatWithAWord(t *testing.T) {
 	}
 }
 
-// TestReaderTextIgnoresFormatWithoutAWord covers the other half of Ruling
-// B: a literal that holds only verbs, no word of two or more letters left
+// TestReaderTextIgnoresFormatWithoutAWord confirms the converse: a literal
+// that holds only printf verbs, with no word of two or more letters left
 // beside them, is not reported.
 func TestReaderTextIgnoresFormatWithoutAWord(t *testing.T) {
 	cases := []string{
@@ -189,8 +188,8 @@ func TestReaderTextIgnoresFormatWithoutAWord(t *testing.T) {
 	}
 }
 
-// TestReaderTextFormatRuleNeedsStrict confirms Ruling B's third rule, like
-// the other two strict-only rules, does not apply outside strict.
+// TestReaderTextFormatRuleNeedsStrict confirms the format-with-a-word rule,
+// like the other two strict-only rules, does not apply outside strict.
 func TestReaderTextFormatRuleNeedsStrict(t *testing.T) {
 	const source = `package sample
 
@@ -532,8 +531,8 @@ func TestReaderTextRejectsBrokenSource(t *testing.T) {
 // `git add`-ed is still seen, while a file matched by .gitignore never is —
 // the same combination the Makefile already uses to list files for gofmt.
 // Plain `git ls-files` (tracked files only, this guard's first version)
-// misses exactly the file an implementer is most likely to be looking at:
-// one just written, before its first commit.
+// misses exactly the file most likely being edited right now: one just
+// written, before its first commit.
 func repositoryGoFiles(t *testing.T, root string, pathspecs ...string) []string {
 	t.Helper()
 
@@ -561,9 +560,9 @@ func repositoryGoFiles(t *testing.T, root string, pathspecs ...string) []string 
 // TestRepositoryTestSeesANewFile confirms repositoryGoFiles sees a file
 // that was just created and never `git add`-ed, and still leaves out a
 // file matched by .gitignore — the class of gap the plain `git ls-files`
-// this guard's first version used could not close, since a new file is
-// invisible to it until it is staged, which an implementer running
-// `make test` before a commit has not yet done.
+// this guard's first version used could not close, since a new file stays
+// invisible to it until staged, and running `make test` before a commit
+// never stages anything.
 func TestRepositoryTestSeesANewFile(t *testing.T) {
 	root := t.TempDir()
 

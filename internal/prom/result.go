@@ -15,8 +15,9 @@ type Sample struct {
 }
 
 // parseVector turns the "data" object of a successful Prometheus answer
-// into samples. Only a "vector" result is accepted; matrix answers are
-// refused as unsupported here (part 2.2 adds them with QueryRange).
+// into samples. Only a "vector" result is accepted; a matrix result is
+// refused as unsupported, because nothing in this package issues a range
+// query yet.
 func parseVector(data map[string]interface{}) ([]Sample, error) {
 	resultTypeRaw := data["resultType"]
 	resultType, _ := resultTypeRaw.(string)

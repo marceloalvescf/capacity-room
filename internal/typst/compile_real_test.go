@@ -36,9 +36,10 @@ func moduleRoot(t *testing.T) string {
 	}
 }
 
-// realFontPath returns the font directory Task 2 populates for the
-// template. These tests exercise the real typst binary, so they need real
-// fonts rather than the empty directories the fake-binary tests use.
+// realFontPath returns the font directory checked into the template
+// (template/graphite/assets/fonts). These tests exercise the real typst
+// binary, so they need real fonts rather than the empty directories the
+// fake-binary tests use.
 func realFontPath(t *testing.T) string {
 	t.Helper()
 	return filepath.Join(moduleRoot(t), "template", "graphite", "assets", "fonts")

@@ -99,9 +99,9 @@ func TestKeysEqualTheFiles(t *testing.T) {
 	}
 }
 
-// wordingTable holds the plan's wording table a second time, so that the
-// test says the files agree with what was approved. Written by hand from
-// the brief.
+// wordingTable holds the expected Portuguese and English wording for every
+// catalog key, transcribed independently of locales/*.toml, so the test
+// below catches either file drifting from what was approved.
 var wordingTable = []struct {
 	key    Key
 	pt, en string
@@ -177,9 +177,9 @@ var wordingTable = []struct {
 	{CapabilityReasonNodeAutoscalingUndetermined, "O estado do escalonamento automático de nós não pôde ser determinado.", "The state of node autoscaling could not be determined."},
 }
 
-// evidenceSubjects and evidenceEndings hold the two small tables the plan
-// builds the 27 evidence sentences from, transcribed by hand from the
-// brief. TestWordingMatchesThePlan crosses them to get the full sentences.
+// evidenceSubjects and evidenceEndings hold the two small tables that cross
+// to build the 27 evidence sentences (nine capabilities times three
+// states). TestWordingMatchesThePlan crosses them to get the full sentences.
 var evidenceSubjects = []struct {
 	name   string
 	pt, en string

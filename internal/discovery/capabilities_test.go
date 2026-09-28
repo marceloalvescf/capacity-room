@@ -1161,21 +1161,21 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 }
 
 // scenarioCapability is one expected row of a scenario's result: every
-// field task-8-brief.md's scenario table and Evidence (R9) table pin down,
-// checked in full by TestDetectScenario.
+// field the scenario table pins down, checked in full by
+// TestDetectScenario. Evidence holds metric names only, not free text.
 type scenarioCapability struct {
 	Name, State, Strategy string
 	Evidence, Reasons     []string
 }
 
 // scenarioWant returns the expected result for every one of the nine
-// capabilities of scenario name, from the scenario table and the Evidence
-// (R9) table of task-8-brief.md. "Every capability that is not listed is
-// available", with the strategy the three baseline scenarios name for
-// workload_usage and node_utilization (recording_rule); every other
-// unlisted capability is raw_metrics, the only strategy its available case
-// can carry. Evidence values were confirmed against an actual run of
-// Detect for all six scenarios, not derived from the table by hand.
+// capabilities of scenario name, from the scenario table. "Every
+// capability that is not listed is available", with the strategy the three
+// baseline scenarios name for workload_usage and node_utilization
+// (recording_rule); every other unlisted capability is raw_metrics, the
+// only strategy its available case can carry. Evidence values were
+// confirmed against an actual run of Detect for all six scenarios, not
+// derived from the table by hand.
 func scenarioWant(name string) []scenarioCapability {
 	baseline := []scenarioCapability{
 		{"namespace_usage", StateAvailable, StrategyRawMetrics, []string{metricContainerCPUUsageSecondsTotal, metricContainerMemoryWorkingSetBytes}, []string{}},

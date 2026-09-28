@@ -455,7 +455,8 @@ func TestCapacityUnnumberedHeadingIsLeftOutOfTheOutline(t *testing.T) {
 	}
 }
 
-// capacityLayout is one row of the brief's table of layouts.
+// capacityLayout is one row of the column-width, size, and inset table
+// template/capacity/tables.typ defines for each table identifier.
 type capacityLayout struct {
 	id      string
 	columns int

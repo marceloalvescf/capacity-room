@@ -48,9 +48,9 @@ const (
 // exit code 5.
 var ErrInsufficient = errors.New("all analytical capabilities are unavailable")
 
-// analyticalForSufficiency lists the five capabilities R16 weighs: when
-// every one of them is unavailable and node_autoscaling is not available,
-// the endpoint carries too little for the report to say anything.
+// analyticalForSufficiency lists the five capabilities that must all be
+// unavailable, together with node_autoscaling itself not being available,
+// before the endpoint carries too little for the report to say anything.
 var analyticalForSufficiency = []string{
 	"namespace_usage", "workload_usage", "hpa_history",
 	"workloads_without_hpa", "node_utilization",
@@ -380,7 +380,7 @@ func nodeAutoscalingCapability(configured string, autoscalerMetrics bool) Capabi
 // CheckSufficient reports ErrInsufficient when the endpoint carries too
 // little for the report to say anything: the five capabilities of
 // analyticalForSufficiency are all unavailable, and node_autoscaling itself
-// is not available (R16). It first requires capabilities to hold exactly
+// is not available. It first requires capabilities to hold exactly
 // the nine capabilities of Names, in that order, each with one of the three
 // known states — a list that is short, reordered, duplicated, or carries an
 // unrecognised state is a caller error, reported as such, and never read as

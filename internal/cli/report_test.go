@@ -150,7 +150,7 @@ func fixedGoldenEnv(t *testing.T) Env {
 }
 
 // fixedGoldenConfig builds the TOML configuration matching the fixed input
-// of Task 13 (internal/goldentest.fixedConfig), pointed at server.
+// of internal/goldentest.fixedConfig, pointed at server.
 func fixedGoldenConfig(server *httptest.Server, scenario promtest.Scenario, outputDir string) string {
 	return fmt.Sprintf(`[metrics]
 url = %q
@@ -578,11 +578,11 @@ func modifiedSnapshot(t *testing.T, name string, modify func(*snapshot.Snapshot)
 	return path
 }
 
-// TestDefaultNameEndToEnd proves the five rows of R4's default-naming table
-// end to end, through the mode from snapshot, which needs no server: each
-// row modifies a golden snapshot's own stored fields (or passes a flag) and
-// checks that the command writes a file under the exact name R4 predicts,
-// in KCR_OUTPUT_DIRECTORY.
+// TestDefaultNameEndToEnd proves the same five default-naming rows as
+// TestDefaultOutputName, end to end, through the mode from snapshot, which
+// needs no server: each row modifies a golden snapshot's own stored fields
+// (or passes a flag) and checks that the command writes a file under the
+// exact name defaultOutputName predicts, in KCR_OUTPUT_DIRECTORY.
 func TestDefaultNameEndToEnd(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -632,9 +632,9 @@ func clockCounter(calls *int) func() time.Time {
 	}
 }
 
-// TestClockIsReadTwice proves ruling 1 of the controller directly: the
-// clock is read exactly twice in every mode that collects, and not at all
-// in the mode from snapshot.
+// TestClockIsReadTwice proves the clock is read exactly twice in every mode
+// that collects — once for when collection finishes, once for when the
+// report is emitted — and not at all in the mode from snapshot.
 func TestClockIsReadTwice(t *testing.T) {
 	t.Run("check", func(t *testing.T) {
 		server, _, scenario := startScenario(t, "direct-complete")

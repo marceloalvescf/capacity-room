@@ -184,7 +184,7 @@ func TestNoCommandRepeatsAnArgument(t *testing.T) {
 
 // TestRootHelpListsOnlyItsCommands proves the root's own --help output
 // names the commands a reader can actually use (report, help) and never
-// the completion command this task removes.
+// the completion command, which this program disables.
 func TestRootHelpListsOnlyItsCommands(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	code := Run(context.Background(), Env{}, []string{"--help"}, &stdout, &stderr)

@@ -91,7 +91,7 @@ func slug(name string) string {
 	return s
 }
 
-// defaultOutputName builds the default PDF file name of R4:
+// defaultOutputName builds the default PDF file name:
 // report-resources-<slug><suffix>-<language>-<YYYYMMDD-HHMMSS>.pdf. emittedAt
 // must already be in the zone the name is written for.
 func defaultOutputName(cluster, minSeverity, language string, emittedAt time.Time) string {

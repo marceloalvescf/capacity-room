@@ -981,8 +981,8 @@ func TestUnknownTransportErrorOfBuiltTransportIsAConnectionFailure(t *testing.T)
 	}
 }
 
-// TestErrorsNeverRepeatTheAddressOrToken walks a representative failure of
-// every row of the brief's table (TLS excepted, checked separately since it
+// TestErrorsNeverRepeatTheAddressOrToken walks a representative case of
+// every classified failure (TLS excepted, checked separately since it
 // needs its own server type) with a token, and checks that no message
 // holds it or the host of the server. net/http's own errors hold the
 // address in their text; this package's fixed sentences must not repeat

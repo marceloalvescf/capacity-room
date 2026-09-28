@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-// TestCandidates covers every row of the brief's table of roots: the API
-// roots to try, in order, and the endpoint kind.
+// TestCandidates covers every combination of address and endpoint type this
+// package resolves: the API roots to try, in order, and the endpoint kind.
 func TestCandidates(t *testing.T) {
 	cases := []struct {
 		name         string

@@ -333,8 +333,7 @@ func TestCapacityControlRepeatsTheHyphen(t *testing.T) {
 // Sans, a Latin-only family, so those three CJK characters have no glyph
 // in the report's font at all and render as empty boxes (confirmed by
 // rendering this fixture to PNG at 300 PPI). That is a font-coverage gap,
-// not markup being interpreted, so it is out of this test's scope — but
-// see the report for this task, which flags it for the controller. The
+// not markup being interpreted, so it is out of this test's scope. The
 // limit is documented in template/graphite/README.md under "Known
 // limitations".
 var literalStrings = []string{
