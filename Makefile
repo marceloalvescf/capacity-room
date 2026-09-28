@@ -20,6 +20,11 @@ BUILD_FLAGS ?=
 # Extra flags for `go test`; the gate sets them so that no cached result counts.
 TEST_FLAGS ?=
 
+# The prerequisite that gives a target a built image. The gate builds the
+# image once itself and then clears this for the steps that follow, so they
+# run against that exact build instead of each triggering their own.
+IMAGE_DEP ?= image
+
 # The test image runs as the runtime user, over a read-only source and a
 # read-only root file system, as the runtime image does in production.
 RUN_TEST_IMAGE_FLAGS := --rm --user 10001:10001 --read-only --tmpfs /tmp:exec \
@@ -64,13 +69,13 @@ image:
 	docker build $(BUILD_FLAGS) --file deploy/Containerfile --target runtime --tag $(IMAGE) .
 	docker build $(BUILD_FLAGS) --file deploy/Containerfile --target test --tag $(TEST_IMAGE) .
 
-test-toolchain: image
+test-toolchain: $(IMAGE_DEP)
 	$(RUN_TEST_IMAGE) go test -v -tags=toolchain ./internal/typst/...
 
-test-template: image
+test-template: $(IMAGE_DEP)
 	$(RUN_TEST_IMAGE) go test -v -tags=template ./internal/typst/... ./template/...
 
-test-golden: image
+test-golden: $(IMAGE_DEP)
 	@mkdir -p $(GOLDEN_OUT)
 	docker run $(RUN_TEST_IMAGE_FLAGS) \
 		--volume "$(CURDIR)/$(GOLDEN_OUT):/out" --env KCR_GOLDEN_OUT=/out \
@@ -78,12 +83,12 @@ test-golden: image
 
 # Rewrites every golden page. Run it only for an intended visual change, and
 # review each page before committing it.
-update-golden: image
+update-golden: $(IMAGE_DEP)
 	docker run $(RUN_TEST_IMAGE_FLAGS) \
 		--volume "$(CURDIR)/template/tests/golden:/src/template/tests/golden" \
 		$(TEST_IMAGE) go run ./template/golden/cmd/update-golden
 
-check-runtime: image
+check-runtime: $(IMAGE_DEP)
 	test "$$(docker run --rm $(IMAGE) --version)" = "k8s-capacity-report $(VERSION)"
 	test "$$(docker run --rm --entrypoint /usr/local/bin/typst $(IMAGE) --version | cut -d' ' -f2)" = "$(TYPST_VERSION)"
 	test "$$(docker inspect --format '{{.Config.User}}' $(IMAGE))" = "10001:10001"
@@ -92,8 +97,9 @@ check-runtime: image
 # Each step is piped into `tee`, so each line turns on `pipefail`; without it
 # the exit status would be that of `tee` and a failed step would pass. The
 # first line proves the flag works in this shell before anything relies on it.
-# The images are built without cache once; the later steps depend on `image`
-# and rebuild from that fresh cache.
+# The images are built without cache once; the later steps pass IMAGE_DEP=
+# empty, so they build nothing and run against that exact build instead of
+# each rebuilding from Docker's cache.
 gate:
 	@set -o pipefail; if false | tee /dev/null; then \
 		echo "gate: pipefail has no effect in $(SHELL); refusing to run"; exit 1; \
@@ -102,8 +108,8 @@ gate:
 	@set -o pipefail; $(MAKE) lint 2>&1 | tee $(GATE_LOGS)/lint.log
 	@set -o pipefail; $(MAKE) test TEST_FLAGS="-count=1" 2>&1 | tee $(GATE_LOGS)/test.log
 	@set -o pipefail; $(MAKE) image BUILD_FLAGS="--no-cache --pull" 2>&1 | tee $(GATE_LOGS)/image.log
-	@set -o pipefail; $(MAKE) test-toolchain 2>&1 | tee $(GATE_LOGS)/test-toolchain.log
-	@set -o pipefail; $(MAKE) test-template 2>&1 | tee $(GATE_LOGS)/test-template.log
-	@set -o pipefail; $(MAKE) test-golden 2>&1 | tee $(GATE_LOGS)/test-golden.log
-	@set -o pipefail; $(MAKE) check-runtime 2>&1 | tee $(GATE_LOGS)/check-runtime.log
+	@set -o pipefail; $(MAKE) test-toolchain IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-toolchain.log
+	@set -o pipefail; $(MAKE) test-template IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-template.log
+	@set -o pipefail; $(MAKE) test-golden IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-golden.log
+	@set -o pipefail; $(MAKE) check-runtime IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/check-runtime.log
 	@echo "gate passed for version $(VERSION)"
