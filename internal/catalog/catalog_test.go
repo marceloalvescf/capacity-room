@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -104,6 +105,11 @@ func TestTextFillsParameters(t *testing.T) {
 	}
 }
 
+// TestTextRefusesMissingEntry compares the whole error text by equality,
+// not with two separate Contains checks: "en" is a substring of the fixed
+// word "entry" in the message's own wording, so a Contains check for the
+// language would pass even if the language were never actually
+// interpolated into the message at all.
 func TestTextRefusesMissingEntry(t *testing.T) {
 	cat, err := Load(English)
 	if err != nil {
@@ -113,11 +119,9 @@ func TestTextRefusesMissingEntry(t *testing.T) {
 	if err == nil {
 		t.Fatal("Text(\"nope\") = nil error, want one")
 	}
-	if !strings.Contains(err.Error(), "nope") {
-		t.Errorf("error %q does not name the key", err)
-	}
-	if !strings.Contains(err.Error(), string(English)) {
-		t.Errorf("error %q does not name the language", err)
+	want := fmt.Sprintf("catalog: %s: no entry %q", English, Key("nope"))
+	if err.Error() != want {
+		t.Errorf("error = %q, want %q", err, want)
 	}
 }
 
@@ -216,39 +220,42 @@ func fsWithEntry(text string) fstest.MapFS {
 // {{...}} span that is not the exact plain form {{.Name}}: a space inside
 // the braces, a pipeline, a condition, a nested field, an empty reference,
 // an unterminated "{{", a stray "}}", and one bad span among otherwise good
-// ones. Each case is checked against templateSpan directly, so the test
-// also pins what Load's error names as the offending span.
+// ones. wantSpan is a literal, hand-written per row, never computed by
+// calling templateSpan: a span taken from templateSpan itself would still
+// match whatever wrong span a regression in templateSpan produced, since
+// load's error is built from that very call. The whole error text is then
+// compared by equality against the one message Load's ruling defines, so
+// that neither a wrong span nor a wrong surrounding text can hide inside a
+// Contains check — "{{" and "}}" both already appear, coincidentally, in
+// the fixed wording "...that is not {{.Name}}: ...", which is exactly what
+// let two rows of an earlier version of this test pass regardless of what
+// span Load actually reported.
 func TestLoadRefusesOtherTemplateForms(t *testing.T) {
 	tests := []struct {
-		name string
-		text string
+		name     string
+		text     string
+		wantSpan string
 	}{
-		{"spaces inside the braces", "{{ .Start }}"},
-		{"a pipeline", `{{.Start | printf "%s"}}`},
-		{"a condition", "{{if .Start}}x{{end}}"},
-		{"a nested field", "{{.start.end}}"},
-		{"an empty reference", "{{.}}"},
-		{"an unterminated open", "{{.Start}"},
-		{"a stray close", "Start}}"},
-		{"one bad span among good ones", "{{.Start}} and {{ .End}}"},
+		{"spaces inside the braces", "{{ .Start }}", "{{ .Start }}"},
+		{"a pipeline", `{{.Start | printf "%s"}}`, `{{.Start | printf "%s"}}`},
+		{"a condition", "{{if .Start}}x{{end}}", "{{if .Start}}"},
+		{"a nested field", "{{.start.end}}", "{{.start.end}}"},
+		{"an empty reference", "{{.}}", "{{.}}"},
+		{"an unterminated open", "{{.Start}", "{{"},
+		{"a stray close", "Start}}", "}}"},
+		{"one bad span among good ones", "{{.Start}} and {{ .End}}", "{{ .End}}"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wantSpan, bad := templateSpan(tt.text)
-			if !bad {
-				t.Fatalf("test setup: templateSpan(%q) found nothing wrong", tt.text)
-			}
+			want := fmt.Sprintf("catalog %s: entry %s uses a template form that is not {{.Name}}: %s", English, Key("value"), tt.wantSpan)
 
 			_, err := load(fsWithEntry(tt.text), English)
 			if err == nil {
-				t.Fatalf("load() with entry %q = nil error, want one", tt.text)
+				t.Fatalf("load() with entry %q = nil error, want %q", tt.text, want)
 			}
-			if !strings.Contains(err.Error(), "value") {
-				t.Errorf("error %q does not name the key", err)
-			}
-			if !strings.Contains(err.Error(), wantSpan) {
-				t.Errorf("error %q does not name the span %q", err, wantSpan)
+			if err.Error() != want {
+				t.Errorf("load() with entry %q error = %q, want %q", tt.text, err.Error(), want)
 			}
 		})
 	}

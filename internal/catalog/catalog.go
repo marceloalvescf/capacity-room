@@ -54,8 +54,19 @@ type Catalog struct {
 	entries   map[Key]string // raw template text of every entry, this language only
 }
 
-// paramPattern finds a parameter reference such as {{.Start}}.
-var paramPattern = regexp.MustCompile(`\{\{\.(\w+)\}\}`)
+// nameRule is the one definition of a parameter name this package uses: a
+// letter, then letters and digits. namePattern and paramPattern both build
+// on it, so that what Load accepts and what paramNames reads can never
+// drift apart into two different rules for the same thing.
+const nameRule = `[A-Za-z][A-Za-z0-9]*`
+
+// namePattern matches a parameter reference filling an entire pair of
+// braces: a dot, then nameRule, with no space anywhere inside the braces.
+var namePattern = regexp.MustCompile(`^\.` + nameRule + `$`)
+
+// paramPattern finds a parameter reference such as {{.Start}} inside a
+// larger text.
+var paramPattern = regexp.MustCompile(`\{\{\.(` + nameRule + `)\}\}`)
 
 // paramNames returns the distinct parameter names that text references, in
 // the order they first appear.
@@ -72,11 +83,6 @@ func paramNames(text string) []string {
 	}
 	return names
 }
-
-// namePattern is a parameter reference in the one form the catalog accepts
-// inside a pair of braces: a dot, then a letter, then letters and digits,
-// with no space anywhere inside the braces.
-var namePattern = regexp.MustCompile(`^\.[A-Za-z][A-Za-z0-9]*$`)
 
 // templateSpan finds the first span of text that keeps this catalog from
 // holding only the plain template form {{.Name}}: a pair of braces whose

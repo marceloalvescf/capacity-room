@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -489,10 +490,11 @@ func TestNoBannedTerm(t *testing.T) {
 
 // keyDeclarations parses keys.go itself, so that a constant or a key
 // function added later is covered without a list of names kept here too.
-// constants holds every exported constant declared with the explicit type
-// Key; functions holds every exported top-level function whose one result
-// is a Key (Keys, whose result is []Key, is not one of them).
-func keyDeclarations(t *testing.T) (constants, functions []string) {
+// constants holds, for every exported constant declared with the explicit
+// type Key, its name and the string value of its literal; functions holds
+// every exported top-level function whose one result is a Key (Keys, whose
+// result is []Key, is not one of them).
+func keyDeclarations(t *testing.T) (constants map[string]Key, functions []string) {
 	t.Helper()
 
 	fset := token.NewFileSet()
@@ -501,6 +503,7 @@ func keyDeclarations(t *testing.T) (constants, functions []string) {
 		t.Fatalf("parsing keys.go: %v", err)
 	}
 
+	constants = make(map[string]Key)
 	for _, decl := range file.Decls {
 		switch d := decl.(type) {
 		case *ast.GenDecl:
@@ -516,10 +519,22 @@ func keyDeclarations(t *testing.T) (constants, functions []string) {
 				if !ok || ident.Name != "Key" {
 					continue
 				}
-				for _, name := range vs.Names {
-					if name.IsExported() {
-						constants = append(constants, name.Name)
+				for i, name := range vs.Names {
+					if !name.IsExported() {
+						continue
 					}
+					if i >= len(vs.Values) {
+						t.Fatalf("keys.go: constant %s has no value expression", name.Name)
+					}
+					lit, ok := vs.Values[i].(*ast.BasicLit)
+					if !ok || lit.Kind != token.STRING {
+						t.Fatalf("keys.go: constant %s is not a plain string literal", name.Name)
+					}
+					value, err := strconv.Unquote(lit.Value)
+					if err != nil {
+						t.Fatalf("keys.go: constant %s: %v", name.Name, err)
+					}
+					constants[name.Name] = Key(value)
 				}
 			}
 		case *ast.FuncDecl:
@@ -595,7 +610,7 @@ func TestEveryKeyIsUsed(t *testing.T) {
 		}
 	}
 
-	for _, name := range constants {
+	for name := range constants {
 		if selectors[name] {
 			continue
 		}
@@ -609,6 +624,48 @@ func TestEveryKeyIsUsed(t *testing.T) {
 		if !coveredByFunction {
 			t.Errorf("internal/document never uses catalog.%s, directly or through a key function", name)
 		}
+	}
+}
+
+// TestKeysHoldEveryConstant proves that Keys() never drifts from the
+// constants keys.go itself declares. Keys() is built from wordingKeys, a
+// list written by hand in keys.go: a constant added there and left out of
+// that list would be invisible to TestKeysEqualTheFiles, which only
+// compares Keys() against the locale files, never against keys.go's own
+// source. This guard parses keys.go independently (through keyDeclarations,
+// the same parser TestEveryKeyIsUsed uses) and compares the values of its
+// constants with the part of Keys() that is not made from the registries
+// of discovery, in both directions.
+func TestKeysHoldEveryConstant(t *testing.T) {
+	constants, _ := keyDeclarations(t)
+
+	keys := make(map[Key]bool)
+	for _, k := range Keys() {
+		keys[k] = true
+	}
+
+	// The keys Keys() makes from the registries of discovery, not from a
+	// constant of keys.go: the 27 capability.evidence.<name>.<state> keys.
+	derived := make(map[Key]bool)
+	for _, name := range discovery.Names {
+		for _, state := range discovery.States {
+			derived[CapabilityEvidence(name, state)] = true
+		}
+	}
+
+	constantValues := make(map[Key]bool, len(constants))
+	for name, value := range constants {
+		constantValues[value] = true
+		if !keys[value] {
+			t.Errorf("keys.go declares %s = %q, which Keys() does not hold", name, value)
+		}
+	}
+
+	for key := range keys {
+		if derived[key] || constantValues[key] {
+			continue
+		}
+		t.Errorf("Keys() holds %q, which no constant of keys.go declares", key)
 	}
 }
 
