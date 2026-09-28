@@ -1598,6 +1598,7 @@ func Time(value string) (time.Time, error)
 | anything after the first document | `snapshot holds data after the document` |
 | an unknown key | `snapshot holds an unknown key: <cause of the decoder>` |
 | a key of the contract that the file lacks | `snapshot lacks the key <path>` |
+| a `null` anywhere in the file | `snapshot holds null at <path>` |
 | `schema_version` missing | `snapshot has no schema_version` |
 | another `schema_version` | `snapshot has schema_version "<value>"; this version reads "1.0"` |
 | an integrity failure | the message of `Check` |
