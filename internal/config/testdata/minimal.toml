@@ -1,0 +1,6 @@
+[metrics]
+url = "https://prom.example.org"
+
+[cluster]
+name = "prod"
+namespaces = ["default"]
