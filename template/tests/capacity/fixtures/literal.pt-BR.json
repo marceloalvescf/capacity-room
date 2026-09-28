@@ -1,0 +1,280 @@
+{
+  "schema": "1",
+  "language": "pt-BR",
+  "theme": {
+    "lang": "pt",
+    "region": "BR",
+    "date_format": "[day padding:zero]/[month padding:zero]/[year]"
+  },
+  "labels": {
+    "author": "Responsável",
+    "date": "Emissão",
+    "classification": "Classificação",
+    "outline": "Sumário",
+    "note": "Nota",
+    "info": "Informação",
+    "warning": "Atenção"
+  },
+  "cover": {
+    "title": "LEVANTAMENTO DE CAPACIDADE",
+    "cluster_label": "Cluster:",
+    "cluster": "aks-prod-eastus2",
+    "author_label": "ELABORADO POR:",
+    "author": "Time SRE",
+    "issued_label": "EMITIDO EM:",
+    "issued": "15/07/2026 14:30"
+  },
+  "footer": {
+    "classification": "Uso interno",
+    "page_label": "Página"
+  },
+  "blocks": [
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "#let x = 1"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "*negrito*"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "_sublinhado_"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "$x^2$"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "<rotulo>"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "@referencia"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "`codigo`"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "[colchetes]"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "// comentario"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "\\n literal"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "https://example.com/a?b=c&d=e"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "linha um\nlinha dois"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "tab\tulado"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "ação çedilha ñ ü 日本語"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "interpretation-notes",
+      "headers": [
+        "Observação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "#let x = 1"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "*negrito*"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "_sublinhado_"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "$x^2$"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "<rotulo>"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "@referencia"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "`codigo`"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "[colchetes]"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "// comentario"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "\\n literal"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "https://example.com/a?b=c&d=e"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "linha um\nlinha dois"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "tab\tulado"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "ação çedilha ñ ü 日本語"
+            }
+          ]
+        ]
+      ]
+    }
+  ]
+}

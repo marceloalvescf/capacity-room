@@ -1,0 +1,152 @@
+{
+  "schema": "1",
+  "language": "pt-BR",
+  "theme": {
+    "lang": "pt",
+    "region": "BR",
+    "date_format": "[day padding:zero]/[month padding:zero]/[year]"
+  },
+  "labels": {
+    "author": "Responsável",
+    "date": "Emissão",
+    "classification": "Classificação",
+    "outline": "Sumário",
+    "note": "Nota",
+    "info": "Informação",
+    "warning": "Atenção"
+  },
+  "cover": {
+    "title": "LEVANTAMENTO DE CAPACIDADE",
+    "cluster_label": "Cluster:",
+    "cluster": "aks-prod-eastus2",
+    "author_label": "ELABORADO POR:",
+    "author": "Time SRE",
+    "issued_label": "EMITIDO EM:",
+    "issued": "15/07/2026 14:30"
+  },
+  "footer": {
+    "classification": "Uso interno",
+    "page_label": "Página"
+  },
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Detalhamento por nó"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "node-detail",
+      "headers": [
+        "Nó",
+        "CPU méd/pico",
+        "Mem méd/pico",
+        "Motivo",
+        "Estado"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "aks-generalpool-29715314-vmss000001"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "55% / 78%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "60% / 75%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Pronto; Agendável"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "aks-generalpool-29715314-vmss000001"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "55% / 78%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "60% / 75%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Pronto; Agendável"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "aksgeneralpool29715314vmss000001"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ]
+        ]
+      ]
+    }
+  ]
+}

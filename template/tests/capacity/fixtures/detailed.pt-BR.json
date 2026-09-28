@@ -1,0 +1,2827 @@
+{
+  "schema": "1",
+  "language": "pt-BR",
+  "theme": {
+    "lang": "pt",
+    "region": "BR",
+    "date_format": "[day padding:zero]/[month padding:zero]/[year]"
+  },
+  "labels": {
+    "author": "Responsável",
+    "date": "Emissão",
+    "classification": "Classificação",
+    "outline": "Sumário",
+    "note": "Nota",
+    "info": "Informação",
+    "warning": "Atenção"
+  },
+  "cover": {
+    "title": "LEVANTAMENTO DE CAPACIDADE",
+    "cluster_label": "Cluster:",
+    "cluster": "aks-prod-eastus2",
+    "author_label": "ELABORADO POR:",
+    "author": "Time SRE",
+    "issued_label": "EMITIDO EM:",
+    "issued": "15/07/2026 14:30"
+  },
+  "footer": {
+    "classification": "Uso interno",
+    "page_label": "Página"
+  },
+  "blocks": [
+    {
+      "type": "outline",
+      "title": "Sumário",
+      "depth": 2
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Metadados do relatório"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "report-metadata",
+      "headers": [
+        "Campo",
+        "Valor"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Ambiente"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "aks-prod-eastus2"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Período analisado"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "14/07/2026 14:30 a 15/07/2026 14:30"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Namespaces"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "checkout, billing-core, gateway-api"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Containers excluídos"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "POD, istio-proxy"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Organização"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Aurora Digital Ltda."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Classificação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Uso interno"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Legenda de status"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "status-legend",
+      "headers": [
+        "Status",
+        "Interpretação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": null
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Saudável"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": null
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Atenção / prioridade alta"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": null
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Crítico / prioridade crítica"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": null
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Dado indisponível"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "status",
+              "status": "undefined",
+              "text": null
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Sem base de cálculo"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Qualidade dos dados"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Disponíveis: 3 · Parciais: 0 · Indisponíveis: 1."
+        }
+      ]
+    },
+    {
+      "type": "callout",
+      "kind": "warning",
+      "title": [
+        {
+          "kind": "text",
+          "text": "Aviso de interpretação"
+        }
+      ],
+      "runs": [
+        {
+          "kind": "text",
+          "text": "A série de eventos possui cobertura parcial."
+        }
+      ]
+    },
+    {
+      "type": "pagebreak",
+      "weak": false
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Capacidade por Namespace"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespace: "
+        },
+        {
+          "kind": "ident",
+          "text": "checkout"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "namespace-capacity",
+      "headers": [
+        "Recurso",
+        "Uso médio",
+        "Pico",
+        "Solicitação",
+        "Limite",
+        "% Pico/Solicitação",
+        "% Pico/Limite"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "CPU"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3,5 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "6,2 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "91%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Memória"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "12 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "18 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "79%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespace: "
+        },
+        {
+          "kind": "ident",
+          "text": "billing-core"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "namespace-capacity",
+      "headers": [
+        "Recurso",
+        "Uso médio",
+        "Pico",
+        "Solicitação",
+        "Limite",
+        "% Pico/Solicitação",
+        "% Pico/Limite"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "CPU"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1,8 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2,9 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2,5 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4 cores"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "58%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "36%"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Memória"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "6 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "8,4 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "7 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "10 B"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "60%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "42%"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespace: "
+        },
+        {
+          "kind": "ident",
+          "text": "gateway-api"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "namespace-capacity",
+      "headers": [
+        "Recurso",
+        "Uso médio",
+        "Pico",
+        "Solicitação",
+        "Limite",
+        "% Pico/Solicitação",
+        "% Pico/Limite"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "CPU"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4,1 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "7,8 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "5 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "8 cores"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "78%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "70%"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Memória"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "9 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "14 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "10 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "16 B"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "82%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "62%"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Recursos por carga de trabalho"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespace: "
+        },
+        {
+          "kind": "ident",
+          "text": "checkout"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "workload-resources",
+      "headers": [
+        "Carga de trabalho",
+        "Pods",
+        "CPU média",
+        "CPU pico",
+        "% CPU/Solicitação",
+        "% CPU/Limite",
+        "Memória média",
+        "Memória pico",
+        "% Memória/Solicitação",
+        "% Memória/Limite"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "checkout-worker"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "500 mCPU"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "800 mCPU"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "50%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1,5 B"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "55%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "checkout-api"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "5,4 cores"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "97%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "11 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "17 B"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "95%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespace: "
+        },
+        {
+          "kind": "ident",
+          "text": "billing-core"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "workload-resources",
+      "headers": [
+        "Carga de trabalho",
+        "Pods",
+        "CPU média",
+        "CPU pico",
+        "% CPU/Solicitação",
+        "% CPU/Limite",
+        "Memória média",
+        "Memória pico",
+        "% Memória/Solicitação",
+        "% Memória/Limite"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "billing-worker"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "420 mCPU"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "650 mCPU"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "42%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "28%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2,8 B"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "45%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "30%"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "billing-api"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1,1 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1,6 cores"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "55%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "40%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4,2 B"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "58%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "44%"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespace: "
+        },
+        {
+          "kind": "ident",
+          "text": "gateway-api"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "workload-resources",
+      "headers": [
+        "Carga de trabalho",
+        "Pods",
+        "CPU média",
+        "CPU pico",
+        "% CPU/Solicitação",
+        "% CPU/Limite",
+        "Memória média",
+        "Memória pico",
+        "% Memória/Solicitação",
+        "% Memória/Limite"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "gateway-worker"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "6"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2,4 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4,7 cores"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "78%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "70%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "5 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "7,9 B"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "80%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "62%"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "gateway-router"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1,2 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2,1 cores"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "48%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "35%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2,5 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3,6 B"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "52%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "38%"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Histórico de HPA"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Comportamento dos Horizontal Pod Autoscalers no período de 24 horas. A situação indica se o máximo configurado foi observado."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespace: "
+        },
+        {
+          "kind": "ident",
+          "text": "checkout"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "HPAs observados"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "hpa-observed",
+      "headers": [
+        "HPA",
+        "Spec Min",
+        "Spec Max",
+        "Atual (Avg)",
+        "Mín Atingido",
+        "Máx Atingido",
+        "Situação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "checkout-api"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "10"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "7"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "10"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Máximo atingido"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Cargas de trabalho sem HPA"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "workloads-without-hpa",
+      "headers": [
+        "Tipo",
+        "Carga de trabalho",
+        "Qtde. Pods",
+        "Situação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Deployment"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "checkout-worker"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Sem HPA"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespace: "
+        },
+        {
+          "kind": "ident",
+          "text": "billing-core"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "HPAs observados"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "hpa-observed",
+      "headers": [
+        "HPA",
+        "Spec Min",
+        "Spec Max",
+        "Atual (Avg)",
+        "Mín Atingido",
+        "Máx Atingido",
+        "Situação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "billing-api"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "6"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Dentro do previsto"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Cargas de trabalho sem HPA"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "workloads-without-hpa",
+      "headers": [
+        "Tipo",
+        "Carga de trabalho",
+        "Qtde. Pods",
+        "Situação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Deployment"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "billing-worker"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Sem HPA"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Uso de recursos por pool de nós"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Sumário por pool de nós"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "nodepool-summary",
+      "headers": [
+        "Pool de nós",
+        "Nós",
+        "CPU média",
+        "CPU pico",
+        "Memória média",
+        "Memória pico",
+        "Confiança"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "aks-generalpool"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "55%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "78%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "64%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "80%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Exata"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "aks-memorypool"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "48%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "60%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "76%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "85%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Exata"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "placeholder",
+              "text": "Indeterminado"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "undefined",
+              "text": null
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "undefined",
+              "text": null
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "undefined",
+              "text": null
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "undefined",
+              "text": null
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Desconhecida"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Perfil de uso agregado por pool de nós"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "nodepool-profile",
+      "headers": [
+        "Pool de nós",
+        "CPU alocável/nó",
+        "CPU usada/nó",
+        "CPU solicitada/nó",
+        "Memória alocável/nó",
+        "Memória usada/nó",
+        "Memória solicitada/nó"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "aks-generalpool"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "7,5 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4,12 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4,5 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "30 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "19,2 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "21 B"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "aks-memorypool"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "6 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3,6 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "48 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "36,4 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "40 B"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Detalhamento por nó"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Pool de nós: "
+        },
+        {
+          "kind": "ident",
+          "text": "aks-generalpool"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "node-detail",
+      "headers": [
+        "Nó",
+        "CPU méd/pico",
+        "Mem méd/pico",
+        "Motivo",
+        "Estado"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "aks-generalpool-29715314-vmss000001"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "55%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "78%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "64%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "80%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Memória: pico de 80% de utilização"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Pronto; Agendável"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "aks-generalpool-29715314-vmss000002"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "48%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "62%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "50%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "68%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Pronto; Agendável"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "aks-generalpool-29715314-vmss000003"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "72%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "94%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "70%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "82%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "CPU: pico de 94% de utilização"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Pronto; Agendável"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Pool de nós: "
+        },
+        {
+          "kind": "ident",
+          "text": "aks-memorypool"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "node-detail",
+      "headers": [
+        "Nó",
+        "CPU méd/pico",
+        "Mem méd/pico",
+        "Motivo",
+        "Estado"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "aks-memorypool-88213456-vmss000001"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "40%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "58%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "74%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "88%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Memória: pico de 88% de utilização"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Pronto; Agendável"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "aks-memorypool-88213456-vmss000002"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "38%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "55%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "60%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "70%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Pronto; Agendável"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Resumo executivo"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Síntese dos principais riscos identificados no período de 24 horas, com foco em pontos de prioridade crítica e alta que requerem atenção imediata."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Cargas de trabalho com prioridade crítica"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "priority-workloads",
+      "headers": [
+        "Namespace",
+        "Carga de trabalho",
+        "Qtde. Pods",
+        "Motivo"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "checkout"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "checkout-api"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "CPU: pico de 97% da solicitação"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "gateway-api"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "gateway-worker"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "6"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 80% do limite"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Cargas de trabalho com prioridade alta"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "priority-workloads",
+      "headers": [
+        "Namespace",
+        "Carga de trabalho",
+        "Qtde. Pods",
+        "Motivo"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "billing-core"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "billing-worker"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Nenhum HPA configurado para a carga de trabalho."
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespaces com carga de trabalho em risco"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "namespaces-at-risk",
+      "headers": [
+        "Namespace",
+        "CPU % / Lim",
+        "Mem % / Lim",
+        "Motivo",
+        "Status",
+        "Prioridade"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "checkout"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "CPU: pico de 97% da solicitação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 crítica"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "gateway-api"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "70%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "62%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 80% do limite"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 alta"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Cargas de trabalho com máximo de réplicas e sem HPA"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "replica-ceiling",
+      "headers": [
+        "Namespace",
+        "Carga de trabalho",
+        "Tipo",
+        "Réplicas",
+        "Situação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "checkout"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "checkout-api"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Deployment"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "10 observadas / máximo 10"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Máximo do HPA atingido"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "checkout"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "checkout-worker"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Deployment"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2 ativas"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Sem HPA"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "billing-core"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "billing-worker"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Deployment"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3 ativas"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Sem HPA"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Situação dos pools de nós"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "nodepool-status",
+      "headers": [
+        "Pool de nós",
+        "Situação",
+        "Observação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "aks-generalpool"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Atenção"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Uso de memória requer atenção"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "placeholder",
+              "text": "Indeterminado"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "undefined",
+              "text": null
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Nós sem rótulo de pool identificável."
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Plano de ação priorizado"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "action-plan",
+      "headers": [
+        "Ordem",
+        "Prioridade",
+        "Ação",
+        "Cargas de trabalho / Escopo"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de CPU e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "checkout-api"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Validar a margem e o limite máximo do HPA."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "checkout-api"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o dimensionamento da solicitação de memória."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "billing-worker"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Limitações materiais"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "material-limitations",
+      "headers": [
+        "Capacidade",
+        "Cobertura",
+        "Observação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Escalonamento automático de nós"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Eventos históricos indisponíveis."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Interpretação"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "A série de eventos possui cobertura parcial."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Limitação de CPU"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Eventos de throttling não instrumentados no período."
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "pagebreak",
+      "weak": true
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Apêndice técnico de qualidade"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "quality-appendix",
+      "headers": [
+        "Capacidade",
+        "Cobertura",
+        "Fonte",
+        "Observação",
+        "Evidência técnica"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Uso por carga de trabalho"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Disponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Regra de gravação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Série consolidada disponível."
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados de utilização por carga de trabalho estão disponíveis para o período analisado."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Escalonamento automático de nós"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Configuração"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Eventos históricos indisponíveis."
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados de escalonamento automático dos nós não foram localizados para o período analisado."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Histórico de HPA"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Disponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Métricas brutas"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Sem observação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados históricos e de configuração dos HPAs estão disponíveis para o período analisado."
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Avisos de interpretação"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "interpretation-notes",
+      "headers": [
+        "Observação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "A série de eventos possui cobertura parcial."
+            }
+          ]
+        ]
+      ]
+    }
+  ]
+}

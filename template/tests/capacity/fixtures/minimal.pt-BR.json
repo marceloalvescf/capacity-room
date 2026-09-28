@@ -1,0 +1,65 @@
+{
+  "schema": "1",
+  "language": "pt-BR",
+  "theme": {
+    "lang": "pt",
+    "region": "BR",
+    "date_format": "[day padding:zero]/[month padding:zero]/[year]"
+  },
+  "labels": {
+    "author": "Responsável",
+    "date": "Emissão",
+    "classification": "Classificação",
+    "outline": "Sumário",
+    "note": "Nota",
+    "info": "Informação",
+    "warning": "Atenção"
+  },
+  "cover": {
+    "title": "LEVANTAMENTO DE CAPACIDADE",
+    "cluster_label": "Cluster:",
+    "cluster": "aks-prod-eastus2",
+    "author_label": "ELABORADO POR:",
+    "author": null,
+    "issued_label": "EMITIDO EM:",
+    "issued": "15/07/2026 14:30"
+  },
+  "footer": {
+    "classification": null,
+    "page_label": "Página"
+  },
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 1,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Resumo executivo"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Período analisado: 24 horas."
+        }
+      ]
+    },
+    {
+      "type": "pagebreak",
+      "weak": false
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Nenhuma carga de trabalho com prioridade alta foi identificada."
+        }
+      ]
+    }
+  ]
+}
