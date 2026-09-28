@@ -169,8 +169,8 @@ func TestCapacityEveryDiagnosticIsCovered(t *testing.T) {
 	ws := workspace(t)
 	capDir := filepath.Join(ws, "capacity")
 	names := diagnosticNames(t, filepath.Join(capDir, "validate.typ"))
-	if len(names) != 19 {
-		t.Errorf("diagnostic names = %v (%d), want 19", names, len(names))
+	if len(names) != 20 {
+		t.Errorf("diagnostic names = %v (%d), want 20", names, len(names))
 	}
 
 	dir := capacityNegativeDir(ws)

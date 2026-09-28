@@ -40,6 +40,7 @@
   empty-list: "`items` must not be empty at",
   misplaced-front: "block \"front\" is allowed only as the first block",
   nested-block: "block",
+  duplicate-outline: "block \"outline\" is allowed only once; found again at",
 )
 // diagnostics:end
 
@@ -428,6 +429,30 @@
   }
   for (index, block) in data.blocks.enumerate() {
     validate-block(index, block, false)
+  }
+
+  // Every block is individually well-formed by this point, so this second
+  // pass can read `.type` and `front`'s `.blocks` without checking either
+  // again. It counts every `outline` in document order — front's, since
+  // `front` can only be the first block, always come first — and fails on
+  // the second one, wherever it is.
+  let outline-count = 0
+  for (index, block) in data.blocks.enumerate() {
+    if block.type == "outline" {
+      outline-count += 1
+      if outline-count > 1 {
+        fail("duplicate-outline", " " + "blocks[" + str(index) + "]")
+      }
+    } else if block.type == "front" {
+      for (j, inner) in block.blocks.enumerate() {
+        if inner.type == "outline" {
+          outline-count += 1
+          if outline-count > 1 {
+            fail("duplicate-outline", " " + "blocks[0].blocks[" + str(j) + "]")
+          }
+        }
+      }
+    }
   }
 
   data
