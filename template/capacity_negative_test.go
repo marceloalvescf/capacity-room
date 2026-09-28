@@ -112,6 +112,63 @@ func TestCapacityEveryNegativeHasAnExpectation(t *testing.T) {
 	}
 }
 
+// headerWithVisibleTextFixture is a minimal, self-contained document (the
+// same top-level shape as minimal.pt-BR.json) used to prove that a table
+// header carrying a Unicode format character alongside real, visible text
+// is not rejected: is-blank must reject only a header that shows nothing,
+// not any header that merely contains one of those characters.
+const headerWithVisibleTextFixture = `{
+  "schema": "1",
+  "language": "pt-BR",
+  "theme": {
+    "lang": "pt",
+    "region": "BR"
+  },
+  "labels": {
+    "note": "Nota",
+    "info": "Informação",
+    "warning": "Atenção"
+  },
+  "cover": {
+    "title": "LEVANTAMENTO DE CAPACIDADE",
+    "cluster_label": "Cluster:",
+    "cluster": "aks-prod-eastus2",
+    "author_label": "ELABORADO POR:",
+    "author": null,
+    "issued_label": "EMITIDO EM:",
+    "issued": "15/07/2026 14:30"
+  },
+  "footer": {
+    "classification": null,
+    "page_label": "Página"
+  },
+  "blocks": [
+    {
+      "type": "table",
+      "id": "status-legend",
+      "headers": [ "CPU\u200b", "Interpretação" ],
+      "rows": [
+        [
+          [ { "kind": "text", "text": "A" } ],
+          [ { "kind": "text", "text": "B" } ]
+        ]
+      ]
+    }
+  ]
+}
+`
+
+func TestCapacityHeaderWithVisibleTextCompiles(t *testing.T) {
+	ws := workspace(t)
+	dataFile := filepath.Join(t.TempDir(), "report.json")
+	if err := os.WriteFile(dataFile, []byte(headerWithVisibleTextFixture), 0o644); err != nil {
+		t.Fatalf("writing %s: %v", dataFile, err)
+	}
+	pdf, stderr, err := compileCapacityData(t, ws, dataFile)
+	assertCleanCompile(t, stderr, err)
+	assertNonEmptyPDF(t, pdf)
+}
+
 func TestCapacityMissingInputFails(t *testing.T) {
 	ws := workspace(t)
 	_, stderr, err := compilePDF(t, ws, capacityEntry, nil)

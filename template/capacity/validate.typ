@@ -228,6 +228,11 @@
   }
 }
 
+// is-blank reports whether a string shows nothing on the page: it holds
+// only white space and Unicode format characters (zero-width space,
+// direction marks, byte order mark, soft hyphen).
+#let is-blank(value) = value.replace(regex("[\s\p{Cf}]"), "") == ""
+
 #let validate-table-block(place, block) = {
   check-exact-keys(place, block, ("type", "id", "headers", "rows"))
   let id = block.id
@@ -241,9 +246,10 @@
   for (i, header) in block.headers.enumerate() {
     let header-path = place + ".headers[" + str(i) + "]"
     expect-string(header-path, header)
-    // A header of only white space is indistinguishable, on the page,
+    // A header of only white space, or only Unicode format characters
+    // such as a zero-width space, is indistinguishable, on the page,
     // from one that lost its label entirely.
-    if header.trim() == "" {
+    if is-blank(header) {
       fail("wrong-type", header-path + "` must be a non-empty string; received " + repr(header))
     }
   }
