@@ -26,10 +26,11 @@ make test             # Go tests that need no service and no tool
 make lint             # gofmt, go vet, golangci-lint
 make image            # runtime image and test image
 make test-toolchain   # checks typst and pdftotext inside the test image
-make test-template    # compiles the template and its fixtures in the test image
+make test-template    # compiles the template and writes reports in the test image
 make test-golden      # compares rendered pages with the golden pages
 make gate             # everything above, from freshly built images
 make update-golden    # rewrites the golden pages after an intended change
+make update-testdata  # rewrites the golden snapshots and data files
 ```
 
 `make gate` writes one log per step under `.cache/gate/`. It builds the images
@@ -58,6 +59,26 @@ image build enforce.
 - **Imports point one way.** `guard.Layers` holds the table of layers. A new
   package must be added to that table. Nothing outside `cmd/` imports a
   package under `cmd/`, and the root package imports nothing of this module.
+  An import of a package that the table does not hold is reported at the
+  import, whatever imports it.
+- **Reader text lives in the catalog.** A guard reads every string literal of
+  the Go files under `internal/` and `cmd/`, test files left out. It reports
+  a literal with a letter outside ASCII. In `internal/document` it also
+  reports two words with only spaces or percent signs between them, a word
+  that starts with a capital letter followed by a lower-case one, and a
+  format verb beside a word. An argument of `errors.New`, `fmt.Errorf`, or a
+  function whose name ends in `Errorf` is a diagnostic and is left alone, and
+  so is the name of a parameter in a `catalog.Params`. A literal that the
+  guard takes wrongly for text carries the comment
+  `// wording: not reader text, <reason>` at the end of its line.
+- **The catalog agrees with itself.** Every key exists in both languages with
+  the same parameters, every key is used by `internal/document`, and every
+  code of the registries of `internal/discovery` has its entry. An entry uses
+  the one template form `{{.Name}}`. No entry holds a banned term, and none
+  holds an em-dash unless it is the em-dash alone.
+- **The production binary holds no test support.** `internal/promtest`,
+  `internal/goldentest`, `cmd/fake-prometheus`, and `cmd/update-testdata` are
+  not among its dependencies, and `time/tzdata` is.
 - **Typst is pinned at exactly 0.15.1.** The toolchain probe refuses any other
   version, and the image build asserts it.
 - **One version.** `VERSION` holds it, and the newest changelog heading must
@@ -72,22 +93,86 @@ No guard checks these. The reviewer of each task does.
 - **Diagnostics are in English.** This covers errors, logs, and help text.
 - **Nothing else declares a version** without a test that compares it with
   `VERSION`.
-- **Reader-facing report text lives in the catalog only**, once it exists.
+- **The wording guard reads text, not meaning.** It lets through one word
+  alone, words parted by digits or a slash, and a sentence joined from parts.
+  The reviewer of a task reads the string literals of `internal/document`,
+  and the golden data files show every text that reaches a page.
+- **No comment speaks of the process.** A comment says what the code does. It
+  names no task, step, round, ruling, brief, or role. It may name a section
+  of the design and the original program.
 
 Build tags in use:
 
 | Tag | Needs | Runs in |
 |---|---|---|
 | `toolchain` | `typst`, `pdftotext` | `make test-toolchain` |
-| `template` | `typst`, `pdftotext` | `make test-template` |
+| `template` | `typst`, `pdftotext` | `make test-template`, which also runs `internal/cli` |
 | `golden` | `typst`, with `template` | `make test-golden` |
 
 With the native tools installed, a subagent runs the tagged tests itself:
 
 ```bash
-go test -count=1 -tags=template ./template/ ./internal/typst/
+go test -count=1 -tags=template ./template/ ./internal/typst/ ./internal/cli/
 go test -count=1 -tags='template golden' ./template/ -run 'Golden|Snapshots'
 ```
+
+## The layers
+
+`guard.Layers` holds this table. A package imports only packages of a lower
+rank, or of its own layer.
+
+| Rank | Packages |
+|---|---|
+| 0 | `internal/guard`, `internal/typst`, `internal/redact`, `internal/promtest`, `template` |
+| 10 | `template/golden` |
+| 20 | `internal/config` |
+| 30 | `internal/prom` |
+| 40 | `internal/discovery` |
+| 50, 60 | kept for `collect`, `resolve`, and `analysis` |
+| 70 | `internal/snapshot` |
+| 80 | `internal/catalog` |
+| 90 | `internal/document` |
+| 95 | `internal/goldentest` |
+| 100 | `internal/cli` |
+
+The snapshot is the only handover. Everything after `snapshot.Build` reads
+the snapshot and nothing else.
+
+## The command
+
+- **One redactor for the whole run.** `cli.Run` makes it on its first line
+  and wraps both streams with it. Nothing below `Run` sees a raw stream. A
+  secret is added to it as soon as it is known: the value of `--token` before
+  the flags are read, the token of the configuration as soon as it is loaded.
+  No function passes a list of secrets.
+- **One message, one write.** The redactor reads each write as one text, so a
+  line is built whole and written once.
+- **No message repeats an argument that was not understood.** It may be a
+  secret typed at the wrong place. A path that the user gave is repeated on
+  purpose, and so is a value read from a file that the user named.
+- **The program has the commands the design names, and no other.** The
+  completion command that the command-line library adds is turned off. A
+  test names the commands it expects and runs each with a stray argument.
+- **Every failure prints one line**, `error: <message>`, on standard error,
+  and nothing on standard output.
+- **Output files are written beside their target and renamed.** They follow
+  the umask, which is never read or set.
+- **The probes keep the order of the original**, short cuts included. The
+  fake server answers a query with the first recorded answer whose text is
+  part of the query, so another order consumes the wrong answers.
+- **The clock is read twice in a run that collects:** for the emission time,
+  which is also the start of the collection, and for its end.
+
+### Golden snapshots and data files
+
+- `testdata/snapshot/` holds one snapshot for each scenario.
+  `template/tests/capacity/fixtures/command/` holds the data files made from
+  them, which are also fixtures of the template and sources of golden pages.
+- A test never writes one. `make update-testdata` does. It needs no image.
+- After `make update-testdata`, read every file that changed, whole, before
+  committing. A value that cannot be explained is a defect.
+- The files of `testdata/prometheus/` are the recorded answers of the
+  original, byte for byte. They are never edited.
 
 ## The template
 

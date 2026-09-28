@@ -170,6 +170,51 @@ of them when reviewing this plan.
 | R15 | Ruling: `--config` defaults to `report.toml` and a missing file is an error, as in the original — a run cannot be configured from the environment alone — a user without a file must create one |
 | R16 | Ruling: capabilities are insufficient when `namespace_usage`, `workload_usage`, `hpa_history`, `workloads_without_hpa`, and `node_utilization` are all unavailable and `node_autoscaling` is not available — the rule of the original can never fire, because it waits for `node_autoscaling` to be unavailable, a state that capability never takes (F-37) — a run against an empty Prometheus now stops at the preflight with exit code 5, where the original stopped with the same code after collecting |
 
+## Rulings made during the execution
+
+The rulings R1 to R16 above were made when the plan was written, and the
+owner approved them with it. The ones below were made while the tasks ran,
+when a review or a real run showed something the plan had not foreseen. Each
+is written as decision, reason, and cost if wrong. The owner may overturn any
+of them.
+
+| ID | Task | Ruling |
+|---|---|---|
+| E1 | — | in a collecting run cli calls Env.Now exactly twice, first for the emission time, which is also the collection start, and then after the capabilities are detected, for the collection end — the golden snapshots fix start = emission and end = 42 s later, and a fixed count makes the test clock simple — if wrong, the snapshot records a collection start a few milliseconds earlier than the first request. |
+| E2 | 2 | the message for a path that cannot be made absolute has no test: the branch stays untested, because filepath.Abs fails only when the working directory is gone and Locate takes no seam for it — if wrong, a wrong message reaches an operator in a case that needs a deleted working directory |
+| E3 | — | promtest.Scenario gains NodeAutoscaling, `disabled` for value-edge-cases and `auto` for the rest, and value-edge-cases gets golden data files of its own — the file is byte-identical to direct-complete (F-40) and the run setting of the original is the only thing that makes it a scenario — if wrong, two more golden files are kept than needed. Plan text amended in Tasks 5, 8, and 13. |
+| E4 | 3 | redact.Writer stays as the plan wrote it, one Write call is one text, and Task 14 must write each message with a single call and pin it with a test — a line buffer would hold back a message that has no line break and adds state to every stream; the command controls every write — if wrong, a secret split across two writes of some library reaches the terminal |
+| E5 | 4 | Load validates the whole Config first and resolves the token last, so a wrong ca_bundle is reported before an unset token variable — Validate takes no environment, and the plan's table says "in the order in which Validate and Load check" — if wrong, an operator with two faults sees them in another order |
+| E6 | 6 | errors of the built transport are classified by exclusion — context ended, then TLS, then everything else is a connection failure — and the pass-through of a foreign error applies only to a transport the caller supplied, after the *url.Error around it is taken off — classification by listing the known errors is what let EOF, the idle-connection error, and the cancelled context fall through with the address in their text — if wrong, an error that should stop the run at once is tried three times |
+| E7 | 6 | keep-alives stay on and the text match is removed — both were there only to steer one error into the list, which the ruling above makes unnecessary — if wrong, a flaky test returns and is fixed at its cause |
+| E8 | 6 | the time of a sample must be a JSON number or a string that reads as a number, as float() of the original accepts — the brief says "a member cannot be read" — if wrong, an endpoint that writes the time in another form is refused |
+| E9 | — | the expected request counts of Task 8 become 30 for raw-fallback and 26 for partial-data — the plan counted the scripted answers of the files, and the files hold answers for probes the original never asks because of its short cuts — if wrong, the port asks fewer probes than the original and a capability is judged on less evidence; the scenario results of state, strategy, and reasons all match, which says it is not. Plan text amended. |
+| E10 | 9 | Decode refuses a file that lacks any key of the contract, and Check also covers period, timezone, node_autoscaling, timeout_seconds, cluster_label, and the rules of the seven thresholds — the snapshot is the only handover and, from phase 3, a stored record; encoding/json reads a missing key as zero, and zero is a valid threshold — if wrong, the snapshot repeats rules that config already holds, and a rule changed in one place must be changed in the other |
+| E11 | 9 | the values that discovery defines (capability names, states, strategies, reasons, confidences) are checked against the registry of discovery, and the values of the configuration against literal lists in snapshot; the comment says so — spec 7.2 makes the registry the single list of codes, and spec 8.3 forbids a code to change its meaning — if wrong, a renamed constant in discovery changes what a stored file means |
+| E12 | 9 | a null anywhere in a snapshot file is refused by Decode with `snapshot holds null at <path>` — the writer never writes null, so a null is a damaged or foreign file, and one rule for every kind of field leaves no kind out — if wrong, a file written by another tool that uses null for "empty" is refused |
+| E13 | 9 | the walk of the types fails loudly on a kind of field it does not know, and a test lists the 45 paths by hand — a walk that skips what it does not know is the class met in Tasks 1 and 8 — if wrong, adding a pointer or a map to the snapshot needs a change of the walk first |
+| E14 | 10 | the constants of keys.go write initialisms in capitals (HPA, CPU, IP), as the constants of discovery do — the brief gave only lower-case examples — if wrong, a rename of constants with no effect on any file or key |
+| E15 | 10 | the catalog accepts the one form `{{.Name}}`; Load refuses a file with any other use of braces, and a guard reads both files for it — refusing the other forms is simpler than reading them, and no entry needs them — if wrong, an entry that needs a condition must be split into two entries, which is what spec 9.3 asks for anyway |
+| E16 | 12 | the guard exempts the key of a composite literal written as catalog.Params, and still reads its values — a parameter name is an identifier, and an exemption by place needs no comment at each call of the catalog, of which later parts add dozens — if wrong, a sentence used as a map key of catalog.Params passes the guard, where the catalog itself refuses it as an unused parameter |
+| E17 | 12 | a space is not a flag of a verb for this guard, and %% is removed first as a pair — this program writes sentences with percent signs — if wrong, a format with the space flag, such as "% d", is read as text |
+| E18 | 12 | with strict, a literal with a verb and a word of two letters or more is reported — "%d nodes" is a sentence — if wrong, an identifier built by a format with a word in internal/document needs the comment |
+| E19 | 12 | the repository test lists tracked and new files, leaving ignored ones out — an implementer runs make test before the commit — if wrong, a scratch file left in the tree fails the guard |
+| E20 | 12 | between the two words the gap may hold spaces and percent signs only — that catches "rate % change" and nothing that is punctuated — if wrong, a sentence whose two words are parted by a comma or a colon passes, as it did under the brief |
+| E21 | 14 | one redactor for the whole run, made at the top of Run before cobra reads anything, to which secrets are added as they become known; redact.Redactor gains Add — a list of secrets passed by value leaves an older copy somewhere, which is how the Critical finding happened — if wrong, a lock is taken at each write |
+| E22 | 14 | Run reads the value of --token from the arguments by itself, before cobra, in both forms — cobra reports a broken flag before RunE runs — if wrong, a value that follows --token and is not its value is redacted too |
+| E23 | 14 | report refuses a positional argument without repeating it — an argument that was not understood may be a token typed without its flag — if wrong, a typing error is a little harder to find |
+| E24 | 14 | output files are created with mode 0644 less the umask, not 0600 — a report is written to be read by others, and a file written in a container by user 10001 must be readable from the host — if wrong, a snapshot on a shared machine is readable by other users; it holds no secret by contract |
+| E25 | 14 | the life of the work folder is one function that takes the work as a function value, tested by itself with a function that panics — the seams of Env cannot reach that window — if wrong, nothing |
+| E26 | 14 | the PDF keeps the mode the compiler left, less the bits outside 0644 — every output file follows the umask, which is never read or set — if wrong, nothing |
+| E27 | 14 | no message of the program repeats an argument that was not understood; the root lists its commands instead — the controller had left the root out of Ruling D, which was a mistake — if wrong, a typing error in the name of a command is a little harder to see |
+| E28 | 15 | the test of partial data takes its two texts from the catalog by key — the plan wrote the sentences where it should have named the keys — if wrong, nothing |
+| E29 | 15 | the output folder of check-runtime keeps being writable by any user, with the sticky bit, mode 1777 — the container runs as user 10001, which is no account of the host, and the image has no shell to check the file inside it; the sticky bit stops another account from replacing the file — if wrong, on a machine with several accounts another account can read a PDF made from fixture data |
+| E30 | 14 | the default completion command of cobra is turned off, and a test runs every command with an extra argument and looks for it in the streams — the design names no such command, and with it gone every command is one whose arguments this package checks — if wrong, a user who wants shell completion has none until the design asks for it |
+| E31 | 14 | a value read from a file that the operator named (a schema version, a period, a state) is repeated in the diagnostic on purpose — the operator needs it to find the fault, and it was not typed on the command line — if wrong, a secret pasted into a snapshot or a configuration file under the wrong key is printed |
+| E32 | 14 | round 4 resumes the same implementer, where the process asks for a fresh one on a stronger model — the loop is not stuck: every round closed what it was given, and each new finding was a wider reading of the class by the reviewer — if wrong, the implementer repeats a blind spot |
+| E33 | — | the controller changed the recipe of check-runtime itself (commit b9e83cb): the folder is kept and only the file is removed, and a snapshot path that names no file is refused before Docker runs — only the main thread may run Docker, so only it can see this recipe fail and pass — if wrong, a change of three recipe lines went in without a task review; the whole-branch review reads it |
+| E34 | — | Decode reads the schema version first and judges the rest only for the version it reads — the order of the plan, and of the controller's ruling in the first fix round of Task 9, was wrong — if wrong, a file is parsed twice |
+
 ## Findings this plan closes or records
 
 | ID | What happens in this part |
@@ -1590,18 +1635,20 @@ func Time(value string) (time.Time, error)
   `grafana`, never `auto`.
 - The snapshot holds no address, no host name, no token, no name of an
   environment variable, and no path of a file.
-- `Decode` refuses, each with its own message:
+- `Decode` reads the schema version first, and judges the rest only for the
+  version it reads. It refuses, in this order, each with its own message:
 
-| Input | Message |
-|---|---|
-| not JSON, or cut in the middle | `snapshot is not valid JSON: <cause>` |
-| anything after the first document | `snapshot holds data after the document` |
-| an unknown key | `snapshot holds an unknown key: <cause of the decoder>` |
-| a key of the contract that the file lacks | `snapshot lacks the key <path>` |
-| a `null` anywhere in the file | `snapshot holds null at <path>` |
-| `schema_version` missing | `snapshot has no schema_version` |
-| another `schema_version` | `snapshot has schema_version "<value>"; this version reads "1.0"` |
-| an integrity failure | the message of `Check` |
+| Step | Input | Message |
+|---|---|---|
+| 1 | not JSON, or cut in the middle | `snapshot is not valid JSON: <cause>` |
+| 2 | a document that is not a JSON object | `snapshot is not a JSON object` |
+| 3 | `schema_version` missing, `null`, or not a string | `snapshot has no schema_version` |
+| 4 | another `schema_version` | `snapshot has schema_version "<value>"; this version reads "1.0"` |
+| 5 | an unknown key | `snapshot holds an unknown key: <cause of the decoder>` |
+| 6 | anything after the first document | `snapshot holds data after the document` |
+| 7 | a key of the contract that the file lacks | `snapshot lacks the key <path>` |
+| 8 | a `null` anywhere in the file | `snapshot holds null at <path>` |
+| 9 | an integrity failure | the message of `Check` |
 
 - `Check` refuses, in this order:
 
