@@ -40,9 +40,16 @@ test:
 	go test $(TEST_FLAGS) ./...
 
 # gofmt reads the Go files git knows about, tracked or new, so that scratch
-# files under ignored folders cannot fail the check.
+# files under ignored folders cannot fail the check. pipefail is turned on
+# for that one recipe line, so a failing `git ls-files` or a file gofmt
+# cannot parse (it lists nothing and exits non-zero) fails the step instead
+# of being read as "no files need formatting".
 lint:
-	@unformatted="$$(git ls-files --cached --others --exclude-standard -z -- '*.go' | xargs -0 gofmt -l)"; \
+	@set -o pipefail; unformatted="$$(git ls-files --cached --others --exclude-standard -z -- '*.go' | xargs -0 gofmt -l)"; \
+	status=$$?; \
+	if [ $$status -ne 0 ]; then \
+		echo "gofmt: could not check formatting"; exit 1; \
+	fi; \
 	if [ -n "$$unformatted" ]; then \
 		echo "gofmt: these files need formatting:"; echo "$$unformatted"; exit 1; \
 	fi
