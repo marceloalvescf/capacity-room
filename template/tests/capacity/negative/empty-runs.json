@@ -1,0 +1,87 @@
+{
+  "schema": "1",
+  "language": "pt-BR",
+  "theme": {
+    "lang": "pt",
+    "region": "BR",
+    "date_format": "[day padding:zero]/[month padding:zero]/[year]"
+  },
+  "labels": {
+    "author": "Responsável",
+    "date": "Emissão",
+    "classification": "Classificação",
+    "outline": "Sumário",
+    "note": "Nota",
+    "info": "Informação",
+    "warning": "Atenção"
+  },
+  "cover": {
+    "title": "LEVANTAMENTO DE CAPACIDADE",
+    "cluster_label": "Cluster:",
+    "cluster": "production-east",
+    "author_label": "ELABORADO POR:",
+    "author": "Time SRE",
+    "issued_label": "EMITIDO EM:",
+    "issued": "15/07/2026 14:30"
+  },
+  "footer": {
+    "classification": "Uso interno",
+    "page_label": "Página"
+  },
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 1,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Resumo executivo"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": []
+    },
+    {
+      "type": "table",
+      "id": "status-legend",
+      "headers": [
+        "Status",
+        "Interpretação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítico"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Requer ação imediata."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Saudável"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Dentro do esperado."
+            }
+          ]
+        ]
+      ]
+    }
+  ]
+}

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 )
 
-//go:embed graphite/typst.toml graphite/lib.typ graphite/src graphite/assets
+//go:embed graphite/typst.toml graphite/lib.typ graphite/src graphite/assets capacity
 var embedded embed.FS
 
 // Unpack writes the embedded template under dir, creating it if needed.
