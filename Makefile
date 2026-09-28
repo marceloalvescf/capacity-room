@@ -8,6 +8,10 @@ IMAGE := k8s-capacity-report:$(VERSION)
 TEST_IMAGE := k8s-capacity-report-test:$(VERSION)
 GOLANGCI := github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 TYPST_VERSION := 0.15.1
+
+# Every build tag of the repository, as declared in guard.BuildTags. The linter
+# runs once without tags and once with all of them, so that no file escapes it.
+BUILD_TAGS := golden,template,toolchain
 GATE_LOGS := .cache/gate
 
 # Extra flags for `docker build`; the gate sets them to build from scratch.
@@ -47,6 +51,7 @@ lint:
 	go vet -tags=template ./...
 	go vet -tags='template golden' ./...
 	go run $(GOLANGCI) run
+	go run $(GOLANGCI) run --build-tags=$(BUILD_TAGS)
 
 image:
 	docker build $(BUILD_FLAGS) --file deploy/Containerfile --target runtime --tag $(IMAGE) .
