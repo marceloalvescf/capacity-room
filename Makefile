@@ -16,11 +16,18 @@ BUILD_FLAGS ?=
 # Extra flags for `go test`; the gate sets them so that no cached result counts.
 TEST_FLAGS ?=
 
-# The test image runs as the runtime user over a read-only source.
-RUN_TEST_IMAGE := docker run --rm --user 10001:10001 \
-	--volume "$(CURDIR):/src:ro" --workdir /src $(TEST_IMAGE)
+# The test image runs as the runtime user, over a read-only source and a
+# read-only root file system, as the runtime image does in production.
+RUN_TEST_IMAGE_FLAGS := --rm --user 10001:10001 --read-only --tmpfs /tmp:exec \
+	--volume "$(CURDIR):/src:ro" --workdir /src
+RUN_TEST_IMAGE := docker run $(RUN_TEST_IMAGE_FLAGS) $(TEST_IMAGE)
 
-.PHONY: build test lint image test-toolchain check-runtime gate
+# Where a failed golden comparison leaves the actual pages and the difference
+# images.
+GOLDEN_OUT := .cache/template
+
+.PHONY: build test lint image test-toolchain test-template test-golden \
+	update-golden check-runtime gate
 
 build:
 	go build -o bin/k8s-capacity-report ./cmd/k8s-capacity-report
@@ -37,6 +44,8 @@ lint:
 	fi
 	go vet ./...
 	go vet -tags=toolchain ./...
+	go vet -tags=template ./...
+	go vet -tags='template golden' ./...
 	go run $(GOLANGCI) run
 
 image:
@@ -45,6 +54,22 @@ image:
 
 test-toolchain: image
 	$(RUN_TEST_IMAGE) go test -v -tags=toolchain ./internal/typst/...
+
+test-template: image
+	$(RUN_TEST_IMAGE) go test -v -tags=template ./internal/typst/... ./template/...
+
+test-golden: image
+	@mkdir -p $(GOLDEN_OUT)
+	docker run $(RUN_TEST_IMAGE_FLAGS) \
+		--volume "$(CURDIR)/$(GOLDEN_OUT):/out" --env KCR_GOLDEN_OUT=/out \
+		$(TEST_IMAGE) go test -v -tags='template golden' ./template/ -run Golden
+
+# Rewrites every golden page. Run it only for an intended visual change, and
+# review each page before committing it.
+update-golden: image
+	docker run $(RUN_TEST_IMAGE_FLAGS) \
+		--volume "$(CURDIR)/template/tests/golden:/src/template/tests/golden" \
+		$(TEST_IMAGE) go run ./template/golden/cmd/update-golden
 
 check-runtime: image
 	test "$$(docker run --rm $(IMAGE) --version)" = "k8s-capacity-report $(VERSION)"
@@ -66,5 +91,7 @@ gate:
 	@set -o pipefail; $(MAKE) test TEST_FLAGS="-count=1" 2>&1 | tee $(GATE_LOGS)/test.log
 	@set -o pipefail; $(MAKE) image BUILD_FLAGS="--no-cache --pull" 2>&1 | tee $(GATE_LOGS)/image.log
 	@set -o pipefail; $(MAKE) test-toolchain 2>&1 | tee $(GATE_LOGS)/test-toolchain.log
+	@set -o pipefail; $(MAKE) test-template 2>&1 | tee $(GATE_LOGS)/test-template.log
+	@set -o pipefail; $(MAKE) test-golden 2>&1 | tee $(GATE_LOGS)/test-golden.log
 	@set -o pipefail; $(MAKE) check-runtime 2>&1 | tee $(GATE_LOGS)/check-runtime.log
 	@echo "gate passed for version $(VERSION)"
