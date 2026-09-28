@@ -30,241 +30,275 @@
   },
   "blocks": [
     {
-      "type": "outline",
-      "title": "Contents",
-      "depth": 2
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "runs": [
+      "type": "front",
+      "blocks": [
         {
-          "kind": "text",
-          "text": "Report metadata"
-        }
-      ]
-    },
-    {
-      "type": "table",
-      "id": "report-metadata",
-      "headers": [
-        "Field",
-        "Value"
-      ],
-      "rows": [
-        [
-          [
-            {
-              "kind": "text",
-              "text": "Environment"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "aks-prod-eastus2"
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "Analysis period"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "07/14/2026 14:30 to 07/15/2026 14:30"
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "Namespaces"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "checkout, billing-core, gateway-api"
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "Excluded containers"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "POD, istio-proxy"
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "Organization"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Aurora Digital Ltda."
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "Classification"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Internal use"
-            }
-          ]
-        ]
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "runs": [
+          "type": "outline",
+          "title": "Contents",
+          "depth": 2
+        },
         {
-          "kind": "text",
-          "text": "Status legend"
-        }
-      ]
-    },
-    {
-      "type": "table",
-      "id": "status-legend",
-      "headers": [
-        "Status",
-        "Meaning"
-      ],
-      "rows": [
-        [
-          [
-            {
-              "kind": "status",
-              "status": "healthy",
-              "text": null
-            }
-          ],
-          [
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
             {
               "kind": "text",
-              "text": "Healthy"
+              "text": "Report metadata"
             }
           ]
-        ],
-        [
-          [
-            {
-              "kind": "status",
-              "status": "attention",
-              "text": null
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Attention / high priority"
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "status",
-              "status": "critical",
-              "text": null
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Critical / critical priority"
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "status",
-              "status": "unavailable",
-              "text": null
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Data unavailable"
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "status",
-              "status": "undefined",
-              "text": null
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "No base for the ratio"
-            }
-          ]
-        ]
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "runs": [
+        },
         {
-          "kind": "text",
-          "text": "Data quality"
-        }
-      ]
-    },
-    {
-      "type": "paragraph",
-      "runs": [
+          "type": "table",
+          "id": "report-metadata",
+          "headers": [
+            "Field",
+            "Value"
+          ],
+          "rows": [
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Environment"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "aks-prod-eastus2"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Analysis period"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "07/14/2026 14:30 to 07/15/2026 14:30"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Namespaces"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "checkout, billing-core, gateway-api"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Excluded containers"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "POD, istio-proxy"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Organization"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Aurora Digital Ltda."
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Classification"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Internal use"
+                }
+              ]
+            ]
+          ]
+        },
         {
-          "kind": "text",
-          "text": "Available: 3 · Partial: 0 · Unavailable: 1."
-        }
-      ]
-    },
-    {
-      "type": "callout",
-      "kind": "warning",
-      "title": [
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Status legend"
+            }
+          ]
+        },
         {
-          "kind": "text",
-          "text": "Interpretation notice"
-        }
-      ],
-      "runs": [
+          "type": "table",
+          "id": "status-legend",
+          "headers": [
+            "Status",
+            "Meaning"
+          ],
+          "rows": [
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "healthy",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Healthy"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "attention",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Attention / high priority"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Critical / critical priority"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "unavailable",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Data unavailable"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "undefined",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "No base for the ratio"
+                }
+              ]
+            ]
+          ]
+        },
         {
-          "kind": "text",
-          "text": "The event series has partial coverage."
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Data quality"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            [
+              {
+                "kind": "strong",
+                "text": "Available:"
+              },
+              {
+                "kind": "text",
+                "text": " 3"
+              }
+            ],
+            [
+              {
+                "kind": "strong",
+                "text": "Partial:"
+              },
+              {
+                "kind": "text",
+                "text": " 0"
+              }
+            ],
+            [
+              {
+                "kind": "strong",
+                "text": "Unavailable:"
+              },
+              {
+                "kind": "text",
+                "text": " 1"
+              }
+            ]
+          ]
+        },
+        {
+          "type": "callout",
+          "kind": "note",
+          "title": [
+            {
+              "kind": "text",
+              "text": "Interpretation notice"
+            }
+          ],
+          "runs": [
+            {
+              "kind": "text",
+              "text": "The event series has partial coverage."
+            }
+          ]
         }
       ]
     },
@@ -275,6 +309,7 @@
     {
       "type": "heading",
       "level": 1,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -285,6 +320,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -406,6 +442,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -527,6 +564,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -648,6 +686,7 @@
     {
       "type": "heading",
       "level": 1,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -658,6 +697,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -822,6 +862,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -986,6 +1027,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -1150,6 +1192,7 @@
     {
       "type": "heading",
       "level": 1,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -1169,6 +1212,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -1183,6 +1227,7 @@
     {
       "type": "heading",
       "level": 3,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -1253,6 +1298,7 @@
     {
       "type": "heading",
       "level": 3,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -1302,6 +1348,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -1316,6 +1363,7 @@
     {
       "type": "heading",
       "level": 3,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -1386,6 +1434,7 @@
     {
       "type": "heading",
       "level": 3,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -1435,6 +1484,7 @@
     {
       "type": "heading",
       "level": 1,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -1445,6 +1495,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -1614,6 +1665,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -1727,6 +1779,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -1737,6 +1790,7 @@
     {
       "type": "heading",
       "level": 3,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -1922,6 +1976,7 @@
     {
       "type": "heading",
       "level": 3,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",
@@ -2054,6 +2109,7 @@
     {
       "type": "heading",
       "level": 1,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -2073,6 +2129,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -2147,6 +2204,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -2195,6 +2253,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -2301,6 +2360,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -2423,6 +2483,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -2486,6 +2547,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -2589,6 +2651,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -2677,6 +2740,7 @@
     {
       "type": "heading",
       "level": 1,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
@@ -2799,6 +2863,7 @@
     {
       "type": "heading",
       "level": 2,
+      "numbered": false,
       "runs": [
         {
           "kind": "text",

@@ -32,6 +32,7 @@
     {
       "type": "heading",
       "level": 1,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",
