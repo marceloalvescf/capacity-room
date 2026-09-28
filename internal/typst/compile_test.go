@@ -326,4 +326,64 @@ func TestCompileHonoursDeadline(t *testing.T) {
 	if elapsed > time.Second {
 		t.Fatalf("Compile() took %s, want under 1s", elapsed)
 	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("Compile() error = %v, want errors.Is(err, context.DeadlineExceeded)", err)
+	}
+	if !strings.HasPrefix(err.Error(), "typst compile stopped:") {
+		t.Fatalf("Compile() error = %v, want it to start with %q", err, "typst compile stopped:")
+	}
+	var compileErr *CompileError
+	if errors.As(err, &compileErr) {
+		t.Fatalf("Compile() error = %v, want errors.As(err, &CompileError{}) to be false", err)
+	}
+}
+
+func TestCompileReportsCancellation(t *testing.T) {
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\n/bin/sleep 5\n")}
+	job := validJob(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(100*time.Millisecond, cancel)
+	defer cancel()
+
+	start := time.Now()
+	_, err := tc.Compile(ctx, job)
+	elapsed := time.Since(start)
+
+	if elapsed > time.Second {
+		t.Fatalf("Compile() took %s, want under 1s", elapsed)
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("Compile() error = %v, want errors.Is(err, context.Canceled)", err)
+	}
+}
+
+func TestCompileWithEndedContext(t *testing.T) {
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\nexit 0\n")}
+	job := validJob(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := tc.Compile(ctx, job)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("Compile() error = %v, want errors.Is(err, context.Canceled)", err)
+	}
+	if strings.Contains(err.Error(), "could not start") {
+		t.Fatalf("Compile() error = %v, want it not to contain %q", err, "could not start")
+	}
+}
+
+func TestCompileFailureIsNotAStop(t *testing.T) {
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\necho 'x.typ:1:1: error: boom' >&2\nexit 1\n")}
+	job := validJob(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := tc.Compile(ctx, job)
+	var compileErr *CompileError
+	if !errors.As(err, &compileErr) {
+		t.Fatalf("Compile() error = %v, want *CompileError", err)
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("Compile() error = %v, want errors.Is(err, context.DeadlineExceeded) to be false", err)
+	}
 }

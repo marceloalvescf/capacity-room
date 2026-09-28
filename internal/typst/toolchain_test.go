@@ -230,6 +230,26 @@ func TestVersionHonoursDeadline(t *testing.T) {
 	if elapsed > time.Second {
 		t.Fatalf("Version() took %s, want under 1s", elapsed)
 	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("Version() error = %v, want errors.Is(err, context.DeadlineExceeded)", err)
+	}
+	if !strings.HasPrefix(err.Error(), "typst --version stopped:") {
+		t.Fatalf("Version() error = %v, want it to start with %q", err, "typst --version stopped:")
+	}
+}
+
+func TestVersionWithEndedContext(t *testing.T) {
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\necho 'typst 0.15.1 (x)'\n")}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := tc.Version(ctx)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("Version() error = %v, want errors.Is(err, context.Canceled)", err)
+	}
+	if strings.Contains(err.Error(), "could not start") {
+		t.Fatalf("Version() error = %v, want it not to contain %q", err, "could not start")
+	}
 }
 
 func TestVersionUsesEmptyEnvironment(t *testing.T) {

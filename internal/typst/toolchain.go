@@ -63,12 +63,19 @@ func (t Toolchain) Version(ctx context.Context) (string, error) {
 
 	runErr := cmd.Run()
 
+	// The context is checked before any other branch: once it has ended, a
+	// killed-but-started process and a never-started one both count as
+	// "stopped", not "failed" or "could not start". A caller distinguishes
+	// this from a real failure with errors.Is(err, ctx.Err()).
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return "", fmt.Errorf("typst --version stopped: %w", ctxErr)
+	}
+
 	// A nil ProcessState means the process never ran at all (e.g. the
 	// binary lacks the executable bit), as opposed to having run and
-	// exited or been killed. That is a distinct failure the operator needs
-	// the real cause for, unless the context itself is why the process
-	// never got a chance to start.
-	if cmd.ProcessState == nil && ctx.Err() == nil {
+	// exited. The context has already been ruled out above, so this is a
+	// distinct failure the operator needs the real cause for.
+	if cmd.ProcessState == nil {
 		return "", fmt.Errorf("typst --version could not start: %w", runErr)
 	}
 

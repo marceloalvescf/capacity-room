@@ -179,6 +179,14 @@ func (t Toolchain) Compile(ctx context.Context, job Job) (string, error) {
 	runErr := cmd.Run()
 	out := stderr.String()
 
+	// The context is checked before any other branch: once it has ended, a
+	// killed-but-started process and a never-started one both count as
+	// "stopped", not "failed" or "could not start". A caller distinguishes
+	// this from a real compile failure with errors.Is(err, ctx.Err()).
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return out, fmt.Errorf("typst compile stopped: %w", ctxErr)
+	}
+
 	if runErr != nil {
 		if cmd.ProcessState != nil {
 			return out, &CompileError{ExitCode: cmd.ProcessState.ExitCode(), Stderr: out}
