@@ -29,7 +29,8 @@ make test-toolchain   # checks typst and pdftotext inside the test image
 make gate             # everything above, from freshly built images
 ```
 
-`make gate` writes one log per step under `.cache/gate/`.
+`make gate` writes one log per step under `.cache/gate/`. It builds the images
+without cache and runs the tests without cached results.
 
 Run one test while iterating:
 
@@ -37,18 +38,33 @@ Run one test while iterating:
 go test ./internal/guard/ -run TestForbiddenModules -v
 ```
 
-## Rules that hold everywhere
+## Rules enforced by a guard
 
-- **No test skips.** `t.Skip`, `t.Skipf`, and `t.SkipNow` are forbidden, and a
-  guard enforces it. A test that needs a tool carries a build tag and fails
-  when the tool is missing. A skipped gate is not a checked gate.
+Each of these fails `make test` when broken. The guards live in
+`internal/guard`.
+
+- **No test skips.** `Skip`, `Skipf`, and `SkipNow` are forbidden in test
+  files and in any file that imports `testing`. A test that needs a tool
+  carries a build tag and fails when the tool is missing. A skipped gate is
+  not a checked gate.
+- **Every build tag is declared.** `guard.BuildTags` lists them. A tag that is
+  not in the list fails the guard, so that no file hides from the scans.
 - **Metrics only.** No Kubernetes or cloud client may appear in `go.mod`.
-- **Imports point one way.** `internal/guard` holds the table of layers. A new
-  package must be added to that table, or the guard fails.
-- **Typst is pinned at exactly 0.15.1.** Any other version is a failure.
-- **One version.** `VERSION` holds it. Nothing else declares a version without
-  a test that compares it with `VERSION`.
+- **Imports point one way.** `guard.Layers` holds the table of layers. A new
+  package must be added to that table. Nothing outside `cmd/` imports a
+  package under `cmd/`, and the root package imports nothing of this module.
+- **Typst is pinned at exactly 0.15.1.** The toolchain probe refuses any other
+  version, and the image build asserts it.
+- **One version.** `VERSION` holds it, and the newest changelog heading must
+  equal it.
+
+## Rules kept by review
+
+No guard checks these. The reviewer of each task does.
+
 - **Diagnostics are in English.** This covers errors, logs, and help text.
+- **Nothing else declares a version** without a test that compares it with
+  `VERSION`.
 - **Reader-facing report text lives in the catalog only**, once it exists.
 
 Build tags in use:
