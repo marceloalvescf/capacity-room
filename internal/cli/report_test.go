@@ -509,6 +509,46 @@ func TestOutputFilesAreReadableByOthers(t *testing.T) {
 	})
 }
 
+// TestOutputFilesShareOneMode runs the PDF mode (with the fake compiler)
+// and the snapshot mode in the same test and checks the two files it writes
+// end up at the same mode: whatever the process umask is, right now, both
+// paths are meant to give "0o644 less that umask", never one file more
+// open than the other.
+func TestOutputFilesShareOneMode(t *testing.T) {
+	pdfServer, _, pdfScenario := startScenario(t, "direct-complete")
+	defer pdfServer.Close()
+	pdfCfg := writeConfig(t, scenarioConfig(pdfServer, pdfScenario, t.TempDir()))
+	pdfPath := filepath.Join(t.TempDir(), "r.pdf")
+
+	env := withTypst(t, testEnv(t))
+	_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", pdfCfg, "--output", pdfPath})
+	if code != 0 {
+		t.Fatalf("PDF mode: code = %d, want 0; stderr = %q", code, stderr)
+	}
+
+	snapServer, _, snapScenario := startScenario(t, "direct-complete")
+	defer snapServer.Close()
+	snapCfg := writeConfig(t, scenarioConfig(snapServer, snapScenario, t.TempDir()))
+	snapPath := filepath.Join(t.TempDir(), "s.json")
+
+	_, stderr, code = runArgs(context.Background(), testEnv(t), []string{"report", "--config", snapCfg, "--snapshot", snapPath})
+	if code != 0 {
+		t.Fatalf("snapshot mode: code = %d, want 0; stderr = %q", code, stderr)
+	}
+
+	pdfInfo, err := os.Stat(pdfPath)
+	if err != nil {
+		t.Fatalf("stat %s: %v", pdfPath, err)
+	}
+	snapInfo, err := os.Stat(snapPath)
+	if err != nil {
+		t.Fatalf("stat %s: %v", snapPath, err)
+	}
+	if pdfInfo.Mode().Perm() != snapInfo.Mode().Perm() {
+		t.Fatalf("PDF mode = %v, snapshot mode = %v, want equal", pdfInfo.Mode().Perm(), snapInfo.Mode().Perm())
+	}
+}
+
 // modifiedSnapshot decodes the golden snapshot of name, applies modify to
 // it, encodes it again, and writes it to a fresh file, returning its path.
 func modifiedSnapshot(t *testing.T, name string, modify func(*snapshot.Snapshot)) string {

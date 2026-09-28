@@ -119,6 +119,46 @@ func TestWriteAtomicFileReplacesAnExistingFile(t *testing.T) {
 	assertNoTempFilesBeside(t, dir)
 }
 
+// TestPDFModeFollowsWhatTheCompilerLeft tests settlePDFMode directly: it
+// creates a file, sets its mode by hand with os.Chmod (never subject to the
+// umask, so the test controls the exact starting mode), and checks what
+// settlePDFMode leaves it at.
+func TestPDFModeFollowsWhatTheCompilerLeft(t *testing.T) {
+	tests := []struct {
+		name        string
+		start, want os.FileMode
+	}{
+		{"0o666", 0o666, 0o644},
+		{"0o644", 0o644, 0o644},
+		{"0o600", 0o600, 0o600},
+		{"0o640", 0o640, 0o640},
+		{"0o755", 0o755, 0o644},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "r.pdf")
+			if err := os.WriteFile(path, []byte("data"), 0o644); err != nil {
+				t.Fatalf("writing %s: %v", path, err)
+			}
+			if err := os.Chmod(path, tt.start); err != nil {
+				t.Fatalf("chmod %s to %v: %v", path, tt.start, err)
+			}
+
+			if err := settlePDFMode(path); err != nil {
+				t.Fatalf("settlePDFMode: %v", err)
+			}
+
+			info, err := os.Stat(path)
+			if err != nil {
+				t.Fatalf("stat: %v", err)
+			}
+			if got := info.Mode().Perm(); got != tt.want {
+				t.Fatalf("mode = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestWriteAtomicFileHasTheExpectedMode(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "out.json")

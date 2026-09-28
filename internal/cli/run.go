@@ -712,17 +712,25 @@ func withWorkFolder(parent string, work func(dir string) error) error {
 	return work(dir)
 }
 
+// settlePDFMode gives path the mode the compiler already left it with, less
+// any bit outside 0o644: typst was measured (see the command's report) to
+// leave its output at a mode derived from 0o666, not the 0o644 every other
+// output file of this command is created with, so under a permissive umask
+// the PDF would otherwise end up more open than 0o644 allows. This never
+// makes the file more permissive than the compiler already left it, and
+// never touches the umask itself, only the file already on disk.
+func settlePDFMode(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	return os.Chmod(path, info.Mode().Perm()&0o644)
+}
+
 // compileToPath unpacks the template into a fresh work folder, writes
 // report.json, compiles to a temporary file beside outputPath, and renames
-// it into place.
-//
-// The compiler is given a name that does not yet exist and creates the file
-// itself; typst was measured (see the command's report) to leave it with
-// mode 0o666 less the process umask, not the 0o644-less-umask every other
-// output file of this command gets, so it is chmoded to exactly 0o644
-// afterward, regardless of the umask: a report is meant to be read by
-// others, including the container user of a later phase that is not this
-// process's own user.
+// it into place. The compiler is given a name that does not yet exist and
+// creates the file itself.
 func compileToPath(ctx context.Context, env Env, tc typst.Toolchain, data []byte, outputPath string) error {
 	return withWorkFolder(env.TempDir, func(dir string) error {
 		if err := template.Unpack(dir); err != nil {
@@ -755,7 +763,7 @@ func compileToPath(ctx context.Context, env Env, tc typst.Toolchain, data []byte
 			return err
 		}
 
-		if err := os.Chmod(tmpPath, 0o644); err != nil {
+		if err := settlePDFMode(tmpPath); err != nil {
 			return err
 		}
 		if err := syncFile(tmpPath); err != nil {
