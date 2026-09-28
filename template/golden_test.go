@@ -106,6 +106,9 @@ func TestGoldenManifestMatchesFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading golden manifest: %v; run `make update-golden` to create it", err)
 	}
+	if len(sums) == 0 {
+		t.Fatalf("golden manifest %s/SHA256SUMS lists no page; run `make update-golden` to create it", dir)
+	}
 
 	entries, err := os.ReadDir(dir)
 	if err != nil {
