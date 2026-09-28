@@ -26,7 +26,10 @@ make test             # Go tests that need no service and no tool
 make lint             # gofmt, go vet, golangci-lint
 make image            # runtime image and test image
 make test-toolchain   # checks typst and pdftotext inside the test image
+make test-template    # compiles the template and its fixtures in the test image
+make test-golden      # compares rendered pages with the golden pages
 make gate             # everything above, from freshly built images
+make update-golden    # rewrites the golden pages after an intended change
 ```
 
 `make gate` writes one log per step under `.cache/gate/`. It builds the images
@@ -73,14 +76,64 @@ Build tags in use:
 | Tag | Needs | Runs in |
 |---|---|---|
 | `toolchain` | `typst`, `pdftotext` | `make test-toolchain` |
+| `template` | `typst`, `pdftotext` | `make test-template` |
+| `golden` | `typst`, with `template` | `make test-golden` |
+
+With the native tools installed, a subagent runs the tagged tests itself:
+
+```bash
+go test -count=1 -tags=template ./template/ ./internal/typst/
+go test -count=1 -tags='template golden' ./template/ -run Golden
+```
+
+## The template
+
+`template/graphite/` is the generic page shell, a port of `graphite-report`
+1.0.0 that stays a valid Typst package. `template/capacity/` is the layout of
+the capacity report. Go decides what is said; the template decides how it
+looks.
+
+- The report layer reads one JSON data file. Its contract is in the plan of
+  phase 1, and `template/capacity/validate.typ` enforces it.
+- Every word on the page arrives in the data file. The template adds no
+  wording of its own and never evaluates a value as markup. `eval` is
+  forbidden, and a test scans for it.
+- Every diagnostic of the generic layer starts with `graphite-report: `, and
+  every diagnostic of the report layer with `capacity-report: `. All of the
+  report layer's diagnostics live in one dictionary in `validate.typ`, and
+  each has a fixture that triggers it.
+- No page may contain a coloured pixel.
+- The public surface of the generic layer is frozen: `graphite-report`,
+  `callout`, `keep-together`, with the keys its README documents.
+
+### Golden pages
+
+- `template/golden/snapshots.go` is the one list of golden pages. Each entry
+  states the one behaviour it alone protects.
+- Pages are rendered at 144 PPI and compared by SHA-256.
+- A test never writes a golden page. `make update-golden` does, and only for
+  an intended visual change.
+- After `make update-golden`, open every page that changed and review it
+  before committing. A page that changed without a reason you can name is a
+  defect, not a new golden page.
+- The pages of the snapshot `capacity-parity` equal, byte for byte, the pages
+  of the original report. A change that alters them has moved away from the
+  original, and needs a decision recorded in `ROADMAP.md`.
+- Rendering was measured equal on linux/amd64, linux/arm64, and macOS
+  (`docs/decisions/0001-golden-architecture.md`). Measure again when the
+  pinned Typst version changes.
 
 ## Delegating to subagents
 
 The main thread plans, judges, and runs the gates. Subagents implement.
 
 - A subagent may run `go`, `make build`, `make test`, and `make lint`.
-- A subagent must not run Docker, so `make image`, `make test-toolchain`, and
+- A subagent must not run Docker, so `make image`, `make test-toolchain`,
+  `make test-template`, `make test-golden`, `make update-golden`, and
   `make gate` stay on the main thread.
+- Two agents in one checkout break each other's builds when they share a Go
+  package. Give a reviewer a diff file, and let it run tests only on packages
+  nobody is editing.
 - A subagent cannot declare a task or a phase finished.
 - Interface design, API design, and catalog wording stay on the main thread.
 - Tasks that share a file run in sequence. When in doubt, treat two tasks as
