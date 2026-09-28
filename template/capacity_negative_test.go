@@ -169,6 +169,9 @@ func TestCapacityEveryDiagnosticIsCovered(t *testing.T) {
 	ws := workspace(t)
 	capDir := filepath.Join(ws, "capacity")
 	names := diagnosticNames(t, filepath.Join(capDir, "validate.typ"))
+	if len(names) != 19 {
+		t.Errorf("diagnostic names = %v (%d), want 19", names, len(names))
+	}
 
 	dir := capacityNegativeDir(ws)
 	nameSet := map[string]bool{}
@@ -185,13 +188,17 @@ func TestCapacityEveryDiagnosticIsCovered(t *testing.T) {
 		}
 	}
 
+	// A fixture may be named "<short name>.<case>.json" when a diagnostic
+	// needs more than one example; only the part before the first dot is
+	// the short name that must be a key of validate.typ's dictionary.
 	matches, err := filepath.Glob(filepath.Join(dir, "*.json"))
 	if err != nil {
 		t.Fatalf("globbing %s: %v", dir, err)
 	}
 	for _, m := range matches {
 		base := strings.TrimSuffix(filepath.Base(m), ".json")
-		if !nameSet[base] {
+		name := strings.SplitN(base, ".", 2)[0]
+		if !nameSet[name] {
 			t.Errorf("fixture %s has no matching name in validate.typ's diagnostics dictionary", base)
 		}
 	}
@@ -217,6 +224,135 @@ func TestCapacityEveryDiagnosticIsCovered(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("walking %s: %v", capDir, err)
+	}
+}
+
+// TestCapacityNeverFailsWithoutItsPrefix catches a native crash whatever
+// the fixture expected: even when a fixture's own .expect names a
+// different diagnostic, the compiler's stderr must start (once compiler
+// noise is set aside) with a diagnostic from this layer or from the
+// generic one underneath it, never a bare Typst error message.
+func TestCapacityNeverFailsWithoutItsPrefix(t *testing.T) {
+	ws := workspace(t)
+	dir := capacityNegativeDir(ws)
+	matches, err := filepath.Glob(filepath.Join(dir, "*.json"))
+	if err != nil {
+		t.Fatalf("globbing %s: %v", dir, err)
+	}
+	if len(matches) == 0 {
+		t.Fatalf("no negative fixtures found in %s", dir)
+	}
+
+	for _, file := range matches {
+		t.Run(filepath.Base(file), func(t *testing.T) {
+			_, stderr, err := compileCapacityData(t, ws, file)
+			var compileErr *typst.CompileError
+			if !errors.As(err, &compileErr) {
+				t.Fatalf("Compile() error = %v, want *typst.CompileError", err)
+			}
+			if !strings.Contains(compileErr.Stderr, "capacity-report: ") &&
+				!strings.Contains(compileErr.Stderr, "graphite-report: ") {
+				t.Fatalf("stderr = %q, want it to contain \"capacity-report: \" or \"graphite-report: \"", stderr)
+			}
+		})
+	}
+}
+
+// TestCapacityFrontBlockIsSetSmaller proves `front` really does set its
+// content at a smaller size than the same content outside it. Comparing
+// `text.size` directly does not work here: the `set text(size: 8pt)`
+// inside `front`'s own `block(...)` body is out of scope again by the
+// time control returns to the top level of this test document, so a
+// `context` placed after the call never sees it. Measuring the rendered
+// height of the very same paragraph, once wrapped in `front` and once
+// not, sidesteps that: smaller text at the same width wraps into a
+// shorter block. `measure` is given an explicit width instead of relying
+// on its default (unbounded) one, because `front`'s own `block(width:
+// 100%)` has no page to resolve "100%" against when measured outside a
+// page context, which otherwise measures a wildly wrong height.
+func TestCapacityFrontBlockIsSetSmaller(t *testing.T) {
+	ws := workspace(t)
+
+	source := `#import "blocks.typ": build-block
+
+#let para = (type: "paragraph", runs: ((kind: "text", text: "The quick brown fox jumps over the lazy dog, repeated to force wrapping across at least two lines of text."),))
+#let front-entry = (type: "front", blocks: (para,))
+
+#context {
+  let h-front = measure(build-block(front-entry), width: 400pt).height
+  let h-plain = measure(build-block(para), width: 400pt).height
+  assert(
+    h-front < h-plain,
+    message: "front text is not smaller: " + repr(h-front) + " vs " + repr(h-plain),
+  )
+}
+`
+	path := filepath.Join(ws, "capacity", "front_smaller_check.typ")
+	if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
+		t.Fatalf("writing %s: %v", path, err)
+	}
+	pdf, stderr, err := compilePDF(t, ws, filepath.Join("capacity", "front_smaller_check.typ"), nil)
+	assertCleanCompile(t, stderr, err)
+	assertNonEmptyPDF(t, pdf)
+}
+
+// unnumberedHeadingFixture is a minimal, self-contained document (every
+// top-level key, one outline, one numbered heading, one unnumbered one)
+// used only to prove B2's rendering rule end to end.
+const unnumberedHeadingFixture = `{
+  "schema": "1",
+  "language": "pt-BR",
+  "theme": {
+    "lang": "pt",
+    "region": "BR",
+    "date_format": "[day padding:zero]/[month padding:zero]/[year]"
+  },
+  "labels": {
+    "author": "Responsável",
+    "date": "Emissão",
+    "classification": "Classificação",
+    "outline": "Sumário",
+    "note": "Nota",
+    "info": "Informação",
+    "warning": "Atenção"
+  },
+  "cover": {
+    "title": "LEVANTAMENTO DE CAPACIDADE",
+    "cluster_label": "Cluster:",
+    "cluster": "production-east",
+    "author_label": "ELABORADO POR:",
+    "author": "Time SRE",
+    "issued_label": "EMITIDO EM:",
+    "issued": "15/07/2026 14:30"
+  },
+  "footer": {
+    "classification": "Uso interno",
+    "page_label": "Página"
+  },
+  "blocks": [
+    { "type": "outline", "title": "Sumário", "depth": 1 },
+    { "type": "heading", "level": 1, "numbered": true, "runs": [ { "kind": "text", "text": "Alpha" } ] },
+    { "type": "heading", "level": 1, "numbered": false, "runs": [ { "kind": "text", "text": "Beta" } ] }
+  ]
+}
+`
+
+func TestCapacityUnnumberedHeadingIsLeftOutOfTheOutline(t *testing.T) {
+	ws := workspace(t)
+	dataFile := filepath.Join(t.TempDir(), "report.json")
+	if err := os.WriteFile(dataFile, []byte(unnumberedHeadingFixture), 0o644); err != nil {
+		t.Fatalf("writing %s: %v", dataFile, err)
+	}
+	pdf, stderr, err := compileCapacityData(t, ws, dataFile)
+	assertCleanCompile(t, stderr, err)
+	assertNonEmptyPDF(t, pdf)
+
+	text := pdfText(t, pdf)
+	if got := strings.Count(text, "Alpha"); got != 2 {
+		t.Errorf("page text has %d occurrences of %q, want 2 (outline entry + heading)", got, "Alpha")
+	}
+	if got := strings.Count(text, "Beta"); got != 1 {
+		t.Errorf("page text has %d occurrences of %q, want 1 (heading only, left out of the outline)", got, "Beta")
 	}
 }
 

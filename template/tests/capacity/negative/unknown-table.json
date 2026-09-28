@@ -30,8 +30,45 @@
   },
   "blocks": [
     {
+      "type": "front",
+      "blocks": [
+        {
+          "type": "outline",
+          "title": "Sumário",
+          "depth": 2
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Metadados do relatório"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            [
+              {
+                "kind": "strong",
+                "text": "Disponíveis:"
+              },
+              {
+                "kind": "text",
+                "text": " 3"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
       "type": "heading",
       "level": 1,
+      "numbered": true,
       "runs": [
         {
           "kind": "text",

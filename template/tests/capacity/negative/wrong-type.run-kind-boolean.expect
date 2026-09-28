@@ -1,0 +1,1 @@
+capacity-report: `blocks[1].runs[0].kind` must be a string; received boolean

@@ -1,0 +1,129 @@
+{
+  "schema": "1",
+  "language": "pt-BR",
+  "theme": {
+    "lang": "pt",
+    "region": "br",
+    "date_format": "[day padding:zero]/[month padding:zero]/[year]"
+  },
+  "labels": {
+    "author": "Responsável",
+    "date": "Emissão",
+    "classification": "Classificação",
+    "outline": "Sumário",
+    "note": "Nota",
+    "info": "Informação",
+    "warning": "Atenção"
+  },
+  "cover": {
+    "title": "LEVANTAMENTO DE CAPACIDADE",
+    "cluster_label": "Cluster:",
+    "cluster": "production-east",
+    "author_label": "ELABORADO POR:",
+    "author": "Time SRE",
+    "issued_label": "EMITIDO EM:",
+    "issued": "15/07/2026 14:30"
+  },
+  "footer": {
+    "classification": "Uso interno",
+    "page_label": "Página"
+  },
+  "blocks": [
+    {
+      "type": "front",
+      "blocks": [
+        {
+          "type": "outline",
+          "title": "Sumário",
+          "depth": 2
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Metadados do relatório"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            [
+              {
+                "kind": "strong",
+                "text": "Disponíveis:"
+              },
+              {
+                "kind": "text",
+                "text": " 3"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Resumo executivo"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Período analisado: 24 horas."
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "status-legend",
+      "headers": [
+        "Status",
+        "Interpretação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítico"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Requer ação imediata."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Saudável"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Dentro do esperado."
+            }
+          ]
+        ]
+      ]
+    }
+  ]
+}

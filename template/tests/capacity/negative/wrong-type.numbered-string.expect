@@ -1,0 +1,1 @@
+capacity-report: `blocks[1].numbered` must be a boolean; received string

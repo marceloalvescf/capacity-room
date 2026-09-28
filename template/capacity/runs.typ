@@ -17,6 +17,8 @@
 #let run-to-content(run) = {
   if run.kind == "text" {
     text(run.text)
+  } else if run.kind == "strong" {
+    text(weight: "bold", run.text)
   } else if run.kind == "ident" {
     text(size: 0.92em, hyphenate: false, lang: "en", run.text)
   } else if run.kind == "placeholder" {
