@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -117,6 +119,21 @@ func TestWriteAtomicFileReplacesAnExistingFile(t *testing.T) {
 	assertNoTempFilesBeside(t, dir)
 }
 
+func TestWriteAtomicFileHasTheExpectedMode(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "out.json")
+	if err := writeAtomicFile(path, []byte("data")); err != nil {
+		t.Fatalf("writeAtomicFile: %v", err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if got, want := info.Mode().Perm(), expected0644Mode(t); got != want {
+		t.Fatalf("mode = %v, want %v", got, want)
+	}
+}
+
 func TestWriteAtomicFileLeavesNoTempFileWhenRenameFails(t *testing.T) {
 	dir := t.TempDir()
 	// path itself is an existing folder, so the final os.Rename fails after
@@ -132,6 +149,54 @@ func TestWriteAtomicFileLeavesNoTempFileWhenRenameFails(t *testing.T) {
 		t.Fatal("writeAtomicFile onto an existing folder = nil error, want one")
 	}
 	assertNoTempFilesBeside(t, dir)
+}
+
+// TestWritableCheckReportsAProbeItCannotRemove forces checkWritableTarget's
+// clean-up of its own probe file to fail, through the private seam
+// removeProbeFile, restored with t.Cleanup so no other test in the package
+// ever sees the replacement.
+func TestWritableCheckReportsAProbeItCannotRemove(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "r.pdf")
+
+	boom := errors.New("boom")
+	old := removeProbeFile
+	removeProbeFile = func(string) error { return boom }
+	t.Cleanup(func() { removeProbeFile = old })
+
+	err := checkOutputPath(path)
+	if err == nil {
+		t.Fatal("checkOutputPath() = nil, want an error")
+	}
+	if !strings.Contains(err.Error(), "output directory holds a probe file that could not be removed") {
+		t.Fatalf("error = %q, want it to mention the probe file", err.Error())
+	}
+	if !strings.Contains(err.Error(), "boom") {
+		t.Fatalf("error = %q, want it to name the cause", err.Error())
+	}
+}
+
+// expected0644Mode returns the mode a file created with 0o644 will actually
+// get on this machine, right now: 0o644 with every bit the process umask
+// clears also cleared. It measures the umask indirectly, by creating a
+// throwaway file with 0o666 and reading back what survived, rather than
+// reading or setting the umask itself (umask has no portable read-only
+// accessor in Go, and the brief asks that this package never touch it).
+// Since 0o644's bits are a subset of 0o666's, ANDing the measured mode with
+// 0o644 gives exactly "0o644 less the same umask", for any umask.
+func expected0644Mode(t *testing.T) os.FileMode {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "umask-probe")
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o666)
+	if err != nil {
+		t.Fatalf("probing the umask: %v", err)
+	}
+	defer func() { _ = f.Close() }()
+	info, err := f.Stat()
+	if err != nil {
+		t.Fatalf("stat of the umask probe: %v", err)
+	}
+	return os.FileMode(0o644) & info.Mode().Perm()
 }
 
 // assertNoTempFilesBeside fails the test if dir holds any ".*.tmp" entry.

@@ -2,6 +2,7 @@ package redact_test
 
 import (
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
@@ -208,4 +209,65 @@ type failingWriter struct {
 
 func (f *failingWriter) Write(_ []byte) (int, error) {
 	return 0, f.err
+}
+
+func TestRedactorAdd(t *testing.T) {
+	t.Run("adds a secret after construction", func(t *testing.T) {
+		r := redact.New()
+		r.Add("abc")
+		got := r.Text("x abc y")
+		want := "x [redacted] y"
+		if got != want {
+			t.Fatalf("Text() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("ignores an empty secret", func(t *testing.T) {
+		r := redact.New()
+		r.Add("")
+		got := r.Text("abc")
+		if got != "abc" {
+			t.Fatalf("Text() = %q, want unchanged", got)
+		}
+	})
+
+	t.Run("a longer secret added later still wins", func(t *testing.T) {
+		r := redact.New()
+		r.Add("abc")
+		r.Add("abcdef")
+		got := r.Text("x abcdef y")
+		want := "x [redacted] y"
+		if got != want {
+			t.Fatalf("Text() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("concurrent Add and Text", func(_ *testing.T) {
+		r := redact.New()
+		var wg sync.WaitGroup
+		wg.Add(50)
+		for i := 0; i < 50; i++ {
+			go func() {
+				defer wg.Done()
+				_ = r.Text("some text with maybe-a-secret in it")
+			}()
+		}
+		r.Add("maybe-a-secret")
+		wg.Wait()
+	})
+}
+
+func TestWriterSeesSecretsAddedLater(t *testing.T) {
+	r := redact.New()
+	inner := &captureWriter{}
+	w := r.Writer(inner)
+
+	r.Add("abc")
+	if _, err := w.Write([]byte("x abc y")); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+	want := "x [redacted] y"
+	if inner.String() != want {
+		t.Fatalf("inner received %q, want %q", inner.String(), want)
+	}
 }

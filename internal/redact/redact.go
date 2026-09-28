@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // Mark replaces every secret found.
@@ -28,8 +29,12 @@ var (
 )
 
 // Redactor removes a fixed set of literal secrets and every pattern of
-// spec 5.4 from text.
+// spec 5.4 from text. A Redactor is safe for use by several goroutines: a
+// caller may hold one for the life of a whole run, calling Add as it learns
+// of a new secret, while Text and the writers Writer returns are already in
+// use from other goroutines.
 type Redactor struct {
+	mu sync.Mutex
 	// secrets is sorted longest first, so a short secret never leaves a
 	// suffix of a longer one behind in the text.
 	secrets []string
@@ -37,19 +42,33 @@ type Redactor struct {
 
 // New keeps the secrets that are not empty.
 func New(secrets ...string) *Redactor {
-	kept := make([]string, 0, len(secrets))
-	for _, secret := range secrets {
-		if secret != "" {
-			kept = append(kept, secret)
-		}
-	}
-	sort.SliceStable(kept, func(i, j int) bool { return len(kept[i]) > len(kept[j]) })
-	return &Redactor{secrets: kept}
+	r := &Redactor{}
+	r.Add(secrets...)
+	return r
 }
 
-// Text returns s with every secret removed.
+// Add keeps the secrets that are not empty, adding them to the ones r
+// already holds, and keeps the whole set sorted longest first.
+func (r *Redactor) Add(secrets ...string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, secret := range secrets {
+		if secret != "" {
+			r.secrets = append(r.secrets, secret)
+		}
+	}
+	sort.SliceStable(r.secrets, func(i, j int) bool { return len(r.secrets[i]) > len(r.secrets[j]) })
+}
+
+// Text returns s with every secret removed. It reads the current set of
+// secrets under lock, so a concurrent Add is either fully reflected or not
+// reflected at all, never partially.
 func (r *Redactor) Text(s string) string {
-	for _, secret := range r.secrets {
+	r.mu.Lock()
+	secrets := append([]string(nil), r.secrets...)
+	r.mu.Unlock()
+
+	for _, secret := range secrets {
 		s = strings.ReplaceAll(s, secret, Mark)
 	}
 	s = quotedAuthDoubleRe.ReplaceAllString(s, `${1}"`+Mark+`"`)

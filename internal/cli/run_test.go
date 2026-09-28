@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -54,12 +55,19 @@ func envWithTypst(env Env, binary string) Env {
 	return env
 }
 
-func TestModeConflicts(t *testing.T) {
-	tests := []struct {
-		name string
-		args []string
-		want string
-	}{
+// modeConflictRow is one row of the mode-conflict table: the flags given
+// (report is prepended by the caller) and the message they must produce.
+// It is a package-level type, rather than a literal local to
+// TestModeConflicts, so TestEveryFailureHasThePrefix can walk the same
+// table without copying it.
+type modeConflictRow struct {
+	name string
+	args []string
+	want string
+}
+
+func modeConflictRows() []modeConflictRow {
+	rows := []modeConflictRow{
 		{"check with output", []string{"--check", "--output", "r.pdf"}, "--check cannot be combined with --output"},
 		{"check with snapshot", []string{"--check", "--snapshot", "s.json"}, "--check cannot be combined with --snapshot"},
 		{"check with from-snapshot", []string{"--check", "--from-snapshot", "s.json"}, "--check cannot be combined with --from-snapshot"},
@@ -76,18 +84,17 @@ func TestModeConflicts(t *testing.T) {
 		} else {
 			flagArgs = append(flagArgs, "--"+name, "x")
 		}
-		tests = append(tests, struct {
-			name string
-			args []string
-			want string
-		}{
+		rows = append(rows, modeConflictRow{
 			"from-snapshot with " + name,
 			flagArgs,
 			"--from-snapshot cannot be combined with --" + name,
 		})
 	}
+	return rows
+}
 
-	for _, tt := range tests {
+func TestModeConflicts(t *testing.T) {
+	for _, tt := range modeConflictRows() {
 		t.Run(tt.name, func(t *testing.T) {
 			args := append([]string{"report"}, tt.args...)
 			stdout, stderr, code := runArgs(context.Background(), testEnv(t), args)
@@ -100,6 +107,120 @@ func TestModeConflicts(t *testing.T) {
 			if stdout != "" {
 				t.Fatalf("stdout = %q, want empty", stdout)
 			}
+		})
+	}
+}
+
+// argsRow is a bare name-and-arguments row, shared by the cobra-error and
+// positional-argument tables below and by TestEveryFailureHasThePrefix.
+type argsRow struct {
+	name string
+	args []string
+}
+
+// cobraErrorRows are invocations that fail during cobra's own flag
+// resolution, before report's RunE ever runs: an unknown flag, in every
+// position relative to a --token; the same at the root, where the unknown
+// "command" is the word right after a --token; and --token given with no
+// value at all.
+func cobraErrorRows() []argsRow {
+	return []argsRow{
+		{"token equals then unknown flag", []string{"report", "--token=s3cr3t-value", "--nope"}},
+		{"token space then unknown flag", []string{"report", "--token", "s3cr3t-value", "--nope"}},
+		{"unknown flag then token equals", []string{"report", "--nope", "--token=s3cr3t-value"}},
+		{"token equals at the root", []string{"--token=s3cr3t-value", "nope"}},
+		{"token with no value", []string{"report", "--token"}},
+	}
+}
+
+func TestCobraErrorsPassTheRedactor(t *testing.T) {
+	for _, tt := range cobraErrorRows() {
+		t.Run(tt.name, func(t *testing.T) {
+			stdout, stderr, code := runArgs(context.Background(), testEnv(t), tt.args)
+			if code != 2 {
+				t.Fatalf("code = %d, want 2; stdout=%q stderr=%q", code, stdout, stderr)
+			}
+			assertExactlyOneErrorLine(t, stderr)
+			if strings.Contains(stdout, "s3cr3t-value") || strings.Contains(stderr, "s3cr3t-value") {
+				t.Fatalf("a stream held the token: stdout=%q stderr=%q", stdout, stderr)
+			}
+		})
+	}
+}
+
+// positionalArgRows are invocations report refuses for carrying a
+// positional argument; the row name doubles as the key into the exact
+// wanted message in TestReportRefusesAPositionalArgument.
+func positionalArgRows() []argsRow {
+	return []argsRow{
+		{"one argument", []string{"report", "s3cr3t-value", "--check"}},
+		{"two arguments", []string{"report", "a", "b"}},
+	}
+}
+
+func TestReportRefusesAPositionalArgument(t *testing.T) {
+	want := map[string]string{
+		"one argument":  "error: report takes no argument; found 1\n",
+		"two arguments": "error: report takes no argument; found 2\n",
+	}
+	for _, tt := range positionalArgRows() {
+		t.Run(tt.name, func(t *testing.T) {
+			stdout, stderr, code := runArgs(context.Background(), testEnv(t), tt.args)
+			if code != 2 {
+				t.Fatalf("code = %d, want 2; stdout=%q stderr=%q", code, stdout, stderr)
+			}
+			if stderr != want[tt.name] {
+				t.Fatalf("stderr = %q, want %q", stderr, want[tt.name])
+			}
+			if strings.Contains(stdout, "s3cr3t-value") || strings.Contains(stderr, "s3cr3t-value") {
+				t.Fatalf("a stream held the argument: stdout=%q stderr=%q", stdout, stderr)
+			}
+		})
+	}
+}
+
+// assertExactlyOneErrorLine requires stderr to be exactly one line, ending
+// in a line break, that starts with "error: ".
+func assertExactlyOneErrorLine(t *testing.T, stderr string) {
+	t.Helper()
+	if stderr == "" {
+		t.Fatalf("stderr is empty, want one line starting with %q", "error: ")
+	}
+	lines := strings.Split(strings.TrimRight(stderr, "\n"), "\n")
+	if len(lines) != 1 || !strings.HasPrefix(lines[0], "error: ") || !strings.HasSuffix(stderr, "\n") {
+		t.Fatalf("stderr = %q, want exactly one line starting with %q", stderr, "error: ")
+	}
+}
+
+// TestEveryFailureHasThePrefix walks every row of TestExitCodes,
+// TestModeConflicts, TestCobraErrorsPassTheRedactor, and
+// TestReportRefusesAPositionalArgument, from the same tables those tests
+// use, and checks only the shape every one of them must share: standard
+// error is exactly one line, starting with "error: ".
+func TestEveryFailureHasThePrefix(t *testing.T) {
+	for _, r := range exitCodeRows() {
+		t.Run("exit-code/"+r.name, func(t *testing.T) {
+			_, stderr, _ := r.run(t)
+			assertExactlyOneErrorLine(t, stderr)
+		})
+	}
+	for _, tt := range modeConflictRows() {
+		t.Run("mode-conflict/"+tt.name, func(t *testing.T) {
+			args := append([]string{"report"}, tt.args...)
+			_, stderr, _ := runArgs(context.Background(), testEnv(t), args)
+			assertExactlyOneErrorLine(t, stderr)
+		})
+	}
+	for _, tt := range cobraErrorRows() {
+		t.Run("cobra/"+tt.name, func(t *testing.T) {
+			_, stderr, _ := runArgs(context.Background(), testEnv(t), tt.args)
+			assertExactlyOneErrorLine(t, stderr)
+		})
+	}
+	for _, tt := range positionalArgRows() {
+		t.Run("positional/"+tt.name, func(t *testing.T) {
+			_, stderr, _ := runArgs(context.Background(), testEnv(t), tt.args)
+			assertExactlyOneErrorLine(t, stderr)
 		})
 	}
 }
@@ -242,14 +363,17 @@ func alwaysStatus(status int) *httptest.Server {
 	}))
 }
 
-func TestExitCodes(t *testing.T) {
-	type row struct {
-		name string
-		want int
-		run  func(t *testing.T) (stdout, stderr string, code int)
-	}
+// exitCodeRow is one row of the exit-code table: a package-level type,
+// rather than a literal local to TestExitCodes, so TestEveryFailureHasThePrefix
+// can walk the same table without copying it.
+type exitCodeRow struct {
+	name string
+	want int
+	run  func(t *testing.T) (stdout, stderr string, code int)
+}
 
-	rows := []row{
+func exitCodeRows() []exitCodeRow {
+	return []exitCodeRow{
 		{
 			name: "missing configuration file",
 			want: 2,
@@ -393,16 +517,16 @@ output_directory = %q
 			},
 		},
 	}
+}
 
-	for _, r := range rows {
+func TestExitCodes(t *testing.T) {
+	for _, r := range exitCodeRows() {
 		t.Run(r.name, func(t *testing.T) {
 			stdout, stderr, code := r.run(t)
 			if code != r.want {
 				t.Fatalf("code = %d, want %d; stderr = %q", code, r.want, stderr)
 			}
-			if !strings.HasPrefix(stderr, "error: ") {
-				t.Fatalf("stderr = %q, want it to start with %q", stderr, "error: ")
-			}
+			assertExactlyOneErrorLine(t, stderr)
 			if stdout != "" {
 				t.Fatalf("stdout = %q, want empty", stdout)
 			}
@@ -717,6 +841,51 @@ func TestSnapshotFileRefusals(t *testing.T) {
 	}
 }
 
+// TestPanicWithATokenOfTheEnvironment is the regression test for the
+// Critical review finding: a panic that happens after the configuration's
+// own token is known (here, loaded from an environment variable, not
+// --token) but before the mode function returns must still be redacted.
+// The clock's second call, inside collect() itself, is the one that
+// panics, well after runCheck has already added the token to the
+// Redactor.
+func TestPanicWithATokenOfTheEnvironment(t *testing.T) {
+	const token = "s3cr3t-value"
+	server, _, scenario := startScenario(t, "direct-complete")
+	defer server.Close()
+
+	text := scenarioConfig(server, scenario, t.TempDir(), "KCR_TOKEN")
+	cfgPath := writeConfig(t, text)
+
+	env := testEnv(t)
+	base := time.Date(2026, time.July, 15, 14, 30, 0, 0, time.UTC)
+	calls := 0
+	env.Now = func() time.Time {
+		calls++
+		if calls == 1 {
+			return base
+		}
+		panic("boom holding " + token)
+	}
+	env.Getenv = func(k string) string {
+		if k == "KCR_TOKEN" {
+			return token
+		}
+		return ""
+	}
+	env = withTypst(t, env)
+
+	stdout, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--check"})
+	if code != 1 {
+		t.Fatalf("code = %d, want 1; stderr = %q", code, stderr)
+	}
+	if !strings.Contains(stderr, "error: internal failure:") {
+		t.Fatalf("stderr = %q, want it to contain %q", stderr, "error: internal failure:")
+	}
+	if strings.Contains(stderr, token) || strings.Contains(stdout, token) {
+		t.Fatalf("a stream held the token: stdout=%q stderr=%q", stdout, stderr)
+	}
+}
+
 func TestPanicIsReportedAndRedacted(t *testing.T) {
 	const token = "s3cr3t-panic-value"
 	server, _, scenario := startScenario(t, "direct-complete")
@@ -825,6 +994,51 @@ func TestWorkFolderIsRemoved(t *testing.T) {
 		}
 		assertTempDirEmpty(t, tempDir)
 	})
+}
+
+// TestWorkFolderIsRemovedOnSuccess, TestWorkFolderIsRemovedOnError, and
+// TestWorkFolderIsRemovedOnPanic test withWorkFolder directly, by itself,
+// rather than through a whole collecting run: the life of the work folder
+// is withWorkFolder's own responsibility (make it, defer its removal, run
+// the given work), so it is provable on its own terms, including the one
+// case (a panic while the folder is open) that no combination of the
+// frozen Env seams can reach from a real run — see Important finding 4 of
+// the review.
+func TestWorkFolderIsRemovedOnSuccess(t *testing.T) {
+	parent := t.TempDir()
+	err := withWorkFolder(parent, func(string) error { return nil })
+	if err != nil {
+		t.Fatalf("withWorkFolder() error = %v, want nil", err)
+	}
+	assertTempDirEmpty(t, parent)
+}
+
+func TestWorkFolderIsRemovedOnError(t *testing.T) {
+	parent := t.TempDir()
+	boom := errors.New("boom")
+	err := withWorkFolder(parent, func(string) error { return boom })
+	if !errors.Is(err, boom) {
+		t.Fatalf("withWorkFolder() error = %v, want %v", err, boom)
+	}
+	assertTempDirEmpty(t, parent)
+}
+
+func TestWorkFolderIsRemovedOnPanic(t *testing.T) {
+	parent := t.TempDir()
+	recovered := func() (r any) {
+		defer func() { r = recover() }()
+		_ = withWorkFolder(parent, func(dir string) error {
+			if err := os.WriteFile(filepath.Join(dir, "x"), []byte("y"), 0o644); err != nil {
+				t.Fatalf("writing inside the work folder: %v", err)
+			}
+			panic("boom")
+		})
+		return nil
+	}()
+	if recovered != "boom" {
+		t.Fatalf("recovered = %v, want the panic to reach the caller", recovered)
+	}
+	assertTempDirEmpty(t, parent)
 }
 
 // assertTempDirEmpty fails the test if dir holds any entry: every work
@@ -971,6 +1185,26 @@ func TestEachLineIsOneWrite(t *testing.T) {
 	t.Run("failing run", func(t *testing.T) {
 		var stdout, stderr recordingWriter
 		code := Run(context.Background(), testEnv(t), []string{"report", "--check", "--snapshot", "s.json"}, &stdout, &stderr)
+		if code != 2 {
+			t.Fatalf("code = %d, want 2", code)
+		}
+		assertOneLinePerCall(t, "stdout", &stdout)
+		assertOneLinePerCall(t, "stderr", &stderr)
+	})
+
+	t.Run("cobra flag error", func(t *testing.T) {
+		var stdout, stderr recordingWriter
+		code := Run(context.Background(), testEnv(t), []string{"report", "--token=s3cr3t-value", "--nope"}, &stdout, &stderr)
+		if code != 2 {
+			t.Fatalf("code = %d, want 2", code)
+		}
+		assertOneLinePerCall(t, "stdout", &stdout)
+		assertOneLinePerCall(t, "stderr", &stderr)
+	})
+
+	t.Run("report refuses a positional argument", func(t *testing.T) {
+		var stdout, stderr recordingWriter
+		code := Run(context.Background(), testEnv(t), []string{"report", "s3cr3t-value", "--check"}, &stdout, &stderr)
 		if code != 2 {
 			t.Fatalf("code = %d, want 2", code)
 		}

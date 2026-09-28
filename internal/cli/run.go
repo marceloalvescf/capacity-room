@@ -59,35 +59,77 @@ func RealEnv() Env {
 	}
 }
 
+// tokenValuesFromArgs finds every value a --token flag holds in args,
+// however it was spelled: --token=<value> or --token <value>. It reads the
+// raw argument list itself, before cobra parses anything, so that a token
+// is known to the redactor even when a broken flag elsewhere stops cobra
+// from ever calling report's own RunE.
+func tokenValuesFromArgs(args []string) []string {
+	var values []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case strings.HasPrefix(arg, "--token="):
+			values = append(values, strings.TrimPrefix(arg, "--token="))
+		case arg == "--token":
+			if i+1 < len(args) {
+				values = append(values, args[i+1])
+			}
+		}
+	}
+	return values
+}
+
 // Run builds the root command, executes it against args, and returns the
-// process exit code. Output streams are passed explicitly rather than using
-// os.Stdout/os.Stderr so callers (including tests) control where they go.
+// process exit code.
 //
-// Cobra's own error and usage printing stays silenced; a plain cobra error
-// (an unknown command or flag) is printed once here, unredacted, since it
-// carries nothing but the command's own definitions. A command that has
-// already reported its own diagnostic, redacted, signals its exit code with
-// exitStatus instead, so that message is never printed a second time.
-func Run(ctx context.Context, env Env, args []string, stdout, stderr io.Writer) int {
-	cmd := newRootCmd(ctx, env)
+// One redact.Redactor is made here, on the very first line, from every
+// --token value tokenValuesFromArgs can find in args, and both streams are
+// wrapped by it before cobra ever sees them: nothing below this function
+// writes to a raw stream. The same Redactor is handed down to the report
+// command, which adds the configuration's own token to it, in place, the
+// moment config.Load returns (see runCheck, runSnapshot, and runPDF); every
+// writer already built from that Redactor sees the addition immediately,
+// including one the panic recovery below reaches for after the fact — so a
+// panic anywhere after the token is known is redacted, not only a panic
+// that happens to occur before any mode function is even called.
+//
+// The recovery sits here, above cmd.Execute(), rather than inside the
+// report command's own logic, so that it also catches a panic from
+// anything cobra itself might do while resolving or parsing.
+func Run(ctx context.Context, env Env, args []string, stdout, stderr io.Writer) (code int) {
+	redactor := redact.New(tokenValuesFromArgs(args)...)
+	wrappedOut := redactor.Writer(stdout)
+	wrappedErr := redactor.Writer(stderr)
+
+	defer func() {
+		if r := recover(); r != nil {
+			_, _ = fmt.Fprintf(wrappedErr, "error: internal failure: %v\n", r)
+			code = 1
+		}
+	}()
+
+	cmd := newRootCmd(ctx, env, redactor)
 	cmd.SetArgs(args)
-	cmd.SetOut(stdout)
-	cmd.SetErr(stderr)
+	cmd.SetOut(wrappedOut)
+	cmd.SetErr(wrappedErr)
 
 	if err := cmd.Execute(); err != nil {
 		var status *exitStatus
 		if errors.As(err, &status) {
 			return status.code
 		}
-		// Discard the error from writing to stderr; if it fails, there is
-		// nowhere left to report the failure.
-		_, _ = fmt.Fprintln(stderr, err)
+		// Every failure prints exactly one "error: <message>" line, cobra's
+		// own errors included (an unknown flag, or report's own refusal of
+		// a positional argument), each as a single Write through the
+		// redactor already wrapping wrappedErr.
+		_, _ = fmt.Fprintf(wrappedErr, "error: %s\n", err)
 		return 2
 	}
 	return 0
 }
 
-func newRootCmd(ctx context.Context, env Env) *cobra.Command {
+func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "k8s-capacity-report",
 		Short:   "Generate Kubernetes capacity reports from Prometheus metrics.",
@@ -107,7 +149,7 @@ func newRootCmd(ctx context.Context, env Env) *cobra.Command {
 		},
 	}
 	cmd.SetVersionTemplate("{{.Name}} {{.Version}}\n")
-	cmd.AddCommand(newReportCmd(ctx, env))
+	cmd.AddCommand(newReportCmd(ctx, env, redactor))
 	return cmd
 }
 
@@ -228,49 +270,33 @@ func configSource(cmd *cobra.Command, f *reportFlags, env Env) config.Source {
 }
 
 // runReport is the whole of the report command's own logic: it resolves the
-// mode, runs it, and writes exactly one line to stdout per success line, or
-// one "error: <message>" line to stderr, through a redactor built from every
-// secret the run has learned about by the time it prints.
-func runReport(ctx context.Context, env Env, cmd *cobra.Command, f *reportFlags) (code int) {
-	rawStdout := cmd.OutOrStdout()
-	rawStderr := cmd.ErrOrStderr()
-
-	var secrets []string
-	if cmd.Flags().Changed("token") {
-		secrets = append(secrets, f.token)
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			red := redact.New(secrets...)
-			_, _ = fmt.Fprintf(red.Writer(rawStderr), "error: internal failure: %v\n", r)
-			code = 1
-		}
-	}()
-
+// mode, runs it, and writes exactly one line per success line to stdout, or
+// one "error: <message>" line to stderr — both already wrapped by Run's
+// Redactor, through cmd.OutOrStdout()/ErrOrStderr(), which return the very
+// writers Run gave the root command.
+func runReport(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.Command, f *reportFlags) int {
 	mode, err := determineMode(cmd)
 	var lines []string
 	if err == nil {
 		switch mode {
 		case modeCheck:
-			lines, secrets, err = runCheck(ctx, env, cmd, f, secrets)
+			lines, err = runCheck(ctx, env, redactor, cmd, f)
 		case modeSnapshot:
-			lines, secrets, err = runSnapshot(ctx, env, cmd, f, secrets)
+			lines, err = runSnapshot(ctx, env, redactor, cmd, f)
 		case modeFromSnapshot:
-			lines, secrets, err = runFromSnapshot(ctx, env, cmd, f, secrets)
+			lines, err = runFromSnapshot(ctx, env, cmd, f)
 		default:
-			lines, secrets, err = runPDF(ctx, env, cmd, f, secrets)
+			lines, err = runPDF(ctx, env, redactor, cmd, f)
 		}
 	}
 
-	red := redact.New(secrets...)
 	if err != nil {
 		c, msg := classify(ctx, err)
-		_, _ = fmt.Fprintf(red.Writer(rawStderr), "error: %s\n", msg)
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "error: %s\n", msg)
 		return c
 	}
 
-	out := red.Writer(rawStdout)
+	out := cmd.OutOrStdout()
 	for _, line := range lines {
 		_, _ = fmt.Fprintf(out, "%s\n", line)
 	}
@@ -311,19 +337,20 @@ type collected struct {
 	client                *prom.Client
 	scope                 discovery.Scope
 	capabilities          []discovery.Capability
-	emittedAt             time.Time
 	collectionCompletedAt time.Time
 }
 
 // collect runs the preflight every collecting mode shares: connect, resolve
-// the scope, detect the capabilities, and check they are sufficient. The
-// clock is read once before connecting (the emission and collection-start
-// time) and once after the capabilities are known (the collection-completed
-// time), matching every mode that collects, whether or not it goes on to
-// build a snapshot.
-func collect(ctx context.Context, env Env, cfg config.Config, token string) (collected, error) {
-	emittedAt := env.Now()
-
+// the scope, detect the capabilities, and check they are sufficient.
+// emittedAt is the caller's own first clock read (the emission and
+// collection-start time), taken as a parameter rather than read here, so
+// that a caller that also needs it for something else (runPDF's default
+// output name) reads the clock only once for both purposes; collect reads
+// it a second time, once the capabilities are known, for the
+// collection-completed time. This keeps the clock read exactly twice in
+// every collecting mode, whatever else that mode does with the first
+// reading.
+func collect(ctx context.Context, env Env, cfg config.Config, token string, emittedAt time.Time) (collected, error) {
 	client, err := prom.Connect(ctx, prom.Options{Metrics: cfg.Metrics, Token: token})
 	if err != nil {
 		return collected{}, err
@@ -344,76 +371,77 @@ func collect(ctx context.Context, env Env, cfg config.Config, token string) (col
 		client:                client,
 		scope:                 scope,
 		capabilities:          capabilities,
-		emittedAt:             emittedAt,
 		collectionCompletedAt: env.Now(),
 	}, nil
 }
 
 // runCheck runs the preflight and reports it; it builds no snapshot.
-func runCheck(ctx context.Context, env Env, cmd *cobra.Command, f *reportFlags, secrets []string) ([]string, []string, error) {
+func runCheck(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.Command, f *reportFlags) ([]string, error) {
 	loaded, err := config.Load(configSource(cmd, f, env))
 	if err != nil {
-		return nil, secrets, &exitError{2, err}
+		return nil, &exitError{2, err}
 	}
-	secrets = append(secrets, loaded.Token)
+	redactor.Add(loaded.Token)
 
-	c, err := collect(ctx, env, loaded.Config, loaded.Token)
+	emittedAt := env.Now()
+	c, err := collect(ctx, env, loaded.Config, loaded.Token, emittedAt)
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 
 	lines := preflightLines(c.capabilities)
 	if f.verbose {
 		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.capabilities)...)
 	}
-	return lines, secrets, nil
+	return lines, nil
 }
 
 // runSnapshot runs the preflight, builds the snapshot, and writes it. It
 // needs no typst.
-func runSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *reportFlags, secrets []string) ([]string, []string, error) {
+func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.Command, f *reportFlags) ([]string, error) {
 	loaded, err := config.Load(configSource(cmd, f, env))
 	if err != nil {
-		return nil, secrets, &exitError{2, err}
+		return nil, &exitError{2, err}
 	}
-	secrets = append(secrets, loaded.Token)
+	redactor.Add(loaded.Token)
 
 	outputPath := f.snapshotPath
 	if err := checkSnapshotOutputPath(outputPath); err != nil {
-		return nil, secrets, &exitError{6, err}
+		return nil, &exitError{6, err}
 	}
 
-	c, err := collect(ctx, env, loaded.Config, loaded.Token)
+	emittedAt := env.Now()
+	c, err := collect(ctx, env, loaded.Config, loaded.Token, emittedAt)
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 
 	reportID, err := env.NewID()
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 
 	snap, err := snapshot.Build(snapshot.Input{
 		ID:                  reportID,
 		GeneratorVersion:    env.Version,
-		EmittedAt:           c.emittedAt,
+		EmittedAt:           emittedAt,
 		Config:              loaded.Config,
 		EndpointKind:        c.client.Kind(),
 		Scope:               c.scope,
 		Capabilities:        c.capabilities,
-		CollectionStarted:   c.emittedAt,
+		CollectionStarted:   emittedAt,
 		CollectionCompleted: c.collectionCompletedAt,
 	})
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 
 	data, err := snapshot.Encode(snap)
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 	if err := writeAtomicFile(outputPath, data); err != nil {
-		return nil, secrets, &exitError{6, err}
+		return nil, &exitError{6, err}
 	}
 
 	lines := preflightLines(c.capabilities)
@@ -421,26 +449,26 @@ func runSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *reportFlag
 	if f.verbose {
 		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.capabilities)...)
 	}
-	return lines, secrets, nil
+	return lines, nil
 }
 
 // runPDF runs the preflight, builds the snapshot in memory, builds the
 // document, and compiles it.
-func runPDF(ctx context.Context, env Env, cmd *cobra.Command, f *reportFlags, secrets []string) ([]string, []string, error) {
+func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.Command, f *reportFlags) ([]string, error) {
 	loaded, err := config.Load(configSource(cmd, f, env))
 	if err != nil {
-		return nil, secrets, &exitError{2, err}
+		return nil, &exitError{2, err}
 	}
-	secrets = append(secrets, loaded.Token)
+	redactor.Add(loaded.Token)
 
 	if loaded.Config.Report.Profile == "executive" {
-		return nil, secrets, &exitError{2, executiveError(loaded.Config.Report.Profile)}
+		return nil, &exitError{2, executiveError(loaded.Config.Report.Profile)}
 	}
 
 	emittedAt := env.Now()
 	loc, err := loaded.Config.Analysis.Location()
 	if err != nil {
-		return nil, secrets, &exitError{2, err}
+		return nil, &exitError{2, err}
 	}
 
 	outputPath := f.output
@@ -450,40 +478,28 @@ func runPDF(ctx context.Context, env Env, cmd *cobra.Command, f *reportFlags, se
 	}
 	outputPath, err = filepath.Abs(outputPath)
 	if err != nil {
-		return nil, secrets, &exitError{6, err}
+		return nil, &exitError{6, err}
 	}
 	if err := checkOutputPath(outputPath); err != nil {
-		return nil, secrets, &exitError{6, err}
+		return nil, &exitError{6, err}
 	}
 
 	tc, err := typst.Locate(env.Getenv, env.LookPath)
 	if err != nil {
-		return nil, secrets, &exitError{6, err}
+		return nil, &exitError{6, err}
 	}
 	if err := tc.Probe(ctx); err != nil {
-		return nil, secrets, &exitError{6, err}
+		return nil, &exitError{6, err}
 	}
 
-	client, err := prom.Connect(ctx, prom.Options{Metrics: loaded.Config.Metrics, Token: loaded.Token})
+	c, err := collect(ctx, env, loaded.Config, loaded.Token, emittedAt)
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
-	scope, err := discovery.ResolveScope(ctx, client, loaded.Config.Cluster, emittedAt)
-	if err != nil {
-		return nil, secrets, err
-	}
-	capabilities, err := discovery.Detect(ctx, client, scope, loaded.Config.Analysis, emittedAt)
-	if err != nil {
-		return nil, secrets, err
-	}
-	if err := discovery.CheckSufficient(capabilities); err != nil {
-		return nil, secrets, err
-	}
-	collectionCompleted := env.Now()
 
 	reportID, err := env.NewID()
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 
 	snap, err := snapshot.Build(snapshot.Input{
@@ -491,51 +507,52 @@ func runPDF(ctx context.Context, env Env, cmd *cobra.Command, f *reportFlags, se
 		GeneratorVersion:    env.Version,
 		EmittedAt:           emittedAt,
 		Config:              loaded.Config,
-		EndpointKind:        client.Kind(),
-		Scope:               scope,
-		Capabilities:        capabilities,
+		EndpointKind:        c.client.Kind(),
+		Scope:               c.scope,
+		Capabilities:        c.capabilities,
 		CollectionStarted:   emittedAt,
-		CollectionCompleted: collectionCompleted,
+		CollectionCompleted: c.collectionCompletedAt,
 	})
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 
 	lang, err := catalog.ParseLanguage(loaded.Config.Report.Language)
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 	cat, err := catalog.Load(lang)
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 	doc, err := document.Build(snap, cat, document.Options{})
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 	data, err := document.Encode(doc)
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 
 	if err := compileToPath(ctx, env, tc, data, outputPath); err != nil {
-		return nil, secrets, &exitError{6, err}
+		return nil, &exitError{6, err}
 	}
 
-	lines := preflightLines(capabilities)
+	lines := preflightLines(c.capabilities)
 	lines = append(lines, "report: "+outputPath)
 	if f.verbose {
-		lines = append(lines, verboseCollectingLines(f, loaded.Config, capabilities)...)
+		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.capabilities)...)
 	}
-	return lines, secrets, nil
+	return lines, nil
 }
 
 // runFromSnapshot reads a stored snapshot and renders it; it makes no
-// request and reads no configuration file.
-func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *reportFlags, secrets []string) ([]string, []string, error) {
+// request, reads no configuration file, and so has no token of its own to
+// add to the redactor.
+func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *reportFlags) ([]string, error) {
 	opts, err := config.LoadRenderOptions(env.Getenv, buildConfigFlags(cmd, f))
 	if err != nil {
-		return nil, secrets, &exitError{2, err}
+		return nil, &exitError{2, err}
 	}
 
 	raw, err := os.ReadFile(f.fromSnapshot)
@@ -545,11 +562,11 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 		if errors.As(err, &pathErr) {
 			cause = pathErr.Err.Error()
 		}
-		return nil, secrets, &exitError{2, fmt.Errorf("snapshot cannot be read: %s: %s", f.fromSnapshot, cause)}
+		return nil, &exitError{2, fmt.Errorf("snapshot cannot be read: %s: %s", f.fromSnapshot, cause)}
 	}
 	snap, err := snapshot.Decode(raw)
 	if err != nil {
-		return nil, secrets, &exitError{2, err}
+		return nil, &exitError{2, err}
 	}
 
 	profile := opts.Profile
@@ -557,7 +574,7 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 		profile = snap.Report.Profile
 	}
 	if profile == "executive" {
-		return nil, secrets, &exitError{2, executiveError(profile)}
+		return nil, &exitError{2, executiveError(profile)}
 	}
 
 	outputDir := opts.OutputDirectory
@@ -570,7 +587,7 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 	}
 	emittedAt, err := snapshot.Time(snap.Report.EmittedAt)
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 
 	outputPath := f.output
@@ -580,46 +597,46 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 	}
 	outputPath, err = filepath.Abs(outputPath)
 	if err != nil {
-		return nil, secrets, &exitError{6, err}
+		return nil, &exitError{6, err}
 	}
 	if err := checkOutputPath(outputPath); err != nil {
-		return nil, secrets, &exitError{6, err}
+		return nil, &exitError{6, err}
 	}
 
 	tc, err := typst.Locate(env.Getenv, env.LookPath)
 	if err != nil {
-		return nil, secrets, &exitError{6, err}
+		return nil, &exitError{6, err}
 	}
 	if err := tc.Probe(ctx); err != nil {
-		return nil, secrets, &exitError{6, err}
+		return nil, &exitError{6, err}
 	}
 
 	lang, err := catalog.ParseLanguage(opts.Language)
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 	cat, err := catalog.Load(lang)
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 	doc, err := document.Build(snap, cat, document.Options{Profile: opts.Profile, MinSeverity: opts.MinSeverity})
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 	data, err := document.Encode(doc)
 	if err != nil {
-		return nil, secrets, err
+		return nil, err
 	}
 
 	if err := compileToPath(ctx, env, tc, data, outputPath); err != nil {
-		return nil, secrets, &exitError{6, err}
+		return nil, &exitError{6, err}
 	}
 
 	lines := []string{"snapshot: loaded", "report: " + outputPath}
 	if f.verbose {
 		lines = append(lines, "generator: "+snap.Report.GeneratorVersion)
 	}
-	return lines, secrets, nil
+	return lines, nil
 }
 
 // executiveError is the one message a refused executive profile always
@@ -676,117 +693,78 @@ func strategiesLine(capabilities []discovery.Capability) string {
 	return strings.Join(out, ", ")
 }
 
-// compileToPath makes the work folder, unpacks the template, writes
-// report.json, compiles to a temporary file beside outputPath, and renames
-// it into place. The work folder is removed in every case.
-func compileToPath(ctx context.Context, env Env, tc typst.Toolchain, data []byte, outputPath string) (err error) {
-	parent := env.TempDir
+// withWorkFolder makes a fresh, empty folder under parent (or under
+// os.TempDir() when parent is empty), runs work with its path, and removes
+// the folder in every case — success, an error work returns, or a panic
+// that unwinds through it — since the deferred removal is registered right
+// after the folder is made and Go runs every such defer while a panic
+// unwinds through its frame, whether or not anything above ever recovers
+// it.
+func withWorkFolder(parent string, work func(dir string) error) error {
 	if parent == "" {
 		parent = os.TempDir()
 	}
-	workDir, err := os.MkdirTemp(parent, "k8s-capacity-report-*")
+	dir, err := os.MkdirTemp(parent, "k8s-capacity-report-*")
 	if err != nil {
 		return err
 	}
-	defer func() { _ = os.RemoveAll(workDir) }()
+	defer func() { _ = os.RemoveAll(dir) }()
+	return work(dir)
+}
 
-	if err := template.Unpack(workDir); err != nil {
-		return err
-	}
-	if err := os.WriteFile(filepath.Join(workDir, "report.json"), data, 0o644); err != nil {
-		return err
-	}
-
-	tmpPath, err := reserveTempFile(outputPath)
-	if err != nil {
-		return err
-	}
-	succeeded := false
-	defer func() {
-		if !succeeded {
-			_ = os.Remove(tmpPath)
+// compileToPath unpacks the template into a fresh work folder, writes
+// report.json, compiles to a temporary file beside outputPath, and renames
+// it into place.
+//
+// The compiler is given a name that does not yet exist and creates the file
+// itself; typst was measured (see the command's report) to leave it with
+// mode 0o666 less the process umask, not the 0o644-less-umask every other
+// output file of this command gets, so it is chmoded to exactly 0o644
+// afterward, regardless of the umask: a report is meant to be read by
+// others, including the container user of a later phase that is not this
+// process's own user.
+func compileToPath(ctx context.Context, env Env, tc typst.Toolchain, data []byte, outputPath string) error {
+	return withWorkFolder(env.TempDir, func(dir string) error {
+		if err := template.Unpack(dir); err != nil {
+			return err
 		}
-	}()
-
-	job := typst.Job{
-		Root:     workDir,
-		FontPath: template.FontPath(workDir),
-		Source:   template.Entry(workDir),
-		Output:   tmpPath,
-		Format:   typst.PDF,
-		Inputs:   map[string]string{"data": "/report.json"},
-	}
-	if _, err := tc.Compile(ctx, job); err != nil {
-		return err
-	}
-
-	if err := syncFile(tmpPath); err != nil {
-		return err
-	}
-	if err := os.Rename(tmpPath, outputPath); err != nil {
-		return err
-	}
-	succeeded = true
-	return nil
-}
-
-// reserveTempFile creates an empty ".<name>.<random>.tmp" file beside
-// finalPath and returns its path.
-func reserveTempFile(finalPath string) (string, error) {
-	dir := filepath.Dir(finalPath)
-	base := filepath.Base(finalPath)
-	f, err := os.CreateTemp(dir, "."+base+".*.tmp")
-	if err != nil {
-		return "", err
-	}
-	name := f.Name()
-	if err := f.Close(); err != nil {
-		return "", err
-	}
-	return name, nil
-}
-
-// syncFile flushes path's content to disk.
-func syncFile(path string) (err error) {
-	f, err := os.OpenFile(path, os.O_RDWR, 0)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if closeErr := f.Close(); err == nil {
-			err = closeErr
+		if err := os.WriteFile(filepath.Join(dir, "report.json"), data, 0o644); err != nil {
+			return err
 		}
-	}()
-	return f.Sync()
-}
 
-// writeAtomicFile writes data to a temporary file beside path, flushes it,
-// and renames it into place. The temporary file is removed on any failure.
-func writeAtomicFile(path string, data []byte) (err error) {
-	tmpPath, err := reserveTempFile(path)
-	if err != nil {
-		return err
-	}
-	defer func() {
+		tmpPath, err := tempSiblingName(outputPath)
 		if err != nil {
-			_ = os.Remove(tmpPath)
+			return err
 		}
-	}()
+		succeeded := false
+		defer func() {
+			if !succeeded {
+				_ = os.Remove(tmpPath)
+			}
+		}()
 
-	f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_TRUNC, 0o644)
-	if err != nil {
-		return err
-	}
-	if _, err = f.Write(data); err != nil {
-		_ = f.Close()
-		return err
-	}
-	if err = f.Sync(); err != nil {
-		_ = f.Close()
-		return err
-	}
-	if err = f.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmpPath, path)
+		job := typst.Job{
+			Root:     dir,
+			FontPath: template.FontPath(dir),
+			Source:   template.Entry(dir),
+			Output:   tmpPath,
+			Format:   typst.PDF,
+			Inputs:   map[string]string{"data": "/report.json"},
+		}
+		if _, err := tc.Compile(ctx, job); err != nil {
+			return err
+		}
+
+		if err := os.Chmod(tmpPath, 0o644); err != nil {
+			return err
+		}
+		if err := syncFile(tmpPath); err != nil {
+			return err
+		}
+		if err := os.Rename(tmpPath, outputPath); err != nil {
+			return err
+		}
+		succeeded = true
+		return nil
+	})
 }

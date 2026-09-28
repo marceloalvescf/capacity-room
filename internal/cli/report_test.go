@@ -14,6 +14,7 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/goldentest"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
 
 // reportFlagNames lists every flag report.go declares; TestReportHelpListsEveryFlag
@@ -437,4 +438,235 @@ func TestSnapshotThenFromSnapshotEqualsPDFMode(t *testing.T) {
 	if !bytes.Equal(a, b) {
 		t.Fatalf("PDF mode and snapshot-then-from-snapshot produced different documents")
 	}
+}
+
+// TestOutputFilesAreReadableByOthers checks the mode of the file each mode
+// writes: 0o644 less the umask of this test process, for the PDF (chmoded
+// explicitly, since the fake compiler — like the real one, measured
+// separately; see the command's report — leaves it at a mode derived from
+// 0o666, not 0o644), the snapshot, and the PDF built from a snapshot.
+func TestOutputFilesAreReadableByOthers(t *testing.T) {
+	want := expected0644Mode(t)
+
+	t.Run("pdf mode", func(t *testing.T) {
+		server, _, scenario := startScenario(t, "direct-complete")
+		defer server.Close()
+		cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+		outPath := filepath.Join(t.TempDir(), "r.pdf")
+
+		env := withTypst(t, testEnv(t))
+		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--output", outPath})
+		if code != 0 {
+			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+		}
+		info, err := os.Stat(outPath)
+		if err != nil {
+			t.Fatalf("stat: %v", err)
+		}
+		if got := info.Mode().Perm(); got != want {
+			t.Fatalf("mode = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("snapshot mode", func(t *testing.T) {
+		server, _, scenario := startScenario(t, "direct-complete")
+		defer server.Close()
+		cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+		snapPath := filepath.Join(t.TempDir(), "s.json")
+
+		_, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--config", cfgPath, "--snapshot", snapPath})
+		if code != 0 {
+			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+		}
+		info, err := os.Stat(snapPath)
+		if err != nil {
+			t.Fatalf("stat: %v", err)
+		}
+		if got := info.Mode().Perm(); got != want {
+			t.Fatalf("mode = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("mode from snapshot", func(t *testing.T) {
+		snapPath, err := goldentest.SnapshotPath("direct-complete")
+		if err != nil {
+			t.Fatalf("SnapshotPath: %v", err)
+		}
+		outPath := filepath.Join(t.TempDir(), "r.pdf")
+
+		env := withTypst(t, testEnv(t))
+		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--from-snapshot", snapPath, "--output", outPath})
+		if code != 0 {
+			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+		}
+		info, err := os.Stat(outPath)
+		if err != nil {
+			t.Fatalf("stat: %v", err)
+		}
+		if got := info.Mode().Perm(); got != want {
+			t.Fatalf("mode = %v, want %v", got, want)
+		}
+	})
+}
+
+// modifiedSnapshot decodes the golden snapshot of name, applies modify to
+// it, encodes it again, and writes it to a fresh file, returning its path.
+func modifiedSnapshot(t *testing.T, name string, modify func(*snapshot.Snapshot)) string {
+	t.Helper()
+	goldenPath, err := goldentest.SnapshotPath(name)
+	if err != nil {
+		t.Fatalf("SnapshotPath: %v", err)
+	}
+	raw, err := os.ReadFile(goldenPath)
+	if err != nil {
+		t.Fatalf("reading %s: %v", goldenPath, err)
+	}
+	snap, err := snapshot.Decode(raw)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	modify(&snap)
+
+	data, err := snapshot.Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	path := filepath.Join(t.TempDir(), "s.json")
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("writing %s: %v", path, err)
+	}
+	return path
+}
+
+// TestDefaultNameEndToEnd proves the five rows of R4's default-naming table
+// end to end, through the mode from snapshot, which needs no server: each
+// row modifies a golden snapshot's own stored fields (or passes a flag) and
+// checks that the command writes a file under the exact name R4 predicts,
+// in KCR_OUTPUT_DIRECTORY.
+func TestDefaultNameEndToEnd(t *testing.T) {
+	tests := []struct {
+		name   string
+		modify func(*snapshot.Snapshot)
+		lang   string
+		want   string
+	}{
+		{"cluster prod", func(*snapshot.Snapshot) {}, "en", "report-resources-prod-en-20260715-143000.pdf"},
+		{"cluster with punctuation", func(s *snapshot.Snapshot) { s.Scope.ClusterName = "Prod West_1" }, "en", "report-resources-prod-west-1-en-20260715-143000.pdf"},
+		{"cluster all punctuation", func(s *snapshot.Snapshot) { s.Scope.ClusterName = "---" }, "en", "report-resources-cluster-en-20260715-143000.pdf"},
+		{"minimum severity", func(s *snapshot.Snapshot) { s.Report.MinSeverity = "attention" }, "en", "report-resources-prod-attention-en-20260715-143000.pdf"},
+		{"language pt-BR", func(*snapshot.Snapshot) {}, "pt-BR", "report-resources-prod-pt-br-20260715-143000.pdf"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			snapPath := modifiedSnapshot(t, "direct-complete", tt.modify)
+			outDir := t.TempDir()
+
+			env := withTypst(t, testEnv(t))
+			inner := env.Getenv
+			env.Getenv = func(k string) string {
+				if k == "KCR_OUTPUT_DIRECTORY" {
+					return outDir
+				}
+				return inner(k)
+			}
+
+			_, stderr, code := runArgs(context.Background(), env, []string{"report", "--from-snapshot", snapPath, "--lang", tt.lang})
+			if code != 0 {
+				t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+			}
+			if _, err := os.Stat(filepath.Join(outDir, tt.want)); err != nil {
+				t.Fatalf("%s was not written in %s: %v", tt.want, outDir, err)
+			}
+		})
+	}
+}
+
+// clockCounter returns a func() time.Time that counts its own calls and
+// records the count in calls.
+func clockCounter(calls *int) func() time.Time {
+	base := time.Date(2026, time.July, 15, 14, 30, 0, 0, time.UTC)
+	return func() time.Time {
+		*calls++
+		return base
+	}
+}
+
+// TestClockIsReadTwice proves ruling 1 of the controller directly: the
+// clock is read exactly twice in every mode that collects, and not at all
+// in the mode from snapshot.
+func TestClockIsReadTwice(t *testing.T) {
+	t.Run("check", func(t *testing.T) {
+		server, _, scenario := startScenario(t, "direct-complete")
+		defer server.Close()
+		cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+
+		env := testEnv(t)
+		var calls int
+		env.Now = clockCounter(&calls)
+
+		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--check"})
+		if code != 0 {
+			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+		}
+		if calls != 2 {
+			t.Fatalf("Env.Now was called %d times, want 2", calls)
+		}
+	})
+
+	t.Run("snapshot", func(t *testing.T) {
+		server, _, scenario := startScenario(t, "direct-complete")
+		defer server.Close()
+		cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+
+		env := testEnv(t)
+		var calls int
+		env.Now = clockCounter(&calls)
+		env.NewID = fixedID("00000000-0000-4000-8000-000000000099")
+
+		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--snapshot", filepath.Join(t.TempDir(), "s.json")})
+		if code != 0 {
+			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+		}
+		if calls != 2 {
+			t.Fatalf("Env.Now was called %d times, want 2", calls)
+		}
+	})
+
+	t.Run("pdf", func(t *testing.T) {
+		server, _, scenario := startScenario(t, "direct-complete")
+		defer server.Close()
+		cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+
+		env := withTypst(t, testEnv(t))
+		var calls int
+		env.Now = clockCounter(&calls)
+
+		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--output", filepath.Join(t.TempDir(), "r.pdf")})
+		if code != 0 {
+			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+		}
+		if calls != 2 {
+			t.Fatalf("Env.Now was called %d times, want 2", calls)
+		}
+	})
+
+	t.Run("from snapshot", func(t *testing.T) {
+		snapPath, err := goldentest.SnapshotPath("direct-complete")
+		if err != nil {
+			t.Fatalf("SnapshotPath: %v", err)
+		}
+
+		env := withTypst(t, testEnv(t))
+		var calls int
+		env.Now = clockCounter(&calls)
+
+		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--from-snapshot", snapPath, "--output", filepath.Join(t.TempDir(), "r.pdf")})
+		if code != 0 {
+			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+		}
+		if calls != 0 {
+			t.Fatalf("Env.Now was called %d times, want 0", calls)
+		}
+	})
 }

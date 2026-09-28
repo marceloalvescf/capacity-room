@@ -2,8 +2,11 @@ package cli
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
 )
 
 // reportFlags holds the destination variable of every flag of `report`. A
@@ -35,17 +38,25 @@ type reportFlags struct {
 // newReportCmd builds the `report` subcommand: collect from a metrics
 // endpoint and check, write a snapshot, write a PDF, or write a PDF from a
 // snapshot written before.
-func newReportCmd(ctx context.Context, env Env) *cobra.Command {
+func newReportCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.Command {
 	f := &reportFlags{}
 
 	cmd := &cobra.Command{
-		Use:           "report",
-		Short:         "Generate a capacity report from a Prometheus-compatible endpoint.",
-		Args:          cobra.NoArgs,
+		Use:   "report",
+		Short: "Generate a capacity report from a Prometheus-compatible endpoint.",
+		// A custom check, rather than cobra.NoArgs, so the message never
+		// repeats a positional argument back to the terminal: one might be
+		// a secret a user pasted in the wrong place.
+		Args: func(_ *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return fmt.Errorf("report takes no argument; found %d", len(args))
+			}
+			return nil
+		},
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			if code := runReport(ctx, env, cmd, f); code != 0 {
+			if code := runReport(ctx, env, redactor, cmd, f); code != 0 {
 				return &exitStatus{code: code}
 			}
 			return nil
