@@ -53,6 +53,28 @@ func TestProductionBinaryHoldsNoTestSupport(t *testing.T) {
 	}
 }
 
+// TestProductionBinaryEmbedsZones confirms the shipped binary embeds the
+// IANA time zone database (via internal/config's blank import of
+// time/tzdata), so analysis.timezone resolves the same way on every
+// machine, whether or not the host itself carries zoneinfo files.
+func TestProductionBinaryEmbedsZones(t *testing.T) {
+	root := moduleRoot(t)
+
+	cmd := exec.Command("go", "list", "-deps", "./cmd/k8s-capacity-report")
+	cmd.Dir = root
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("go list -deps ./cmd/k8s-capacity-report: %v\n%s", err, out)
+	}
+
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line == "time/tzdata" {
+			return
+		}
+	}
+	t.Fatalf("cmd/k8s-capacity-report does not depend on time/tzdata")
+}
+
 // TestFakePrometheusBuilds confirms cmd/fake-prometheus builds on its own,
 // as the tool kept out of the production binary above.
 func TestFakePrometheusBuilds(t *testing.T) {

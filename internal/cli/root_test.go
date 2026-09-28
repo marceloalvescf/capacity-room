@@ -2,13 +2,14 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 )
 
 func TestRunVersionFlag(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"--version"}, &stdout, &stderr)
+	code := Run(context.Background(), Env{}, []string{"--version"}, &stdout, &stderr)
 
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0", code)
@@ -23,7 +24,7 @@ func TestRunVersionFlag(t *testing.T) {
 
 func TestRunNoArgumentsPrintsHelp(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{}, &stdout, &stderr)
+	code := Run(context.Background(), Env{}, []string{}, &stdout, &stderr)
 
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0", code)
@@ -35,7 +36,7 @@ func TestRunNoArgumentsPrintsHelp(t *testing.T) {
 
 func TestRunUnknownCommand(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"nope"}, &stdout, &stderr)
+	code := Run(context.Background(), Env{}, []string{"nope"}, &stdout, &stderr)
 
 	if code != 2 {
 		t.Fatalf("Run() code = %d, want 2", code)
@@ -50,7 +51,7 @@ func TestRunUnknownCommand(t *testing.T) {
 
 func TestRunUnknownFlag(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"--nope"}, &stdout, &stderr)
+	code := Run(context.Background(), Env{}, []string{"--nope"}, &stdout, &stderr)
 
 	if code != 2 {
 		t.Fatalf("Run() code = %d, want 2", code)
