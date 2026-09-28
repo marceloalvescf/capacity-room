@@ -67,7 +67,7 @@ test-golden: image
 	@mkdir -p $(GOLDEN_OUT)
 	docker run $(RUN_TEST_IMAGE_FLAGS) \
 		--volume "$(CURDIR)/$(GOLDEN_OUT):/out" --env KCR_GOLDEN_OUT=/out \
-		$(TEST_IMAGE) go test -v -tags='template golden' ./template/ -run Golden
+		$(TEST_IMAGE) go test -v -tags='template golden' ./template/ -run 'Golden|Snapshots'
 
 # Rewrites every golden page. Run it only for an intended visual change, and
 # review each page before committing it.

@@ -83,7 +83,7 @@ With the native tools installed, a subagent runs the tagged tests itself:
 
 ```bash
 go test -count=1 -tags=template ./template/ ./internal/typst/
-go test -count=1 -tags='template golden' ./template/ -run Golden
+go test -count=1 -tags='template golden' ./template/ -run 'Golden|Snapshots'
 ```
 
 ## The template
@@ -110,6 +110,8 @@ looks.
 
 - `template/golden/snapshots.go` is the one list of golden pages. Each entry
   states the one behaviour it alone protects.
+- A snapshot covers every page of its document, or says in `Omits` which
+  pages it leaves out and why. A test compares the list with the page count.
 - Pages are rendered at 144 PPI and compared by SHA-256.
 - A test never writes a golden page. `make update-golden` does, and only for
   an intended visual change.
