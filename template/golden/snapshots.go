@@ -15,8 +15,16 @@ const PPI = 144
 // Snapshot names one page set rendered from a Typst source, for visual
 // regression testing.
 type Snapshot struct {
-	Name     string // file stem, for example "complete"
-	Source   string // path relative to the template folder
+	Name   string // file stem, for example "complete"
+	Source string // path relative to the template folder
+	// Data is the path, relative to the compile root, of a JSON data file
+	// to pass as the "data" input — for example
+	// "tests/capacity/fixtures/detailed.pt-BR.json". It is empty for a
+	// snapshot of the generic graphite layer, which reads no data file.
+	// Render (never a caller) turns it into the "/"-prefixed input value
+	// data.typ expects; a Snapshot must not set both Data and an Inputs
+	// entry named "data".
+	Data     string
 	Pages    []int
 	Inputs   map[string]string
 	Protects string // the one behaviour this snapshot alone protects
@@ -117,5 +125,45 @@ var Snapshots = []Snapshot{
 			"breaking a machine identifier, and an unbreakable string " +
 			"overflowing its cell into the neighbour; the only snapshot " +
 			"where the suite can see either, since Typst compiles both clean",
+	},
+	{
+		Name:   "capacity-pt",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/detailed.pt-BR.json",
+		Pages:  []int{1, 2, 3},
+		Protects: "the cover, the opening matter set small, and the first " +
+			"dense tables of the capacity report, in Portuguese",
+	},
+	{
+		Name:   "capacity-en",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/detailed.en.json",
+		Pages:  []int{1, 2, 3},
+		Protects: "the same pages as capacity-pt in English: labels, date " +
+			"order, decimal point, and hyphenation",
+	},
+	{
+		Name:   "capacity-minimal",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/minimal.pt-BR.json",
+		Pages:  []int{1, 2},
+		Protects: "a cover with no author and a footer with no " +
+			"classification, in the capacity report",
+	},
+	{
+		Name:   "capacity-identifiers",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/identifiers.pt-BR.json",
+		Pages:  []int{1},
+		Protects: "identifier wrapping in the capacity report's own table, " +
+			"and silent overflow of a name with no break point",
+	},
+	{
+		Name:   "capacity-parity",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/parity.pt-BR.json",
+		Pages:  []int{1, 2, 3, 4},
+		Protects: "the report layer reproduces the original generated " +
+			"document page for page",
 	},
 }

@@ -71,6 +71,99 @@ func TestSnapshotSourcesExist(t *testing.T) {
 		if info.IsDir() {
 			t.Errorf("%s: source %s is a directory, want a file", s.Name, s.Source)
 		}
+
+		if s.Data == "" {
+			continue
+		}
+		dataPath := filepath.Join(templateDir, s.Data)
+		dataInfo, err := os.Stat(dataPath)
+		if err != nil {
+			t.Errorf("%s: data %s: %v", s.Name, s.Data, err)
+			continue
+		}
+		if dataInfo.IsDir() {
+			t.Errorf("%s: data %s is a directory, want a file", s.Name, s.Data)
+		}
+	}
+}
+
+func TestJobSetsDataInput(t *testing.T) {
+	s := Snapshot{
+		Name:   "capacity-pt",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/detailed.pt-BR.json",
+		Pages:  []int{1, 2},
+	}
+	j, err := job("/root", s, "/dir")
+	if err != nil {
+		t.Fatalf("job() error = %v", err)
+	}
+	want := "/tests/capacity/fixtures/detailed.pt-BR.json"
+	if got := j.Inputs["data"]; got != want {
+		t.Errorf(`Inputs["data"] = %q, want %q`, got, want)
+	}
+}
+
+func TestJobLeavesInputsAloneWithoutData(t *testing.T) {
+	s := Snapshot{
+		Name:   "theme",
+		Source: "graphite/examples/custom-theme.typ",
+		Pages:  []int{1},
+		Inputs: map[string]string{"foo": "bar"},
+	}
+	j, err := job("/root", s, "/dir")
+	if err != nil {
+		t.Fatalf("job() error = %v", err)
+	}
+	if _, exists := j.Inputs["data"]; exists {
+		t.Error(`Inputs has "data" set, want it absent when Data is empty`)
+	}
+	if got := j.Inputs["foo"]; got != "bar" {
+		t.Errorf(`Inputs["foo"] = %q, want %q`, got, "bar")
+	}
+}
+
+func TestJobRejectsDataAndDataInputTogether(t *testing.T) {
+	s := Snapshot{
+		Name:   "capacity-pt",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/detailed.pt-BR.json",
+		Pages:  []int{1},
+		Inputs: map[string]string{"data": "/report.json"},
+	}
+	if _, err := job("/root", s, "/dir"); err == nil {
+		t.Fatal("job() error = nil, want an error naming the Data/Inputs[\"data\"] conflict")
+	}
+}
+
+func TestJobBuildsExpectedFields(t *testing.T) {
+	s := Snapshot{
+		Name:   "capacity-pt",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/detailed.pt-BR.json",
+		Pages:  []int{1, 3},
+	}
+	j, err := job("/root", s, "/dir")
+	if err != nil {
+		t.Fatalf("job() error = %v", err)
+	}
+	if j.Root != "/root" {
+		t.Errorf("Root = %q, want %q", j.Root, "/root")
+	}
+	if want := filepath.Join("/root", "graphite", "assets", "fonts"); j.FontPath != want {
+		t.Errorf("FontPath = %q, want %q", j.FontPath, want)
+	}
+	if want := filepath.Join("/root", "capacity", "main.typ"); j.Source != want {
+		t.Errorf("Source = %q, want %q", j.Source, want)
+	}
+	if want := filepath.Join("/dir", "capacity-pt-{p}.png"); j.Output != want {
+		t.Errorf("Output = %q, want %q", j.Output, want)
+	}
+	if j.Pages != "1,3" {
+		t.Errorf("Pages = %q, want %q", j.Pages, "1,3")
+	}
+	if j.PPI != PPI {
+		t.Errorf("PPI = %d, want %d", j.PPI, PPI)
 	}
 }
 

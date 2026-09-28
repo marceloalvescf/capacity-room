@@ -19,18 +19,34 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
 )
 
-// Render writes the pages of s into dir, one PNG per page, compiling from
-// root (a compile root, i.e. a copy of the template folder). It returns an
-// error when the compile fails, when standard error is not empty, or when
-// a file of s.Files() is missing afterwards, so a caller never mistakes a
-// silently incomplete render for success.
-func Render(ctx context.Context, tc typst.Toolchain, root string, s Snapshot, dir string) error {
+// job builds the typst.Job that renders s from root (a compile root, i.e. a
+// copy of the template folder) into dir. It is extracted from Render so the
+// rule about Data and Inputs["data"] — see Snapshot.Data's doc comment —
+// can be tested without a real toolchain.
+func job(root string, s Snapshot, dir string) (typst.Job, error) {
+	if s.Data != "" {
+		if _, exists := s.Inputs["data"]; exists {
+			return typst.Job{}, fmt.Errorf(
+				"rendering %s: Data (%q) and an input named \"data\" (%q) are both set",
+				s.Name, s.Data, s.Inputs["data"],
+			)
+		}
+	}
+
+	inputs := make(map[string]string, len(s.Inputs)+1)
+	for k, v := range s.Inputs {
+		inputs[k] = v
+	}
+	if s.Data != "" {
+		inputs["data"] = "/" + s.Data
+	}
+
 	pages := make([]string, len(s.Pages))
 	for i, page := range s.Pages {
 		pages[i] = strconv.Itoa(page)
 	}
 
-	job := typst.Job{
+	return typst.Job{
 		Root:     root,
 		FontPath: filepath.Join(root, "graphite", "assets", "fonts"),
 		Source:   filepath.Join(root, s.Source),
@@ -38,10 +54,22 @@ func Render(ctx context.Context, tc typst.Toolchain, root string, s Snapshot, di
 		Format:   typst.PNG,
 		Pages:    strings.Join(pages, ","),
 		PPI:      PPI,
-		Inputs:   s.Inputs,
+		Inputs:   inputs,
+	}, nil
+}
+
+// Render writes the pages of s into dir, one PNG per page, compiling from
+// root (a compile root, i.e. a copy of the template folder). It returns an
+// error when the compile fails, when standard error is not empty, or when
+// a file of s.Files() is missing afterwards, so a caller never mistakes a
+// silently incomplete render for success.
+func Render(ctx context.Context, tc typst.Toolchain, root string, s Snapshot, dir string) error {
+	j, err := job(root, s, dir)
+	if err != nil {
+		return err
 	}
 
-	stderr, err := tc.Compile(ctx, job)
+	stderr, err := tc.Compile(ctx, j)
 	if err != nil {
 		return fmt.Errorf("rendering %s: %w", s.Name, err)
 	}
