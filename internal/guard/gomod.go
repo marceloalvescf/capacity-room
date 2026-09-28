@@ -17,6 +17,8 @@ var forbiddenModulePrefixes = []string{
 	"github.com/Azure",
 	"github.com/oracle/oci-go-sdk",
 	"github.com/kubernetes",
+	"github.com/kubernetes-sigs",
+	"github.com/kubernetes-client",
 }
 
 // hasForbiddenPrefix reports whether module matches prefix on path

@@ -89,6 +89,44 @@ func TestForbiddenModulesIgnoresCaseInPrefixList(t *testing.T) {
 	}
 }
 
+func TestForbiddenModulesKubernetesSigs(t *testing.T) {
+	gomod := baseGoMod + "require github.com/kubernetes-sigs/controller-runtime v0.1.0\n"
+
+	got, err := ForbiddenModules([]byte(gomod))
+	if err != nil {
+		t.Fatalf("ForbiddenModules returned error: %v", err)
+	}
+	want := []string{"github.com/kubernetes-sigs/controller-runtime"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ForbiddenModules = %v, want %v", got, want)
+	}
+}
+
+func TestForbiddenModulesKubernetesClient(t *testing.T) {
+	gomod := baseGoMod + "require github.com/kubernetes-client/go v0.1.0\n"
+
+	got, err := ForbiddenModules([]byte(gomod))
+	if err != nil {
+		t.Fatalf("ForbiddenModules returned error: %v", err)
+	}
+	want := []string{"github.com/kubernetes-client/go"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ForbiddenModules = %v, want %v", got, want)
+	}
+}
+
+func TestForbiddenModulesKubernetesSigsSegmentBoundary(t *testing.T) {
+	gomod := baseGoMod + "require github.com/kubernetes-sigsx/foo v1.0.0\n"
+
+	got, err := ForbiddenModules([]byte(gomod))
+	if err != nil {
+		t.Fatalf("ForbiddenModules returned error: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("ForbiddenModules = %v, want empty", got)
+	}
+}
+
 func TestForbiddenModulesSegmentBoundary(t *testing.T) {
 	gomod := baseGoMod + "require k8s.iox/thing v1.0.0\n"
 
