@@ -2,6 +2,9 @@ package guard
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -108,5 +111,49 @@ func TestRepositoryDeclaresEveryBuildTag(t *testing.T) {
 	}
 	if len(violations) != 0 {
 		t.Fatalf("undeclared build tags found:\n%s", strings.Join(violations, "\n"))
+	}
+}
+
+// TestMakefileBuildTagsMatchDeclaredTags checks that the Makefile's own
+// BUILD_TAGS variable, which golangci-lint's second pass uses to see every
+// gated file, names exactly the tags guard.BuildTags declares. Otherwise a
+// tag could be added to one and forgotten in the other, and either the
+// linter or this repository-import scan would silently stop covering a
+// gated file.
+func TestMakefileBuildTagsMatchDeclaredTags(t *testing.T) {
+	root := moduleRoot(t)
+	path := filepath.Join(root, "Makefile")
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+
+	const prefix = "BUILD_TAGS := "
+	var value string
+	found := false
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, prefix) {
+			value = strings.TrimPrefix(line, prefix)
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("%s: no line starting with %q", path, "BUILD_TAGS :=")
+	}
+
+	got := strings.Split(value, ",")
+	sort.Strings(got)
+	want := append([]string(nil), BuildTags...)
+	sort.Strings(want)
+
+	if len(got) != len(want) {
+		t.Fatalf("Makefile BUILD_TAGS = %v, want %v (guard.BuildTags)", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("Makefile BUILD_TAGS = %v, want %v (guard.BuildTags)", got, want)
+		}
 	}
 }
