@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"regexp"
@@ -183,27 +184,46 @@ func validateReport(r Report) error {
 	default:
 		return errReportLanguage
 	}
-	if !isWritableDir(r.OutputDirectory) {
-		return errReportOutputDir
+	if err := checkWritableDir(r.OutputDirectory); err != nil {
+		return err
 	}
 	return nil
 }
 
-// isWritableDir reports whether path exists, is a folder, and a file can be
-// created in it. A permission bit alone is not checked; a temporary file is
-// actually created and removed.
-func isWritableDir(path string) bool {
+// removeFile is the seam TestWritableCheckReportsAProbeItCannotRemove
+// replaces to force the clean-up path of checkWritableDir to fail without
+// needing a real read-only-after-create filesystem.
+var removeFile = os.Remove
+
+// checkWritableDir reports whether path exists, is a folder, and a file can
+// be created in it. A permission bit alone is not checked; a temporary file
+// is actually created, then closed and removed. The folder being missing,
+// not being a folder, or refusing the file's creation all return the same
+// "must exist and be writable" error. A probe file that was created but
+// then could not be closed or removed is reported by name instead of being
+// left behind silently: removal is attempted even when the close fails, so
+// a close-only failure still gets one more chance to clean up.
+func checkWritableDir(path string) error {
 	info, err := os.Stat(path)
 	if err != nil || !info.IsDir() {
-		return false
+		return errReportOutputDir
 	}
 
 	probe, err := os.CreateTemp(path, ".kcr-write-test-*")
 	if err != nil {
-		return false
+		return errReportOutputDir
 	}
 	name := probe.Name()
-	_ = probe.Close()
-	_ = os.Remove(name)
-	return true
+
+	closeErr := probe.Close()
+	removeErr := removeFile(name)
+
+	cause := closeErr
+	if cause == nil {
+		cause = removeErr
+	}
+	if cause != nil {
+		return fmt.Errorf("report.output_directory holds a probe file that could not be removed: %s: %s", name, cause)
+	}
+	return nil
 }

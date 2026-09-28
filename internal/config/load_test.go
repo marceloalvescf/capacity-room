@@ -586,3 +586,131 @@ func TestLoadRenderOptions(t *testing.T) {
 }
 
 func strPtr(s string) *string { return &s }
+
+// TestLoadKeepsExplicitZeroValues checks that a key the file sets to the
+// zero value of its type wins over the (non-zero, for most of these)
+// default, rather than being mistaken for "not set". Each row is
+// testdata/minimal.toml plus exactly one extra line.
+func TestLoadKeepsExplicitZeroValues(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		check   func(Config) bool
+	}{
+		{
+			name: "metrics.tls_verify = false",
+			content: `
+[metrics]
+url = "https://prom.example.org"
+tls_verify = false
+
+[cluster]
+name = "prod"
+namespaces = ["default"]
+`,
+			check: func(c Config) bool { return !c.Metrics.TLSVerify },
+		},
+		{
+			name: "thresholds.bursty_gap_percent = 0",
+			content: `
+[metrics]
+url = "https://prom.example.org"
+
+[cluster]
+name = "prod"
+namespaces = ["default"]
+
+[thresholds]
+bursty_gap_percent = 0
+`,
+			check: func(c Config) bool { return c.Thresholds.BurstyGapPercent == 0 },
+		},
+		{
+			name: "thresholds.hpa_replica_divergence = 0",
+			content: `
+[metrics]
+url = "https://prom.example.org"
+
+[cluster]
+name = "prod"
+namespaces = ["default"]
+
+[thresholds]
+hpa_replica_divergence = 0
+`,
+			check: func(c Config) bool { return c.Thresholds.HPAReplicaDivergence == 0 },
+		},
+		{
+			name: "thresholds.low_utilization_percent = 0",
+			content: `
+[metrics]
+url = "https://prom.example.org"
+
+[cluster]
+name = "prod"
+namespaces = ["default"]
+
+[thresholds]
+low_utilization_percent = 0
+`,
+			check: func(c Config) bool { return c.Thresholds.LowUtilizationPercent == 0 },
+		},
+		{
+			name: "analysis.excluded_containers = []",
+			content: `
+[metrics]
+url = "https://prom.example.org"
+
+[cluster]
+name = "prod"
+namespaces = ["default"]
+
+[analysis]
+excluded_containers = []
+`,
+			check: func(c Config) bool { return len(c.Analysis.ExcludedContainers) == 0 },
+		},
+		{
+			name: `report.organization = ""`,
+			content: `
+[metrics]
+url = "https://prom.example.org"
+
+[cluster]
+name = "prod"
+namespaces = ["default"]
+
+[report]
+organization = ""
+`,
+			check: func(c Config) bool { return c.Report.Organization == "" },
+		},
+		{
+			name: `cluster.nodepool_label = ""`,
+			content: `
+[metrics]
+url = "https://prom.example.org"
+
+[cluster]
+name = "prod"
+namespaces = ["default"]
+nodepool_label = ""
+`,
+			check: func(c Config) bool { return c.Cluster.NodepoolLabel == "" },
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := writeFile(t, tt.content)
+
+			loaded, err := Load(Source{File: path, Getenv: noEnv})
+			if err != nil {
+				t.Fatalf("Load() error = %v", err)
+			}
+			if !tt.check(loaded.Config) {
+				t.Fatalf("Load().Config = %+v, did not keep the explicit zero value", loaded.Config)
+			}
+		})
+	}
+}

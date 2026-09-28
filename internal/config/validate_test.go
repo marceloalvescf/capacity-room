@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -186,5 +187,79 @@ func TestMessagesNeverRepeatTheAddress(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestWritableCheckLeavesNothingBehind(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := checkWritableDir(dir); err != nil {
+		t.Fatalf("checkWritableDir() error = %v, want nil", err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("dir has %d entries after checkWritableDir, want 0: %v", len(entries), entries)
+	}
+}
+
+func TestWritableCheckReportsAProbeItCannotRemove(t *testing.T) {
+	var probePath string
+	original := removeFile
+	removeFile = func(name string) error {
+		probePath = name
+		return errors.New("permission denied")
+	}
+	t.Cleanup(func() { removeFile = original })
+
+	dir := t.TempDir()
+	err := checkWritableDir(dir)
+	if err == nil {
+		t.Fatalf("checkWritableDir() = nil, want an error")
+	}
+	if probePath == "" {
+		t.Fatalf("removeFile was never called")
+	}
+	want := "report.output_directory holds a probe file that could not be removed: " + probePath + ": permission denied"
+	if err.Error() != want {
+		t.Fatalf("checkWritableDir() = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestWritableCheckRefusesAFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	err := checkWritableDir(path)
+	want := "report.output_directory must exist and be writable"
+	if err == nil || err.Error() != want {
+		t.Fatalf("checkWritableDir() = %v, want %q", err, want)
+	}
+}
+
+func TestWritableCheckRefusesAReadOnlyFolder(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Fatalf("Chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+
+	err := checkWritableDir(dir)
+	want := "report.output_directory must exist and be writable"
+	if err == nil || err.Error() != want {
+		t.Fatalf("checkWritableDir() = %v, want %q", err, want)
+	}
+
+	entries, readErr := os.ReadDir(dir)
+	if readErr != nil {
+		t.Fatalf("ReadDir: %v", readErr)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("dir has %d entries after checkWritableDir, want 0: %v", len(entries), entries)
 	}
 }
