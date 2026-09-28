@@ -169,6 +169,152 @@ func TestUndeclaredBuildTagsIgnoresLegacyLookalikes(t *testing.T) {
 	}
 }
 
+// The remaining cases cover F-24: a block comment ahead of a build
+// constraint line. The hand-written scanner this package used to have
+// stopped at the first line that was neither blank nor "//"-prefixed, so a
+// block comment hid every constraint line behind it from the guard, even
+// though the toolchain honours it (go/build's leading-comment reader treats
+// a //go:build line as controlling wherever it appears in the header,
+// block comments included). Verified against the real toolchain with
+// `go list -f '{{.GoFiles}} {{.IgnoredGoFiles}}'`, with and without
+// `-tags=hidden`, on scratch packages built from each row.
+
+const blockCommentThenGoBuildSource = `/* licence */
+//go:build hidden
+
+package sample
+
+func helper() {}
+`
+
+func TestUndeclaredBuildTagsBlockCommentThenGoBuild(t *testing.T) {
+	got, err := UndeclaredBuildTags("blockthengo.go", []byte(blockCommentThenGoBuildSource), BuildTags)
+	if err != nil {
+		t.Fatalf("UndeclaredBuildTags returned error: %v", err)
+	}
+	want := []string{`blockthengo.go: build tag "hidden" is not declared in guard.BuildTags`}
+	if len(got) != 1 || got[0] != want[0] {
+		t.Fatalf("UndeclaredBuildTags = %v, want %v", got, want)
+	}
+}
+
+const multiLineBlockCommentThenGoBuildSource = `/*
+multi
+line
+licence
+*/
+
+//go:build hidden
+
+package sample
+
+func helper() {}
+`
+
+func TestUndeclaredBuildTagsMultiLineBlockCommentThenGoBuild(t *testing.T) {
+	got, err := UndeclaredBuildTags("multiblock.go", []byte(multiLineBlockCommentThenGoBuildSource), BuildTags)
+	if err != nil {
+		t.Fatalf("UndeclaredBuildTags returned error: %v", err)
+	}
+	want := []string{`multiblock.go: build tag "hidden" is not declared in guard.BuildTags`}
+	if len(got) != 1 || got[0] != want[0] {
+		t.Fatalf("UndeclaredBuildTags = %v, want %v", got, want)
+	}
+}
+
+const blockCommentThenLegacyBuildSource = `/* licence */
+// +build hidden
+
+package sample
+
+func helper() {}
+`
+
+func TestUndeclaredBuildTagsBlockCommentThenLegacyBuild(t *testing.T) {
+	got, err := UndeclaredBuildTags("blockthenlegacy.go", []byte(blockCommentThenLegacyBuildSource), BuildTags)
+	if err != nil {
+		t.Fatalf("UndeclaredBuildTags returned error: %v", err)
+	}
+	want := []string{`blockthenlegacy.go: legacy "// +build" line is forbidden; use //go:build`}
+	if len(got) != 1 || got[0] != want[0] {
+		t.Fatalf("UndeclaredBuildTags = %v, want %v", got, want)
+	}
+}
+
+const copyrightBlockCommentThenGoBuildDeclaredSource = `// Copyright line
+
+/* block */
+
+//go:build template
+
+package sample
+
+func helper() {}
+`
+
+func TestUndeclaredBuildTagsCopyrightBlockCommentThenGoBuildDeclared(t *testing.T) {
+	got, err := UndeclaredBuildTags("copyrightblock.go", []byte(copyrightBlockCommentThenGoBuildDeclaredSource), []string{"template"})
+	if err != nil {
+		t.Fatalf("UndeclaredBuildTags returned error: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("UndeclaredBuildTags = %v, want empty", got)
+	}
+}
+
+// The constraint text sits INSIDE the block comment itself, so it is not a
+// "//"-prefixed line at all. Go does not read a constraint that appears
+// inside a block comment, confirmed with `go list`: the file built with
+// and without -tags=hidden.
+const constraintInsideBlockCommentSource = `/* //go:build hidden */
+
+package sample
+
+func helper() {}
+`
+
+func TestUndeclaredBuildTagsConstraintInsideBlockComment(t *testing.T) {
+	got, err := UndeclaredBuildTags("insideblock.go", []byte(constraintInsideBlockCommentSource), BuildTags)
+	if err != nil {
+		t.Fatalf("UndeclaredBuildTags returned error: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("UndeclaredBuildTags = %v, want empty", got)
+	}
+}
+
+// A comment after the package clause is not part of the header, whatever it
+// says. Confirmed with `go list`: the file built with and without
+// -tags=hidden.
+const goBuildAfterPackageClauseSource = `package sample
+
+//go:build hidden
+
+func helper() {}
+`
+
+func TestUndeclaredBuildTagsGoBuildAfterPackageClause(t *testing.T) {
+	got, err := UndeclaredBuildTags("afterpackage.go", []byte(goBuildAfterPackageClauseSource), BuildTags)
+	if err != nil {
+		t.Fatalf("UndeclaredBuildTags returned error: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("UndeclaredBuildTags = %v, want empty", got)
+	}
+}
+
+const notGoSource = `this is not go`
+
+func TestUndeclaredBuildTagsNotGo(t *testing.T) {
+	got, err := UndeclaredBuildTags("notgo.go", []byte(notGoSource), BuildTags)
+	if err == nil {
+		t.Fatalf("UndeclaredBuildTags returned no error, want error")
+	}
+	if len(got) != 0 {
+		t.Fatalf("UndeclaredBuildTags = %v, want no entries alongside the error", got)
+	}
+}
+
 // TestRepositoryDeclaresEveryBuildTag walks every .go file below the module
 // root, the same walk TestRepositoryHasNoSkippedTest uses, and fails if any
 // file names a build tag that guard.BuildTags does not declare.

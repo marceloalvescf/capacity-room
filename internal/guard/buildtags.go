@@ -1,10 +1,10 @@
 package guard
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"go/build/constraint"
+	"go/parser"
+	"go/token"
 	"sort"
 	"strings"
 )
@@ -16,32 +16,41 @@ import (
 // named here, so a new tag cannot go unnoticed by either.
 var BuildTags = []string{"golden", "template", "toolchain"}
 
-// buildConstraintLines returns the first "//go:build" line in source, if
-// any, and every "// +build" line found alongside it. Per the language spec
-// such lines must appear only among the blank lines and other line comments
-// that precede the package clause, so scanning stops at the first line that
-// is neither. The legacy "// +build" form is collected regardless of
-// whether a "//go:build" line is also present: it is forbidden outright,
-// not merely superseded.
-func buildConstraintLines(source []byte) (goBuild string, plusBuild []string, err error) {
-	scanner := bufio.NewScanner(bytes.NewReader(source))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-		if !strings.HasPrefix(line, "//") {
-			break
-		}
-		if goBuild == "" && constraint.IsGoBuild(line) {
-			goBuild = line
-		}
-		if constraint.IsPlusBuild(line) {
-			plusBuild = append(plusBuild, line)
-		}
-	}
-	if err := scanner.Err(); err != nil {
+// buildConstraintLines returns the first "//go:build" line in the file's
+// header, if any, and every "// +build" line found alongside it. The header
+// is read with the Go parser rather than by hand, so the guard sees the
+// same header the toolchain does: a block comment ahead of a constraint
+// line does not hide it, since go/build honours a "//go:build" line
+// wherever it falls before the package clause, block comments included.
+// Every comment that starts before the package clause (filename, package)
+// belongs to the header; a comment after it, even textually close to the
+// top of the file, does not. A block comment is never itself a constraint,
+// so it is only passed over while its "//" siblings are examined. The
+// legacy "// +build" form is collected regardless of whether a "//go:build"
+// line is also present: it is forbidden outright, not merely superseded.
+func buildConstraintLines(filename string, source []byte) (goBuild string, plusBuild []string, err error) {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, filename, source, parser.PackageClauseOnly|parser.ParseComments)
+	if err != nil {
 		return "", nil, err
+	}
+
+	for _, group := range file.Comments {
+		for _, comment := range group.List {
+			if comment.Pos() >= file.Package {
+				continue
+			}
+			if !strings.HasPrefix(comment.Text, "//") {
+				continue
+			}
+			line := strings.TrimSpace(comment.Text)
+			if goBuild == "" && constraint.IsGoBuild(line) {
+				goBuild = line
+			}
+			if constraint.IsPlusBuild(line) {
+				plusBuild = append(plusBuild, line)
+			}
+		}
 	}
 	return goBuild, plusBuild, nil
 }
@@ -75,7 +84,7 @@ func collectTags(expr constraint.Expr, tags map[string]bool) {
 // special-cased: it is reported unless it is declared, the same as any
 // other tag.
 func UndeclaredBuildTags(filename string, source []byte, declared []string) ([]string, error) {
-	goBuild, plusBuild, err := buildConstraintLines(source)
+	goBuild, plusBuild, err := buildConstraintLines(filename, source)
 	if err != nil {
 		return nil, err
 	}
