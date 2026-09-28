@@ -3,6 +3,7 @@
 package template
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -15,6 +16,8 @@ import (
 	"strings"
 	"testing"
 	"unicode"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
 )
 
 // capacityFixture returns the absolute path of a positive fixture under
@@ -96,6 +99,31 @@ func collectIdents(v any, out *[]string) {
 	}
 }
 
+// collectRunTexts appends the `text` of every run object found anywhere in
+// v, whatever its `kind`. Unlike collectIdents, it does not filter by
+// kind: an identifier can legitimately also reach the page through a
+// plain `text` run (for example a namespace name repeated inside a
+// comma-joined "Namespaces: checkout, billing-core, ..." cell), so a count
+// of how often an identifier appears in the data has to include every run,
+// not only its own `ident` runs.
+func collectRunTexts(v any, out *[]string) {
+	switch val := v.(type) {
+	case map[string]any:
+		if _, hasKind := val["kind"]; hasKind {
+			if text, ok := val["text"].(string); ok {
+				*out = append(*out, text)
+			}
+		}
+		for _, sub := range val {
+			collectRunTexts(sub, out)
+		}
+	case []any:
+		for _, sub := range val {
+			collectRunTexts(sub, out)
+		}
+	}
+}
+
 // stripWhitespace removes every Unicode whitespace character from s. Both
 // sides of a comparison against a PDF text layer are stripped this way,
 // since Typst's line breaking freely inserts spaces and newlines that have
@@ -143,6 +171,17 @@ func leadingCellStream(text string) string {
 // detailed.pt-BR and detailed.en reaches the PDF's text layer intact: an
 // identifier that vanished, or was mangled by hyphenation, would be a
 // silent content loss that no compile error would ever catch.
+//
+// It counts occurrences rather than merely checking presence, because
+// these fixtures' metadata table prints a comma-joined
+// "checkout, billing-core, gateway-api" as plain text: every one of those
+// three names would still be "found somewhere" even if every `ident` run
+// printed nothing at all, which would make a presence-only check pass for
+// the wrong reason. Counting how many times each identifier occurs in the
+// data that reaches the page, and requiring at least that many occurrences
+// in the rendered text, does not have that blind spot: if only the
+// `ident`-run occurrences vanish, the text-layer count drops below the
+// data-side count.
 func TestCapacityIdentifiersSurviveTheTextLayer(t *testing.T) {
 	ws := workspace(t)
 	for _, stem := range []string{"detailed.pt-BR", "detailed.en"} {
@@ -152,26 +191,61 @@ func TestCapacityIdentifiersSurviveTheTextLayer(t *testing.T) {
 			if err != nil {
 				t.Fatalf("reading %s: %v", path, err)
 			}
-			var doc any
+			var doc map[string]any
 			if err := json.Unmarshal(raw, &doc); err != nil {
 				t.Fatalf("parsing %s: %v", path, err)
 			}
+
 			var idents []string
-			collectIdents(doc, &idents)
+			collectIdents(doc["blocks"], &idents)
 			if len(idents) == 0 {
 				t.Fatalf("%s: found no ident runs; the fixture or the collector is broken", stem)
 			}
+
+			// The data-side corpus: every run's text, of whatever kind,
+			// from every block (including one nested inside "front", a
+			// table cell, or a list item), plus cover.cluster, joined
+			// with a NUL between consecutive strings so an occurrence can
+			// never be formed by splicing the end of one string to the
+			// start of the next.
+			var runTexts []string
+			collectRunTexts(doc["blocks"], &runTexts)
+			if cover, ok := doc["cover"].(map[string]any); ok {
+				if cluster, ok := cover["cluster"].(string); ok {
+					runTexts = append(runTexts, cluster)
+				}
+			}
+			data := strings.Join(runTexts, "\x00")
 
 			pdf, stderr, err := compileCapacityData(t, ws, path)
 			assertCleanCompile(t, stderr, err)
 			pageText := pdfText(t, pdf)
 			whole := stripWhitespace(pageText)
+			// leadingCellStream is also counted, and the larger of the two
+			// counts is kept: a wrapped identifier's second half can only
+			// be recovered through leadingCellStream (see its doc
+			// comment), while an identifier repeated across several
+			// columns is only counted correctly by the whole-text strip
+			// (leadingCellStream sees just the first column). Today no
+			// identifier's occurrences are split across both situations
+			// at once, so the larger count is always the accurate one.
 			leading := leadingCellStream(pageText)
 
+			seen := make(map[string]bool, len(idents))
 			for _, ident := range idents {
-				want := stripWhitespace(ident)
-				if !strings.Contains(whole, want) && !strings.Contains(leading, want) {
-					t.Errorf("%s: ident %q (whitespace removed) not found in the text layer", stem, ident)
+				if seen[ident] {
+					continue
+				}
+				seen[ident] = true
+
+				dataCount := strings.Count(data, ident)
+				textCount := strings.Count(whole, ident)
+				if lc := strings.Count(leading, ident); lc > textCount {
+					textCount = lc
+				}
+				if textCount < dataCount {
+					t.Errorf("%s: ident %q occurs %d time(s) in the text layer, want at least %d (its count in the data)",
+						stem, ident, textCount, dataCount)
 				}
 			}
 		})
@@ -232,7 +306,9 @@ func TestCapacityControlRepeatsTheHyphen(t *testing.T) {
 // in the report's font at all and render as empty boxes (confirmed by
 // rendering this fixture to PNG at 300 PPI). That is a font-coverage gap,
 // not markup being interpreted, so it is out of this test's scope — but
-// see the report for this task, which flags it for the controller.
+// see the report for this task, which flags it for the controller. The
+// limit is documented in template/graphite/README.md under "Known
+// limitations".
 var literalStrings = []string{
 	"#let x = 1",
 	"*negrito*",
@@ -290,6 +366,16 @@ func TestCapacityControlCharactersAreNotEscaped(t *testing.T) {
 		t.Errorf("text does not contain %q", "linha dois")
 	}
 
+	// The real tab of "tab\tulado" is not assumed to lay out as anything
+	// in particular: pdftotext -layout was checked by hand and prints it
+	// as nothing at all ("tabulado", confirmed byte for byte with `xxd`),
+	// but a real tab printing as plain white space would be just as
+	// correct. Stripping all white space first makes the assertion hold
+	// either way.
+	if !strings.Contains(stripWhitespace(text), "tabulado") {
+		t.Errorf("text (whitespace removed) does not contain %q", "tabulado")
+	}
+
 	scrubbed := strings.ReplaceAll(text, "\\n literal", "")
 	if strings.Contains(scrubbed, "\\n") {
 		t.Errorf("text contains the escape sequence %q; a real newline must not be turned into it", "\\n")
@@ -301,13 +387,22 @@ func TestCapacityControlCharactersAreNotEscaped(t *testing.T) {
 
 // TestCapacityMinimalCoverOmitsAuthor checks minimal.pt-BR, whose
 // cover.author is null: the author line must take up no space at all, not
-// merely print empty.
+// merely print empty. The absence check alone would pass just as well on a
+// blank page, so it is paired with two positive checks — the cover title
+// and the issue label, both from the fixture — that only pass if the
+// cover actually rendered.
 func TestCapacityMinimalCoverOmitsAuthor(t *testing.T) {
 	ws := workspace(t)
 	pdf, stderr, err := compileCapacityData(t, ws, capacityFixture(ws, "minimal.pt-BR"))
 	assertCleanCompile(t, stderr, err)
 
 	page1 := pdfTextPage(t, pdf, 1)
+	if !strings.Contains(page1, "LEVANTAMENTO DE CAPACIDADE") {
+		t.Errorf("page 1 text does not contain %q", "LEVANTAMENTO DE CAPACIDADE")
+	}
+	if !strings.Contains(page1, "EMITIDO EM:") {
+		t.Errorf("page 1 text does not contain %q", "EMITIDO EM:")
+	}
 	if strings.Contains(page1, "ELABORADO POR") {
 		t.Errorf("page 1 text contains %q, want it omitted when cover.author is null", "ELABORADO POR")
 	}
@@ -316,7 +411,10 @@ func TestCapacityMinimalCoverOmitsAuthor(t *testing.T) {
 // TestCapacityFooterWithoutClassification checks minimal.pt-BR, whose
 // footer.classification is null: page 2 (the first page with a footer at
 // all) must show the page label and number with no leading "classification
-// · " and no stray separator.
+// · " and no stray separator. The "Página 2" check is the positive that
+// pairs with the "no ·" absence check below it, on the same page: it
+// proves the footer is there at all, not merely that this one separator
+// is missing from a blank page.
 func TestCapacityFooterWithoutClassification(t *testing.T) {
 	ws := workspace(t)
 	pdf, stderr, err := compileCapacityData(t, ws, capacityFixture(ws, "minimal.pt-BR"))
@@ -347,15 +445,29 @@ func TestCapacityFooterWithClassification(t *testing.T) {
 
 // TestCapacityFirstPageHasNoFooter checks detailed.pt-BR: the footer only
 // starts on the second page (report-footer in main.typ gates on
-// counter(page) > 1), so page 1 must show no page number at all.
+// counter(page) > 1), so page 1 must show no page number at all. The
+// absence check alone would pass on a blank page 1, or even if the footer
+// never appeared anywhere, so it is paired with the cover title on page 1
+// and the same footer text (proven present by
+// TestCapacityFooterWithClassification) on page 2 — together proving the
+// footer exists and starts on the second page, not merely that page 1
+// lacks it.
 func TestCapacityFirstPageHasNoFooter(t *testing.T) {
 	ws := workspace(t)
 	pdf, stderr, err := compileCapacityData(t, ws, capacityFixture(ws, "detailed.pt-BR"))
 	assertCleanCompile(t, stderr, err)
 
 	page1 := pdfTextPage(t, pdf, 1)
+	if !strings.Contains(page1, "LEVANTAMENTO DE CAPACIDADE") {
+		t.Errorf("page 1 text does not contain %q", "LEVANTAMENTO DE CAPACIDADE")
+	}
 	if strings.Contains(page1, "Página 1") {
 		t.Errorf("page 1 text contains %q, want no footer on the first page", "Página 1")
+	}
+
+	page2 := pdfTextPage(t, pdf, 2)
+	if !strings.Contains(page2, "Uso interno · Página 2") {
+		t.Errorf("page 2 text does not contain %q, want the footer to start on the second page", "Uso interno · Página 2")
 	}
 }
 
@@ -374,6 +486,9 @@ func TestCapacityEnglishUsesEnglishLabels(t *testing.T) {
 	}
 
 	full := pdfText(t, pdf)
+	if !strings.Contains(full, "Page") {
+		t.Errorf("text does not contain %q, want the English page label somewhere in the document", "Page")
+	}
 	if strings.Contains(full, "Página") {
 		t.Errorf("text contains %q, want the English fixture to never print the Portuguese page label", "Página")
 	}
@@ -439,6 +554,59 @@ func TestCapacityPassesEveryLabel(t *testing.T) {
 		if !strings.Contains(before, key+":") {
 			t.Errorf("main.typ does not build a %q label before calling graphite-report.with(...)", key)
 		}
+	}
+}
+
+// TestCapacityCompilesFromUnpackedTemplate proves that the embedded copy
+// of the template — the one Unpack() writes to disk, and the one
+// production actually compiles from — produces the exact same PDF as the
+// source tree. TestEmbeddedFilesMatchDisk (embed_test.go) already proves
+// the embedded bytes equal the source tree byte for byte, but that alone
+// would not catch Unpack() itself mishandling a file on the way to disk
+// (wrong relative path, a missing parent folder, truncated content): only
+// an independent compile-and-compare of the two catches that.
+func TestCapacityCompilesFromUnpackedTemplate(t *testing.T) {
+	fixture := filepath.Join(moduleRoot(t), "template", "tests", "capacity", "fixtures", "detailed.pt-BR.json")
+	data, err := os.ReadFile(fixture)
+	if err != nil {
+		t.Fatalf("reading %s: %v", fixture, err)
+	}
+
+	// compilePDF (the harness helper every other test in this file uses)
+	// takes a source path relative to its root and joins it itself, but
+	// Entry(dir) returns an already-absolute path, so it cannot be handed
+	// to compilePDF without being joined onto the root a second time. The
+	// job is built directly here instead, using Entry and FontPath exactly
+	// as a real caller of Unpack would.
+	unpacked := t.TempDir()
+	if err := Unpack(unpacked); err != nil {
+		t.Fatalf("Unpack() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(unpacked, "report.json"), data, 0o644); err != nil {
+		t.Fatalf("writing report.json: %v", err)
+	}
+
+	tc := toolchain(t)
+	unpackedOutput := filepath.Join(t.TempDir(), "unpacked.pdf")
+	unpackedJob := typst.Job{
+		Root:     unpacked,
+		FontPath: FontPath(unpacked),
+		Source:   Entry(unpacked),
+		Output:   unpackedOutput,
+		Format:   typst.PDF,
+		Inputs:   map[string]string{"data": "/report.json"},
+	}
+	unpackedStderr, err := tc.Compile(context.Background(), unpackedJob)
+	assertCleanCompile(t, unpackedStderr, err)
+
+	ws := workspace(t)
+	sourcePDF, sourceStderr, err := compileCapacityData(t, ws, fixture)
+	assertCleanCompile(t, sourceStderr, err)
+
+	unpackedDigest := fileDigest(t, unpackedOutput)
+	sourceDigest := fileDigest(t, sourcePDF)
+	if unpackedDigest != sourceDigest {
+		t.Errorf("unpacked-template digest = %s, source-tree digest = %s, want equal", unpackedDigest, sourceDigest)
 	}
 }
 
