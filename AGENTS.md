@@ -52,7 +52,8 @@ image build enforce.
   carries a build tag and fails when the tool is missing. A skipped gate is
   not a checked gate.
 - **Every build tag is declared.** `guard.BuildTags` lists them. A tag that is
-  not in the list fails the guard, so that no file hides from the scans.
+  not in the list fails the guard, so that no file hides from the scans. The
+  legacy `// +build` form is forbidden; write `//go:build`.
 - **Metrics only.** No Kubernetes or cloud client may appear in `go.mod`.
 - **Imports point one way.** `guard.Layers` holds the table of layers. A new
   package must be added to that table. Nothing outside `cmd/` imports a
@@ -60,7 +61,9 @@ image build enforce.
 - **Typst is pinned at exactly 0.15.1.** The toolchain probe refuses any other
   version, and the image build asserts it.
 - **One version.** `VERSION` holds it, and the newest changelog heading must
-  equal it.
+  equal it. The only level-two headings the changelog may hold are
+  `## [Unreleased]` and `## [X.Y.Z] - YYYY-MM-DD`, and it holds no heading
+  written as text over a line of dashes.
 
 ## Rules kept by review
 
@@ -95,6 +98,9 @@ looks.
 
 - The report layer reads one JSON data file. Its contract is in the plan of
   phase 1, and `template/capacity/validate.typ` enforces it.
+- `template.Unpack` writes only into a fresh folder: one that does not exist,
+  or exists and is empty, and is not a symbolic link. The caller creates a new
+  folder for each run and discards it afterwards.
 - Every word on the page arrives in the data file. The template adds no
   wording of its own and never evaluates a value as markup. `eval` is
   forbidden, and a test scans for it.
