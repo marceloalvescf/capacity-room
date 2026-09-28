@@ -1390,7 +1390,13 @@ func CheckSufficient(capabilities []Capability) error
 | `node_autoscaling` | metrics found | `cluster_autoscaler_*`, the one entry that is a pattern, because the probe asks for a family of names |
 | any | unavailable, not listed above | none |
 
-- `CheckSufficient` follows R16.
+- `CheckSufficient` follows R16. It first refuses an input that is not
+  exactly the nine capabilities of `Names`, in order, with
+  `capabilities must hold the nine capabilities in their order; found: <names, or none>`,
+  and a capability whose state is outside the registry, with
+  `capability "<name>" has an unknown state: "<state>"`. Neither error is
+  `ErrInsufficient`. A guard that says yes to an empty list protects
+  nothing.
 
 **Tests.** The querier is a fake built from the set of metric names that are
 present. It records every query.
@@ -1591,6 +1597,7 @@ func Time(value string) (time.Time, error)
 | not JSON, or cut in the middle | `snapshot is not valid JSON: <cause>` |
 | anything after the first document | `snapshot holds data after the document` |
 | an unknown key | `snapshot holds an unknown key: <cause of the decoder>` |
+| a key of the contract that the file lacks | `snapshot lacks the key <path>` |
 | `schema_version` missing | `snapshot has no schema_version` |
 | another `schema_version` | `snapshot has schema_version "<value>"; this version reads "1.0"` |
 | an integrity failure | the message of `Check` |
@@ -1609,6 +1616,14 @@ func Time(value string) (time.Time, error)
 | a list that is not sorted or holds a repeat | `<path> is not sorted or holds a repeated value` |
 | the capabilities are not the nine of `discovery.Names` in order | `quality.capabilities must hold the nine capabilities in their order; found: <names>` |
 | a state, a strategy, or a reason outside the registry | `quality.capabilities[<n>].<field> has an unknown value: "<value>"` |
+| `report.period` not matching `^[1-9][0-9]*[mhd]$`; `report.settings.node_autoscaling` outside its values | `<path> has an unknown value: "<value>"` |
+| `report.timezone` or `scope.cluster_label` empty | `<path> is empty` |
+| `report.settings.timeout_seconds` not above zero | `report.settings.timeout_seconds must be positive` |
+| a threshold that breaks the rules of spec 5.2 | the message of `config` for that rule, with `report.thresholds` in place of `thresholds` |
+
+The values that `discovery` defines (capability names, states, strategies,
+reasons, confidences) are checked against the registry of `discovery`. The
+values of the configuration are checked against literal lists in `snapshot`.
 
 **Tests:**
 
