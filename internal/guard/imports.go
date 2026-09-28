@@ -20,6 +20,8 @@ type Layer struct {
 var Layers = []Layer{
 	{Path: "internal/guard", Rank: 0},
 	{Path: "internal/typst", Rank: 0},
+	{Path: "template", Rank: 0},
+	{Path: "template/golden", Rank: 10},
 	{Path: "internal/cli", Rank: 100},
 }
 
