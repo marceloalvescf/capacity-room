@@ -60,23 +60,45 @@ func Encode(s Snapshot) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Decode reads exactly one snapshot of schema_version "1.0" from data and
-// checks it, in this order: the JSON is well formed and holds no unknown
-// key, nothing follows the document, the file holds every key of the
-// contract and none of them is null, schema_version is present, it equals
-// "1.0", and Check passes.
+// Decode reads exactly one snapshot from data and checks it.
 //
-// encoding/json reads a missing key as the zero value, and zero is a valid
-// threshold, a valid boolean, and a valid empty list, so a decoded Snapshot
-// alone cannot tell "the run wrote this" from "the key was left out" —
-// and a key written as JSON null decodes exactly the same way, since
-// encoding/json leaves a non-pointer field at its zero value on a null
-// literal instead of erroring. The check below reads data a second time,
-// into a plain map[string]any, and walks it against Snapshot's own fields
-// by reflect, so that a field added to a type is covered without a second
-// list to keep, and so that a missing key and a null value are refused
-// alike, by their own distinct messages.
+// The schema version is read before anything else: a file of another
+// version is expected to have another shape, so nothing about that shape
+// is judged until the version itself is confirmed to be the one this
+// program reads. Decode reads data loosely first, into a plain any, to
+// find the version without needing the rest of the document to fit
+// Snapshot's shape at all: a file that is not a JSON object, that has no
+// schema_version, or whose schema_version is null or not a string is all
+// refused the same way, since none of them names a version to compare;
+// only a schema_version that is a string other than "1.0" gets the message
+// that names it. Once the version is confirmed, data is read again, this
+// time strictly: no unknown key, nothing after the document, every key of
+// the contract present and none of them null (encoding/json reads a
+// missing key as the zero value, and zero is a valid threshold, a valid
+// boolean, and a valid empty list, so a decoded Snapshot alone cannot tell
+// "the run wrote this" from "the key was left out" — and a key holding
+// JSON null decodes exactly the same way, since encoding/json leaves a
+// non-pointer field at its zero value on a null literal instead of
+// erroring), and finally Check. Reading the file more than once is
+// accepted: a snapshot is small.
 func Decode(data []byte) (Snapshot, error) {
+	var loose any
+	if err := json.NewDecoder(bytes.NewReader(data)).Decode(&loose); err != nil {
+		return Snapshot{}, fmt.Errorf("snapshot is not valid JSON: %s", err)
+	}
+	obj, ok := loose.(map[string]any)
+	if !ok {
+		return Snapshot{}, errors.New("snapshot is not a JSON object")
+	}
+
+	version, ok := obj["schema_version"].(string)
+	if !ok {
+		return Snapshot{}, errors.New("snapshot has no schema_version")
+	}
+	if version != SchemaVersion {
+		return Snapshot{}, fmt.Errorf("snapshot has schema_version %q; this version reads %q", version, SchemaVersion)
+	}
+
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 
@@ -92,19 +114,8 @@ func Decode(data []byte) (Snapshot, error) {
 		return Snapshot{}, errors.New("snapshot holds data after the document")
 	}
 
-	var tree map[string]any
-	if err := json.Unmarshal(data, &tree); err != nil {
-		return Snapshot{}, fmt.Errorf("snapshot is not valid JSON: %s", err)
-	}
-	if err := checkKeys(reflect.TypeOf(Snapshot{}), tree, ""); err != nil {
+	if err := checkKeys(reflect.TypeOf(Snapshot{}), obj, ""); err != nil {
 		return Snapshot{}, err
-	}
-
-	if snap.SchemaVersion == "" {
-		return Snapshot{}, errors.New("snapshot has no schema_version")
-	}
-	if snap.SchemaVersion != SchemaVersion {
-		return Snapshot{}, fmt.Errorf("snapshot has schema_version %q; this version reads %q", snap.SchemaVersion, SchemaVersion)
 	}
 
 	if err := snap.Check(); err != nil {
@@ -157,8 +168,8 @@ func supportedKey(field reflect.StructField) (string, bool) {
 // (only quality.capabilities) is followed into each element obj actually
 // holds, named by its index, and an element that is itself null is
 // refused without being treated as an object. schema_version is skipped:
-// its absence or its null both leave the string at "", which Decode
-// already turns into its own dedicated message.
+// by the time this walk runs, Decode has already read it and confirmed it
+// names the version this program reads.
 func checkKeys(t reflect.Type, obj map[string]any, prefix string) error {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)

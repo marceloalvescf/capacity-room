@@ -91,6 +91,74 @@ func mutateJSON(t *testing.T, good []byte, mutate func(map[string]any)) []byte {
 	return data
 }
 
+// TestDecodeOrder exercises the order in which Decode judges a file: the
+// schema version, read loosely, before anything about the rest of the
+// document's shape.
+func TestDecodeOrder(t *testing.T) {
+	snap := validSnapshot(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		data     []byte
+		want     string
+		isPrefix bool
+	}{
+		{"an empty object", []byte(`{}`), "snapshot has no schema_version", false},
+		{"a JSON array", []byte(`[]`), "snapshot is not a JSON object", false},
+		{"a JSON string", []byte(`"text"`), "snapshot is not a JSON object", false},
+		{"a JSON number", []byte(`3`), "snapshot is not a JSON object", false},
+		{"schema_version null", []byte(`{"schema_version": null}`), "snapshot has no schema_version", false},
+		{"schema_version a number", []byte(`{"schema_version": 1.0}`), "snapshot has no schema_version", false},
+		{"schema_version another version", []byte(`{"schema_version": "2.0"}`), `snapshot has schema_version "2.0"; this version reads "1.0"`, false},
+		{
+			"another version, a missing key, and an unknown key at once",
+			[]byte(`{"schema_version": "2.0", "report": {}, "extra": 1}`),
+			`snapshot has schema_version "2.0"; this version reads "1.0"`,
+			false,
+		},
+		{
+			"a valid snapshot of another version",
+			mutateJSON(t, good, func(tree map[string]any) { tree["schema_version"] = "2.0" }),
+			`snapshot has schema_version "2.0"; this version reads "1.0"`,
+			false,
+		},
+		{
+			"a valid snapshot with an unknown key",
+			mutateJSON(t, good, func(tree map[string]any) { tree["bogus"] = true }),
+			"snapshot holds an unknown key: ",
+			true,
+		},
+		{
+			"a valid snapshot followed by another document",
+			append(append([]byte{}, good...), []byte("{}")...),
+			"snapshot holds data after the document",
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Decode(tt.data)
+			if err == nil {
+				t.Fatalf("Decode() = nil, want error %q", tt.want)
+			}
+			if tt.isPrefix {
+				if !strings.HasPrefix(err.Error(), tt.want) {
+					t.Fatalf("Decode() = %q, want prefix %q", err.Error(), tt.want)
+				}
+				return
+			}
+			if err.Error() != tt.want {
+				t.Fatalf("Decode() = %q, want %q", err.Error(), tt.want)
+			}
+		})
+	}
+}
+
 func TestDecodeRefuses(t *testing.T) {
 	snap := validSnapshot(t)
 	good, err := Encode(snap)
