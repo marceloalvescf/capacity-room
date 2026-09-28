@@ -41,6 +41,7 @@
   misplaced-front: "block \"front\" is allowed only as the first block",
   nested-block: "block",
   duplicate-outline: "block \"outline\" is allowed only once; found again at",
+  trailing-pagebreak: "block \"pagebreak\" is not allowed as the last block",
 )
 // diagnostics:end
 
@@ -429,6 +430,10 @@
   }
   for (index, block) in data.blocks.enumerate() {
     validate-block(index, block, false)
+  }
+
+  if data.blocks.last().type == "pagebreak" {
+    fail("trailing-pagebreak", "")
   }
 
   // Every block is individually well-formed by this point, so this second
