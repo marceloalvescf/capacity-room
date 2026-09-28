@@ -35,6 +35,13 @@ RUN_TEST_IMAGE := docker run $(RUN_TEST_IMAGE_FLAGS) $(TEST_IMAGE)
 # images.
 GOLDEN_OUT := .cache/template
 
+# The snapshot check-runtime renders inside the runtime image, and the
+# folder of the host its output is written to. A variable, so the
+# controller can point CHECK_SNAPSHOT at a missing file to see the check
+# fail.
+CHECK_SNAPSHOT := testdata/snapshot/direct-complete.json
+CHECK_RUNTIME_OUT := .cache/check-runtime
+
 .PHONY: build test lint image test-toolchain test-template test-golden \
 	update-golden update-testdata check-runtime gate
 
@@ -73,7 +80,7 @@ test-toolchain: $(IMAGE_DEP)
 	$(RUN_TEST_IMAGE) go test -v -tags=toolchain ./internal/typst/...
 
 test-template: $(IMAGE_DEP)
-	$(RUN_TEST_IMAGE) go test -v -tags=template ./internal/typst/... ./template/...
+	$(RUN_TEST_IMAGE) go test -v -tags=template ./internal/typst/... ./template/... ./internal/cli/...
 
 test-golden: $(IMAGE_DEP)
 	@mkdir -p $(GOLDEN_OUT)
@@ -98,6 +105,15 @@ check-runtime: $(IMAGE_DEP)
 	test "$$(docker run --rm $(IMAGE) --version)" = "k8s-capacity-report $(VERSION)"
 	test "$$(docker run --rm --entrypoint /usr/local/bin/typst $(IMAGE) --version | cut -d' ' -f2)" = "$(TYPST_VERSION)"
 	test "$$(docker inspect --format '{{.Config.User}}' $(IMAGE))" = "10001:10001"
+	rm -rf $(CHECK_RUNTIME_OUT)
+	mkdir -p $(CHECK_RUNTIME_OUT)
+	chmod 0777 $(CHECK_RUNTIME_OUT)
+	docker run --rm --user "$$(docker inspect --format '{{.Config.User}}' $(IMAGE))" \
+		--read-only --tmpfs /tmp \
+		--volume "$(CURDIR)/$(CHECK_SNAPSHOT):/data/snapshot.json:ro" \
+		--volume "$(CURDIR)/$(CHECK_RUNTIME_OUT):/out" \
+		$(IMAGE) report --from-snapshot /data/snapshot.json --lang en --output /out/report.pdf
+	test "$$(head -c 5 $(CHECK_RUNTIME_OUT)/report.pdf)" = "%PDF-"
 
 # Runs every check from freshly built images and keeps one log per step.
 # Each step is piped into `tee`, so each line turns on `pipefail`; without it
