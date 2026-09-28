@@ -24,7 +24,9 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	// once here so it always lands on stderr regardless of the command
 	// that produced it.
 	if err := cmd.Execute(); err != nil {
-		fmt.Fprintln(stderr, err)
+		// Discard the error from writing to stderr; if it fails,
+		// there is nowhere left to report the failure.
+		_, _ = fmt.Fprintln(stderr, err)
 		return 2
 	}
 	return 0
@@ -41,11 +43,13 @@ func newRootCmd() *cobra.Command {
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		SilenceUsage:  true,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, _ []string) {
 			// A Run function is required for cobra to validate Args at
 			// all (an unrunnable command short-circuits straight to
 			// help); with no subcommands yet, running with no arguments
 			// just shows the help.
+			// Help is written to the caller's writer and cannot report
+			// a write failure anywhere else, so discard the error.
 			_ = cmd.Help()
 		},
 	}

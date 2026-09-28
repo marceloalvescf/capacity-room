@@ -1,3 +1,4 @@
+// Command k8s-capacity-report generates Kubernetes capacity reports from a Prometheus-compatible API.
 package main
 
 import (
