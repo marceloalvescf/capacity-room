@@ -3,6 +3,7 @@ package typst
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -162,6 +163,55 @@ func TestVersionFailsOnNoOutput(t *testing.T) {
 	_, err := tc.Version(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "no output") {
 		t.Fatalf("Version() error = %v, want it to contain %q", err, "no output")
+	}
+}
+
+func TestVersionMessageSkipsLeadingBlankLines(t *testing.T) {
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\necho\necho boom\nexit 3\n")}
+
+	_, err := tc.Version(context.Background())
+	if err == nil {
+		t.Fatalf("Version() error = nil, want an error")
+	}
+	if !strings.Contains(err.Error(), "exit 3") || !strings.Contains(err.Error(), "boom") {
+		t.Fatalf("Version() error = %v, want it to contain %q and %q", err, "exit 3", "boom")
+	}
+}
+
+func TestVersionMessageFallsBackToStderrWhenStdoutIsBlank(t *testing.T) {
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\necho\necho\necho 'from stderr' >&2\nexit 3\n")}
+
+	_, err := tc.Version(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "from stderr") {
+		t.Fatalf("Version() error = %v, want it to contain %q", err, "from stderr")
+	}
+}
+
+func TestVersionMessageSaysNoOutputWhenBothAreBlank(t *testing.T) {
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\necho\necho >&2\nexit 0\n")}
+
+	_, err := tc.Version(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "no output") {
+		t.Fatalf("Version() error = %v, want it to contain %q", err, "no output")
+	}
+}
+
+func TestVersionReportsWhyItCouldNotStart(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "typst")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nexit 0\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	tc := Toolchain{Binary: path}
+
+	_, err := tc.Version(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "typst --version could not start:") {
+		t.Fatalf("Version() error = %v, want it to contain %q", err, "typst --version could not start:")
+	}
+	if !errors.Is(err, fs.ErrPermission) {
+		t.Fatalf("Version() error = %v, want errors.Is(err, fs.ErrPermission)", err)
+	}
+	if strings.Contains(err.Error(), "exit -1") {
+		t.Fatalf("Version() error = %v, want it not to contain %q", err, "exit -1")
 	}
 }
 

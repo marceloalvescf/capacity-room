@@ -62,6 +62,16 @@ func (t Toolchain) Version(ctx context.Context) (string, error) {
 	cmd.Stderr = &stderr
 
 	runErr := cmd.Run()
+
+	// A nil ProcessState means the process never ran at all (e.g. the
+	// binary lacks the executable bit), as opposed to having run and
+	// exited or been killed. That is a distinct failure the operator needs
+	// the real cause for, unless the context itself is why the process
+	// never got a chance to start.
+	if cmd.ProcessState == nil && ctx.Err() == nil {
+		return "", fmt.Errorf("typst --version could not start: %w", runErr)
+	}
+
 	fields := strings.Fields(stdout.String())
 	if runErr == nil && len(fields) >= 2 {
 		return fields[1], nil
@@ -74,24 +84,27 @@ func (t Toolchain) Version(ctx context.Context) (string, error) {
 	return "", fmt.Errorf("typst --version failed (exit %d): %s", exitCode, firstLineOrFallback(stdout.String(), stderr.String()))
 }
 
-// firstLineOrFallback returns the first line of stdout, falling back to the
-// first line of stderr when stdout is empty, and to "no output" when both
-// are empty.
+// firstLineOrFallback returns the first non-blank line of stdout, falling
+// back to the first non-blank line of stderr when stdout has none, and to
+// "no output" when neither does. A line is blank when it is empty after
+// trimming white space; the returned line is itself trimmed.
 func firstLineOrFallback(stdout, stderr string) string {
-	if line := firstLine(stdout); line != "" {
+	if line := firstNonBlankLine(stdout); line != "" {
 		return line
 	}
-	if line := firstLine(stderr); line != "" {
+	if line := firstNonBlankLine(stderr); line != "" {
 		return line
 	}
 	return "no output"
 }
 
-func firstLine(s string) string {
-	if i := strings.IndexByte(s, '\n'); i >= 0 {
-		return s[:i]
+func firstNonBlankLine(s string) string {
+	for _, line := range strings.Split(s, "\n") {
+		if trimmed := strings.TrimSpace(line); trimmed != "" {
+			return trimmed
+		}
 	}
-	return s
+	return ""
 }
 
 // Probe fails unless Version returns RequiredVersion.
