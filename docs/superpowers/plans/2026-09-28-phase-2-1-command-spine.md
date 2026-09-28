@@ -692,6 +692,7 @@ Messages, in the order in which `Validate` and `Load` check:
 | `report.min_severity` | `report.min_severity must be all, attention, or critical` |
 | `report.language` | `report.language must be pt-BR or en` |
 | `report.output_directory` | `report.output_directory must exist and be writable` |
+| the probe file of that check could not be closed or removed | `report.output_directory holds a probe file that could not be removed: <path>: <cause>` |
 
 A valid label name matches `^[A-Za-z_][A-Za-z0-9_]*$`. A valid period matches
 `^[1-9][0-9]*[mhd]$`.
