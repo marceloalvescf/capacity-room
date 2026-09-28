@@ -1,7 +1,7 @@
 # k8s-capacity-report: design
 
 Date: 2026-09-27
-Status: awaiting review
+Status: approved by the owner on 2026-09-27
 
 ## 1. Purpose
 
