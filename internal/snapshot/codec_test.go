@@ -138,6 +138,12 @@ func TestDecodeOrder(t *testing.T) {
 			"snapshot holds data after the document",
 			false,
 		},
+		{
+			"a valid snapshot of another version, followed by another document",
+			append(mutateJSON(t, good, func(tree map[string]any) { tree["schema_version"] = "2.0" }), []byte("{}")...),
+			"snapshot holds data after the document",
+			false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -233,6 +239,220 @@ func TestDecodeRefuses(t *testing.T) {
 	}
 }
 
+// capitalizeFirst returns s with its first rune upper-cased. Every path of
+// the contract is written in lower snake case, so this is exactly the
+// change of letter case a file writing a duplicate, forged key beside a
+// real one would carry.
+func capitalizeFirst(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+// parentAndKey navigates tree (the generic decoding of a document) by path
+// (dot-separated, with an optional "[N]" on a segment that names an array)
+// and returns the object that holds the value at path and the plain name
+// of that value's own key, so a test can add a forged sibling key beside
+// it without caring whether path names a leaf or an object.
+func parentAndKey(t *testing.T, tree map[string]any, path string) (map[string]any, string) {
+	t.Helper()
+	segments := strings.Split(path, ".")
+	var cur any = tree
+
+	for i, seg := range segments {
+		name, idx, hasIdx := splitIndex(seg)
+		m, ok := cur.(map[string]any)
+		if !ok {
+			t.Fatalf("parentAndKey(%q): segment %d (%q) is not an object", path, i, seg)
+		}
+		if i == len(segments)-1 {
+			return m, name
+		}
+		next, ok := m[name]
+		if !ok {
+			t.Fatalf("parentAndKey(%q): missing key %q", path, name)
+		}
+		if hasIdx {
+			arr, ok := next.([]any)
+			if !ok || idx >= len(arr) {
+				t.Fatalf("parentAndKey(%q): segment %d (%q) is not a long enough array", path, i, seg)
+			}
+			cur = arr[idx]
+		} else {
+			cur = next
+		}
+	}
+	return nil, ""
+}
+
+// TestDecodeRefusesAnotherLetterCase builds, for each of the 45 paths of
+// the contract, a valid snapshot with one more key beside the real one: the
+// same name, its first letter capitalised, holding a forged value. The
+// walk of the map compares a key letter for letter, so every one of these
+// is refused as an unknown key, never silently merged into the real one by
+// a case-insensitive struct decode.
+func TestDecodeRefusesAnotherLetterCase(t *testing.T) {
+	if len(contractPaths) != 45 {
+		t.Fatalf("contractPaths has %d entries, want 45", len(contractPaths))
+	}
+
+	snap := validSnapshot(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	for _, path := range contractPaths {
+		t.Run(path, func(t *testing.T) {
+			var tree map[string]any
+			if err := json.Unmarshal(good, &tree); err != nil {
+				t.Fatalf("Unmarshal(good): %v", err)
+			}
+
+			parent, key := parentAndKey(t, tree, path)
+			forgedName := capitalizeFirst(key)
+			parent[forgedName] = "a forged value"
+
+			data, err := json.Marshal(tree)
+			if err != nil {
+				t.Fatalf("Marshal(tree): %v", err)
+			}
+
+			segments := strings.Split(path, ".")
+			segments[len(segments)-1] = forgedName
+			want := fmt.Sprintf("snapshot holds an unknown key: %s", strings.Join(segments, "."))
+
+			_, err = Decode(data)
+			if err == nil {
+				t.Fatalf("Decode() = nil, want error %q", want)
+			}
+			if err.Error() != want {
+				t.Fatalf("Decode() = %q, want %q", err.Error(), want)
+			}
+		})
+	}
+}
+
+// TestDecodeRefusesOnlyAnotherLetterCase renames report.classification to
+// report.Classification, in place of adding a sibling: the key the contract
+// declares is now entirely missing, and the only key present at that name
+// carries the wrong letter case. The unknown key is still the fault
+// reported, never the missing one: the walk finds it first.
+func TestDecodeRefusesOnlyAnotherLetterCase(t *testing.T) {
+	snap := validSnapshot(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	var tree map[string]any
+	if err := json.Unmarshal(good, &tree); err != nil {
+		t.Fatalf("Unmarshal(good): %v", err)
+	}
+	report := tree["report"].(map[string]any)
+	report["Classification"] = report["classification"]
+	delete(report, "classification")
+
+	data, err := json.Marshal(tree)
+	if err != nil {
+		t.Fatalf("Marshal(tree): %v", err)
+	}
+
+	_, err = Decode(data)
+	want := "snapshot holds an unknown key: report.Classification"
+	if err == nil {
+		t.Fatalf("Decode() = nil, want error %q", want)
+	}
+	if err.Error() != want {
+		t.Fatalf("Decode() = %q, want %q", err.Error(), want)
+	}
+}
+
+// TestDecodeReadsWhatTheMapHolds writes report.classification twice, with
+// the same letters and two different values: not something Encode ever
+// produces, but something a hand-edited or foreign file legally could,
+// since JSON itself does not forbid a repeated key. The map is the one
+// reading of the file, and a map keeps the last value written to a key, so
+// the snapshot must hold that last value too — one reading, the last one,
+// never the first one a second, independent reading might have kept.
+func TestDecodeReadsWhatTheMapHolds(t *testing.T) {
+	snap := validSnapshot(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	original := fmt.Sprintf("%q: %q,", "classification", snap.Report.Classification)
+	if !strings.Contains(string(good), original) {
+		t.Fatalf("did not find %s in the encoded snapshot", original)
+	}
+	duplicated := original + "\n    " + fmt.Sprintf("%q: %q,", "classification", "a repeated value wins")
+	data := []byte(strings.Replace(string(good), original, duplicated, 1))
+
+	got, err := Decode(data)
+	if err != nil {
+		t.Fatalf("Decode() error = %v, want nil", err)
+	}
+	if got.Report.Classification != "a repeated value wins" {
+		t.Fatalf("Report.Classification = %q, want %q (the last value written)", got.Report.Classification, "a repeated value wins")
+	}
+}
+
+// TestDecodeRefusesAWrongKind mutates one key of a valid snapshot to a
+// value of a JSON kind the contract does not expect there, and checks the
+// walk reports it by path, never as an unsupported field or a missing one.
+func TestDecodeRefusesAWrongKind(t *testing.T) {
+	snap := validSnapshot(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		path   string
+		mutate func(tree map[string]any)
+	}{
+		{"text for tls_verify", "report.settings.tls_verify", func(tree map[string]any) {
+			tree["report"].(map[string]any)["settings"].(map[string]any)["tls_verify"] = "true"
+		}},
+		{"number for cluster_name", "scope.cluster_name", func(tree map[string]any) {
+			tree["scope"].(map[string]any)["cluster_name"] = 1.0
+		}},
+		{"object for namespaces", "scope.namespaces", func(tree map[string]any) {
+			tree["scope"].(map[string]any)["namespaces"] = map[string]any{}
+		}},
+		{"list for report", "report", func(tree map[string]any) {
+			tree["report"] = []any{}
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var tree map[string]any
+			if err := json.Unmarshal(good, &tree); err != nil {
+				t.Fatalf("Unmarshal(good): %v", err)
+			}
+			tt.mutate(tree)
+
+			data, err := json.Marshal(tree)
+			if err != nil {
+				t.Fatalf("Marshal(tree): %v", err)
+			}
+
+			_, err = Decode(data)
+			want := fmt.Sprintf("snapshot holds a value of the wrong kind at %s", tt.path)
+			if err == nil {
+				t.Fatalf("Decode() = nil, want error %q", want)
+			}
+			if err.Error() != want {
+				t.Fatalf("Decode() = %q, want %q", err.Error(), want)
+			}
+		})
+	}
+}
+
 func TestCheckRefuses(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -269,7 +489,31 @@ func TestCheckRefuses(t *testing.T) {
 		{"quality.capabilities[0].state unknown", func(s *Snapshot) { s.Quality.Capabilities[0].State = "bogus" }, `quality.capabilities[0].state has an unknown value: "bogus"`},
 		{"quality.capabilities[0].strategy unknown", func(s *Snapshot) { s.Quality.Capabilities[0].Strategy = "bogus" }, `quality.capabilities[0].strategy has an unknown value: "bogus"`},
 		{"quality.capabilities[0].reasons unknown", func(s *Snapshot) { s.Quality.Capabilities[0].Reasons = []string{"BOGUS_REASON"} }, `quality.capabilities[0].reasons has an unknown value: "BOGUS_REASON"`},
+		{"quality.capabilities[0] available with a reason", func(s *Snapshot) {
+			s.Quality.Capabilities[0].Reasons = []string{discovery.ReasonCodes[0]}
+		}, "quality.capabilities[0] is available and carries a reason"},
+		{"quality.capabilities[0] partial with no reason", func(s *Snapshot) {
+			s.Quality.Capabilities[0].State = discovery.StatePartial
+		}, "quality.capabilities[0] is partial and carries no reason"},
+		{"quality.capabilities[0] unavailable with no reason", func(s *Snapshot) {
+			s.Quality.Capabilities[0].State = discovery.StateUnavailable
+		}, "quality.capabilities[0] is unavailable and carries no reason"},
+		{"quality.capabilities[0] available names no source", func(s *Snapshot) {
+			s.Quality.Capabilities[0].Strategy = discovery.StrategyNone
+		}, "quality.capabilities[0] is available and names no source"},
+		{"quality.capabilities[0] unavailable names a source", func(s *Snapshot) {
+			s.Quality.Capabilities[0].State = discovery.StateUnavailable
+			s.Quality.Capabilities[0].Reasons = []string{discovery.ReasonCodes[0]}
+		}, "quality.capabilities[0] is unavailable and names a source"},
+		{"quality.capabilities[0] cannot be configured", func(s *Snapshot) {
+			s.Quality.Capabilities[0].Strategy = discovery.StrategyConfigured
+		}, "quality.capabilities[0] cannot be configured"},
+		{"quality.capabilities[0].reasons repeated", func(s *Snapshot) {
+			s.Quality.Capabilities[0].State = discovery.StatePartial
+			s.Quality.Capabilities[0].Reasons = []string{discovery.ReasonCodes[0], discovery.ReasonCodes[0]}
+		}, "quality.capabilities[0].reasons holds a repeated value"},
 		{"report.period unknown", func(s *Snapshot) { s.Report.Period = "bogus" }, `report.period has an unknown value: "bogus"`},
+		{"report.period too long", func(s *Snapshot) { s.Report.Period = "999999999d" }, `report.period is too long: "999999999d"`},
 		{"report.settings.node_autoscaling unknown", func(s *Snapshot) { s.Report.Settings.NodeAutoscaling = "bogus" }, `report.settings.node_autoscaling has an unknown value: "bogus"`},
 		{"report.timezone empty", func(s *Snapshot) { s.Report.Timezone = "" }, "report.timezone is empty"},
 		{"scope.cluster_label empty", func(s *Snapshot) { s.Scope.ClusterLabel = "" }, "scope.cluster_label is empty"},

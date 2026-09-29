@@ -6,9 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"reflect"
 	"regexp"
 	"slices"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +24,34 @@ import (
 // stored contract and must be able to judge a file that no configuration of
 // this version produced.
 var periodRe = regexp.MustCompile(`^[1-9][0-9]*[mhd]$`)
+
+// periodUnitNanos returns the length, in nanoseconds, of one unit of a
+// period's trailing letter: 'm' for minutes, 'h' for hours, and anything
+// else (periodRe accepts only 'd' besides those two) for days.
+func periodUnitNanos(unit byte) int64 {
+	switch unit {
+	case 'm':
+		return int64(time.Minute)
+	case 'h':
+		return int64(time.Hour)
+	default: // 'd', the only other letter periodRe accepts
+		return int64(24 * time.Hour)
+	}
+}
+
+// periodTooLong reports whether period, already known to match periodRe,
+// names a length that does not fit in a time.Duration: more digits than an
+// int64 can hold, or a value whose product with its unit overflows. The
+// design sets no upper limit of its own on a period, so the only limit is
+// what the type that carries it can hold.
+func periodTooLong(period string) bool {
+	value, err := strconv.ParseInt(period[:len(period)-1], 10, 64)
+	if err != nil {
+		return true
+	}
+	unit := periodUnitNanos(period[len(period)-1])
+	return value > math.MaxInt64/unit
+}
 
 // validProfiles, validSeverities, validFilterModes, validEndpointTypes, and
 // validNodeAutoscaling are the values of the configuration that report and
@@ -62,30 +93,33 @@ func Encode(s Snapshot) ([]byte, error) {
 
 // Decode reads exactly one snapshot from data and checks it.
 //
-// The schema version is read before anything else: a file of another
-// version is expected to have another shape, so nothing about that shape
-// is judged until the version itself is confirmed to be the one this
-// program reads. Decode reads data loosely first, into a plain any, to
-// find the version without needing the rest of the document to fit
-// Snapshot's shape at all: a file that is not a JSON object, that has no
-// schema_version, or whose schema_version is null or not a string is all
-// refused the same way, since none of them names a version to compare;
-// only a schema_version that is a string other than "1.0" gets the message
-// that names it. Once the version is confirmed, data is read again, this
-// time strictly: no unknown key, nothing after the document, every key of
-// the contract present and none of them null (encoding/json reads a
-// missing key as the zero value, and zero is a valid threshold, a valid
-// boolean, and a valid empty list, so a decoded Snapshot alone cannot tell
-// "the run wrote this" from "the key was left out" — and a key holding
-// JSON null decodes exactly the same way, since encoding/json leaves a
-// non-pointer field at its zero value on a null literal instead of
-// erroring), and finally Check. Reading the file more than once is
-// accepted: a snapshot is small.
+// The document is decoded loosely exactly once, into a plain map: that map
+// is the one reading of the file, and everything Decode judges afterwards
+// — the schema version, every key of the contract, and the typed Snapshot
+// itself — is read from it, never from the bytes a second time. Two
+// independent readings of the same bytes can disagree on which value a
+// repeated, differently-cased key carries (encoding/json's own struct
+// decode matches a field's name without regard to letter case; a map does
+// not), and a second reading that keeps validating the value the first
+// reading discarded is a check that says yes to what it did not look at.
+//
+// The order below is fixed: a file that is not JSON, or is cut in the
+// middle; anything after the first document; a document that is not a JSON
+// object; a missing, null, or non-string schema_version; another
+// schema_version; then one walk of the map against the contract's types
+// (an unknown key, a missing key, a null, or a value of the wrong kind, in
+// that order at each key); the typed Snapshot, filled from the same map
+// once it has passed that walk; and finally Check.
 func Decode(data []byte) (Snapshot, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
 	var loose any
-	if err := json.NewDecoder(bytes.NewReader(data)).Decode(&loose); err != nil {
+	if err := dec.Decode(&loose); err != nil {
 		return Snapshot{}, fmt.Errorf("snapshot is not valid JSON: %s", err)
 	}
+	if err := dec.Decode(new(struct{})); !errors.Is(err, io.EOF) {
+		return Snapshot{}, errors.New("snapshot holds data after the document")
+	}
+
 	obj, ok := loose.(map[string]any)
 	if !ok {
 		return Snapshot{}, errors.New("snapshot is not a JSON object")
@@ -99,26 +133,36 @@ func Decode(data []byte) (Snapshot, error) {
 		return Snapshot{}, fmt.Errorf("snapshot has schema_version %q; this version reads %q", version, SchemaVersion)
 	}
 
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.DisallowUnknownFields()
-
-	var snap Snapshot
-	if err := dec.Decode(&snap); err != nil {
-		if strings.Contains(err.Error(), "unknown field") {
-			return Snapshot{}, fmt.Errorf("snapshot holds an unknown key: %s", err)
-		}
-		return Snapshot{}, fmt.Errorf("snapshot is not valid JSON: %s", err)
-	}
-
-	if err := dec.Decode(new(struct{})); !errors.Is(err, io.EOF) {
-		return Snapshot{}, errors.New("snapshot holds data after the document")
-	}
-
 	if err := checkKeys(reflect.TypeOf(Snapshot{}), obj, ""); err != nil {
 		return Snapshot{}, err
 	}
 
+	snap, err := decodeFromMap(obj)
+	if err != nil {
+		return Snapshot{}, err
+	}
+
 	if err := snap.Check(); err != nil {
+		return Snapshot{}, err
+	}
+	return snap, nil
+}
+
+// decodeFromMap fills a Snapshot from obj, the same map checkKeys has
+// already walked against the contract's types. obj holds only keys that
+// match the contract letter for letter, of the kind the contract expects,
+// so encoding it again and decoding it strictly is the simplest way to
+// turn it into a Snapshot: no value of the result comes from the bytes of
+// the original file by any other path.
+func decodeFromMap(obj map[string]any) (Snapshot, error) {
+	raw, err := json.Marshal(obj)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	var snap Snapshot
+	if err := dec.Decode(&snap); err != nil {
 		return Snapshot{}, err
 	}
 	return snap, nil
@@ -159,68 +203,131 @@ func supportedKey(field reflect.StructField) (string, bool) {
 	return "", false
 }
 
-// checkKeys walks t's fields in their declared order, following obj (the
-// generic decoding of the same document) at each level, and reports the
-// first problem: a key t declares that obj does not hold, a key present
-// with the JSON value null (the writer never writes one), or a field of t
-// the walk does not know how to check at all. A struct field is followed
-// into its own object; a slice field whose element is itself a struct
-// (only quality.capabilities) is followed into each element obj actually
-// holds, named by its index, and an element that is itself null is
-// refused without being treated as an object. schema_version is skipped:
-// by the time this walk runs, Decode has already read it and confirmed it
-// names the version this program reads.
-func checkKeys(t reflect.Type, obj map[string]any, prefix string) error {
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
+// kindMatches reports whether value, one leaf of the generic decoding of
+// the document, is of the JSON kind that field's Go type expects: a
+// string, a bool, a number for a float, an object for a struct, or an
+// array for a slice. It is the one place that decides "the wrong kind", so
+// that a text where a number belongs, an object for a list, and so on are
+// all refused by the same rule.
+func kindMatches(kind reflect.Kind, value any) bool {
+	switch kind {
+	case reflect.String:
+		_, ok := value.(string)
+		return ok
+	case reflect.Bool:
+		_, ok := value.(bool)
+		return ok
+	case reflect.Float32, reflect.Float64:
+		_, ok := value.(float64)
+		return ok
+	case reflect.Struct:
+		_, ok := value.(map[string]any)
+		return ok
+	case reflect.Slice:
+		_, ok := value.([]any)
+		return ok
+	}
+	return false
+}
 
-		name, ok := supportedKey(field)
+// sortedKeys returns the keys of obj, sorted: obj comes from encoding/json,
+// which gives no order of its own, and the unknown-key scan below must
+// visit them in a fixed order for Decode to report the same fault on every
+// run of the same bytes.
+func sortedKeys(obj map[string]any) []string {
+	keys := make([]string, 0, len(obj))
+	for k := range obj {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// joinPath appends name to prefix, dot-separated, or returns name alone
+// when prefix is empty.
+func joinPath(prefix, name string) string {
+	if prefix == "" {
+		return name
+	}
+	return prefix + "." + name
+}
+
+// checkKeys walks t's fields against obj, the generic decoding of the same
+// document at this level, and reports the first problem, in this fixed
+// order: a key obj holds that no field of t declares, compared letter for
+// letter (obj's keys are visited in sorted order, so the same file always
+// names the same key first); then, for each field of t in its declared
+// order, a key t declares that obj does not hold, a key present with the
+// JSON value null (the writer never writes one), or a value of the kind
+// kindMatches refuses. A struct field is followed into its own object; a
+// slice field whose element is itself a struct (only
+// quality.capabilities) is followed into each element obj actually holds,
+// named by its index, and an element that is itself null, or not itself
+// an object, is refused without being read as one. schema_version is
+// skipped: by the time this walk runs, Decode has already read it and
+// confirmed it names the version this program reads.
+func checkKeys(t reflect.Type, obj map[string]any, prefix string) error {
+	type field struct {
+		decl reflect.StructField
+		name string
+	}
+
+	known := make(map[string]bool, t.NumField())
+	var fields []field
+	for i := 0; i < t.NumField(); i++ {
+		decl := t.Field(i)
+		name, ok := supportedKey(decl)
 		if !ok {
-			return fmt.Errorf(unsupportedKeyFmt, t.Name(), field.Name)
+			return fmt.Errorf(unsupportedKeyFmt, t.Name(), decl.Name)
 		}
+		known[name] = true
 		if name == "schema_version" {
 			continue
 		}
+		fields = append(fields, field{decl, name})
+	}
 
-		path := name
-		if prefix != "" {
-			path = prefix + "." + name
+	for _, key := range sortedKeys(obj) {
+		if !known[key] {
+			return fmt.Errorf("snapshot holds an unknown key: %s", joinPath(prefix, key))
 		}
+	}
 
-		value, present := obj[name]
+	for _, f := range fields {
+		path := joinPath(prefix, f.name)
+
+		value, present := obj[f.name]
 		if !present {
 			return fmt.Errorf("snapshot lacks the key %s", path)
 		}
 		if value == nil {
 			return fmt.Errorf("snapshot holds null at %s", path)
 		}
+		if !kindMatches(f.decl.Type.Kind(), value) {
+			return fmt.Errorf("snapshot holds a value of the wrong kind at %s", path)
+		}
 
-		switch field.Type.Kind() {
+		switch f.decl.Type.Kind() {
 		case reflect.Struct:
-			child, ok := value.(map[string]any)
-			if !ok {
-				return fmt.Errorf(unsupportedKeyFmt, t.Name(), field.Name)
-			}
-			if err := checkKeys(field.Type, child, path); err != nil {
+			if err := checkKeys(f.decl.Type, value.(map[string]any), path); err != nil {
 				return err
 			}
 		case reflect.Slice:
-			arr, ok := value.([]any)
-			if !ok {
-				return fmt.Errorf(unsupportedKeyFmt, t.Name(), field.Name)
-			}
-			elemType := field.Type.Elem()
-			for idx, elem := range arr {
+			elemType := f.decl.Type.Elem()
+			for idx, elem := range value.([]any) {
 				elemPath := fmt.Sprintf("%s[%d]", path, idx)
 				if elem == nil {
 					return fmt.Errorf("snapshot holds null at %s", elemPath)
 				}
 				if elemType.Kind() != reflect.Struct {
+					if !kindMatches(elemType.Kind(), elem) {
+						return fmt.Errorf("snapshot holds a value of the wrong kind at %s", elemPath)
+					}
 					continue
 				}
 				elemObj, ok := elem.(map[string]any)
 				if !ok {
-					return fmt.Errorf(unsupportedKeyFmt, t.Name(), field.Name)
+					return fmt.Errorf("snapshot holds a value of the wrong kind at %s", elemPath)
 				}
 				if err := checkKeys(elemType, elemObj, elemPath); err != nil {
 					return err
@@ -306,6 +413,9 @@ func (s Snapshot) Check() error {
 
 	if !periodRe.MatchString(s.Report.Period) {
 		return fmt.Errorf("report.period has an unknown value: %q", s.Report.Period)
+	}
+	if periodTooLong(s.Report.Period) {
+		return fmt.Errorf("report.period is too long: %q", s.Report.Period)
 	}
 	if err := checkEnum("report.settings.node_autoscaling", s.Report.Settings.NodeAutoscaling, validNodeAutoscaling); err != nil {
 		return err
@@ -422,7 +532,11 @@ func checkCapabilityNames(capabilities []Capability) error {
 
 // checkCapability refuses the capability at index i when its evidence or
 // reasons is nil, or when its state, strategy, or a reason falls outside
-// the registry.
+// the registry, and then, once every value is known to be in its
+// registry, when the capability's state, strategy, evidence, and reasons
+// disagree with each other: a state, a strategy, and a set of reasons are
+// each individually valid on their own and can still describe a
+// capability that could never come out of Detect.
 func checkCapability(i int, c Capability) error {
 	if c.Evidence == nil {
 		return fmt.Errorf("quality.capabilities[%d].evidence is null; an empty list is written as []", i)
@@ -440,6 +554,33 @@ func checkCapability(i int, c Capability) error {
 		if !slices.Contains(discovery.ReasonCodes, reason) {
 			return fmt.Errorf("quality.capabilities[%d].reasons has an unknown value: %q", i, reason)
 		}
+	}
+
+	switch c.State {
+	case discovery.StateAvailable:
+		if len(c.Reasons) > 0 {
+			return fmt.Errorf("quality.capabilities[%d] is available and carries a reason", i)
+		}
+	case discovery.StatePartial, discovery.StateUnavailable:
+		if len(c.Reasons) == 0 {
+			return fmt.Errorf("quality.capabilities[%d] is %s and carries no reason", i, c.State)
+		}
+	}
+	if c.State == discovery.StateAvailable && c.Strategy == discovery.StrategyNone {
+		return fmt.Errorf("quality.capabilities[%d] is available and names no source", i)
+	}
+	if c.State == discovery.StateUnavailable && c.Strategy != discovery.StrategyNone {
+		return fmt.Errorf("quality.capabilities[%d] is unavailable and names a source", i)
+	}
+	if c.Strategy == discovery.StrategyConfigured && c.Name != "node_autoscaling" {
+		return fmt.Errorf("quality.capabilities[%d] cannot be configured", i)
+	}
+	seenReasons := make(map[string]bool, len(c.Reasons))
+	for _, reason := range c.Reasons {
+		if seenReasons[reason] {
+			return fmt.Errorf("quality.capabilities[%d].reasons holds a repeated value", i)
+		}
+		seenReasons[reason] = true
 	}
 	return nil
 }

@@ -255,11 +255,21 @@ func TestBuildEveryFieldChangesTheBytes(t *testing.T) {
 		{"Input.Scope.MatcherEnabled", func(in *Input) { in.Scope.MatcherEnabled = false }},
 		{"Input.Scope.Confidence", func(in *Input) { in.Scope.Confidence = discovery.ConfidenceInferred }},
 		{"Input.Scope.DiscoveredValues", func(in *Input) { in.Scope.DiscoveredValues = []string{"only"} }},
-		{"Input.Capabilities[0].State", func(in *Input) { in.Capabilities[0].State = discovery.StatePartial }},
+		{"Input.Capabilities[0].State", func(in *Input) {
+			// A partial capability must carry a reason, so the reason is
+			// set alongside the state being tested here.
+			in.Capabilities[0].State = discovery.StatePartial
+			in.Capabilities[0].Reasons = []string{discovery.ReasonCodes[0]}
+		}},
 		{"Input.Capabilities[0].Strategy", func(in *Input) { in.Capabilities[0].Strategy = discovery.StrategyRecordingRule }},
 		{"Input.Capabilities[0].Evidence", func(in *Input) { in.Capabilities[0].Evidence = []string{"other_metric"} }},
 		{"Input.Capabilities[0].Reasons", func(in *Input) {
-			in.Capabilities[0].Reasons = []string{discovery.ReasonCodes[0]}
+			// An available capability may carry no reason, so the state
+			// and strategy are moved to unavailable alongside the reason
+			// being tested here.
+			in.Capabilities[0].State = discovery.StateUnavailable
+			in.Capabilities[0].Strategy = discovery.StrategyNone
+			in.Capabilities[0].Reasons = []string{discovery.ReasonCodes[1]}
 		}},
 		{"Input.CollectionStarted", func(in *Input) { in.CollectionStarted = in.CollectionStarted.Add(time.Minute) }},
 		{"Input.CollectionCompleted", func(in *Input) { in.CollectionCompleted = in.CollectionCompleted.Add(time.Minute) }},
