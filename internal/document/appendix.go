@@ -92,3 +92,39 @@ func appendixRemark(b *builder, reasons []string) string {
 	}
 	return strings.Join(sentences, " ")
 }
+
+// buildNotes assembles the interpretation notes that follow the appendix:
+// one row for every warning, then every notice, of the snapshot, each text
+// written once; or no block at all when there is neither. The minimum
+// severity does not filter these rows.
+func buildNotes(b *builder, s snapshot.Snapshot) []Block {
+	var rows [][][]Run
+	seen := make(map[string]bool)
+	add := func(text string) {
+		if seen[text] {
+			return
+		}
+		seen[text] = true
+		rows = append(rows, [][]Run{{Text(text)}})
+	}
+
+	for _, w := range s.Quality.Warnings {
+		add(b.text(catalog.Warning(w.Code), nil))
+	}
+	for _, n := range s.Quality.Notices {
+		count := n.Params["count"]
+		var params catalog.Params
+		if count != 1 {
+			params = catalog.Params{"Count": b.cat.Count(count)}
+		}
+		add(b.text(catalog.Notice(n.Code, count), params))
+	}
+
+	if len(rows) == 0 {
+		return nil
+	}
+	return []Block{
+		Heading{Level: 2, Numbered: false, Runs: []Run{Text(b.text(catalog.NotesHeading, nil))}},
+		Table{ID: "interpretation-notes", Headers: []string{b.text(catalog.NotesHeaderRemark, nil)}, Rows: rows},
+	}
+}

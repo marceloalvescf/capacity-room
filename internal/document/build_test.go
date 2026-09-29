@@ -53,9 +53,29 @@ func baseCapabilities() []snapshot.Capability {
 	return caps
 }
 
+// unavailableNamespace returns a namespace row that answered nothing:
+// every statistic unavailable, and its pod count unknown.
+func unavailableNamespace(name string) snapshot.Namespace {
+	unavailable := snapshot.Statistics{State: stateUnavailable}
+	return snapshot.Namespace{
+		Name:                 name,
+		CPUUsage:             unavailable,
+		MemoryUsage:          unavailable,
+		CPURequests:          unavailable,
+		MemoryRequests:       unavailable,
+		CPULimits:            unavailable,
+		MemoryLimits:         unavailable,
+		CPURequestPercent:    unavailable,
+		MemoryRequestPercent: unavailable,
+		CPULimitPercent:      unavailable,
+		MemoryLimitPercent:   unavailable,
+	}
+}
+
 // baseSnapshot returns "base": a snapshot that passes Check(), with every
 // optional field of the metadata table already set, so a table test can
-// clear exactly one of them.
+// clear exactly one of them, and one row for each namespace of its scope,
+// sorted, every statistic unavailable and every pod count unknown.
 func baseSnapshot(t *testing.T) snapshot.Snapshot {
 	t.Helper()
 
@@ -105,6 +125,10 @@ func baseSnapshot(t *testing.T) snapshot.Snapshot {
 			Capabilities:          baseCapabilities(),
 			CollectionStartedAt:   "2026-07-15T14:25:00-03:00",
 			CollectionCompletedAt: "2026-07-15T14:29:00-03:00",
+		},
+		Namespaces: []snapshot.Namespace{
+			unavailableNamespace("checkout"),
+			unavailableNamespace("payments"),
 		},
 	}
 	if err := snap.Check(); err != nil {
@@ -286,7 +310,13 @@ func TestBuildBlockOrder(t *testing.T) {
 	s := baseSnapshot(t)
 	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{})
 
-	wantTop := []string{"front", "pagebreak", "pagebreak", "heading", "table"}
+	wantTop := []string{
+		"front", "pagebreak",
+		"heading", "heading", "table", "heading", "table",
+		"heading", "paragraph",
+		"pagebreak",
+		"heading", "table",
+	}
 	if got := blockTypes(doc.Blocks); !slices.Equal(got, wantTop) {
 		t.Fatalf("top-level block order = %v, want %v", got, wantTop)
 	}
@@ -348,6 +378,11 @@ func TestBuildMetadataNoExcludedContainersFallback(t *testing.T) {
 func TestBuildMetadataJoinsNames(t *testing.T) {
 	s := baseSnapshot(t)
 	s.Scope.Namespaces = []string{"a", "b", "c"}
+	s.Namespaces = []snapshot.Namespace{
+		unavailableNamespace("a"),
+		unavailableNamespace("b"),
+		unavailableNamespace("c"),
+	}
 	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{})
 	table := findTable(t, frontBlock(t, doc).Blocks, "report-metadata")
 	got := runText(t, table.Rows[2][1][0])
@@ -612,12 +647,12 @@ func TestBuildAppendixEmpty(t *testing.T) {
 	cat := mustCatalog(t, catalog.English)
 	doc := mustBuild(t, s, cat, Options{MinSeverity: "attention"})
 
-	if len(doc.Blocks) != 5 {
-		t.Fatalf("len(Blocks) = %d, want 5", len(doc.Blocks))
+	if len(doc.Blocks) != 9 {
+		t.Fatalf("len(Blocks) = %d, want 9", len(doc.Blocks))
 	}
-	para, ok := doc.Blocks[4].(Paragraph)
+	para, ok := doc.Blocks[8].(Paragraph)
 	if !ok {
-		t.Fatalf("Blocks[4] is %T, want Paragraph", doc.Blocks[4])
+		t.Fatalf("Blocks[8] is %T, want Paragraph", doc.Blocks[8])
 	}
 	want, err := cat.Text(catalog.AppendixEmpty, nil)
 	if err != nil {

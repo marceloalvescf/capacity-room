@@ -220,6 +220,10 @@ func Text(text string) Run { return Run{kind: "text", text: &text} }
 // Strong returns a bold run, for a label inside a sentence.
 func Strong(text string) Run { return Run{kind: "strong", text: &text} }
 
+// Ident returns a real name run: a namespace, a workload, set without
+// hyphenation.
+func Ident(text string) Run { return Run{kind: "ident", text: &text} }
+
 // Status returns a status mark alone: its text is null.
 func Status(status string) Run { return Run{kind: "status", status: status} }
 

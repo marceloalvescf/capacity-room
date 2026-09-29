@@ -77,9 +77,20 @@ func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, err
 	}
 
 	b := &builder{cat: c}
+	thresholds := thresholdsFromSnapshot(s.Report.Thresholds)
 
 	front := buildFront(b, s)
+	namespaces := buildNamespacesSection(b, s.Namespaces, s.Findings, thresholds, severity)
+	workloads := buildWorkloadsSection(b, s.Workloads, s.Findings, thresholds, severity)
 	appendix := buildAppendix(b, s, severity)
+	notes := buildNotes(b, s)
+
+	blocks := []Block{front, PageBreak{Weak: false}}
+	blocks = append(blocks, namespaces...)
+	blocks = append(blocks, workloads...)
+	blocks = append(blocks, PageBreak{Weak: true})
+	blocks = append(blocks, appendix...)
+	blocks = append(blocks, notes...)
 
 	doc := Document{
 		Schema:   Schema,
@@ -88,11 +99,7 @@ func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, err
 		Labels:   buildLabels(b),
 		Cover:    buildCover(b, s),
 		Footer:   buildFooter(b, s),
-		Blocks: append([]Block{
-			front,
-			PageBreak{Weak: false},
-			PageBreak{Weak: true},
-		}, appendix...),
+		Blocks:   blocks,
 	}
 
 	if b.err != nil {
