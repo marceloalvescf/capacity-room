@@ -108,6 +108,63 @@ func TestLiteralsLeavesOtherCharactersAlone(t *testing.T) {
 	}
 }
 
+// assertPanicsWith fails the test unless fn panics with a value holding
+// want.
+func assertPanicsWith(t *testing.T, want string, fn func()) {
+	t.Helper()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatalf("want a panic with %q, got none", want)
+		}
+		msg, ok := r.(string)
+		if !ok {
+			t.Fatalf("panic value = %v (%T), want a string", r, r)
+		}
+		if msg != want {
+			t.Errorf("panic value = %q, want %q", msg, want)
+		}
+	}()
+	fn()
+}
+
+// TestLiteralsPanicsOnAnEmptyList checks that Literals refuses an empty
+// list of values, as literal_regex of the original does.
+func TestLiteralsPanicsOnAnEmptyList(t *testing.T) {
+	const want = "prom: a regular expression of literals needs at least one value"
+	t.Run("nil", func(t *testing.T) {
+		assertPanicsWith(t, want, func() { Literals(nil) })
+	})
+	t.Run("empty", func(t *testing.T) {
+		assertPanicsWith(t, want, func() { Literals([]string{}) })
+	})
+}
+
+// TestLiteralsAcceptsOneEmptyValue checks that a list holding one value
+// that is itself the empty text is not an empty list.
+func TestLiteralsAcceptsOneEmptyValue(t *testing.T) {
+	got := Literals([]string{""})
+	want := "(?:)"
+	if got != want {
+		t.Errorf("Literals([\"\"]) = %q, want %q", got, want)
+	}
+}
+
+// TestSelectorPanicsOnAnEmptyRegexList checks that a Selector whose Regex
+// or NotRegex holds a label with an empty list panics through Literals
+// when String is called.
+func TestSelectorPanicsOnAnEmptyRegexList(t *testing.T) {
+	const want = "prom: a regular expression of literals needs at least one value"
+	t.Run("Regex", func(t *testing.T) {
+		sel := Selector{Metric: "m", Regex: map[string][]string{"namespace": {}}}
+		assertPanicsWith(t, want, func() { _ = sel.String() })
+	})
+	t.Run("NotRegex", func(t *testing.T) {
+		sel := Selector{Metric: "m", NotRegex: map[string][]string{"container": nil}}
+		assertPanicsWith(t, want, func() { _ = sel.String() })
+	})
+}
+
 // TestQuote covers the three escaping rules, applied in order: backslashes
 // doubled first, then a line break turned into \n, then a double quote
 // escaped.

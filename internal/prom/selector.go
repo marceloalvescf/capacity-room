@@ -11,9 +11,9 @@ import (
 type Selector struct {
 	Metric   string
 	Equal    map[string]string
-	Regex    map[string][]string // label =~ one of these literal values
+	Regex    map[string][]string // label =~ one of these literal values; an empty list panics
 	NotEqual map[string]string
-	NotRegex map[string][]string // label !~ one of these literal values
+	NotRegex map[string][]string // label !~ one of these literal values; an empty list panics
 }
 
 // String renders the selector, with its four groups of matchers written
@@ -84,12 +84,21 @@ var regexSpecial = map[rune]bool{
 	' ': true, '\t': true, '\n': true, '\r': true, '\v': true, '\f': true,
 }
 
+// errEmptyLiterals is the fixed message of a panic over an empty list of
+// values: a fault of the program, not of an input to validate.
+const errEmptyLiterals = "prom: a regular expression of literals needs at least one value"
+
 // Literals writes values as one regular expression that matches any of
 // them and nothing else, ready to stand between the quotes of a matcher.
 // Each value is escaped for a regular expression as re.escape of Python
 // does, then the whole expression is escaped by Quote. regexp.QuoteMeta is
-// not used: it does not escape the hyphen.
+// not used: it does not escape the hyphen. Literals panics when values is
+// empty; a list holding one value that is itself the empty text is not an
+// empty list, and does not panic.
 func Literals(values []string) string {
+	if len(values) == 0 {
+		panic(errEmptyLiterals)
+	}
 	escaped := make([]string, len(values))
 	for i, value := range values {
 		escaped[i] = escapeLiteral(value)
