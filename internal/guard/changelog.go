@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -35,20 +36,45 @@ func isLevelTwoHeading(line string) bool {
 	return strings.HasPrefix(trimmed, "##") && !strings.HasPrefix(trimmed, "###")
 }
 
+// compareVersions orders two dotted-triple version strings by comparing
+// their major, minor, and patch numbers in turn. It returns a negative
+// number when a is lower than b, zero when they are equal, and a positive
+// number when a is higher. Both arguments must already have the shape
+// versionHeadingPattern captures, a run of digits per part, so each part
+// always parses.
+func compareVersions(a, b string) int {
+	aParts := strings.SplitN(a, ".", 3)
+	bParts := strings.SplitN(b, ".", 3)
+	for i := 0; i < 3; i++ {
+		an, _ := strconv.Atoi(aParts[i])
+		bn, _ := strconv.Atoi(bParts[i])
+		if an != bn {
+			return an - bn
+		}
+	}
+	return 0
+}
+
 // NewestVersionHeading returns the version named by the first well-formed
 // release heading in changelog, scanning from the top. Keep a Changelog
 // lists releases newest first, so the first match is the newest version.
-// "## [Unreleased]" is allowed and ignored. Every level-two heading is
-// checked, in both of Markdown's forms — "##" (ATX) and a non-blank line
-// followed by a line of dashes (setext) — and one that is not exactly
-// "## [Unreleased]" and does not match the strict version form is reported
-// as an error immediately, rather than skipped, so a malformed heading
-// cannot hide behind an older, well-formed one further down.
+// "## [Unreleased]" is allowed and ignored. Every level-two heading of the
+// changelog is checked, in order, in both of Markdown's forms — "##" (ATX)
+// and a non-blank line followed by a line of dashes (setext) — all the way
+// to the end of the file, rather than stopping at the first one accepted:
+// one that is not exactly "## [Unreleased]" and does not match the strict
+// version form is reported as an error immediately, so a malformed heading
+// cannot hide behind an older, well-formed one further down. Every version
+// heading is also compared with the one above it: one that is not lower is
+// reported, whether it repeats that version or names a newer one out of
+// place.
 func NewestVersionHeading(changelog string) (version string, found bool, err error) {
 	scanner := bufio.NewScanner(strings.NewReader(changelog))
 	lineNum := 0
 	var prevLine string
 	havePrev := false
+	var prevVersion string
+	havePrevVersion := false
 	for scanner.Scan() {
 		lineNum++
 		line := scanner.Text()
@@ -67,7 +93,17 @@ func NewestVersionHeading(changelog string) (version string, found bool, err err
 			if _, parseErr := time.Parse("2006-01-02", match[2]); parseErr != nil {
 				return "", false, fmt.Errorf("malformed changelog heading on line %d: %q", lineNum, line)
 			}
-			return match[1], true, nil
+			current := match[1]
+			if havePrevVersion && compareVersions(current, prevVersion) >= 0 {
+				return "", false, fmt.Errorf("changelog heading out of order on line %d: %q", lineNum, line)
+			}
+			prevVersion = current
+			havePrevVersion = true
+			if !found {
+				version = current
+				found = true
+			}
+			continue
 		}
 
 		if line == "## [Unreleased]" {
@@ -81,5 +117,5 @@ func NewestVersionHeading(changelog string) (version string, found bool, err err
 	if scanErr := scanner.Err(); scanErr != nil {
 		return "", false, scanErr
 	}
-	return "", false, nil
+	return version, found, nil
 }

@@ -261,6 +261,57 @@ func TestNewestVersionHeadingIgnoresDeeperHeadings(t *testing.T) {
 	}
 }
 
+func TestChangelogReportsMalformedOlderHeading(t *testing.T) {
+	changelog := "## [1.1.0] - 2026-10-01\n## 1.0.0 (2026-01-01)\n"
+
+	_, _, err := NewestVersionHeading(changelog)
+	if err == nil {
+		t.Fatalf("NewestVersionHeading(%q) returned no error, want error", changelog)
+	}
+	want := `malformed changelog heading on line 2: "## 1.0.0 (2026-01-01)"`
+	if err.Error() != want {
+		t.Fatalf("NewestVersionHeading(%q) error = %q, want %q", changelog, err.Error(), want)
+	}
+}
+
+func TestChangelogReportsHeadingsOutOfOrder(t *testing.T) {
+	changelog := "## [1.0.0] - 2026-01-01\n## [1.1.0] - 2026-02-01\n"
+
+	_, _, err := NewestVersionHeading(changelog)
+	if err == nil {
+		t.Fatalf("NewestVersionHeading(%q) returned no error, want error", changelog)
+	}
+	want := `changelog heading out of order on line 2: "## [1.1.0] - 2026-02-01"`
+	if err.Error() != want {
+		t.Fatalf("NewestVersionHeading(%q) error = %q, want %q", changelog, err.Error(), want)
+	}
+}
+
+func TestChangelogReportsRepeatedVersion(t *testing.T) {
+	changelog := "## [1.0.0] - 2026-01-01\n## [1.0.0] - 2026-01-01\n"
+
+	_, _, err := NewestVersionHeading(changelog)
+	if err == nil {
+		t.Fatalf("NewestVersionHeading(%q) returned no error, want error", changelog)
+	}
+	want := `changelog heading out of order on line 2: "## [1.0.0] - 2026-01-01"`
+	if err.Error() != want {
+		t.Fatalf("NewestVersionHeading(%q) error = %q, want %q", changelog, err.Error(), want)
+	}
+}
+
+func TestChangelogAcceptsManyGoodHeadings(t *testing.T) {
+	changelog := "## [Unreleased]\n## [1.1.0] - 2026-03-01\n## [1.0.1] - 2026-02-01\n## [1.0.0] - 2026-01-01\n"
+
+	version, found, err := NewestVersionHeading(changelog)
+	if err != nil {
+		t.Fatalf("NewestVersionHeading(%q) returned error: %v", changelog, err)
+	}
+	if !found || version != "1.1.0" {
+		t.Fatalf("NewestVersionHeading(%q) = (%q, %v), want (\"1.1.0\", true)", changelog, version, found)
+	}
+}
+
 func TestChangelogAgreesWithVersion(t *testing.T) {
 	root := moduleRoot(t)
 	raw, err := os.ReadFile(filepath.Join(root, "CHANGELOG.md"))
