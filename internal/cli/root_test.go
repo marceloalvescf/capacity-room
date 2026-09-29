@@ -74,7 +74,7 @@ func TestRootRepeatsNoArgument(t *testing.T) {
 		{"bare argument", []string{"hunter2"}},
 		{"argument then a valid command and flag", []string{"hunter2", "report", "--check"}},
 		{"misspelled command with a flag", []string{"reprot", "--check"}},
-		{"argument then an unknown flag", []string{"hunter2", "--token=abc"}},
+		{"argument then an unknown flag", []string{"hunter2", "--token=abcdefgh"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -232,7 +232,7 @@ func TestHiddenCompletionIsRefused(t *testing.T) {
 		{"__complete with an argument", []string{"__complete", "hunter2"}},
 		{"__completeNoDesc with an argument", []string{"__completeNoDesc", "hunter2"}},
 		{"__complete naming report", []string{"__complete", "report", "hunter2"}},
-		{"__complete naming report and a flag", []string{"__complete", "report", "--token", "hunter2"}},
+		{"__complete naming report and a flag", []string{"__complete", "report", "--token", "hunter22"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

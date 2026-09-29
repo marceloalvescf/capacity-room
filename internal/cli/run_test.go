@@ -79,9 +79,15 @@ func modeConflictRows() []modeConflictRow {
 	}
 	for _, name := range collectingFlagNames {
 		flagArgs := []string{"--from-snapshot", "s.json"}
-		if name == "insecure" {
+		switch name {
+		case "insecure":
 			flagArgs = append(flagArgs, "--insecure")
-		} else {
+		case "token":
+			// A placeholder eight characters long: shorter values now stop
+			// the run at the token length gate, before this mode conflict
+			// is ever checked.
+			flagArgs = append(flagArgs, "--"+name, "xxxxxxxx")
+		default:
 			flagArgs = append(flagArgs, "--"+name, "x")
 		}
 		rows = append(rows, modeConflictRow{
@@ -841,13 +847,12 @@ func TestSnapshotFileRefusals(t *testing.T) {
 	}
 }
 
-// TestPanicWithATokenOfTheEnvironment is the regression test for the
-// Critical review finding: a panic that happens after the configuration's
-// own token is known (here, loaded from an environment variable, not
-// --token) but before the mode function returns must still be redacted.
-// The clock's second call, inside collect() itself, is the one that
-// panics, well after runCheck has already added the token to the
-// Redactor.
+// TestPanicWithATokenOfTheEnvironment proves that a panic that happens
+// after the configuration's own token is known (here, loaded from an
+// environment variable, not --token) but before the mode function returns
+// is still redacted. The clock's second call, inside collect() itself, is
+// the one that panics, well after runCheck has already added the token to
+// the Redactor.
 func TestPanicWithATokenOfTheEnvironment(t *testing.T) {
 	const token = "s3cr3t-value"
 	server, _, scenario := startScenario(t, "direct-complete")
@@ -1002,8 +1007,7 @@ func TestWorkFolderIsRemoved(t *testing.T) {
 // is withWorkFolder's own responsibility (make it, defer its removal, run
 // the given work), so it is provable on its own terms, including the one
 // case (a panic while the folder is open) that no combination of the
-// frozen Env seams can reach from a real run — see Important finding 4 of
-// the review.
+// frozen Env seams can reach from a real run.
 func TestWorkFolderIsRemovedOnSuccess(t *testing.T) {
 	parent := t.TempDir()
 	err := withWorkFolder(parent, func(string) error { return nil })
@@ -1055,6 +1059,169 @@ func assertTempDirEmpty(t *testing.T, dir string) {
 			names = append(names, e.Name())
 		}
 		t.Fatalf("%s still holds %v", dir, names)
+	}
+}
+
+// TestTokenLengthStopsTheRunBeforeAnythingElse proves that a --token value
+// shorter than config.MinTokenLength characters stops the run at once, with
+// exactly one message, before cobra reads anything else: combined with an
+// otherwise-erroring flag, or given at the root before any command, the
+// token message still wins.
+func TestTokenLengthStopsTheRunBeforeAnythingElse(t *testing.T) {
+	want := "error: the token must hold at least 8 characters\n"
+
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{"a single letter, space form", []string{"report", "--token", "e"}},
+		{"seven characters, equals form", []string{"report", "--token=1234567"}},
+		{"seven accented characters", []string{"report", "--token", "áéíóúçã"}},
+		{"combined with an unrelated bad flag", []string{"report", "--token", "e", "--nope"}},
+		{"at the root, before any command", []string{"--token=e", "nope"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stdout, stderr, code := runArgs(context.Background(), testEnv(t), tt.args)
+			if code != 2 {
+				t.Fatalf("code = %d, want 2; stdout=%q stderr=%q", code, stdout, stderr)
+			}
+			if stderr != want {
+				t.Fatalf("stderr = %q, want %q", stderr, want)
+			}
+			if stdout != "" {
+				t.Fatalf("stdout = %q, want empty", stdout)
+			}
+		})
+	}
+}
+
+// TestTokenLongEnoughIsAccepted proves the length gate lets an eight
+// character token, plain or accented, through: the run still fails, for an
+// unrelated reason (no configuration file at the given path), which proves
+// the gate did not swallow it.
+func TestTokenLongEnoughIsAccepted(t *testing.T) {
+	tests := []struct {
+		name  string
+		token string
+	}{
+		{"eight plain characters", "12345678"},
+		{"eight accented characters", "áéíóúçãõ"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			missing := filepath.Join(t.TempDir(), "missing.toml")
+			stdout, stderr, code := runArgs(context.Background(), testEnv(t), []string{
+				"report", "--token", tt.token, "--config", missing,
+			})
+			if code != 2 {
+				t.Fatalf("code = %d, want 2; stdout=%q stderr=%q", code, stdout, stderr)
+			}
+			if strings.Contains(stderr, "the token must hold at least 8 characters") {
+				t.Fatalf("stderr = %q, want the length gate to accept this token", stderr)
+			}
+		})
+	}
+}
+
+// TestTokenVariableTooShortStopsTheRun proves the same MinTokenLength rule
+// applies to a token read from the variable metrics.token_env names, not
+// only to one given on the command line.
+func TestTokenVariableTooShortStopsTheRun(t *testing.T) {
+	cfgPath := writeConfig(t, fmt.Sprintf(`[metrics]
+url = "http://127.0.0.1:1/api/v1"
+token_env = "KCR_TOKEN"
+
+[cluster]
+name = "prod"
+namespaces = ["payments"]
+
+[report]
+output_directory = %q
+`, t.TempDir()))
+
+	env := testEnv(t)
+	env.Getenv = envFunc(map[string]string{"KCR_TOKEN": "abc"})
+
+	stdout, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath})
+	if code != 2 {
+		t.Fatalf("code = %d, want 2; stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	want := "error: the token must hold at least 8 characters\n"
+	if stderr != want {
+		t.Fatalf("stderr = %q, want %q", stderr, want)
+	}
+}
+
+// TestCompileRefusesANonPDFOutput proves that a compiler that exits 0
+// without warning, but writes something other than a real PDF to the file
+// it was told to write to, is never reported as a successful run: the
+// command reads the first bytes of that file itself, after the compile and
+// before the rename, and refuses anything that does not start with the PDF
+// magic bytes.
+func TestCompileRefusesANonPDFOutput(t *testing.T) {
+	tests := []struct {
+		name       string
+		writeBogus string
+	}{
+		{"plain text", `/bin/echo -n 'NOT A PDF' > "$last"` + "\n"},
+		{"empty file", `: > "$last"` + "\n"},
+		{"only the PDF prefix, cut short", `/bin/printf '%%PDF' > "$last"` + "\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server, _, scenario := startScenario(t, "direct-complete")
+			defer server.Close()
+			outDir := t.TempDir()
+			cfgPath := writeConfig(t, scenarioConfig(server, scenario, outDir))
+
+			outputPath := filepath.Join(outDir, "r.pdf")
+			const older = "an older report, untouched"
+			if err := os.WriteFile(outputPath, []byte(older), 0o644); err != nil {
+				t.Fatalf("writing the older file: %v", err)
+			}
+
+			script := "#!/bin/sh\n" +
+				"case \"$1\" in --version) /bin/echo 'typst 0.15.1 (x)'; exit 0;; esac\n" +
+				"last=\"\"\n" +
+				"for a in \"$@\"; do last=\"$a\"; done\n" +
+				tt.writeBogus +
+				"exit 0\n"
+			binary := writeScript(t, script)
+			env := envWithTypst(testEnv(t), binary)
+
+			_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--output", outputPath})
+			if code != 6 {
+				t.Fatalf("code = %d, want 6; stderr = %q", code, stderr)
+			}
+			want := "error: the compiler wrote a file that is not a PDF\n"
+			if stderr != want {
+				t.Fatalf("stderr = %q, want %q", stderr, want)
+			}
+
+			data, err := os.ReadFile(outputPath)
+			if err != nil {
+				t.Fatalf("reading the target after the failed run: %v", err)
+			}
+			if string(data) != older {
+				t.Fatalf("the target = %q, want the older file untouched: %q", data, older)
+			}
+
+			entries, err := os.ReadDir(outDir)
+			if err != nil {
+				t.Fatalf("reading %s: %v", outDir, err)
+			}
+			if len(entries) != 1 || entries[0].Name() != "r.pdf" {
+				var names []string
+				for _, e := range entries {
+					names = append(names, e.Name())
+				}
+				t.Fatalf("%s holds %v, want only r.pdf (no leftover temporary file)", outDir, names)
+			}
+		})
 	}
 }
 

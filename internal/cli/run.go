@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -84,13 +85,20 @@ func tokenValuesFromArgs(args []string) []string {
 // Run builds the root command, executes it against args, and returns the
 // process exit code.
 //
-// One redact.Redactor is made here, on the very first line, from every
-// --token value tokenValuesFromArgs can find in args, and both streams are
-// wrapped by it before cobra ever sees them: nothing below this function
-// writes to a raw stream. The same Redactor is handed down to the report
-// command, which adds the configuration's own token to it, in place, the
-// moment config.Load returns (see runCheck, runSnapshot, and runPDF); every
-// writer already built from that Redactor sees the addition immediately,
+// A --token value too short to survive redaction without mangling every
+// unrelated occurrence of its own text is refused first, on the raw
+// arguments, before anything else below: before the Redactor is built, so
+// that value is never added to it, and before cobra reads anything, so
+// that a broken flag elsewhere never reports its own message instead. An
+// empty --token counts as not given, not as too short.
+//
+// One redact.Redactor is made here, from every remaining --token value
+// tokenValuesFromArgs can find in args, and both streams are wrapped by it
+// before cobra ever sees them: nothing below this function writes to a raw
+// stream. The same Redactor is handed down to the report command, which
+// adds the configuration's own token to it, in place, the moment
+// config.Load returns (see runCheck, runSnapshot, and runPDF); every writer
+// already built from that Redactor sees the addition immediately,
 // including one the panic recovery below reaches for after the fact — so a
 // panic anywhere after the token is known is redacted, not only a panic
 // that happens to occur before any mode function is even called.
@@ -99,7 +107,15 @@ func tokenValuesFromArgs(args []string) []string {
 // report command's own logic, so that it also catches a panic from
 // anything cobra itself might do while resolving or parsing.
 func Run(ctx context.Context, env Env, args []string, stdout, stderr io.Writer) (code int) {
-	redactor := redact.New(tokenValuesFromArgs(args)...)
+	tokenValues := tokenValuesFromArgs(args)
+	for _, value := range tokenValues {
+		if err := config.CheckToken(value); err != nil {
+			_, _ = fmt.Fprintf(stderr, "error: %s\n", err)
+			return 2
+		}
+	}
+
+	redactor := redact.New(tokenValues...)
 	wrappedOut := redactor.Writer(stdout)
 	wrappedErr := redactor.Writer(stderr)
 
@@ -821,6 +837,32 @@ func settlePDFMode(path string) error {
 	return os.Chmod(path, info.Mode().Perm()&0o644)
 }
 
+// pdfMagic is the first bytes of every real PDF file.
+var pdfMagic = []byte("%PDF-")
+
+// checkPDFMagic refuses path when its first bytes are not pdfMagic: a
+// compiler that exits 0 without warning, yet writes something that is not
+// a PDF at the path it was told to write to, must not be reported as a
+// successful run. A file shorter than pdfMagic, including an empty one, is
+// refused the same way as one whose bytes simply differ.
+func checkPDFMagic(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+
+	head := make([]byte, len(pdfMagic))
+	n, err := io.ReadFull(f, head)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
+		return err
+	}
+	if !bytes.Equal(head[:n], pdfMagic) {
+		return errors.New("the compiler wrote a file that is not a PDF")
+	}
+	return nil
+}
+
 // compileToPath unpacks the template into a fresh work folder, writes
 // report.json, compiles to a temporary file beside outputPath, and renames
 // it into place. The compiler is given a name that does not yet exist and
@@ -857,6 +899,9 @@ func compileToPath(ctx context.Context, env Env, tc typst.Toolchain, data []byte
 			return err
 		}
 
+		if err := checkPDFMagic(tmpPath); err != nil {
+			return err
+		}
 		if err := settlePDFMode(tmpPath); err != nil {
 			return err
 		}
