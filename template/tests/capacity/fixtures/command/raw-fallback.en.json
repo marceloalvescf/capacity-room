@@ -286,6 +286,249 @@
       "weak": false
     },
     {
+      "type": "heading",
+      "level": 1,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Capacity by namespace"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespace: "
+        },
+        {
+          "kind": "ident",
+          "text": "payments"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "namespace-capacity",
+      "headers": [
+        "Resource",
+        "Average usage",
+        "Peak",
+        "Request",
+        "Limit",
+        "% Peak/Request",
+        "% Peak/Limit"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "CPU"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "300 mCPU"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "400 mCPU"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "500 mCPU"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 cores"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "80%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "40%"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Memory"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "110 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "120 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "0.5 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 B"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "24000%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "12000%"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Resources by workload"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespace: "
+        },
+        {
+          "kind": "ident",
+          "text": "payments"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "workload-resources",
+      "headers": [
+        "Workload",
+        "Pods",
+        "Average CPU",
+        "Peak CPU",
+        "% CPU/Request",
+        "% CPU/Limit",
+        "Average memory",
+        "Peak memory",
+        "% Memory/Request",
+        "% Memory/Limit"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "300 mCPU"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "400 mCPU"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "66.7%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "33.3%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "110 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "120 B"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "20000%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "10000%"
+            }
+          ]
+        ]
+      ]
+    },
+    {
       "type": "pagebreak",
       "weak": true
     },
@@ -605,6 +848,34 @@
             {
               "kind": "text",
               "text": "Node autoscaling data is partly available for the analysis period."
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Interpretation notes"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "interpretation-notes",
+      "headers": [
+        "Remark"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "The history uses the current association between active pods and workloads."
             }
           ]
         ]
