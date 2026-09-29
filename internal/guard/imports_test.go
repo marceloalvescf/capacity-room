@@ -288,6 +288,9 @@ func TestLayersHoldEveryPackageOfThisPart(t *testing.T) {
 		"internal/config":     20,
 		"internal/prom":       30,
 		"internal/discovery":  40,
+		"internal/resolve":    50,
+		"internal/collect":    55,
+		"internal/analysis":   60,
 		"internal/snapshot":   70,
 		"internal/catalog":    80,
 		"internal/document":   90,
@@ -311,6 +314,29 @@ func TestLayersHoldEveryPackageOfThisPart(t *testing.T) {
 	}
 	if len(got) != len(want) {
 		t.Fatalf("Layers has %d entries, want %d", len(got), len(want))
+	}
+}
+
+func TestLayersHoldThePackagesOfThisPart(t *testing.T) {
+	want := map[string]int{
+		"internal/resolve":  50,
+		"internal/collect":  55,
+		"internal/analysis": 60,
+	}
+
+	got := make(map[string]int, len(Layers))
+	for _, layer := range Layers {
+		got[layer.Path] = layer.Rank
+	}
+
+	for path, rank := range want {
+		gotRank, ok := got[path]
+		if !ok {
+			t.Fatalf("Layers is missing %q", path)
+		}
+		if gotRank != rank {
+			t.Fatalf("Layers[%q].Rank = %d, want %d", path, gotRank, rank)
+		}
 	}
 }
 

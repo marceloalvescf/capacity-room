@@ -16,10 +16,9 @@ type Layer struct {
 // Layers is the table of known layers for this phase. Several of the new
 // layers named here (internal/redact, internal/promtest, internal/config,
 // internal/prom, internal/discovery, internal/snapshot, internal/catalog,
-// internal/document, internal/goldentest) have no package yet; ranks 50 and
-// 60 are kept for collect, resolve, and analysis, added later. A layer with
-// no package yet is not a violation; only a package that matches no layer
-// is.
+// internal/document, internal/goldentest) have no package yet; rank 60 is
+// kept for analysis, added later. A layer with no package yet is not a
+// violation; only a package that matches no layer is.
 var Layers = []Layer{
 	{Path: "internal/guard", Rank: 0},
 	{Path: "internal/typst", Rank: 0},
@@ -30,6 +29,9 @@ var Layers = []Layer{
 	{Path: "internal/config", Rank: 20},
 	{Path: "internal/prom", Rank: 30},
 	{Path: "internal/discovery", Rank: 40},
+	{Path: "internal/resolve", Rank: 50},
+	{Path: "internal/collect", Rank: 55},
+	{Path: "internal/analysis", Rank: 60},
 	{Path: "internal/snapshot", Rank: 70},
 	{Path: "internal/catalog", Rank: 80},
 	{Path: "internal/document", Rank: 90},
