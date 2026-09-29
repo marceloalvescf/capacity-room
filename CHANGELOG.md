@@ -20,3 +20,5 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from the command line.
 - The bearer token is taken from an environment variable or from `--token`,
   and is removed from every message the program prints.
+- A bearer token shorter than 8 characters is refused, because a text that
+  short cannot be told from ordinary words in a message.
