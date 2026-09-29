@@ -352,6 +352,87 @@ func TestQuerySendsTimeInSeconds(t *testing.T) {
 	}
 }
 
+// TestQueryRefusesAMatrix checks that Query accepts a vector result only:
+// a matrix answer is refused, naming the result type it got.
+func TestQueryRefusesAMatrix(t *testing.T) {
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		n := atomic.AddInt32(&calls, 1)
+		w.Header().Set("Content-Type", "application/json")
+		if n == 1 {
+			_, _ = w.Write([]byte(emptySuccessVector))
+			return
+		}
+		_, _ = w.Write([]byte(`{"status":"success","data":{"resultType":"matrix","result":[]}}`))
+	}))
+	defer server.Close()
+
+	sleep, _ := recordingSleep()
+	opts := baseOptions(server.URL + "/api/v1")
+	opts.Sleep = sleep
+	client, err := Connect(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+
+	_, err = client.Query(context.Background(), "up", time.Unix(1000, 0))
+	assertPromError(t, err, KindQuery, "unsupported Prometheus result type: matrix")
+}
+
+// TestAnswerAboveTheLimitIsRefused checks that a body over the client's
+// limit is refused at once, without being parsed or tried again.
+func TestAnswerAboveTheLimitIsRefused(t *testing.T) {
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		n := atomic.AddInt32(&calls, 1)
+		w.Header().Set("Content-Type", "application/json")
+		if n == 1 {
+			_, _ = w.Write([]byte(emptySuccessVector))
+			return
+		}
+		_, _ = w.Write([]byte(emptySuccessVector + "  "))
+	}))
+	defer server.Close()
+
+	sleep, _ := recordingSleep()
+	opts := baseOptions(server.URL + "/api/v1")
+	opts.Sleep = sleep
+	client, err := Connect(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	client.maxResponseBytes = 64
+
+	_, err = client.Query(context.Background(), "up", time.Unix(1000, 0))
+	assertPromError(t, err, KindMetrics, "metrics endpoint answered with more than 256 MiB")
+	if calls != 2 {
+		t.Errorf("requests = %d, want 2 (the connect probe, and the one query attempt)", calls)
+	}
+}
+
+// TestAnswerAtTheLimitIsRead checks that a body of exactly the client's
+// limit is read and parsed normally.
+func TestAnswerAtTheLimitIsRead(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(emptySuccessVector))
+	}))
+	defer server.Close()
+
+	sleep, _ := recordingSleep()
+	opts := baseOptions(server.URL + "/api/v1")
+	opts.Sleep = sleep
+	client, err := Connect(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	client.maxResponseBytes = int64(len(emptySuccessVector))
+
+	if _, err := client.Query(context.Background(), "up", time.Unix(1000, 0)); err != nil {
+		t.Fatalf("Query: %v", err)
+	}
+}
+
 func TestQueryNeverFollowsRedirect(t *testing.T) {
 	var secondHits int32
 	second := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {

@@ -30,6 +30,84 @@ func TestSelectorWithoutMatchers(t *testing.T) {
 	}
 }
 
+// TestSelectorWritesFourGroupsInOrder checks that the four kinds of
+// matcher are written in the order of selector() of the original:
+// Equal, Regex, NotEqual, NotRegex.
+func TestSelectorWritesFourGroupsInOrder(t *testing.T) {
+	sel := Selector{
+		Metric: "m",
+		Equal: map[string]string{
+			"cluster": "prod",
+		},
+		Regex: map[string][]string{
+			"namespace": {"payments", "orders"},
+		},
+		NotRegex: map[string][]string{
+			"container": {"", "POD", "istio-proxy"},
+		},
+	}
+	got := sel.String()
+	want := `m{cluster="prod",namespace=~"(?:payments|orders)",container!~"(?:|POD|istio\\-proxy)"}`
+	if got != want {
+		t.Errorf("String() = %q, want %q", got, want)
+	}
+}
+
+// TestLiteralsEscapesTwice checks the exact text of the original's
+// literal_regex(): each value escaped for a regular expression, then the
+// whole escaped again by Quote.
+func TestLiteralsEscapesTwice(t *testing.T) {
+	got := Literals([]string{"payments", "orders.v2"})
+	want := `(?:payments|orders\\.v2)`
+	if got != want {
+		t.Errorf("Literals(...) = %q, want %q", got, want)
+	}
+}
+
+// TestLiteralsEscapesAQuote checks a value holding a double quote, which
+// is not special to a regular expression and so is left to Quote, applied
+// once to the whole expression.
+func TestLiteralsEscapesAQuote(t *testing.T) {
+	got := Literals([]string{`a"b`})
+	want := `(?:a\"b)`
+	if got != want {
+		t.Errorf("Literals(...) = %q, want %q", got, want)
+	}
+}
+
+// TestLiteralsEscapesEveryListedCharacter checks every character
+// re.escape of Python puts a backslash before: each gets a backslash from
+// the value-level escape, doubled by Quote.
+func TestLiteralsEscapesEveryListedCharacter(t *testing.T) {
+	chars := []string{
+		"(", ")", "[", "]", "{", "}", "?", "*", "+", "-", "|", "^", "$",
+		`\`, ".", "&", "~", "#", " ", "\t", "\n", "\r", "\v", "\f",
+	}
+	for _, c := range chars {
+		got := Literals([]string{c})
+		want := "(?:\\\\" + c + ")"
+		switch c {
+		case `\`:
+			want = `(?:\\\\)`
+		case "\n":
+			want = `(?:\\\n)`
+		}
+		if got != want {
+			t.Errorf("Literals([%q]) = %q, want %q", c, got, want)
+		}
+	}
+}
+
+// TestLiteralsLeavesOtherCharactersAlone checks that a value holding none
+// of the escaped characters passes through unchanged.
+func TestLiteralsLeavesOtherCharactersAlone(t *testing.T) {
+	got := Literals([]string{"a_b/c:d,e=f"})
+	want := "(?:a_b/c:d,e=f)"
+	if got != want {
+		t.Errorf("Literals(...) = %q, want %q", got, want)
+	}
+}
+
 // TestQuote covers the three escaping rules, applied in order: backslashes
 // doubled first, then a line break turned into \n, then a double quote
 // escaped.

@@ -15,9 +15,8 @@ type Sample struct {
 }
 
 // parseVector turns the "data" object of a successful Prometheus answer
-// into samples. Only a "vector" result is accepted; a matrix result is
-// refused as unsupported, because nothing in this package issues a range
-// query yet.
+// into samples. Only a "vector" result is accepted; a "matrix" result, or
+// any other, is refused as unsupported.
 func parseVector(data map[string]interface{}) ([]Sample, error) {
 	resultTypeRaw := data["resultType"]
 	resultType, _ := resultTypeRaw.(string)
@@ -131,13 +130,20 @@ func parseSampleValue(raw interface{}) (value float64, valid bool, err error) {
 // strconv.ParseFloat can read — the two shapes a sample's timestamp or
 // value member is allowed to arrive in.
 func isReadableSampleNumber(v interface{}) bool {
+	_, ok := numberValue(v)
+	return ok
+}
+
+// numberValue reads v as a JSON number (already a float64, however
+// encoding/json decoded it) or a JSON string strconv.ParseFloat can read.
+func numberValue(v interface{}) (float64, bool) {
 	switch value := v.(type) {
 	case float64:
-		return true
+		return value, true
 	case string:
-		_, err := strconv.ParseFloat(value, 64)
-		return err == nil
+		f, err := strconv.ParseFloat(value, 64)
+		return f, err == nil
 	default:
-		return false
+		return 0, false
 	}
 }

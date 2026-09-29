@@ -30,6 +30,13 @@ const maxRetryAfter = 60 * time.Second
 // timeout, once every attempt has been used.
 const errCouldNotConnect = "could not connect to the metrics endpoint"
 
+// MaxResponseBytes is the largest answer the client reads.
+const MaxResponseBytes = 256 << 20
+
+// errAnswerTooLarge is the fixed message of a body over the client's
+// limit, whatever that limit actually is.
+const errAnswerTooLarge = "metrics endpoint answered with more than 256 MiB"
+
 // midCollectionSuffix marks a failure that came after a good probe: the
 // candidate was the right one, something just went wrong along the way.
 const midCollectionSuffix = " mid-collection"
@@ -83,6 +90,9 @@ type Client struct {
 	// whatever shape they take; only a transport the caller controls gets
 	// its errors passed through.
 	foreignTransport bool
+	// maxResponseBytes is the largest answer this client reads. It is
+	// MaxResponseBytes, and only a test of this package sets it smaller.
+	maxResponseBytes int64
 }
 
 // Root returns the API root that answered.
@@ -104,7 +114,10 @@ func Connect(ctx context.Context, opts Options) (*Client, error) {
 
 	for _, root := range roots {
 		answered := false
-		_, err := runQuery(ctx, httpClient, root, opts.Token, opts.Sleep, "vector(1)", nil, &answered, foreignTransport)
+		data, err := runQuery(ctx, opts.Sleep, probeSend(httpClient, root, opts.Token), &answered, foreignTransport, MaxResponseBytes)
+		if err == nil {
+			_, err = parseVector(data)
+		}
 		if err == nil {
 			return &Client{
 				httpClient:       httpClient,
@@ -114,6 +127,7 @@ func Connect(ctx context.Context, opts Options) (*Client, error) {
 				sleep:            opts.Sleep,
 				answered:         true,
 				foreignTransport: foreignTransport,
+				maxResponseBytes: MaxResponseBytes,
 			}, nil
 		}
 
@@ -130,9 +144,12 @@ func Connect(ctx context.Context, opts Options) (*Client, error) {
 // Query asks an instant query at the given time.
 func (c *Client) Query(ctx context.Context, query string, at time.Time) ([]Sample, error) {
 	answered := c.answered
-	samples, err := runQuery(ctx, c.httpClient, c.root, c.token, c.sleep, query, &at, &answered, c.foreignTransport)
+	data, err := runQuery(ctx, c.sleep, querySend(c.httpClient, c.root, c.token, query, at), &answered, c.foreignTransport, c.maxResponseBytes)
 	c.answered = answered
-	return samples, err
+	if err != nil {
+		return nil, err
+	}
+	return parseVector(data)
 }
 
 // buildHTTPClient builds the client Connect and Query share: no proxy, no
@@ -196,19 +213,21 @@ func secondsToDuration(seconds float64) time.Duration {
 // answered tracks whether this client (or this candidate, during Connect)
 // has ever parsed a full, successful answer; it is set to true the moment
 // that happens, which turns a later 404, 405, or unparsable body from a
-// "wrong candidate" signal into a mid-collection failure.
+// "wrong candidate" signal into a mid-collection failure. send performs
+// one attempt; Connect, Query, and QueryRange each give it a different
+// request to send, and share everything else through this one function.
+// The "data" object of a successful answer is returned for the caller to
+// parse according to the result type it accepts.
 func runQuery(
 	ctx context.Context,
-	httpClient *http.Client,
-	root, token string,
 	sleep func(context.Context, time.Duration) error,
-	query string,
-	at *time.Time,
+	send func(ctx context.Context) (*http.Response, error),
 	answered *bool,
 	foreignTransport bool,
-) ([]Sample, error) {
+	maxResponseBytes int64,
+) (map[string]interface{}, error) {
 	for attempt := 0; attempt < attempts; attempt++ {
-		resp, err := postQuery(ctx, httpClient, root, token, query, at)
+		resp, err := send(ctx)
 		if err != nil {
 			if done, failErr := attemptFailed(ctx, sleep, err, foreignTransport, *answered, attempt); done {
 				return nil, failErr
@@ -216,8 +235,11 @@ func runQuery(
 			continue
 		}
 
-		body, readErr := io.ReadAll(resp.Body)
+		body, tooLarge, readErr := readLimitedBody(resp.Body, maxResponseBytes)
 		_ = resp.Body.Close()
+		if tooLarge {
+			return nil, &Error{Kind: KindMetrics, Message: errAnswerTooLarge}
+		}
 		if readErr != nil {
 			if done, failErr := attemptFailed(ctx, sleep, readErr, foreignTransport, *answered, attempt); done {
 				return nil, failErr
@@ -248,6 +270,9 @@ func runQuery(
 			}
 			continue
 
+		case resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusUnprocessableEntity:
+			return nil, &Error{Kind: KindQuery, Status: resp.StatusCode, Message: queryRefusalMessage(resp.StatusCode, body)}
+
 		case resp.StatusCode < 200 || resp.StatusCode > 299:
 			return nil, &Error{Kind: KindQuery, Status: resp.StatusCode, Message: fmt.Sprintf("metrics endpoint returned HTTP %d", resp.StatusCode)}
 		}
@@ -257,13 +282,41 @@ func runQuery(
 			return nil, err
 		}
 		*answered = true
-		return parseVector(data)
+		return data, nil
 	}
 
 	// Every branch above either returns or continues, and the branches that
 	// continue always return instead on the last attempt, so this line is
 	// never reached; it satisfies the compiler's need for a final return.
 	return nil, &Error{Kind: KindMetrics, Message: withMidCollection(errCouldNotConnect, *answered)}
+}
+
+// readLimitedBody reads at most limit+1 bytes of body. tooLarge is true
+// when the body holds more than limit bytes, in which case data is nil and
+// the body is left unread past that point: it is refused, not parsed.
+func readLimitedBody(body io.Reader, limit int64) (data []byte, tooLarge bool, err error) {
+	data, err = io.ReadAll(io.LimitReader(body, limit+1))
+	if err != nil {
+		return nil, false, err
+	}
+	if int64(len(data)) > limit {
+		return nil, true, nil
+	}
+	return data, false, nil
+}
+
+// queryRefusalMessage builds the message for a 400 or 422 answer: the
+// errorType and error text of a Prometheus error body, when the body holds
+// both as strings, or the fixed "HTTP <code>" text otherwise.
+func queryRefusalMessage(status int, body []byte) string {
+	var parsed struct {
+		ErrorType string `json:"errorType"`
+		Error     string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &parsed); err == nil && parsed.ErrorType != "" && parsed.Error != "" {
+		return fmt.Sprintf("Prometheus query failed with type %s: %s", parsed.ErrorType, parsed.Error)
+	}
+	return fmt.Sprintf("metrics endpoint returned HTTP %d", status)
 }
 
 // attemptFailed classifies one attempt's failure — from sending the
@@ -298,17 +351,47 @@ func attemptFailed(
 	return false, nil
 }
 
-// postQuery sends the POST /query request: form-encoded body, no query
-// string on the address, Accept: application/json, and a bearer token when
-// one is given. at nil means the probe, which sends no time field.
-func postQuery(ctx context.Context, httpClient *http.Client, root, token, query string, at *time.Time) (*http.Response, error) {
+// probeSend builds the send function for Connect's probe: `vector(1)`,
+// with no time field.
+func probeSend(httpClient *http.Client, root, token string) func(context.Context) (*http.Response, error) {
+	return func(ctx context.Context) (*http.Response, error) {
+		req, err := newQueryRequest(ctx, root, token, "vector(1)", nil)
+		if err != nil {
+			return nil, err
+		}
+		return httpClient.Do(req)
+	}
+}
+
+// querySend builds the send function for one instant query attempt.
+func querySend(httpClient *http.Client, root, token, query string, at time.Time) func(context.Context) (*http.Response, error) {
+	return func(ctx context.Context) (*http.Response, error) {
+		req, err := newQueryRequest(ctx, root, token, query, &at)
+		if err != nil {
+			return nil, err
+		}
+		return httpClient.Do(req)
+	}
+}
+
+// newQueryRequest builds the POST /query request: form-encoded body, no
+// query string on the address, Accept: application/json, and a bearer
+// token when one is given. at nil means the probe, which sends no time
+// field.
+func newQueryRequest(ctx context.Context, root, token, query string, at *time.Time) (*http.Request, error) {
 	form := url.Values{}
 	form.Set("query", query)
 	if at != nil {
 		form.Set("time", strconv.FormatInt(at.Unix(), 10))
 	}
+	return newFormRequest(ctx, root, "/query", token, form)
+}
 
-	target := strings.TrimSuffix(root, "/") + "/query"
+// newFormRequest builds one POST request against root+path: form-encoded
+// body, no query string on the address, Accept: application/json, and a
+// bearer token when one is given.
+func newFormRequest(ctx context.Context, root, path, token string, form url.Values) (*http.Request, error) {
+	target := strings.TrimSuffix(root, "/") + path
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, target, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
@@ -318,7 +401,7 @@ func postQuery(ctx context.Context, httpClient *http.Client, root, token, query 
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
-	return httpClient.Do(req)
+	return req, nil
 }
 
 // decodeAPIResponse reads the JSON body of a 2xx answer through the
