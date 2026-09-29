@@ -60,11 +60,12 @@ image build enforce.
   package must be added to that table. Nothing outside `cmd/` imports a
   package under `cmd/`, and the root package imports nothing of this module.
   An import of a package that the table does not hold is reported at the
-  import, whatever imports it.
+  import, whatever imports it. An import made only by a test file is outside
+  the rule: a test of a low package may use a higher one.
 - **Reader text lives in the catalog.** A guard reads every string literal of
   the Go files under `internal/` and `cmd/`, test files left out. It reports
   a literal with a letter outside ASCII. In `internal/document` it also
-  reports two words with only spaces or percent signs between them, a word
+  reports two words with only white space or percent signs between them, a word
   that starts with a capital letter followed by a lower-case one, and a
   format verb beside a word. An argument of `errors.New`, `fmt.Errorf`, or a
   function whose name ends in `Errorf` is a diagnostic and is left alone, and
@@ -72,8 +73,10 @@ image build enforce.
   guard takes wrongly for text carries the comment
   `// wording: not reader text, <reason>` at the end of its line.
 - **The catalog agrees with itself.** Every key exists in both languages with
-  the same parameters, every key is used by `internal/document`, and every
-  code of the registries of `internal/discovery` has its entry. An entry uses
+  the same parameters, and every code of the registries of
+  `internal/discovery` has its entry. Every key is used: a key of a family,
+  such as `state.available`, by being a code of its registry, and every other
+  key by being named in `internal/document`. An entry uses
   the one template form `{{.Name}}`. No entry holds a banned term, and none
   holds an em-dash unless it is the em-dash alone.
 - **The production binary holds no test support.** `internal/promtest`,
@@ -156,7 +159,13 @@ the snapshot and nothing else.
 - **Every failure prints one line**, `error: <message>`, on standard error,
   and nothing on standard output.
 - **Output files are written beside their target and renamed.** They follow
-  the umask, which is never read or set.
+  the umask, which is never read or set. A file that the compiler wrote is
+  renamed only when it starts as a PDF does.
+- **A token is at least 8 characters long.** A shorter one cannot be told
+  from ordinary text, and is refused before it reaches the redactor.
+- **The snapshot file has one reading.** The reader walks the file against
+  the contract, letter for letter, and fills the snapshot from what it
+  walked. It names a wrong schema version before anything else.
 - **The probes keep the order of the original**, short cuts included. The
   fake server answers a query with the first recorded answer whose text is
   part of the query, so another order consumes the wrong answers.
@@ -165,7 +174,10 @@ the snapshot and nothing else.
 
 ### Golden snapshots and data files
 
-- `testdata/snapshot/` holds one snapshot for each scenario.
+- `testdata/snapshot/` holds one snapshot for each scenario, and
+  `testdata/queries/` the queries the program sent for it, in order. The
+  recorded answers match a query by a part of its text, so only the list of
+  queries can show that a probe asks what it should.
   `template/tests/capacity/fixtures/command/` holds the data files made from
   them, which are also fixtures of the template and sources of golden pages.
 - A test never writes one. `make update-testdata` does. It needs no image.

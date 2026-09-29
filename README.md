@@ -53,7 +53,9 @@ Section 5.2 of the design lists every key, its default, and its rule.
 
 The token is never written in the file. `metrics.token_env` names the
 environment variable that holds it, or `--token` gives it. When the named
-variable is unset or empty, the run stops.
+variable is unset or empty, the run stops. A token shorter than 8 characters
+is refused: a text that short cannot be told from ordinary words, so it could
+not be removed from the messages the program prints.
 
 ### The four modes
 
@@ -79,7 +81,9 @@ through `--snapshot` followed by `--from-snapshot`, once for each language.
 `KCR_MIN_SEVERITY`, and `KCR_OUTPUT_DIRECTORY`.
 
 Without `--output`, the PDF is written to `report.output_directory` under the
-name `report-resources-<cluster>-<language>-<date>-<time>.pdf`.
+name `report-resources-<cluster>-<language>-<date>-<time>.pdf`. When the
+minimum severity is not `all`, it comes after the cluster:
+`report-resources-<cluster>-<severity>-<language>-<date>-<time>.pdf`.
 
 Add `--verbose` to any mode for a few more lines about the run.
 
@@ -92,8 +96,8 @@ Add `--verbose` to any mode for a few more lines about the run.
 | 2 | Configuration: the file, a flag, a snapshot file that cannot be read |
 | 3 | Metrics: the endpoint could not be reached or did not answer as expected |
 | 4 | Cluster scope: the cluster named is not the one the endpoint shows |
-| 5 | Insufficient capabilities: the endpoint offers none of the metrics a report needs |
-| 6 | Output: the output path, or a missing or wrong `typst` |
+| 5 | Insufficient capabilities: the endpoint offers nothing a report could be made of |
+| 6 | Output: the output path, a missing or wrong `typst`, or a compile that gave no PDF |
 
 A failure prints one line on standard error, which starts with `error: `, and
 nothing on standard output.
