@@ -3,12 +3,16 @@ package snapshot
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 )
@@ -286,15 +290,15 @@ func parentAndKey(t *testing.T, tree map[string]any, path string) (map[string]an
 	return nil, ""
 }
 
-// TestDecodeRefusesAnotherLetterCase builds, for each of the 45 paths of
+// TestDecodeRefusesAnotherLetterCase builds, for each of the 50 paths of
 // the contract, a valid snapshot with one more key beside the real one: the
 // same name, its first letter capitalised, holding a forged value. The
 // walk of the map compares a key letter for letter, so every one of these
 // is refused as an unknown key, never silently merged into the real one by
 // a case-insensitive struct decode.
 func TestDecodeRefusesAnotherLetterCase(t *testing.T) {
-	if len(contractPaths) != 45 {
-		t.Fatalf("contractPaths has %d entries, want 45", len(contractPaths))
+	if len(contractPaths) != 50 {
+		t.Fatalf("contractPaths has %d entries, want 50", len(contractPaths))
 	}
 
 	snap := validSnapshot(t)
@@ -615,6 +619,10 @@ func TestBuildOutputAlwaysPassesDecode(t *testing.T) {
 		CollectionStarted:   time.Date(2025, 12, 31, 23, 55, 0, 0, time.UTC),
 		CollectionCompleted: time.Date(2025, 12, 31, 23, 59, 0, 0, time.UTC),
 	}
+	in.Window = windowFor(in.Config.Analysis, in.EmittedAt)
+	in.Collected = collect.Collected{
+		Namespaces: collect.Result[collect.Namespace]{Rows: baseCollectedNamespaces(in.Config.Cluster.Namespaces)},
+	}
 
 	snap, err := Build(in)
 	if err != nil {
@@ -851,7 +859,7 @@ func TestDecodeRefusesAMissingKey(t *testing.T) {
 	}
 }
 
-// contractPaths is the 45 key paths of the snapshot contract, written by
+// contractPaths is the 50 key paths of the snapshot contract, written by
 // hand, in the order the types declare them. TestKeyPathsAreTheContract
 // compares it against contractKeyPaths(3), the same list built by walking
 // the types with reflect, so that the two can actually drift apart if a
@@ -896,8 +904,13 @@ var contractPaths = []string{
 	"scope.excluded_containers",
 	"quality",
 	"quality.capabilities",
+	"quality.warnings",
+	"quality.notices",
 	"quality.collection_started_at",
 	"quality.collection_completed_at",
+	"namespaces",
+	"workloads",
+	"findings",
 	"quality.capabilities[3].name",
 	"quality.capabilities[3].state",
 	"quality.capabilities[3].strategy",
@@ -949,7 +962,7 @@ func TestDecodeReportsTheFirstMissingKey(t *testing.T) {
 // TestDecodeRefusesNull mirrors TestDecodeRefusesAMissingKey exactly, but
 // leaves every key in place and sets its value to JSON null instead of
 // removing it: the writer never writes null, so a snapshot holding one at
-// any of the 45 paths of the contract must be refused, by its own message.
+// any of the 50 paths of the contract must be refused, by its own message.
 func TestDecodeRefusesNull(t *testing.T) {
 	snap := validSnapshot(t)
 	good, err := Encode(snap)
@@ -1106,6 +1119,480 @@ func TestKeyWalkRefusesWhatItDoesNotKnow(t *testing.T) {
 			}
 			if err.Error() != want {
 				t.Fatalf("checkKeys() = %q, want %q", err.Error(), want)
+			}
+		})
+	}
+}
+
+// TestKeyWalkRefusesOtherPointersAndMaps covers that the walk's new support
+// for *float64 and map[string]float64 does not widen to any other pointer
+// or any other map: a *string and a map[string]string are refused exactly
+// as TestKeyWalkRefusesWhatItDoesNotKnow already covers for the shapes
+// this task adds no support for.
+func TestKeyWalkRefusesOtherPointersAndMaps(t *testing.T) {
+	tests := []struct {
+		name string
+		typ  reflect.Type
+	}{
+		{"a pointer that is not *float64", reflect.TypeOf(keyWalkPointerField{})},
+		{"a map that is not map[string]float64", reflect.TypeOf(keyWalkMapField{})},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := checkKeys(tt.typ, map[string]any{}, "")
+			want := fmt.Sprintf(unsupportedKeyFmt, tt.typ.Name(), "Foo")
+			if err == nil {
+				t.Fatalf("checkKeys() = nil, want error %q", want)
+			}
+			if err.Error() != want {
+				t.Fatalf("checkKeys() = %q, want %q", err.Error(), want)
+			}
+		})
+	}
+}
+
+// validSnapshotWithRows returns a Snapshot that passes Check(), with one
+// namespace, one workload, one notice, and the eight findings of the
+// "direct-complete" scenario (see directCompleteResources in
+// build_test.go), so a table test can mutate an element of any of the new
+// lists.
+func validSnapshotWithRows(t *testing.T) Snapshot {
+	t.Helper()
+	in := baseInput()
+	in.Config.Cluster.Namespaces = []string{"payments"}
+
+	resources := directCompleteResources()
+	namespaces := []collect.Namespace{{
+		Name: "payments", Pods: 3, PodsKnown: true,
+		RequestsLimitsState: discovery.StateAvailable, Resources: resources,
+	}}
+	workloads := []collect.Workload{{
+		Namespace: "payments", Kind: "Deployment", Name: "payments-web",
+		Pods: 1, PodsKnown: true,
+		RequestsLimitsState: discovery.StateAvailable, Resources: resources,
+	}}
+	collected := collect.Collected{
+		Namespaces: collect.Result[collect.Namespace]{
+			Rows:    namespaces,
+			Notices: []collect.Message{{Code: collect.NoticeJobsOmitted, Params: map[string]float64{"count": 2}}},
+		},
+		Workloads: collect.Result[collect.Workload]{Rows: workloads},
+	}
+	in.Collected = collected
+	in.Findings = analysis.All(collected, in.Config.Thresholds)
+
+	return mustBuild(t, in)
+}
+
+// TestDecodeAcceptsNullNumber covers that a *float64 field, such as
+// namespaces[0].cpu_usage.average, reads a JSON null as a nil pointer.
+func TestDecodeAcceptsNullNumber(t *testing.T) {
+	snap := validSnapshotWithRows(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	data := nullJSONKey(t, good, "namespaces[0].cpu_usage.average")
+
+	got, err := Decode(data)
+	if err != nil {
+		t.Fatalf("Decode() error = %v, want nil", err)
+	}
+	if got.Namespaces[0].CPUUsage.Average != nil {
+		t.Fatalf("Namespaces[0].CPUUsage.Average = %v, want nil", *got.Namespaces[0].CPUUsage.Average)
+	}
+}
+
+// TestDecodeRefusesNullElsewhere covers that null is refused, by path, at a
+// text, at a list, at an object of parameters, and inside it: the only
+// place null is accepted is a *float64 field, covered by
+// TestDecodeAcceptsNullNumber.
+func TestDecodeRefusesNullElsewhere(t *testing.T) {
+	snap := validSnapshotWithRows(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	tests := []struct {
+		name string
+		path string
+	}{
+		{"a text", "namespaces[0].name"},
+		{"a list", "findings[0].evidence"},
+		{"an object of parameters", "quality.notices[0].params"},
+		{"inside an object of parameters", "quality.notices[0].params.count"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := nullJSONKey(t, good, tt.path)
+
+			_, err := Decode(data)
+			want := fmt.Sprintf("snapshot holds null at %s", tt.path)
+			if err == nil {
+				t.Fatalf("Decode() = nil, want error %q", want)
+			}
+			if err.Error() != want {
+				t.Fatalf("Decode() = %q, want %q", err.Error(), want)
+			}
+		})
+	}
+}
+
+// setKeyText sets the key named by path (dot-separated, with an optional
+// "[N]" on a segment that names an array) to a JSON string in tree, the
+// generic decoding of a document, in place of setKeyNull's null.
+func setKeyText(tree map[string]any, path, value string) {
+	segments := strings.Split(path, ".")
+	var cur any = tree
+
+	for i, seg := range segments {
+		name, idx, hasIdx := splitIndex(seg)
+		m, ok := cur.(map[string]any)
+		if !ok {
+			return
+		}
+		if i == len(segments)-1 {
+			m[name] = value
+			return
+		}
+
+		next, ok := m[name]
+		if !ok {
+			return
+		}
+		if hasIdx {
+			arr, ok := next.([]any)
+			if !ok || idx >= len(arr) {
+				return
+			}
+			cur = arr[idx]
+		} else {
+			cur = next
+		}
+	}
+}
+
+// textJSONKey decodes good into a generic tree, sets the value at path to
+// the JSON string value, and re-encodes it.
+func textJSONKey(t *testing.T, good []byte, path, value string) []byte {
+	t.Helper()
+	var tree map[string]any
+	if err := json.Unmarshal(good, &tree); err != nil {
+		t.Fatalf("Unmarshal(good): %v", err)
+	}
+	setKeyText(tree, path, value)
+	data, err := json.Marshal(tree)
+	if err != nil {
+		t.Fatalf("Marshal(tree): %v", err)
+	}
+	return data
+}
+
+// TestDecodeRefusesTextAsNumber covers a text where a *float64 field and
+// where a map[string]float64 entry expect a number.
+func TestDecodeRefusesTextAsNumber(t *testing.T) {
+	snap := validSnapshotWithRows(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	tests := []struct {
+		name string
+		path string
+	}{
+		{"a *float64 field", "namespaces[0].cpu_usage.average"},
+		{"an entry of a map[string]float64 field", "quality.notices[0].params.count"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := textJSONKey(t, good, tt.path, "1")
+
+			_, err := Decode(data)
+			want := fmt.Sprintf("snapshot holds a value of the wrong kind at %s", tt.path)
+			if err == nil {
+				t.Fatalf("Decode() = nil, want error %q", want)
+			}
+			if err.Error() != want {
+				t.Fatalf("Decode() = %q, want %q", err.Error(), want)
+			}
+		})
+	}
+}
+
+// TestDecodeRefusesUnknownKeyInNewSections covers a forged key beside a
+// real one in each of the six new shapes: a namespace, a workload, a
+// statistic, a finding, an evidence, and a message.
+func TestDecodeRefusesUnknownKeyInNewSections(t *testing.T) {
+	snap := validSnapshotWithRows(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	tests := []struct {
+		name string
+		path string
+	}{
+		{"a namespace", "namespaces[0]"},
+		{"a workload", "workloads[0]"},
+		{"a statistic", "namespaces[0].cpu_usage"},
+		{"a finding", "findings[0]"},
+		{"an evidence", "findings[0].evidence[0]"},
+		{"a message", "quality.notices[0]"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var tree map[string]any
+			if err := json.Unmarshal(good, &tree); err != nil {
+				t.Fatalf("Unmarshal(good): %v", err)
+			}
+			parent, _ := parentAndKey(t, tree, tt.path+".bogus")
+			parent["bogus"] = true
+			data, err := json.Marshal(tree)
+			if err != nil {
+				t.Fatalf("Marshal(tree): %v", err)
+			}
+
+			_, err = Decode(data)
+			want := fmt.Sprintf("snapshot holds an unknown key: %s.bogus", tt.path)
+			if err == nil {
+				t.Fatalf("Decode() = nil, want error %q", want)
+			}
+			if err.Error() != want {
+				t.Fatalf("Decode() = %q, want %q", err.Error(), want)
+			}
+		})
+	}
+}
+
+// TestDecodeRefusesMissingNewSection reads a snapshot of part 2.1, stored
+// as testdata/schema-1.0-before-rows.json before this task added
+// namespaces, workloads, findings, and quality's warnings and notices:
+// checkKeys visits quality's fields in their declared order, so the first
+// one this fixture lacks, warnings, is the one Decode reports.
+func TestDecodeRefusesMissingNewSection(t *testing.T) {
+	data, err := os.ReadFile("testdata/schema-1.0-before-rows.json")
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+
+	_, err = Decode(data)
+	want := "snapshot lacks the key quality.warnings"
+	if err == nil {
+		t.Fatalf("Decode() = nil, want error %q", want)
+	}
+	if err.Error() != want {
+		t.Fatalf("Decode() = %q, want %q", err.Error(), want)
+	}
+}
+
+// TestEncodeSortsParams covers that an object of parameters is written
+// with its keys sorted, whatever order Params holds them in: this is
+// Go's own encoding/json behaviour for a map, so the test exercises it
+// with more than one key to actually observe the order.
+func TestEncodeSortsParams(t *testing.T) {
+	snap := validSnapshot(t)
+	snap.Quality.Notices = []Message{{
+		Code:   collect.NoticeJobsOmitted,
+		Params: map[string]float64{"zebra": 1, "alpha": 2, "middle": 3},
+	}}
+
+	data, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	alpha := strings.Index(string(data), `"alpha"`)
+	middle := strings.Index(string(data), `"middle"`)
+	zebra := strings.Index(string(data), `"zebra"`)
+	if alpha < 0 || middle < 0 || zebra < 0 {
+		t.Fatalf("Encode() does not hold every key: %s", data)
+	}
+	if alpha >= middle || middle >= zebra {
+		t.Fatalf("Encode() does not sort the keys of params: %s", data)
+	}
+}
+
+// TestCheckAcceptsTwoWorkloadsOfOneName covers that two workloads of one
+// namespace and one name, kept apart by kind, pass Check: rule 6 refuses a
+// repeat only when namespace, name, and kind all agree.
+func TestCheckAcceptsTwoWorkloadsOfOneName(t *testing.T) {
+	in := baseInput()
+	in.Config.Cluster.Namespaces = []string{"payments"}
+	in.Collected = collect.Collected{
+		Namespaces: collect.Result[collect.Namespace]{Rows: []collect.Namespace{
+			{Name: "payments", Resources: unavailableResources()},
+		}},
+		Workloads: collect.Result[collect.Workload]{Rows: []collect.Workload{
+			{Namespace: "payments", Kind: "Deployment", Name: "api", Resources: unavailableResources()},
+			{Namespace: "payments", Kind: "StatefulSet", Name: "api", Resources: unavailableResources()},
+		}},
+	}
+
+	if _, err := Build(in); err != nil {
+		t.Fatalf("Build() error = %v, want nil", err)
+	}
+}
+
+// TestCheckRules covers each of the nine rules Check gained for the
+// namespaces, the workloads, and the findings, and each part of a rule
+// that carries its own message, against validSnapshotWithRows: one
+// namespace ("payments"), one workload ("payments/Deployment/payments-web"),
+// one notice, and the eight findings of the "direct-complete" scenario.
+func TestCheckRules(t *testing.T) {
+	tests := []struct {
+		name    string
+		mutate  func(*Snapshot)
+		message string
+	}{
+		// Rule 1: a warning or a notice code is in its registry; no message
+		// stands twice in its list.
+		{"quality.warnings[0].code unknown", func(s *Snapshot) {
+			s.Quality.Warnings = []Message{{Code: "BOGUS", Params: map[string]float64{}}}
+		}, `quality.warnings[0].code has an unknown value: "BOGUS"`},
+		{"quality.notices[0].code unknown", func(s *Snapshot) {
+			s.Quality.Notices = []Message{{Code: "BOGUS", Params: map[string]float64{}}}
+		}, `quality.notices[0].code has an unknown value: "BOGUS"`},
+		{"quality.warnings holds a repeated message", func(s *Snapshot) {
+			s.Quality.Warnings = []Message{
+				{Code: collect.WarningNamespaceUsageIncomplete, Params: map[string]float64{}},
+				{Code: collect.WarningNamespaceUsageIncomplete, Params: map[string]float64{}},
+			}
+		}, fmt.Sprintf("quality.warnings holds a repeated message: %q", collect.WarningNamespaceUsageIncomplete)},
+		{"quality.notices holds a repeated message", func(s *Snapshot) {
+			s.Quality.Notices = []Message{
+				{Code: collect.NoticeJobsOmitted, Params: map[string]float64{"count": 1}},
+				{Code: collect.NoticeJobsOmitted, Params: map[string]float64{"count": 1}},
+			}
+		}, fmt.Sprintf("quality.notices holds a repeated message: %q", collect.NoticeJobsOmitted)},
+
+		// Rule 2: a notice's parameters are exactly the names of
+		// collect.NoticeParams; a warning has none; a count is a whole
+		// number above zero.
+		{"quality.warnings[0].params must be empty", func(s *Snapshot) {
+			s.Quality.Warnings = []Message{{Code: collect.WarningNamespaceUsageIncomplete, Params: map[string]float64{"x": 1}}}
+		}, "quality.warnings[0].params must be empty"},
+		{"quality.notices[0].params must hold exactly", func(s *Snapshot) {
+			s.Quality.Notices[0].Params = map[string]float64{}
+		}, "quality.notices[0].params must hold exactly: count"},
+		{"quality.notices[0].params.count not whole", func(s *Snapshot) {
+			s.Quality.Notices[0].Params = map[string]float64{"count": 2.5}
+		}, "quality.notices[0].params.count must be a whole number above zero"},
+
+		// Rule 3: the state of a statistic is one of the three; value has a
+		// number; any other state has none; no number is NaN or infinite.
+		{"namespaces[0].cpu_usage.state unknown", func(s *Snapshot) {
+			s.Namespaces[0].CPUUsage.State = "bogus"
+		}, `namespaces[0].cpu_usage.state has an unknown value: "bogus"`},
+		{"namespaces[0].cpu_usage has state value and no number", func(s *Snapshot) {
+			s.Namespaces[0].CPUUsage = Statistics{State: collect.StateValue}
+		}, `namespaces[0].cpu_usage has state "value" and no number`},
+		{"namespaces[0].cpu_usage.average set for a state that is not value", func(s *Snapshot) {
+			s.Namespaces[0].CPUUsage.State = collect.StateUnavailable
+		}, `namespaces[0].cpu_usage.average is set for a state that is not "value"`},
+		{"namespaces[0].cpu_usage.average not finite", func(s *Snapshot) {
+			s.Namespaces[0].CPUUsage.Average = ptr(math.NaN())
+		}, "namespaces[0].cpu_usage.average is not a finite number"},
+
+		// Rule 4: a pod count, when present, is a whole number, zero or
+		// above.
+		{"namespaces[0].pods not whole", func(s *Snapshot) {
+			s.Namespaces[0].Pods = ptr(2.5)
+		}, "namespaces[0].pods must be a whole number, zero or above"},
+		{"namespaces[0].pods negative", func(s *Snapshot) {
+			s.Namespaces[0].Pods = ptr(-1)
+		}, "namespaces[0].pods must be a whole number, zero or above"},
+
+		// Rule 5: the namespaces are sorted, none twice, and are exactly
+		// the namespaces of the scope.
+		{"namespaces not sorted or holds a repeat", func(s *Snapshot) {
+			s.Namespaces = []Namespace{s.Namespaces[0], s.Namespaces[0]}
+		}, "namespaces is not sorted or holds a repeated value"},
+		{"namespaces does not match scope.namespaces", func(s *Snapshot) {
+			s.Namespaces[0].Name = "other"
+		}, "namespaces does not name exactly the namespaces of scope.namespaces"},
+
+		// Rule 6: the workloads are sorted, none twice; each has a name, a
+		// kind, and a namespace of the scope; none has the kind Job.
+		{"workloads not sorted or holds a repeat", func(s *Snapshot) {
+			s.Workloads = append(s.Workloads, s.Workloads[0])
+		}, "workloads is not sorted or holds a repeated value"},
+		{"workloads[0].name empty", func(s *Snapshot) {
+			s.Workloads[0].Name = ""
+		}, "workloads[0].name is empty"},
+		{"workloads[0].kind empty", func(s *Snapshot) {
+			s.Workloads[0].Kind = ""
+		}, "workloads[0].kind is empty"},
+		{"workloads[0].namespace not of the scope", func(s *Snapshot) {
+			s.Workloads[0].Namespace = "other-ns"
+		}, "workloads[0].namespace is not a namespace of the scope"},
+		{"workloads[0].kind is Job", func(s *Snapshot) {
+			s.Workloads[0].Kind = "Job"
+		}, "workloads[0].kind must not be Job"},
+
+		// Rule 7: a finding agrees with its definition of analysis.Registry;
+		// its confidence is one of the three; its evidence holds no number
+		// that is NaN or infinite.
+		{"findings[0].code unknown", func(s *Snapshot) {
+			s.Findings[0].Code = "BOGUS_CODE"
+		}, `findings[0].code has an unknown value: "BOGUS_CODE"`},
+		{"findings[0].severity does not match its definition", func(s *Snapshot) {
+			s.Findings[0].Severity = analysis.SeverityHealthy
+		}, "findings[0].severity does not match the definition of NAMESPACE_MEMORY_LIMIT_CRITICAL"},
+		{"findings[0].scope_type does not match its definition", func(s *Snapshot) {
+			s.Findings[0].ScopeType = analysis.ScopeWorkload
+		}, "findings[0].scope_type does not match the definition of NAMESPACE_MEMORY_LIMIT_CRITICAL"},
+		{"findings[0].evidence does not match its definition", func(s *Snapshot) {
+			s.Findings[0].Evidence = []Evidence{{Name: "only_one", Value: 1}}
+		}, "findings[0].evidence does not match the definition of NAMESPACE_MEMORY_LIMIT_CRITICAL"},
+		{"findings[0].confidence unknown", func(s *Snapshot) {
+			s.Findings[0].Confidence = "bogus"
+		}, `findings[0].confidence has an unknown value: "bogus"`},
+		{"findings[0].evidence[0].value not finite", func(s *Snapshot) {
+			s.Findings[0].Evidence[0].Value = math.Inf(1)
+		}, "findings[0].evidence[0].value is not a finite number"},
+
+		// Rule 8: a namespace finding names a namespace of the snapshot and
+		// has an empty kind; a workload finding names a workload of the
+		// snapshot.
+		{"findings[0].scope_kind must be empty for a namespace finding", func(s *Snapshot) {
+			s.Findings[0].ScopeKind = "Deployment"
+		}, "findings[0].scope_kind must be empty for a namespace finding"},
+		{"findings[0].scope_name not a namespace of the snapshot", func(s *Snapshot) {
+			s.Findings[0].ScopeName = "unknown-namespace"
+		}, "findings[0].scope_name is not a namespace of the snapshot"},
+		{"findings[2].scope_name not a workload of the snapshot", func(s *Snapshot) {
+			s.Findings[2].ScopeName = "payments/unknown-workload"
+		}, "findings[2].scope_name is not a workload of the snapshot"},
+
+		// Rule 9: the findings are in the order of analysis.Sort, none
+		// twice.
+		{"findings holds a repeated finding", func(s *Snapshot) {
+			s.Findings = append(s.Findings, s.Findings[0])
+		}, "findings holds a repeated finding"},
+		{"findings not in the order of analysis.Sort", func(s *Snapshot) {
+			s.Findings[0], s.Findings[1] = s.Findings[1], s.Findings[0]
+		}, "findings is not in the order analysis.Sort gives"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			snap := validSnapshotWithRows(t)
+			tt.mutate(&snap)
+
+			err := snap.Check()
+			if err == nil {
+				t.Fatalf("Check() = nil, want error %q", tt.message)
+			}
+			if err.Error() != tt.message {
+				t.Fatalf("Check() = %q, want %q", err.Error(), tt.message)
 			}
 		})
 	}

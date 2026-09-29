@@ -22,6 +22,7 @@ import (
 
 	kcr "github.com/marceloalvescf/k8s-capacity-report"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
+	collectpkg "github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
@@ -531,6 +532,11 @@ func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *c
 		return nil, err
 	}
 
+	window, err := collectpkg.NewWindow(loaded.Config.Analysis, emittedAt)
+	if err != nil {
+		return nil, err
+	}
+
 	snap, err := snapshot.Build(snapshot.Input{
 		ID:                  reportID,
 		GeneratorVersion:    env.Version,
@@ -541,6 +547,8 @@ func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *c
 		Capabilities:        c.capabilities,
 		CollectionStarted:   emittedAt,
 		CollectionCompleted: c.collectionCompletedAt,
+		Window:              window,
+		Collected:           collectpkg.Collected{},
 	})
 	if err != nil {
 		return nil, err
@@ -612,6 +620,11 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 		return nil, err
 	}
 
+	window, err := collectpkg.NewWindow(loaded.Config.Analysis, emittedAt)
+	if err != nil {
+		return nil, err
+	}
+
 	snap, err := snapshot.Build(snapshot.Input{
 		ID:                  reportID,
 		GeneratorVersion:    env.Version,
@@ -622,6 +635,8 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 		Capabilities:        c.capabilities,
 		CollectionStarted:   emittedAt,
 		CollectionCompleted: c.collectionCompletedAt,
+		Window:              window,
+		Collected:           collectpkg.Collected{},
 	})
 	if err != nil {
 		return nil, err

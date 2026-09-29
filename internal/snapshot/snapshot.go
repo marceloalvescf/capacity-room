@@ -3,9 +3,9 @@
 // reads and nothing else. The same snapshot gives a report in Portuguese or
 // in English, so it holds codes and numbers, never a sentence.
 //
-// This part of the project fills three of its sections: report, scope, and
-// quality. Later parts add summary, namespaces, workloads, HPAs, nodes,
-// nodepools, findings, and recommendations (spec 8).
+// This part of the project fills six of its sections: report, scope,
+// quality, namespaces, workloads, and findings. Later parts add summary,
+// HPAs, nodes, nodepools, and recommendations (spec 8).
 package snapshot
 
 // SchemaVersion is the only schema version this package writes, and the
@@ -14,10 +14,13 @@ const SchemaVersion = "1.0"
 
 // Snapshot is the stored contract of one report run.
 type Snapshot struct {
-	SchemaVersion string  `json:"schema_version"`
-	Report        Report  `json:"report"`
-	Scope         Scope   `json:"scope"`
-	Quality       Quality `json:"quality"`
+	SchemaVersion string      `json:"schema_version"`
+	Report        Report      `json:"report"`
+	Scope         Scope       `json:"scope"`
+	Quality       Quality     `json:"quality"`
+	Namespaces    []Namespace `json:"namespaces"` // sorted, never nil
+	Workloads     []Workload  `json:"workloads"`  // sorted, never nil
+	Findings      []Finding   `json:"findings"`   // sorted, never nil
 }
 
 // Report identifies the run and carries the settings that shaped it: the
@@ -80,9 +83,12 @@ type Scope struct {
 }
 
 // Quality holds what the run could tell about its own coverage: the nine
-// capabilities, and when collection started and completed.
+// capabilities, the warnings and notices the collectors raised, and when
+// collection started and completed.
 type Quality struct {
 	Capabilities          []Capability `json:"capabilities"`
+	Warnings              []Message    `json:"warnings"` // never nil
+	Notices               []Message    `json:"notices"`  // never nil
 	CollectionStartedAt   string       `json:"collection_started_at"`
 	CollectionCompletedAt string       `json:"collection_completed_at"`
 }
@@ -96,4 +102,74 @@ type Capability struct {
 	Strategy string   `json:"strategy"`
 	Evidence []string `json:"evidence"` // never nil
 	Reasons  []string `json:"reasons"`  // reason codes, never nil
+}
+
+// Message is a warning or a notice: a code and its named numbers, spec 8.2.
+type Message struct {
+	Code   string             `json:"code"`
+	Params map[string]float64 `json:"params"` // never nil
+}
+
+// Statistics is a series reduced to four numbers, spec 8.1. A number is nil
+// when the state is not value.
+type Statistics struct {
+	State   string   `json:"state"`
+	Average *float64 `json:"average"`
+	Minimum *float64 `json:"minimum"`
+	Peak    *float64 `json:"peak"`
+	Current *float64 `json:"current"`
+}
+
+// Namespace is the row of one namespace, spec 8, "namespaces".
+type Namespace struct {
+	Name                 string     `json:"name"`
+	Pods                 *float64   `json:"pods"` // nil when unknown
+	Approximate          bool       `json:"approximate"`
+	CPUUsage             Statistics `json:"cpu_usage"`
+	MemoryUsage          Statistics `json:"memory_usage"`
+	CPURequests          Statistics `json:"cpu_requests"`
+	MemoryRequests       Statistics `json:"memory_requests"`
+	CPULimits            Statistics `json:"cpu_limits"`
+	MemoryLimits         Statistics `json:"memory_limits"`
+	CPURequestPercent    Statistics `json:"cpu_request_percent"`
+	MemoryRequestPercent Statistics `json:"memory_request_percent"`
+	CPULimitPercent      Statistics `json:"cpu_limit_percent"`
+	MemoryLimitPercent   Statistics `json:"memory_limit_percent"`
+}
+
+// Workload is the row of one workload, spec 8, "workloads".
+type Workload struct {
+	Namespace            string     `json:"namespace"`
+	Kind                 string     `json:"kind"`
+	Name                 string     `json:"name"`
+	Pods                 *float64   `json:"pods"` // nil when unknown
+	Approximate          bool       `json:"approximate"`
+	CPUUsage             Statistics `json:"cpu_usage"`
+	MemoryUsage          Statistics `json:"memory_usage"`
+	CPURequests          Statistics `json:"cpu_requests"`
+	MemoryRequests       Statistics `json:"memory_requests"`
+	CPULimits            Statistics `json:"cpu_limits"`
+	MemoryLimits         Statistics `json:"memory_limits"`
+	CPURequestPercent    Statistics `json:"cpu_request_percent"`
+	MemoryRequestPercent Statistics `json:"memory_request_percent"`
+	CPULimitPercent      Statistics `json:"cpu_limit_percent"`
+	MemoryLimitPercent   Statistics `json:"memory_limit_percent"`
+}
+
+// Evidence is one named number of a finding.
+type Evidence struct {
+	Name  string  `json:"name"`
+	Value float64 `json:"value"`
+}
+
+// Finding is one judgment of the analysis, spec 7.1. It carries no
+// sentence.
+type Finding struct {
+	Code       string     `json:"code"`
+	Severity   string     `json:"severity"`
+	ScopeType  string     `json:"scope_type"`
+	ScopeKind  string     `json:"scope_kind"`
+	ScopeName  string     `json:"scope_name"`
+	Evidence   []Evidence `json:"evidence"` // never nil
+	Confidence string     `json:"confidence"`
 }

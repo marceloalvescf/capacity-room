@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
@@ -128,6 +129,11 @@ func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, []
 		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: checking the capabilities: %w", scenario.Name, err)
 	}
 
+	window, err := collect.NewWindow(cfg.Analysis, emittedAt)
+	if err != nil {
+		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: building the window: %w", scenario.Name, err)
+	}
+
 	snap, err := snapshot.Build(snapshot.Input{
 		ID:                  reportID,
 		GeneratorVersion:    generatorVersion,
@@ -138,6 +144,8 @@ func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, []
 		Capabilities:        capabilities,
 		CollectionStarted:   emittedAt,
 		CollectionCompleted: emittedAt.Add(collectionSpan),
+		Window:              window,
+		Collected:           collect.Collected{},
 	})
 	if err != nil {
 		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: building the snapshot: %w", scenario.Name, err)
