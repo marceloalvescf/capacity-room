@@ -101,3 +101,75 @@ func findCapability(capabilities []discovery.Capability, name string) (discovery
 	}
 	return discovery.Capability{}, fmt.Errorf("collect: input capabilities do not name %q", name)
 }
+
+// Collected is the result of every collector of a run.
+type Collected struct {
+	Namespaces Result[Namespace]
+	Workloads  Result[Workload]
+}
+
+// All runs the collectors in the order of the original: namespaces, then
+// workloads. It stops at the first error and returns it.
+func All(ctx context.Context, q Querier, in Input) (Collected, error) {
+	namespaces, err := Namespaces(ctx, q, in)
+	if err != nil {
+		return Collected{}, err
+	}
+	workloads, err := Workloads(ctx, q, in)
+	if err != nil {
+		return Collected{}, err
+	}
+	return Collected{Namespaces: namespaces, Workloads: workloads}, nil
+}
+
+// Warnings joins the warnings of both collectors, in the order of the
+// collectors, each message held once.
+func (c Collected) Warnings() []Message {
+	return dedupMessages(c.Namespaces.Warnings, c.Workloads.Warnings)
+}
+
+// Notices joins the notices of both collectors, in the order of the
+// collectors, each message held once.
+func (c Collected) Notices() []Message {
+	return dedupMessages(c.Namespaces.Notices, c.Workloads.Notices)
+}
+
+// dedupMessages concatenates groups in the order given, keeping the first
+// occurrence of a message and dropping a later one equal to it by code and
+// parameters.
+func dedupMessages(groups ...[]Message) []Message {
+	joined := []Message{}
+	for _, group := range groups {
+		for _, message := range group {
+			if !holdsMessage(joined, message) {
+				joined = append(joined, message)
+			}
+		}
+	}
+	return joined
+}
+
+// holdsMessage reports whether messages holds one equal to message by code
+// and parameters.
+func holdsMessage(messages []Message, message Message) bool {
+	for _, existing := range messages {
+		if existing.Code == message.Code && paramsEqual(existing.Params, message.Params) {
+			return true
+		}
+	}
+	return false
+}
+
+// paramsEqual reports whether a and b hold the same keys, each with the
+// same value.
+func paramsEqual(a, b map[string]float64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for key, value := range a {
+		if other, ok := b[key]; !ok || other != value {
+			return false
+		}
+	}
+	return true
+}
