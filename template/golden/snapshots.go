@@ -185,31 +185,47 @@ var Snapshots = []Snapshot{
 		Name:   "command-complete-pt",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/direct-complete.pt-BR.json",
-		Pages:  []int{1, 2},
+		Pages:  []int{1, 2, 3},
 		Protects: "the report as the command writes it, from a data file " +
-			"that Go built and no hand wrote: a numbered appendix that " +
-			"follows the opening page with no empty page between, where " +
-			"two page breaks stand in a row",
+			"that Go built and no hand wrote: the outline of three " +
+			"numbered sections, the capacity of a namespace and the " +
+			"resources of a workload on one page, and the appendix on " +
+			"the next, with no empty page between",
 	},
 	{
 		Name:   "command-complete-en",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/direct-complete.en.json",
-		Pages:  []int{1, 2},
+		Pages:  []int{1, 2, 3},
 		Protects: "the same report in English, with the wording of the " +
-			"catalog: the only pages that show the English catalog as " +
-			"the command prints it",
+			"catalog: the English headers of the ten columns of the " +
+			"workload table, each wrapped inside its own cell",
 	},
 	{
 		Name:   "command-partial-en",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/partial-data.en.json",
-		Pages:  []int{2},
+		Pages:  []int{2, 3},
 		Omits: "page 1: it differs from page 1 of command-complete-en " +
 			"only in the three counts of the data quality list, which " +
 			"are plain text",
 		Protects: "the three states in the coverage column of one table, " +
 			"each with its mark, and a remark that wraps beside an " +
-			"evidence sentence that wraps",
+			"evidence sentence that wraps; and, in English, a namespace " +
+			"whose requests and limits are unavailable and whose four " +
+			"ratios have no base",
+	},
+	{
+		Name:   "command-edge-pt",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/command/edge-values.pt-BR.json",
+		Pages:  []int{2, 3},
+		Omits: "page 1: it equals page 1 of command-complete-pt, the " +
+			"opening page of the same cluster with the same nine " +
+			"capabilities available",
+		Protects: "a request of zero printed as a number beside a limit " +
+			"that is unavailable; the mark of no base in a cell of the " +
+			"workload table, where its text wraps to two lines; and the " +
+			"interpretation notes, two rows under the appendix",
 	},
 }
