@@ -1,0 +1,431 @@
+{
+  "scenario": "edge-values",
+  "source": "kubernetes-report 1.11.0",
+  "period_start": 1784050200,
+  "period_end": 1784136600,
+  "step": "5m",
+  "namespace_collection": "available",
+  "workload_collection": "available",
+  "namespaces": [
+    {
+      "namespace": "payments",
+      "active_pods": 3,
+      "approximate_ratios": true,
+      "requests_limits_status": "available",
+      "cpu_usage": {
+        "average": 0.5,
+        "minimum": 0.5,
+        "peak": 0.5,
+        "current": 0.5,
+        "no_base": false
+      },
+      "memory_usage": {
+        "average": 105.0,
+        "minimum": 60.0,
+        "peak": 150.0,
+        "current": 60.0,
+        "no_base": false
+      },
+      "cpu_requests": {
+        "average": 0.0,
+        "minimum": 0.0,
+        "peak": 0.0,
+        "current": 0.0,
+        "no_base": false
+      },
+      "memory_requests": {
+        "average": 200.0,
+        "minimum": 200.0,
+        "peak": 200.0,
+        "current": 200.0,
+        "no_base": false
+      },
+      "cpu_limits": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": false
+      },
+      "memory_limits": {
+        "average": 300.0,
+        "minimum": 300.0,
+        "peak": 300.0,
+        "current": 300.0,
+        "no_base": false
+      },
+      "cpu_request_percent": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": true
+      },
+      "memory_request_percent": {
+        "average": 52.5,
+        "minimum": 30.0,
+        "peak": 75.0,
+        "current": 30.0,
+        "no_base": false
+      },
+      "cpu_limit_percent": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": true
+      },
+      "memory_limit_percent": {
+        "average": 35.0,
+        "minimum": 20.0,
+        "peak": 50.0,
+        "current": 20.0,
+        "no_base": false
+      }
+    }
+  ],
+  "workloads": [
+    {
+      "namespace": "payments",
+      "kind": "Deployment",
+      "name": "api",
+      "active_pods": 4,
+      "approximate_ratios": false,
+      "requests_limits_status": "available",
+      "cpu_usage": {
+        "average": 0.55,
+        "minimum": 0.2,
+        "peak": 0.9,
+        "current": 0.9,
+        "no_base": false
+      },
+      "memory_usage": {
+        "average": 110.0,
+        "minimum": 100.0,
+        "peak": 120.0,
+        "current": 120.0,
+        "no_base": false
+      },
+      "cpu_requests": {
+        "average": 1.0,
+        "minimum": 1.0,
+        "peak": 1.0,
+        "current": 1.0,
+        "no_base": false
+      },
+      "memory_requests": {
+        "average": 400.0,
+        "minimum": 400.0,
+        "peak": 400.0,
+        "current": 400.0,
+        "no_base": false
+      },
+      "cpu_limits": {
+        "average": 1.0,
+        "minimum": 1.0,
+        "peak": 1.0,
+        "current": 1.0,
+        "no_base": false
+      },
+      "memory_limits": {
+        "average": 800.0,
+        "minimum": 800.0,
+        "peak": 800.0,
+        "current": 800.0,
+        "no_base": false
+      },
+      "cpu_request_percent": {
+        "average": 55.0,
+        "minimum": 20.0,
+        "peak": 90.0,
+        "current": 90.0,
+        "no_base": false
+      },
+      "memory_request_percent": {
+        "average": 27.5,
+        "minimum": 25.0,
+        "peak": 30.0,
+        "current": 30.0,
+        "no_base": false
+      },
+      "cpu_limit_percent": {
+        "average": 55.0,
+        "minimum": 20.0,
+        "peak": 90.0,
+        "current": 90.0,
+        "no_base": false
+      },
+      "memory_limit_percent": {
+        "average": 13.75,
+        "minimum": 12.5,
+        "peak": 15.0,
+        "current": 15.0,
+        "no_base": false
+      }
+    },
+    {
+      "namespace": "payments",
+      "kind": "StatefulSet",
+      "name": "queue",
+      "active_pods": 2,
+      "approximate_ratios": false,
+      "requests_limits_status": "available",
+      "cpu_usage": {
+        "average": 0.1,
+        "minimum": 0.1,
+        "peak": 0.1,
+        "current": 0.1,
+        "no_base": false
+      },
+      "memory_usage": {
+        "average": 10.0,
+        "minimum": 10.0,
+        "peak": 10.0,
+        "current": 10.0,
+        "no_base": false
+      },
+      "cpu_requests": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": false
+      },
+      "memory_requests": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": false
+      },
+      "cpu_limits": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": false
+      },
+      "memory_limits": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": false
+      },
+      "cpu_request_percent": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": true
+      },
+      "memory_request_percent": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": true
+      },
+      "cpu_limit_percent": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": true
+      },
+      "memory_limit_percent": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": true
+      }
+    }
+  ],
+  "findings": [
+    {
+      "code": "WORKLOAD_CPU_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/api",
+      "confidence": "exact",
+      "evidence": [
+        [
+          "average_percent",
+          55.0
+        ],
+        [
+          "peak_percent",
+          90.0
+        ]
+      ]
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/api",
+      "confidence": "exact",
+      "evidence": [
+        [
+          "average_percent",
+          55.0
+        ],
+        [
+          "peak_percent",
+          90.0
+        ]
+      ]
+    },
+    {
+      "code": "NAMESPACE_CPU_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "confidence": "exact",
+      "evidence": []
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "confidence": "inferred",
+      "evidence": [
+        [
+          "average_percent",
+          52.5
+        ],
+        [
+          "peak_percent",
+          75.0
+        ],
+        [
+          "approximate",
+          true
+        ]
+      ]
+    },
+    {
+      "code": "WORKLOAD_MEMORY_OVERREQUESTED",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/api",
+      "confidence": "exact",
+      "evidence": [
+        [
+          "average_percent",
+          27.5
+        ],
+        [
+          "peak_percent",
+          30.0
+        ]
+      ]
+    },
+    {
+      "code": "WORKLOAD_CPU_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/queue",
+      "confidence": "exact",
+      "evidence": []
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/queue",
+      "confidence": "exact",
+      "evidence": []
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/queue",
+      "confidence": "exact",
+      "evidence": []
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/queue",
+      "confidence": "exact",
+      "evidence": []
+    },
+    {
+      "code": "NAMESPACE_MEMORY_LIMIT_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "confidence": "inferred",
+      "evidence": [
+        [
+          "average_percent",
+          35.0
+        ],
+        [
+          "peak_percent",
+          50.0
+        ],
+        [
+          "approximate",
+          true
+        ]
+      ]
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/api",
+      "confidence": "exact",
+      "evidence": [
+        [
+          "average_percent",
+          13.75
+        ],
+        [
+          "peak_percent",
+          15.0
+        ]
+      ]
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/api",
+      "confidence": "exact",
+      "evidence": [
+        [
+          "average_percent",
+          27.5
+        ],
+        [
+          "peak_percent",
+          30.0
+        ]
+      ]
+    }
+  ],
+  "warnings": [],
+  "notices": [
+    "1 carga de trabalho deixada de fora por não ter consumo observado no período.",
+    "1 Job foi deixado de fora do inventário de cargas de trabalho; o consumo continua contabilizado no total do namespace."
+  ]
+}
