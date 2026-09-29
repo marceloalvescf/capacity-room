@@ -328,34 +328,32 @@ func TestNamespaceRowsAreSortedAndUnique(t *testing.T) {
 	}
 }
 
-// TestNamespaceNumbersOfTheScenario covers one namespace's full set of
-// answers: the reduced statistics and the pod count match hand-computed
-// numbers.
+// TestNamespaceNumbersOfTheScenario transcribes the recorded answers of
+// the namespace "payments" in the "direct-complete" scenario
+// (testdata/prometheus/direct-complete.json, requests 48 to 53 for the
+// range queries and 29 for the instant one, by their 0-based index) and
+// asserts the whole row against the numbers the original recorded for it
+// in .cache/phase-2/part-2/python/out/direct-complete.json,
+// namespaces[0]. The scenario file itself is not read here; a later task
+// runs it.
 func TestNamespaceNumbersOfTheScenario(t *testing.T) {
-	cpuUsage := []prom.Series{{
-		Labels: map[string]string{"namespace": "payments"},
-		Points: []prom.Point{{Time: 1, Value: 0.2, Valid: true}, {Time: 2, Value: 0.4, Valid: true}},
-	}}
-	memoryUsage := []prom.Series{{
-		Labels: map[string]string{"namespace": "payments"},
-		Points: []prom.Point{{Time: 1, Value: 100, Valid: true}, {Time: 2, Value: 120, Valid: true}},
-	}}
-	cpuRequests := []prom.Series{{
-		Labels: map[string]string{"namespace": "payments"},
-		Points: []prom.Point{{Time: 1, Value: 0.5, Valid: true}, {Time: 2, Value: 0.5, Valid: true}},
-	}}
-	cpuLimits := []prom.Series{{
-		Labels: map[string]string{"namespace": "payments"},
-		Points: []prom.Point{{Time: 1, Value: 1, Valid: true}, {Time: 2, Value: 1, Valid: true}},
-	}}
-	memoryRequests := []prom.Series{{
-		Labels: map[string]string{"namespace": "payments"},
-		Points: []prom.Point{{Time: 1, Value: 200, Valid: true}, {Time: 2, Value: 200, Valid: true}},
-	}}
-	memoryLimits := []prom.Series{{
-		Labels: map[string]string{"namespace": "payments"},
-		Points: []prom.Point{{Time: 1, Value: 400, Valid: true}, {Time: 2, Value: 400, Valid: true}},
-	}}
+	const t1, t2 = 1784050200, 1784093400
+
+	series := func(value1, value2 float64) []prom.Series {
+		return []prom.Series{{
+			Labels: map[string]string{"namespace": "payments"},
+			Points: []prom.Point{
+				{Time: t1, Value: value1, Valid: true},
+				{Time: t2, Value: value2, Valid: true},
+			},
+		}}
+	}
+	cpuUsage := series(0.2, 0.4)
+	memoryUsage := series(100, 120)
+	cpuRequests := series(0.5, 0.5)
+	memoryRequests := series(0.5, 0.5)
+	cpuLimits := series(1.0, 1.0)
+	memoryLimits := series(1.0, 1.0)
 	podSamples := []prom.Sample{{Labels: map[string]string{"namespace": "payments"}, Value: 3, Valid: true}}
 
 	q := &scriptedQuerier{
@@ -381,27 +379,17 @@ func TestNamespaceNumbersOfTheScenario(t *testing.T) {
 	row := result.Rows[0]
 	res := row.Resources
 
-	if res.CPUUsage.Peak != 0.4 {
-		t.Errorf("CPUUsage.Peak = %v, want 0.4", res.CPUUsage.Peak)
-	}
-	if res.CPUUsage.Current != 0.4 {
-		t.Errorf("CPUUsage.Current = %v, want 0.4", res.CPUUsage.Current)
-	}
-	if res.CPUUsage.Minimum != 0.2 {
-		t.Errorf("CPUUsage.Minimum = %v, want 0.2", res.CPUUsage.Minimum)
-	}
-	if res.MemoryUsage.Average != 110 {
-		t.Errorf("MemoryUsage.Average = %v, want 110", res.MemoryUsage.Average)
-	}
-	if res.CPURequests.Average != 0.5 {
-		t.Errorf("CPURequests.Average = %v, want 0.5", res.CPURequests.Average)
-	}
-	if res.CPULimits.Average != 1 {
-		t.Errorf("CPULimits.Average = %v, want 1", res.CPULimits.Average)
-	}
-	if res.CPURequestPercent.Peak != 80 {
-		t.Errorf("CPURequestPercent.Peak = %v, want 80", res.CPURequestPercent.Peak)
-	}
+	checkStatistics(t, res.CPUUsage, Statistics{State: StateValue, Average: 0.30000000000000004, Minimum: 0.2, Peak: 0.4, Current: 0.4})
+	checkStatistics(t, res.MemoryUsage, Statistics{State: StateValue, Average: 110.0, Minimum: 100.0, Peak: 120.0, Current: 120.0})
+	checkStatistics(t, res.CPURequests, Statistics{State: StateValue, Average: 0.5, Minimum: 0.5, Peak: 0.5, Current: 0.5})
+	checkStatistics(t, res.MemoryRequests, Statistics{State: StateValue, Average: 0.5, Minimum: 0.5, Peak: 0.5, Current: 0.5})
+	checkStatistics(t, res.CPULimits, Statistics{State: StateValue, Average: 1.0, Minimum: 1.0, Peak: 1.0, Current: 1.0})
+	checkStatistics(t, res.MemoryLimits, Statistics{State: StateValue, Average: 1.0, Minimum: 1.0, Peak: 1.0, Current: 1.0})
+	checkStatistics(t, res.CPURequestPercent, Statistics{State: StateValue, Average: 60.0, Minimum: 40.0, Peak: 80.0, Current: 80.0})
+	checkStatistics(t, res.MemoryRequestPercent, Statistics{State: StateValue, Average: 22000.0, Minimum: 20000.0, Peak: 24000.0, Current: 24000.0})
+	checkStatistics(t, res.CPULimitPercent, Statistics{State: StateValue, Average: 30.0, Minimum: 20.0, Peak: 40.0, Current: 40.0})
+	checkStatistics(t, res.MemoryLimitPercent, Statistics{State: StateValue, Average: 11000.0, Minimum: 10000.0, Peak: 12000.0, Current: 12000.0})
+
 	if row.Pods != 3 {
 		t.Errorf("Pods = %d, want 3", row.Pods)
 	}
@@ -410,6 +398,9 @@ func TestNamespaceNumbersOfTheScenario(t *testing.T) {
 	}
 	if row.Approximate {
 		t.Errorf("Approximate = true, want false")
+	}
+	if row.RequestsLimitsState != discovery.StateAvailable {
+		t.Errorf("RequestsLimitsState = %q, want %q", row.RequestsLimitsState, discovery.StateAvailable)
 	}
 }
 
