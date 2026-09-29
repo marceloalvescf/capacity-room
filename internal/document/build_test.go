@@ -44,8 +44,11 @@ func baseCapabilities() []snapshot.Capability {
 		}
 	}
 	caps[6].State = discovery.StatePartial
+	caps[6].Reasons = []string{discovery.ReasonCodes[2]}
 	caps[7].State = discovery.StatePartial
+	caps[7].Reasons = []string{discovery.ReasonCodes[3]}
 	caps[8].State = discovery.StateUnavailable
+	caps[8].Strategy = discovery.StrategyNone
 	caps[8].Reasons = []string{discovery.ReasonCodes[0], discovery.ReasonCodes[1]}
 	return caps
 }
@@ -455,8 +458,12 @@ func TestBuildAppendixCoverage(t *testing.T) {
 		t.Run(tt.state, func(t *testing.T) {
 			s := baseSnapshot(t)
 			s.Quality.Capabilities[0].State = tt.state
-			if tt.state == discovery.StateUnavailable {
+			switch tt.state {
+			case discovery.StatePartial, discovery.StateUnavailable:
 				s.Quality.Capabilities[0].Reasons = []string{discovery.ReasonCodes[0]}
+			}
+			if tt.state == discovery.StateUnavailable {
+				s.Quality.Capabilities[0].Strategy = discovery.StrategyNone
 			}
 			doc := mustBuild(t, s, cat, Options{MinSeverity: "all"})
 			table := findTable(t, doc.Blocks, "quality-appendix")
@@ -509,10 +516,17 @@ func TestBuildAppendixRemark(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := baseSnapshot(t)
-			s.Quality.Capabilities[8].State = discovery.StateUnavailable
 			if tt.reasons == nil {
+				// Check refuses an unavailable capability with no reason,
+				// so the fallback "No remark" text is reached from an
+				// available one instead: available is the one state that
+				// may legitimately carry no reason.
+				s.Quality.Capabilities[8].State = discovery.StateAvailable
+				s.Quality.Capabilities[8].Strategy = discovery.StrategyRawMetrics
 				s.Quality.Capabilities[8].Reasons = []string{}
 			} else {
+				s.Quality.Capabilities[8].State = discovery.StateUnavailable
+				s.Quality.Capabilities[8].Strategy = discovery.StrategyNone
 				s.Quality.Capabilities[8].Reasons = tt.reasons
 			}
 			doc := mustBuild(t, s, cat, Options{})
@@ -533,8 +547,22 @@ func TestBuildAppendixEvidence(t *testing.T) {
 		for _, state := range discovery.States {
 			t.Run(name+"/"+state, func(t *testing.T) {
 				s := baseSnapshot(t)
+				// Every field Check cross-checks against state is
+				// normalised together, regardless of what the base
+				// fixture happened to hold at this index: a state, a
+				// strategy, and a set of reasons that agree with each
+				// other are what every one of the 27 combinations this
+				// test exercises must produce.
 				s.Quality.Capabilities[idx].State = state
-				if state == discovery.StateUnavailable && len(s.Quality.Capabilities[idx].Reasons) == 0 {
+				switch state {
+				case discovery.StateAvailable:
+					s.Quality.Capabilities[idx].Strategy = discovery.StrategyRawMetrics
+					s.Quality.Capabilities[idx].Reasons = []string{}
+				case discovery.StatePartial:
+					s.Quality.Capabilities[idx].Strategy = discovery.StrategyRawMetrics
+					s.Quality.Capabilities[idx].Reasons = []string{discovery.ReasonCodes[0]}
+				case discovery.StateUnavailable:
+					s.Quality.Capabilities[idx].Strategy = discovery.StrategyNone
 					s.Quality.Capabilities[idx].Reasons = []string{discovery.ReasonCodes[0]}
 				}
 				doc := mustBuild(t, s, cat, Options{})
@@ -578,6 +606,7 @@ func TestBuildAppendixEmpty(t *testing.T) {
 	s := baseSnapshot(t)
 	for i := range s.Quality.Capabilities {
 		s.Quality.Capabilities[i].State = discovery.StateAvailable
+		s.Quality.Capabilities[i].Strategy = discovery.StrategyRawMetrics
 		s.Quality.Capabilities[i].Reasons = []string{}
 	}
 	cat := mustCatalog(t, catalog.English)
