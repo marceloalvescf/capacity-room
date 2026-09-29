@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 )
 
 func TestParseLanguage(t *testing.T) {
@@ -102,6 +104,43 @@ func TestTextFillsParameters(t *testing.T) {
 	want = "14/07/2026 14:30 to 15/07/2026 14:30"
 	if got != want {
 		t.Errorf("en Text(FrontMetadataPeriodRange) = %q, want %q", got, want)
+	}
+}
+
+// TestTextForWarningAndNoticeEntries proves that a warning key and both
+// entries of every notice code resolve through the embedded files, not
+// only through the entries map catalog.go builds on its own: the locale
+// files hold the "singular" and "plural" entries of a notice as an
+// ordinary table, the same shape as every other family, so a lookup by the
+// exact key must still work through go-i18n's own bundle.
+func TestTextForWarningAndNoticeEntries(t *testing.T) {
+	for _, lang := range Languages() {
+		cat, err := Load(lang)
+		if err != nil {
+			t.Fatalf("Load(%q): %v", lang, err)
+		}
+
+		if _, err := cat.Text(Warning("NAMESPACE_USAGE_INCOMPLETE"), nil); err != nil {
+			t.Errorf("%s Text(Warning) unexpected error: %v", lang, err)
+		}
+
+		for _, code := range collect.NoticeCodes {
+			singular, err := cat.Text(Notice(code, 1), nil)
+			if err != nil {
+				t.Fatalf("%s Text(Notice(%s), singular) unexpected error: %v", lang, code, err)
+			}
+			if strings.Contains(singular, "{{") {
+				t.Errorf("%s Text(Notice(%s), singular) = %q, holds an unfilled template", lang, code, singular)
+			}
+
+			plural, err := cat.Text(Notice(code, 3), Params{"Count": "3"})
+			if err != nil {
+				t.Fatalf("%s Text(Notice(%s), plural) unexpected error: %v", lang, code, err)
+			}
+			if !strings.Contains(plural, "3") {
+				t.Errorf("%s Text(Notice(%s), plural) = %q, does not hold the filled count", lang, code, plural)
+			}
+		}
 	}
 }
 

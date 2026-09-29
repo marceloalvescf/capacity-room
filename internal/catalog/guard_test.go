@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 )
 
@@ -259,6 +260,229 @@ func TestEveryRegistryCodeHasAnEntry(t *testing.T) {
 	}
 	for _, code := range discovery.ReasonCodes {
 		check(CapabilityReason(code))
+	}
+}
+
+// sectionsWordingTable holds the expected Portuguese text of the two
+// sections Task 11 adds, transcribed independently of locales/pt-BR.toml,
+// so a change to the file is caught against the wording that was approved.
+var sectionsWordingTable = []struct {
+	key Key
+	pt  string
+}{
+	{SectionsNamespaceLabel, "Namespace:"},
+	{SectionsNamespacesHeading, "Capacidade por Namespace"},
+	{SectionsNamespacesEmpty, "Nenhum dado de namespace está disponível para os filtros atuais."},
+	{SectionsNamespacesHeaderResource, "Recurso"},
+	{SectionsNamespacesHeaderAverage, "Uso médio"},
+	{SectionsNamespacesHeaderPeak, "Pico"},
+	{SectionsNamespacesHeaderRequest, "Solicitação"},
+	{SectionsNamespacesHeaderLimit, "Limite"},
+	{SectionsNamespacesHeaderPeakRequest, "% Pico/Solicitação"},
+	{SectionsNamespacesHeaderPeakLimit, "% Pico/Limite"},
+	{SectionsNamespacesRowCPU, "CPU"},
+	{SectionsNamespacesRowMemory, "Memória"},
+	{SectionsWorkloadsHeading, "Recursos por carga de trabalho"},
+	{SectionsWorkloadsEmpty, "Nenhum dado de carga de trabalho está disponível para os filtros atuais."},
+	{SectionsWorkloadsHeaderWorkload, "Carga de trabalho"},
+	{SectionsWorkloadsHeaderPods, "Pods"},
+	{SectionsWorkloadsHeaderCPUAverage, "CPU média"},
+	{SectionsWorkloadsHeaderCPUPeak, "CPU pico"},
+	{SectionsWorkloadsHeaderCPURequest, "% CPU/Solicitação"},
+	{SectionsWorkloadsHeaderCPULimit, "% CPU/Limite"},
+	{SectionsWorkloadsHeaderMemoryAverage, "Memória média"},
+	{SectionsWorkloadsHeaderMemoryPeak, "Memória pico"},
+	{SectionsWorkloadsHeaderMemoryRequest, "% Memória/Solicitação"},
+	{SectionsWorkloadsHeaderMemoryLimit, "% Memória/Limite"},
+	{PlaceholderUnavailable, "Indisponível"},
+	{PlaceholderNoBase, "Não definido"},
+	{NotesHeading, "Avisos de interpretação"},
+	{NotesHeaderRemark, "Observação"},
+}
+
+// warningWordingTable and noticeWordingTable hold the expected Portuguese
+// text of the warning and notice codes Task 11 adds, transcribed
+// independently of locales/pt-BR.toml, the same way sectionsWordingTable
+// covers the first table.
+var warningWordingTable = []struct {
+	code string
+	pt   string
+}{
+	{collect.WarningNamespaceUsageIncomplete, "As métricas de uso dos namespaces estão incompletas."},
+	{collect.WarningNamespaceRequestsLimitsIncomplete, "As métricas de solicitações e limites dos namespaces estão incompletas."},
+	{collect.WarningNamespaceRequestsLimitsUnavailable, "As métricas de solicitações e limites dos namespaces estão indisponíveis."},
+	{collect.WarningWorkloadUsageIncomplete, "As métricas de uso das cargas de trabalho estão incompletas."},
+	{collect.WarningWorkloadRequestsLimitsIncomplete, "As métricas de solicitações e limites das cargas de trabalho estão incompletas."},
+	{collect.WarningWorkloadRequestsLimitsUnavailable, "As métricas de solicitações e limites das cargas de trabalho estão indisponíveis."},
+	{collect.WarningWorkloadHistoryCurrentAssociation, "O histórico usa a associação atual entre pods ativos e cargas de trabalho."},
+}
+
+var noticeWordingTable = []struct {
+	code       string
+	ptSingular string
+	ptPlural   string
+}{
+	{collect.NoticeWorkloadsOmittedNoUsage,
+		"1 carga de trabalho deixada de fora por não ter consumo observado no período.",
+		"{{.Count}} cargas de trabalho deixadas de fora por não terem consumo observado no período."},
+	{collect.NoticeJobsOmitted,
+		"1 Job foi deixado de fora do inventário de cargas de trabalho; o consumo continua contabilizado no total do namespace.",
+		"{{.Count}} Jobs foram deixados de fora do inventário de cargas de trabalho; o consumo continua contabilizado nos totais dos namespaces."},
+}
+
+// TestPortugueseOfThisPartEqualsTheOriginal proves that the Portuguese text
+// of the two sections Task 11 adds, and of the warnings and notices they
+// use, equals the wording that was approved, letter for letter.
+func TestPortugueseOfThisPartEqualsTheOriginal(t *testing.T) {
+	pt := fileEntries(t, PortugueseBrazil)
+
+	for _, row := range sectionsWordingTable {
+		if got := pt[row.key]; got != row.pt {
+			t.Errorf("pt-BR %q = %q, want %q", row.key, got, row.pt)
+		}
+	}
+	for _, row := range warningWordingTable {
+		key := Warning(row.code)
+		if got := pt[key]; got != row.pt {
+			t.Errorf("pt-BR %q = %q, want %q", key, got, row.pt)
+		}
+	}
+	for _, row := range noticeWordingTable {
+		singularKey := Notice(row.code, 1)
+		if got := pt[singularKey]; got != row.ptSingular {
+			t.Errorf("pt-BR %q = %q, want %q", singularKey, got, row.ptSingular)
+		}
+		pluralKey := Notice(row.code, 2)
+		if got := pt[pluralKey]; got != row.ptPlural {
+			t.Errorf("pt-BR %q = %q, want %q", pluralKey, got, row.ptPlural)
+		}
+	}
+}
+
+// TestEveryWarningHasItsEntry proves that every code of collect.WarningCodes
+// has an entry in both languages, and that entry takes no parameter.
+func TestEveryWarningHasItsEntry(t *testing.T) {
+	pt := fileEntries(t, PortugueseBrazil)
+	en := fileEntries(t, English)
+
+	if len(collect.WarningCodes) != 7 {
+		t.Fatalf("collect.WarningCodes has %d codes, want 7", len(collect.WarningCodes))
+	}
+
+	for _, code := range collect.WarningCodes {
+		key := Warning(code)
+		ptText, ok := pt[key]
+		if !ok {
+			t.Errorf("locales/pt-BR.toml is missing %q", key)
+		}
+		enText, ok := en[key]
+		if !ok {
+			t.Errorf("locales/en.toml is missing %q", key)
+		}
+		if params := paramNames(ptText); len(params) != 0 {
+			t.Errorf("pt-BR %q takes parameters %v, want none", key, params)
+		}
+		if params := paramNames(enText); len(params) != 0 {
+			t.Errorf("en %q takes parameters %v, want none", key, params)
+		}
+	}
+}
+
+// TestEveryNoticeHasBothEntries proves that every code of collect.NoticeCodes
+// has both its entries, singular and plural, in both languages: singular
+// takes no parameter, and plural takes Count.
+func TestEveryNoticeHasBothEntries(t *testing.T) {
+	pt := fileEntries(t, PortugueseBrazil)
+	en := fileEntries(t, English)
+
+	if len(collect.NoticeCodes) != 2 {
+		t.Fatalf("collect.NoticeCodes has %d codes, want 2", len(collect.NoticeCodes))
+	}
+
+	for _, code := range collect.NoticeCodes {
+		singularKey := Notice(code, 1)
+		pluralKey := Notice(code, 2)
+
+		ptSingular, ok := pt[singularKey]
+		if !ok {
+			t.Errorf("locales/pt-BR.toml is missing %q", singularKey)
+		}
+		enSingular, ok := en[singularKey]
+		if !ok {
+			t.Errorf("locales/en.toml is missing %q", singularKey)
+		}
+		if params := paramNames(ptSingular); len(params) != 0 {
+			t.Errorf("pt-BR %q takes parameters %v, want none", singularKey, params)
+		}
+		if params := paramNames(enSingular); len(params) != 0 {
+			t.Errorf("en %q takes parameters %v, want none", singularKey, params)
+		}
+
+		ptPlural, ok := pt[pluralKey]
+		if !ok {
+			t.Errorf("locales/pt-BR.toml is missing %q", pluralKey)
+		}
+		enPlural, ok := en[pluralKey]
+		if !ok {
+			t.Errorf("locales/en.toml is missing %q", pluralKey)
+		}
+		if params := paramNames(ptPlural); !sameSet(params, []string{"Count"}) {
+			t.Errorf("pt-BR %q takes parameters %v, want [Count]", pluralKey, params)
+		}
+		if params := paramNames(enPlural); !sameSet(params, []string{"Count"}) {
+			t.Errorf("en %q takes parameters %v, want [Count]", pluralKey, params)
+		}
+	}
+}
+
+// familyKeyProblems returns one description for every key of entries whose
+// family is warning. or notice. but whose code names no member of
+// warningCodes or noticeCodes: a key left behind by a registry that dropped
+// a code, or a stray key that never named one to start with.
+func familyKeyProblems(entries map[Key]string, warningCodes, noticeCodes []string) []string {
+	var problems []string
+	for key := range entries {
+		value := string(key)
+		switch {
+		case strings.HasPrefix(value, "warning."):
+			code := strings.TrimPrefix(value, "warning.")
+			if !slices.Contains(warningCodes, code) {
+				problems = append(problems, fmt.Sprintf("key %q names no code of collect.WarningCodes", key))
+			}
+		case strings.HasPrefix(value, "notice."):
+			rest := strings.TrimPrefix(value, "notice.")
+			match := noticeSuffixPattern.FindStringSubmatch(rest)
+			if match == nil || !slices.Contains(noticeCodes, match[1]) {
+				problems = append(problems, fmt.Sprintf("key %q names no code of collect.NoticeCodes", key))
+			}
+		}
+	}
+	return problems
+}
+
+// noticeSuffixPattern matches the part of a notice. key that follows the
+// prefix: a code, then ".singular" or ".plural".
+var noticeSuffixPattern = regexp.MustCompile(`^(.+)\.(singular|plural)$`)
+
+// TestNoFamilyKeyWithoutACode proves familyKeyProblems reports a key of the
+// family warning. or notice. that names a code in no registry: a copy of
+// the real Portuguese file, with one bogus key added.
+func TestNoFamilyKeyWithoutACode(t *testing.T) {
+	entries := fileEntries(t, PortugueseBrazil)
+
+	if problems := familyKeyProblems(entries, collect.WarningCodes, collect.NoticeCodes); len(problems) != 0 {
+		t.Fatalf("familyKeyProblems on the real file = %v, want none", problems)
+	}
+
+	tainted := make(map[Key]string, len(entries)+1)
+	for k, v := range entries {
+		tainted[k] = v
+	}
+	tainted[Key("warning.UNKNOWN")] = "some text"
+
+	problems := familyKeyProblems(tainted, collect.WarningCodes, collect.NoticeCodes)
+	if len(problems) != 1 || !strings.Contains(problems[0], "warning.UNKNOWN") {
+		t.Fatalf("familyKeyProblems = %v, want exactly one problem naming warning.UNKNOWN", problems)
 	}
 }
 
@@ -812,7 +1036,7 @@ var stateFunc = catalog.State
 // source. This guard parses keys.go independently (through keyDeclarations,
 // the same parser TestEveryKeyIsUsed uses) and compares the values of its
 // constants with the part of Keys() that is not made from the registries
-// of discovery, in both directions.
+// of discovery and collect, in both directions.
 func TestKeysHoldEveryConstant(t *testing.T) {
 	constants, _ := keyDeclarations(t)
 
@@ -821,13 +1045,22 @@ func TestKeysHoldEveryConstant(t *testing.T) {
 		keys[k] = true
 	}
 
-	// The keys Keys() makes from the registries of discovery, not from a
-	// constant of keys.go: the 27 capability.evidence.<name>.<state> keys.
+	// The keys Keys() makes from the registries of discovery and collect,
+	// not from a constant of keys.go: the 27
+	// capability.evidence.<name>.<state> keys, the 7 warning.<code> keys,
+	// and the 4 notice.<code>.<singular|plural> keys.
 	derived := make(map[Key]bool)
 	for _, name := range discovery.Names {
 		for _, state := range discovery.States {
 			derived[CapabilityEvidence(name, state)] = true
 		}
+	}
+	for _, code := range collect.WarningCodes {
+		derived[Warning(code)] = true
+	}
+	for _, code := range collect.NoticeCodes {
+		derived[Notice(code, 1)] = true
+		derived[Notice(code, 2)] = true
 	}
 
 	constantValues := make(map[Key]bool, len(constants))

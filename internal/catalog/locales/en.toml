@@ -135,3 +135,58 @@ unavailable = "Node utilization data was not found for the analysis period."
 available = "Node autoscaling data is available for the analysis period."
 partial = "Node autoscaling data is partly available for the analysis period."
 unavailable = "Node autoscaling data was not found for the analysis period."
+
+[sections]
+namespace_label = "Namespace:"
+
+[sections.namespaces]
+heading = "Capacity by namespace"
+empty = "No namespace data is available for the current filters."
+header_resource = "Resource"
+header_average = "Average usage"
+header_peak = "Peak"
+header_request = "Request"
+header_limit = "Limit"
+header_peak_request = "% Peak/Request"
+header_peak_limit = "% Peak/Limit"
+row_cpu = "CPU"
+row_memory = "Memory"
+
+[sections.workloads]
+heading = "Resources by workload"
+empty = "No workload data is available for the current filters."
+header_workload = "Workload"
+header_pods = "Pods"
+header_cpu_average = "Average CPU"
+header_cpu_peak = "Peak CPU"
+header_cpu_request = "% CPU/Request"
+header_cpu_limit = "% CPU/Limit"
+header_memory_average = "Average memory"
+header_memory_peak = "Peak memory"
+header_memory_request = "% Memory/Request"
+header_memory_limit = "% Memory/Limit"
+
+[placeholder]
+unavailable = "Unavailable"
+no_base = "Not defined"
+
+[notes]
+heading = "Interpretation notes"
+header_remark = "Remark"
+
+[warning]
+NAMESPACE_USAGE_INCOMPLETE = "The usage metrics of the namespaces are incomplete."
+NAMESPACE_REQUESTS_LIMITS_INCOMPLETE = "The request and limit metrics of the namespaces are incomplete."
+NAMESPACE_REQUESTS_LIMITS_UNAVAILABLE = "The request and limit metrics of the namespaces are unavailable."
+WORKLOAD_USAGE_INCOMPLETE = "The usage metrics of the workloads are incomplete."
+WORKLOAD_REQUESTS_LIMITS_INCOMPLETE = "The request and limit metrics of the workloads are incomplete."
+WORKLOAD_REQUESTS_LIMITS_UNAVAILABLE = "The request and limit metrics of the workloads are unavailable."
+WORKLOAD_HISTORY_CURRENT_ASSOCIATION = "The history uses the current association between active pods and workloads."
+
+[notice.WORKLOADS_OMITTED_NO_USAGE]
+singular = "1 workload was left out because it had no observed consumption in the period."
+plural = "{{.Count}} workloads were left out because they had no observed consumption in the period."
+
+[notice.JOBS_OMITTED]
+singular = "1 Job was left out of the workload inventory; its consumption still counts in the total of the namespace."
+plural = "{{.Count}} Jobs were left out of the workload inventory; their consumption still counts in the totals of the namespaces."

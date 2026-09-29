@@ -3,6 +3,7 @@ package catalog
 import (
 	"sort"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 )
 
@@ -92,6 +93,39 @@ const (
 	CapabilityReasonNodeAddressMappingIncomplete   Key = "capability.reason.NODE_ADDRESS_MAPPING_INCOMPLETE"
 	CapabilityReasonNodepoolLabelsNotFound         Key = "capability.reason.NODEPOOL_LABELS_NOT_FOUND"
 	CapabilityReasonNodeAutoscalingUndetermined    Key = "capability.reason.NODE_AUTOSCALING_UNDETERMINED"
+
+	SectionsNamespaceLabel Key = "sections.namespace_label"
+
+	SectionsNamespacesHeading           Key = "sections.namespaces.heading"
+	SectionsNamespacesEmpty             Key = "sections.namespaces.empty"
+	SectionsNamespacesHeaderResource    Key = "sections.namespaces.header_resource"
+	SectionsNamespacesHeaderAverage     Key = "sections.namespaces.header_average"
+	SectionsNamespacesHeaderPeak        Key = "sections.namespaces.header_peak"
+	SectionsNamespacesHeaderRequest     Key = "sections.namespaces.header_request"
+	SectionsNamespacesHeaderLimit       Key = "sections.namespaces.header_limit"
+	SectionsNamespacesHeaderPeakRequest Key = "sections.namespaces.header_peak_request"
+	SectionsNamespacesHeaderPeakLimit   Key = "sections.namespaces.header_peak_limit"
+	SectionsNamespacesRowCPU            Key = "sections.namespaces.row_cpu"
+	SectionsNamespacesRowMemory         Key = "sections.namespaces.row_memory"
+
+	SectionsWorkloadsHeading             Key = "sections.workloads.heading"
+	SectionsWorkloadsEmpty               Key = "sections.workloads.empty"
+	SectionsWorkloadsHeaderWorkload      Key = "sections.workloads.header_workload"
+	SectionsWorkloadsHeaderPods          Key = "sections.workloads.header_pods"
+	SectionsWorkloadsHeaderCPUAverage    Key = "sections.workloads.header_cpu_average"
+	SectionsWorkloadsHeaderCPUPeak       Key = "sections.workloads.header_cpu_peak"
+	SectionsWorkloadsHeaderCPURequest    Key = "sections.workloads.header_cpu_request"
+	SectionsWorkloadsHeaderCPULimit      Key = "sections.workloads.header_cpu_limit"
+	SectionsWorkloadsHeaderMemoryAverage Key = "sections.workloads.header_memory_average"
+	SectionsWorkloadsHeaderMemoryPeak    Key = "sections.workloads.header_memory_peak"
+	SectionsWorkloadsHeaderMemoryRequest Key = "sections.workloads.header_memory_request"
+	SectionsWorkloadsHeaderMemoryLimit   Key = "sections.workloads.header_memory_limit"
+
+	PlaceholderUnavailable Key = "placeholder.unavailable"
+	PlaceholderNoBase      Key = "placeholder.no_base"
+
+	NotesHeading      Key = "notes.heading"
+	NotesHeaderRemark Key = "notes.header_remark"
 )
 
 // wordingKeys lists every constant above, in the order of the wording
@@ -128,6 +162,17 @@ var wordingKeys = []Key{
 	CapabilityReasonHPAHistoryIncomplete, CapabilityReasonWorkloadInventoryIncomplete,
 	CapabilityReasonNodeAddressMappingIncomplete, CapabilityReasonNodepoolLabelsNotFound,
 	CapabilityReasonNodeAutoscalingUndetermined,
+	SectionsNamespaceLabel,
+	SectionsNamespacesHeading, SectionsNamespacesEmpty, SectionsNamespacesHeaderResource,
+	SectionsNamespacesHeaderAverage, SectionsNamespacesHeaderPeak, SectionsNamespacesHeaderRequest,
+	SectionsNamespacesHeaderLimit, SectionsNamespacesHeaderPeakRequest, SectionsNamespacesHeaderPeakLimit,
+	SectionsNamespacesRowCPU, SectionsNamespacesRowMemory,
+	SectionsWorkloadsHeading, SectionsWorkloadsEmpty, SectionsWorkloadsHeaderWorkload,
+	SectionsWorkloadsHeaderPods, SectionsWorkloadsHeaderCPUAverage, SectionsWorkloadsHeaderCPUPeak,
+	SectionsWorkloadsHeaderCPURequest, SectionsWorkloadsHeaderCPULimit, SectionsWorkloadsHeaderMemoryAverage,
+	SectionsWorkloadsHeaderMemoryPeak, SectionsWorkloadsHeaderMemoryRequest, SectionsWorkloadsHeaderMemoryLimit,
+	PlaceholderUnavailable, PlaceholderNoBase,
+	NotesHeading, NotesHeaderRemark,
 }
 
 // CapabilityName returns the key that names capability name, one of
@@ -150,18 +195,39 @@ func State(state string) Key { return Key("state." + state) }
 // Strategy returns the key that names strategy, one of discovery.Strategies.
 func Strategy(strategy string) Key { return Key("strategy." + strategy) }
 
+// Warning returns the key of warning code, one of collect.WarningCodes.
+func Warning(code string) Key { return Key("warning." + code) }
+
+// Notice returns the key of notice code, one of collect.NoticeCodes, for
+// a count: the entry "singular" for a count of 1, "plural" for any other.
+func Notice(code string, count float64) Key {
+	if count == 1 {
+		return Key("notice." + code + ".singular")
+	}
+	return Key("notice." + code + ".plural")
+}
+
 // Keys returns every valid key, sorted: the constants of this file and the
-// keys made from the registries of discovery, which is only the capability
-// evidence sentences — every other family (capability names, capability
-// reasons, states, strategies) already has a row, and so a constant, in the
-// wording table.
+// keys made from the registries of discovery and collect. The registries of
+// discovery give only the capability evidence sentences — every other
+// family (capability names, capability reasons, states, strategies) already
+// has a row, and so a constant, in the wording table. The registries of
+// collect give both families of the second wording table: every warning
+// code, and both entries of every notice code.
 func Keys() []Key {
-	keys := make([]Key, 0, len(wordingKeys)+len(discovery.Names)*len(discovery.States))
+	keys := make([]Key, 0, len(wordingKeys)+len(discovery.Names)*len(discovery.States)+len(collect.WarningCodes)+len(collect.NoticeCodes)*2)
 	keys = append(keys, wordingKeys...)
 	for _, name := range discovery.Names {
 		for _, state := range discovery.States {
 			keys = append(keys, CapabilityEvidence(name, state))
 		}
+	}
+	for _, code := range collect.WarningCodes {
+		keys = append(keys, Warning(code))
+	}
+	for _, code := range collect.NoticeCodes {
+		keys = append(keys, Notice(code, 1))
+		keys = append(keys, Notice(code, 2))
 	}
 	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 	return keys

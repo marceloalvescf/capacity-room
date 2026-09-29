@@ -135,3 +135,58 @@ unavailable = "Os dados de utilização dos nós não foram localizados para o p
 available = "Os dados de escalonamento automático dos nós estão disponíveis para o período analisado."
 partial = "Os dados de escalonamento automático dos nós estão disponíveis parcialmente para o período analisado."
 unavailable = "Os dados de escalonamento automático dos nós não foram localizados para o período analisado."
+
+[sections]
+namespace_label = "Namespace:"
+
+[sections.namespaces]
+heading = "Capacidade por Namespace"
+empty = "Nenhum dado de namespace está disponível para os filtros atuais."
+header_resource = "Recurso"
+header_average = "Uso médio"
+header_peak = "Pico"
+header_request = "Solicitação"
+header_limit = "Limite"
+header_peak_request = "% Pico/Solicitação"
+header_peak_limit = "% Pico/Limite"
+row_cpu = "CPU"
+row_memory = "Memória"
+
+[sections.workloads]
+heading = "Recursos por carga de trabalho"
+empty = "Nenhum dado de carga de trabalho está disponível para os filtros atuais."
+header_workload = "Carga de trabalho"
+header_pods = "Pods"
+header_cpu_average = "CPU média"
+header_cpu_peak = "CPU pico"
+header_cpu_request = "% CPU/Solicitação"
+header_cpu_limit = "% CPU/Limite"
+header_memory_average = "Memória média"
+header_memory_peak = "Memória pico"
+header_memory_request = "% Memória/Solicitação"
+header_memory_limit = "% Memória/Limite"
+
+[placeholder]
+unavailable = "Indisponível"
+no_base = "Não definido"
+
+[notes]
+heading = "Avisos de interpretação"
+header_remark = "Observação"
+
+[warning]
+NAMESPACE_USAGE_INCOMPLETE = "As métricas de uso dos namespaces estão incompletas."
+NAMESPACE_REQUESTS_LIMITS_INCOMPLETE = "As métricas de solicitações e limites dos namespaces estão incompletas."
+NAMESPACE_REQUESTS_LIMITS_UNAVAILABLE = "As métricas de solicitações e limites dos namespaces estão indisponíveis."
+WORKLOAD_USAGE_INCOMPLETE = "As métricas de uso das cargas de trabalho estão incompletas."
+WORKLOAD_REQUESTS_LIMITS_INCOMPLETE = "As métricas de solicitações e limites das cargas de trabalho estão incompletas."
+WORKLOAD_REQUESTS_LIMITS_UNAVAILABLE = "As métricas de solicitações e limites das cargas de trabalho estão indisponíveis."
+WORKLOAD_HISTORY_CURRENT_ASSOCIATION = "O histórico usa a associação atual entre pods ativos e cargas de trabalho."
+
+[notice.WORKLOADS_OMITTED_NO_USAGE]
+singular = "1 carga de trabalho deixada de fora por não ter consumo observado no período."
+plural = "{{.Count}} cargas de trabalho deixadas de fora por não terem consumo observado no período."
+
+[notice.JOBS_OMITTED]
+singular = "1 Job foi deixado de fora do inventário de cargas de trabalho; o consumo continua contabilizado no total do namespace."
+plural = "{{.Count}} Jobs foram deixados de fora do inventário de cargas de trabalho; o consumo continua contabilizado nos totais dos namespaces."
