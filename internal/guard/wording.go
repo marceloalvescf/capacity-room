@@ -193,8 +193,10 @@ func wordRuns(value string) []wordRun {
 }
 
 // hasTwoAdjacentWords reports whether value holds two words of two or more
-// letters each, with a gap between them that holds only spaces and percent
-// signs, and at least one space. The percent sign is allowed, and nothing
+// letters each, with a gap between them that holds only white space (of any
+// kind unicode.IsSpace recognises, not only the plain ' ' character — a
+// tab, a line break, or a no-break space all count) and percent signs, and
+// at least one white space rune. The percent sign is allowed, and nothing
 // else is, so that "rate % change" (a plain sentence that happens to carry
 // a stray percent sign that did not form a verb) still reads as one, while
 // a MIME type ("text/plain; charset=utf-8"), a key/value pair ("key:
@@ -216,16 +218,20 @@ func hasTwoAdjacentWords(value string) bool {
 	return false
 }
 
-// isSpaceAndPercentGap reports whether gap holds only ' ' and '%' runes,
-// with at least one ' ' among them. Any other rune disqualifies the gap.
+// isSpaceAndPercentGap reports whether gap holds only white space
+// (unicode.IsSpace) and '%' runes, with at least one white space rune among
+// them. Any other rune disqualifies the gap. A tab or a line break joining
+// two words is white space exactly as much as a plain ' ' is: a raw string
+// literal that happens to hold an embedded line break is not a reason for
+// the two-word rule to look away.
 func isSpaceAndPercentGap(gap []rune) bool {
 	sawSpace := false
 	for _, r := range gap {
-		switch r {
-		case ' ':
+		switch {
+		case unicode.IsSpace(r):
 			sawSpace = true
-		case '%':
-			// Allowed alongside a space; see hasTwoAdjacentWords.
+		case r == '%':
+			// Allowed alongside white space; see hasTwoAdjacentWords.
 		default:
 			return false
 		}

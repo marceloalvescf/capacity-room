@@ -256,6 +256,58 @@ func f() {
 	}
 }
 
+// TestReaderTextFindsWhitespaceGaps proves the two-word rule fires when the
+// gap between the two words is white space other than a plain ' ':  a tab,
+// an escaped newline, an embedded line break inside a raw string literal,
+// and a no-break space. lit.Value, the text ReaderText reports, is the
+// literal exactly as written in the source, escapes and all — never the
+// decoded value — so the want strings below carry the same raw form the
+// source itself holds.
+func TestReaderTextFindsWhitespaceGaps(t *testing.T) {
+	const backtick = "`"
+	const nbsp = " "
+
+	tests := []struct {
+		name   string
+		source string
+		want   []string
+	}{
+		{
+			name:   "a tab",
+			source: "package sample\n\nfunc f() {\n\tx := \"no\\tremark\"\n\t_ = x\n}\n",
+			want:   []string{`sample.go:4: "no\tremark"`},
+		},
+		{
+			name:   "an escaped newline",
+			source: "package sample\n\nfunc f() {\n\tx := \"no\\nremark\"\n\t_ = x\n}\n",
+			want:   []string{`sample.go:4: "no\nremark"`},
+		},
+		{
+			name: "a raw string of two lines",
+			source: "package sample\n\nfunc f() {\n\tx := " + backtick + "no\nremark" + backtick +
+				"\n\t_ = x\n}\n",
+			want: []string{"sample.go:4: " + backtick + "no\nremark" + backtick},
+		},
+		{
+			name:   "a no-break space",
+			source: "package sample\n\nfunc f() {\n\tx := \"no" + nbsp + "remark\"\n\t_ = x\n}\n",
+			want:   []string{"sample.go:4: \"no" + nbsp + "remark\""},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ReaderText("sample.go", []byte(tt.source), true)
+			if err != nil {
+				t.Fatalf("ReaderText returned error: %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("ReaderText = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestReaderTextIgnoresDiagnostics(t *testing.T) {
 	cases := []struct {
 		name   string
