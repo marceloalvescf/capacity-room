@@ -277,6 +277,27 @@ func TestImportViolationsEdgeAllowsCmdToClassified(t *testing.T) {
 	}
 }
 
+// checkLayerRanks fails t unless every path of want is in Layers with the
+// rank want gives it, and returns Layers as a path-to-rank map.
+func checkLayerRanks(t *testing.T, want map[string]int) map[string]int {
+	t.Helper()
+	got := make(map[string]int, len(Layers))
+	for _, layer := range Layers {
+		got[layer.Path] = layer.Rank
+	}
+
+	for path, rank := range want {
+		gotRank, ok := got[path]
+		if !ok {
+			t.Fatalf("Layers is missing %q", path)
+		}
+		if gotRank != rank {
+			t.Fatalf("Layers[%q].Rank = %d, want %d", path, gotRank, rank)
+		}
+	}
+	return got
+}
+
 func TestLayersHoldEveryPackageOfThisPart(t *testing.T) {
 	want := map[string]int{
 		"internal/guard":      0,
@@ -298,20 +319,7 @@ func TestLayersHoldEveryPackageOfThisPart(t *testing.T) {
 		"internal/cli":        100,
 	}
 
-	got := make(map[string]int, len(Layers))
-	for _, layer := range Layers {
-		got[layer.Path] = layer.Rank
-	}
-
-	for path, rank := range want {
-		gotRank, ok := got[path]
-		if !ok {
-			t.Fatalf("Layers is missing %q", path)
-		}
-		if gotRank != rank {
-			t.Fatalf("Layers[%q].Rank = %d, want %d", path, gotRank, rank)
-		}
-	}
+	got := checkLayerRanks(t, want)
 	if len(got) != len(want) {
 		t.Fatalf("Layers has %d entries, want %d", len(got), len(want))
 	}
@@ -324,20 +332,7 @@ func TestLayersHoldThePackagesOfThisPart(t *testing.T) {
 		"internal/analysis": 60,
 	}
 
-	got := make(map[string]int, len(Layers))
-	for _, layer := range Layers {
-		got[layer.Path] = layer.Rank
-	}
-
-	for path, rank := range want {
-		gotRank, ok := got[path]
-		if !ok {
-			t.Fatalf("Layers is missing %q", path)
-		}
-		if gotRank != rank {
-			t.Fatalf("Layers[%q].Rank = %d, want %d", path, gotRank, rank)
-		}
-	}
+	checkLayerRanks(t, want)
 }
 
 // goListPackage mirrors the subset of `go list -json` output this guard

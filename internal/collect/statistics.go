@@ -25,9 +25,16 @@ type Statistics struct {
 }
 
 // Key is the values of the grouping labels of one row, in the order of the
-// labels. A label a series lacks, and a place beyond the number of labels
-// given, hold the empty text.
+// labels. A label a series does not have at all reads as unknownLabel; a
+// label the series has with the empty text as its value reads as the
+// empty text. A place beyond the number of labels given holds the empty
+// text.
 type Key [3]string
+
+// unknownLabel is UNKNOWN_LABEL of the original: the default of
+// PromSeries.label(name, UNKNOWN_LABEL), used only when the series has no
+// value for the label at all.
+const unknownLabel = "unknown"
 
 // Lookup returns the statistics of key, or a Statistics of StateUnavailable
 // when statistics holds no entry for it.
@@ -38,12 +45,18 @@ func Lookup(statistics map[Key]Statistics, key Key) Statistics {
 	return Statistics{State: StateUnavailable}
 }
 
-// keyOf reads the values of labels from source, in order. A label source
-// lacks reads as the empty text, the zero value Key already holds.
+// keyOf reads the values of labels from source, in order, as dict.get(name,
+// UNKNOWN_LABEL) reads them in the original: a label source has no entry
+// for reads as unknownLabel, and a label source holds with the empty text
+// stays the empty text.
 func keyOf(source map[string]string, labels []string) Key {
 	var key Key
 	for i, label := range labels {
-		key[i] = source[label]
+		if value, ok := source[label]; ok {
+			key[i] = value
+		} else {
+			key[i] = unknownLabel
+		}
 	}
 	return key
 }

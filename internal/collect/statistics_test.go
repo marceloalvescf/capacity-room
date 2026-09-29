@@ -301,6 +301,89 @@ func TestReduceUsesThreeLabels(t *testing.T) {
 	}
 }
 
+// TestReduceKeysAMissingLabelAsUnknown covers a series that has no
+// workload_type label at all: its place in the key reads as "unknown".
+func TestReduceKeysAMissingLabelAsUnknown(t *testing.T) {
+	series := []prom.Series{
+		{
+			Labels: map[string]string{
+				"namespace": "ns1",
+				"workload":  "api",
+			},
+			Points: []prom.Point{{Time: 1, Value: 1, Valid: true}},
+		},
+	}
+
+	got := Reduce(series, []string{"namespace", "workload", "workload_type"})
+	if _, ok := got[Key{"ns1", "api", "unknown"}]; !ok {
+		t.Errorf("Reduce has no entry for %v", Key{"ns1", "api", "unknown"})
+	}
+}
+
+// TestReduceKeysAnEmptyLabelAsEmpty covers a series whose workload_type
+// label is present but holds the empty text: its place in the key stays
+// the empty text, not "unknown".
+func TestReduceKeysAnEmptyLabelAsEmpty(t *testing.T) {
+	series := []prom.Series{
+		{
+			Labels: map[string]string{
+				"namespace":     "ns1",
+				"workload":      "api",
+				"workload_type": "",
+			},
+			Points: []prom.Point{{Time: 1, Value: 1, Valid: true}},
+		},
+	}
+
+	got := Reduce(series, []string{"namespace", "workload", "workload_type"})
+	if _, ok := got[Key{"ns1", "api", ""}]; !ok {
+		t.Errorf("Reduce has no entry for %v", Key{"ns1", "api", ""})
+	}
+}
+
+// TestReduceLeavesUnusedPlacesEmpty covers labels holding one name: the
+// second and third places of the key stay the empty text, not "unknown".
+func TestReduceLeavesUnusedPlacesEmpty(t *testing.T) {
+	series := []prom.Series{
+		{
+			Labels: map[string]string{"namespace": "ns1"},
+			Points: []prom.Point{{Time: 1, Value: 1, Valid: true}},
+		},
+	}
+
+	got := Reduce(series, []string{"namespace"})
+	if _, ok := got[Key{"ns1", "", ""}]; !ok {
+		t.Errorf("Reduce has no entry for %v", Key{"ns1", "", ""})
+	}
+}
+
+// TestRatiosKeyAMissingLabelAsUnknown covers usage and base series that
+// both lack workload_type: the ratio is found under the key with
+// "unknown" in its place.
+func TestRatiosKeyAMissingLabelAsUnknown(t *testing.T) {
+	usage := []prom.Series{
+		{
+			Labels: map[string]string{"namespace": "ns1", "workload": "api"},
+			Points: []prom.Point{{Time: 1, Value: 50, Valid: true}},
+		},
+	}
+	requests := []prom.Series{
+		{
+			Labels: map[string]string{"namespace": "ns1", "workload": "api"},
+			Points: []prom.Point{{Time: 1, Value: 100, Valid: true}},
+		},
+	}
+
+	ratios, _ := Ratios(usage, requests, []string{"namespace", "workload", "workload_type"}, "available")
+	stats := Lookup(ratios, Key{"ns1", "api", "unknown"})
+	if stats.State != StateValue {
+		t.Fatalf("State = %q, want %q", stats.State, StateValue)
+	}
+	if stats.Current != 50.0 {
+		t.Errorf("Current = %v, want %v", stats.Current, 50.0)
+	}
+}
+
 // TestRatiosNegativeBaseGivesNoRatio covers a base of -1: no ratio for
 // that timestamp, and no entry at all since it is the only timestamp.
 func TestRatiosNegativeBaseGivesNoRatio(t *testing.T) {
