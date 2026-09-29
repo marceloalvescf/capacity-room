@@ -24,6 +24,7 @@ func TestLoadReadsEachScenario(t *testing.T) {
 		{"raw-fallback", 73},
 		{"partial-data", 63},
 		{"value-edge-cases", 70},
+		{"edge-values", 70},
 	}
 
 	for _, c := range cases {
@@ -271,39 +272,52 @@ func TestServerIsSafeForConcurrentUse(t *testing.T) {
 	}
 }
 
+// TestScenariosMatchTheFiles checks, for each folder a scenario names, that
+// Scenarios holds exactly the scenarios whose file sits in that folder.
 func TestScenariosMatchTheFiles(t *testing.T) {
-	anyPath, err := Path("direct-complete")
-	if err != nil {
-		t.Fatalf("Path: %v", err)
-	}
-	dir := filepath.Dir(anyPath)
-
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("reading %s: %v", dir, err)
-	}
-
-	var files []string
-	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
-			continue
-		}
-		files = append(files, strings.TrimSuffix(entry.Name(), ".json"))
-	}
-	sort.Strings(files)
-
-	var names []string
+	byFolder := map[string][]string{}
 	for _, s := range Scenarios {
-		names = append(names, s.Name)
+		byFolder[s.Folder] = append(byFolder[s.Folder], s.Name)
 	}
-	sort.Strings(names)
 
-	if len(names) != len(files) {
-		t.Fatalf("Scenarios has %d entries, folder has %d files: %v vs %v", len(names), len(files), names, files)
+	var folders []string
+	for folder := range byFolder {
+		folders = append(folders, folder)
 	}
-	for i := range names {
-		if names[i] != files[i] {
-			t.Fatalf("Scenarios %v does not match folder %v", names, files)
-		}
+	sort.Strings(folders)
+
+	for _, folder := range folders {
+		names := byFolder[folder]
+		t.Run(folder, func(t *testing.T) {
+			anyPath, err := Path(names[0])
+			if err != nil {
+				t.Fatalf("Path: %v", err)
+			}
+			dir := filepath.Dir(anyPath)
+
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				t.Fatalf("reading %s: %v", dir, err)
+			}
+
+			var files []string
+			for _, entry := range entries {
+				if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+					continue
+				}
+				files = append(files, strings.TrimSuffix(entry.Name(), ".json"))
+			}
+			sort.Strings(files)
+			sort.Strings(names)
+
+			if len(names) != len(files) {
+				t.Fatalf("Scenarios has %d entries for folder %s, folder has %d files: %v vs %v", len(names), folder, len(files), names, files)
+			}
+			for i := range names {
+				if names[i] != files[i] {
+					t.Fatalf("Scenarios %v does not match folder %v", names, files)
+				}
+			}
+		})
 	}
 }

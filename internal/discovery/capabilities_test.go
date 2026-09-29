@@ -1128,6 +1128,7 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 		// node_memory_MemTotal_bytes) are left out too.
 		"partial-data":     26,
 		"value-edge-cases": 29,
+		"edge-values":      29,
 	}
 
 	// windowLen is how many of the fixture's own scripted requests (in its
@@ -1145,6 +1146,7 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 		"raw-fallback":          31,
 		"partial-data":          29,
 		"value-edge-cases":      29,
+		"edge-values":           29,
 	}
 
 	// wantUnused is the query_contains text of every scripted request within
@@ -1162,6 +1164,7 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 		"raw-fallback":          {"kube_pod_status_phase", "instance:node_memory_utilisation:ratio"},
 		"partial-data":          {"instance:node_memory_utilisation:ratio", "node_memory_MemAvailable_bytes", "node_memory_MemTotal_bytes"},
 		"value-edge-cases":      {},
+		"edge-values":           {},
 	}
 
 	for _, scenario := range promtest.Scenarios {

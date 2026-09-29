@@ -29,10 +29,11 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
 
-// DataFileScenarios names the scenarios that have golden data files. The
-// other two give, in this part, the same document as direct-complete.
+// DataFileScenarios names the scenarios that have golden data files. Of the
+// other two, grafana-authenticated and thanos-multicluster give, in this
+// part, the same document as direct-complete.
 var DataFileScenarios = []string{
-	"direct-complete", "partial-data", "raw-fallback", "value-edge-cases",
+	"direct-complete", "partial-data", "raw-fallback", "value-edge-cases", "edge-values",
 }
 
 // The fixed input every scenario runs with, held constant so that only the
@@ -87,10 +88,11 @@ func fixedConfig(scenario promtest.Scenario, serverURL string) config.Config {
 // whole chain the command itself runs before writing a snapshot: build the
 // window, connect, resolve the scope, detect the capabilities, check they
 // are sufficient, collect, analyze, and build. It returns the built
-// snapshot together with every request the server saw, in the order it saw
-// them, so that Snapshot and Queries, run once each, always describe the
-// very same run of the scenario.
-func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, []promtest.Seen, error) {
+// snapshot together with the fake server that served it, so that Snapshot
+// and Queries, run once each, always describe the very same run of the
+// scenario, and so that a caller that needs to know whether every scripted
+// answer was consumed can ask the server itself once the run is over.
+func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, *promtest.Server, error) {
 	path, err := promtest.Path(scenario.Name)
 	if err != nil {
 		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: locating fixture: %w", scenario.Name, err)
@@ -168,7 +170,7 @@ func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, []
 		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: building the snapshot: %w", scenario.Name, err)
 	}
 
-	return snap, fake.Seen(), nil
+	return snap, fake, nil
 }
 
 // Snapshot serves the scenario in this process, runs the connection, the
@@ -193,13 +195,13 @@ func Snapshot(ctx context.Context, scenario promtest.Scenario) ([]byte, error) {
 // as the two characters \n rather than an actual line break, so that the
 // golden file itself stays one line per request.
 func Queries(ctx context.Context, scenario promtest.Scenario) ([]byte, error) {
-	_, seen, err := run(ctx, scenario)
+	_, fake, err := run(ctx, scenario)
 	if err != nil {
 		return nil, err
 	}
 
 	var buf bytes.Buffer
-	for _, s := range seen {
+	for _, s := range fake.Seen() {
 		query := strings.ReplaceAll(s.Query, "\n", `\n`)
 		fmt.Fprintf(&buf, "%s\t%s\n", s.Path, query)
 	}

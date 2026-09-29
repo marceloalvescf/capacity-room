@@ -32,3 +32,7 @@ a9bfd11f3f22e1b0bdeb52f324d25eccc9817c3145a139fc7b1ff2c096d87d72  grafana-authen
 f0ae19bf0b07f5446dd8dae717fba35f48388589e455999d272ac16f11e1bdcb  thanos-multicluster.json
 114e04d41f69d77fceddd71433228fa16ff0d835cb73a3e1ee25384921b14f4f  value-edge-cases.json
 ```
+
+A seventh scenario, with values at the edge that no answer of the original
+tool holds, is not carried over from it and lives in
+`testdata/prometheus-own/`, described in its own README.
