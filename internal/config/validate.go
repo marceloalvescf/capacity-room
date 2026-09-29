@@ -17,7 +17,9 @@ var labelRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 // wording never drifts between call sites.
 var (
 	errPeriodShape     = errors.New("analysis.period must look like 30m, 4h, 24h, or 7d")
+	errPeriodTooLong   = errors.New("analysis.period is too long")
 	errTimezoneUnknown = errors.New("analysis.timezone is unknown")
+	errTokenTooShort   = errors.New("the token must hold at least 8 characters")
 	errMetricsURLShape = errors.New("metrics.url must be an absolute HTTP or HTTPS URL")
 	errMetricsURLCreds = errors.New("metrics.url must not embed credentials")
 	errMetricsURLQuery = errors.New("metrics.url must not include a query string")
@@ -131,6 +133,9 @@ func validateCluster(cl Cluster) error {
 func validateAnalysis(a Analysis) error {
 	if !periodRe.MatchString(a.Period) {
 		return errPeriodShape
+	}
+	if _, err := a.Duration(); err != nil {
+		return errPeriodTooLong
 	}
 	if _, err := a.Location(); err != nil {
 		return errTimezoneUnknown

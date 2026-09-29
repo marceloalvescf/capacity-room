@@ -4,15 +4,40 @@
 package config
 
 import (
+	"math"
 	"regexp"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	// Imported for its effect: it embeds the IANA time zone database in the
 	// binary, so analysis.timezone resolves the same way on every machine,
 	// whether or not the host itself carries zoneinfo files.
 	_ "time/tzdata"
 )
+
+// MinTokenLength is the fewest characters a non-empty --token or a
+// non-empty variable named by metrics.token_env may hold. A token shorter
+// than this cannot be told apart from ordinary text once every occurrence
+// of it is redacted: a token of one letter, or a common short word, turns
+// every unrelated use of that letter or word in a diagnostic into
+// [redacted] too.
+const MinTokenLength = 8
+
+// CheckToken refuses a token shorter than MinTokenLength characters. An
+// empty token is not refused here: an empty --token or metrics.token_env
+// value means "not given", not "too short". The count is of characters,
+// not of bytes, so a token of seven accented letters is refused exactly
+// like one of seven plain ones.
+func CheckToken(token string) error {
+	if token == "" {
+		return nil
+	}
+	if utf8.RuneCountInString(token) < MinTokenLength {
+		return errTokenTooShort
+	}
+	return nil
+}
 
 // Config is the fully resolved, validated configuration of a report run.
 type Config struct {
@@ -135,25 +160,40 @@ type Loaded struct {
 	Token  string
 }
 
-// Duration returns the length of analysis.period.
+// periodUnitNanos returns the length, in nanoseconds, of one unit of a
+// period's trailing letter: 'm' for minutes, 'h' for hours, and anything
+// else (periodRe accepts only 'd' besides those two) for days.
+func periodUnitNanos(unit byte) int64 {
+	switch unit {
+	case 'm':
+		return int64(time.Minute)
+	case 'h':
+		return int64(time.Hour)
+	default: // 'd', the only other letter periodRe accepts
+		return int64(24 * time.Hour)
+	}
+}
+
+// Duration returns the length of analysis.period. The design sets no upper
+// limit of its own on a period, so the only limit is what a time.Duration
+// (an int64 count of nanoseconds) can hold: a period whose number of
+// digits, or whose product with its unit, does not fit is refused rather
+// than silently wrapped into a negative value.
 func (a Analysis) Duration() (time.Duration, error) {
 	if !periodRe.MatchString(a.Period) {
 		return 0, errPeriodShape
 	}
 
-	value, err := strconv.Atoi(a.Period[:len(a.Period)-1])
+	value, err := strconv.ParseInt(a.Period[:len(a.Period)-1], 10, 64)
 	if err != nil {
-		return 0, errPeriodShape
+		return 0, errPeriodTooLong
 	}
 
-	switch a.Period[len(a.Period)-1] {
-	case 'm':
-		return time.Duration(value) * time.Minute, nil
-	case 'h':
-		return time.Duration(value) * time.Hour, nil
-	default: // 'd', the only other letter periodRe accepts
-		return time.Duration(value) * 24 * time.Hour, nil
+	unit := periodUnitNanos(a.Period[len(a.Period)-1])
+	if value > math.MaxInt64/unit {
+		return 0, errPeriodTooLong
 	}
+	return time.Duration(value * unit), nil
 }
 
 // Location returns the zone of analysis.timezone, from the data embedded

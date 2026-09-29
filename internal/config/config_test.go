@@ -108,6 +108,73 @@ func TestDurationRejectsAMalformedPeriod(t *testing.T) {
 	}
 }
 
+// TestDurationRejectsATooLongPeriod proves the only limit on a period's
+// magnitude is what a time.Duration (an int64 count of nanoseconds) can
+// hold, and that a period that does not fit is refused rather than
+// silently wrapped into a negative value: 106752d is the first number of
+// days that overflows, and 106751d is the last one that does not.
+func TestDurationRejectsATooLongPeriod(t *testing.T) {
+	tests := []string{"999999999d", "9223372036854775807m", "106752d"}
+	for _, period := range tests {
+		t.Run(period, func(t *testing.T) {
+			a := Analysis{Period: period}
+			d, err := a.Duration()
+			if err == nil {
+				t.Fatalf("Duration() = %v, err nil, want %q", d, errPeriodTooLong)
+			}
+			if err.Error() != errPeriodTooLong.Error() {
+				t.Fatalf("Duration() error = %q, want %q", err.Error(), errPeriodTooLong.Error())
+			}
+			if d != 0 {
+				t.Fatalf("Duration() = %v, want 0", d)
+			}
+		})
+	}
+}
+
+// TestDurationAcceptsTheLongestDayPeriod proves 106751d, the day count
+// immediately below the one TestDurationRejectsATooLongPeriod proves
+// overflows, is accepted, with the duration it names.
+func TestDurationAcceptsTheLongestDayPeriod(t *testing.T) {
+	a := Analysis{Period: "106751d"}
+	got, err := a.Duration()
+	if err != nil {
+		t.Fatalf("Duration() error = %v, want nil", err)
+	}
+	want := 106751 * 24 * time.Hour
+	if got != want {
+		t.Fatalf("Duration() = %v, want %v", got, want)
+	}
+}
+
+func TestCheckToken(t *testing.T) {
+	tests := []struct {
+		name    string
+		token   string
+		wantErr bool
+	}{
+		{"empty means not given", "", false},
+		{"seven characters", "1234567", true},
+		{"eight characters", "12345678", false},
+		{"seven accented characters", "áéíóúçã", true},
+		{"eight accented characters", "áéíóúçãõ", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := CheckToken(tt.token)
+			if tt.wantErr && err == nil {
+				t.Fatalf("CheckToken(%q) = nil, want an error", tt.token)
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("CheckToken(%q) = %v, want nil", tt.token, err)
+			}
+			if tt.wantErr && err.Error() != "the token must hold at least 8 characters" {
+				t.Fatalf("CheckToken(%q) = %q, want %q", tt.token, err.Error(), "the token must hold at least 8 characters")
+			}
+		})
+	}
+}
+
 // TestLocationUsesEmbeddedZones sets ZONEINFO to a folder that does not
 // exist. On this machine the system also carries zoneinfo files under
 // /usr/share/zoneinfo, which time.LoadLocation would find regardless of the

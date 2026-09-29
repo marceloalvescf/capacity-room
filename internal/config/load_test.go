@@ -65,7 +65,7 @@ func getenvWithToken(extraKey, extraVal string) func(string) string {
 	return func(key string) string {
 		switch key {
 		case "KCR_FULL_TOKEN":
-			return "s3cr3t"
+			return "s3cr3t12"
 		case extraKey:
 			return extraVal
 		default:
@@ -221,7 +221,7 @@ func TestLoadFlagOverridesEnvironment(t *testing.T) {
 func TestLoadEmptyVariableIsNotSet(t *testing.T) {
 	getenv := func(key string) string {
 		if key == "KCR_FULL_TOKEN" {
-			return "s3cr3t"
+			return "s3cr3t12"
 		}
 		if key == "KCR_CLUSTER" {
 			return ""
@@ -309,7 +309,7 @@ namespaces = ["default"]
 `)
 	getenv := func(key string) string {
 		if key == "KCR_TOKEN" {
-			return "abc"
+			return "abcdefgh"
 		}
 		return ""
 	}
@@ -318,8 +318,8 @@ namespaces = ["default"]
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if loaded.Token != "abc" {
-		t.Fatalf("Token = %q, want %q", loaded.Token, "abc")
+	if loaded.Token != "abcdefgh" {
+		t.Fatalf("Token = %q, want %q", loaded.Token, "abcdefgh")
 	}
 }
 
@@ -335,18 +335,45 @@ namespaces = ["default"]
 `)
 	getenv := func(key string) string {
 		if key == "KCR_TOKEN" {
-			return "abc"
+			return "abcdefgh"
 		}
 		return ""
 	}
-	token := "xyz"
+	token := "xyzxyzxy"
 
 	loaded, err := Load(Source{File: path, Getenv: getenv, Flags: Flags{Token: &token}})
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if loaded.Token != "xyz" {
-		t.Fatalf("Token = %q, want %q", loaded.Token, "xyz")
+	if loaded.Token != "xyzxyzxy" {
+		t.Fatalf("Token = %q, want %q", loaded.Token, "xyzxyzxy")
+	}
+}
+
+// TestLoadRejectsATooShortTokenVariable proves resolveToken applies the
+// same MinTokenLength rule to a token read from metrics.token_env as
+// cli.Run applies, before anything else, to one read from --token.
+func TestLoadRejectsATooShortTokenVariable(t *testing.T) {
+	path := writeFile(t, `
+[metrics]
+url = "https://prom.example.org"
+token_env = "KCR_TOKEN"
+
+[cluster]
+name = "prod"
+namespaces = ["default"]
+`)
+	getenv := func(key string) string {
+		if key == "KCR_TOKEN" {
+			return "abc"
+		}
+		return ""
+	}
+
+	_, err := Load(Source{File: path, Getenv: getenv})
+	want := "the token must hold at least 8 characters"
+	if err == nil || err.Error() != want {
+		t.Fatalf("Load() error = %v, want %q", err, want)
 	}
 }
 
@@ -378,14 +405,14 @@ token_env = "KCR_TOKEN"
 name = "prod"
 namespaces = ["default"]
 `)
-	token := "xyz"
+	token := "xyzxyzxy"
 
 	loaded, err := Load(Source{File: path, Getenv: noEnv, Flags: Flags{Token: &token}})
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if loaded.Token != "xyz" {
-		t.Fatalf("Token = %q, want %q", loaded.Token, "xyz")
+	if loaded.Token != "xyzxyzxy" {
+		t.Fatalf("Token = %q, want %q", loaded.Token, "xyzxyzxy")
 	}
 }
 

@@ -401,9 +401,13 @@ func splitList(s string) []string {
 // resolveToken picks the token: flagToken when given and not empty;
 // otherwise the variable named by tokenEnv; otherwise empty. It fails when
 // tokenEnv names a variable that is unset or empty and flagToken was not
-// given.
+// given, and it refuses either source of a token shorter than
+// MinTokenLength characters, by the same rule CheckToken applies.
 func resolveToken(getenv func(string) string, flagToken *string, tokenEnv string) (string, error) {
 	if flagToken != nil && *flagToken != "" {
+		if err := CheckToken(*flagToken); err != nil {
+			return "", err
+		}
 		return *flagToken, nil
 	}
 	if tokenEnv == "" {
@@ -412,6 +416,9 @@ func resolveToken(getenv func(string) string, flagToken *string, tokenEnv string
 	value := getenv(tokenEnv)
 	if value == "" {
 		return "", fmt.Errorf("metrics.token_env names %s, which is unset or empty", tokenEnv)
+	}
+	if err := CheckToken(value); err != nil {
+		return "", err
 	}
 	return value, nil
 }

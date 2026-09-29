@@ -57,6 +57,7 @@ func TestValidate(t *testing.T) {
 		{"cluster.filter_mode invalid", func(c *Config) { c.Cluster.FilterMode = "bogus" }, "cluster.filter_mode must be required, auto, or none"},
 		{"cluster.nodepool_label invalid", func(c *Config) { c.Cluster.NodepoolLabel = "1bad" }, "cluster.nodepool_label must be a valid Prometheus label name"},
 		{"analysis.period invalid", func(c *Config) { c.Analysis.Period = "abc" }, "analysis.period must look like 30m, 4h, 24h, or 7d"},
+		{"analysis.period too long", func(c *Config) { c.Analysis.Period = "999999999d" }, "analysis.period is too long"},
 		{"analysis.timezone unknown", func(c *Config) { c.Analysis.Timezone = "Not/AZone" }, "analysis.timezone is unknown"},
 		{"analysis.node_autoscaling invalid", func(c *Config) { c.Analysis.NodeAutoscaling = "bogus" }, "analysis.node_autoscaling must be auto, enabled, or disabled"},
 		{"threshold percent out of range", func(c *Config) { c.Thresholds.WarningPercent = 101 }, "threshold values must be within 0..100"},
