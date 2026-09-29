@@ -430,32 +430,18 @@ func TestFromSnapshotPrintsTheSections(t *testing.T) {
 	}
 }
 
-// wordAppears reports whether text holds word as a word of its own: a
-// match with a boundary on each side, so that idle inside a longer word
-// such as middle does not count.
+// wordAppears reports whether text holds word as a word of its own: an
+// occurrence whose neighboring character, on each side, is neither a
+// letter, a digit, a hyphen, a dot, nor an underscore — or is absent,
+// word being at the very start or the very end of text. A name of
+// Kubernetes may itself hold a hyphen or a dot, so the ordinary regular
+// expression word boundary, which treats both as the edge of a word, is
+// not enough: it would count api as a word of its own inside
+// api-gateway or my.api, neither of which it is.
 func wordAppears(text, word string) bool {
-	re := regexp.MustCompile(`\b` + regexp.QuoteMeta(word) + `\b`)
+	const notWordChar = `[^A-Za-z0-9_.\-]`
+	re := regexp.MustCompile(`(?:^|` + notWordChar + `)` + regexp.QuoteMeta(word) + `(?:$|` + notWordChar + `)`)
 	return re.MatchString(text)
-}
-
-// holdsARepeatedHyphen reports whether text, once every whitespace
-// character is stripped, holds two consecutive hyphens: the shape Typst
-// leaves behind when it wraps an already-hyphenated name at its own
-// hyphen and adds a second one of its own at the break.
-//
-// template/capacity_test.go checks the same thing, on one specific table
-// column, through leadingCellStream, a helper of that package's own
-// *_test.go file: unexported, and, being a test helper, not reachable
-// from another package's tests regardless. This file cannot reach it, so
-// it applies the same rule with the tool already reached here instead,
-// stripWhitespace (itself a duplicate of the template package's own,
-// following the same file's earlier doc comment on why), over the whole
-// page rather than one column: every one of this test's documents was
-// read to confirm no line of ordinary prose, in either language, wraps at
-// a hyphen of its own, so nothing else on the page can produce a false
-// match.
-func holdsARepeatedHyphen(text string) bool {
-	return strings.Contains(stripWhitespace(text), "--")
 }
 
 // numberedHeading builds the text a numbered top-level heading of the
@@ -470,14 +456,55 @@ func numberedHeading(t *testing.T, cat *catalog.Catalog, number int, key catalog
 	return fmt.Sprintf("%d %s", number, text)
 }
 
+// pdfPages splits text, the whole output of pdftotext -raw, into one
+// string per page, on the form feed pdftotext writes between pages —
+// and, as it also writes one after the last page, drops the empty page
+// that trailing form feed would otherwise leave behind.
+func pdfPages(text string) []string {
+	pages := strings.Split(text, "\f")
+	if len(pages) > 0 && pages[len(pages)-1] == "" {
+		pages = pages[:len(pages)-1]
+	}
+	return pages
+}
+
+// TestWordAppears checks wordAppears' own table: api is a word of its
+// own surrounded by ordinary text, but is not one as a bare substring of
+// a longer word (capital, rapid), nor as the part of a Kubernetes name
+// that a hyphen or a dot joins to something else (api-gateway, my.api).
+func TestWordAppears(t *testing.T) {
+	tests := []struct {
+		name string
+		text string
+		want bool
+	}{
+		{"surrounded by ordinary text", "... api 4 ...", true},
+		{"substring holding the letters before an extra one", "capital", false},
+		{"prefix of a name joined by a hyphen", "api-gateway", false},
+		{"suffix of a name joined by a dot", "my.api", false},
+		{"substring in the middle of a word", "rapid", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := wordAppears(tt.text, "api"); got != tt.want {
+				t.Errorf("wordAppears(%q, %q) = %v, want %v", tt.text, "api", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestRealReportTextOfEveryScenario checks, for every one of the seven
 // scenarios and both languages, that the compiled PDF: has three pages;
-// holds the numbered heading of section 1, section 2, and the appendix;
-// holds the name of every namespace and every workload the scenario's
-// snapshot holds; holds the interpretation notes heading exactly when the
-// snapshot holds a warning or a notice; holds, for edge-values, neither
-// of the two workload names its snapshot omits, as a word of its own; and
-// holds no repeated hyphen at a line break.
+// names the numbered heading of section 1, section 2, and the appendix
+// in the outline, on page 1; carries the heading of section 1 and of
+// section 2, each with its number, on page 2, and the heading of the
+// appendix, with its number, on page 3; carries the name of every
+// namespace and every workload the scenario's snapshot holds, as a word
+// of its own, on page 2; carries the interpretation notes heading, after
+// the appendix heading, on page 3, exactly when the snapshot holds a
+// warning or a notice, and on no page otherwise; and, for edge-values,
+// carries neither of the two workload names its snapshot omits, as a
+// word of its own, on any page.
 //
 // The names and the notes expectation come from
 // testdata/snapshot/<scenario>.json, not from a second collecting run:
@@ -517,9 +544,9 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 						t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
 					}
 
-					text := pdfText(t, outPath)
-					if got := strings.Count(text, "\f"); got != 3 {
-						t.Fatalf("form feed count = %d, want 3", got)
+					pages := pdfPages(pdfText(t, outPath))
+					if len(pages) != 3 {
+						t.Fatalf("PDF has %d page(s), want 3", len(pages))
 					}
 
 					cat, err := catalog.Load(lang)
@@ -527,28 +554,44 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 						t.Fatalf("catalog.Load(%s): %v", lang, err)
 					}
 
-					for _, h := range []struct {
+					headings := []struct {
 						number int
 						key    catalog.Key
+						page   int // 0-based: the page the heading itself, not the outline entry, belongs on
 					}{
-						{1, catalog.SectionsNamespacesHeading},
-						{2, catalog.SectionsWorkloadsHeading},
-						{3, catalog.AppendixHeading},
-					} {
+						{1, catalog.SectionsNamespacesHeading, 1},
+						{2, catalog.SectionsWorkloadsHeading, 1},
+						{3, catalog.AppendixHeading, 2},
+					}
+
+					// Page 1's own outline names all three, each with its
+					// number, whether or not the heading it names still
+					// reaches the page it promises: a separate assertion
+					// from the one below, so a lost section and a lost
+					// outline entry are never reported as the same fault.
+					for _, h := range headings {
 						want := numberedHeading(t, cat, h.number, h.key)
-						if !containsText(text, want) {
-							t.Errorf("text does not contain the heading %q", want)
+						if !containsText(pages[0], want) {
+							t.Errorf("the outline on page 1 does not contain %q", want)
+						}
+					}
+
+					// The heading itself, on the page it belongs on.
+					for _, h := range headings {
+						want := numberedHeading(t, cat, h.number, h.key)
+						if !containsText(pages[h.page], want) {
+							t.Errorf("page %d does not contain the heading %q", h.page+1, want)
 						}
 					}
 
 					for _, ns := range snap.Namespaces {
-						if !containsText(text, ns.Name) {
-							t.Errorf("text does not contain the namespace name %q", ns.Name)
+						if !wordAppears(pages[1], ns.Name) {
+							t.Errorf("page 2 does not contain the namespace name %q as a word of its own", ns.Name)
 						}
 					}
 					for _, wl := range snap.Workloads {
-						if !containsText(text, wl.Name) {
-							t.Errorf("text does not contain the workload name %q", wl.Name)
+						if !wordAppears(pages[1], wl.Name) {
+							t.Errorf("page 2 does not contain the workload name %q as a word of its own", wl.Name)
 						}
 					}
 
@@ -556,24 +599,33 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 					if err != nil {
 						t.Fatalf("NotesHeading text: %v", err)
 					}
-					holdsNotes := containsText(text, notesHeading)
-					if wantNotes && !holdsNotes {
-						t.Errorf("text does not contain the interpretation notes heading %q, though the snapshot holds a warning or a notice", notesHeading)
-					}
-					if !wantNotes && holdsNotes {
-						t.Errorf("text contains the interpretation notes heading %q, though the snapshot holds neither a warning nor a notice", notesHeading)
-					}
-
-					if scenario.Name == "edge-values" {
-						for _, omitted := range []string{"idle", "nightly"} {
-							if wordAppears(text, omitted) {
-								t.Errorf("text contains %q as a word of its own, though the snapshot omits that workload", omitted)
+					if wantNotes {
+						appendixWant := numberedHeading(t, cat, 3, catalog.AppendixHeading)
+						strippedPage3 := stripWhitespace(pages[2])
+						appendixIdx := strings.Index(strippedPage3, stripWhitespace(appendixWant))
+						notesIdx := strings.Index(strippedPage3, stripWhitespace(notesHeading))
+						switch {
+						case notesIdx == -1:
+							t.Errorf("page 3 does not contain the interpretation notes heading %q, though the snapshot holds a warning or a notice", notesHeading)
+						case appendixIdx != -1 && notesIdx < appendixIdx:
+							t.Errorf("the interpretation notes heading %q appears before the appendix heading on page 3", notesHeading)
+						}
+					} else {
+						for i, page := range pages {
+							if containsText(page, notesHeading) {
+								t.Errorf("page %d contains the interpretation notes heading %q, though the snapshot holds neither a warning nor a notice", i+1, notesHeading)
 							}
 						}
 					}
 
-					if holdsARepeatedHyphen(text) {
-						t.Errorf("text holds a repeated hyphen at a line break")
+					if scenario.Name == "edge-values" {
+						for _, omitted := range []string{"idle", "nightly"} {
+							for i, page := range pages {
+								if wordAppears(page, omitted) {
+									t.Errorf("page %d contains %q as a word of its own, though the snapshot omits that workload", i+1, omitted)
+								}
+							}
+						}
 					}
 				})
 			}
