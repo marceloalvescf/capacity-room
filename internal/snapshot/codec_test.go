@@ -1076,6 +1076,13 @@ type keyWalkMapField struct {
 	Foo map[string]string `json:"foo"`
 }
 
+// keyWalkIntKeyMapField gives TestKeyWalkRefusesOtherPointersAndMaps a map
+// whose value type is float64, the one the walk supports, but whose key
+// type is not a text.
+type keyWalkIntKeyMapField struct {
+	Foo map[int]float64 `json:"foo"`
+}
+
 type keyWalkNoTag struct {
 	Foo string
 }
@@ -1124,11 +1131,11 @@ func TestKeyWalkRefusesWhatItDoesNotKnow(t *testing.T) {
 	}
 }
 
-// TestKeyWalkRefusesOtherPointersAndMaps covers that the walk's new support
+// TestKeyWalkRefusesOtherPointersAndMaps covers that the walk's support
 // for *float64 and map[string]float64 does not widen to any other pointer
 // or any other map: a *string and a map[string]string are refused exactly
 // as TestKeyWalkRefusesWhatItDoesNotKnow already covers for the shapes
-// this task adds no support for.
+// the walk does not support.
 func TestKeyWalkRefusesOtherPointersAndMaps(t *testing.T) {
 	tests := []struct {
 		name string
@@ -1136,6 +1143,7 @@ func TestKeyWalkRefusesOtherPointersAndMaps(t *testing.T) {
 	}{
 		{"a pointer that is not *float64", reflect.TypeOf(keyWalkPointerField{})},
 		{"a map that is not map[string]float64", reflect.TypeOf(keyWalkMapField{})},
+		{"a map whose key is not a text", reflect.TypeOf(keyWalkIntKeyMapField{})},
 	}
 
 	for _, tt := range tests {
@@ -1183,6 +1191,133 @@ func validSnapshotWithRows(t *testing.T) Snapshot {
 	in.Findings = analysis.All(collected, in.Config.Thresholds)
 
 	return mustBuild(t, in)
+}
+
+// unavailableSnapshotWorkload returns a Workload of the snapshot's own
+// type, every one of its ten statistics of state unavailable, so a table
+// test can add a second, well-formed row to an already-built Snapshot.
+func unavailableSnapshotWorkload(namespace, kind, name string) Workload {
+	u := Statistics{State: collect.StateUnavailable}
+	return Workload{
+		Namespace: namespace, Kind: kind, Name: name,
+		CPUUsage: u, MemoryUsage: u, CPURequests: u, MemoryRequests: u,
+		CPULimits: u, MemoryLimits: u, CPURequestPercent: u, MemoryRequestPercent: u,
+		CPULimitPercent: u, MemoryLimitPercent: u,
+	}
+}
+
+// fullSnapshot returns a Snapshot that passes Check(), with every new
+// section filled: one namespace and two workloads of one name kept apart
+// by kind, a finding of the namespace and one of a workload, each with
+// evidence, one warning, one notice with its count, a statistic of each
+// of the three states, and a pod count that is known (the namespace, and
+// the workload "Deployment/api") and one that is not (the workload
+// "StatefulSet/api").
+func fullSnapshot(t *testing.T) Snapshot {
+	t.Helper()
+	in := baseInput()
+	in.Config.Cluster.Namespaces = []string{"payments"}
+
+	namespaces := []collect.Namespace{{
+		Name: "payments", Pods: 3, PodsKnown: true,
+		RequestsLimitsState: discovery.StateAvailable,
+		Resources: collect.Resources{
+			CPUUsage:             collect.Statistics{State: collect.StateValue, Average: 0.3, Minimum: 0.2, Peak: 0.4, Current: 0.4},
+			MemoryUsage:          collect.Statistics{State: collect.StateUnavailable},
+			CPURequests:          collect.Statistics{State: collect.StateUnavailable},
+			MemoryRequests:       collect.Statistics{State: collect.StateUnavailable},
+			CPULimits:            collect.Statistics{State: collect.StateUnavailable},
+			MemoryLimits:         collect.Statistics{State: collect.StateUnavailable},
+			CPURequestPercent:    collect.Statistics{State: collect.StateValue, Average: 60, Minimum: 40, Peak: 80, Current: 80},
+			MemoryRequestPercent: collect.Statistics{State: collect.StateNoBase},
+			CPULimitPercent:      collect.Statistics{State: collect.StateValue, Average: 30, Minimum: 20, Peak: 40, Current: 40},
+			MemoryLimitPercent:   collect.Statistics{State: collect.StateUnavailable},
+		},
+	}}
+	workloads := []collect.Workload{
+		{
+			Namespace: "payments", Kind: "Deployment", Name: "api",
+			Pods: 2, PodsKnown: true,
+			RequestsLimitsState: discovery.StateAvailable, Resources: unavailableResources(),
+		},
+		{
+			Namespace: "payments", Kind: "StatefulSet", Name: "api",
+			PodsKnown:           false,
+			RequestsLimitsState: discovery.StateAvailable, Resources: unavailableResources(),
+		},
+	}
+
+	in.Collected = collect.Collected{
+		Namespaces: collect.Result[collect.Namespace]{
+			Rows:     namespaces,
+			Warnings: []collect.Message{{Code: collect.WarningNamespaceUsageIncomplete, Params: map[string]float64{}}},
+			Notices:  []collect.Message{{Code: collect.NoticeJobsOmitted, Params: map[string]float64{"count": 2}}},
+		},
+		Workloads: collect.Result[collect.Workload]{Rows: workloads},
+	}
+	in.Findings = []analysis.Finding{
+		{
+			Code: "NAMESPACE_CPU_REQUEST_ATTENTION", Severity: analysis.SeverityAttention,
+			ScopeType: analysis.ScopeNamespace, ScopeKind: "", ScopeName: "payments",
+			Confidence: discovery.ConfidenceExact,
+			Evidence:   []analysis.Evidence{{Name: "average_percent", Value: 60}, {Name: "peak_percent", Value: 80}},
+		},
+		{
+			Code: "WORKLOAD_CPU_LIMIT_HEALTHY", Severity: analysis.SeverityHealthy,
+			ScopeType: analysis.ScopeWorkload, ScopeKind: "Deployment", ScopeName: "payments/api",
+			Confidence: discovery.ConfidenceExact,
+			Evidence:   []analysis.Evidence{{Name: "average_percent", Value: 30}, {Name: "peak_percent", Value: 40}},
+		},
+	}
+
+	return mustBuild(t, in)
+}
+
+// TestEncodeDecodeRoundTrip covers Decode(Encode(s)) == s, compared
+// deeply, and that re-encoding the decoded snapshot gives the same bytes
+// as the first encoding, compared byte for byte, for a snapshot with
+// every new section filled and for one with every new section empty.
+//
+// Rule 5 makes the second case's namespaces impossible to leave empty:
+// scope.namespaces is never empty, and the snapshot's own namespaces must
+// name exactly the namespaces of the scope. So "every new section empty"
+// here means every one but namespaces: the snapshot has one row for each
+// namespace of its scope, every statistic unavailable, and no workload,
+// no finding, no warning, no notice; this is exactly validSnapshot's own
+// baseline.
+func TestEncodeDecodeRoundTrip(t *testing.T) {
+	tests := []struct {
+		name string
+		snap Snapshot
+	}{
+		{"every new section filled", fullSnapshot(t)},
+		{"every new section empty but the namespaces of the scope", validSnapshot(t)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			first, err := Encode(tt.snap)
+			if err != nil {
+				t.Fatalf("Encode() error = %v", err)
+			}
+
+			got, err := Decode(first)
+			if err != nil {
+				t.Fatalf("Decode() error = %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.snap) {
+				t.Fatalf("Decode(Encode(s)) = %+v, want %+v", got, tt.snap)
+			}
+
+			second, err := Encode(got)
+			if err != nil {
+				t.Fatalf("Encode(Decode(Encode(s))) error = %v", err)
+			}
+			if string(second) != string(first) {
+				t.Fatalf("Encode(Decode(Encode(s))) != Encode(s):\n%s\nvs\n%s", second, first)
+			}
+		})
+	}
 }
 
 // TestDecodeAcceptsNullNumber covers that a *float64 field, such as
@@ -1372,11 +1507,12 @@ func TestDecodeRefusesUnknownKeyInNewSections(t *testing.T) {
 	}
 }
 
-// TestDecodeRefusesMissingNewSection reads a snapshot of part 2.1, stored
-// as testdata/schema-1.0-before-rows.json before this task added
-// namespaces, workloads, findings, and quality's warnings and notices:
-// checkKeys visits quality's fields in their declared order, so the first
-// one this fixture lacks, warnings, is the one Decode reports.
+// TestDecodeRefusesMissingNewSection reads
+// testdata/schema-1.0-before-rows.json, a snapshot whose top level holds
+// no namespaces, workloads, or findings, and whose quality holds no
+// warnings or notices: checkKeys visits quality's fields in their
+// declared order, so the first one this fixture lacks, warnings, is the
+// one Decode reports.
 func TestDecodeRefusesMissingNewSection(t *testing.T) {
 	data, err := os.ReadFile("testdata/schema-1.0-before-rows.json")
 	if err != nil {
@@ -1483,7 +1619,10 @@ func TestCheckRules(t *testing.T) {
 			s.Quality.Notices[0].Params = map[string]float64{}
 		}, "quality.notices[0].params must hold exactly: count"},
 		{"quality.notices[0].params.count not whole", func(s *Snapshot) {
-			s.Quality.Notices[0].Params = map[string]float64{"count": 2.5}
+			s.Quality.Notices[0].Params = map[string]float64{"count": 1.5}
+		}, "quality.notices[0].params.count must be a whole number above zero"},
+		{"quality.notices[0].params.count not above zero", func(s *Snapshot) {
+			s.Quality.Notices[0].Params = map[string]float64{"count": 0}
 		}, "quality.notices[0].params.count must be a whole number above zero"},
 
 		// Rule 3: the state of a statistic is one of the three; value has a
@@ -1552,6 +1691,18 @@ func TestCheckRules(t *testing.T) {
 		{"findings[0].evidence does not match its definition", func(s *Snapshot) {
 			s.Findings[0].Evidence = []Evidence{{Name: "only_one", Value: 1}}
 		}, "findings[0].evidence does not match the definition of NAMESPACE_MEMORY_LIMIT_CRITICAL"},
+		{"findings[0].evidence in another order", func(s *Snapshot) {
+			s.Findings[0].Evidence = []Evidence{
+				{Name: "peak_percent", Value: 12000},
+				{Name: "average_percent", Value: 11000},
+			}
+		}, "findings[0].evidence does not match the definition of NAMESPACE_MEMORY_LIMIT_CRITICAL"},
+		{"findings[0].evidence holds one name twice", func(s *Snapshot) {
+			s.Findings[0].Evidence = []Evidence{
+				{Name: "average_percent", Value: 11000},
+				{Name: "average_percent", Value: 12000},
+			}
+		}, "findings[0].evidence does not match the definition of NAMESPACE_MEMORY_LIMIT_CRITICAL"},
 		{"findings[0].confidence unknown", func(s *Snapshot) {
 			s.Findings[0].Confidence = "bogus"
 		}, `findings[0].confidence has an unknown value: "bogus"`},
@@ -1571,6 +1722,14 @@ func TestCheckRules(t *testing.T) {
 		{"findings[2].scope_name not a workload of the snapshot", func(s *Snapshot) {
 			s.Findings[2].ScopeName = "payments/unknown-workload"
 		}, "findings[2].scope_name is not a workload of the snapshot"},
+		{"findings[7].scope_name a workload by name, not by this kind", func(s *Snapshot) {
+			// findings[7] (WORKLOAD_CPU_LIMIT_HEALTHY) is the only finding
+			// of its severity and scope name, so changing its scope kind
+			// cannot also disturb the order rule 9 checks: this case is
+			// isolated to rule 8 alone.
+			s.Workloads = append(s.Workloads, unavailableSnapshotWorkload("payments", "StatefulSet", "payments-web"))
+			s.Findings[7].ScopeKind = "ReplicaSet"
+		}, "findings[7].scope_name is not a workload of the snapshot"},
 
 		// Rule 9: the findings are in the order of analysis.Sort, none
 		// twice.
