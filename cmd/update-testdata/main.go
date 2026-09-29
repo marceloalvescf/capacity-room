@@ -107,6 +107,18 @@ func run(ctx context.Context) error {
 		if err := writeIfChanged(root, path, data); err != nil {
 			return err
 		}
+
+		queries, err := goldentest.Queries(ctx, scenario)
+		if err != nil {
+			return err
+		}
+		queriesPath, err := goldentest.QueriesPath(scenario.Name)
+		if err != nil {
+			return err
+		}
+		if err := writeIfChanged(root, queriesPath, queries); err != nil {
+			return err
+		}
 	}
 
 	for _, name := range goldentest.DataFileScenarios {

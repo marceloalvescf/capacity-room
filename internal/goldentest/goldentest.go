@@ -8,11 +8,13 @@
 package goldentest
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
@@ -78,25 +80,29 @@ func fixedConfig(scenario promtest.Scenario, serverURL string) config.Config {
 	return cfg
 }
 
-// Snapshot serves the scenario in this process, runs the connection, the
-// scope, and the capabilities against it with the fixed input, and returns
-// the encoded snapshot.
-func Snapshot(ctx context.Context, scenario promtest.Scenario) ([]byte, error) {
+// run serves scenario's fixture in this process and carries it through the
+// whole chain the command itself runs before writing a snapshot: connect,
+// resolve the scope, detect the capabilities, check they are sufficient,
+// and build. It returns the built snapshot together with every request the
+// server saw, in the order it saw them, so that Snapshot and Queries, run
+// once each, always describe the very same run of the scenario.
+func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, []promtest.Seen, error) {
 	path, err := promtest.Path(scenario.Name)
 	if err != nil {
-		return nil, fmt.Errorf("%s: locating fixture: %w", scenario.Name, err)
+		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: locating fixture: %w", scenario.Name, err)
 	}
 	fixture, err := promtest.Load(path)
 	if err != nil {
-		return nil, fmt.Errorf("%s: loading fixture: %w", scenario.Name, err)
+		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: loading fixture: %w", scenario.Name, err)
 	}
 
-	server := httptest.NewServer(promtest.NewServer(fixture))
+	fake := promtest.NewServer(fixture)
+	server := httptest.NewServer(fake)
 	defer server.Close()
 
 	emittedAt, err := fixedEmittedAt()
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", scenario.Name, err)
+		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: %w", scenario.Name, err)
 	}
 	cfg := fixedConfig(scenario, server.URL)
 
@@ -105,21 +111,21 @@ func Snapshot(ctx context.Context, scenario promtest.Scenario) ([]byte, error) {
 		Token:   scenario.Token,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("%s: connecting: %w", scenario.Name, err)
+		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: connecting: %w", scenario.Name, err)
 	}
 
 	scope, err := discovery.ResolveScope(ctx, client, cfg.Cluster, emittedAt)
 	if err != nil {
-		return nil, fmt.Errorf("%s: resolving the scope: %w", scenario.Name, err)
+		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: resolving the scope: %w", scenario.Name, err)
 	}
 
 	capabilities, err := discovery.Detect(ctx, client, scope, cfg.Analysis, emittedAt)
 	if err != nil {
-		return nil, fmt.Errorf("%s: detecting the capabilities: %w", scenario.Name, err)
+		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: detecting the capabilities: %w", scenario.Name, err)
 	}
 
 	if err := discovery.CheckSufficient(capabilities); err != nil {
-		return nil, fmt.Errorf("%s: checking the capabilities: %w", scenario.Name, err)
+		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: checking the capabilities: %w", scenario.Name, err)
 	}
 
 	snap, err := snapshot.Build(snapshot.Input{
@@ -134,14 +140,45 @@ func Snapshot(ctx context.Context, scenario promtest.Scenario) ([]byte, error) {
 		CollectionCompleted: emittedAt.Add(collectionSpan),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("%s: building the snapshot: %w", scenario.Name, err)
+		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: building the snapshot: %w", scenario.Name, err)
 	}
 
+	return snap, fake.Seen(), nil
+}
+
+// Snapshot serves the scenario in this process, runs the connection, the
+// scope, and the capabilities against it with the fixed input, and returns
+// the encoded snapshot.
+func Snapshot(ctx context.Context, scenario promtest.Scenario) ([]byte, error) {
+	snap, _, err := run(ctx, scenario)
+	if err != nil {
+		return nil, err
+	}
 	data, err := snapshot.Encode(snap)
 	if err != nil {
 		return nil, fmt.Errorf("%s: encoding the snapshot: %w", scenario.Name, err)
 	}
 	return data, nil
+}
+
+// Queries runs scenario the same way Snapshot does, and returns the exact
+// queries the program sent, in the order it sent them: one line per
+// request, the path of the request, one tab, and the text of the form
+// field "query" as it was sent, with a line break inside a query written
+// as the two characters \n rather than an actual line break, so that the
+// golden file itself stays one line per request.
+func Queries(ctx context.Context, scenario promtest.Scenario) ([]byte, error) {
+	_, seen, err := run(ctx, scenario)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	for _, s := range seen {
+		query := strings.ReplaceAll(s.Query, "\n", `\n`)
+		fmt.Fprintf(&buf, "%s\t%s\n", s.Path, query)
+	}
+	return buf.Bytes(), nil
 }
 
 // DataFile decodes an encoded snapshot and returns the encoded document in
@@ -187,6 +224,15 @@ func DataFilePath(scenario string, lang catalog.Language) (string, error) {
 		return "", err
 	}
 	return filepath.Join(root, "template", "tests", "capacity", "fixtures", "command", scenario+"."+string(lang)+".json"), nil
+}
+
+// QueriesPath returns the place of a scenario's golden file of queries.
+func QueriesPath(scenario string) (string, error) {
+	root, err := moduleRoot()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "testdata", "queries", scenario+".txt"), nil
 }
 
 // moduleRoot walks up from the working directory to the folder that holds

@@ -91,10 +91,10 @@ func TestGoldenDataFiles(t *testing.T) {
 	}
 }
 
-// jsonStems reads dir and returns the stem of every ".json" file directly
-// inside it, sorted. A non-".json" entry, or one in a subfolder, fails the
-// test: neither folder holds anything else.
-func jsonStems(t *testing.T, dir string) []string {
+// fileStems reads dir and returns the stem of every file directly inside it
+// whose extension is ext, sorted. A file of another extension, or one in a
+// subfolder, fails the test: neither folder holds anything else.
+func fileStems(t *testing.T, dir, ext string) []string {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -105,18 +105,107 @@ func jsonStems(t *testing.T, dir string) []string {
 		if entry.IsDir() {
 			t.Fatalf("%s: unexpected subfolder %s", dir, entry.Name())
 		}
-		if filepath.Ext(entry.Name()) != ".json" {
+		if filepath.Ext(entry.Name()) != ext {
 			t.Fatalf("%s: unexpected file %s", dir, entry.Name())
 		}
-		stems = append(stems, strings.TrimSuffix(entry.Name(), ".json"))
+		stems = append(stems, strings.TrimSuffix(entry.Name(), ext))
 	}
 	sort.Strings(stems)
 	return stems
 }
 
-// TestGoldenFoldersHoldNoStranger checks that testdata/snapshot/ and
-// template/tests/capacity/fixtures/command/ hold exactly the files the
-// scenario lists name, and nothing else.
+// jsonStems reads dir and returns the stem of every ".json" file directly
+// inside it, sorted. A non-".json" entry, or one in a subfolder, fails the
+// test: neither folder holds anything else.
+func jsonStems(t *testing.T, dir string) []string {
+	t.Helper()
+	return fileStems(t, dir, ".json")
+}
+
+// TestGoldenQueries runs each of the six scenarios through Queries and
+// compares the result with its golden file: the queries the program sends
+// for that scenario are pinned exactly like its snapshot.
+func TestGoldenQueries(t *testing.T) {
+	for _, scenario := range promtest.Scenarios {
+		t.Run(scenario.Name, func(t *testing.T) {
+			got, err := Queries(context.Background(), scenario)
+			if err != nil {
+				t.Fatalf("Queries(%s): %v", scenario.Name, err)
+			}
+			path, err := QueriesPath(scenario.Name)
+			if err != nil {
+				t.Fatalf("QueriesPath(%s): %v", scenario.Name, err)
+			}
+			if err := compareGolden(path, got); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+// unifiedRequestsLimitsQueries returns the lines of a golden queries file
+// whose query mentions the unified requests or limits metric: the four
+// lines the four probes of TestQueriesTellTheProbesApart pins down.
+func unifiedRequestsLimitsQueries(lines []string) []string {
+	var out []string
+	for _, line := range lines {
+		if strings.Contains(line, "kube_pod_container_resource_requests{") ||
+			strings.Contains(line, "kube_pod_container_resource_limits{") {
+			out = append(out, line)
+		}
+	}
+	return out
+}
+
+// TestQueriesTellTheProbesApart proves that the four probes of the unified
+// requests and limits capability are told apart in the golden queries
+// files: two lines carry resource="cpu" and two carry resource="memory",
+// and the four lines are pairwise different — never four labels the
+// scenario's own fixture could have answered interchangeably.
+func TestQueriesTellTheProbesApart(t *testing.T) {
+	for _, scenario := range promtest.Scenarios {
+		t.Run(scenario.Name, func(t *testing.T) {
+			path, err := QueriesPath(scenario.Name)
+			if err != nil {
+				t.Fatalf("QueriesPath(%s): %v", scenario.Name, err)
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("reading %s: %v", path, err)
+			}
+			lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
+
+			found := unifiedRequestsLimitsQueries(lines)
+			if len(found) != 4 {
+				t.Fatalf("found %d unified requests/limits lines, want 4: %v", len(found), found)
+			}
+
+			seen := make(map[string]bool, 4)
+			cpu, memory := 0, 0
+			for _, line := range found {
+				if seen[line] {
+					t.Fatalf("line %q repeated among the four unified requests/limits lines", line)
+				}
+				seen[line] = true
+				switch {
+				case strings.Contains(line, `resource="cpu"`):
+					cpu++
+				case strings.Contains(line, `resource="memory"`):
+					memory++
+				default:
+					t.Fatalf("line %q names neither resource=\"cpu\" nor resource=\"memory\"", line)
+				}
+			}
+			if cpu != 2 || memory != 2 {
+				t.Fatalf("cpu=%d memory=%d, want 2 and 2: %v", cpu, memory, found)
+			}
+		})
+	}
+}
+
+// TestGoldenFoldersHoldNoStranger checks that testdata/snapshot/,
+// testdata/queries/, and template/tests/capacity/fixtures/command/ hold
+// exactly the files the scenario lists name, and nothing else.
 func TestGoldenFoldersHoldNoStranger(t *testing.T) {
 	t.Run("snapshot", func(t *testing.T) {
 		anyPath, err := SnapshotPath("direct-complete")
@@ -151,6 +240,23 @@ func TestGoldenFoldersHoldNoStranger(t *testing.T) {
 		got := jsonStems(t, filepath.Dir(anyPath))
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("fixtures/command/ holds %v, want %v", got, want)
+		}
+	})
+
+	t.Run("queries", func(t *testing.T) {
+		anyPath, err := QueriesPath("direct-complete")
+		if err != nil {
+			t.Fatalf("QueriesPath: %v", err)
+		}
+		var want []string
+		for _, s := range promtest.Scenarios {
+			want = append(want, s.Name)
+		}
+		sort.Strings(want)
+
+		got := fileStems(t, filepath.Dir(anyPath), ".txt")
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("testdata/queries/ holds %v, want %v", got, want)
 		}
 	})
 }
