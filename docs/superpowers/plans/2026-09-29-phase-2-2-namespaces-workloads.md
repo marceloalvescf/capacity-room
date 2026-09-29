@@ -180,7 +180,7 @@ reviewing this plan. The numbering continues that of part 2.1.
 | R28 | Ruling: the second rule of insufficient capabilities of the original waits for part 2.3 — it judges the results of five collectors, and this part has two — a run whose two collectors return nothing goes on and prints two empty sections |
 | R29 | Ruling: `schema_version` stays `"1.0"`, and a snapshot written by part 2.1 is refused by this part for the keys it lacks — no version is released, as in R10 — a file kept from a run of part 2.1 must be written again |
 | R30 | Ruling: the interpretation notes are printed in this part, after the quality appendix — the collectors of this part produce the first warnings and notices, and a field of the snapshot enters with the page that prints it — none known |
-| R31 | Ruling: a notice that counts has two entries in the catalog, one for the count of one and one for any other count, and Go chooses between them — the entries of the catalog use the one form `{{.Name}}`, and both languages of this project have exactly these two forms — a third language with more plural forms needs another mechanism |
+| R31 | Ruling: a notice that counts has two entries in the catalog, one for the count of one, named `singular`, and one for any other count, named `plural`, and Go chooses between them — the entries of the catalog use the one form `{{.Name}}`, and both languages of this project have exactly these two forms — a third language with more plural forms needs another mechanism |
 | R32 | Ruling: the units `mCPU`, `cores`, `B`, `KiB`, `MiB`, `GiB`, and `TiB` are the same in both languages and are written by the format functions, not by the catalog files — spec 9.2 shows them equal, and the original writes `1 cores` — a language that translates a unit needs an entry |
 | R33 | Ruling: the minimum severity judges a workload by the findings that carry its name and its kind; the original compares the name only — two workloads of one name would otherwise share the worst severity of both — the pages differ from the original when two workloads share a name and differ in severity |
 | R34 | Ruling: a run that collects prints one line for each collector after the lines of the capabilities, `namespace collection: <state>` and `workload collection: <state>`, as the original does — scripts may read them (R13) — none known |
@@ -463,7 +463,7 @@ func Literals(values []string) string
 | `TestAnswerAtTheLimitIsRead` | limit 64 bytes, a valid body of 64 | no error |
 | `TestSelectorWritesFourGroupsInOrder` | `Equal{cluster: prod}`, `Regex{namespace: [payments, orders]}`, `NotRegex{container: ["", POD, istio-proxy]}` | `m{cluster="prod",namespace=~"(?:payments\|orders)",container!~"(?:\|POD\|istio\\-proxy)"}` |
 | `TestLiteralsEscapesTwice` | `payments`, `orders.v2` | `(?:payments\|orders\\.v2)` |
-| `TestLiteralsEscapesAQuote` | `a"b` | `(?:a\\"b)` |
+| `TestLiteralsEscapesAQuote` | `a"b` | `(?:a\"b)` |
 | `TestLiteralsEscapesEveryListedCharacter` | each character of the list above | a backslash, doubled by `Quote`, before each |
 | `TestLiteralsLeavesOtherCharactersAlone` | `a_b/c:d,e=f` | unchanged between `(?:` and `)` |
 | every existing test of the package | unchanged | passes unchanged |
@@ -572,8 +572,8 @@ func Ratios(usage, base []prom.Series, labels []string, baseState string) (ratio
     taken in the order of their timestamps;
   - the minimum and the peak are the smallest and the largest value;
   - the current value is the one of the last timestamp.
-- A label of `labels` that a series lacks counts as the empty text.
-  `labels` holds one to three names.
+- A label of `labels` that a series lacks counts as the text `unknown`, as
+  in the original. `labels` holds one to three names.
 - `Ratios` follows `aggregate_percentages` and `percent` of
   `collectors/common.py:118-174`, line by line:
   - both inputs are first reduced by timestamp as above;
@@ -997,7 +997,8 @@ The collector follows `WorkloadCollector` of
     `WORKLOAD_HISTORY_CURRENT_ASSOCIATION`.
 - **Both strategies.**
   - Every kind passes through `resolve.CanonicalKind`, before any
-    comparison and before the rows are keyed.
+    comparison and before the rows are keyed. A kind that is absent or
+    empty is `Unknown` first, as in the original.
   - The keys of the rows are the keys of the pod counts and of every
     statistic. A workload of kind `Job` is taken out and counted.
   - When `workload_usage` is `available`, a workload with no statistic of
@@ -1517,7 +1518,7 @@ below is the main thread's and is copied, not rewritten.
 func Warning(code string) Key { return Key("warning." + code) }
 
 // Notice returns the key of notice code, one of collect.NoticeCodes, for
-// a count: the entry "one" for a count of 1, "other" for any other.
+// a count: the entry "singular" for a count of 1, "plural" for any other.
 func Notice(code string, count float64) Key
 ```
 
@@ -1567,16 +1568,17 @@ English column is new and is reviewed by the owner in Task 18.
 | `warning.WORKLOAD_REQUESTS_LIMITS_INCOMPLETE` | As métricas de solicitações e limites das cargas de trabalho estão incompletas. | The request and limit metrics of the workloads are incomplete. |
 | `warning.WORKLOAD_REQUESTS_LIMITS_UNAVAILABLE` | As métricas de solicitações e limites das cargas de trabalho estão indisponíveis. | The request and limit metrics of the workloads are unavailable. |
 | `warning.WORKLOAD_HISTORY_CURRENT_ASSOCIATION` | O histórico usa a associação atual entre pods ativos e cargas de trabalho. | The history uses the current association between active pods and workloads. |
-| `notice.WORKLOADS_OMITTED_NO_USAGE.one` | 1 carga de trabalho deixada de fora por não ter consumo observado no período. | 1 workload was left out because it had no observed consumption in the period. |
-| `notice.WORKLOADS_OMITTED_NO_USAGE.other` | {{.Count}} cargas de trabalho deixadas de fora por não terem consumo observado no período. | {{.Count}} workloads were left out because they had no observed consumption in the period. |
-| `notice.JOBS_OMITTED.one` | 1 Job foi deixado de fora do inventário de cargas de trabalho; o consumo continua contabilizado no total do namespace. | 1 Job was left out of the workload inventory; its consumption still counts in the total of the namespace. |
-| `notice.JOBS_OMITTED.other` | {{.Count}} Jobs foram deixados de fora do inventário de cargas de trabalho; o consumo continua contabilizado nos totais dos namespaces. | {{.Count}} Jobs were left out of the workload inventory; their consumption still counts in the totals of the namespaces. |
+| `notice.WORKLOADS_OMITTED_NO_USAGE.singular` | 1 carga de trabalho deixada de fora por não ter consumo observado no período. | 1 workload was left out because it had no observed consumption in the period. |
+| `notice.WORKLOADS_OMITTED_NO_USAGE.plural` | {{.Count}} cargas de trabalho deixadas de fora por não terem consumo observado no período. | {{.Count}} workloads were left out because they had no observed consumption in the period. |
+| `notice.JOBS_OMITTED.singular` | 1 Job foi deixado de fora do inventário de cargas de trabalho; o consumo continua contabilizado no total do namespace. | 1 Job was left out of the workload inventory; its consumption still counts in the total of the namespace. |
+| `notice.JOBS_OMITTED.plural` | {{.Count}} Jobs foram deixados de fora do inventário de cargas de trabalho; o consumo continua contabilizado nos totais dos namespaces. | {{.Count}} Jobs were left out of the workload inventory; their consumption still counts in the totals of the namespaces. |
 
 **Requirements:**
 
 - Both files gain every entry above, letter for letter. The entries of a
   family stand under one table of the file, as the capability reasons do.
-- The entry `one` of a notice takes no parameter. The entry `other` takes
+- The entry `singular` of a notice takes no parameter. The entry `plural`
+  takes
   `Count`. The guard that compares the parameters of both languages
   compares each entry with the same entry of the other language.
 - The guard of the catalog gains: every code of `collect.WarningCodes` has
@@ -1591,9 +1593,9 @@ English column is new and is reviewed by the owner in Task 18.
 
 | Test | Input | Expected |
 |---|---|---|
-| `TestNoticeChoosesTheEntry` | counts 1, 2, 0, 1.0 | `one`, `other`, `other`, `one` |
+| `TestNoticeChoosesTheEntry` | counts 1, 2, 0, 1.0 | `singular`, `plural`, `plural`, `singular` |
 | `TestEveryWarningHasItsEntry` | both languages | the seven entries exist and take no parameter |
-| `TestEveryNoticeHasBothEntries` | both languages | four entries in each; `other` takes `Count` |
+| `TestEveryNoticeHasBothEntries` | both languages | four entries in each; `plural` takes `Count` |
 | `TestNoFamilyKeyWithoutACode` | an entry `warning.UNKNOWN` added to a copy of a file | reported |
 | `TestPortugueseOfThisPartEqualsTheOriginal` | each Portuguese text of both tables | equal, letter for letter, to the text in the test file, which is copied from this plan |
 | `TestKeysHoldTheNewFamilies` | `Keys()` | holds the 28 constants, 7 warnings, 4 notice entries |
@@ -1734,7 +1736,7 @@ table quality-appendix, or its fallback paragraph
 | `TestWorkloadSectionSkipsANamespaceWithoutRows` | two namespaces, the workloads of one filtered out | one heading of level 2 |
 | `TestEmptySections` | no row passes | each section is a heading and its paragraph |
 | `TestNotesOfRawFallback` | the snapshot of the scenario | one row, the text of `WORKLOAD_HISTORY_CURRENT_ASSOCIATION` |
-| `TestNotesChooseThePlural` | the notice with `count` 1, then 3 | the entry `one`; the entry `other` with `3` |
+| `TestNotesChooseThePlural` | the notice with `count` 1, then 3 | the entry `singular`; the entry `plural` with `3` |
 | `TestNotesAreLeftOutWhenEmpty` | no warning, no notice | the appendix ends with its table |
 | `TestNotesIgnoreTheMinimumSeverity` | minimum `critical`, one warning | the note is written |
 | `TestDocumentEqualsParityForItsSections` | a snapshot built to hold the values of the parity fixture for sections 1 and 2 | blocks 2 to 7 of the document equal blocks 2 to 7 of the fixture, as JSON |
