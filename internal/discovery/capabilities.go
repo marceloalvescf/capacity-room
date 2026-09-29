@@ -48,14 +48,6 @@ const (
 // exit code 5.
 var ErrInsufficient = errors.New("all analytical capabilities are unavailable")
 
-// analyticalForSufficiency lists the five capabilities that must all be
-// unavailable, together with node_autoscaling itself not being available,
-// before the endpoint carries too little for the report to say anything.
-var analyticalForSufficiency = []string{
-	"namespace_usage", "workload_usage", "hpa_history",
-	"workloads_without_hpa", "node_utilization",
-}
-
 // prober asks the nine capability queries in the fixed order of the
 // original, against one scope and one instant, and remembers the first
 // query error so that no probe after it is asked.
@@ -378,14 +370,20 @@ func nodeAutoscalingCapability(configured string, autoscalerMetrics bool) Capabi
 }
 
 // CheckSufficient reports ErrInsufficient when the endpoint carries too
-// little for the report to say anything: the five capabilities of
-// analyticalForSufficiency are all unavailable, and node_autoscaling itself
-// is not available. It first requires capabilities to hold exactly
-// the nine capabilities of Names, in that order, each with one of the three
-// known states — a list that is short, reordered, duplicated, or carries an
-// unrecognised state is a caller error, reported as such, and never read as
-// "sufficient" by a lookup that silently treats a missing or malformed
-// entry as "not unavailable".
+// little for the report to say anything: every capability other than
+// node_autoscaling is unavailable, all eight of them, and node_autoscaling
+// itself is not available. With nothing at all to collect there is nothing
+// to report; with any one of the eight present, or with node_autoscaling
+// available (even by configuration alone), the run goes on — the original
+// does the same, and a run whose only evidence is the configured state of
+// node autoscaling is exactly the case this keeps going.
+//
+// It first requires capabilities to hold exactly the nine capabilities of
+// Names, in that order, each with one of the three known states — a list
+// that is short, reordered, duplicated, or carries an unrecognised state is
+// a caller error, reported as such, and never read as "sufficient" by a
+// lookup that silently treats a missing or malformed entry as "not
+// unavailable".
 func CheckSufficient(capabilities []Capability) error {
 	if err := checkCapabilityList(capabilities); err != nil {
 		return err
@@ -396,7 +394,10 @@ func CheckSufficient(capabilities []Capability) error {
 		byName[capability.Name] = capability
 	}
 
-	for _, name := range analyticalForSufficiency {
+	for _, name := range Names {
+		if name == "node_autoscaling" {
+			continue
+		}
 		if byName[name].State != StateUnavailable {
 			return nil
 		}

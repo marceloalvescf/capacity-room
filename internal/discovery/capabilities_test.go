@@ -872,13 +872,16 @@ func TestCheckSufficient(t *testing.T) {
 	}{
 		{"all nine available", allAvailable(), false, ""},
 		{
+			// Five of the eight non-autoscaling capabilities are
+			// unavailable, but three still are: CheckSufficient requires
+			// all eight, so this endpoint is sufficient.
 			"the five unavailable and autoscaling partial",
 			withState(allAvailable(), map[string]string{
 				"namespace_usage": StateUnavailable, "workload_usage": StateUnavailable,
 				"hpa_history": StateUnavailable, "workloads_without_hpa": StateUnavailable,
 				"node_utilization": StateUnavailable, "node_autoscaling": StatePartial,
 			}),
-			true, "",
+			false, "",
 		},
 		{
 			"the five unavailable and autoscaling available",
@@ -895,6 +898,61 @@ func TestCheckSufficient(t *testing.T) {
 				"namespace_usage": StateUnavailable, "workload_usage": StateUnavailable,
 				"hpa_history": StateUnavailable, "workloads_without_hpa": StateUnavailable,
 				"node_utilization": StatePartial,
+			}),
+			false, "",
+		},
+		{
+			"nothing at all",
+			withState(allAvailable(), map[string]string{
+				"namespace_usage": StateUnavailable, "workload_usage": StateUnavailable,
+				"requests_limits": StateUnavailable, "hpa_history": StateUnavailable,
+				"workloads_without_hpa": StateUnavailable, "ip_node_mapping": StateUnavailable,
+				"nodepool_discovery": StateUnavailable, "node_utilization": StateUnavailable,
+				"node_autoscaling": StatePartial,
+			}),
+			true, "",
+		},
+		{
+			"node metrics only",
+			withState(allAvailable(), map[string]string{
+				"namespace_usage": StateUnavailable, "workload_usage": StateUnavailable,
+				"requests_limits": StateUnavailable, "hpa_history": StateUnavailable,
+				"workloads_without_hpa": StateUnavailable, "ip_node_mapping": StateAvailable,
+				"nodepool_discovery": StateUnavailable, "node_utilization": StateUnavailable,
+				"node_autoscaling": StatePartial,
+			}),
+			false, "",
+		},
+		{
+			"requests and limits only",
+			withState(allAvailable(), map[string]string{
+				"namespace_usage": StateUnavailable, "workload_usage": StateUnavailable,
+				"requests_limits": StatePartial, "hpa_history": StateUnavailable,
+				"workloads_without_hpa": StateUnavailable, "ip_node_mapping": StateUnavailable,
+				"nodepool_discovery": StateUnavailable, "node_utilization": StateUnavailable,
+				"node_autoscaling": StatePartial,
+			}),
+			false, "",
+		},
+		{
+			"node pools by name only",
+			withState(allAvailable(), map[string]string{
+				"namespace_usage": StateUnavailable, "workload_usage": StateUnavailable,
+				"requests_limits": StateUnavailable, "hpa_history": StateUnavailable,
+				"workloads_without_hpa": StateUnavailable, "ip_node_mapping": StateUnavailable,
+				"nodepool_discovery": StatePartial, "node_utilization": StateUnavailable,
+				"node_autoscaling": StatePartial,
+			}),
+			false, "",
+		},
+		{
+			"configured only",
+			withState(allAvailable(), map[string]string{
+				"namespace_usage": StateUnavailable, "workload_usage": StateUnavailable,
+				"requests_limits": StateUnavailable, "hpa_history": StateUnavailable,
+				"workloads_without_hpa": StateUnavailable, "ip_node_mapping": StateUnavailable,
+				"nodepool_discovery": StateUnavailable, "node_utilization": StateUnavailable,
+				"node_autoscaling": StateAvailable,
 			}),
 			false, "",
 		},
@@ -995,8 +1053,8 @@ func TestDetectScenario(t *testing.T) {
 // its method is equal (a missing method means GET), its path is equal, its
 // query_contains is empty or held by the seen query, and its authorization
 // is empty or equal to the seen one. It is reimplemented here, rather than
-// exported from promtest, because internal/promtest is not to be touched
-// while its own reviewer reads it live.
+// exported from promtest, so that this package's own tests do not force a
+// new export onto promtest's minimal public surface.
 func requestMatchesScripted(c promtest.Request, s promtest.Seen) bool {
 	method := c.Method
 	if method == "" {
