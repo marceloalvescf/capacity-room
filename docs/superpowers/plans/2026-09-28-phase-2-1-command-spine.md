@@ -168,7 +168,7 @@ of them when reviewing this plan.
 | R13 | Ruling: `--check` prints the lines of the original, in English, unchanged — scripts may read them — the lines say less than they could |
 | R14 | Ruling: the English label of a warning callout is `Warning`; the fixture of phase 1 used `Attention` — `Attention` is also a severity, and one word should not have two jobs — the owner reviews the wording in any case |
 | R15 | Ruling: `--config` defaults to `report.toml` and a missing file is an error, as in the original — a run cannot be configured from the environment alone — a user without a file must create one |
-| R16 | Ruling: capabilities are insufficient when `namespace_usage`, `workload_usage`, `hpa_history`, `workloads_without_hpa`, and `node_utilization` are all unavailable and `node_autoscaling` is not available — the rule of the original can never fire, because it waits for `node_autoscaling` to be unavailable, a state that capability never takes (F-37) — a run against an empty Prometheus now stops at the preflight with exit code 5, where the original stopped with the same code after collecting |
+| R16 | **Narrowed by E37 after the review of the branch.** Ruling: capabilities are insufficient when `namespace_usage`, `workload_usage`, `hpa_history`, `workloads_without_hpa`, and `node_utilization` are all unavailable and `node_autoscaling` is not available — the rule of the original can never fire, because it waits for `node_autoscaling` to be unavailable, a state that capability never takes (F-37) — a run against an empty Prometheus now stops at the preflight with exit code 5, where the original stopped with the same code after collecting |
 
 ## Rulings made during the execution
 
@@ -214,6 +214,16 @@ of them.
 | E32 | 14 | round 4 resumes the same implementer, where the process asks for a fresh one on a stronger model — the loop is not stuck: every round closed what it was given, and each new finding was a wider reading of the class by the reviewer — if wrong, the implementer repeats a blind spot |
 | E33 | — | the controller changed the recipe of check-runtime itself (commit b9e83cb): the folder is kept and only the file is removed, and a snapshot path that names no file is refused before Docker runs — only the main thread may run Docker, so only it can see this recipe fail and pass — if wrong, a change of three recipe lines went in without a task review; the whole-branch review reads it |
 | E34 | — | Decode reads the schema version first and judges the rest only for the version it reads — the order of the plan, and of the controller's ruling in the first fix round of Task 9, was wrong — if wrong, a file is parsed twice |
+| E35 | 9 | the fix of Task 9 after its close gets no scoped re-review of its own; the review of the whole branch is given it as a point to judge — the whole-branch review is the next step and reads the same file — if wrong, a defect of that fix is found one step later. It was: the review found that one file could have two readings |
+| E36 | 18 | the final review is four adversarial reviewers by area, not one reviewer over the whole diff — the diff of the branch is 740 kB, more than one reviewer can read with care — if wrong, a defect that lies between two areas is seen by neither |
+| E37 | 18 | **R16 is narrowed, provisionally:** capabilities are insufficient when every capability other than `node_autoscaling` is unavailable and `node_autoscaling` is not available — R16 stopped runs that the original finished, such as an endpoint with node metrics only, and its text claimed to equal the original — if wrong, a run against an endpoint that offers very little goes on and writes a thin report. **The owner decides** |
+| E38 | 18 | **a token shorter than 8 characters is refused, provisionally,** with exit code 2, and is never given to the redactor — a secret that short cannot be told from ordinary text; `--token e` made every message unreadable — if wrong, a test setup with a short token must choose a longer one. **The owner decides** |
+| E39 | 18 | the snapshot is filled from the map that the walk of the keys passed, and an unknown key is one that differs in any letter — the strict decode of the library matches keys without regard to letter case, so one file had two readings — if wrong, a snapshot written by hand with a key in another letter case is refused |
+| E40 | 18 | `snapshot.Check` judges a capability as a whole: available with a reason, unavailable with a source, and four more — a capability whose parts contradict each other printed "No remark" beside "Unavailable"; every set of metrics that was tried, 180 of them, passes — if wrong, a later change of `Detect` that is right is refused by `Check` until the rule is changed with it |
+| E41 | 18 | a period whose length does not fit is refused; the design sets no upper limit — `999999999d` gave a negative duration — if wrong, nothing |
+| E42 | 18 | the queries that the program sends for each scenario are golden files — the recorded answers match a query by a part of its text, so two probes that differ in a label could not be told apart — if wrong, six more files to read when a probe changes |
+| E43 | 18 | the command checks that the file the compiler wrote starts as a PDF does — a compiler that exits 0 and writes something else gave a run that reported success — if wrong, nothing |
+| E44 | 18 | the finding on daylight-saving time, F-47, is assigned to part 2.2 and not fixed now — the arithmetic is the original's and spec 6.4 keeps it; the period first drives a query in part 2.2 — if wrong, a run in the hour after the change, with a period of one hour, stops with a message about the snapshot |
 
 ## Findings this plan closes or records
 
@@ -1435,7 +1445,9 @@ func CheckSufficient(capabilities []Capability) error
 | `node_autoscaling` | metrics found | `cluster_autoscaler_*`, the one entry that is a pattern, because the probe asks for a family of names |
 | any | unavailable, not listed above | none |
 
-- `CheckSufficient` follows R16. It first refuses an input that is not
+- `CheckSufficient` follows R16 as E37 narrowed it: every capability other
+  than `node_autoscaling` is unavailable, and `node_autoscaling` is not
+  available. It first refuses an input that is not
   exactly the nine capabilities of `Names`, in order, with
   `capabilities must hold the nine capabilities in their order; found: <names, or none>`,
   and a capability whose state is outside the registry, with
@@ -1636,19 +1648,22 @@ func Time(value string) (time.Time, error)
 - The snapshot holds no address, no host name, no token, no name of an
   environment variable, and no path of a file.
 - `Decode` reads the schema version first, and judges the rest only for the
-  version it reads. It refuses, in this order, each with its own message:
+  version it reads. The snapshot is filled from the map that the walk of the
+  keys passed, so that the file has one reading. It refuses, in this order,
+  each with its own message:
 
 | Step | Input | Message |
 |---|---|---|
 | 1 | not JSON, or cut in the middle | `snapshot is not valid JSON: <cause>` |
-| 2 | a document that is not a JSON object | `snapshot is not a JSON object` |
-| 3 | `schema_version` missing, `null`, or not a string | `snapshot has no schema_version` |
-| 4 | another `schema_version` | `snapshot has schema_version "<value>"; this version reads "1.0"` |
-| 5 | an unknown key | `snapshot holds an unknown key: <cause of the decoder>` |
-| 6 | anything after the first document | `snapshot holds data after the document` |
+| 2 | anything after the first document | `snapshot holds data after the document` |
+| 3 | a document that is not a JSON object | `snapshot is not a JSON object` |
+| 4 | `schema_version` missing, `null`, or not a string | `snapshot has no schema_version` |
+| 5 | another `schema_version` | `snapshot has schema_version "<value>"; this version reads "1.0"` |
+| 6 | a key that the contract does not hold, compared letter for letter | `snapshot holds an unknown key: <path>` |
 | 7 | a key of the contract that the file lacks | `snapshot lacks the key <path>` |
 | 8 | a `null` anywhere in the file | `snapshot holds null at <path>` |
-| 9 | an integrity failure | the message of `Check` |
+| 9 | a value of the wrong kind | `snapshot holds a value of the wrong kind at <path>` |
+| 10 | an integrity failure | the message of `Check` |
 
 - `Check` refuses, in this order:
 
