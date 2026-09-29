@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -17,8 +15,6 @@ import (
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
@@ -73,13 +69,13 @@ type pythonWorkloadRow struct {
 }
 
 // pythonEvidencePair is one named number of a recorded finding's evidence.
-// The pair "approximate" carries a boolean rather than a number, so both
-// are read, and IsBool says which one is meaningful.
+// The pair "approximate" carries a boolean rather than a number; its value
+// is not compared (compareEvidence leaves the pair out and compares the
+// finding's confidence instead), so UnmarshalJSON only checks that it
+// reads as one or the other.
 type pythonEvidencePair struct {
 	Name   string
 	Number float64
-	Bool   bool
-	IsBool bool
 }
 
 // UnmarshalJSON reads a pair written as a two-element JSON array: a name,
@@ -98,10 +94,10 @@ func (p *pythonEvidencePair) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(raw[1], &p.Number); err == nil {
 		return nil
 	}
-	if err := json.Unmarshal(raw[1], &p.Bool); err != nil {
+	var flag bool
+	if err := json.Unmarshal(raw[1], &flag); err != nil {
 		return fmt.Errorf("evidence pair value is neither a number nor a boolean: %w", err)
 	}
-	p.IsBool = true
 	return nil
 }
 
@@ -259,15 +255,23 @@ func compareWorkloadStatistics(label string, got snapshot.Workload, want pythonW
 	return compareTenStatistics(label, asNamespace, asPythonRow)
 }
 
-// compareNamespaceRow compares one namespace row, field by field. The
-// snapshot does not store requests_limits_status, so it is not compared
-// here.
-func compareNamespaceRow(scenario string, got snapshot.Namespace, want pythonNamespaceRow) []string {
-	label := fmt.Sprintf("%s: namespace %s", scenario, got.Name)
+// namespaceLabel names a namespace row for a difference message.
+func namespaceLabel(scenario, name string) string {
+	return fmt.Sprintf("%s: namespace %s", scenario, name)
+}
+
+// compareNamespaceRow compares one namespace row, field by field: pods,
+// approximate, the requests_limits_status of the collector that produced
+// the row (not stored in the snapshot itself), and the ten statistics.
+func compareNamespaceRow(scenario string, got snapshot.Namespace, requestsLimitsState string, want pythonNamespaceRow) []string {
+	label := namespaceLabel(scenario, got.Name)
 	var diffs []string
 	diffs = append(diffs, comparePointer(label, "pods", got.Pods, want.ActivePods)...)
 	if got.Approximate != want.ApproximateRatios {
 		diffs = append(diffs, fmt.Sprintf("%s: approximate: got %v, want %v", label, got.Approximate, want.ApproximateRatios))
+	}
+	if requestsLimitsState != want.RequestsLimitsStatus {
+		diffs = append(diffs, fmt.Sprintf("%s: requests_limits_status: got %q, want %q", label, requestsLimitsState, want.RequestsLimitsStatus))
 	}
 	diffs = append(diffs, compareTenStatistics(label, got, want)...)
 	return diffs
@@ -278,15 +282,18 @@ func workloadLabel(scenario, namespace, kind, name string) string {
 	return fmt.Sprintf("%s: workload %s/%s (%s)", scenario, namespace, name, kind)
 }
 
-// compareWorkloadRow compares one workload row, field by field. The
-// snapshot does not store requests_limits_status, so it is not compared
-// here.
-func compareWorkloadRow(scenario string, got snapshot.Workload, want pythonWorkloadRow) []string {
+// compareWorkloadRow compares one workload row, field by field: pods,
+// approximate, the requests_limits_status of the collector that produced
+// the row (not stored in the snapshot itself), and the ten statistics.
+func compareWorkloadRow(scenario string, got snapshot.Workload, requestsLimitsState string, want pythonWorkloadRow) []string {
 	label := workloadLabel(scenario, got.Namespace, got.Kind, got.Name)
 	var diffs []string
 	diffs = append(diffs, comparePointer(label, "pods", got.Pods, want.ActivePods)...)
 	if got.Approximate != want.ApproximateRatios {
 		diffs = append(diffs, fmt.Sprintf("%s: approximate: got %v, want %v", label, got.Approximate, want.ApproximateRatios))
+	}
+	if requestsLimitsState != want.RequestsLimitsStatus {
+		diffs = append(diffs, fmt.Sprintf("%s: requests_limits_status: got %q, want %q", label, requestsLimitsState, want.RequestsLimitsStatus))
 	}
 	diffs = append(diffs, compareWorkloadStatistics(label, got, want)...)
 	return diffs
@@ -294,25 +301,34 @@ func compareWorkloadRow(scenario string, got snapshot.Workload, want pythonWorkl
 
 // compareNamespaces matches the namespaces of a snapshot with those of a
 // recorded file by name, and compares each pair found on both sides.
-func compareNamespaces(scenario string, got []snapshot.Namespace, want []pythonNamespaceRow) []string {
+// collectedRows is collect.Collected.Namespaces.Rows of the same run: it
+// holds the same rows as got, in the same order, since buildNamespaces
+// (internal/snapshot/build.go) copies them across one for one with no
+// filtering or reordering, so collectedRows[i] is the row got[i] was built
+// from.
+func compareNamespaces(scenario string, got []snapshot.Namespace, collectedRows []collect.Namespace, want []pythonNamespaceRow) []string {
+	if len(got) != len(collectedRows) {
+		return []string{fmt.Sprintf("%s: namespaces: the snapshot holds %d rows, the collector %d", scenario, len(got), len(collectedRows))}
+	}
+
 	var diffs []string
 	wantByName := make(map[string]pythonNamespaceRow, len(want))
 	for _, w := range want {
 		wantByName[w.Namespace] = w
 	}
 	seen := make(map[string]bool, len(got))
-	for _, g := range got {
+	for i, g := range got {
 		seen[g.Name] = true
 		w, ok := wantByName[g.Name]
 		if !ok {
-			diffs = append(diffs, fmt.Sprintf("%s: namespace %s: present in the project, missing from the original", scenario, g.Name))
+			diffs = append(diffs, fmt.Sprintf("%s: present in the project, missing from the original", namespaceLabel(scenario, g.Name)))
 			continue
 		}
-		diffs = append(diffs, compareNamespaceRow(scenario, g, w)...)
+		diffs = append(diffs, compareNamespaceRow(scenario, g, collectedRows[i].RequestsLimitsState, w)...)
 	}
 	for _, w := range want {
 		if !seen[w.Namespace] {
-			diffs = append(diffs, fmt.Sprintf("%s: namespace %s: present in the original, missing from the project", scenario, w.Namespace))
+			diffs = append(diffs, fmt.Sprintf("%s: present in the original, missing from the project", namespaceLabel(scenario, w.Namespace)))
 		}
 	}
 	return diffs
@@ -323,15 +339,23 @@ type workloadRowKey struct{ Namespace, Kind, Name string }
 
 // compareWorkloads matches the workloads of a snapshot with those of a
 // recorded file by namespace, kind, and name, and compares each pair found
-// on both sides.
-func compareWorkloads(scenario string, got []snapshot.Workload, want []pythonWorkloadRow) []string {
+// on both sides. collectedRows is collect.Collected.Workloads.Rows of the
+// same run: it holds the same rows as got, in the same order, since
+// buildWorkloads (internal/snapshot/build.go) copies them across one for
+// one with no filtering or reordering, so collectedRows[i] is the row
+// got[i] was built from.
+func compareWorkloads(scenario string, got []snapshot.Workload, collectedRows []collect.Workload, want []pythonWorkloadRow) []string {
+	if len(got) != len(collectedRows) {
+		return []string{fmt.Sprintf("%s: workloads: the snapshot holds %d rows, the collector %d", scenario, len(got), len(collectedRows))}
+	}
+
 	var diffs []string
 	wantByKey := make(map[workloadRowKey]pythonWorkloadRow, len(want))
 	for _, w := range want {
 		wantByKey[workloadRowKey{w.Namespace, w.Kind, w.Name}] = w
 	}
 	seen := make(map[workloadRowKey]bool, len(got))
-	for _, g := range got {
+	for i, g := range got {
 		key := workloadRowKey{g.Namespace, g.Kind, g.Name}
 		seen[key] = true
 		w, ok := wantByKey[key]
@@ -339,7 +363,7 @@ func compareWorkloads(scenario string, got []snapshot.Workload, want []pythonWor
 			diffs = append(diffs, fmt.Sprintf("%s: present in the project, missing from the original", workloadLabel(scenario, g.Namespace, g.Kind, g.Name)))
 			continue
 		}
-		diffs = append(diffs, compareWorkloadRow(scenario, g, w)...)
+		diffs = append(diffs, compareWorkloadRow(scenario, g, collectedRows[i].RequestsLimitsState, w)...)
 	}
 	for _, w := range want {
 		key := workloadRowKey{w.Namespace, w.Kind, w.Name}
@@ -431,6 +455,9 @@ func compareFindings(scenario string, got []snapshot.Finding, want []pythonFindi
 		if gf.Severity != wf.Severity {
 			diffs = append(diffs, fmt.Sprintf("%s: severity: got %q, want %q", label, gf.Severity, wf.Severity))
 		}
+		if gf.ScopeType != wf.ScopeType {
+			diffs = append(diffs, fmt.Sprintf("%s: scope_type: got %q, want %q", label, gf.ScopeType, wf.ScopeType))
+		}
 		if gf.Confidence != wf.Confidence {
 			diffs = append(diffs, fmt.Sprintf("%s: confidence: got %q, want %q", label, gf.Confidence, wf.Confidence))
 		}
@@ -438,7 +465,12 @@ func compareFindings(scenario string, got []snapshot.Finding, want []pythonFindi
 	}
 
 	if sameKeySet(gotOrder, wantOrder) && !slices.Equal(gotOrder, wantOrder) {
-		diffs = append(diffs, fmt.Sprintf("%s: findings: the order differs from the original: got %v, want %v", scenario, gotOrder, wantOrder))
+		for i := range gotOrder {
+			if gotOrder[i] != wantOrder[i] {
+				diffs = append(diffs, fmt.Sprintf("%s: findings[%d]: the order differs from the original: got %v, want %v", scenario, i, gotOrder[i], wantOrder[i]))
+				break
+			}
+		}
 	}
 
 	return diffs
@@ -519,21 +551,22 @@ func compareStrings(scenario, label string, got, want []string) []string {
 	return diffs
 }
 
-// compareNumbers compares snap, a decoded snapshot of scenario, with want,
-// a decoded recorded file of the original, and returns every difference
-// found: a namespace row, a workload row, a finding, a warning, or a
-// notice present on one side and not the other, or a field of a matched
-// row or finding that disagrees, each naming the scenario, the row or
-// finding, and the field, with both values.
-func compareNumbers(scenario string, snap snapshot.Snapshot, want pythonRecording) []string {
+// compareNumbers compares snap and collected, the snapshot and the
+// collectors' own result of one run of scenario, with want, a decoded
+// recorded file of the original, and returns every difference found: a
+// namespace row, a workload row, a finding, a warning, or a notice present
+// on one side and not the other, or a field of a matched row or finding
+// that disagrees, each naming the scenario, the row or finding, and the
+// field, with both values.
+func compareNumbers(scenario string, snap snapshot.Snapshot, collected collect.Collected, want pythonRecording) []string {
 	cat, err := catalog.Load(catalog.PortugueseBrazil)
 	if err != nil {
 		return []string{fmt.Sprintf("%s: loading the pt-BR catalog: %v", scenario, err)}
 	}
 
 	var diffs []string
-	diffs = append(diffs, compareNamespaces(scenario, snap.Namespaces, want.Namespaces)...)
-	diffs = append(diffs, compareWorkloads(scenario, snap.Workloads, want.Workloads)...)
+	diffs = append(diffs, compareNamespaces(scenario, snap.Namespaces, collected.Namespaces.Rows, want.Namespaces)...)
+	diffs = append(diffs, compareWorkloads(scenario, snap.Workloads, collected.Workloads.Rows, want.Workloads)...)
 	diffs = append(diffs, compareFindings(scenario, snap.Findings, want.Findings)...)
 
 	gotWarnings, gotNotices, err := catalogTexts(cat, snap.Quality.Warnings, snap.Quality.Notices)
@@ -561,77 +594,16 @@ func TestNumbersEqualTheOriginal(t *testing.T) {
 				t.Fatalf("loadPythonRecording(%s): %v", scenario.Name, err)
 			}
 
-			encoded, err := Snapshot(context.Background(), scenario)
+			out, _, err := run(context.Background(), scenario)
 			if err != nil {
-				t.Fatalf("Snapshot(%s): %v", scenario.Name, err)
-			}
-			snap, err := snapshot.Decode(encoded)
-			if err != nil {
-				t.Fatalf("Decode(%s): %v", scenario.Name, err)
+				t.Fatalf("run(%s): %v", scenario.Name, err)
 			}
 
-			if diffs := compareNumbers(scenario.Name, snap, want); len(diffs) > 0 {
+			if diffs := compareNumbers(scenario.Name, out.Snapshot, out.Collected, want); len(diffs) > 0 {
 				t.Fatalf("%s differs from the original:\n%s", scenario.Name, strings.Join(diffs, "\n"))
 			}
 		})
 	}
-}
-
-// collectScenario runs scenario's fixture in this process through
-// connection, scope resolution, capability detection, and collection, with
-// the same fixed input Snapshot uses, and returns what the two collectors
-// found.
-func collectScenario(ctx context.Context, scenario promtest.Scenario) (collect.Collected, error) {
-	path, err := promtest.Path(scenario.Name)
-	if err != nil {
-		return collect.Collected{}, fmt.Errorf("%s: locating fixture: %w", scenario.Name, err)
-	}
-	fixture, err := promtest.Load(path)
-	if err != nil {
-		return collect.Collected{}, fmt.Errorf("%s: loading fixture: %w", scenario.Name, err)
-	}
-
-	fake := promtest.NewServer(fixture)
-	server := httptest.NewServer(fake)
-	defer server.Close()
-
-	emittedAt, err := fixedEmittedAt()
-	if err != nil {
-		return collect.Collected{}, fmt.Errorf("%s: %w", scenario.Name, err)
-	}
-	cfg := fixedConfig(scenario, server.URL)
-
-	window, err := collect.NewWindow(cfg.Analysis, emittedAt)
-	if err != nil {
-		return collect.Collected{}, fmt.Errorf("%s: building the window: %w", scenario.Name, err)
-	}
-
-	client, err := prom.Connect(ctx, prom.Options{Metrics: cfg.Metrics, Token: scenario.Token})
-	if err != nil {
-		return collect.Collected{}, fmt.Errorf("%s: connecting: %w", scenario.Name, err)
-	}
-
-	scope, err := discovery.ResolveScope(ctx, client, cfg.Cluster, window.End)
-	if err != nil {
-		return collect.Collected{}, fmt.Errorf("%s: resolving the scope: %w", scenario.Name, err)
-	}
-
-	capabilities, err := discovery.Detect(ctx, client, scope, cfg.Analysis, window.End)
-	if err != nil {
-		return collect.Collected{}, fmt.Errorf("%s: detecting the capabilities: %w", scenario.Name, err)
-	}
-
-	if err := discovery.CheckSufficient(capabilities); err != nil {
-		return collect.Collected{}, fmt.Errorf("%s: checking the capabilities: %w", scenario.Name, err)
-	}
-
-	return collect.All(ctx, client, collect.Input{
-		Scope:        scope,
-		Cluster:      cfg.Cluster,
-		Analysis:     cfg.Analysis,
-		Capabilities: capabilities,
-		Window:       window,
-	})
 }
 
 // TestCollectionStatesEqualTheOriginal checks, for each of the seven
@@ -650,16 +622,16 @@ func TestCollectionStatesEqualTheOriginal(t *testing.T) {
 				t.Fatalf("loadPythonRecording(%s): %v", scenario.Name, err)
 			}
 
-			collected, err := collectScenario(context.Background(), scenario)
+			out, _, err := run(context.Background(), scenario)
 			if err != nil {
-				t.Fatalf("collectScenario(%s): %v", scenario.Name, err)
+				t.Fatalf("run(%s): %v", scenario.Name, err)
 			}
 
-			if collected.Namespaces.State != want.NamespaceCollection {
-				t.Errorf("%s: namespace collector state: got %q, want %q", scenario.Name, collected.Namespaces.State, want.NamespaceCollection)
+			if out.Collected.Namespaces.State != want.NamespaceCollection {
+				t.Errorf("%s: namespace collector state: got %q, want %q", scenario.Name, out.Collected.Namespaces.State, want.NamespaceCollection)
 			}
-			if collected.Workloads.State != want.WorkloadCollection {
-				t.Errorf("%s: workload collector state: got %q, want %q", scenario.Name, collected.Workloads.State, want.WorkloadCollection)
+			if out.Collected.Workloads.State != want.WorkloadCollection {
+				t.Errorf("%s: workload collector state: got %q, want %q", scenario.Name, out.Collected.Workloads.State, want.WorkloadCollection)
 			}
 		})
 	}
@@ -719,14 +691,27 @@ func readQueriesLines(t *testing.T, path string) []string {
 	return strings.Split(strings.TrimRight(string(data), "\n"), "\n")
 }
 
+// collectorQueryFloor is the fewest lines the project's own golden queries
+// file can hold for any scenario today: the fourteen queries the
+// namespace collector and the workload collector send between them, and
+// at least one query of the preflight that precedes them. A list shorter
+// than this is never a real run: it is empty, or holds only the
+// preflight.
+const collectorQueryFloor = 14 + 1
+
 // TestQueriesBeginTheListOfTheOriginal checks, for each of the seven
-// scenarios, that every line of the project's golden queries file equals
-// the line of the same number of the recorded queries file of the
-// original, and that the recorded list is at least as long.
+// scenarios, that the project's own golden queries file holds at least
+// collectorQueryFloor lines, that every one of them equals the line of
+// the same number of the recorded queries file of the original, and that
+// the recorded list is strictly longer.
 func TestQueriesBeginTheListOfTheOriginal(t *testing.T) {
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
 			projectLines := queriesLines(t, scenario)
+			if len(projectLines) < collectorQueryFloor {
+				t.Fatalf("%s: the project's own list holds %d lines; the floor is the fourteen queries of the collectors and at least one of the preflight, %d",
+					scenario.Name, len(projectLines), collectorQueryFloor)
+			}
 
 			originalPath, err := pythonQueriesPath(scenario.Name)
 			if err != nil {
@@ -736,6 +721,14 @@ func TestQueriesBeginTheListOfTheOriginal(t *testing.T) {
 
 			if len(originalLines) < len(projectLines) {
 				t.Fatalf("%s: the original holds %d lines, shorter than the project's %d", scenario.Name, len(originalLines), len(projectLines))
+			}
+			// The original goes on to query the autoscalers, the nodes,
+			// and the cluster autoscaling after the namespaces and the
+			// workloads, which this project does not send yet, so its
+			// list is always strictly longer; this assertion changes once
+			// the project sends those queries too.
+			if len(originalLines) <= len(projectLines) {
+				t.Errorf("%s: the original holds %d lines, not more than the project's %d", scenario.Name, len(originalLines), len(projectLines))
 			}
 			for i, line := range projectLines {
 				if originalLines[i] != line {
@@ -833,20 +826,16 @@ func TestRecordedFilesAreUntouched(t *testing.T) {
 
 // TestComparisonCanFail proves, on the edge-values scenario, that
 // compareNumbers reports each of a list of single changes made to a copy
-// of the recorded file held in memory, and that a change touching one
-// field of a row or a finding is reported as exactly that field, nothing
-// beside it.
+// of the recorded file held in memory, and that it reports exactly the
+// differences the change makes, in order, and nothing beside them.
 func TestComparisonCanFail(t *testing.T) {
 	scenario := scenarioByName(t, "edge-values")
 
-	encoded, err := Snapshot(context.Background(), scenario)
+	out, _, err := run(context.Background(), scenario)
 	if err != nil {
-		t.Fatalf("Snapshot(%s): %v", scenario.Name, err)
+		t.Fatalf("run(%s): %v", scenario.Name, err)
 	}
-	snap, err := snapshot.Decode(encoded)
-	if err != nil {
-		t.Fatalf("Decode(%s): %v", scenario.Name, err)
-	}
+	snap, collected := out.Snapshot, out.Collected
 
 	path, err := pythonRecordingPath(scenario.Name)
 	if err != nil {
@@ -862,142 +851,164 @@ func TestComparisonCanFail(t *testing.T) {
 		return want
 	}
 
-	// check requires compareNumbers to report a difference naming
-	// contains, and fails when it reports none.
-	check := func(t *testing.T, want pythonRecording, contains string) []string {
+	// checkExact requires compareNumbers to report exactly want, in order,
+	// and nothing else.
+	checkExact := func(t *testing.T, recording pythonRecording, want []string) {
 		t.Helper()
-		diffs := compareNumbers(scenario.Name, snap, want)
-		if len(diffs) == 0 {
-			t.Fatalf("compareNumbers reported no difference, want one naming %q", contains)
+		got := compareNumbers(scenario.Name, snap, collected, recording)
+		if !slices.Equal(got, want) {
+			t.Errorf("differences:\n got:  %s\n want: %s", strings.Join(got, "\n       "), strings.Join(want, "\n       "))
 		}
-		joined := strings.Join(diffs, "\n")
-		if !strings.Contains(joined, contains) {
-			t.Errorf("differences do not name %q:\n%s", contains, joined)
-		}
-		return diffs
 	}
 
-	t.Run("a number of a statistic changed in its last digit", func(t *testing.T) {
+	t.Run("a number of a statistic changed", func(t *testing.T) {
 		want := fresh(t)
-		want.Namespaces[0].MemoryUsage.Average = floatPtr(math.Nextafter(*want.Namespaces[0].MemoryUsage.Average, math.Inf(1)))
-		diffs := check(t, want, "namespace payments: memory_usage.average")
-		if len(diffs) != 1 {
-			t.Errorf("got %d differences, want 1:\n%s", len(diffs), strings.Join(diffs, "\n"))
-		}
+		want.Namespaces[0].MemoryUsage.Average = floatPtr(106)
+		checkExact(t, want, []string{
+			namespaceLabel(scenario.Name, "payments") + ": memory_usage.average: got 105, want 106",
+		})
 	})
 
 	t.Run("a statistic changed from a number to null", func(t *testing.T) {
 		want := fresh(t)
 		want.Namespaces[0].MemoryUsage.Average = nil
-		diffs := check(t, want, "namespace payments: memory_usage.average")
-		if len(diffs) != 1 {
-			t.Errorf("got %d differences, want 1:\n%s", len(diffs), strings.Join(diffs, "\n"))
-		}
+		checkExact(t, want, []string{
+			namespaceLabel(scenario.Name, "payments") + ": memory_usage.average: got 105, want null",
+		})
 	})
 
 	t.Run("no_base changed from true to false", func(t *testing.T) {
 		want := fresh(t)
 		want.Namespaces[0].CPURequestPercent.NoBase = false
-		diffs := check(t, want, "namespace payments: cpu_request_percent.state")
-		if len(diffs) != 1 {
-			t.Errorf("got %d differences, want 1:\n%s", len(diffs), strings.Join(diffs, "\n"))
-		}
+		checkExact(t, want, []string{
+			namespaceLabel(scenario.Name, "payments") + `: cpu_request_percent.state: got "no_base", want "unavailable"`,
+		})
 	})
 
 	t.Run("a pod count changed", func(t *testing.T) {
 		want := fresh(t)
 		*want.Namespaces[0].ActivePods = 99
-		diffs := check(t, want, "namespace payments: pods")
-		if len(diffs) != 1 {
-			t.Errorf("got %d differences, want 1:\n%s", len(diffs), strings.Join(diffs, "\n"))
-		}
+		checkExact(t, want, []string{
+			namespaceLabel(scenario.Name, "payments") + ": pods: got 3, want 99",
+		})
 	})
 
 	t.Run("approximate_ratios changed", func(t *testing.T) {
 		want := fresh(t)
 		want.Namespaces[0].ApproximateRatios = !want.Namespaces[0].ApproximateRatios
-		diffs := check(t, want, "namespace payments: approximate")
-		if len(diffs) != 1 {
-			t.Errorf("got %d differences, want 1:\n%s", len(diffs), strings.Join(diffs, "\n"))
-		}
+		checkExact(t, want, []string{
+			namespaceLabel(scenario.Name, "payments") + ": approximate: got true, want false",
+		})
+	})
+
+	t.Run("requests_limits_status changed", func(t *testing.T) {
+		want := fresh(t)
+		want.Workloads[0].RequestsLimitsStatus = "partial"
+		checkExact(t, want, []string{
+			workloadLabel(scenario.Name, "payments", "Deployment", "api") + `: requests_limits_status: got "available", want "partial"`,
+		})
 	})
 
 	t.Run("a workload removed", func(t *testing.T) {
 		want := fresh(t)
 		want.Workloads = want.Workloads[:1]
-		check(t, want, "workload payments/queue")
+		checkExact(t, want, []string{
+			workloadLabel(scenario.Name, "payments", "StatefulSet", "queue") + ": present in the project, missing from the original",
+		})
 	})
 
 	t.Run("a finding removed", func(t *testing.T) {
 		want := fresh(t)
-		removed := want.Findings[0].Code
+		removed := want.Findings[0]
 		want.Findings = append([]pythonFinding{}, want.Findings[1:]...)
-		check(t, want, removed)
+		key := findingKey{removed.Code, removed.ScopeName, removed.ScopeKind}
+		checkExact(t, want, []string{
+			findingLabel(scenario.Name, key) + ": present in the project, missing from the original",
+		})
 	})
 
 	t.Run("the code of a finding changed", func(t *testing.T) {
 		want := fresh(t)
-		original := want.Findings[0].Code
-		want.Findings[0].Code = original + "_X"
-		diffs := compareNumbers(scenario.Name, snap, want)
-		joined := strings.Join(diffs, "\n")
-		if !strings.Contains(joined, original+" ") || !strings.Contains(joined, "missing from the original") {
-			t.Errorf("differences do not name %s missing from the original:\n%s", original, joined)
-		}
-		if !strings.Contains(joined, original+"_X") || !strings.Contains(joined, "missing from the project") {
-			t.Errorf("differences do not name %s_X missing from the project:\n%s", original, joined)
-		}
+		original := want.Findings[0]
+		want.Findings[0].Code = original.Code + "_X"
+		originalKey := findingKey{original.Code, original.ScopeName, original.ScopeKind}
+		changedKey := findingKey{original.Code + "_X", original.ScopeName, original.ScopeKind}
+		checkExact(t, want, []string{
+			findingLabel(scenario.Name, originalKey) + ": present in the project, missing from the original",
+			findingLabel(scenario.Name, changedKey) + ": present in the original, missing from the project",
+		})
 	})
 
 	t.Run("a number of the evidence of a finding changed", func(t *testing.T) {
 		want := fresh(t)
-		want.Findings[0].Evidence[0].Number = math.Nextafter(want.Findings[0].Evidence[0].Number, math.Inf(1))
-		diffs := check(t, want, "evidence[0]")
-		if len(diffs) != 1 {
-			t.Errorf("got %d differences, want 1:\n%s", len(diffs), strings.Join(diffs, "\n"))
-		}
+		f := want.Findings[0]
+		key := findingKey{f.Code, f.ScopeName, f.ScopeKind}
+		want.Findings[0].Evidence[0].Number = 56
+		checkExact(t, want, []string{
+			findingLabel(scenario.Name, key) + ": evidence[0].average_percent: got 55, want 56",
+		})
 	})
 
 	t.Run("the confidence of a finding changed", func(t *testing.T) {
 		want := fresh(t)
-		changed := false
+		idx := -1
 		for i := range want.Findings {
 			if want.Findings[i].Confidence == "inferred" {
-				want.Findings[i].Confidence = "exact"
-				changed = true
+				idx = i
 				break
 			}
 		}
-		if !changed {
+		if idx < 0 {
 			t.Fatal("edge-values holds no finding of confidence inferred to change")
 		}
-		diffs := check(t, want, "confidence: got")
-		if len(diffs) != 1 {
-			t.Errorf("got %d differences, want 1:\n%s", len(diffs), strings.Join(diffs, "\n"))
+		f := want.Findings[idx]
+		key := findingKey{f.Code, f.ScopeName, f.ScopeKind}
+		want.Findings[idx].Confidence = "exact"
+		checkExact(t, want, []string{
+			findingLabel(scenario.Name, key) + `: confidence: got "inferred", want "exact"`,
+		})
+	})
+
+	t.Run("the scope type of a finding changed", func(t *testing.T) {
+		want := fresh(t)
+		f := want.Findings[2]
+		if f.ScopeType != "namespace" {
+			t.Fatalf("edge-values findings[2] has scope_type %q, want %q", f.ScopeType, "namespace")
 		}
+		key := findingKey{f.Code, f.ScopeName, f.ScopeKind}
+		want.Findings[2].ScopeType = "workload"
+		checkExact(t, want, []string{
+			findingLabel(scenario.Name, key) + `: scope_type: got "namespace", want "workload"`,
+		})
 	})
 
 	t.Run("two findings exchanged", func(t *testing.T) {
 		want := fresh(t)
-		want.Findings[0], want.Findings[1] = want.Findings[1], want.Findings[0]
-		diffs := check(t, want, "the order differs from the original")
-		if len(diffs) != 1 {
-			t.Errorf("got %d differences, want 1:\n%s", len(diffs), strings.Join(diffs, "\n"))
-		}
+		first, second := want.Findings[0], want.Findings[1]
+		want.Findings[0], want.Findings[1] = second, first
+		firstKey := findingKey{first.Code, first.ScopeName, first.ScopeKind}
+		secondKey := findingKey{second.Code, second.ScopeName, second.ScopeKind}
+		checkExact(t, want, []string{
+			fmt.Sprintf("%s: findings[0]: the order differs from the original: got %v, want %v", scenario.Name, firstKey, secondKey),
+		})
 	})
 
 	t.Run("a notice removed", func(t *testing.T) {
 		want := fresh(t)
+		removedText := want.Notices[1]
 		want.Notices = want.Notices[:1]
-		check(t, want, "notices[1]")
+		checkExact(t, want, []string{
+			fmt.Sprintf("%s: notices[1]: got %q, want %q", scenario.Name, removedText, ""),
+		})
 	})
 
 	t.Run("one letter of a notice changed", func(t *testing.T) {
 		want := fresh(t)
-		want.Notices[0] = strings.Replace(want.Notices[0], "carga", "xarga", 1)
-		diffs := check(t, want, "notices[0]")
-		if len(diffs) != 1 {
-			t.Errorf("got %d differences, want 1:\n%s", len(diffs), strings.Join(diffs, "\n"))
-		}
+		original := want.Notices[0]
+		mutated := strings.Replace(original, "carga", "xarga", 1)
+		want.Notices[0] = mutated
+		checkExact(t, want, []string{
+			fmt.Sprintf("%s: notices[0]: got %q, want %q", scenario.Name, original, mutated),
+		})
 	})
 }

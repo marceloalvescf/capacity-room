@@ -84,22 +84,33 @@ func fixedConfig(scenario promtest.Scenario, serverURL string) config.Config {
 	return cfg
 }
 
+// runOutput is everything one call to run produces from a scenario: the
+// snapshot the whole chain built, and what its two collectors returned
+// before analysis turned them into findings and before the snapshot
+// flattened namespace_usage and workload_usage's own state into the ten
+// statistics of each row.
+type runOutput struct {
+	Snapshot  snapshot.Snapshot
+	Collected collect.Collected
+}
+
 // run serves scenario's fixture in this process and carries it through the
 // whole chain the command itself runs before writing a snapshot: build the
 // window, connect, resolve the scope, detect the capabilities, check they
 // are sufficient, collect, analyze, and build. It returns the built
-// snapshot together with the fake server that served it, so that Snapshot
-// and Queries, run once each, always describe the very same run of the
-// scenario, and so that a caller that needs to know whether every scripted
-// answer was consumed can ask the server itself once the run is over.
-func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, *promtest.Server, error) {
+// snapshot and what the collectors returned, together with the fake
+// server that served it, so that Snapshot and Queries, run once each,
+// always describe the very same run of the scenario, and so that a caller
+// that needs to know whether every scripted answer was consumed can ask
+// the server itself once the run is over.
+func run(ctx context.Context, scenario promtest.Scenario) (runOutput, *promtest.Server, error) {
 	path, err := promtest.Path(scenario.Name)
 	if err != nil {
-		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: locating fixture: %w", scenario.Name, err)
+		return runOutput{}, nil, fmt.Errorf("%s: locating fixture: %w", scenario.Name, err)
 	}
 	fixture, err := promtest.Load(path)
 	if err != nil {
-		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: loading fixture: %w", scenario.Name, err)
+		return runOutput{}, nil, fmt.Errorf("%s: loading fixture: %w", scenario.Name, err)
 	}
 
 	fake := promtest.NewServer(fixture)
@@ -108,13 +119,13 @@ func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, *p
 
 	emittedAt, err := fixedEmittedAt()
 	if err != nil {
-		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: %w", scenario.Name, err)
+		return runOutput{}, nil, fmt.Errorf("%s: %w", scenario.Name, err)
 	}
 	cfg := fixedConfig(scenario, server.URL)
 
 	window, err := collect.NewWindow(cfg.Analysis, emittedAt)
 	if err != nil {
-		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: building the window: %w", scenario.Name, err)
+		return runOutput{}, nil, fmt.Errorf("%s: building the window: %w", scenario.Name, err)
 	}
 
 	client, err := prom.Connect(ctx, prom.Options{
@@ -122,21 +133,21 @@ func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, *p
 		Token:   scenario.Token,
 	})
 	if err != nil {
-		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: connecting: %w", scenario.Name, err)
+		return runOutput{}, nil, fmt.Errorf("%s: connecting: %w", scenario.Name, err)
 	}
 
 	scope, err := discovery.ResolveScope(ctx, client, cfg.Cluster, window.End)
 	if err != nil {
-		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: resolving the scope: %w", scenario.Name, err)
+		return runOutput{}, nil, fmt.Errorf("%s: resolving the scope: %w", scenario.Name, err)
 	}
 
 	capabilities, err := discovery.Detect(ctx, client, scope, cfg.Analysis, window.End)
 	if err != nil {
-		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: detecting the capabilities: %w", scenario.Name, err)
+		return runOutput{}, nil, fmt.Errorf("%s: detecting the capabilities: %w", scenario.Name, err)
 	}
 
 	if err := discovery.CheckSufficient(capabilities); err != nil {
-		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: checking the capabilities: %w", scenario.Name, err)
+		return runOutput{}, nil, fmt.Errorf("%s: checking the capabilities: %w", scenario.Name, err)
 	}
 
 	collected, err := collect.All(ctx, client, collect.Input{
@@ -147,7 +158,7 @@ func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, *p
 		Window:       window,
 	})
 	if err != nil {
-		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: collecting: %w", scenario.Name, err)
+		return runOutput{}, nil, fmt.Errorf("%s: collecting: %w", scenario.Name, err)
 	}
 
 	findings := analysis.All(collected, cfg.Thresholds)
@@ -167,21 +178,21 @@ func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, *p
 		Findings:            findings,
 	})
 	if err != nil {
-		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: building the snapshot: %w", scenario.Name, err)
+		return runOutput{}, nil, fmt.Errorf("%s: building the snapshot: %w", scenario.Name, err)
 	}
 
-	return snap, fake, nil
+	return runOutput{Snapshot: snap, Collected: collected}, fake, nil
 }
 
 // Snapshot serves the scenario in this process, runs the connection, the
 // scope, and the capabilities against it with the fixed input, and returns
 // the encoded snapshot.
 func Snapshot(ctx context.Context, scenario promtest.Scenario) ([]byte, error) {
-	snap, _, err := run(ctx, scenario)
+	out, _, err := run(ctx, scenario)
 	if err != nil {
 		return nil, err
 	}
-	data, err := snapshot.Encode(snap)
+	data, err := snapshot.Encode(out.Snapshot)
 	if err != nil {
 		return nil, fmt.Errorf("%s: encoding the snapshot: %w", scenario.Name, err)
 	}
