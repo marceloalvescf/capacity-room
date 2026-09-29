@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -554,19 +556,24 @@ func keyDeclarations(t *testing.T) (constants map[string]Key, functions []string
 	return constants, functions
 }
 
-// documentSelectors parses every non-test Go file of internal/document and
-// collects every selector of the form catalog.<Name>, once each.
-func documentSelectors(t *testing.T) map[string]bool {
+// scanCatalogSelectors parses every non-test Go file of dir and returns two
+// sets built from every selector of the form catalog.<Name> it finds: all,
+// which holds every such selector at all, and called, the subset of those
+// that are the function of a call expression (catalog.<Name>(...)) rather
+// than merely named (catalog.<Name> used as a value, or the right side of
+// an assignment, with no call). The distinction is what tells apart a key
+// function that is genuinely invoked from one that is only mentioned.
+func scanCatalogSelectors(t *testing.T, dir string) (all, called map[string]bool) {
 	t.Helper()
 
-	dir := filepath.Join("..", "document")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
 
 	fset := token.NewFileSet()
-	selectors := make(map[string]bool)
+	all = make(map[string]bool)
+	called = make(map[string]bool)
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
@@ -577,20 +584,128 @@ func documentSelectors(t *testing.T) map[string]bool {
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
-		ast.Inspect(file, func(n ast.Node) bool {
+
+		catalogSelector := func(n ast.Node) (string, bool) {
 			sel, ok := n.(*ast.SelectorExpr)
 			if !ok {
-				return true
+				return "", false
 			}
 			ident, ok := sel.X.(*ast.Ident)
 			if !ok || ident.Name != "catalog" {
-				return true
+				return "", false
 			}
-			selectors[sel.Sel.Name] = true
+			return sel.Sel.Name, true
+		}
+
+		ast.Inspect(file, func(n ast.Node) bool {
+			if name, ok := catalogSelector(n); ok {
+				all[name] = true
+			}
+			if call, ok := n.(*ast.CallExpr); ok {
+				if name, ok := catalogSelector(call.Fun); ok {
+					called[name] = true
+				}
+			}
 			return true
 		})
 	}
-	return selectors
+	return all, called
+}
+
+// keyFamily is one family of keys built from a prefix and a code of a
+// registry of internal/discovery, by one key function of keys.go: every
+// value that starts with prefix is a member, and the code is what follows
+// the prefix.
+type keyFamily struct {
+	prefix   string
+	function string
+	codes    []string
+}
+
+// keyFamilies lists every family a constant of keys.go can belong to.
+// capability.evidence., the one family Keys() builds without a constant of
+// its own (see Keys' own comment), is not here: nothing in keys.go ever
+// declares a constant of that prefix, so no constant is ever checked
+// against it.
+func keyFamilies() []keyFamily {
+	return []keyFamily{
+		{"capability.name.", "CapabilityName", discovery.Names},
+		{"capability.reason.", "CapabilityReason", discovery.ReasonCodes},
+		{"state.", "State", discovery.States},
+		{"strategy.", "Strategy", discovery.Strategies},
+	}
+}
+
+// familyOf returns the family whose prefix matches value and the code that
+// follows it, or ok=false when value belongs to no family.
+func familyOf(value Key) (family keyFamily, code string, ok bool) {
+	for _, f := range keyFamilies() {
+		if strings.HasPrefix(string(value), f.prefix) {
+			return f, strings.TrimPrefix(string(value), f.prefix), true
+		}
+	}
+	return keyFamily{}, "", false
+}
+
+// unusedKeyProblems compares constants and functions (as keyDeclarations
+// parses them from keys.go) against all and called (as scanCatalogSelectors
+// scans a document-shaped folder), and returns one description for every
+// key that folder never uses:
+//
+//   - a key function that all shows as named but called never shows as
+//     called (the selector is not the function of a call expression);
+//   - a constant of a family whose code is not a member of the family's
+//     registry, or whose key function called does not show as called — a
+//     registry-membership check alone would let a constant such as
+//     StrategyBogusPlanted = "strategy.bogus" pass merely because
+//     something, somewhere, calls catalog.Strategy for an unrelated,
+//     genuine strategy;
+//   - every other constant whose name all does not hold at all.
+func unusedKeyProblems(constants map[string]Key, functions []string, all, called map[string]bool) []string {
+	var problems []string
+
+	for _, fn := range functions {
+		if !called[fn] {
+			problems = append(problems, fmt.Sprintf("never calls the key function catalog.%s", fn))
+		}
+	}
+
+	for name, value := range constants {
+		if family, code, ok := familyOf(value); ok {
+			if slices.Contains(family.codes, code) && called[family.function] {
+				continue
+			}
+			problems = append(problems, fmt.Sprintf("never uses catalog.%s, directly or through a key function", name))
+			continue
+		}
+		if !all[name] {
+			problems = append(problems, fmt.Sprintf("never uses catalog.%s, directly or through a key function", name))
+		}
+	}
+	return problems
+}
+
+// missingRegistryConstants checks the other direction of the same table:
+// every code of every family's registry must have a constant in keys.go
+// whose value is that family's prefix plus that code. A registry code with
+// no matching constant would let a family drift out of sync with
+// discovery's own list in silence, the same way an unused constant would.
+func missingRegistryConstants(constants map[string]Key) []string {
+	have := make(map[Key]bool, len(constants))
+	for _, v := range constants {
+		have[v] = true
+	}
+
+	var problems []string
+	for _, family := range keyFamilies() {
+		for _, code := range family.codes {
+			want := Key(family.prefix + code)
+			if !have[want] {
+				problems = append(problems, fmt.Sprintf("no constant of keys.go declares %q", want))
+			}
+		}
+	}
+	return problems
 }
 
 // TestEveryKeyIsUsed proves that internal/document, which is the only
@@ -598,32 +713,94 @@ func documentSelectors(t *testing.T) map[string]bool {
 // leaves no key of the catalog unused: every exported Key constant of
 // keys.go is either called directly (catalog.CoverTitle) or reached
 // through one of its key functions (a name such as CapabilityNameFoo is
-// reached through catalog.CapabilityName), and every key function is
-// called at least once.
+// reached through catalog.CapabilityName, only when its own code —
+// "namespace_usage" — is genuinely a member of discovery.Names), and every
+// key function is called at least once. It also checks the reverse: every
+// code of every registry of internal/discovery has a matching constant in
+// keys.go.
 func TestEveryKeyIsUsed(t *testing.T) {
 	constants, functions := keyDeclarations(t)
-	selectors := documentSelectors(t)
+	all, called := scanCatalogSelectors(t, filepath.Join("..", "document"))
 
-	for _, fn := range functions {
-		if !selectors[fn] {
-			t.Errorf("internal/document never calls the key function catalog.%s", fn)
-		}
+	for _, problem := range unusedKeyProblems(constants, functions, all, called) {
+		t.Errorf("internal/document %s", problem)
+	}
+	for _, problem := range missingRegistryConstants(constants) {
+		t.Error(problem)
+	}
+}
+
+// writeGoFile writes source as name.go into a fresh temporary folder and
+// returns that folder's path, so a test can hand scanCatalogSelectors a
+// document-shaped folder of its own without ever touching the real
+// internal/document.
+func writeGoFile(t *testing.T, name, source string) string {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, name+".go")
+	if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
+		t.Fatalf("writing %s: %v", path, err)
+	}
+	return dir
+}
+
+// TestKeyUsageGuardCatchesAnUnusedFamilyMember proves unusedKeyProblems
+// refuses a constant whose code is not a member of its family's registry,
+// even when the family's key function is called for other, genuine values
+// elsewhere — the exact shape of StrategyBogusPlanted = "strategy.bogus",
+// proven here against synthetic data rather than the real keys.go and
+// locale files (which TestEveryKeyIsUsed already covers as they stand).
+func TestKeyUsageGuardCatchesAnUnusedFamilyMember(t *testing.T) {
+	constants := map[string]Key{"StrategyBogusPlanted": "strategy.bogus"}
+	functions := []string{"Strategy"}
+	all := map[string]bool{"Strategy": true}
+	called := map[string]bool{"Strategy": true}
+
+	problems := unusedKeyProblems(constants, functions, all, called)
+	if len(problems) != 1 || !strings.Contains(problems[0], "StrategyBogusPlanted") {
+		t.Fatalf("unusedKeyProblems = %v, want exactly one problem naming StrategyBogusPlanted", problems)
+	}
+}
+
+// TestKeyUsageGuardCatchesAnUnusedPlainKey proves unusedKeyProblems refuses
+// a constant of no family whose name no selector of the scanned folder
+// names.
+func TestKeyUsageGuardCatchesAnUnusedPlainKey(t *testing.T) {
+	constants := map[string]Key{"BogusPlainKey": "bogus.plain_key"}
+
+	problems := unusedKeyProblems(constants, nil, map[string]bool{}, map[string]bool{})
+	if len(problems) != 1 || !strings.Contains(problems[0], "BogusPlainKey") {
+		t.Fatalf("unusedKeyProblems = %v, want exactly one problem naming BogusPlainKey", problems)
+	}
+}
+
+// TestKeyUsageGuardCatchesAnUncalledFunction proves scanCatalogSelectors
+// itself tells apart a key function that is merely named from one that is
+// called: a copy of a source file, in a temporary folder, names
+// catalog.State as a plain value (never as a call), and the scan must
+// report it in all but not in called — the shape unusedKeyProblems then
+// refuses as "never calls the key function".
+func TestKeyUsageGuardCatchesAnUncalledFunction(t *testing.T) {
+	dir := writeGoFile(t, "probe", `package probe
+
+import "github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
+
+// stateFunc is never called: a key function that is named and not called
+// must not count as used.
+var stateFunc = catalog.State
+`)
+
+	all, called := scanCatalogSelectors(t, dir)
+	if !all["State"] {
+		t.Fatalf("scanCatalogSelectors: all[%q] = false, want true", "State")
+	}
+	if called["State"] {
+		t.Fatalf("scanCatalogSelectors: called[%q] = true, want false (never called)", "State")
 	}
 
-	for name := range constants {
-		if selectors[name] {
-			continue
-		}
-		coveredByFunction := false
-		for _, fn := range functions {
-			if strings.HasPrefix(name, fn) {
-				coveredByFunction = true
-				break
-			}
-		}
-		if !coveredByFunction {
-			t.Errorf("internal/document never uses catalog.%s, directly or through a key function", name)
-		}
+	problems := unusedKeyProblems(nil, []string{"State"}, all, called)
+	if len(problems) != 1 || !strings.Contains(problems[0], "catalog.State") {
+		t.Fatalf("unusedKeyProblems = %v, want exactly one problem naming catalog.State", problems)
 	}
 }
 
