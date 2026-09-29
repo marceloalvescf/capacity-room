@@ -8,10 +8,15 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/goldentest"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
 
 // minimalConfig is a config.Config valid enough for config.Load to accept,
@@ -1378,4 +1383,288 @@ func TestEachLineIsOneWrite(t *testing.T) {
 		assertOneLinePerCall(t, "stdout", &stdout)
 		assertOneLinePerCall(t, "stderr", &stderr)
 	})
+}
+
+// TestCheckSendsNoRangeQuery proves --check still sends no request to
+// /query_range and still prints exactly the preflight lines it printed
+// before this part: neither collector runs in check mode.
+func TestCheckSendsNoRangeQuery(t *testing.T) {
+	server, handler, scenario := startScenario(t, "direct-complete")
+	defer server.Close()
+
+	cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+	stdout, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--config", cfgPath, "--check"})
+	if code != 0 {
+		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+	}
+
+	for _, seen := range handler.Seen() {
+		if strings.HasSuffix(seen.Path, "query_range") {
+			t.Fatalf("check mode made a request to %s", seen.Path)
+		}
+	}
+
+	want := strings.Join(directCompletePreflightLines(), "\n") + "\n"
+	if stdout != want {
+		t.Fatalf("stdout =\n%s\nwant\n%s", stdout, want)
+	}
+}
+
+// TestSnapshotRunSendsTheCollectorQueries establishes the preflight's own
+// request count through a --check run, then proves a --snapshot run of the
+// same scenario sends exactly fourteen more.
+func TestSnapshotRunSendsTheCollectorQueries(t *testing.T) {
+	baseServer, baseHandler, baseScenario := startScenario(t, "direct-complete")
+	defer baseServer.Close()
+	baseCfg := writeConfig(t, scenarioConfig(baseServer, baseScenario, t.TempDir()))
+	_, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--config", baseCfg, "--check"})
+	if code != 0 {
+		t.Fatalf("check: code = %d, want 0; stderr = %q", code, stderr)
+	}
+	preflightCount := len(baseHandler.Seen())
+
+	server, handler, scenario := startScenario(t, "direct-complete")
+	defer server.Close()
+	cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+	snapPath := filepath.Join(t.TempDir(), "s.json")
+
+	_, stderr, code = runArgs(context.Background(), testEnv(t), []string{"report", "--config", cfgPath, "--snapshot", snapPath})
+	if code != 0 {
+		t.Fatalf("snapshot: code = %d, want 0; stderr = %q", code, stderr)
+	}
+
+	got := len(handler.Seen())
+	want := preflightCount + 14
+	if got != want {
+		t.Fatalf("requests = %d, want %d (preflight %d + 14 collector requests)", got, want, preflightCount)
+	}
+}
+
+// TestRunPrintsCollectionLines proves a --snapshot run of raw-fallback
+// prints the two collection lines, in order, after every capability line.
+func TestRunPrintsCollectionLines(t *testing.T) {
+	server, _, scenario := startScenario(t, "raw-fallback")
+	defer server.Close()
+
+	cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+	snapPath := filepath.Join(t.TempDir(), "s.json")
+
+	stdout, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--config", cfgPath, "--snapshot", snapPath})
+	if code != 0 {
+		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+	}
+
+	capIdx := strings.Index(stdout, "capability: discovered")
+	nsIdx := strings.Index(stdout, "namespace collection: available")
+	wlIdx := strings.Index(stdout, "workload collection: partial")
+	if capIdx == -1 || nsIdx == -1 || wlIdx == -1 {
+		t.Fatalf("stdout = %q, want it to hold the capability header and the two collection lines", stdout)
+	}
+	if capIdx >= nsIdx || nsIdx >= wlIdx {
+		t.Fatalf("stdout = %q, the collection lines are not in order after the capability lines", stdout)
+	}
+}
+
+// TestCheckPrintsNoCollectionLine proves --check prints neither collection
+// line: it never runs a collector.
+func TestCheckPrintsNoCollectionLine(t *testing.T) {
+	server, _, scenario := startScenario(t, "direct-complete")
+	defer server.Close()
+
+	cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+	stdout, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--config", cfgPath, "--check"})
+	if code != 0 {
+		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+	}
+	if strings.Contains(stdout, "namespace collection:") || strings.Contains(stdout, "workload collection:") {
+		t.Fatalf("stdout = %q, want no collection line", stdout)
+	}
+}
+
+// TestEmptyPeriodStopsBeforeAnyRequest proves that a period the zone's own
+// spring-forward gap empties stops the run with exit code 2, one line
+// naming analysis.period, before any request and with no file written: the
+// window is built before the preflight, in every mode that collects.
+func TestEmptyPeriodStopsBeforeAnyRequest(t *testing.T) {
+	server, handler, scenario := startScenario(t, "direct-complete")
+	defer server.Close()
+
+	loc, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatalf("loading Europe/Berlin: %v", err)
+	}
+	clock := time.Date(2026, time.March, 29, 3, 30, 0, 0, loc)
+
+	text := fmt.Sprintf(`[metrics]
+url = %q
+endpoint_type = %q
+
+[cluster]
+name = "prod"
+namespaces = ["payments"]
+
+[analysis]
+period = "1h"
+timezone = "Europe/Berlin"
+node_autoscaling = %q
+
+[report]
+output_directory = %q
+`, server.URL+scenario.APIRoot, scenario.EndpointType, scenario.NodeAutoscaling, t.TempDir())
+	cfgPath := writeConfig(t, text)
+
+	env := testEnv(t)
+	env.Now = func() time.Time { return clock }
+
+	snapPath := filepath.Join(t.TempDir(), "s.json")
+	_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--snapshot", snapPath})
+	if code != 2 {
+		t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
+	}
+	if !strings.HasPrefix(stderr, "error: analysis.period: ") {
+		t.Fatalf("stderr = %q, want it to start with %q", stderr, "error: analysis.period: ")
+	}
+	if strings.Count(stderr, "\n") != 1 {
+		t.Fatalf("stderr = %q, want exactly one line", stderr)
+	}
+	if len(handler.Seen()) != 0 {
+		t.Fatalf("the server saw %d requests, want 0", len(handler.Seen()))
+	}
+	if _, err := os.Stat(snapPath); err == nil {
+		t.Fatalf("%s was written, want no file", snapPath)
+	}
+}
+
+// TestCollectorFailureStopsWithThree proves that a range query the server
+// always answers with an HTTP 500 exhausts the client's three attempts and
+// stops the run with exit code 3, writing no snapshot and leaving no
+// temporary file beside it: the same classification an error of the client
+// already gets everywhere else.
+func TestCollectorFailureStopsWithThree(t *testing.T) {
+	var scenario promtest.Scenario
+	for _, s := range promtest.Scenarios {
+		if s.Name == "direct-complete" {
+			scenario = s
+		}
+	}
+
+	path, err := promtest.Path("direct-complete")
+	if err != nil {
+		t.Fatalf("promtest.Path: %v", err)
+	}
+	fixture, err := promtest.Load(path)
+	if err != nil {
+		t.Fatalf("promtest.Load: %v", err)
+	}
+	handler := promtest.NewServer(fixture)
+
+	var rangeAttempts int
+	mux := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "query_range") {
+			rangeAttempts++
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = fmt.Fprint(w, `{"status":"error","errorType":"internal","error":"boom"}`)
+			return
+		}
+		handler.ServeHTTP(w, r)
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	outDir := t.TempDir()
+	cfgPath := writeConfig(t, scenarioConfig(server, scenario, outDir))
+	snapPath := filepath.Join(t.TempDir(), "s.json")
+
+	env := testEnv(t)
+	_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--snapshot", snapPath})
+	if code != 3 {
+		t.Fatalf("code = %d, want 3; stderr = %q", code, stderr)
+	}
+	if rangeAttempts != 3 {
+		t.Fatalf("range attempts = %d, want 3", rangeAttempts)
+	}
+	if _, err := os.Stat(snapPath); err == nil {
+		t.Fatalf("%s was written, want no file", snapPath)
+	}
+	assertNoTempFilesBeside(t, filepath.Dir(snapPath))
+}
+
+// TestFromSnapshotRefusesASnapshotOfThePartBefore proves that a snapshot
+// stored before this part, which never held quality.warnings or
+// quality.notices, is refused with exit code 2 and a message naming the
+// missing key: it is read straight from internal/snapshot's own fixture,
+// never copied.
+func TestFromSnapshotRefusesASnapshotOfThePartBefore(t *testing.T) {
+	snapPath, err := filepath.Abs(filepath.Join("..", "snapshot", "testdata", "schema-1.0-before-rows.json"))
+	if err != nil {
+		t.Fatalf("resolving path: %v", err)
+	}
+
+	outPath := filepath.Join(t.TempDir(), "r.pdf")
+	_, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--from-snapshot", snapPath, "--output", outPath})
+	if code != 2 {
+		t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
+	}
+	if !strings.Contains(stderr, "quality.warnings") {
+		t.Fatalf("stderr = %q, want it to name quality.warnings", stderr)
+	}
+}
+
+// clearCollectionTimes blanks the two collection-time fields of s in place:
+// TestGoldenFlowEqualsTheCommand compares the command's own snapshot with
+// goldentest's, and both are built from clocks that already agree, but the
+// brief still asks the comparison to set these two fields equal rather than
+// lean on that agreement.
+func clearCollectionTimes(s *snapshot.Snapshot) {
+	s.Quality.CollectionStartedAt = ""
+	s.Quality.CollectionCompletedAt = ""
+}
+
+// TestGoldenFlowEqualsTheCommand proves that the command, run with the
+// fixed clock and identifier internal/goldentest also uses, and with the
+// same organization, classification, and author given through its own
+// configuration file, produces the same snapshot internal/goldentest
+// builds for the same scenario, for every one of the six scenarios.
+func TestGoldenFlowEqualsTheCommand(t *testing.T) {
+	for _, scenario := range promtest.Scenarios {
+		t.Run(scenario.Name, func(t *testing.T) {
+			server, _, sc := startScenario(t, scenario.Name)
+			defer server.Close()
+
+			outDir := t.TempDir()
+			cfgPath := writeConfig(t, fixedGoldenConfig(server, sc, outDir))
+			snapPath := filepath.Join(t.TempDir(), "s.json")
+
+			args := scenarioArgs(cfgPath, sc, "--snapshot", snapPath)
+			_, stderr, code := runArgs(context.Background(), fixedGoldenEnv(t), args)
+			if code != 0 {
+				t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+			}
+
+			gotBytes, err := os.ReadFile(snapPath)
+			if err != nil {
+				t.Fatalf("reading %s: %v", snapPath, err)
+			}
+			wantBytes, err := goldentest.Snapshot(context.Background(), sc)
+			if err != nil {
+				t.Fatalf("goldentest.Snapshot(%s): %v", sc.Name, err)
+			}
+
+			got, err := snapshot.Decode(gotBytes)
+			if err != nil {
+				t.Fatalf("decoding the command's snapshot: %v", err)
+			}
+			want, err := snapshot.Decode(wantBytes)
+			if err != nil {
+				t.Fatalf("decoding goldentest's snapshot: %v", err)
+			}
+			clearCollectionTimes(&got)
+			clearCollectionTimes(&want)
+
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("the command's snapshot for %s differs from goldentest's", scenario.Name)
+			}
+		})
+	}
 }

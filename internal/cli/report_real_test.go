@@ -382,3 +382,46 @@ func TestRealReportIsDeterministic(t *testing.T) {
 		t.Fatalf("two runs of the same input produced different PDFs")
 	}
 }
+
+// TestFromSnapshotPrintsTheSections builds a snapshot of this part with a
+// --snapshot run against the recorded server, renders it with
+// --from-snapshot, and checks the PDF text holds a workload name from the
+// fixture and the namespaces section's own heading: it reads no golden
+// file, which is still the shape of an earlier part.
+func TestFromSnapshotPrintsTheSections(t *testing.T) {
+	server, _, scenario := startScenario(t, "direct-complete")
+	defer server.Close()
+
+	outDir := t.TempDir()
+	cfgPath := writeConfig(t, scenarioConfig(server, scenario, outDir))
+	snapPath := filepath.Join(outDir, "s.json")
+
+	env := realEnv(t)
+	_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, scenario, "--snapshot", snapPath))
+	if code != 0 {
+		t.Fatalf("snapshot mode: code = %d, want 0; stderr = %q", code, stderr)
+	}
+
+	outPath := filepath.Join(t.TempDir(), "r.pdf")
+	_, stderr, code = runArgs(context.Background(), env, []string{"report", "--from-snapshot", snapPath, "--lang", "en", "--output", outPath})
+	if code != 0 {
+		t.Fatalf("from-snapshot mode: code = %d, want 0; stderr = %q", code, stderr)
+	}
+
+	cat, err := catalog.Load(catalog.English)
+	if err != nil {
+		t.Fatalf("catalog.Load: %v", err)
+	}
+	heading, err := cat.Text(catalog.SectionsNamespacesHeading, nil)
+	if err != nil {
+		t.Fatalf("SectionsNamespacesHeading text: %v", err)
+	}
+
+	text := pdfText(t, outPath)
+	if !containsText(text, "payments-web") {
+		t.Errorf("text does not contain %q", "payments-web")
+	}
+	if !containsText(text, heading) {
+		t.Errorf("text does not contain %q", heading)
+	}
+}

@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kcr "github.com/marceloalvescf/k8s-capacity-report"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	collectpkg "github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
@@ -451,26 +452,21 @@ type collected struct {
 	collectionCompletedAt time.Time
 }
 
-// collect runs the preflight every collecting mode shares: connect, resolve
-// the scope, detect the capabilities, and check they are sufficient.
-// emittedAt is the caller's own first clock read (the emission and
-// collection-start time), taken as a parameter rather than read here, so
-// that a caller that also needs it for something else (runPDF's default
-// output name) reads the clock only once for both purposes; collect reads
-// it a second time, once the capabilities are known, for the
-// collection-completed time. This keeps the clock read exactly twice in
-// every collecting mode, whatever else that mode does with the first
-// reading.
-func collect(ctx context.Context, env Env, cfg config.Config, token string, emittedAt time.Time) (collected, error) {
+// preflight connects, resolves the scope, detects the capabilities, and
+// checks they are sufficient, with at as the time of every instant query
+// this stage sends. It reads the clock nowhere itself: runSnapshot and
+// runPDF read it again only once collect.All has returned, and runCheck's
+// own collect wrapper below reads it right after preflight returns instead.
+func preflight(ctx context.Context, cfg config.Config, token string, at time.Time) (collected, error) {
 	client, err := prom.Connect(ctx, prom.Options{Metrics: cfg.Metrics, Token: token})
 	if err != nil {
 		return collected{}, err
 	}
-	scope, err := discovery.ResolveScope(ctx, client, cfg.Cluster, emittedAt)
+	scope, err := discovery.ResolveScope(ctx, client, cfg.Cluster, at)
 	if err != nil {
 		return collected{}, err
 	}
-	capabilities, err := discovery.Detect(ctx, client, scope, cfg.Analysis, emittedAt)
+	capabilities, err := discovery.Detect(ctx, client, scope, cfg.Analysis, at)
 	if err != nil {
 		return collected{}, err
 	}
@@ -478,15 +474,26 @@ func collect(ctx context.Context, env Env, cfg config.Config, token string, emit
 		return collected{}, err
 	}
 
-	return collected{
-		client:                client,
-		scope:                 scope,
-		capabilities:          capabilities,
-		collectionCompletedAt: env.Now(),
-	}, nil
+	return collected{client: client, scope: scope, capabilities: capabilities}, nil
 }
 
-// runCheck runs the preflight and reports it; it builds no snapshot.
+// collect runs preflight and then reads the clock a second time, for the
+// collection-completed time. runCheck is its only caller: a check never
+// collects namespaces or workloads, so preflight's own return is its last
+// chance to read the clock again and keep it read exactly twice.
+func collect(ctx context.Context, env Env, cfg config.Config, token string, at time.Time) (collected, error) {
+	c, err := preflight(ctx, cfg, token, at)
+	if err != nil {
+		return collected{}, err
+	}
+	c.collectionCompletedAt = env.Now()
+	return c, nil
+}
+
+// runCheck runs the preflight and reports it; it builds no snapshot. It
+// computes the window before the preflight, exactly like every mode that
+// collects, so that an empty period stops a check the same way it stops a
+// run, before any request; the window itself is otherwise unused here.
 func runCheck(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.Command, f *reportFlags) ([]string, error) {
 	loaded, err := config.Load(configSource(cmd, f, env))
 	if err != nil {
@@ -495,7 +502,12 @@ func runCheck(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 	redactor.Add(loaded.Token)
 
 	emittedAt := env.Now()
-	c, err := collect(ctx, env, loaded.Config, loaded.Token, emittedAt)
+	window, err := collectpkg.NewWindow(loaded.Config.Analysis, emittedAt)
+	if err != nil {
+		return nil, &exitError{2, err}
+	}
+
+	c, err := collect(ctx, env, loaded.Config, loaded.Token, window.End)
 	if err != nil {
 		return nil, err
 	}
@@ -522,20 +534,35 @@ func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *c
 	}
 
 	emittedAt := env.Now()
-	c, err := collect(ctx, env, loaded.Config, loaded.Token, emittedAt)
+	window, err := collectpkg.NewWindow(loaded.Config.Analysis, emittedAt)
+	if err != nil {
+		return nil, &exitError{2, err}
+	}
+
+	c, err := preflight(ctx, loaded.Config, loaded.Token, window.End)
 	if err != nil {
 		return nil, err
 	}
+
+	result, err := collectpkg.All(ctx, c.client, collectpkg.Input{
+		Scope:        c.scope,
+		Cluster:      loaded.Config.Cluster,
+		Analysis:     loaded.Config.Analysis,
+		Capabilities: c.capabilities,
+		Window:       window,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	collectionCompletedAt := env.Now()
 
 	reportID, err := env.NewID()
 	if err != nil {
 		return nil, err
 	}
 
-	window, err := collectpkg.NewWindow(loaded.Config.Analysis, emittedAt)
-	if err != nil {
-		return nil, err
-	}
+	findings := analysis.All(result, loaded.Config.Thresholds)
 
 	snap, err := snapshot.Build(snapshot.Input{
 		ID:                  reportID,
@@ -546,9 +573,10 @@ func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *c
 		Scope:               c.scope,
 		Capabilities:        c.capabilities,
 		CollectionStarted:   emittedAt,
-		CollectionCompleted: c.collectionCompletedAt,
+		CollectionCompleted: collectionCompletedAt,
 		Window:              window,
-		Collected:           collectpkg.Collected{},
+		Collected:           result,
+		Findings:            findings,
 	})
 	if err != nil {
 		return nil, err
@@ -563,6 +591,8 @@ func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *c
 	}
 
 	lines := preflightLines(c.capabilities)
+	lines = append(lines, "namespace collection: "+result.Namespaces.State)
+	lines = append(lines, "workload collection: "+result.Workloads.State)
 	lines = append(lines, "snapshot: "+outputPath)
 	if f.verbose {
 		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.capabilities)...)
@@ -584,6 +614,11 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 	}
 
 	emittedAt := env.Now()
+	window, err := collectpkg.NewWindow(loaded.Config.Analysis, emittedAt)
+	if err != nil {
+		return nil, &exitError{2, err}
+	}
+
 	loc, err := loaded.Config.Analysis.Location()
 	if err != nil {
 		return nil, &exitError{2, err}
@@ -610,20 +645,30 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 		return nil, &exitError{6, err}
 	}
 
-	c, err := collect(ctx, env, loaded.Config, loaded.Token, emittedAt)
+	c, err := preflight(ctx, loaded.Config, loaded.Token, window.End)
 	if err != nil {
 		return nil, err
 	}
+
+	result, err := collectpkg.All(ctx, c.client, collectpkg.Input{
+		Scope:        c.scope,
+		Cluster:      loaded.Config.Cluster,
+		Analysis:     loaded.Config.Analysis,
+		Capabilities: c.capabilities,
+		Window:       window,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	collectionCompletedAt := env.Now()
 
 	reportID, err := env.NewID()
 	if err != nil {
 		return nil, err
 	}
 
-	window, err := collectpkg.NewWindow(loaded.Config.Analysis, emittedAt)
-	if err != nil {
-		return nil, err
-	}
+	findings := analysis.All(result, loaded.Config.Thresholds)
 
 	snap, err := snapshot.Build(snapshot.Input{
 		ID:                  reportID,
@@ -634,9 +679,10 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 		Scope:               c.scope,
 		Capabilities:        c.capabilities,
 		CollectionStarted:   emittedAt,
-		CollectionCompleted: c.collectionCompletedAt,
+		CollectionCompleted: collectionCompletedAt,
 		Window:              window,
-		Collected:           collectpkg.Collected{},
+		Collected:           result,
+		Findings:            findings,
 	})
 	if err != nil {
 		return nil, err
@@ -664,6 +710,8 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 	}
 
 	lines := preflightLines(c.capabilities)
+	lines = append(lines, "namespace collection: "+result.Namespaces.State)
+	lines = append(lines, "workload collection: "+result.Workloads.State)
 	lines = append(lines, "report: "+outputPath)
 	if f.verbose {
 		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.capabilities)...)

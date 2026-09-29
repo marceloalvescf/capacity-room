@@ -1,10 +1,11 @@
 // Package goldentest runs the whole chain — connect, resolve the scope,
-// detect the capabilities, build a snapshot, build a document — against one
-// of the six recorded scenarios of internal/promtest, with one fixed input
-// held constant across every run. It is not a test file: golden_test.go
-// uses it to compare against the golden files, and cmd/update-testdata uses
-// it to rewrite them. Neither the production binary nor any package outside
-// this chain of tests may import it; internal/guard enforces that.
+// detect the capabilities, collect, analyze, build a snapshot, build a
+// document — against one of the six recorded scenarios of internal/promtest,
+// with one fixed input held constant across every run. It is not a test
+// file: golden_test.go uses it to compare against the golden files, and
+// cmd/update-testdata uses it to rewrite them. Neither the production binary
+// nor any package outside this chain of tests may import it; internal/guard
+// enforces that.
 package goldentest
 
 import (
@@ -17,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
@@ -82,11 +84,12 @@ func fixedConfig(scenario promtest.Scenario, serverURL string) config.Config {
 }
 
 // run serves scenario's fixture in this process and carries it through the
-// whole chain the command itself runs before writing a snapshot: connect,
-// resolve the scope, detect the capabilities, check they are sufficient,
-// and build. It returns the built snapshot together with every request the
-// server saw, in the order it saw them, so that Snapshot and Queries, run
-// once each, always describe the very same run of the scenario.
+// whole chain the command itself runs before writing a snapshot: build the
+// window, connect, resolve the scope, detect the capabilities, check they
+// are sufficient, collect, analyze, and build. It returns the built
+// snapshot together with every request the server saw, in the order it saw
+// them, so that Snapshot and Queries, run once each, always describe the
+// very same run of the scenario.
 func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, []promtest.Seen, error) {
 	path, err := promtest.Path(scenario.Name)
 	if err != nil {
@@ -107,6 +110,11 @@ func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, []
 	}
 	cfg := fixedConfig(scenario, server.URL)
 
+	window, err := collect.NewWindow(cfg.Analysis, emittedAt)
+	if err != nil {
+		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: building the window: %w", scenario.Name, err)
+	}
+
 	client, err := prom.Connect(ctx, prom.Options{
 		Metrics: cfg.Metrics,
 		Token:   scenario.Token,
@@ -115,12 +123,12 @@ func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, []
 		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: connecting: %w", scenario.Name, err)
 	}
 
-	scope, err := discovery.ResolveScope(ctx, client, cfg.Cluster, emittedAt)
+	scope, err := discovery.ResolveScope(ctx, client, cfg.Cluster, window.End)
 	if err != nil {
 		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: resolving the scope: %w", scenario.Name, err)
 	}
 
-	capabilities, err := discovery.Detect(ctx, client, scope, cfg.Analysis, emittedAt)
+	capabilities, err := discovery.Detect(ctx, client, scope, cfg.Analysis, window.End)
 	if err != nil {
 		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: detecting the capabilities: %w", scenario.Name, err)
 	}
@@ -129,10 +137,18 @@ func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, []
 		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: checking the capabilities: %w", scenario.Name, err)
 	}
 
-	window, err := collect.NewWindow(cfg.Analysis, emittedAt)
+	collected, err := collect.All(ctx, client, collect.Input{
+		Scope:        scope,
+		Cluster:      cfg.Cluster,
+		Analysis:     cfg.Analysis,
+		Capabilities: capabilities,
+		Window:       window,
+	})
 	if err != nil {
-		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: building the window: %w", scenario.Name, err)
+		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: collecting: %w", scenario.Name, err)
 	}
+
+	findings := analysis.All(collected, cfg.Thresholds)
 
 	snap, err := snapshot.Build(snapshot.Input{
 		ID:                  reportID,
@@ -145,7 +161,8 @@ func run(ctx context.Context, scenario promtest.Scenario) (snapshot.Snapshot, []
 		CollectionStarted:   emittedAt,
 		CollectionCompleted: emittedAt.Add(collectionSpan),
 		Window:              window,
-		Collected:           collect.Collected{},
+		Collected:           collected,
+		Findings:            findings,
 	})
 	if err != nil {
 		return snapshot.Snapshot{}, nil, fmt.Errorf("%s: building the snapshot: %w", scenario.Name, err)
