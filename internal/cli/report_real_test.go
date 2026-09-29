@@ -10,15 +10,18 @@ package cli
 import (
 	"context"
 	"crypto/sha256"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"unicode"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/goldentest"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
@@ -424,5 +427,156 @@ func TestFromSnapshotPrintsTheSections(t *testing.T) {
 	}
 	if !containsText(text, heading) {
 		t.Errorf("text does not contain %q", heading)
+	}
+}
+
+// wordAppears reports whether text holds word as a word of its own: a
+// match with a boundary on each side, so that idle inside a longer word
+// such as middle does not count.
+func wordAppears(text, word string) bool {
+	re := regexp.MustCompile(`\b` + regexp.QuoteMeta(word) + `\b`)
+	return re.MatchString(text)
+}
+
+// holdsARepeatedHyphen reports whether text, once every whitespace
+// character is stripped, holds two consecutive hyphens: the shape Typst
+// leaves behind when it wraps an already-hyphenated name at its own
+// hyphen and adds a second one of its own at the break.
+//
+// template/capacity_test.go checks the same thing, on one specific table
+// column, through leadingCellStream, a helper of that package's own
+// *_test.go file: unexported, and, being a test helper, not reachable
+// from another package's tests regardless. This file cannot reach it, so
+// it applies the same rule with the tool already reached here instead,
+// stripWhitespace (itself a duplicate of the template package's own,
+// following the same file's earlier doc comment on why), over the whole
+// page rather than one column: every one of this test's documents was
+// read to confirm no line of ordinary prose, in either language, wraps at
+// a hyphen of its own, so nothing else on the page can produce a false
+// match.
+func holdsARepeatedHyphen(text string) bool {
+	return strings.Contains(stripWhitespace(text), "--")
+}
+
+// numberedHeading builds the text a numbered top-level heading of the
+// report — section 1, section 2, or the appendix — prints as: the number,
+// a space, and the catalog's own heading text.
+func numberedHeading(t *testing.T, cat *catalog.Catalog, number int, key catalog.Key) string {
+	t.Helper()
+	text, err := cat.Text(key, nil)
+	if err != nil {
+		t.Fatalf("%s text: %v", key, err)
+	}
+	return fmt.Sprintf("%d %s", number, text)
+}
+
+// TestRealReportTextOfEveryScenario checks, for every one of the seven
+// scenarios and both languages, that the compiled PDF: has three pages;
+// holds the numbered heading of section 1, section 2, and the appendix;
+// holds the name of every namespace and every workload the scenario's
+// snapshot holds; holds the interpretation notes heading exactly when the
+// snapshot holds a warning or a notice; holds, for edge-values, neither
+// of the two workload names its snapshot omits, as a word of its own; and
+// holds no repeated hyphen at a line break.
+//
+// The names and the notes expectation come from
+// testdata/snapshot/<scenario>.json, not from a second collecting run:
+// TestSnapshotModeWritesTheGoldenFile (report_test.go) and
+// TestGoldenFlowEqualsTheCommand (run_test.go) already keep that file
+// equal to what a run of the command itself writes for the same scenario.
+func TestRealReportTextOfEveryScenario(t *testing.T) {
+	for _, scenario := range promtest.Scenarios {
+		t.Run(scenario.Name, func(t *testing.T) {
+			snapPath, err := goldentest.SnapshotPath(scenario.Name)
+			if err != nil {
+				t.Fatalf("SnapshotPath(%s): %v", scenario.Name, err)
+			}
+			raw, err := os.ReadFile(snapPath)
+			if err != nil {
+				t.Fatalf("reading %s: %v", snapPath, err)
+			}
+			snap, err := snapshot.Decode(raw)
+			if err != nil {
+				t.Fatalf("decoding %s: %v", snapPath, err)
+			}
+			wantNotes := len(snap.Quality.Warnings) > 0 || len(snap.Quality.Notices) > 0
+
+			for _, lang := range catalog.Languages() {
+				t.Run(string(lang), func(t *testing.T) {
+					server, _, sc := startScenario(t, scenario.Name)
+					defer server.Close()
+
+					outDir := t.TempDir()
+					cfgPath := writeConfig(t, scenarioConfig(server, sc, outDir))
+					outPath := filepath.Join(outDir, "r.pdf")
+
+					env := realEnv(t)
+					args := scenarioArgs(cfgPath, sc, "--lang", string(lang), "--output", outPath)
+					_, stderr, code := runArgs(context.Background(), env, args)
+					if code != 0 {
+						t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+					}
+
+					text := pdfText(t, outPath)
+					if got := strings.Count(text, "\f"); got != 3 {
+						t.Fatalf("form feed count = %d, want 3", got)
+					}
+
+					cat, err := catalog.Load(lang)
+					if err != nil {
+						t.Fatalf("catalog.Load(%s): %v", lang, err)
+					}
+
+					for _, h := range []struct {
+						number int
+						key    catalog.Key
+					}{
+						{1, catalog.SectionsNamespacesHeading},
+						{2, catalog.SectionsWorkloadsHeading},
+						{3, catalog.AppendixHeading},
+					} {
+						want := numberedHeading(t, cat, h.number, h.key)
+						if !containsText(text, want) {
+							t.Errorf("text does not contain the heading %q", want)
+						}
+					}
+
+					for _, ns := range snap.Namespaces {
+						if !containsText(text, ns.Name) {
+							t.Errorf("text does not contain the namespace name %q", ns.Name)
+						}
+					}
+					for _, wl := range snap.Workloads {
+						if !containsText(text, wl.Name) {
+							t.Errorf("text does not contain the workload name %q", wl.Name)
+						}
+					}
+
+					notesHeading, err := cat.Text(catalog.NotesHeading, nil)
+					if err != nil {
+						t.Fatalf("NotesHeading text: %v", err)
+					}
+					holdsNotes := containsText(text, notesHeading)
+					if wantNotes && !holdsNotes {
+						t.Errorf("text does not contain the interpretation notes heading %q, though the snapshot holds a warning or a notice", notesHeading)
+					}
+					if !wantNotes && holdsNotes {
+						t.Errorf("text contains the interpretation notes heading %q, though the snapshot holds neither a warning nor a notice", notesHeading)
+					}
+
+					if scenario.Name == "edge-values" {
+						for _, omitted := range []string{"idle", "nightly"} {
+							if wordAppears(text, omitted) {
+								t.Errorf("text contains %q as a word of its own, though the snapshot omits that workload", omitted)
+							}
+						}
+					}
+
+					if holdsARepeatedHyphen(text) {
+						t.Errorf("text holds a repeated hyphen at a line break")
+					}
+				})
+			}
+		})
 	}
 }
