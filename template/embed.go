@@ -36,7 +36,7 @@ func Unpack(dir string) error {
 	switch {
 	case os.IsNotExist(err):
 		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return err
+			return fmt.Errorf("template: creating %s: %w", dir, err)
 		}
 	case err != nil:
 		return fmt.Errorf("template: %w", err)
@@ -59,17 +59,23 @@ func Unpack(dir string) error {
 	// written.
 	return fs.WalkDir(embedded, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("template: walking %s: %w", path, err)
 		}
 		target := filepath.Join(dir, path)
 		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
+			if err := os.MkdirAll(target, 0o755); err != nil {
+				return fmt.Errorf("template: creating %s: %w", target, err)
+			}
+			return nil
 		}
 		data, err := embedded.ReadFile(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("template: reading %s: %w", path, err)
 		}
-		return os.WriteFile(target, data, 0o644)
+		if err := os.WriteFile(target, data, 0o644); err != nil {
+			return fmt.Errorf("template: writing %s: %w", target, err)
+		}
+		return nil
 	})
 }
 

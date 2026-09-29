@@ -268,6 +268,53 @@ func TestUnpackPrefixesReadFailure(t *testing.T) {
 	}
 }
 
+// TestUnpackPrefixesMkdirFailure proves the os.MkdirAll error Unpack
+// returns when dir does not exist and cannot be created — here, because its
+// parent folder has no write permission — carries the "template: " prefix,
+// while still answering errors.Is against fs.ErrPermission.
+func TestUnpackPrefixesMkdirFailure(t *testing.T) {
+	parent := t.TempDir()
+	if err := os.Chmod(parent, 0o555); err != nil {
+		t.Fatalf("Chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(parent, 0o755) })
+
+	err := Unpack(filepath.Join(parent, "new"))
+	if err == nil {
+		t.Fatalf("Unpack() error = nil, want an error")
+	}
+	if !strings.HasPrefix(err.Error(), "template: ") {
+		t.Fatalf("Unpack() error = %q, want it to start with %q", err.Error(), "template: ")
+	}
+	if !errors.Is(err, fs.ErrPermission) {
+		t.Fatalf("Unpack() error = %v, want errors.Is(err, fs.ErrPermission)", err)
+	}
+}
+
+// TestUnpackPrefixesWriteFailure proves the error Unpack returns while
+// writing the embedded tree into an existing, empty, but read-only target
+// folder carries the "template: " prefix, while still answering errors.Is
+// against fs.ErrPermission. With no write permission on dir itself, the
+// first folder the walk tries to create under it fails.
+func TestUnpackPrefixesWriteFailure(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Fatalf("Chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+
+	err := Unpack(dir)
+	if err == nil {
+		t.Fatalf("Unpack() error = nil, want an error")
+	}
+	if !strings.HasPrefix(err.Error(), "template: ") {
+		t.Fatalf("Unpack() error = %q, want it to start with %q", err.Error(), "template: ")
+	}
+	if !errors.Is(err, fs.ErrPermission) {
+		t.Fatalf("Unpack() error = %v, want errors.Is(err, fs.ErrPermission)", err)
+	}
+}
+
 // TestUnpackEveryRefusalHasPrefix proves every refusal Unpack already had a
 // message for, before the two permission failures above were added, also
 // carries the "template: " prefix.
