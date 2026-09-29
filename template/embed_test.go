@@ -2,6 +2,7 @@ package template
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -218,6 +219,141 @@ func TestUnpackRefusesFolderThatIsASymbolicLink(t *testing.T) {
 			t.Fatalf("Lstat(%s) error = %v, want it to still report missing", missing, err)
 		}
 	})
+}
+
+// TestUnpackPrefixesStatFailure proves the os.Lstat error Unpack returns
+// when dir cannot even be examined — here, because its parent folder has no
+// search permission — carries the "template: " prefix every other refusal
+// of Unpack already carries, while still answering errors.Is against the
+// standard library's fs.ErrPermission.
+func TestUnpackPrefixesStatFailure(t *testing.T) {
+	parent := t.TempDir()
+	if err := os.Chmod(parent, 0o000); err != nil {
+		t.Fatalf("Chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(parent, 0o755) })
+
+	err := Unpack(filepath.Join(parent, "unreachable"))
+	if err == nil {
+		t.Fatalf("Unpack() error = nil, want an error")
+	}
+	if !strings.HasPrefix(err.Error(), "template: ") {
+		t.Fatalf("Unpack() error = %q, want it to start with %q", err.Error(), "template: ")
+	}
+	if !errors.Is(err, fs.ErrPermission) {
+		t.Fatalf("Unpack() error = %v, want errors.Is(err, fs.ErrPermission)", err)
+	}
+}
+
+// TestUnpackPrefixesReadFailure proves the os.ReadDir error Unpack returns
+// when dir exists but cannot be listed — here, because it has no read
+// permission — carries the "template: " prefix, while still answering
+// errors.Is against fs.ErrPermission.
+func TestUnpackPrefixesReadFailure(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0o300); err != nil {
+		t.Fatalf("Chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+
+	err := Unpack(dir)
+	if err == nil {
+		t.Fatalf("Unpack() error = nil, want an error")
+	}
+	if !strings.HasPrefix(err.Error(), "template: ") {
+		t.Fatalf("Unpack() error = %q, want it to start with %q", err.Error(), "template: ")
+	}
+	if !errors.Is(err, fs.ErrPermission) {
+		t.Fatalf("Unpack() error = %v, want errors.Is(err, fs.ErrPermission)", err)
+	}
+}
+
+// TestUnpackEveryRefusalHasPrefix proves every refusal Unpack already had a
+// message for, before the two permission failures above were added, also
+// carries the "template: " prefix.
+func TestUnpackEveryRefusalHasPrefix(t *testing.T) {
+	cases := []struct {
+		name string
+		dir  func(t *testing.T) string
+	}{
+		{
+			name: "folder is not empty",
+			dir: func(t *testing.T) string {
+				dir := t.TempDir()
+				existing := filepath.Join(dir, "already-here.txt")
+				if err := os.WriteFile(existing, []byte("leftover"), 0o644); err != nil {
+					t.Fatalf("writing %s: %v", existing, err)
+				}
+				return dir
+			},
+		},
+		{
+			name: "path is a symbolic link to an empty folder",
+			dir: func(t *testing.T) string {
+				parent := t.TempDir()
+				target := filepath.Join(parent, "empty-target")
+				if err := os.Mkdir(target, 0o755); err != nil {
+					t.Fatalf("creating %s: %v", target, err)
+				}
+				link := filepath.Join(parent, "link")
+				if err := os.Symlink(target, link); err != nil {
+					t.Fatalf("creating symbolic link: %v", err)
+				}
+				return link
+			},
+		},
+		{
+			name: "path is a symbolic link to a file",
+			dir: func(t *testing.T) string {
+				parent := t.TempDir()
+				target := filepath.Join(parent, "a-file")
+				if err := os.WriteFile(target, []byte("a plain file"), 0o644); err != nil {
+					t.Fatalf("writing %s: %v", target, err)
+				}
+				link := filepath.Join(parent, "link")
+				if err := os.Symlink(target, link); err != nil {
+					t.Fatalf("creating symbolic link: %v", err)
+				}
+				return link
+			},
+		},
+		{
+			name: "path is a dangling symbolic link",
+			dir: func(t *testing.T) string {
+				parent := t.TempDir()
+				missing := filepath.Join(parent, "does-not-exist")
+				link := filepath.Join(parent, "link")
+				if err := os.Symlink(missing, link); err != nil {
+					t.Fatalf("creating symbolic link: %v", err)
+				}
+				return link
+			},
+		},
+		{
+			name: "path is a file",
+			dir: func(t *testing.T) string {
+				dir := t.TempDir()
+				target := filepath.Join(dir, "not-a-folder")
+				if err := os.WriteFile(target, []byte("a plain file"), 0o644); err != nil {
+					t.Fatalf("writing %s: %v", target, err)
+				}
+				return target
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := tc.dir(t)
+			err := Unpack(dir)
+			if err == nil {
+				t.Fatalf("Unpack() error = nil, want an error")
+			}
+			if !strings.HasPrefix(err.Error(), "template: ") {
+				t.Fatalf("Unpack() error = %q, want it to start with %q", err.Error(), "template: ")
+			}
+		})
+	}
 }
 
 // TestUnpackAcceptsParentThatIsASymbolicLink proves Unpack checks only the

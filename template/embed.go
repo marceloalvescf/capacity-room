@@ -39,7 +39,7 @@ func Unpack(dir string) error {
 			return err
 		}
 	case err != nil:
-		return err
+		return fmt.Errorf("template: %w", err)
 	case info.Mode()&os.ModeSymlink != 0:
 		return fmt.Errorf("template: %s is a symbolic link", dir)
 	case !info.IsDir():
@@ -47,7 +47,7 @@ func Unpack(dir string) error {
 	default:
 		entries, err := os.ReadDir(dir)
 		if err != nil {
-			return err
+			return fmt.Errorf("template: %w", err)
 		}
 		if len(entries) != 0 {
 			return fmt.Errorf("template: folder %s is not empty", dir)
