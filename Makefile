@@ -103,7 +103,7 @@ update-testdata:
 
 check-runtime: $(IMAGE_DEP)
 	test "$$(docker run --rm $(IMAGE) --version)" = "k8s-capacity-report $(VERSION)"
-	test "$$(docker run --rm --entrypoint /usr/local/bin/typst $(IMAGE) --version | cut -d' ' -f2)" = "$(TYPST_VERSION)"
+	set -o pipefail; test "$$(docker run --rm --entrypoint /usr/local/bin/typst $(IMAGE) --version | cut -d' ' -f2)" = "$(TYPST_VERSION)"
 	test "$$(docker inspect --format '{{.Config.User}}' $(IMAGE))" = "10001:10001"
 	# The snapshot must exist: Docker makes a folder at a mount source that
 	# is missing. The output folder is kept between runs and only the file
