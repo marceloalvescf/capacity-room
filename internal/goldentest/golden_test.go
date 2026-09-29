@@ -143,18 +143,104 @@ func TestGoldenQueries(t *testing.T) {
 	}
 }
 
-// unifiedRequestsLimitsQueries returns the lines of a golden queries file
-// whose query mentions the unified requests or limits metric: the four
-// lines the four probes of TestQueriesTellTheProbesApart pins down.
-func unifiedRequestsLimitsQueries(lines []string) []string {
+// queriesLines reads scenario's golden queries file and returns it split
+// into lines: the reading TestQueriesTellTheProbesApart and
+// TestQueriesTellTheCollectorsApart share.
+func queriesLines(t *testing.T, scenario promtest.Scenario) []string {
+	t.Helper()
+	path, err := QueriesPath(scenario.Name)
+	if err != nil {
+		t.Fatalf("QueriesPath(%s): %v", scenario.Name, err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	return strings.Split(strings.TrimRight(string(data), "\n"), "\n")
+}
+
+// splitQueryLine splits one line of a queries file, "path<TAB>query", on
+// its first tab. ok is false for a line that holds none, which no real
+// line of a queries file ever is.
+func splitQueryLine(line string) (path, query string, ok bool) {
+	i := strings.Index(line, "\t")
+	if i < 0 {
+		return "", "", false
+	}
+	return line[:i], line[i+1:], true
+}
+
+// namesUnifiedRequestsLimits reports whether query names the unified
+// requests or limits metric.
+func namesUnifiedRequestsLimits(query string) bool {
+	return strings.Contains(query, "kube_pod_container_resource_requests{") ||
+		strings.Contains(query, "kube_pod_container_resource_limits{")
+}
+
+// unifiedRequestsLimitsProbeLines returns the lines of a queries file
+// whose path ends in /query and whose query is a count() probe naming the
+// unified requests or limits metric: the four lines
+// TestQueriesTellTheProbesApart pins down. A collector's own range query
+// of the same metric, over the same path suffix a Grafana proxy also
+// carries, is told apart by requiring the query itself, not only the
+// path, to mark it as a probe.
+func unifiedRequestsLimitsProbeLines(lines []string) []string {
 	var out []string
 	for _, line := range lines {
-		if strings.Contains(line, "kube_pod_container_resource_requests{") ||
-			strings.Contains(line, "kube_pod_container_resource_limits{") {
+		path, query, ok := splitQueryLine(line)
+		if ok && strings.HasSuffix(path, "/query") && strings.HasPrefix(query, "count(") && namesUnifiedRequestsLimits(query) {
 			out = append(out, line)
 		}
 	}
 	return out
+}
+
+// unifiedRequestsLimitsRangeLines returns the lines of a queries file
+// whose path ends in /query_range and whose query names the unified
+// requests or limits metric: the eight lines
+// TestQueriesTellTheCollectorsApart pins down, four sent by the namespace
+// collector and four by the workload collector.
+func unifiedRequestsLimitsRangeLines(lines []string) []string {
+	var out []string
+	for _, line := range lines {
+		path, query, ok := splitQueryLine(line)
+		if ok && strings.HasSuffix(path, "/query_range") && namesUnifiedRequestsLimits(query) {
+			out = append(out, line)
+		}
+	}
+	return out
+}
+
+// countByResource requires lines to hold exactly n entries, pairwise
+// different, split evenly between resource="cpu" and resource="memory":
+// the counting TestQueriesTellTheProbesApart and
+// TestQueriesTellTheCollectorsApart share, so that neither repeats the
+// other's loop.
+func countByResource(t *testing.T, what string, lines []string, n int) {
+	t.Helper()
+	if len(lines) != n {
+		t.Fatalf("found %d %s, want %d: %v", len(lines), what, n, lines)
+	}
+
+	seen := make(map[string]bool, n)
+	cpu, memory := 0, 0
+	for _, line := range lines {
+		if seen[line] {
+			t.Fatalf("line %q repeated among the %s", line, what)
+		}
+		seen[line] = true
+		switch {
+		case strings.Contains(line, `resource="cpu"`):
+			cpu++
+		case strings.Contains(line, `resource="memory"`):
+			memory++
+		default:
+			t.Fatalf("line %q names neither resource=\"cpu\" nor resource=\"memory\", among the %s", line, what)
+		}
+	}
+	if half := n / 2; cpu != half || memory != half {
+		t.Fatalf("cpu=%d memory=%d, want %d and %d, among the %s: %v", cpu, memory, half, half, what, lines)
+	}
 }
 
 // TestQueriesTellTheProbesApart proves that the four probes of the unified
@@ -165,40 +251,86 @@ func unifiedRequestsLimitsQueries(lines []string) []string {
 func TestQueriesTellTheProbesApart(t *testing.T) {
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
-			path, err := QueriesPath(scenario.Name)
-			if err != nil {
-				t.Fatalf("QueriesPath(%s): %v", scenario.Name, err)
-			}
-			data, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatalf("reading %s: %v", path, err)
-			}
-			lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
+			found := unifiedRequestsLimitsProbeLines(queriesLines(t, scenario))
+			countByResource(t, "unified requests/limits probes", found, 4)
+		})
+	}
+}
 
-			found := unifiedRequestsLimitsQueries(lines)
-			if len(found) != 4 {
-				t.Fatalf("found %d unified requests/limits lines, want 4: %v", len(found), found)
+// workloadGroupingPrefix returns the grouping the workload collector's own
+// four range queries of the unified requests and limits metric start
+// with, for scenario: raw-fallback's raw ownership groups by pod, every
+// other scenario's recording rule groups by workload.
+func workloadGroupingPrefix(scenario promtest.Scenario) string {
+	if scenario.Name == "raw-fallback" {
+		return "sum by (namespace, pod) ("
+	}
+	return "sum by (namespace, workload, workload_type) ("
+}
+
+// checkRequestsLimitsOrder requires lines to hold, in this exact order,
+// one range query of the unified requests metric with resource="cpu",
+// one of the requests metric with resource="memory", one of the limits
+// metric with resource="cpu", and one of the limits metric with
+// resource="memory": the order every collector's own four range queries
+// of this metric follow.
+func checkRequestsLimitsOrder(t *testing.T, what string, lines []string) {
+	t.Helper()
+	want := []struct{ metric, resource string }{
+		{"kube_pod_container_resource_requests{", `resource="cpu"`},
+		{"kube_pod_container_resource_requests{", `resource="memory"`},
+		{"kube_pod_container_resource_limits{", `resource="cpu"`},
+		{"kube_pod_container_resource_limits{", `resource="memory"`},
+	}
+	if len(lines) != len(want) {
+		t.Fatalf("%s holds %d lines, want %d to check their order", what, len(lines), len(want))
+	}
+	for i, w := range want {
+		if !strings.Contains(lines[i], w.metric) || !strings.Contains(lines[i], w.resource) {
+			t.Fatalf("%s, line %d = %q, want it to name %s with %s", what, i, lines[i], w.metric, w.resource)
+		}
+	}
+}
+
+// TestQueriesTellTheCollectorsApart proves that the eight range queries of
+// the unified requests and limits metric the namespace and the workload
+// collector send are told apart in the golden queries files: the four of
+// the namespace collector, grouped by namespace alone, stand before the
+// four of the workload collector, grouped by workload or by pod; each
+// group holds one of the metric's four combinations of requests-or-limits
+// and CPU-or-memory, in that fixed order, no two of the four alike; and a
+// scenario whose requests-and-limits capability is unavailable, which none
+// is today, sends none of the eight and is named as such rather than
+// failing on a bare count.
+func TestQueriesTellTheCollectorsApart(t *testing.T) {
+	for _, scenario := range promtest.Scenarios {
+		t.Run(scenario.Name, func(t *testing.T) {
+			found := unifiedRequestsLimitsRangeLines(queriesLines(t, scenario))
+			if len(found) == 0 {
+				t.Fatalf("found no unified requests/limits range lines for %s; this is expected only when its requests_limits capability is unavailable, which is true of no scenario today", scenario.Name)
+			}
+			if len(found) != 8 {
+				t.Fatalf("found %d unified requests/limits range lines, want 8: %v", len(found), found)
 			}
 
-			seen := make(map[string]bool, 4)
-			cpu, memory := 0, 0
-			for _, line := range found {
-				if seen[line] {
-					t.Fatalf("line %q repeated among the four unified requests/limits lines", line)
-				}
-				seen[line] = true
-				switch {
-				case strings.Contains(line, `resource="cpu"`):
-					cpu++
-				case strings.Contains(line, `resource="memory"`):
-					memory++
-				default:
-					t.Fatalf("line %q names neither resource=\"cpu\" nor resource=\"memory\"", line)
+			namespaceGroup, workloadGroup := found[:4], found[4:]
+			workloadPrefix := workloadGroupingPrefix(scenario)
+
+			for _, line := range namespaceGroup {
+				if _, query, _ := splitQueryLine(line); !strings.HasPrefix(query, "sum by (namespace) (") {
+					t.Fatalf("line %q, among the namespace collector's first four, does not start with %q", line, "sum by (namespace) (")
 				}
 			}
-			if cpu != 2 || memory != 2 {
-				t.Fatalf("cpu=%d memory=%d, want 2 and 2: %v", cpu, memory, found)
+			for _, line := range workloadGroup {
+				if _, query, _ := splitQueryLine(line); !strings.HasPrefix(query, workloadPrefix) {
+					t.Fatalf("line %q, among the workload collector's last four, does not start with %q", line, workloadPrefix)
+				}
 			}
+
+			countByResource(t, "namespace collector's range queries", namespaceGroup, 4)
+			countByResource(t, "workload collector's range queries", workloadGroup, 4)
+			checkRequestsLimitsOrder(t, "the namespace collector's range queries", namespaceGroup)
+			checkRequestsLimitsOrder(t, "the workload collector's range queries", workloadGroup)
 		})
 	}
 }
