@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
@@ -158,6 +159,35 @@ var requiredShapes = []requiredShape{
 		[]string{}},
 }
 
+// unavailableNamespaceRows returns one collect.Namespace for each of
+// namespaces, sorted, with its ten statistics unavailable and its pod
+// count unknown: a namespace row as it reads before any collector has run.
+func unavailableNamespaceRows(namespaces []string) []collect.Namespace {
+	sorted := append([]string{}, namespaces...)
+	slices.Sort(sorted)
+
+	unavailable := collect.Statistics{State: collect.StateUnavailable}
+	rows := make([]collect.Namespace, len(sorted))
+	for i, name := range sorted {
+		rows[i] = collect.Namespace{
+			Name: name,
+			Resources: collect.Resources{
+				CPUUsage:             unavailable,
+				MemoryUsage:          unavailable,
+				CPURequests:          unavailable,
+				MemoryRequests:       unavailable,
+				CPULimits:            unavailable,
+				MemoryLimits:         unavailable,
+				CPURequestPercent:    unavailable,
+				MemoryRequestPercent: unavailable,
+				CPULimitPercent:      unavailable,
+				MemoryLimitPercent:   unavailable,
+			},
+		}
+	}
+	return rows
+}
+
 // TestEverythingDetectGivesPassesCheck proves two things about
 // discovery.Detect's output: every shape of every capability it can
 // produce passes snapshot.Check (through snapshot.Build, which calls it),
@@ -168,13 +198,15 @@ var requiredShapes = []requiredShape{
 // (name, state, strategy, reasons) shape of every capability it sees along
 // the way. At the end, every shape of requiredShapes must have been seen,
 // and every reason code of discovery.ReasonCodes must appear in some
-// shape's reasons.
+// shape's reasons. Build also needs a window and a collection: neither
+// changes with the capabilities under test, so both are fixed once, ahead
+// of the sweep, from the harness's own emission time and configured
+// namespaces.
 func TestEverythingDetectGivesPassesCheck(t *testing.T) {
-	loc, err := time.LoadLocation("America/Sao_Paulo")
+	emittedAt, err := fixedEmittedAt()
 	if err != nil {
-		t.Fatalf("LoadLocation: %v", err)
+		t.Fatalf("fixedEmittedAt: %v", err)
 	}
-	emittedAt := time.Date(2026, time.July, 15, 14, 30, 0, 0, loc)
 
 	scope := discovery.Scope{
 		ClusterName:      "prod",
@@ -190,6 +222,14 @@ func TestEverythingDetectGivesPassesCheck(t *testing.T) {
 	cfg.Cluster.Namespaces = []string{"payments"}
 	cfg.Cluster.Label = scope.ClusterLabel
 	cfg.Cluster.FilterMode = scope.FilterMode
+
+	window, err := collect.NewWindow(cfg.Analysis, emittedAt)
+	if err != nil {
+		t.Fatalf("NewWindow: %v", err)
+	}
+	collected := collect.Collected{
+		Namespaces: collect.Result[collect.Namespace]{Rows: unavailableNamespaceRows(cfg.Cluster.Namespaces)},
+	}
 
 	sets := detectSets()
 	autoscalingValues := []string{"auto", "enabled", "disabled"}
@@ -224,6 +264,8 @@ func TestEverythingDetectGivesPassesCheck(t *testing.T) {
 				Capabilities:        capabilities,
 				CollectionStarted:   emittedAt,
 				CollectionCompleted: emittedAt.Add(time.Second),
+				Window:              window,
+				Collected:           collected,
 			})
 			if err != nil {
 				t.Fatalf("Build() error = %v (autoscaling=%s, set=%v)", err, autoscaling, set)

@@ -154,11 +154,12 @@ func TestRealReportFromEachScenario(t *testing.T) {
 	}
 }
 
-// TestRealReportHasTwoPages checks that direct-complete, whose fixture backs
-// every one of the nine capabilities, renders as exactly two pages: two form
-// feeds in the text layer, one at the end of each page, so the two page
-// breaks in a row leave no empty page between the cover and the appendix.
-func TestRealReportHasTwoPages(t *testing.T) {
+// TestRealReportHasThreePages checks that direct-complete, whose fixture
+// backs every one of the nine capabilities and gives payments-web its own
+// rows, renders as exactly three pages: the opening page; the page of
+// sections 1 and 2 (capacity by namespace, capacity by workload); and the
+// quality appendix, with its interpretation notes.
+func TestRealReportHasThreePages(t *testing.T) {
 	server, _, scenario := startScenario(t, "direct-complete")
 	defer server.Close()
 
@@ -173,8 +174,8 @@ func TestRealReportHasTwoPages(t *testing.T) {
 	}
 
 	text := pdfText(t, outPath)
-	if got := strings.Count(text, "\f"); got != 2 {
-		t.Fatalf("form feed count = %d, want 2", got)
+	if got := strings.Count(text, "\f"); got != 3 {
+		t.Fatalf("form feed count = %d, want 3 (the opening page, sections 1 and 2, and the quality appendix)", got)
 	}
 }
 

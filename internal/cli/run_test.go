@@ -1385,20 +1385,24 @@ func TestEachLineIsOneWrite(t *testing.T) {
 	})
 }
 
-// TestCheckSendsNoRangeQuery proves --check still sends no request to
-// /query_range and still prints exactly the preflight lines it printed
-// before this part: neither collector runs in check mode.
+// TestCheckSendsNoRangeQuery proves --check sends no request to
+// /query_range, still prints exactly the preflight lines it printed before
+// this part, and sends exactly the requests of the preflight: the same
+// requests, one by one and in order, by path and by the text of the query,
+// as the first requests of a --snapshot run of the same scenario, which
+// sends exactly fourteen more.
 func TestCheckSendsNoRangeQuery(t *testing.T) {
-	server, handler, scenario := startScenario(t, "direct-complete")
-	defer server.Close()
+	checkServer, checkHandler, checkScenario := startScenario(t, "direct-complete")
+	defer checkServer.Close()
 
-	cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
-	stdout, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--config", cfgPath, "--check"})
+	checkCfgPath := writeConfig(t, scenarioConfig(checkServer, checkScenario, t.TempDir()))
+	stdout, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--config", checkCfgPath, "--check"})
 	if code != 0 {
-		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+		t.Fatalf("check: code = %d, want 0; stderr = %q", code, stderr)
 	}
+	checkSeen := checkHandler.Seen()
 
-	for _, seen := range handler.Seen() {
+	for _, seen := range checkSeen {
 		if strings.HasSuffix(seen.Path, "query_range") {
 			t.Fatalf("check mode made a request to %s", seen.Path)
 		}
@@ -1407,6 +1411,27 @@ func TestCheckSendsNoRangeQuery(t *testing.T) {
 	want := strings.Join(directCompletePreflightLines(), "\n") + "\n"
 	if stdout != want {
 		t.Fatalf("stdout =\n%s\nwant\n%s", stdout, want)
+	}
+
+	snapServer, snapHandler, snapScenario := startScenario(t, "direct-complete")
+	defer snapServer.Close()
+
+	snapCfgPath := writeConfig(t, scenarioConfig(snapServer, snapScenario, t.TempDir()))
+	snapPath := filepath.Join(t.TempDir(), "s.json")
+	_, stderr, code = runArgs(context.Background(), testEnv(t), []string{"report", "--config", snapCfgPath, "--snapshot", snapPath})
+	if code != 0 {
+		t.Fatalf("snapshot: code = %d, want 0; stderr = %q", code, stderr)
+	}
+	snapSeen := snapHandler.Seen()
+
+	if len(snapSeen) != len(checkSeen)+14 {
+		t.Fatalf("snapshot sent %d requests, want %d (the check's %d preflight requests, plus 14)", len(snapSeen), len(checkSeen)+14, len(checkSeen))
+	}
+	for i, wantSeen := range checkSeen {
+		gotSeen := snapSeen[i]
+		if gotSeen.Path != wantSeen.Path || gotSeen.Query != wantSeen.Query {
+			t.Fatalf("request %d: snapshot sent %s %q, check sent %s %q", i, gotSeen.Path, gotSeen.Query, wantSeen.Path, wantSeen.Query)
+		}
 	}
 }
 
@@ -1481,21 +1506,11 @@ func TestCheckPrintsNoCollectionLine(t *testing.T) {
 	}
 }
 
-// TestEmptyPeriodStopsBeforeAnyRequest proves that a period the zone's own
-// spring-forward gap empties stops the run with exit code 2, one line
-// naming analysis.period, before any request and with no file written: the
-// window is built before the preflight, in every mode that collects.
-func TestEmptyPeriodStopsBeforeAnyRequest(t *testing.T) {
-	server, handler, scenario := startScenario(t, "direct-complete")
-	defer server.Close()
-
-	loc, err := time.LoadLocation("Europe/Berlin")
-	if err != nil {
-		t.Fatalf("loading Europe/Berlin: %v", err)
-	}
-	clock := time.Date(2026, time.March, 29, 3, 30, 0, 0, loc)
-
-	text := fmt.Sprintf(`[metrics]
+// emptyPeriodConfig is the configuration text every mode of
+// TestEmptyPeriodStopsBeforeAnyRequest shares: a period the zone's own
+// spring-forward gap, at the given clock, empties.
+func emptyPeriodConfig(server *httptest.Server, scenario promtest.Scenario, outDir string) string {
+	return fmt.Sprintf(`[metrics]
 url = %q
 endpoint_type = %q
 
@@ -1510,28 +1525,82 @@ node_autoscaling = %q
 
 [report]
 output_directory = %q
-`, server.URL+scenario.APIRoot, scenario.EndpointType, scenario.NodeAutoscaling, t.TempDir())
-	cfgPath := writeConfig(t, text)
+`, server.URL+scenario.APIRoot, scenario.EndpointType, scenario.NodeAutoscaling, outDir)
+}
 
-	env := testEnv(t)
-	env.Now = func() time.Time { return clock }
+// TestEmptyPeriodStopsBeforeAnyRequest proves that a period the zone's own
+// spring-forward gap empties stops every mode with exit code 2, one line
+// naming analysis.period, nothing on standard output, no request, and no
+// file written: the window is built before the preflight, in every mode,
+// check included. The mode that writes a PDF also points KCR_TYPST at a
+// compiler that does not exist, so the test itself fails, with exit code 6
+// and a different message, if the window ever moved back behind the
+// compiler being looked for.
+func TestEmptyPeriodStopsBeforeAnyRequest(t *testing.T) {
+	loc, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatalf("loading Europe/Berlin: %v", err)
+	}
+	clock := time.Date(2026, time.March, 29, 3, 30, 0, 0, loc)
 
-	snapPath := filepath.Join(t.TempDir(), "s.json")
-	_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--snapshot", snapPath})
-	if code != 2 {
-		t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
+	tests := []struct {
+		name string
+		args func(cfgPath, outDir string) []string
+	}{
+		{"check", func(cfgPath, _ string) []string {
+			return []string{"report", "--config", cfgPath, "--check"}
+		}},
+		{"snapshot", func(cfgPath, outDir string) []string {
+			return []string{"report", "--config", cfgPath, "--snapshot", filepath.Join(outDir, "s.json")}
+		}},
+		{"pdf", func(cfgPath, outDir string) []string {
+			return []string{"report", "--config", cfgPath, "--output", filepath.Join(outDir, "r.pdf")}
+		}},
 	}
-	if !strings.HasPrefix(stderr, "error: analysis.period: ") {
-		t.Fatalf("stderr = %q, want it to start with %q", stderr, "error: analysis.period: ")
-	}
-	if strings.Count(stderr, "\n") != 1 {
-		t.Fatalf("stderr = %q, want exactly one line", stderr)
-	}
-	if len(handler.Seen()) != 0 {
-		t.Fatalf("the server saw %d requests, want 0", len(handler.Seen()))
-	}
-	if _, err := os.Stat(snapPath); err == nil {
-		t.Fatalf("%s was written, want no file", snapPath)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server, handler, scenario := startScenario(t, "direct-complete")
+			defer server.Close()
+
+			outDir := t.TempDir()
+			cfgPath := writeConfig(t, emptyPeriodConfig(server, scenario, outDir))
+
+			env := testEnv(t)
+			env.Now = func() time.Time { return clock }
+			if tt.name == "pdf" {
+				env = envWithTypst(env, filepath.Join(outDir, "no-such-compiler"))
+			}
+
+			stdout, stderr, code := runArgs(context.Background(), env, tt.args(cfgPath, outDir))
+			if code != 2 {
+				t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
+			}
+			if !strings.HasPrefix(stderr, "error: analysis.period: ") {
+				t.Fatalf("stderr = %q, want it to start with %q", stderr, "error: analysis.period: ")
+			}
+			if strings.Count(stderr, "\n") != 1 {
+				t.Fatalf("stderr = %q, want exactly one line", stderr)
+			}
+			if stdout != "" {
+				t.Fatalf("stdout = %q, want empty", stdout)
+			}
+			if len(handler.Seen()) != 0 {
+				t.Fatalf("the server saw %d requests, want 0", len(handler.Seen()))
+			}
+
+			entries, err := os.ReadDir(outDir)
+			if err != nil {
+				t.Fatalf("reading %s: %v", outDir, err)
+			}
+			if len(entries) != 0 {
+				var names []string
+				for _, e := range entries {
+					names = append(names, e.Name())
+				}
+				t.Fatalf("%s holds %v, want no file written", outDir, names)
+			}
+		})
 	}
 }
 
@@ -1611,11 +1680,10 @@ func TestFromSnapshotRefusesASnapshotOfThePartBefore(t *testing.T) {
 	}
 }
 
-// clearCollectionTimes blanks the two collection-time fields of s in place:
-// TestGoldenFlowEqualsTheCommand compares the command's own snapshot with
-// goldentest's, and both are built from clocks that already agree, but the
-// brief still asks the comparison to set these two fields equal rather than
-// lean on that agreement.
+// clearCollectionTimes blanks the two collection-time fields of s in
+// place: they are the only fields of a snapshot that come from a clock
+// rather than from configuration or from the metrics endpoint, so a
+// comparison that means to check everything else sets them equal first.
 func clearCollectionTimes(s *snapshot.Snapshot) {
 	s.Quality.CollectionStartedAt = ""
 	s.Quality.CollectionCompletedAt = ""
