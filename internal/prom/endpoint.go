@@ -37,14 +37,17 @@ func Candidates(address, endpointType string) (roots []string, kind string) {
 	return dedupe(candidates), kind
 }
 
-// normalizeRoot strips a trailing slash from the path of address, leaving
-// the rest untouched.
+// normalizeRoot strips every trailing slash from the path of address,
+// leaving the rest, and any slash that is not at the very end, untouched:
+// the original strips every one of them too (Python's str.rstrip removes
+// every trailing occurrence, not just one), and a single TrimSuffix call
+// only ever removes the last.
 func normalizeRoot(address string) string {
 	parsed, err := url.Parse(address)
 	if err != nil {
-		return strings.TrimSuffix(address, "/")
+		return strings.TrimRight(address, "/")
 	}
-	parsed.Path = strings.TrimSuffix(parsed.Path, "/")
+	parsed.Path = strings.TrimRight(parsed.Path, "/")
 	return parsed.String()
 }
 

@@ -44,6 +44,30 @@ func TestCandidates(t *testing.T) {
 			wantKind:     "prometheus",
 		},
 		{
+			name:         "two trailing slashes on the base",
+			address:      "https://p.example//",
+			endpointType: "auto",
+			wantRoots:    []string{"https://p.example", "https://p.example/api/v1"},
+			wantKind:     "prometheus",
+		},
+		{
+			name:         "complete api root with two trailing slashes",
+			address:      "https://p.example/api/v1//",
+			endpointType: "auto",
+			wantRoots:    []string{"https://p.example/api/v1"},
+			wantKind:     "prometheus",
+		},
+		{
+			name:         "two slashes in the middle of the path stay",
+			address:      "https://p.example/a//b/",
+			endpointType: "auto",
+			wantRoots: []string{
+				"https://p.example/a//b",
+				"https://p.example/a//b/api/v1",
+			},
+			wantKind: "prometheus",
+		},
+		{
 			name:         "grafana datasource resource proxy",
 			address:      "https://g.example/api/datasources/uid/x/resources/api/v1",
 			endpointType: "auto",
