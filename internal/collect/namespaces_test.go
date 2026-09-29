@@ -333,9 +333,8 @@ func TestNamespaceRowsAreSortedAndUnique(t *testing.T) {
 // (testdata/prometheus/direct-complete.json, requests 48 to 53 for the
 // range queries and 29 for the instant one, by their 0-based index) and
 // asserts the whole row against the numbers the original recorded for it
-// in .cache/phase-2/part-2/python/out/direct-complete.json,
-// namespaces[0]. The scenario file itself is not read here; a later task
-// runs it.
+// in testdata/python/direct-complete.json, namespaces[0]. The scenario
+// file itself is not read here; its numbers are transcribed above.
 func TestNamespaceNumbersOfTheScenario(t *testing.T) {
 	const t1, t2 = 1784050200, 1784093400
 

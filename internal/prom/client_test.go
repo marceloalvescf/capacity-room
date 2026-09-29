@@ -811,9 +811,9 @@ func TestTimeoutOfOneAttemptIsRetried(t *testing.T) {
 // TestBodyReadFailureIsClassified checks that a failure reading the
 // response body — not sending the request — goes through the same
 // classification as a connection failure, and is retried the same way.
-// The brief's own text says the TLS equivalent is not needed: a body-read
-// failure already exercises the shared classifier; a TLS handshake failure
-// happens before any body exists to read.
+// A body-read failure already exercises the shared classifier, so no
+// separate TLS test is needed: a TLS handshake failure happens before any
+// body exists to read.
 func TestBodyReadFailureIsClassified(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -985,8 +985,8 @@ func TestTransportUsesNoProxy(t *testing.T) {
 	}
 }
 
-// foreignTransportErr stands in for an error a Phase 3 outbound policy
-// transport might return, one this package must never try to interpret.
+// foreignTransportErr stands in for an error a caller-supplied transport
+// might return, one this package must never try to interpret.
 type foreignTransportErr struct{ reason string }
 
 func (e foreignTransportErr) Error() string { return "policy refused: " + e.reason }

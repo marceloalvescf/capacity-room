@@ -562,8 +562,8 @@ func TestWorkloadNoBase(t *testing.T) {
 // "raw-fallback" (testdata/prometheus/raw-fallback.json, requests 32, 33,
 // and 57 to 62, by their 0-based index) and asserts the whole row against
 // the numbers the original recorded for it in
-// .cache/phase-2/part-2/python/out/raw-fallback.json, workloads[0]. The
-// scenario file itself is not read here; a later task runs it.
+// testdata/python/raw-fallback.json, workloads[0]. The scenario file
+// itself is not read here; its numbers are transcribed above.
 func TestWorkloadNumbersOfRawFallback(t *testing.T) {
 	const t1, t2 = 1784050200, 1784093400
 

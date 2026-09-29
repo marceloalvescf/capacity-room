@@ -72,8 +72,8 @@ type Options struct {
 	// Sleep waits between attempts. Nil means a real wait that ends early
 	// when the context ends.
 	Sleep func(ctx context.Context, d time.Duration) error
-	// Transport replaces the transport built from Metrics. Phase 3 uses it
-	// for the outbound policy. Nil means the built one.
+	// Transport replaces the transport built from Metrics, for a caller
+	// that enforces its own outbound policy. Nil means the built one.
 	Transport http.RoundTripper
 }
 

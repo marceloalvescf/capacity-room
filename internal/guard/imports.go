@@ -13,9 +13,9 @@ type Layer struct {
 	Rank int
 }
 
-// Layers is the table of known layers for this phase. Several of the new
-// layers named here (internal/redact, internal/promtest, internal/config,
-// internal/prom, internal/discovery, internal/snapshot, internal/catalog,
+// Layers is the table of known layers. Several of the layers named here
+// (internal/redact, internal/promtest, internal/config, internal/prom,
+// internal/discovery, internal/snapshot, internal/catalog,
 // internal/document, internal/goldentest) have no package yet; rank 60 is
 // kept for analysis, added later. A layer with no package yet is not a
 // violation; only a package that matches no layer is.

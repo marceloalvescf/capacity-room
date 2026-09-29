@@ -23,9 +23,11 @@ func TestNoticeChoosesTheEntry(t *testing.T) {
 	}
 }
 
-// newSectionConstants lists the 28 constants Task 11 adds to the wording
-// table, so TestKeysHoldTheNewFamilies can check each is reachable through
-// Keys() without re-deriving the list from wordingKeys itself.
+// newSectionConstants lists the 28 constants of the namespace label, the
+// sections "Capacity by namespace" and "Resources by workload", the two
+// placeholders, and the interpretation notes, so TestKeysHoldTheNewFamilies
+// can check each is reachable through Keys() without re-deriving the list
+// from wordingKeys itself.
 var newSectionConstants = []Key{
 	SectionsNamespaceLabel,
 	SectionsNamespacesHeading, SectionsNamespacesEmpty, SectionsNamespacesHeaderResource,

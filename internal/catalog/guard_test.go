@@ -263,9 +263,10 @@ func TestEveryRegistryCodeHasAnEntry(t *testing.T) {
 	}
 }
 
-// sectionsWordingTable holds the expected Portuguese text of the two
-// sections Task 11 adds, transcribed independently of locales/pt-BR.toml,
-// so a change to the file is caught against the wording that was approved.
+// sectionsWordingTable holds the expected Portuguese text of the sections
+// "Capacity by namespace" and "Resources by workload", transcribed
+// independently of locales/pt-BR.toml, so a change to the file is caught
+// against the wording that was approved.
 var sectionsWordingTable = []struct {
 	key Key
 	pt  string
@@ -301,9 +302,9 @@ var sectionsWordingTable = []struct {
 }
 
 // warningWordingTable and noticeWordingTable hold the expected Portuguese
-// text of the warning and notice codes Task 11 adds, transcribed
-// independently of locales/pt-BR.toml, the same way sectionsWordingTable
-// covers the first table.
+// text of the warning and notice codes of the namespace and workload
+// sections, transcribed independently of locales/pt-BR.toml, the same way
+// sectionsWordingTable covers the first table.
 var warningWordingTable = []struct {
 	code string
 	pt   string
@@ -331,8 +332,9 @@ var noticeWordingTable = []struct {
 }
 
 // TestPortugueseOfThisPartEqualsTheOriginal proves that the Portuguese text
-// of the two sections Task 11 adds, and of the warnings and notices they
-// use, equals the wording that was approved, letter for letter.
+// of the sections "Capacity by namespace" and "Resources by workload", and
+// of the warnings and notices they use, equals the wording that was
+// approved, letter for letter.
 func TestPortugueseOfThisPartEqualsTheOriginal(t *testing.T) {
 	pt := fileEntries(t, PortugueseBrazil)
 

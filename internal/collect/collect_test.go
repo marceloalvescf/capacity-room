@@ -2,7 +2,7 @@ package collect
 
 import "testing"
 
-// TestRegistriesOfCodes transcribes the shape the brief pins: seven
+// TestRegistriesOfCodes transcribes the shape of the registries: seven
 // warning codes, two notice codes, and a "count" parameter for each
 // notice.
 func TestRegistriesOfCodes(t *testing.T) {

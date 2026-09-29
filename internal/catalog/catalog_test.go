@@ -239,7 +239,7 @@ func TestLoadDoesNotFallBackBetweenLanguages(t *testing.T) {
 }
 
 // tomlString renders value as a TOML basic string, escaping the backslashes
-// and double quotes the fix-round-1 test inputs contain.
+// and double quotes a test input below may contain.
 func tomlString(value string) string {
 	value = strings.ReplaceAll(value, `\`, `\\`)
 	value = strings.ReplaceAll(value, `"`, `\"`)
@@ -263,9 +263,9 @@ func fsWithEntry(text string) fstest.MapFS {
 // calling templateSpan: a span taken from templateSpan itself would still
 // match whatever wrong span a regression in templateSpan produced, since
 // load's error is built from that very call. The whole error text is then
-// compared by equality against the one message Load's ruling defines, so
-// that neither a wrong span nor a wrong surrounding text can hide inside a
-// Contains check — "{{" and "}}" both already appear, coincidentally, in
+// compared by equality against the one message Load produces for a bad
+// span, so that neither a wrong span nor a wrong surrounding text can
+// hide inside a Contains check — "{{" and "}}" both already appear, coincidentally, in
 // the fixed wording "...that is not {{.Name}}: ...", which is exactly what
 // let two rows of an earlier version of this test pass regardless of what
 // span Load actually reported.
