@@ -2,13 +2,19 @@
 
 `edge-values.json` is not a recorded answer of the original Python tool. No
 tool recorded it: this project wrote it, as a copy of the requests of
-`testdata/prometheus/direct-complete.json` with the answers of fourteen
-queries replaced, one series with a sample that is not a number, one with an
+`testdata/prometheus/direct-complete.json` in which the answers of the
+fourteen queries of the two collectors are set, one series with a sample
+that is not a number, one with an
 infinite sample, one base of zero, one base that lacks a timestamp, one
 absent base, one workload with no consumption, one workload of kind `Job`,
 and one workload type written in lower case.
 
-The timestamps of every replaced series are `t1` = 1784050200 and
+Thirteen of the fourteen answers differ from those of `direct-complete`.
+The fourteenth, the pods of the namespace, holds the same bytes, because
+both scenarios answer `3`. The 56 other requests are those of
+`direct-complete`, byte for byte.
+
+The timestamps of every series of a range answer are `t1` = 1784050200 and
 `t2` = 1784093400. Every capability stays available, with the recording
 rule, exactly as `direct-complete` has it.
 
@@ -22,7 +28,7 @@ rule, exactly as `direct-complete` has it.
 | requests of memory | `t1` `200` | a base that lacks `t2` |
 | limits of CPU | no series | an absent base |
 | limits of memory | `t1` `300`, `t2` `300` | — |
-| pods | `3.0` | — |
+| pods | `3`, as in `direct-complete` | — |
 
 ## Workloads, all of namespace `payments`
 

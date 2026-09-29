@@ -101,8 +101,15 @@ No guard checks these. The reviewer of each task does.
   The reviewer of a task reads the string literals of `internal/document`,
   and the golden data files show every text that reaches a page.
 - **No comment speaks of the process.** A comment says what the code does. It
-  names no task, step, round, ruling, brief, or role. It may name a section
-  of the design and the original program.
+  names no task, step, round, ruling, brief, or role, and no path under
+  `.cache/`. It may name a section of the design and the original program.
+- **A ratio is worked out sample by sample.** Consumption over request, and
+  over limit, is computed at each timestamp and then reduced. It is never
+  the ratio of two averages, which gives other numbers than the original.
+- **The numbers equal the original exactly.** Two numbers are equal when
+  they are the same `float64`. A test of the comparison has no tolerance,
+  and an expected number in a test is a literal, never the expression of
+  the code written again.
 
 Build tags in use:
 
@@ -131,7 +138,9 @@ rank, or of its own layer.
 | 20 | `internal/config` |
 | 30 | `internal/prom` |
 | 40 | `internal/discovery` |
-| 50, 60 | kept for `collect`, `resolve`, and `analysis` |
+| 50 | `internal/resolve` |
+| 55 | `internal/collect` |
+| 60 | `internal/analysis` |
 | 70 | `internal/snapshot` |
 | 80 | `internal/catalog` |
 | 90 | `internal/document` |
@@ -169,6 +178,13 @@ the snapshot and nothing else.
 - **The probes keep the order of the original**, short cuts included. The
   fake server answers a query with the first recorded answer whose text is
   part of the query, so another order consumes the wrong answers.
+- **The collectors keep the order of the original too:** the namespaces,
+  then the workloads, and inside each the queries in its order. The text of
+  every query equals the original letter for letter.
+- **`--check` is the preflight and nothing else.** It sends no query of a
+  collector, and the requests it sends are the first requests of a run.
+- **The period is judged before the first request.** A period whose start is
+  not before its end stops the run with exit code 2.
 - **The clock is read twice in a run that collects:** for the emission time,
   which is also the start of the collection, and for its end.
 
@@ -185,6 +201,17 @@ the snapshot and nothing else.
   committing. A value that cannot be explained is a defect.
 - The files of `testdata/prometheus/` are the recorded answers of the
   original, byte for byte. They are never edited.
+- `testdata/prometheus-own/` holds the scenarios that this project wrote,
+  for values that no recorded answer holds. Its README says what each
+  answer exercises. A file there is not edited once its recorded numbers
+  exist.
+- `testdata/python/` holds what the original computes and asks for each
+  scenario: its numbers, and its queries in order. A test compares this
+  project with them on every run. They are never edited; they are replaced
+  only by recording the original again, and its README says how.
+- A test that walks the scenarios or reads a list of queries counts what it
+  means to count. A filter that matched one thing when it was written
+  matches more when the program asks more.
 
 ## The template
 
@@ -247,6 +274,12 @@ The main thread plans, judges, and runs the gates. Subagents implement.
   sharing: an unneeded sequence costs time, a silent overwrite costs the work.
 - Every commit names its paths: `git add <paths>`, never `git add -A` and
   never `git commit -a`.
+- A subagent never runs `git stash`, `git restore`, `git checkout` of a
+  path, or `git clean`. The checkout holds changes of the main thread that
+  are not its own.
+- A brief is cut from the plan. When an implementer finds that the brief and
+  the original disagree, it stops and reports; the main thread runs the
+  original, rules, corrects the plan, and cuts the brief again.
 - After a round of parallel work, the full suite runs once over the combined
   result.
 - An adversarial review runs over the whole branch before a phase is merged.

@@ -22,3 +22,15 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and is removed from every message the program prints.
 - A bearer token shorter than 8 characters is refused, because a text that
   short cannot be told from ordinary words in a message.
+- The report holds the capacity of each namespace and the resources of each
+  workload: average and peak consumption of CPU and memory, the requests and
+  the limits, and the peak of consumption judged against both.
+- The report lists the interpretation notes of the collection after the data
+  quality appendix.
+- The snapshot file holds the namespaces, the workloads, the findings, the
+  warnings, and the notices.
+- A run that collects prints one line for the collection of the namespaces
+  and one for the collection of the workloads.
+- An answer of the endpoint larger than 256 MiB stops the run.
+- A period that is empty, because the offset of the time zone changes inside
+  it, stops the run with a message that names the period and the zone.

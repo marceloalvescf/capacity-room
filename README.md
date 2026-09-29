@@ -13,10 +13,10 @@ full design is in
 
 - The command `report`. It checks a Prometheus-compatible endpoint, stores
   what it found in a snapshot, and writes a PDF.
-- The PDF holds the cover, the report metadata, the status legend, and the
-  data quality appendix. **The capacity sections are not built yet**: the
-  report says which metrics the endpoint offers, and not yet how much of the
-  cluster is in use.
+- The PDF holds the cover, the report metadata, the status legend, the
+  capacity of each namespace, the resources of each workload, the data
+  quality appendix, and the interpretation notes of the collection.
+  **The sections on autoscalers and on nodes are not built yet.**
 - A container image that carries the binary and Typst 0.15.1.
 - The report template, in two layers under [template/](template/): a generic
   page shell and the layout of the capacity report.
@@ -87,6 +87,42 @@ minimum severity is not `all`, it comes after the cluster:
 
 Add `--verbose` to any mode for a few more lines about the run.
 
+### What a run collects
+
+A run that writes a PDF or a snapshot asks the endpoint about the period
+`analysis.period`, which ends when the run starts. For each namespace of
+`cluster.namespaces`, and for each workload in them, it reads the consumption
+of CPU and memory, the requests, and the limits, and reduces each to an
+average, a minimum, a peak, and the last value.
+
+- **The report judges the peak.** The columns of percentages show the
+  highest ratio of consumption to request, and to limit, that the period
+  saw. A ratio is worked out sample by sample; it is never the ratio of two
+  averages.
+- **Three things can stand where a number is expected.** A number; the mark
+  of data that is unavailable, when the value could not be measured; and the
+  mark of no base, when consumption was measured and no request or limit
+  exists to compare it with.
+- **A Job is left out of the list of workloads**, and so is a workload that
+  consumed nothing in the period. What they consumed still counts in the
+  total of their namespace. The interpretation notes, after the quality
+  appendix, say how many were left out.
+- **`--check` collects nothing.** It sends the requests of the preflight
+  and stops.
+
+After the lines of the capabilities, a run that collects prints one line for
+each collection, such as `namespace collection: available`.
+
+Two limits stop a run:
+
+- An answer of the endpoint larger than 256 MiB is refused, with exit
+  code 3.
+- A period that is empty stops the run with exit code 2, before any request.
+  This happens only in a time zone that changes its offset, when the period
+  is shorter than the hour that the change skips and the run starts inside
+  the hour after it. The message names the period and the zone; a longer
+  period avoids it.
+
 ### Exit codes
 
 | Code | Meaning |
@@ -104,9 +140,12 @@ nothing on standard output.
 
 ### Trying it without a Prometheus
 
-The repository holds six recorded scenarios and a server that answers from
-them. Each recorded answer is given once, so the server is started again for
-each run that collects.
+The repository holds seven scenarios and a server that answers from them.
+Six are recorded answers, in `testdata/prometheus/`. The seventh,
+`testdata/prometheus-own/edge-values.json`, was written for this project and
+holds values at the edge: a sample that is not a number, a request of zero,
+a workload with no request at all. Each answer is given once, so the server
+is started again for each run that collects.
 
 ```bash
 make build
