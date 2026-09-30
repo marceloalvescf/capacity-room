@@ -754,13 +754,14 @@ func TestWorkloadRowsAreSorted(t *testing.T) {
 	}
 }
 
-// TestAllRunsNamespacesFirst covers a run where everything is available:
-// the first seven queries equal to the ones the namespace collector alone
-// would send, and the next seven the ones of the workload collector.
+// TestAllRunsNamespacesFirst covers a run where requests_limits and
+// workload_usage are available and the HPA and node discovery capabilities
+// are not. The thirty queries are: seven of the namespace collector, seven of
+// the workload collector, none of the HPA collector (both capabilities
+// unavailable), ten of the node collector (the eight of identity, capacity,
+// allocatable, ready and unschedulable, and the two requests queries), and six
+// of the autoscaling collector.
 func TestAllRunsNamespacesFirst(t *testing.T) {
-	cluster := defaultCluster()
-	analysis := defaultAnalysis()
-	scope := testScope(true)
 	capabilities := []discovery.Capability{
 		testCapability(discovery.StateAvailable, nil),
 		workloadCapability(discovery.StateAvailable, discovery.StrategyRecordingRule),
@@ -770,26 +771,52 @@ func TestAllRunsNamespacesFirst(t *testing.T) {
 		nodeCapability("nodepool_discovery", discovery.StateUnavailable, discovery.StrategyNone, nil, nil),
 	}
 	in := Input{
-		Scope: scope, Cluster: cluster, Analysis: analysis, Capabilities: capabilities,
+		Scope: testScope(true), Cluster: defaultCluster(), Analysis: defaultAnalysis(), Capabilities: capabilities,
 		Window: Window{Start: time.Unix(1, 0), End: time.Unix(2, 0), Step: "30s"},
 	}
+	ctx := context.Background()
 
 	nsQuerier := &scriptedQuerier{}
-	if _, err := Namespaces(context.Background(), nsQuerier, in); err != nil {
+	if _, err := Namespaces(ctx, nsQuerier, in); err != nil {
 		t.Fatalf("Namespaces: %v", err)
+	}
+	workloadQuerier := &scriptedQuerier{}
+	if _, err := Workloads(ctx, workloadQuerier, in); err != nil {
+		t.Fatalf("Workloads: %v", err)
+	}
+	nodeQuerier := &scriptedQuerier{}
+	if _, err := Nodes(ctx, nodeQuerier, in); err != nil {
+		t.Fatalf("Nodes: %v", err)
+	}
+	autoscalingQuerier := &scriptedQuerier{}
+	if _, err := Autoscaling(ctx, autoscalingQuerier, in); err != nil {
+		t.Fatalf("Autoscaling: %v", err)
+	}
+	for name, got := range map[string]int{
+		"namespaces": len(nsQuerier.queries), "workloads": len(workloadQuerier.queries),
+		"nodes": len(nodeQuerier.queries), "autoscaling": len(autoscalingQuerier.queries),
+	} {
+		want := map[string]int{"namespaces": 7, "workloads": 7, "nodes": 10, "autoscaling": 6}[name]
+		if got != want {
+			t.Fatalf("the %s collector alone sent %d queries, want %d", name, got, want)
+		}
 	}
 
 	allQuerier := &scriptedQuerier{}
-	collected, err := All(context.Background(), allQuerier, in)
+	collected, err := All(ctx, allQuerier, in)
 	if err != nil {
 		t.Fatalf("All: %v", err)
 	}
-	if len(allQuerier.queries) < 14 {
-		t.Fatalf("len(queries) = %d, want at least 14\nqueries: %v", len(allQuerier.queries), allQuerier.queries)
+	var want []string
+	for _, group := range [][]string{nsQuerier.queries, workloadQuerier.queries, nodeQuerier.queries, autoscalingQuerier.queries} {
+		want = append(want, group...)
 	}
-	for i, want := range nsQuerier.queries {
-		if allQuerier.queries[i] != want {
-			t.Errorf("queries[%d] =\n%q, want\n%q", i, allQuerier.queries[i], want)
+	if len(allQuerier.queries) != 30 {
+		t.Fatalf("len(queries) = %d, want 30\nqueries: %v", len(allQuerier.queries), allQuerier.queries)
+	}
+	for i := range want {
+		if allQuerier.queries[i] != want[i] {
+			t.Errorf("queries[%d] =\n%q, want\n%q", i, allQuerier.queries[i], want[i])
 		}
 	}
 	if collected.Namespaces.State == "" || collected.Workloads.State == "" {
@@ -798,8 +825,9 @@ func TestAllRunsNamespacesFirst(t *testing.T) {
 }
 
 // TestAllJoinsMessagesOnce covers both collectors warning of their own
-// state: the joined warnings hold the codes of both, in the order of the
-// collectors, none twice.
+// state: the joined warnings hold the codes of both, then the one warning of
+// the node collector (the HPA capabilities carry no reason, so the HPA
+// results add none), in the order of the collectors, none twice.
 func TestAllJoinsMessagesOnce(t *testing.T) {
 	cluster := defaultCluster()
 	analysis := defaultAnalysis()
@@ -827,19 +855,15 @@ func TestAllJoinsMessagesOnce(t *testing.T) {
 		WarningNamespaceRequestsLimitsUnavailable,
 		WarningWorkloadUsageIncomplete,
 		WarningWorkloadRequestsLimitsUnavailable,
+		WarningNodeIdentityUnavailable,
 	}
 	warnings := collected.Warnings()
-	if len(warnings) < len(wantCodes) {
-		t.Fatalf("Warnings = %+v, want at least %d entries", warnings, len(wantCodes))
+	if len(warnings) != len(wantCodes) {
+		t.Fatalf("Warnings = %+v, want %d entries", warnings, len(wantCodes))
 	}
-	seen := map[string]bool{}
 	for i, code := range wantCodes {
 		if warnings[i].Code != code {
 			t.Errorf("Warnings[%d].Code = %q, want %q", i, warnings[i].Code, code)
 		}
-		if seen[warnings[i].Code] {
-			t.Errorf("Warnings holds %q twice", warnings[i].Code)
-		}
-		seen[warnings[i].Code] = true
 	}
 }
