@@ -252,3 +252,19 @@ func TestQueryAcceptsTimeAsNumberOrText(t *testing.T) {
 		})
 	}
 }
+
+// TestQueryRefusesANonFiniteTimestamp checks that a sample whose timestamp
+// text reads as NaN or an infinity is refused as an invalid sample, rather
+// than treated as a valid time.
+func TestQueryRefusesANonFiniteTimestamp(t *testing.T) {
+	cases := []string{"NaN", "+Inf", "-Inf", "Infinity"}
+	for _, when := range cases {
+		t.Run(when, func(t *testing.T) {
+			body := fmt.Sprintf(`{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[%q,"9999"]}]}}`, when)
+			client := connectedClient(t, func(int32) (int, string) { return http.StatusOK, body })
+
+			_, err := client.Query(context.Background(), "up", time.Unix(1000, 0))
+			assertPromError(t, err, KindQuery, "Prometheus response contains an invalid sample")
+		})
+	}
+}

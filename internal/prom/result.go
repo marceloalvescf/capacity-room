@@ -136,14 +136,22 @@ func isReadableSampleNumber(v interface{}) bool {
 
 // numberValue reads v as a JSON number (already a float64, however
 // encoding/json decoded it) or a JSON string strconv.ParseFloat can read.
+// A timestamp that is NaN or infinite is refused here: it is never a value
+// a real Prometheus endpoint emits, and it cannot serve as the key it
+// becomes once a caller groups points by it.
 func numberValue(v interface{}) (float64, bool) {
 	switch value := v.(type) {
 	case float64:
-		return value, true
+		return value, isFinite(value)
 	case string:
 		f, err := strconv.ParseFloat(value, 64)
-		return f, err == nil
+		return f, err == nil && isFinite(f)
 	default:
 		return 0, false
 	}
+}
+
+// isFinite reports whether value is neither NaN nor infinite.
+func isFinite(value float64) bool {
+	return !math.IsNaN(value) && !math.IsInf(value, 0)
 }

@@ -70,13 +70,17 @@ func isFinite(value float64) bool {
 // timestamp, following _samples_by_timestamp of the original: the points
 // of several series that share one key and one timestamp are added, in the
 // order the series stand in series; a sum that ends up non-finite is left
-// out; and a key left with no timestamp has no entry.
+// out; and a key left with no timestamp has no entry. A point whose
+// timestamp is NaN or infinite is left out as well: the client itself now
+// refuses such a timestamp before it reaches this package, but a caller of
+// this package can still build a Point by hand with one, and a NaN
+// timestamp can never be found again once used as a map key.
 func samplesByTimestamp(series []prom.Series, labels []string) map[Key]map[float64]float64 {
 	grouped := make(map[Key]map[float64]float64)
 	for _, item := range series {
 		key := keyOf(item.Labels, labels)
 		for _, point := range item.Points {
-			if !point.Valid {
+			if !point.Valid || !isFinite(point.Time) {
 				continue
 			}
 			values := grouped[key]
@@ -104,37 +108,48 @@ func samplesByTimestamp(series []prom.Series, labels []string) map[Key]map[float
 	return grouped
 }
 
+// timestamped carries one value together with the timestamp it was read
+// at, so that sorting by timestamp never needs a later, separate lookup by
+// that same timestamp to recover the value.
+type timestamped struct {
+	timestamp float64
+	value     float64
+}
+
 // statisticsOf reduces values, keyed by timestamp, to a Statistics,
 // following _statistics of the original: the average is the sum of the
 // values divided by their count, the values added in the order of their
-// timestamps; the current value is the one of the largest timestamp.
+// timestamps; the current value is the one of the largest timestamp. Each
+// value is carried through the sort together with its timestamp, and never
+// looked up again by it: a map lookup keyed by a timestamp read back out of
+// the same map is exactly what let a NaN timestamp stand for a real value
+// and return zero instead (a map key never equals itself under NaN).
 func statisticsOf(values map[float64]float64) Statistics {
-	timestamps := make([]float64, 0, len(values))
-	for timestamp := range values {
-		timestamps = append(timestamps, timestamp)
+	pairs := make([]timestamped, 0, len(values))
+	for timestamp, value := range values {
+		pairs = append(pairs, timestamped{timestamp: timestamp, value: value})
 	}
-	sort.Float64s(timestamps)
+	sort.Slice(pairs, func(i, j int) bool { return pairs[i].timestamp < pairs[j].timestamp })
 
 	sum := 0.0
-	minimum := values[timestamps[0]]
+	minimum := pairs[0].value
 	peak := minimum
-	for _, timestamp := range timestamps {
-		value := values[timestamp]
-		sum += value
-		if value < minimum {
-			minimum = value
+	for _, pair := range pairs {
+		sum += pair.value
+		if pair.value < minimum {
+			minimum = pair.value
 		}
-		if value > peak {
-			peak = value
+		if pair.value > peak {
+			peak = pair.value
 		}
 	}
 
 	return Statistics{
 		State:   StateValue,
-		Average: sum / float64(len(timestamps)),
+		Average: sum / float64(len(pairs)),
 		Minimum: minimum,
 		Peak:    peak,
-		Current: values[timestamps[len(timestamps)-1]],
+		Current: pairs[len(pairs)-1].value,
 	}
 }
 

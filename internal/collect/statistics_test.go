@@ -281,6 +281,55 @@ func TestReduceCurrentIsTheLastTimestamp(t *testing.T) {
 	})
 }
 
+// TestReduceNeverLosesAValue covers one series, one point of value 9999,
+// at a whole timestamp, a fraction, zero, and a negative timestamp: the
+// statistic carries the real value through in every case, not a zero from
+// a failed re-lookup.
+func TestReduceNeverLosesAValue(t *testing.T) {
+	times := []float64{5, 5.5, 0, -5}
+	for _, when := range times {
+		series := []prom.Series{
+			{
+				Labels: map[string]string{"namespace": "payments"},
+				Points: []prom.Point{{Time: when, Value: 9999, Valid: true}},
+			},
+		}
+
+		got := Reduce(series, []string{"namespace"})
+		stats := Lookup(got, Key{"payments"})
+
+		checkStatistics(t, stats, Statistics{
+			State:   StateValue,
+			Average: 9999,
+			Minimum: 9999,
+			Peak:    9999,
+			Current: 9999,
+		})
+	}
+}
+
+// TestReduceOfPointsBuiltByHand covers a point whose Time is NaN, built
+// directly rather than read from a Prometheus answer. The client itself
+// now refuses such a timestamp before it ever reaches this package (see
+// internal/prom), but a caller of this package can still construct a Point
+// by hand, as this test does, so Reduce must leave it out as no data
+// rather than turn it into a statistic of zeros.
+func TestReduceOfPointsBuiltByHand(t *testing.T) {
+	series := []prom.Series{
+		{
+			Labels: map[string]string{"namespace": "payments"},
+			Points: []prom.Point{
+				{Time: math.NaN(), Value: 9999, Valid: true},
+			},
+		},
+	}
+
+	got := Reduce(series, []string{"namespace"})
+	if _, ok := got[Key{"payments"}]; ok {
+		t.Errorf("Reduce has an entry for %v, want none", Key{"payments"})
+	}
+}
+
 // TestReduceUsesThreeLabels covers labels namespace, workload, and
 // workload_type: the key holds all three values.
 func TestReduceUsesThreeLabels(t *testing.T) {

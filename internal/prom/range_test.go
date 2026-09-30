@@ -3,6 +3,7 @@ package prom
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -268,6 +269,74 @@ func TestQueryRangeKeepsTheRefusalOfTheEndpoint(t *testing.T) {
 	}
 	if rangeCalls != 1 {
 		t.Errorf("requests to /query_range = %d, want 1", rangeCalls)
+	}
+}
+
+// TestQueryRangeRefusesANonFiniteTimestamp checks that a point whose
+// timestamp text reads as NaN or an infinity is refused as an invalid
+// sample, in one request, rather than treated as a valid time.
+func TestQueryRangeRefusesANonFiniteTimestamp(t *testing.T) {
+	cases := []string{"NaN", "+Inf", "-Inf", "Infinity"}
+	for _, when := range cases {
+		t.Run(when, func(t *testing.T) {
+			var rangeCalls int32
+			body := fmt.Sprintf(`{"status":"success","data":{"resultType":"matrix","result":[{"metric":{},"values":[[%q,"9999"]]}]}}`, when)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				if strings.HasSuffix(r.URL.Path, "/query_range") {
+					atomic.AddInt32(&rangeCalls, 1)
+					_, _ = w.Write([]byte(body))
+					return
+				}
+				_, _ = w.Write([]byte(emptySuccessVector))
+			}))
+			defer server.Close()
+
+			sleep, _ := recordingSleep()
+			opts := baseOptions(server.URL + "/api/v1")
+			opts.Sleep = sleep
+			client, err := Connect(context.Background(), opts)
+			if err != nil {
+				t.Fatalf("Connect: %v", err)
+			}
+
+			_, err = client.QueryRange(context.Background(), "up", time.Unix(1, 0), time.Unix(2, 0), "1s")
+			assertPromError(t, err, KindQuery, "Prometheus response contains an invalid sample")
+			if rangeCalls != 1 {
+				t.Errorf("requests to /query_range = %d, want 1", rangeCalls)
+			}
+		})
+	}
+}
+
+// TestQueryRangeAcceptsATimestampAsText checks that a point's timestamp,
+// read as a JSON string strconv.ParseFloat can parse, gives the number it
+// spells, whole or fractional.
+func TestQueryRangeAcceptsATimestampAsText(t *testing.T) {
+	cases := []struct {
+		name string
+		text string
+		want float64
+	}{
+		{"whole", "1784050200", 1784050200},
+		{"fractional", "1784050200.5", 1784050200.5},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			body := fmt.Sprintf(`{"status":"success","data":{"resultType":"matrix","result":[{"metric":{},"values":[[%q,"2"]]}]}}`, tc.text)
+			client := rangeClient(t, body)
+
+			got, err := client.QueryRange(context.Background(), "up", time.Unix(1, 0), time.Unix(2, 0), "1s")
+			if err != nil {
+				t.Fatalf("QueryRange: %v", err)
+			}
+			if len(got) != 1 || len(got[0].Points) != 1 {
+				t.Fatalf("QueryRange() = %+v, want one series of one point", got)
+			}
+			if got[0].Points[0].Time != tc.want {
+				t.Errorf("Time = %v, want %v", got[0].Points[0].Time, tc.want)
+			}
+		})
 	}
 }
 
