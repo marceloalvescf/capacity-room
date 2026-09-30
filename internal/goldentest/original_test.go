@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
@@ -497,29 +497,80 @@ func sameKeySet(a, b []findingKey) bool {
 	return true
 }
 
-// catalogTexts renders the sentences of the snapshot's warnings and
-// notices with cat, following buildNotes of internal/document: each
-// warning's code with no parameter, each notice's code and count, the
-// parameter Count filled in for the entry that takes it.
-func catalogTexts(cat *catalog.Catalog, warnings, notices []snapshot.Message) ([]string, []string, error) {
+// originalWarnings holds the sentence the original writes for each warning
+// code, in Portuguese, letter for letter. The recorded files of
+// testdata/python/ hold these sentences, and the comparison renders them
+// from the codes of the snapshot rather than from the catalog, whose
+// Portuguese follows the vocabulary of spec 9.3 and not the original.
+var originalWarnings = map[string]string{
+	collect.WarningNamespaceUsageIncomplete:           "As métricas de uso dos namespaces estão incompletas.",
+	collect.WarningNamespaceRequestsLimitsIncomplete:  "As métricas de solicitações e limites dos namespaces estão incompletas.",
+	collect.WarningNamespaceRequestsLimitsUnavailable: "As métricas de solicitações e limites dos namespaces estão indisponíveis.",
+	collect.WarningWorkloadUsageIncomplete:            "As métricas de uso das cargas de trabalho estão incompletas.",
+	collect.WarningWorkloadRequestsLimitsIncomplete:   "As métricas de solicitações e limites das cargas de trabalho estão incompletas.",
+	collect.WarningWorkloadRequestsLimitsUnavailable:  "As métricas de solicitações e limites das cargas de trabalho estão indisponíveis.",
+	collect.WarningWorkloadHistoryCurrentAssociation:  "O histórico usa a associação atual entre pods ativos e cargas de trabalho.",
+}
+
+// originalNotice holds the two forms of a notice of the original: the
+// sentence for a count of one, and the sentence for any other count with
+// %s standing for the count.
+type originalNotice struct {
+	singular string
+	plural   string
+}
+
+var originalNotices = map[string]originalNotice{
+	collect.NoticeWorkloadsOmittedNoUsage: {
+		singular: "1 carga de trabalho deixada de fora por não ter consumo observado no período.",
+		plural:   "%s cargas de trabalho deixadas de fora por não terem consumo observado no período.",
+	},
+	collect.NoticeJobsOmitted: {
+		singular: "1 Job foi deixado de fora do inventário de cargas de trabalho; o consumo continua contabilizado no total do namespace.",
+		plural:   "%s Jobs foram deixados de fora do inventário de cargas de trabalho; o consumo continua contabilizado nos totais dos namespaces.",
+	},
+}
+
+// originalWarningText returns the sentence of the original for a warning
+// code, or an error naming a code the table does not hold.
+func originalWarningText(code string) (string, error) {
+	text, ok := originalWarnings[code]
+	if !ok {
+		return "", fmt.Errorf("no sentence of the original for warning %s", code)
+	}
+	return text, nil
+}
+
+// originalNoticeText returns the sentence of the original for a notice code
+// and a count: the singular form for one, otherwise the plural form with
+// the count written as Python writes an integer.
+func originalNoticeText(code string, count float64) (string, error) {
+	notice, ok := originalNotices[code]
+	if !ok {
+		return "", fmt.Errorf("no sentence of the original for notice %s", code)
+	}
+	if count == 1 {
+		return notice.singular, nil
+	}
+	return fmt.Sprintf(notice.plural, strconv.FormatFloat(count, 'f', -1, 64)), nil
+}
+
+// originalTexts renders the warnings and notices of a snapshot as the
+// original would have written them, in the order of the snapshot.
+func originalTexts(warnings, notices []snapshot.Message) ([]string, []string, error) {
 	warningTexts := make([]string, len(warnings))
 	for i, w := range warnings {
-		text, err := cat.Text(catalog.Warning(w.Code), nil)
+		text, err := originalWarningText(w.Code)
 		if err != nil {
-			return nil, nil, fmt.Errorf("warning %s: %w", w.Code, err)
+			return nil, nil, err
 		}
 		warningTexts[i] = text
 	}
 	noticeTexts := make([]string, len(notices))
 	for i, n := range notices {
-		count := n.Params["count"]
-		var params catalog.Params
-		if count != 1 {
-			params = catalog.Params{"Count": cat.Count(count)}
-		}
-		text, err := cat.Text(catalog.Notice(n.Code, count), params)
+		text, err := originalNoticeText(n.Code, n.Params["count"])
 		if err != nil {
-			return nil, nil, fmt.Errorf("notice %s: %w", n.Code, err)
+			return nil, nil, err
 		}
 		noticeTexts[i] = text
 	}
@@ -559,17 +610,12 @@ func compareStrings(scenario, label string, got, want []string) []string {
 // that disagrees, each naming the scenario, the row or finding, and the
 // field, with both values.
 func compareNumbers(scenario string, snap snapshot.Snapshot, collected collect.Collected, want pythonRecording) []string {
-	cat, err := catalog.Load(catalog.PortugueseBrazil)
-	if err != nil {
-		return []string{fmt.Sprintf("%s: loading the pt-BR catalog: %v", scenario, err)}
-	}
-
 	var diffs []string
 	diffs = append(diffs, compareNamespaces(scenario, snap.Namespaces, collected.Namespaces.Rows, want.Namespaces)...)
 	diffs = append(diffs, compareWorkloads(scenario, snap.Workloads, collected.Workloads.Rows, want.Workloads)...)
 	diffs = append(diffs, compareFindings(scenario, snap.Findings, want.Findings)...)
 
-	gotWarnings, gotNotices, err := catalogTexts(cat, snap.Quality.Warnings, snap.Quality.Notices)
+	gotWarnings, gotNotices, err := originalTexts(snap.Quality.Warnings, snap.Quality.Notices)
 	if err != nil {
 		diffs = append(diffs, fmt.Sprintf("%s: rendering warnings and notices: %v", scenario, err))
 		return diffs
@@ -1011,4 +1057,53 @@ func TestComparisonCanFail(t *testing.T) {
 			fmt.Sprintf("%s: notices[0]: got %q, want %q", scenario.Name, original, mutated),
 		})
 	})
+}
+
+// TestOriginalSentencesCoverEveryCode wants a sentence of the original for
+// every warning code and for both forms of every notice code, so that the
+// comparison with the recorded files never passes by comparing nothing.
+func TestOriginalSentencesCoverEveryCode(t *testing.T) {
+	for _, code := range collect.WarningCodes {
+		if _, err := originalWarningText(code); err != nil {
+			t.Errorf("warning %s: %v", code, err)
+		}
+	}
+	for _, code := range collect.NoticeCodes {
+		for _, count := range []float64{1, 2} {
+			if _, err := originalNoticeText(code, count); err != nil {
+				t.Errorf("notice %s with count %v: %v", code, count, err)
+			}
+		}
+	}
+	if _, err := originalWarningText("NO_SUCH_WARNING"); err == nil {
+		t.Error("originalWarningText(NO_SUCH_WARNING) = nil error, want one")
+	}
+	if _, err := originalNoticeText("NO_SUCH_NOTICE", 1); err == nil {
+		t.Error("originalNoticeText(NO_SUCH_NOTICE, 1) = nil error, want one")
+	}
+}
+
+// TestOriginalNoticeTextWritesTheCount pins the singular form for a count
+// of one and the plural form with the count written as Python writes an
+// integer for any other count.
+func TestOriginalNoticeTextWritesTheCount(t *testing.T) {
+	tests := []struct {
+		code  string
+		count float64
+		want  string
+	}{
+		{collect.NoticeWorkloadsOmittedNoUsage, 1, "1 carga de trabalho deixada de fora por não ter consumo observado no período."},
+		{collect.NoticeWorkloadsOmittedNoUsage, 3, "3 cargas de trabalho deixadas de fora por não terem consumo observado no período."},
+		{collect.NoticeJobsOmitted, 1, "1 Job foi deixado de fora do inventário de cargas de trabalho; o consumo continua contabilizado no total do namespace."},
+		{collect.NoticeJobsOmitted, 12, "12 Jobs foram deixados de fora do inventário de cargas de trabalho; o consumo continua contabilizado nos totais dos namespaces."},
+	}
+	for _, tt := range tests {
+		got, err := originalNoticeText(tt.code, tt.count)
+		if err != nil {
+			t.Fatalf("originalNoticeText(%s, %v): %v", tt.code, tt.count, err)
+		}
+		if got != tt.want {
+			t.Errorf("originalNoticeText(%s, %v) = %q, want %q", tt.code, tt.count, got, tt.want)
+		}
+	}
 }

@@ -509,10 +509,112 @@ func TestEmptySections(t *testing.T) {
 	}
 }
 
+// parityTexts maps each text of template/tests/capacity/fixtures/parity.pt-BR.json
+// that the catalog produces to its key. The fixture is a transcription of
+// the original report and keeps the original's words; the document writes
+// the words of the catalog. The parity comparison reads the current text of
+// each key so that it compares numbers, statuses, identifiers, and shape,
+// and not the words, which the owner may change.
+var parityTexts = map[string]catalog.Key{
+	"Capacidade por Namespace":       catalog.SectionsNamespacesHeading,
+	"Recurso":                        catalog.SectionsNamespacesHeaderResource,
+	"Uso médio":                      catalog.SectionsNamespacesHeaderAverage,
+	"Pico":                           catalog.SectionsNamespacesHeaderPeak,
+	"Solicitação":                    catalog.SectionsNamespacesHeaderRequest,
+	"Limite":                         catalog.SectionsNamespacesHeaderLimit,
+	"% Pico/Solicitação":             catalog.SectionsNamespacesHeaderPeakRequest,
+	"% Pico/Limite":                  catalog.SectionsNamespacesHeaderPeakLimit,
+	"CPU":                            catalog.SectionsNamespacesRowCPU,
+	"Memória":                        catalog.SectionsNamespacesRowMemory,
+	"Recursos por carga de trabalho": catalog.SectionsWorkloadsHeading,
+	"Carga de trabalho":              catalog.SectionsWorkloadsHeaderWorkload,
+	"Pods":                           catalog.SectionsWorkloadsHeaderPods,
+	"CPU média":                      catalog.SectionsWorkloadsHeaderCPUAverage,
+	"CPU pico":                       catalog.SectionsWorkloadsHeaderCPUPeak,
+	"% CPU/Solicitação":              catalog.SectionsWorkloadsHeaderCPURequest,
+	"% CPU/Limite":                   catalog.SectionsWorkloadsHeaderCPULimit,
+	"Memória média":                  catalog.SectionsWorkloadsHeaderMemoryAverage,
+	"Memória pico":                   catalog.SectionsWorkloadsHeaderMemoryPeak,
+	"% Memória/Solicitação":          catalog.SectionsWorkloadsHeaderMemoryRequest,
+	"% Memória/Limite":               catalog.SectionsWorkloadsHeaderMemoryLimit,
+	"Indisponível":                   catalog.PlaceholderUnavailable,
+	"Não definido":                   catalog.PlaceholderNoBase,
+}
+
+// parityLabelText is the one run of the fixture that is a catalog text
+// followed by a space: the namespace label before the identifier.
+const parityLabelText = "Namespace: "
+
+// withCatalogTexts returns a copy of v, a decoded JSON value, in which every
+// header and every run that is not an identifier and whose text parityTexts
+// knows carries the current catalog text of its key. Every other value is
+// copied as it is.
+func withCatalogTexts(t *testing.T, cat *catalog.Catalog, v any) any {
+	t.Helper()
+	replace := func(s string) string {
+		if s == parityLabelText {
+			text, err := cat.Text(catalog.SectionsNamespaceLabel, nil)
+			if err != nil {
+				t.Fatalf("Text(%q): %v", catalog.SectionsNamespaceLabel, err)
+			}
+			return text + " "
+		}
+		key, ok := parityTexts[s]
+		if !ok {
+			return s
+		}
+		text, err := cat.Text(key, nil)
+		if err != nil {
+			t.Fatalf("Text(%q): %v", key, err)
+		}
+		return text
+	}
+
+	switch x := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(x))
+		for k, val := range x {
+			out[k] = val
+		}
+		if headers, ok := x["headers"].([]any); ok {
+			replaced := make([]any, len(headers))
+			for i, h := range headers {
+				if s, ok := h.(string); ok {
+					replaced[i] = replace(s)
+				} else {
+					replaced[i] = h
+				}
+			}
+			out["headers"] = replaced
+		}
+		if kind, ok := x["kind"].(string); ok && kind != "ident" {
+			if s, ok := x["text"].(string); ok {
+				out["text"] = replace(s)
+			}
+		}
+		for k, val := range out {
+			if k == "headers" || k == "text" {
+				continue
+			}
+			out[k] = withCatalogTexts(t, cat, val)
+		}
+		return out
+	case []any:
+		out := make([]any, len(x))
+		for i, val := range x {
+			out[i] = withCatalogTexts(t, cat, val)
+		}
+		return out
+	default:
+		return v
+	}
+}
+
 // TestDocumentEqualsParityForItsSections proves that the namespace and
 // workload sections built straight from a snapshot holding the numbers of
-// template/tests/capacity/fixtures/parity.pt-BR.json produce exactly its
-// blocks 2 to 7.
+// template/tests/capacity/fixtures/parity.pt-BR.json equal its blocks 2 to
+// 7 in every number, status, identifier, and block, with the words of the
+// fixture read through the catalog.
 func TestDocumentEqualsParityForItsSections(t *testing.T) {
 	b := &builder{cat: mustCatalog(t, catalog.PortugueseBrazil)}
 	thresholds := config.Thresholds{WarningPercent: 70, CriticalPercent: 85}
@@ -597,9 +699,64 @@ func TestDocumentEqualsParityForItsSections(t *testing.T) {
 	if err := json.Unmarshal(want, &wantNorm); err != nil {
 		t.Fatalf("unmarshal want: %v", err)
 	}
+	wantNorm = withCatalogTexts(t, b.cat, wantNorm)
 	if !reflect.DeepEqual(gotNorm, wantNorm) {
 		gotPretty, _ := json.MarshalIndent(gotNorm, "", "  ")
 		wantPretty, _ := json.MarshalIndent(wantNorm, "", "  ")
 		t.Fatalf("blocks differ:\ngot:\n%s\nwant:\n%s", gotPretty, wantPretty)
+	}
+}
+
+// TestParitySubstitutionChangesTheFixture proves that withCatalogTexts
+// rewrites a text the mapping knows and leaves alone a number, an
+// identifier, and a text it does not know, so that the parity comparison
+// cannot pass by mapping nothing.
+func TestParitySubstitutionChangesTheFixture(t *testing.T) {
+	cat := mustCatalog(t, catalog.PortugueseBrazil)
+	in := map[string]any{
+		"type":    "table",
+		"id":      "namespace-capacity",
+		"headers": []any{"Recurso", "Solicitação", "% Pico/Limite"},
+		"rows": []any{
+			[]any{
+				[]any{map[string]any{"kind": "ident", "text": "Solicitação"}},
+				[]any{map[string]any{"kind": "text", "text": "3,5 cores"}},
+				[]any{map[string]any{"kind": "status", "status": "unavailable", "text": "Indisponível"}},
+			},
+		},
+	}
+
+	got := withCatalogTexts(t, cat, in).(map[string]any)
+
+	want := func(key catalog.Key) string {
+		text, err := cat.Text(key, nil)
+		if err != nil {
+			t.Fatalf("Text(%q): %v", key, err)
+		}
+		return text
+	}
+	headers := got["headers"].([]any)
+	if headers[0] != want(catalog.SectionsNamespacesHeaderResource) ||
+		headers[1] != want(catalog.SectionsNamespacesHeaderRequest) ||
+		headers[2] != want(catalog.SectionsNamespacesHeaderPeakLimit) {
+		t.Errorf("headers = %v, want the catalog texts of resource, request, and peak/limit", headers)
+	}
+	row := got["rows"].([]any)[0].([]any)
+	ident := row[0].([]any)[0].(map[string]any)
+	if ident["text"] != "Solicitação" {
+		t.Errorf("ident run = %q, want it left alone", ident["text"])
+	}
+	number := row[1].([]any)[0].(map[string]any)
+	if number["text"] != "3,5 cores" {
+		t.Errorf("number run = %q, want it left alone", number["text"])
+	}
+	status := row[2].([]any)[0].(map[string]any)
+	if status["text"] != want(catalog.PlaceholderUnavailable) {
+		t.Errorf("status run = %q, want the catalog text of the placeholder", status["text"])
+	}
+
+	// The input is not changed in place.
+	if in["headers"].([]any)[1] != "Solicitação" {
+		t.Error("withCatalogTexts changed its input")
 	}
 }
