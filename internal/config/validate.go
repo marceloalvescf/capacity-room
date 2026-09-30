@@ -115,6 +115,9 @@ func validateCluster(cl Cluster) error {
 		if ns == "" {
 			return errClusterNS
 		}
+		if strings.Contains(ns, "/") {
+			return fmt.Errorf("cluster.namespaces holds a namespace with a slash: %q", ns)
+		}
 	}
 	if !labelRe.MatchString(cl.Label) {
 		return errClusterLabel

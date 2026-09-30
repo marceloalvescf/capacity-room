@@ -2,7 +2,9 @@ package collect
 
 import (
 	"context"
+	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
@@ -152,6 +154,9 @@ func collectRecordingWorkloads(ctx context.Context, q Querier, in Input, workloa
 	}
 	warnings = append(warnings, workloadResourceWarning(resourceCap.State)...)
 
+	if err := checkWorkloadKeys(statistics, activePods); err != nil {
+		return Result[Workload]{}, err
+	}
 	rows, omittedNoUsage, omittedJobs := assembleWorkloads(statistics, activePods, approximate, workloadCap.State, resourceCap.State)
 
 	return Result[Workload]{
@@ -216,6 +221,9 @@ func collectRawWorkloads(ctx context.Context, q Querier, in Input, workloadCap, 
 	warnings := []Message{{Code: WarningWorkloadHistoryCurrentAssociation, Params: map[string]float64{}}}
 	warnings = append(warnings, workloadResourceWarning(resourceCap.State)...)
 
+	if err := checkWorkloadKeys(statistics, activePods); err != nil {
+		return Result[Workload]{}, err
+	}
 	rows, omittedNoUsage, omittedJobs := assembleWorkloads(statistics, activePods, approximate, workloadCap.State, resourceCap.State)
 
 	return Result[Workload]{
@@ -252,6 +260,41 @@ func workloadStatisticsAndRatios(cpuUsage, memoryUsage, cpuRequests, memoryReque
 
 	approximate := mergeApprox(cpuRequestApprox, memoryRequestApprox, cpuLimitApprox, memoryLimitApprox)
 	return statistics, approximate
+}
+
+// checkWorkloadKeys refuses a slash in the namespace, name, or kind of any
+// key statistics or activePods holds, once the kind is already canonical
+// and before assembleWorkloads keys a single row by it: a name of
+// Kubernetes never holds a slash, so such a label is a fault of the
+// endpoint or of the configuration, not a workload to report on.
+func checkWorkloadKeys(statistics map[string]map[Key]Statistics, activePods map[Key]int) error {
+	checked := make(map[Key]bool)
+	check := func(key Key) error {
+		if checked[key] {
+			return nil
+		}
+		checked[key] = true
+		namespace, name, kind := key[0], key[1], key[2]
+		if strings.Contains(namespace, "/") || strings.Contains(name, "/") || strings.Contains(kind, "/") {
+			return &prom.Error{Kind: prom.KindQuery, Message: fmt.Sprintf(
+				"the endpoint answered with a workload name that holds a slash: namespace %q, name %q, kind %q",
+				namespace, name, kind)}
+		}
+		return nil
+	}
+	for key := range activePods {
+		if err := check(key); err != nil {
+			return err
+		}
+	}
+	for _, family := range statistics {
+		for key := range family {
+			if err := check(key); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // assembleWorkloads follows _assemble of the original: the keys of

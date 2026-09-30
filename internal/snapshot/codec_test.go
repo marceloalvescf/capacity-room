@@ -1756,3 +1756,89 @@ func TestCheckRules(t *testing.T) {
 		})
 	}
 }
+
+// TestCheckRefusesASlashInAName covers that rule 5 and rule 6 refuse a
+// slash in the name of a namespace, and in the namespace, the name, or the
+// kind of a workload: no name of a real Kubernetes namespace or object
+// holds one, so such a label is a fault of the endpoint or of the
+// configuration.
+func TestCheckRefusesASlashInAName(t *testing.T) {
+	tests := []struct {
+		name    string
+		mutate  func(*Snapshot)
+		message string
+	}{
+		{"namespaces[0].name", func(s *Snapshot) {
+			s.Namespaces[0].Name = "a/b"
+		}, `namespaces[0].name holds a slash: "a/b"`},
+		{"workloads[0].namespace", func(s *Snapshot) {
+			s.Workloads[0].Namespace = "a/b"
+		}, `workloads[0].namespace holds a slash: "a/b"`},
+		{"workloads[0].name", func(s *Snapshot) {
+			s.Workloads[0].Name = "a/b"
+		}, `workloads[0].name holds a slash: "a/b"`},
+		{"workloads[0].kind", func(s *Snapshot) {
+			s.Workloads[0].Kind = "a/b"
+		}, `workloads[0].kind holds a slash: "a/b"`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			snap := validSnapshotWithRows(t)
+			tt.mutate(&snap)
+
+			err := snap.Check()
+			if err == nil {
+				t.Fatalf("Check() = nil, want error %q", tt.message)
+			}
+			if err.Error() != tt.message {
+				t.Fatalf("Check() = %q, want %q", err.Error(), tt.message)
+			}
+		})
+	}
+}
+
+// TestCheckKeysAWorkloadByItsFields covers that rule 8 matches a finding to
+// a workload by its three fields as a struct, not by a text joined from
+// them: two workloads that share one namespace and one name, kept apart
+// only by kind, each carry their own findings with no collision, and a
+// finding whose kind names neither workload is still refused.
+func TestCheckKeysAWorkloadByItsFields(t *testing.T) {
+	in := baseInput()
+	in.Config.Cluster.Namespaces = []string{"payments"}
+	resources := directCompleteResources()
+	collected := collect.Collected{
+		Namespaces: collect.Result[collect.Namespace]{Rows: []collect.Namespace{
+			{Name: "payments", Resources: unavailableResources()},
+		}},
+		Workloads: collect.Result[collect.Workload]{Rows: []collect.Workload{
+			{Namespace: "payments", Kind: "Deployment", Name: "api", Resources: resources},
+			{Namespace: "payments", Kind: "StatefulSet", Name: "api", Resources: resources},
+		}},
+	}
+	in.Collected = collected
+	in.Findings = analysis.All(collected, in.Config.Thresholds)
+
+	snap := mustBuild(t, in)
+	if err := snap.Check(); err != nil {
+		t.Fatalf("Check() error = %v, want nil", err)
+	}
+
+	workloadFinding := -1
+	for i, f := range snap.Findings {
+		if f.ScopeType == analysis.ScopeWorkload {
+			workloadFinding = i
+			break
+		}
+	}
+	if workloadFinding < 0 {
+		t.Fatalf("no workload finding built for either workload, want at least one")
+	}
+
+	snap.Findings[workloadFinding].ScopeKind = "ReplicaSet"
+	err := snap.Check()
+	want := fmt.Sprintf("findings[%d].scope_name is not a workload of the snapshot", workloadFinding)
+	if err == nil || err.Error() != want {
+		t.Fatalf("Check() = %v, want %q", err, want)
+	}
+}

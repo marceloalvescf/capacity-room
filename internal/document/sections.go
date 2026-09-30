@@ -178,6 +178,10 @@ func buildWorkloadsSection(b *builder, rows []snapshot.Workload, findings []snap
 	var order []string
 	grouped := make(map[string][][][]Run)
 	for _, row := range rows {
+		// A namespace and a workload name are both refused if either holds a
+		// slash (internal/collect, internal/snapshot), so this join is the
+		// same reversible one internal/analysis builds a finding's scope
+		// name from: the two can never collide with a different pair.
 		scopeName := row.Namespace + "/" + row.Name
 		if analysis.Rank(scopeSeverity(findings, analysis.ScopeWorkload, scopeName, row.Kind)) < minRank {
 			continue

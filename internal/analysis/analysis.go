@@ -45,6 +45,11 @@ func Namespaces(rows []collect.Namespace, t config.Thresholds) []Finding {
 func Workloads(rows []collect.Workload, t config.Thresholds) []Finding {
 	findings := []Finding{}
 	for _, row := range rows {
+		// A namespace and a workload name are both refused if either holds a
+		// slash (internal/collect, internal/snapshot), so joining them with
+		// one is reversible: the first slash of the joined text is always
+		// this join point, with no other slash left to make the cut
+		// ambiguous.
 		scopeName := row.Namespace + "/" + row.Name
 		findings = append(findings, rowFindings(ScopeWorkload, scopeName, row.Kind, row.Resources, row.RequestsLimitsState, row.Approximate, t)...)
 	}

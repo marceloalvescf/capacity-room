@@ -89,6 +89,23 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+// TestValidateRefusesANamespaceWithASlash checks that a namespace holding
+// a slash is refused, naming both the key and the namespace: no name of a
+// real Kubernetes namespace holds one, so it is a fault of the endpoint or
+// of the configuration.
+func TestValidateRefusesANamespaceWithASlash(t *testing.T) {
+	cfg := validConfig(t)
+	cfg.Cluster.Namespaces = []string{"payments", "a/b"}
+
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("Validate() = nil, want error")
+	}
+	if !strings.Contains(err.Error(), "cluster.namespaces") || !strings.Contains(err.Error(), "a/b") {
+		t.Errorf("Validate() = %q, want it to name cluster.namespaces and a/b", err.Error())
+	}
+}
+
 func TestValidateReportsFirstFailure(t *testing.T) {
 	cfg := validConfig(t)
 	cfg.Cluster.Name = ""      // rule 10 in the table

@@ -2,6 +2,7 @@ package collect
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -529,6 +530,81 @@ func TestWorkloadKindIsCanonical(t *testing.T) {
 	if row.Kind != "StatefulSet" || row.Pods != 3 || !row.PodsKnown {
 		t.Errorf("row = %+v, want kind StatefulSet, Pods 3, PodsKnown true", row)
 	}
+}
+
+// TestWorkloadWithASlashStopsTheCollector covers a workload whose
+// namespace, name, or kind holds a slash, in either strategy: the
+// collector stops and returns a *prom.Error of kind KindQuery instead of
+// keying a row by it, since a name of Kubernetes never holds a slash and
+// such a label is a fault of the endpoint or of the configuration.
+func TestWorkloadWithASlashStopsTheCollector(t *testing.T) {
+	assertSlashError := func(t *testing.T, err error) {
+		t.Helper()
+		var promErr *prom.Error
+		if !errors.As(err, &promErr) || promErr.Kind != prom.KindQuery {
+			t.Fatalf("err = %v, want a *prom.Error with Kind KindQuery", err)
+		}
+		if !strings.Contains(promErr.Message, "a workload name that holds a slash") {
+			t.Errorf("message %q does not say a workload name holds a slash", promErr.Message)
+		}
+	}
+
+	t.Run("name, recording strategy", func(t *testing.T) {
+		usage := []prom.Series{{
+			Labels: map[string]string{"namespace": "payments", "workload": "b/c", "workload_type": "Deployment"},
+			Points: []prom.Point{{Time: 1, Value: 1, Valid: true}},
+		}}
+		q := &scriptedQuerier{rangeFunc: rangeTable(rangeCase{[]string{"container_cpu_usage_seconds_total"}, usage})}
+		in := workloadTestInput(testScope(true), defaultCluster(), defaultAnalysis(), workloadCapability(discovery.StateAvailable, discovery.StrategyRecordingRule), testCapability(discovery.StateUnavailable, []string{}))
+
+		_, err := Workloads(context.Background(), q, in)
+		assertSlashError(t, err)
+		if !strings.Contains(err.Error(), `"b/c"`) {
+			t.Errorf("message %q does not name the workload", err.Error())
+		}
+	})
+
+	t.Run("name, raw strategy", func(t *testing.T) {
+		podOwners := []prom.Sample{
+			{Labels: map[string]string{"namespace": "payments", "pod": "web-1", "owner_kind": "ReplicaSet", "owner_name": "web-abc"}, Value: 1, Valid: true},
+		}
+		replicaOwners := []prom.Sample{
+			{Labels: map[string]string{"namespace": "payments", "replicaset": "web-abc", "owner_kind": "Deployment", "owner_name": "b/c"}, Value: 1, Valid: true},
+		}
+		q := &scriptedQuerier{
+			queryFunc: func(query string) ([]prom.Sample, error) {
+				switch {
+				case strings.Contains(query, "kube_pod_owner"):
+					return podOwners, nil
+				case strings.Contains(query, "kube_replicaset_owner"):
+					return replicaOwners, nil
+				}
+				return nil, nil
+			},
+		}
+		in := workloadTestInput(testScope(true), defaultCluster(), defaultAnalysis(), workloadCapability(discovery.StateAvailable, discovery.StrategyRawMetrics), testCapability(discovery.StateUnavailable, []string{}))
+
+		_, err := Workloads(context.Background(), q, in)
+		assertSlashError(t, err)
+		if !strings.Contains(err.Error(), `"b/c"`) {
+			t.Errorf("message %q does not name the workload", err.Error())
+		}
+	})
+
+	t.Run("kind", func(t *testing.T) {
+		usage := []prom.Series{{
+			Labels: map[string]string{"namespace": "payments", "workload": "api", "workload_type": "apps/Deployment"},
+			Points: []prom.Point{{Time: 1, Value: 1, Valid: true}},
+		}}
+		q := &scriptedQuerier{rangeFunc: rangeTable(rangeCase{[]string{"container_cpu_usage_seconds_total"}, usage})}
+		in := workloadTestInput(testScope(true), defaultCluster(), defaultAnalysis(), workloadCapability(discovery.StateAvailable, discovery.StrategyRecordingRule), testCapability(discovery.StateUnavailable, []string{}))
+
+		_, err := Workloads(context.Background(), q, in)
+		assertSlashError(t, err)
+		if !strings.Contains(err.Error(), `"apps/Deployment"`) {
+			t.Errorf("message %q does not name the kind", err.Error())
+		}
+	})
 }
 
 // TestWorkloadNoBase transcribes

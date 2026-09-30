@@ -876,11 +876,16 @@ func checkPodCount(path string, pods *float64) error {
 }
 
 // checkNamespaceRows refuses a namespaces list that is not sorted by name,
-// holds a repeated name, or does not name exactly the namespaces of the
-// scope.
+// holds a repeated name, holds a name with a slash, or does not name
+// exactly the namespaces of the scope. A slash is refused because no name
+// of a real Kubernetes namespace holds one: it is a fault of the endpoint
+// or of the configuration.
 func checkNamespaceRows(namespaces []Namespace, scopeNamespaces []string) error {
 	names := make([]string, len(namespaces))
 	for i, ns := range namespaces {
+		if strings.Contains(ns.Name, "/") {
+			return fmt.Errorf("namespaces[%d].name holds a slash: %q", i, ns.Name)
+		}
 		names[i] = ns.Name
 	}
 	if err := checkSorted("namespaces", names); err != nil {
@@ -894,8 +899,10 @@ func checkNamespaceRows(namespaces []Namespace, scopeNamespaces []string) error 
 
 // checkWorkloadRows refuses a workloads list that is not sorted by
 // namespace, name, and kind, holds a repeated row, or holds a row with an
-// empty name, an empty kind, a namespace outside the scope, or the kind
-// Job.
+// empty name, an empty kind, a namespace outside the scope, the kind Job,
+// or a slash in its namespace, name, or kind. A slash is refused because no
+// name of a real Kubernetes object holds one: it is a fault of the
+// endpoint or of the configuration.
 func checkWorkloadRows(workloads []Workload, scopeNamespaces []string) error {
 	for i := 1; i < len(workloads); i++ {
 		if !workloadLess(workloads[i-1], workloads[i]) {
@@ -903,11 +910,20 @@ func checkWorkloadRows(workloads []Workload, scopeNamespaces []string) error {
 		}
 	}
 	for i, wl := range workloads {
+		if strings.Contains(wl.Namespace, "/") {
+			return fmt.Errorf("workloads[%d].namespace holds a slash: %q", i, wl.Namespace)
+		}
 		if wl.Name == "" {
 			return fmt.Errorf("workloads[%d].name is empty", i)
 		}
+		if strings.Contains(wl.Name, "/") {
+			return fmt.Errorf("workloads[%d].name holds a slash: %q", i, wl.Name)
+		}
 		if wl.Kind == "" {
 			return fmt.Errorf("workloads[%d].kind is empty", i)
+		}
+		if strings.Contains(wl.Kind, "/") {
+			return fmt.Errorf("workloads[%d].kind holds a slash: %q", i, wl.Kind)
 		}
 		if !slices.Contains(scopeNamespaces, wl.Namespace) {
 			return fmt.Errorf("workloads[%d].namespace is not a namespace of the scope", i)
@@ -976,6 +992,14 @@ func evidenceNamesMatch(evidence []Evidence, names []string) bool {
 	return true
 }
 
+// workloadIdentity is the three fields that identify a workload: the same
+// fields checkWorkloadRows already refuses a slash in, so a namespace and a
+// name can be told apart from every other by exact equality alone, with no
+// text joined from them standing in as a map key.
+type workloadIdentity struct {
+	namespace, name, kind string
+}
+
 // checkFindingScope refuses a namespace finding with a non-empty scope kind
 // or a scope name that is not a namespace of the snapshot, and a workload
 // finding whose scope name and scope kind do not name a workload of the
@@ -985,9 +1009,9 @@ func checkFindingScope(findings []Finding, namespaces []Namespace, workloads []W
 	for _, ns := range namespaces {
 		namespaceNames[ns.Name] = true
 	}
-	workloadKeys := make(map[string]bool, len(workloads))
+	workloadKeys := make(map[workloadIdentity]bool, len(workloads))
 	for _, wl := range workloads {
-		workloadKeys[wl.Namespace+"/"+wl.Name+"/"+wl.Kind] = true
+		workloadKeys[workloadIdentity{wl.Namespace, wl.Name, wl.Kind}] = true
 	}
 
 	for i, f := range findings {
@@ -1000,7 +1024,13 @@ func checkFindingScope(findings []Finding, namespaces []Namespace, workloads []W
 				return fmt.Errorf("findings[%d].scope_name is not a namespace of the snapshot", i)
 			}
 		case analysis.ScopeWorkload:
-			if !workloadKeys[f.ScopeName+"/"+f.ScopeKind] {
+			// A workload finding's scope name is namespace/name. checkWorkloadRows
+			// has already refused a slash in either field by the time this rule
+			// runs, so the first slash of scope_name is always the join point,
+			// and cutting there recovers the two fields exactly, with no other
+			// slash left to be ambiguous about.
+			namespace, name, cut := strings.Cut(f.ScopeName, "/")
+			if !cut || !workloadKeys[workloadIdentity{namespace, name, f.ScopeKind}] {
 				return fmt.Errorf("findings[%d].scope_name is not a workload of the snapshot", i)
 			}
 		}

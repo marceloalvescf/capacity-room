@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -1652,6 +1653,67 @@ func TestCollectorFailureStopsWithThree(t *testing.T) {
 	}
 	if rangeAttempts != 3 {
 		t.Fatalf("range attempts = %d, want 3", rangeAttempts)
+	}
+	if _, err := os.Stat(snapPath); err == nil {
+		t.Fatalf("%s was written, want no file", snapPath)
+	}
+	assertNoTempFilesBeside(t, filepath.Dir(snapPath))
+}
+
+// TestCommandStopsOnASlash proves that a workload name holding a slash,
+// answered by the metrics endpoint, stops the run with exit code 3, one
+// line on standard error, and no snapshot file: the collector refuses it
+// before any row is keyed. The fixture of "direct-complete" is loaded and
+// changed in memory only, its one answer naming the workload "payments-web"
+// rewritten to "b/c"; the scenario file on disk is never touched.
+func TestCommandStopsOnASlash(t *testing.T) {
+	var scenario promtest.Scenario
+	for _, s := range promtest.Scenarios {
+		if s.Name == "direct-complete" {
+			scenario = s
+		}
+	}
+
+	path, err := promtest.Path("direct-complete")
+	if err != nil {
+		t.Fatalf("promtest.Path: %v", err)
+	}
+	fixture, err := promtest.Load(path)
+	if err != nil {
+		t.Fatalf("promtest.Load: %v", err)
+	}
+
+	rewritten := false
+	for i, req := range fixture.Requests {
+		if !strings.Contains(req.QueryContains, "container_cpu_usage_seconds_total") {
+			continue
+		}
+		if !bytes.Contains(req.Body, []byte(`"payments-web"`)) {
+			continue
+		}
+		fixture.Requests[i].Body = bytes.ReplaceAll(req.Body, []byte(`"payments-web"`), []byte(`"b/c"`))
+		rewritten = true
+		break
+	}
+	if !rewritten {
+		t.Fatal("fixture direct-complete has no CPU usage answer naming payments-web, want one to rewrite")
+	}
+
+	handler := promtest.NewServer(fixture)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	outDir := t.TempDir()
+	cfgPath := writeConfig(t, scenarioConfig(server, scenario, outDir))
+	snapPath := filepath.Join(t.TempDir(), "s.json")
+
+	env := testEnv(t)
+	_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--snapshot", snapPath})
+	if code != 3 {
+		t.Fatalf("code = %d, want 3; stderr = %q", code, stderr)
+	}
+	if strings.Count(stderr, "\n") != 1 {
+		t.Fatalf("stderr = %q, want exactly one line", stderr)
 	}
 	if _, err := os.Stat(snapPath); err == nil {
 		t.Fatalf("%s was written, want no file", snapPath)
