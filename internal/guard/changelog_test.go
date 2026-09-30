@@ -312,6 +312,127 @@ func TestChangelogAcceptsManyGoodHeadings(t *testing.T) {
 	}
 }
 
+// TestChangelogReportsASecondUnreleased proves that a second heading of
+// the unreleased changes is reported, naming its own line, rather than
+// silently passed over the way the first one is.
+func TestChangelogReportsASecondUnreleased(t *testing.T) {
+	changelog := "## [Unreleased]\n## [Unreleased]\n## [1.0.0] - 2026-01-01\n"
+
+	_, _, err := NewestVersionHeading(changelog)
+	if err == nil {
+		t.Fatalf("NewestVersionHeading(%q) returned no error, want error", changelog)
+	}
+	want := `changelog holds a second heading of the unreleased changes on line 2: "## [Unreleased]"`
+	if err.Error() != want {
+		t.Fatalf("NewestVersionHeading(%q) error = %q, want %q", changelog, err.Error(), want)
+	}
+}
+
+// TestChangelogReportsUnreleasedAfterAVersion proves that the heading of
+// the unreleased changes, when present, must stand before every version
+// heading: one that stands after a version heading is reported.
+func TestChangelogReportsUnreleasedAfterAVersion(t *testing.T) {
+	changelog := "## [1.0.0] - 2026-01-01\n## [Unreleased]\n"
+
+	_, _, err := NewestVersionHeading(changelog)
+	if err == nil {
+		t.Fatalf("NewestVersionHeading(%q) returned no error, want error", changelog)
+	}
+	want := `the heading of the unreleased changes stands after a version heading on line 2: "## [Unreleased]"`
+	if err.Error() != want {
+		t.Fatalf("NewestVersionHeading(%q) error = %q, want %q", changelog, err.Error(), want)
+	}
+}
+
+// TestChangelogIgnoresAFencedBlock proves that a heading-shaped line inside
+// a fenced code block, such as a worked example of the changelog's own
+// format, is not read as a real heading: the reviewer of this very phase
+// found this exact input broke the guard before this fix.
+func TestChangelogIgnoresAFencedBlock(t *testing.T) {
+	changelog := "# Changelog\n\nExample:\n\n```\n## [1.0.0] - 2020-01-01\n```\n\n## [1.2.0] - 2026-01-01\n## [1.1.0] - 2025-01-01\n"
+
+	version, found, err := NewestVersionHeading(changelog)
+	if err != nil {
+		t.Fatalf("NewestVersionHeading(%q) returned error: %v", changelog, err)
+	}
+	if !found || version != "1.2.0" {
+		t.Fatalf("NewestVersionHeading(%q) = (%q, %v), want (\"1.2.0\", true)", changelog, version, found)
+	}
+}
+
+// TestChangelogFences covers the shape of a fence itself: a fence of
+// tildes, a fence of four backticks that a shorter, three-backtick line
+// does not close, a fence indented by up to three spaces, and a fence that
+// is never closed, which runs to the end of the file.
+func TestChangelogFences(t *testing.T) {
+	t.Run("tildes", func(t *testing.T) {
+		changelog := "~~~\n## [1.0.0] - 2020-01-01\n~~~\n## [1.2.0] - 2026-01-01\n"
+		version, found, err := NewestVersionHeading(changelog)
+		if err != nil {
+			t.Fatalf("NewestVersionHeading(%q) returned error: %v", changelog, err)
+		}
+		if !found || version != "1.2.0" {
+			t.Fatalf("NewestVersionHeading(%q) = (%q, %v), want (\"1.2.0\", true)", changelog, version, found)
+		}
+	})
+
+	t.Run("a shorter closing fence does not close it", func(t *testing.T) {
+		changelog := "````\n## [1.0.0] - 2020-01-01\n```\n## [1.2.0] - 2026-01-01\n"
+		version, found, err := NewestVersionHeading(changelog)
+		if err != nil {
+			t.Fatalf("NewestVersionHeading(%q) returned error: %v", changelog, err)
+		}
+		if found {
+			t.Fatalf("NewestVersionHeading(%q) = (%q, %v), want found = false", changelog, version, found)
+		}
+	})
+
+	t.Run("indented by two spaces", func(t *testing.T) {
+		changelog := "  ~~~\n## [1.0.0] - 2020-01-01\n  ~~~\n## [1.2.0] - 2026-01-01\n"
+		version, found, err := NewestVersionHeading(changelog)
+		if err != nil {
+			t.Fatalf("NewestVersionHeading(%q) returned error: %v", changelog, err)
+		}
+		if !found || version != "1.2.0" {
+			t.Fatalf("NewestVersionHeading(%q) = (%q, %v), want (\"1.2.0\", true)", changelog, version, found)
+		}
+	})
+
+	t.Run("never closed", func(t *testing.T) {
+		changelog := "```\n## [1.0.0] - 2020-01-01\n"
+		version, found, err := NewestVersionHeading(changelog)
+		if err != nil {
+			t.Fatalf("NewestVersionHeading(%q) returned error: %v", changelog, err)
+		}
+		if found {
+			t.Fatalf("NewestVersionHeading(%q) = (%q, %v), want found = false", changelog, version, found)
+		}
+	})
+}
+
+// TestChangelogReportsAnImpossibleDate covers the same rule as
+// TestNewestVersionHeadingRejectsImpossibleDate with the exact values the
+// review brief named.
+func TestChangelogReportsAnImpossibleDate(t *testing.T) {
+	cases := []string{
+		"## [1.0.0] - 2026-13-45",
+		"## [1.0.0] - 2026-02-30",
+		"## [1.0.0] - 2026-00-10",
+	}
+	for _, line := range cases {
+		t.Run(line, func(t *testing.T) {
+			_, _, err := NewestVersionHeading(line + "\n")
+			if err == nil {
+				t.Fatalf("NewestVersionHeading(%q) returned no error, want error", line)
+			}
+			want := fmt.Sprintf("malformed changelog heading on line 1: %q", line)
+			if err.Error() != want {
+				t.Fatalf("NewestVersionHeading(%q) error = %q, want %q", line, err.Error(), want)
+			}
+		})
+	}
+}
+
 func TestChangelogAgreesWithVersion(t *testing.T) {
 	root := moduleRoot(t)
 	raw, err := os.ReadFile(filepath.Join(root, "CHANGELOG.md"))
