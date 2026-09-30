@@ -318,10 +318,10 @@
         "Recurso",
         "Uso médio",
         "Pico",
-        "Solicitação",
-        "Limite",
-        "% Pico/Solicitação",
-        "% Pico/Limite"
+        "Request",
+        "Limit",
+        "% Pico/Request",
+        "% Pico/Limit"
       ],
       "rows": [
         [
@@ -425,7 +425,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Recursos por carga de trabalho"
+          "text": "Recursos por workload"
         }
       ]
     },
@@ -448,16 +448,16 @@
       "type": "table",
       "id": "workload-resources",
       "headers": [
-        "Carga de trabalho",
+        "Workload",
         "Pods",
         "CPU média",
         "CPU pico",
-        "% CPU/Solicitação",
-        "% CPU/Limite",
+        "% CPU/Request",
+        "% CPU/Limit",
         "Memória média",
         "Memória pico",
-        "% Memória/Solicitação",
-        "% Memória/Limite"
+        "% Memória/Request",
+        "% Memória/Limit"
       ],
       "rows": [
         [
@@ -637,7 +637,7 @@
           [
             {
               "kind": "text",
-              "text": "Métricas brutas"
+              "text": "Raw metrics"
             }
           ],
           [
@@ -657,7 +657,7 @@
           [
             {
               "kind": "text",
-              "text": "Uso por carga de trabalho"
+              "text": "Uso por workload"
             }
           ],
           [
@@ -670,7 +670,7 @@
           [
             {
               "kind": "text",
-              "text": "Regra de gravação"
+              "text": "Recording rule"
             }
           ],
           [
@@ -682,7 +682,7 @@
           [
             {
               "kind": "text",
-              "text": "Os dados de utilização por carga de trabalho estão disponíveis para o período analisado."
+              "text": "Os dados de utilização por workload estão disponíveis para o período analisado."
             }
           ]
         ],
@@ -690,7 +690,7 @@
           [
             {
               "kind": "text",
-              "text": "Solicitações e limites"
+              "text": "Requests e limits"
             }
           ],
           [
@@ -703,7 +703,7 @@
           [
             {
               "kind": "text",
-              "text": "Métricas brutas"
+              "text": "Raw metrics"
             }
           ],
           [
@@ -715,7 +715,7 @@
           [
             {
               "kind": "text",
-              "text": "Os dados de solicitações e limites de recursos estão disponíveis para o período analisado."
+              "text": "Os dados de requests e limits de recursos estão disponíveis para o período analisado."
             }
           ]
         ],
@@ -736,7 +736,7 @@
           [
             {
               "kind": "text",
-              "text": "Métricas brutas"
+              "text": "Raw metrics"
             }
           ],
           [
@@ -756,7 +756,7 @@
           [
             {
               "kind": "text",
-              "text": "Cobertura de cargas de trabalho sem HPA"
+              "text": "Cobertura de workloads sem HPA"
             }
           ],
           [
@@ -769,7 +769,7 @@
           [
             {
               "kind": "text",
-              "text": "Métricas brutas"
+              "text": "Raw metrics"
             }
           ],
           [
@@ -781,7 +781,7 @@
           [
             {
               "kind": "text",
-              "text": "Os dados de cobertura das cargas de trabalho sem HPA estão disponíveis para o período analisado."
+              "text": "Os dados de cobertura dos workloads sem HPA estão disponíveis para o período analisado."
             }
           ]
         ],
@@ -789,7 +789,7 @@
           [
             {
               "kind": "text",
-              "text": "Associação entre endereço e nó"
+              "text": "Associação entre endereço e node"
             }
           ],
           [
@@ -802,7 +802,7 @@
           [
             {
               "kind": "text",
-              "text": "Métricas brutas"
+              "text": "Raw metrics"
             }
           ],
           [
@@ -814,7 +814,7 @@
           [
             {
               "kind": "text",
-              "text": "Os dados de associação entre endereço e nó estão disponíveis para o período analisado."
+              "text": "Os dados de associação entre endereço e node estão disponíveis para o período analisado."
             }
           ]
         ],
@@ -822,7 +822,7 @@
           [
             {
               "kind": "text",
-              "text": "Identificação de pools de nós"
+              "text": "Identificação de node pools"
             }
           ],
           [
@@ -835,7 +835,7 @@
           [
             {
               "kind": "text",
-              "text": "Métricas brutas"
+              "text": "Raw metrics"
             }
           ],
           [
@@ -847,7 +847,7 @@
           [
             {
               "kind": "text",
-              "text": "Os dados de identificação dos pools de nós estão disponíveis para o período analisado."
+              "text": "Os dados de identificação dos node pools estão disponíveis para o período analisado."
             }
           ]
         ],
@@ -855,7 +855,7 @@
           [
             {
               "kind": "text",
-              "text": "Utilização dos nós"
+              "text": "Utilização dos nodes"
             }
           ],
           [
@@ -868,7 +868,7 @@
           [
             {
               "kind": "text",
-              "text": "Regra de gravação"
+              "text": "Recording rule"
             }
           ],
           [
@@ -880,7 +880,7 @@
           [
             {
               "kind": "text",
-              "text": "Os dados de utilização dos nós estão disponíveis para o período analisado."
+              "text": "Os dados de utilização dos nodes estão disponíveis para o período analisado."
             }
           ]
         ],
@@ -888,7 +888,7 @@
           [
             {
               "kind": "text",
-              "text": "Escalonamento automático de nós"
+              "text": "Autoscaling de nodes"
             }
           ],
           [
@@ -901,7 +901,7 @@
           [
             {
               "kind": "text",
-              "text": "Métricas brutas"
+              "text": "Raw metrics"
             }
           ],
           [
@@ -913,7 +913,7 @@
           [
             {
               "kind": "text",
-              "text": "Os dados de escalonamento automático dos nós estão disponíveis para o período analisado."
+              "text": "Os dados de autoscaling dos nodes estão disponíveis para o período analisado."
             }
           ]
         ]
@@ -941,7 +941,7 @@
           [
             {
               "kind": "text",
-              "text": "1 carga de trabalho deixada de fora por não ter consumo observado no período."
+              "text": "1 workload deixado de fora por não ter consumo observado no período."
             }
           ]
         ],
@@ -949,7 +949,7 @@
           [
             {
               "kind": "text",
-              "text": "1 Job foi deixado de fora do inventário de cargas de trabalho; o consumo continua contabilizado no total do namespace."
+              "text": "1 Job foi deixado de fora do inventário de workloads; o consumo continua contabilizado no total do namespace."
             }
           ]
         ]
