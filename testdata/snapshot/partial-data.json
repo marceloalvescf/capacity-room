@@ -139,7 +139,20 @@
         ]
       }
     ],
-    "warnings": [],
+    "warnings": [
+      {
+        "code": "METRICS_NOT_FOUND",
+        "params": {}
+      },
+      {
+        "code": "WORKLOAD_INVENTORY_INCOMPLETE",
+        "params": {}
+      },
+      {
+        "code": "NODEPOOL_LABELS_NOT_FOUND",
+        "params": {}
+      }
+    ],
     "notices": [],
     "collection_started_at": "2026-07-15T14:30:00-03:00",
     "collection_completed_at": "2026-07-15T14:30:42-03:00"

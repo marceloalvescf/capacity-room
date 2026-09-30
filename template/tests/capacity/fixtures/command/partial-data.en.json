@@ -852,6 +852,50 @@
           ]
         ]
       ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Interpretation notes"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "interpretation-notes",
+      "headers": [
+        "Remark"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "The required metrics were not found."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "The inventory of workloads or of HPA targets is incomplete."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "The node pool labels were not found."
+            }
+          ]
+        ]
+      ]
     }
   ]
 }

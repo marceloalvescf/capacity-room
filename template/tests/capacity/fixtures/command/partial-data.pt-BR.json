@@ -852,6 +852,50 @@
           ]
         ]
       ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Avisos de interpretação"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "interpretation-notes",
+      "headers": [
+        "Observação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "As métricas necessárias não foram encontradas."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "O inventário de workloads ou alvos de HPA está incompleto."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Os labels de node pools não foram encontrados."
+            }
+          ]
+        ]
+      ]
     }
   ]
 }
