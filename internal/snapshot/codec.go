@@ -681,13 +681,14 @@ func paramsEqual(a, b map[string]float64) bool {
 	return true
 }
 
-// checkMessageCodes refuses a warning or a notice whose code is not one of
-// collect.WarningCodes or collect.NoticeCodes, the one registry of what a
+// checkMessageCodes refuses a warning whose code is not one of
+// collect.WarningCodes or discovery.ReasonCodes, a notice whose code is not
+// one of collect.NoticeCodes, the one registry of what a
 // collector can raise, and a message repeated in its own list, by code and
 // parameters.
 func checkMessageCodes(warnings, notices []Message) error {
 	for i, m := range warnings {
-		if !slices.Contains(collect.WarningCodes, m.Code) {
+		if !slices.Contains(collect.WarningCodes, m.Code) && !slices.Contains(discovery.ReasonCodes, m.Code) {
 			return fmt.Errorf("quality.warnings[%d].code has an unknown value: %q", i, m.Code)
 		}
 	}

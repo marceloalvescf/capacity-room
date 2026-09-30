@@ -1,6 +1,7 @@
 package document
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
@@ -109,6 +110,10 @@ func buildNotes(b *builder, s snapshot.Snapshot) []Block {
 	}
 
 	for _, w := range s.Quality.Warnings {
+		if slices.Contains(discovery.ReasonCodes, w.Code) {
+			add(b.text(catalog.CapabilityReason(w.Code), nil))
+			continue
+		}
 		add(b.text(catalog.Warning(w.Code), nil))
 	}
 	for _, n := range s.Quality.Notices {

@@ -29,6 +29,30 @@ func TestNotesOfRawFallback(t *testing.T) {
 	}
 }
 
+func TestNotesRenderAReasonCode(t *testing.T) {
+	s := baseSnapshot(t)
+	s.Quality.Warnings = []snapshot.Message{
+		{Code: "METRICS_NOT_FOUND", Params: map[string]float64{}},
+	}
+	cat := mustCatalog(t, catalog.PortugueseBrazil)
+	doc := mustBuild(t, s, cat, Options{})
+
+	table := findTable(t, doc.Blocks, "interpretation-notes")
+	want, err := cat.Text(catalog.CapabilityReason("METRICS_NOT_FOUND"), nil)
+	if err != nil {
+		t.Fatalf("Text(CapabilityReason): %v", err)
+	}
+	found := 0
+	for _, row := range table.Rows {
+		if runText(t, row[0][0]) == want {
+			found++
+		}
+	}
+	if found != 1 {
+		t.Errorf("the sentence of METRICS_NOT_FOUND appears %d times among the notes, want 1", found)
+	}
+}
+
 func TestNotesChooseThePlural(t *testing.T) {
 	cat := mustCatalog(t, catalog.English)
 

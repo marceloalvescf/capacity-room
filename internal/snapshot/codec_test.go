@@ -594,6 +594,20 @@ func TestCheckAcceptsBoundaries(t *testing.T) {
 	}
 }
 
+func TestCheckAcceptsAReasonCodeAsWarning(t *testing.T) {
+	snap := validSnapshot(t)
+	snap.Quality.Warnings = []Message{{Code: "METRICS_NOT_FOUND", Params: map[string]float64{}}}
+	if err := snap.Check(); err != nil {
+		t.Errorf("Check with a reason code as warning = %v, want nil", err)
+	}
+
+	snap.Quality.Warnings = []Message{{Code: "NOT_A_CODE", Params: map[string]float64{}}}
+	err := snap.Check()
+	if err == nil || !strings.Contains(err.Error(), `NOT_A_CODE`) {
+		t.Errorf("Check with an unknown code = %v, want a refusal naming NOT_A_CODE", err)
+	}
+}
+
 func TestBuildOutputAlwaysPassesDecode(t *testing.T) {
 	cfg := config.Default()
 	cfg.Metrics.URL = "https://prom.example.org"

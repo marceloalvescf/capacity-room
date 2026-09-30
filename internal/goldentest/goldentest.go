@@ -161,6 +161,10 @@ func run(ctx context.Context, scenario promtest.Scenario) (runOutput, *promtest.
 		return runOutput{}, nil, fmt.Errorf("%s: collecting: %w", scenario.Name, err)
 	}
 
+	if err := collect.CheckUseful(collected); err != nil {
+		return runOutput{}, nil, fmt.Errorf("%s: checking the collection: %w", scenario.Name, err)
+	}
+
 	findings := analysis.All(collected, cfg.Thresholds)
 
 	snap, err := snapshot.Build(snapshot.Input{
