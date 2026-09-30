@@ -48,14 +48,17 @@ func TestRegistriesOfCodes(t *testing.T) {
 	}
 }
 
-// TestNoticeAndWarningCodesGrew holds the nine warnings and three notices,
+// TestNoticeAndWarningCodesGrew holds the eleven warnings and three notices,
 // and the count parameter of the newest notice.
 func TestNoticeAndWarningCodesGrew(t *testing.T) {
-	if len(WarningCodes) != 9 {
-		t.Fatalf("len(WarningCodes) = %d, want 9", len(WarningCodes))
+	if len(WarningCodes) != 11 {
+		t.Fatalf("len(WarningCodes) = %d, want 11", len(WarningCodes))
 	}
 	if WarningCodes[7] != "HPA_AMBIGUOUS_SPEC" || WarningCodes[8] != "HPA_AMBIGUOUS_TARGET" {
-		t.Errorf("WarningCodes[7:] = %v, want HPA_AMBIGUOUS_SPEC, HPA_AMBIGUOUS_TARGET", WarningCodes[7:])
+		t.Errorf("WarningCodes[7:9] = %v, want HPA_AMBIGUOUS_SPEC, HPA_AMBIGUOUS_TARGET", WarningCodes[7:9])
+	}
+	if WarningCodes[9] != "NODE_IDENTITY_UNAVAILABLE" || WarningCodes[10] != "NODE_CAPACITY_EVIDENCE_INCOMPLETE" {
+		t.Errorf("WarningCodes[9:] = %v, want NODE_IDENTITY_UNAVAILABLE, NODE_CAPACITY_EVIDENCE_INCOMPLETE", WarningCodes[9:])
 	}
 	if len(NoticeCodes) != 3 {
 		t.Fatalf("len(NoticeCodes) = %d, want 3", len(NoticeCodes))

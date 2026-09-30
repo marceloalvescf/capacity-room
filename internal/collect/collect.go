@@ -68,6 +68,8 @@ const (
 	WarningHPAAmbiguousSpec                   = "HPA_AMBIGUOUS_SPEC"
 	WarningHPAAmbiguousTarget                 = "HPA_AMBIGUOUS_TARGET"
 	NoticeWorkloadsOmittedScaleZero           = "WORKLOADS_OMITTED_SCALE_ZERO"
+	WarningNodeIdentityUnavailable            = "NODE_IDENTITY_UNAVAILABLE"
+	WarningNodeCapacityEvidenceIncomplete     = "NODE_CAPACITY_EVIDENCE_INCOMPLETE"
 )
 
 // WarningCodes lists every warning code, in the order above.
@@ -81,6 +83,8 @@ var WarningCodes = []string{
 	WarningWorkloadHistoryCurrentAssociation,
 	WarningHPAAmbiguousSpec,
 	WarningHPAAmbiguousTarget,
+	WarningNodeIdentityUnavailable,
+	WarningNodeCapacityEvidenceIncomplete,
 }
 
 // NoticeCodes lists every notice code, in the order above.
