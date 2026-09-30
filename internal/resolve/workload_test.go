@@ -46,6 +46,42 @@ func TestJobIsNotRolledUp(t *testing.T) {
 	}
 }
 
+// TestLastRecordWins pins that, when two records name the same pod, or two
+// records name the same replica set, the last one in the list wins: a
+// faithful port of the original, whose dict comprehension and loop both
+// keep the last assignment to a repeated key.
+func TestLastRecordWins(t *testing.T) {
+	t.Run("two records name one pod", func(t *testing.T) {
+		resolved := Workloads(
+			[]Owner{
+				{Namespace: "payments", Child: "api-0", OwnerKind: "Deployment", OwnerName: "first"},
+				{Namespace: "payments", Child: "api-0", OwnerKind: "Deployment", OwnerName: "second"},
+			},
+			nil,
+		)
+		got := resolved[Pod{Namespace: "payments", Name: "api-0"}]
+		want := Identity{Namespace: "payments", Kind: "Deployment", Name: "second"}
+		if got != want {
+			t.Errorf("got %+v, want %+v", got, want)
+		}
+	})
+
+	t.Run("two records name one replica set", func(t *testing.T) {
+		resolved := Workloads(
+			[]Owner{{Namespace: "payments", Child: "api-abc-123", OwnerKind: "ReplicaSet", OwnerName: "api-abc"}},
+			[]Owner{
+				{Namespace: "payments", Child: "api-abc", OwnerKind: "Deployment", OwnerName: "first"},
+				{Namespace: "payments", Child: "api-abc", OwnerKind: "Deployment", OwnerName: "second"},
+			},
+		)
+		got := resolved[Pod{Namespace: "payments", Name: "api-abc-123"}]
+		want := Identity{Namespace: "payments", Kind: "Deployment", Name: "second"}
+		if got != want {
+			t.Errorf("got %+v, want %+v", got, want)
+		}
+	})
+}
+
 func TestPodWithoutOwnerStandsAlone(t *testing.T) {
 	resolved := Workloads(
 		[]Owner{{Namespace: "ops", Child: "debug", OwnerKind: "", OwnerName: ""}},

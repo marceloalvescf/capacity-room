@@ -346,6 +346,21 @@ func TestBuildEveryFieldChangesTheBytes(t *testing.T) {
 		}},
 		{"Input.CollectionStarted", func(in *Input) { in.CollectionStarted = in.CollectionStarted.Add(time.Minute) }},
 		{"Input.CollectionCompleted", func(in *Input) { in.CollectionCompleted = in.CollectionCompleted.Add(time.Minute) }},
+		{"Input.Window", func(in *Input) { in.Window.Start = in.Window.Start.Add(-time.Hour) }},
+		{"Input.Collected", func(in *Input) {
+			in.Collected.Workloads.Rows = []collect.Workload{{
+				Namespace: "payments", Kind: "Deployment", Name: "api",
+				RequestsLimitsState: discovery.StateUnavailable, Resources: unavailableResources(),
+			}}
+		}},
+		{"Input.Findings", func(in *Input) {
+			in.Findings = []analysis.Finding{{
+				Code: "NAMESPACE_CPU_REQUEST_ATTENTION", Severity: analysis.SeverityAttention,
+				ScopeType: analysis.ScopeNamespace, ScopeKind: "", ScopeName: "payments",
+				Confidence: discovery.ConfidenceExact,
+				Evidence:   []analysis.Evidence{{Name: "average_percent", Value: 60}, {Name: "peak_percent", Value: 80}},
+			}}
+		}},
 		{"Config.Metrics.TLSVerify", func(in *Input) { in.Config.Metrics.TLSVerify = false }},
 		{"Config.Metrics.TimeoutSeconds", func(in *Input) { in.Config.Metrics.TimeoutSeconds = 99 }},
 		{"Config.Cluster.Namespaces", func(in *Input) {
