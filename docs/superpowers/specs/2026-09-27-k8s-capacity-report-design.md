@@ -76,6 +76,7 @@ reference. That folder is never tracked by Git.
 | Version repeated in seven files | One `VERSION` file | Nothing to keep in step |
 | Tests skip when a tool is missing | Tests fail when a tool is missing | A skipped gate is not a checked gate |
 | Test harness and tooling in Python | Everything in Go, frontend in TypeScript | One toolchain per side |
+| Portuguese sentences translate every term: solicitação, limite, carga de trabalho, pool de nós | Every technical term is English in both languages; only a common noun is Portuguese | Owner's decision of 2026-09-30: Brazilian readers use the Kubernetes vocabulary in English |
 
 Accepted consequences:
 
@@ -451,22 +452,26 @@ two for cores and memory, trailing zeros removed.
 
 ### 9.3 Vocabulary
 
-| Concept | Portuguese | English |
-|---|---|---|
-| request | solicitação | request |
-| limit | limite | limit |
-| workload | carga de trabalho | workload |
-| node pool | pool de nós | node pool |
-| right-sizing | dimensionamento | right-sizing |
-| headroom | margem | headroom |
-| autoscaling | escalonamento automático | autoscaling |
-| throttling | limitação de CPU | CPU throttling |
-| label | rótulo | label |
+Every technical term is written in English in both languages. Only a common
+noun is written in Portuguese. A term is technical when it names a
+Kubernetes or Prometheus object, field, or mechanism.
 
+| Concept | Portuguese report | English report |
+|---|---|---|
+| request, limit, workload, label, node, node pool, replica, autoscaling, autoscaler, recording rule, raw metrics, throttling | the English word | the same |
+| Kubernetes names and finding codes | as they are | as they are |
+| memory, resource, usage, peak, average, coverage, source, remark, period, confidence, headroom, right-sizing | memória, recurso, uso, pico, média, cobertura, fonte, observação, período, confiança, margem, dimensionamento | memory, resource, usage, peak, average, coverage, source, remark, period, confidence, headroom, right-sizing |
+
+- An English noun inside a Portuguese sentence is masculine and takes an
+  English plural: o request, os requests; o workload, os workloads; o node
+  pool, os node pools. A participle or adjective agrees with it.
 - Kubernetes names (`Deployment`, `StatefulSet`, `DaemonSet`, `Job`,
   `CronJob`, `Pod`, namespace, `HPA`, `OOMKill`) and finding codes stay as
   they are in both languages.
-- The Portuguese sentences are carried over unchanged from the original.
+- The Portuguese sentences follow the sense of the original and its
+  numbers; their words follow this table. The guard of the catalog bans the
+  translations of the first row in Portuguese, and English function words
+  beside them.
 - No em-dash inside a sentence. The em-dash alone is the mark for an empty
   table cell.
 - The node pool marker `unknown` is never shown raw. It reads *Indeterminado*

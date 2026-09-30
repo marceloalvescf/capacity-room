@@ -37,3 +37,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A namespace of the configuration, or a workload that the endpoint answers,
   whose name holds a slash stops the run, because no name of Kubernetes
   holds one.
+
+### Changed
+
+- The Portuguese report writes the technical terms of Kubernetes in English:
+  request, limit, workload, node, node pool, label, and autoscaling.

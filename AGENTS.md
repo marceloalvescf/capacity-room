@@ -94,6 +94,12 @@ image build enforce.
 No guard checks these. The reviewer of each task does.
 
 - **Diagnostics are in English.** This covers errors, logs, and help text.
+- **Technical terms are English in both languages.** A Portuguese sentence
+  writes request, limit, workload, node, node pool, label, replica,
+  autoscaling, recording rule, raw metrics, and throttling as English words,
+  masculine, with an English plural. Only a common noun is Portuguese. The
+  guard bans the translations; the reviewer judges the border cases against
+  the table of spec 9.3.
 - **Nothing else declares a version** without a test that compares it with
   `VERSION`.
 - **The wording guard reads text, not meaning.** It lets through one word
