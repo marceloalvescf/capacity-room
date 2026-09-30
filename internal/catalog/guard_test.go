@@ -681,6 +681,8 @@ func bannedTermsFor(lang Language) (anyCase map[string]bool, phrases [][]string,
 			"unknown", "memory",
 			"the", "is", "are", "was", "were", "not", "found", "with", "from",
 			"omitted", "cannot", "may", "only", "uses",
+			"and", "of", "for", "by", "on", "to", "in", "an", "be", "could",
+			"this", "that", "between", "without", "usage", "coverage",
 		)
 		phrases = [][]string{
 			{"carga", "de", "trabalho"}, {"cargas", "de", "trabalho"},
@@ -792,6 +794,18 @@ func TestBannedTermsFinder(t *testing.T) {
 			lang: PortugueseBrazil,
 			text: "Utilização dos nós.",
 			want: []string{"nós"},
+		},
+		{
+			name: "an english sentence made of allowed nouns",
+			lang: PortugueseBrazil,
+			text: "Coverage data for workloads without HPA",
+			want: []string{"coverage", "for", "without"},
+		},
+		{
+			name: "an english sentence with no verb",
+			lang: PortugueseBrazil,
+			text: "Data on resource requests and limits",
+			want: []string{"on", "and"},
 		},
 		{
 			name: "node pool is allowed and nodepool is not",
