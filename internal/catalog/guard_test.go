@@ -369,8 +369,8 @@ func TestEveryWarningHasItsEntry(t *testing.T) {
 	pt := fileEntries(t, PortugueseBrazil)
 	en := fileEntries(t, English)
 
-	if len(collect.WarningCodes) != 7 {
-		t.Fatalf("collect.WarningCodes has %d codes, want 7", len(collect.WarningCodes))
+	if len(collect.WarningCodes) != 11 {
+		t.Fatalf("collect.WarningCodes has %d codes, want 11", len(collect.WarningCodes))
 	}
 
 	for _, code := range collect.WarningCodes {
@@ -399,8 +399,8 @@ func TestEveryNoticeHasBothEntries(t *testing.T) {
 	pt := fileEntries(t, PortugueseBrazil)
 	en := fileEntries(t, English)
 
-	if len(collect.NoticeCodes) != 2 {
-		t.Fatalf("collect.NoticeCodes has %d codes, want 2", len(collect.NoticeCodes))
+	if len(collect.NoticeCodes) != 3 {
+		t.Fatalf("collect.NoticeCodes has %d codes, want 3", len(collect.NoticeCodes))
 	}
 
 	for _, code := range collect.NoticeCodes {

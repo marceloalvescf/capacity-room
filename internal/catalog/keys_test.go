@@ -58,8 +58,8 @@ func TestKeysHoldTheNewFamilies(t *testing.T) {
 		}
 	}
 
-	if len(collect.WarningCodes) != 7 {
-		t.Fatalf("collect.WarningCodes has %d codes, want 7", len(collect.WarningCodes))
+	if len(collect.WarningCodes) != 11 {
+		t.Fatalf("collect.WarningCodes has %d codes, want 11", len(collect.WarningCodes))
 	}
 	for _, code := range collect.WarningCodes {
 		if !keys[Warning(code)] {
@@ -67,8 +67,8 @@ func TestKeysHoldTheNewFamilies(t *testing.T) {
 		}
 	}
 
-	if got := len(collect.NoticeCodes) * 2; got != 4 {
-		t.Fatalf("collect.NoticeCodes yields %d entries, want 4", got)
+	if got := len(collect.NoticeCodes) * 2; got != 6 {
+		t.Fatalf("collect.NoticeCodes yields %d entries, want 6", got)
 	}
 	for _, code := range collect.NoticeCodes {
 		if !keys[Notice(code, 1)] {

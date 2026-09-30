@@ -182,6 +182,10 @@ WORKLOAD_USAGE_INCOMPLETE = "As métricas de uso dos workloads estão incompleta
 WORKLOAD_REQUESTS_LIMITS_INCOMPLETE = "As métricas de requests e limits dos workloads estão incompletas."
 WORKLOAD_REQUESTS_LIMITS_UNAVAILABLE = "As métricas de requests e limits dos workloads estão indisponíveis."
 WORKLOAD_HISTORY_CURRENT_ASSOCIATION = "O histórico usa a associação atual entre pods ativos e workloads."
+HPA_AMBIGUOUS_SPEC = "Valores ambíguos de configuração ou alvo de HPA foram omitidos."
+HPA_AMBIGUOUS_TARGET = "Alvos ambíguos de HPA impedem uma cobertura confiável dos workloads."
+NODE_IDENTITY_UNAVAILABLE = "As métricas de identidade dos nodes estão indisponíveis."
+NODE_CAPACITY_EVIDENCE_INCOMPLETE = "As evidências de capacidade dos nodes estão incompletas."
 
 [notice.WORKLOADS_OMITTED_NO_USAGE]
 singular = "1 workload deixado de fora por não ter consumo observado no período."
@@ -190,3 +194,7 @@ plural = "{{.Count}} workloads deixados de fora por não terem consumo observado
 [notice.JOBS_OMITTED]
 singular = "1 Job foi deixado de fora do inventário de workloads; o consumo continua contabilizado no total do namespace."
 plural = "{{.Count}} Jobs foram deixados de fora do inventário de workloads; o consumo continua contabilizado nos totais dos namespaces."
+
+[notice.WORKLOADS_OMITTED_SCALE_ZERO]
+singular = "1 workload deixado de fora do inventário de cobertura por estar com escala zero."
+plural = "{{.Count}} workloads deixados de fora do inventário de cobertura por estarem com escala zero."
