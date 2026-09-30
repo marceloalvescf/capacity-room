@@ -6,6 +6,10 @@
   "step": "5m",
   "namespace_collection": "available",
   "workload_collection": "available",
+  "hpa_collection": "unavailable",
+  "hpa_coverage_collection": "partial",
+  "node_collection": "partial",
+  "autoscaling_status": "unknown",
   "namespaces": [
     {
       "namespace": "payments",
@@ -164,6 +168,64 @@
       }
     }
   ],
+  "hpas": [],
+  "workloads_without_hpa": [
+    {
+      "namespace": "payments",
+      "kind": "StatefulSet",
+      "name": "payments-worker"
+    }
+  ],
+  "nodes": [
+    {
+      "name": "node-1",
+      "pool": "pool-a",
+      "pool_confidence": "exact",
+      "cpu_capacity": 4.0,
+      "memory_capacity": 8.0,
+      "cpu_allocatable": 4.0,
+      "memory_allocatable": 8.0,
+      "cpu_usage_percent": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": false
+      },
+      "memory_usage_percent": {
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null,
+        "no_base": false
+      },
+      "cpu_request_percent": 25.0,
+      "memory_request_percent": 25.0,
+      "ready": true,
+      "schedulable": true
+    }
+  ],
+  "nodepools": [
+    {
+      "name": "pool-a",
+      "confidence": "exact",
+      "nodes": [
+        "node-1"
+      ]
+    }
+  ],
+  "autoscaling": {
+    "status": "unknown",
+    "source": "none",
+    "confidence": "unknown",
+    "managed_node_groups": null,
+    "current_nodes": null,
+    "min_nodes": null,
+    "max_nodes": null,
+    "scale_events": null,
+    "unschedulable_pods": null
+  },
+  "node_pressure": false,
   "findings": [
     {
       "code": "WORKLOAD_MEMORY_LIMIT_CRITICAL",
@@ -200,6 +262,15 @@
           24000.0
         ]
       ]
+    },
+    {
+      "code": "NODE_AUTOSCALING_UNKNOWN",
+      "severity": "attention",
+      "scope_type": "cluster",
+      "scope_kind": "",
+      "scope_name": "cluster",
+      "confidence": "unknown",
+      "evidence": []
     },
     {
       "code": "NAMESPACE_CPU_LIMIT_MISSING",
@@ -272,8 +343,21 @@
           40.0
         ]
       ]
+    },
+    {
+      "code": "STATEFULSET_WITHOUT_HPA_INFO",
+      "severity": "healthy",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/payments-worker",
+      "confidence": "exact",
+      "evidence": []
     }
   ],
-  "warnings": [],
+  "warnings": [
+    "As métricas necessárias não foram encontradas.",
+    "O inventário de cargas de trabalho ou alvos de HPA está incompleto.",
+    "Os rótulos de pools de nós não foram encontrados."
+  ],
   "notices": []
 }

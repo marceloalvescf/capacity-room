@@ -13,7 +13,7 @@ committed.
 
 | File | Holds |
 |---|---|
-| `<scenario>.json` | The namespaces, the workloads, the findings of namespaces and workloads, and the warnings and notices of the two collectors |
+| `<scenario>.json` | The namespaces, the workloads, the HPAs, the workloads without an HPA, the nodes, the node pools, the cluster autoscaling evidence, the node pressure, every finding, and the warnings and notices of the five collectors |
 | `<scenario>.queries.txt` | Every request the original sends for the scenario, in order, one line for each: the path, a tab, the query |
 
 There is one pair of files for each of the seven scenarios: the six of
@@ -23,31 +23,42 @@ In a `.json` file:
 
 - `period_start`, `period_end`, and `step` are the window of the range
   queries, in seconds since the epoch, and the step.
-- `namespace_collection` and `workload_collection` are the states that the
-  two collectors report.
+- `namespace_collection`, `workload_collection`, `hpa_collection`,
+  `hpa_coverage_collection`, and `node_collection` are the states that the
+  five collectors report, and `autoscaling_status` is the status of the
+  cluster autoscaling evidence: `enabled`, `disabled`, or `unknown`.
 - A statistic holds `average`, `minimum`, `peak`, and `current`, each a
   number or `null`, and `no_base`. Four `null` with `no_base` false mean that
   the value could not be measured. `no_base` true means that the base of the
   ratio does not exist.
-- The evidence of a finding is a list of pairs, a name and a value. The pair
-  `approximate` is a mark of the original that this project does not store:
-  the confidence `inferred` of the finding says the same.
-- The warnings and notices are the sentences of the original, in Portuguese.
+- An HPA holds its target kind and name, its two specs, each a number or
+  `null`, and the statistics of its current and desired replicas.
+- A node holds its pool and the confidence of the pool, four capacities,
+  each a number or `null`, the two usage statistics, and the two request
+  percents, each the `average` of the original's statistic or `null`, and
+  `ready` and `schedulable`, each `true`, `false`, or `null`.
+- A node pool holds its name, its confidence, and the names of its nodes.
+- The cluster autoscaling evidence holds its status, source, and
+  confidence, and six numbers, each a number or `null`.
+- `node_pressure` is what the original computes from the findings of the
+  nodes and of the node pools.
+- The evidence of a finding is a list of pairs, a name and a value. A value
+  is a number, `true` or `false`, or a text, as the original writes it. The
+  pair `approximate` is a mark of the original that this project does not
+  store: the confidence `inferred` of the finding says the same.
+- The warnings and notices are the sentences of the original, in Portuguese,
+  in the order namespace, workload, hpa, hpa coverage, node, each once.
 - A number is written as Python writes it, which is the shortest text that
   reads back as the same number.
 
-The original sends more requests than this project does yet: after the
-queries of the namespaces and of the workloads come those of the
-autoscalers, the nodes, and the cluster autoscaling. The list of this
-project for a scenario is the beginning of the list of the original.
-
 ## How it was recorded
 
-- Date: 2026-09-29.
+- Date: 2026-09-30. The query lists were recorded again on that date and
+  did not change from the recording of 2026-09-29.
 - Source: `kubernetes-report` 1.11.0, imported from its source folder.
 - Python 3.14.7 with `requests` 2.34.2, in an environment of its own.
 - The answers were served by `cmd/fake-prometheus` of this project, built
-  from the commit `cf7bea0`, so that both tools read the same answers from
+  from the commit `e6c532e`, so that both tools read the same answers from
   the same server.
 - The input is the fixed input of the golden files of this project: cluster
   `prod`, namespace `payments`, excluded container `istio-proxy`, period
@@ -66,13 +77,13 @@ changed.
 ## SHA-256
 
 ```text
-18f290a55767dd814cda16d14ef93c483eda5f9d38cdfb4f69924d3aabe33d59  direct-complete.json
-a1be74c8d80ae404974fed5232aedbf5fb7defb8bac58f9af5287d1080aac7da  edge-values.json
-9b808a1f8f9b5c3817cdcb638d7f866c2af8293bb5d5d3de346407f2b9d6ff66  grafana-authenticated.json
-42d1c939dd7955646813223c92f027dbfdad9eabcd2b270cbbcfb3174403c311  partial-data.json
-01f184b2d571773814e7d09ef47e681263d01f06fcf6c0ce6bec4aee8b9f7ce2  raw-fallback.json
-b3512df844626e8260426ea89b72cd92f6cc53567c8b53110699282a26a89a33  thanos-multicluster.json
-c465e4f885cd3f997badc85c9e9ce5f30ac954db428d27c717ac95cb69f43338  value-edge-cases.json
+0b8c536e6540f1f78be730180a185977cab053049a1665a0df44e5635735f483  direct-complete.json
+2119d8db5ae47393789134b5a9c529e78f59a39a165d1aa735256a83b676665b  edge-values.json
+af6dacd88fa5f7bf4621b53c92243a62c99b3d17b38bcd0a82c6aa3b0134363d  grafana-authenticated.json
+f7248d344bc709270d7d9d14a43eaf6e57908e4ece8e872f29801d460b28cff6  partial-data.json
+7d1dd022702a34059a1e9e16b08c4f73c48da1d43aba33dbb796116bd1ceed5a  raw-fallback.json
+1406129bc402d2d494b9efc6fc5405ecae2fce1c3729025c7ece2921908ddc0d  thanos-multicluster.json
+79fc52777ea677af285cc572722cb8becf96b78bf9840a39b997fb02a77e132b  value-edge-cases.json
 51ea605045169cf7397bef8c6887d931ad86fb4c0d7c03b639645f68cd33a540  direct-complete.queries.txt
 51ea605045169cf7397bef8c6887d931ad86fb4c0d7c03b639645f68cd33a540  edge-values.queries.txt
 d538e9fc978df2e9fb8789da1ec1d713b1c9593bbd429e82b7dcc1475870982d  grafana-authenticated.queries.txt
