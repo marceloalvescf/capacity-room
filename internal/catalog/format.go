@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"math"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -23,12 +24,16 @@ func (c *Catalog) Integer(n int) string {
 }
 
 // Decimal writes value with digits decimals, trims the trailing zeros and
-// then a decimal mark left at the end, and uses the comma in Portuguese and
-// the point in English. It adds no thousands separator.
+// then a decimal mark left after it, and uses the comma in Portuguese and
+// the point in English. It adds no thousands separator. With digits zero,
+// strconv.FormatFloat writes no decimal mark at all, so nothing is trimmed:
+// a whole number keeps every one of its own digits.
 func (c *Catalog) Decimal(value float64, digits int) string {
 	rendered := strconv.FormatFloat(value, 'f', digits, 64)
-	rendered = strings.TrimRight(rendered, "0")
-	rendered = strings.TrimRight(rendered, ".")
+	if strings.Contains(rendered, ".") {
+		rendered = strings.TrimRight(rendered, "0")
+		rendered = strings.TrimRight(rendered, ".")
+	}
 	if c.lang == PortugueseBrazil {
 		rendered = strings.Replace(rendered, ".", ",", 1)
 	}
@@ -66,7 +71,12 @@ func (c *Catalog) Memory(bytes float64) string {
 }
 
 // Count rounds value to the nearest whole number, a half to the even one,
-// and writes it with no separator.
+// and writes it with no separator, whatever its magnitude: it never passes
+// through a fixed-width integer type, which the original's arbitrary
+// precision round() and str() have no equivalent of, so a value beyond an
+// int64's range is written out in full rather than saturated.
 func (c *Catalog) Count(value float64) string {
-	return strconv.Itoa(int(math.RoundToEven(value)))
+	rounded := math.RoundToEven(value)
+	whole, _ := new(big.Float).SetFloat64(rounded).Int(nil)
+	return whole.String()
 }

@@ -121,6 +121,33 @@ func TestDecimal(t *testing.T) {
 	}
 }
 
+// TestDecimalWithZeroDigits checks that Decimal with zero digits trims no
+// digit of a whole number: only a zero after a decimal mark is trimmed, and
+// with no decimal mark at all, nothing changes.
+func TestDecimalWithZeroDigits(t *testing.T) {
+	tests := []struct {
+		value float64
+		want  string
+	}{
+		{value: 30, want: "30"},
+		{value: 100, want: "100"},
+		{value: 0, want: "0"},
+		{value: 0.4, want: "0"},
+		{value: 12.5, want: "12"},
+	}
+
+	en, err := Load(English)
+	if err != nil {
+		t.Fatalf("Load(en): %v", err)
+	}
+
+	for _, tt := range tests {
+		if got := en.Decimal(tt.value, 0); got != tt.want {
+			t.Errorf("Decimal(%v, 0) = %q, want %q", tt.value, got, tt.want)
+		}
+	}
+}
+
 func TestPercent(t *testing.T) {
 	tests := []struct {
 		value float64
@@ -226,6 +253,36 @@ func TestCount(t *testing.T) {
 		{value: 2.5, want: "2"},
 		{value: 3.5, want: "4"},
 		{value: 3, want: "3"},
+	}
+
+	for _, lang := range Languages() {
+		cat, err := Load(lang)
+		if err != nil {
+			t.Fatalf("Load(%q): %v", lang, err)
+		}
+		for _, tt := range tests {
+			if got := cat.Count(tt.value); got != tt.want {
+				t.Errorf("%s Count(%v) = %q, want %q", lang, tt.value, got, tt.want)
+			}
+		}
+	}
+}
+
+// TestCountBeyondAnInteger checks that Count writes a value beyond an
+// int64's range, or one whose float64 form already lost precision, exactly
+// as Python's str(round(value)) does for the same double.
+func TestCountBeyondAnInteger(t *testing.T) {
+	tests := []struct {
+		value float64
+		want  string
+	}{
+		{value: 1e21, want: "1000000000000000000000"},
+		{value: 9007199254740993, want: "9007199254740992"},
+		{value: 1e15, want: "1000000000000000"},
+		{value: 2.5, want: "2"},
+		{value: 3.5, want: "4"},
+		{value: 0, want: "0"},
+		{value: 0.4, want: "0"},
 	}
 
 	for _, lang := range Languages() {
