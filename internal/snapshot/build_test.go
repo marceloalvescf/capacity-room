@@ -358,7 +358,7 @@ func TestBuildEveryFieldChangesTheBytes(t *testing.T) {
 				Code: "NAMESPACE_CPU_REQUEST_ATTENTION", Severity: analysis.SeverityAttention,
 				ScopeType: analysis.ScopeNamespace, ScopeKind: "", ScopeName: "payments",
 				Confidence: discovery.ConfidenceExact,
-				Evidence:   []analysis.Evidence{{Name: "average_percent", Value: 60}, {Name: "peak_percent", Value: 80}},
+				Evidence:   []analysis.Evidence{{Name: "average_percent", Value: analysis.Number(60)}, {Name: "peak_percent", Value: analysis.Number(80)}},
 			}}
 		}},
 		{"Config.Metrics.TLSVerify", func(in *Input) { in.Config.Metrics.TLSVerify = false }},
@@ -683,7 +683,7 @@ func TestBuildCopiesEveryRow(t *testing.T) {
 			continue
 		}
 		for j, e := range want.Evidence {
-			if got.Evidence[j].Name != e.Name || got.Evidence[j].Value != e.Value {
+			if got.Evidence[j].Name != e.Name || got.Evidence[j].Value.Kind != string(e.Value.Kind) || got.Evidence[j].Value.Number != e.Value.Number {
 				t.Errorf("Findings[%d].Evidence[%d] = %+v, want %+v", i, j, got.Evidence[j], e)
 			}
 		}

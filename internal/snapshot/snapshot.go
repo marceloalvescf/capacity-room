@@ -156,10 +156,19 @@ type Workload struct {
 	MemoryLimitPercent   Statistics `json:"memory_limit_percent"`
 }
 
-// Evidence is one named number of a finding.
+// Value is the value of an evidence as the snapshot writes it: a JSON
+// number, boolean, or string, one of the three.
+type Value struct {
+	Kind    string // "number", "boolean", "text"
+	Number  float64
+	Boolean bool
+	Text    string
+}
+
+// Evidence is one named value of a finding.
 type Evidence struct {
-	Name  string  `json:"name"`
-	Value float64 `json:"value"`
+	Name  string `json:"name"`
+	Value Value  `json:"value"`
 }
 
 // Finding is one judgment of the analysis, spec 7.1. It carries no

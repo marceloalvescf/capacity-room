@@ -698,7 +698,7 @@ func typePaths(t reflect.Type, prefix string) []string {
 			path = prefix + "." + name
 		}
 		paths = append(paths, path)
-		if field.Type.Kind() == reflect.Struct {
+		if field.Type.Kind() == reflect.Struct && field.Type != reflect.TypeOf(Value{}) {
 			paths = append(paths, typePaths(field.Type, path)...)
 		}
 	}
@@ -1260,13 +1260,13 @@ func fullSnapshot(t *testing.T) Snapshot {
 			Code: "NAMESPACE_CPU_REQUEST_ATTENTION", Severity: analysis.SeverityAttention,
 			ScopeType: analysis.ScopeNamespace, ScopeKind: "", ScopeName: "payments",
 			Confidence: discovery.ConfidenceExact,
-			Evidence:   []analysis.Evidence{{Name: "average_percent", Value: 60}, {Name: "peak_percent", Value: 80}},
+			Evidence:   []analysis.Evidence{{Name: "average_percent", Value: analysis.Number(60)}, {Name: "peak_percent", Value: analysis.Number(80)}},
 		},
 		{
 			Code: "WORKLOAD_CPU_LIMIT_HEALTHY", Severity: analysis.SeverityHealthy,
 			ScopeType: analysis.ScopeWorkload, ScopeKind: "Deployment", ScopeName: "payments/api",
 			Confidence: discovery.ConfidenceExact,
-			Evidence:   []analysis.Evidence{{Name: "average_percent", Value: 30}, {Name: "peak_percent", Value: 40}},
+			Evidence:   []analysis.Evidence{{Name: "average_percent", Value: analysis.Number(30)}, {Name: "peak_percent", Value: analysis.Number(40)}},
 		},
 	}
 
@@ -1689,25 +1689,25 @@ func TestCheckRules(t *testing.T) {
 			s.Findings[0].ScopeType = analysis.ScopeWorkload
 		}, "findings[0].scope_type does not match the definition of NAMESPACE_MEMORY_LIMIT_CRITICAL"},
 		{"findings[0].evidence does not match its definition", func(s *Snapshot) {
-			s.Findings[0].Evidence = []Evidence{{Name: "only_one", Value: 1}}
+			s.Findings[0].Evidence = []Evidence{{Name: "only_one", Value: numberValue(1)}}
 		}, "findings[0].evidence does not match the definition of NAMESPACE_MEMORY_LIMIT_CRITICAL"},
 		{"findings[0].evidence in another order", func(s *Snapshot) {
 			s.Findings[0].Evidence = []Evidence{
-				{Name: "peak_percent", Value: 12000},
-				{Name: "average_percent", Value: 11000},
+				{Name: "peak_percent", Value: numberValue(12000)},
+				{Name: "average_percent", Value: numberValue(11000)},
 			}
 		}, "findings[0].evidence does not match the definition of NAMESPACE_MEMORY_LIMIT_CRITICAL"},
 		{"findings[0].evidence holds one name twice", func(s *Snapshot) {
 			s.Findings[0].Evidence = []Evidence{
-				{Name: "average_percent", Value: 11000},
-				{Name: "average_percent", Value: 12000},
+				{Name: "average_percent", Value: numberValue(11000)},
+				{Name: "average_percent", Value: numberValue(12000)},
 			}
 		}, "findings[0].evidence does not match the definition of NAMESPACE_MEMORY_LIMIT_CRITICAL"},
 		{"findings[0].confidence unknown", func(s *Snapshot) {
 			s.Findings[0].Confidence = "bogus"
 		}, `findings[0].confidence has an unknown value: "bogus"`},
 		{"findings[0].evidence[0].value not finite", func(s *Snapshot) {
-			s.Findings[0].Evidence[0].Value = math.Inf(1)
+			s.Findings[0].Evidence[0].Value = numberValue(math.Inf(1))
 		}, "findings[0].evidence[0].value is not a finite number"},
 
 		// Rule 8: a namespace finding names a namespace of the snapshot and

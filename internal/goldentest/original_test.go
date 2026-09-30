@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
@@ -68,18 +69,17 @@ type pythonWorkloadRow struct {
 	MemoryLimitPercent   pythonStatistics `json:"memory_limit_percent"`
 }
 
-// pythonEvidencePair is one named number of a recorded finding's evidence.
-// The pair "approximate" carries a boolean rather than a number; its value
-// is not compared (compareEvidence leaves the pair out and compares the
-// finding's confidence instead), so UnmarshalJSON only checks that it
-// reads as one or the other.
+// pythonEvidencePair is one named value of a recorded finding's evidence:
+// a number, a boolean, or a text. The pair "approximate" is not compared
+// (compareEvidence leaves the pair out and compares the finding's
+// confidence instead).
 type pythonEvidencePair struct {
-	Name   string
-	Number float64
+	Name  string
+	Value analysis.Value
 }
 
 // UnmarshalJSON reads a pair written as a two-element JSON array: a name,
-// then a number or a boolean.
+// then a number, a boolean, or a text.
 func (p *pythonEvidencePair) UnmarshalJSON(data []byte) error {
 	var raw []json.RawMessage
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -91,13 +91,21 @@ func (p *pythonEvidencePair) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(raw[0], &p.Name); err != nil {
 		return fmt.Errorf("evidence pair name: %w", err)
 	}
-	if err := json.Unmarshal(raw[1], &p.Number); err == nil {
+	var number float64
+	if err := json.Unmarshal(raw[1], &number); err == nil {
+		p.Value = analysis.Number(number)
 		return nil
 	}
 	var flag bool
-	if err := json.Unmarshal(raw[1], &flag); err != nil {
-		return fmt.Errorf("evidence pair value is neither a number nor a boolean: %w", err)
+	if err := json.Unmarshal(raw[1], &flag); err == nil {
+		p.Value = analysis.Boolean(flag)
+		return nil
 	}
+	var text string
+	if err := json.Unmarshal(raw[1], &text); err != nil {
+		return fmt.Errorf("evidence pair value is neither a number, a boolean, nor a text: %w", err)
+	}
+	p.Value = analysis.Text(text)
 	return nil
 }
 
@@ -383,6 +391,18 @@ func findingLabel(scenario string, key findingKey) string {
 	return fmt.Sprintf("%s: finding %s %s (%s)", scenario, key.Code, key.ScopeName, key.ScopeKind)
 }
 
+// describeValue names the kind of v and what it holds.
+func describeValue(v analysis.Value) string {
+	switch v.Kind {
+	case analysis.KindNumber:
+		return fmt.Sprintf("number %v", v.Number)
+	case analysis.KindBoolean:
+		return fmt.Sprintf("boolean %v", v.Boolean)
+	default:
+		return fmt.Sprintf("%s %q", v.Kind, v.Text)
+	}
+}
+
 // compareEvidence compares the evidence of a matched finding. The pair
 // "approximate" of the recorded evidence is left out: it is compared with
 // the confidence of the finding instead, by the ordinary comparison of
@@ -404,8 +424,9 @@ func compareEvidence(label string, got []snapshot.Evidence, want []pythonEvidenc
 			diffs = append(diffs, fmt.Sprintf("%s: evidence[%d].name: got %q, want %q", label, i, got[i].Name, filtered[i].Name))
 			continue
 		}
-		if got[i].Value != filtered[i].Number {
-			diffs = append(diffs, fmt.Sprintf("%s: evidence[%d].%s: got %v, want %v", label, i, got[i].Name, got[i].Value, filtered[i].Number))
+		gotValue := analysis.Value{Kind: analysis.ValueKind(got[i].Value.Kind), Number: got[i].Value.Number, Boolean: got[i].Value.Boolean, Text: got[i].Value.Text}
+		if gotValue != filtered[i].Value {
+			diffs = append(diffs, fmt.Sprintf("%s: evidence[%d].%s: got %s, want %s", label, i, got[i].Name, describeValue(gotValue), describeValue(filtered[i].Value)))
 		}
 	}
 	return diffs
@@ -989,9 +1010,9 @@ func TestComparisonCanFail(t *testing.T) {
 		want := fresh(t)
 		f := want.Findings[0]
 		key := findingKey{f.Code, f.ScopeName, f.ScopeKind}
-		want.Findings[0].Evidence[0].Number = 56
+		want.Findings[0].Evidence[0].Value = analysis.Number(56)
 		checkExact(t, want, []string{
-			findingLabel(scenario.Name, key) + ": evidence[0].average_percent: got 55, want 56",
+			findingLabel(scenario.Name, key) + ": evidence[0].average_percent: got number 55, want number 56",
 		})
 	})
 
@@ -1104,6 +1125,28 @@ func TestOriginalNoticeTextWritesTheCount(t *testing.T) {
 		}
 		if got != tt.want {
 			t.Errorf("originalNoticeText(%s, %v) = %q, want %q", tt.code, tt.count, got, tt.want)
+		}
+	}
+}
+
+func TestPythonEvidenceReadsThreeKinds(t *testing.T) {
+	cases := []struct {
+		in   string
+		want pythonEvidencePair
+	}{
+		{`["node_pressure", true]`, pythonEvidencePair{"node_pressure", analysis.Boolean(true)}},
+		{`["resources", "cpu,memory"]`, pythonEvidencePair{"resources", analysis.Text("cpu,memory")}},
+		{`["affected_nodes", 1]`, pythonEvidencePair{"affected_nodes", analysis.Number(1)}},
+		{`["average", 1.5]`, pythonEvidencePair{"average", analysis.Number(1.5)}},
+	}
+	for _, c := range cases {
+		var got pythonEvidencePair
+		if err := json.Unmarshal([]byte(c.in), &got); err != nil {
+			t.Errorf("Unmarshal(%s) error = %v", c.in, err)
+			continue
+		}
+		if got != c.want {
+			t.Errorf("Unmarshal(%s) = %+v, want %+v", c.in, got, c.want)
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
@@ -246,19 +247,22 @@ func TestEveryFindingFollowsItsDefinition(t *testing.T) {
 			continue
 		}
 		got := matches[0]
-		if got.Severity != definition.Severity {
-			t.Errorf("%s: Severity = %q, want %q", definition.Code, got.Severity, definition.Severity)
+		if !slices.Contains(definition.Severities, got.Severity) {
+			t.Errorf("%s: Severity = %q, want one of %v", definition.Code, got.Severity, definition.Severities)
 		}
 		if got.ScopeType != definition.ScopeType {
 			t.Errorf("%s: ScopeType = %q, want %q", definition.Code, got.ScopeType, definition.ScopeType)
 		}
 		if len(got.Evidence) != len(definition.Evidence) {
-			t.Errorf("%s: Evidence = %+v, want names %v", definition.Code, got.Evidence, definition.Evidence)
+			t.Errorf("%s: Evidence = %+v, want specs %v", definition.Code, got.Evidence, definition.Evidence)
 			continue
 		}
-		for i, name := range definition.Evidence {
-			if got.Evidence[i].Name != name {
-				t.Errorf("%s: Evidence[%d].Name = %q, want %q", definition.Code, i, got.Evidence[i].Name, name)
+		for i, spec := range definition.Evidence {
+			if got.Evidence[i].Name != spec.Name {
+				t.Errorf("%s: Evidence[%d].Name = %q, want %q", definition.Code, i, got.Evidence[i].Name, spec.Name)
+			}
+			if got.Evidence[i].Value.Kind != spec.Kind {
+				t.Errorf("%s: Evidence[%d].Kind = %q, want %q", definition.Code, i, got.Evidence[i].Value.Kind, spec.Kind)
 			}
 		}
 	}

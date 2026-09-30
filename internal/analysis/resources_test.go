@@ -18,7 +18,7 @@ func valueStats(average, peak float64) collect.Statistics {
 func findEvidence(evidence []Evidence, name string) (float64, bool) {
 	for _, e := range evidence {
 		if e.Name == name {
-			return e.Value, true
+			return e.Value.Number, true
 		}
 	}
 	return 0, false

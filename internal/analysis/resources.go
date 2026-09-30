@@ -98,9 +98,9 @@ func resourceFindings(
 				ScopeKind: scopeKind,
 				ScopeName: scopeName,
 				Evidence: []Evidence{
-					{Name: "average", Value: usage.Average},
-					{Name: "peak", Value: usage.Peak},
-					{Name: "gap_percent", Value: gapPercent},
+					{Name: "average", Value: Number(usage.Average)},
+					{Name: "peak", Value: Number(usage.Peak)},
+					{Name: "gap_percent", Value: Number(gapPercent)},
 				},
 				Confidence: discovery.ConfidenceExact,
 			})
@@ -125,7 +125,7 @@ func higherSeverity(average, peak float64, t config.Thresholds) string {
 // order.
 func percentEvidence(statistics collect.Statistics) []Evidence {
 	return []Evidence{
-		{Name: "average_percent", Value: statistics.Average},
-		{Name: "peak_percent", Value: statistics.Peak},
+		{Name: "average_percent", Value: Number(statistics.Average)},
+		{Name: "peak_percent", Value: Number(statistics.Peak)},
 	}
 }

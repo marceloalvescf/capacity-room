@@ -25,10 +25,43 @@ const (
 	ScopeWorkload  = "workload"
 )
 
-// Evidence is one named number of a finding.
+// ValueKind names the kind an evidence value carries.
+type ValueKind string
+
+// The kinds of an evidence value.
+const (
+	KindNumber  ValueKind = "number"
+	KindBoolean ValueKind = "boolean"
+	KindText    ValueKind = "text"
+)
+
+// Value is the value of an evidence: a number, a boolean, or a text.
+type Value struct {
+	Kind    ValueKind
+	Number  float64
+	Boolean bool
+	Text    string
+}
+
+// Number makes a Value of kind number.
+func Number(v float64) Value { return Value{Kind: KindNumber, Number: v} }
+
+// Boolean makes a Value of kind boolean.
+func Boolean(b bool) Value { return Value{Kind: KindBoolean, Boolean: b} }
+
+// Text makes a Value of kind text.
+func Text(s string) Value { return Value{Kind: KindText, Text: s} }
+
+// Evidence is one named value of a finding.
 type Evidence struct {
 	Name  string
-	Value float64
+	Value Value
+}
+
+// EvidenceSpec names one evidence of a definition and the kind it carries.
+type EvidenceSpec struct {
+	Name string
+	Kind ValueKind
 }
 
 // Finding is one judgment of the analysis. It carries no sentence.
@@ -44,12 +77,12 @@ type Finding struct {
 
 // Definition is what the registry knows of one code.
 type Definition struct {
-	Code      string
-	Family    string
-	Severity  string
-	ScopeType string
-	Params    map[string]string
-	Evidence  []string
+	Code       string
+	Family     string
+	Severities []string // the severities the code may carry, in Severities order
+	ScopeType  string
+	Params     map[string]string
+	Evidence   []EvidenceSpec
 }
 
 // ending describes one of the ten endings of a code, in the order the
@@ -108,14 +141,17 @@ func buildRegistry() []Definition {
 				if e.hasRisk {
 					params["risk"] = resource.risk
 				}
-				evidence := append([]string{}, e.evidence...)
+				evidence := make([]EvidenceSpec, 0, len(e.evidence))
+				for _, name := range e.evidence {
+					evidence = append(evidence, EvidenceSpec{Name: name, Kind: KindNumber})
+				}
 				registry = append(registry, Definition{
-					Code:      prefix.code + "_" + strings.ToUpper(resource.name) + "_" + e.suffix,
-					Family:    e.family,
-					Severity:  e.severity,
-					ScopeType: prefix.scopeType,
-					Params:    params,
-					Evidence:  evidence,
+					Code:       prefix.code + "_" + strings.ToUpper(resource.name) + "_" + e.suffix,
+					Family:     e.family,
+					Severities: []string{e.severity},
+					ScopeType:  prefix.scopeType,
+					Params:     params,
+					Evidence:   evidence,
 				})
 			}
 		}

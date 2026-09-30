@@ -77,11 +77,11 @@ func TestRegistryHoldsFortyCodes(t *testing.T) {
 				if definition.Family != e.family {
 					t.Errorf("%s: Family = %q, want %q", wantCode, definition.Family, e.family)
 				}
-				if definition.Severity != e.severity {
-					t.Errorf("%s: Severity = %q, want %q", wantCode, definition.Severity, e.severity)
+				if !equalStrings(definition.Severities, []string{e.severity}) {
+					t.Errorf("%s: Severities = %v, want %v", wantCode, definition.Severities, []string{e.severity})
 				}
-				if !equalStrings(definition.Evidence, e.evidence) {
-					t.Errorf("%s: Evidence = %v, want %v", wantCode, definition.Evidence, e.evidence)
+				if !equalStrings(evidenceNames(definition), e.evidence) {
+					t.Errorf("%s: Evidence = %v, want %v", wantCode, evidenceNames(definition), e.evidence)
 				}
 				index++
 			}
@@ -140,6 +140,51 @@ func TestRank(t *testing.T) {
 	for _, c := range cases {
 		if got := Rank(c.severity); got != c.want {
 			t.Errorf("Rank(%q) = %d, want %d", c.severity, got, c.want)
+		}
+	}
+}
+
+// evidenceNames lists the evidence names of definition, in order.
+func evidenceNames(definition Definition) []string {
+	names := []string{}
+	for _, spec := range definition.Evidence {
+		names = append(names, spec.Name)
+	}
+	return names
+}
+
+// TestRegistryHoldsTheKindOfEveryEvidence covers the kind of each evidence
+// and the list of severities of each of the 40 definitions.
+func TestRegistryHoldsTheKindOfEveryEvidence(t *testing.T) {
+	if len(Registry) != 40 {
+		t.Fatalf("Registry holds %d definitions, want 40", len(Registry))
+	}
+	for _, definition := range Registry {
+		if len(definition.Severities) != 1 {
+			t.Errorf("%s: Severities = %v, want a list of one", definition.Code, definition.Severities)
+		}
+		for _, spec := range definition.Evidence {
+			if spec.Kind != KindNumber {
+				t.Errorf("%s: evidence %s has kind %q, want %q", definition.Code, spec.Name, spec.Kind, KindNumber)
+			}
+		}
+	}
+}
+
+// TestValueConstructors covers the three constructors of Value.
+func TestValueConstructors(t *testing.T) {
+	cases := []struct {
+		name string
+		got  Value
+		want Value
+	}{
+		{"number", Number(4.5), Value{Kind: KindNumber, Number: 4.5}},
+		{"boolean", Boolean(true), Value{Kind: KindBoolean, Boolean: true}},
+		{"text", Text("cpu,memory"), Value{Kind: KindText, Text: "cpu,memory"}},
+	}
+	for _, c := range cases {
+		if c.got != c.want {
+			t.Errorf("%s: got %+v, want %+v", c.name, c.got, c.want)
 		}
 	}
 }

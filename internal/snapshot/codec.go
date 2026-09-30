@@ -191,7 +191,8 @@ const unsupportedKeyFmt = "snapshot type %s has a field the key walk does not su
 // tagged with a bare name (no "-", no option such as omitempty), and of a
 // kind whose JSON value the walk can look at on its own — a string, a
 // bool, a float, a struct, a slice of strings or of structs, a pointer to
-// a float, or a map of strings to floats. Anything else (any other
+// a float, a map of strings to floats, or a Value (a struct, which checkKeys
+// treats as one leaf). Anything else (any other
 // pointer, any other map, an interface, an embedded struct, a field with
 // no json tag, a "-" tag, or a tag carrying an option) would let the walk
 // say yes without ever having looked, so the caller refuses it instead.
@@ -330,6 +331,13 @@ func checkKeys(t reflect.Type, obj map[string]any, prefix string) error {
 				continue
 			}
 			return fmt.Errorf("snapshot holds null at %s", path)
+		}
+		if f.decl.Type == valueType {
+			switch value.(type) {
+			case float64, bool, string:
+				continue
+			}
+			return fmt.Errorf("snapshot holds a value of the wrong kind at %s", path)
 		}
 		if !kindMatches(f.decl.Type.Kind(), value) {
 			return fmt.Errorf("snapshot holds a value of the wrong kind at %s", path)
@@ -957,7 +965,7 @@ func checkFindingRegistry(findings []Finding) error {
 		if !ok {
 			return fmt.Errorf("findings[%d].code has an unknown value: %q", i, f.Code)
 		}
-		if f.Severity != def.Severity {
+		if !slices.Contains(def.Severities, f.Severity) {
 			return fmt.Errorf("findings[%d].severity does not match the definition of %s", i, f.Code)
 		}
 		if f.ScopeType != def.ScopeType {
@@ -966,26 +974,31 @@ func checkFindingRegistry(findings []Finding) error {
 		if !evidenceNamesMatch(f.Evidence, def.Evidence) {
 			return fmt.Errorf("findings[%d].evidence does not match the definition of %s", i, f.Code)
 		}
+		for j, e := range f.Evidence {
+			if want := def.Evidence[j].Kind; e.Value.Kind != string(want) {
+				return fmt.Errorf("findings[%d].evidence[%d] of %s: %s holds a value of kind %s, want %s", i, j, f.Code, e.Name, e.Value.Kind, want)
+			}
+		}
 		if !slices.Contains(validConfidences, f.Confidence) {
 			return fmt.Errorf("findings[%d].confidence has an unknown value: %q", i, f.Confidence)
 		}
 		for j, e := range f.Evidence {
-			if !isFinite(e.Value) {
-				return fmt.Errorf("findings[%d].evidence[%d].value is not a finite number", i, j)
+			if err := checkValue(e.Value); err != nil {
+				return fmt.Errorf("findings[%d].evidence[%d].value %w", i, j, err)
 			}
 		}
 	}
 	return nil
 }
 
-// evidenceNamesMatch reports whether evidence carries exactly names, in
-// order.
-func evidenceNamesMatch(evidence []Evidence, names []string) bool {
-	if len(evidence) != len(names) {
+// evidenceNamesMatch reports whether evidence carries exactly the names of
+// specs, in order.
+func evidenceNamesMatch(evidence []Evidence, specs []analysis.EvidenceSpec) bool {
+	if len(evidence) != len(specs) {
 		return false
 	}
-	for i, name := range names {
-		if evidence[i].Name != name {
+	for i, spec := range specs {
+		if evidence[i].Name != spec.Name {
 			return false
 		}
 	}

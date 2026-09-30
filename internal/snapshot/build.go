@@ -245,7 +245,7 @@ func buildFindings(findings []analysis.Finding) []Finding {
 func buildEvidence(evidence []analysis.Evidence) []Evidence {
 	out := make([]Evidence, len(evidence))
 	for i, e := range evidence {
-		out[i] = Evidence{Name: e.Name, Value: e.Value}
+		out[i] = Evidence{Name: e.Name, Value: Value{Kind: string(e.Value.Kind), Number: e.Value.Number, Boolean: e.Value.Boolean, Text: e.Value.Text}}
 	}
 	return out
 }
