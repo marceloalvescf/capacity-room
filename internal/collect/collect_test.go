@@ -2,8 +2,8 @@ package collect
 
 import "testing"
 
-// TestRegistriesOfCodes transcribes the shape of the registries: seven
-// warning codes, two notice codes, and a "count" parameter for each
+// TestRegistriesOfCodes transcribes the shape of the registries: the first seven
+// warning codes, the first two notice codes, and a "count" parameter for each
 // notice.
 func TestRegistriesOfCodes(t *testing.T) {
 	wantWarnings := []string{
@@ -15,8 +15,8 @@ func TestRegistriesOfCodes(t *testing.T) {
 		WarningWorkloadRequestsLimitsUnavailable,
 		WarningWorkloadHistoryCurrentAssociation,
 	}
-	if len(WarningCodes) != len(wantWarnings) {
-		t.Fatalf("len(WarningCodes) = %d, want %d", len(WarningCodes), len(wantWarnings))
+	if len(WarningCodes) < len(wantWarnings) {
+		t.Fatalf("len(WarningCodes) = %d, want at least %d", len(WarningCodes), len(wantWarnings))
 	}
 	for i, code := range wantWarnings {
 		if WarningCodes[i] != code {
@@ -28,8 +28,8 @@ func TestRegistriesOfCodes(t *testing.T) {
 		NoticeWorkloadsOmittedNoUsage,
 		NoticeJobsOmitted,
 	}
-	if len(NoticeCodes) != len(wantNotices) {
-		t.Fatalf("len(NoticeCodes) = %d, want %d", len(NoticeCodes), len(wantNotices))
+	if len(NoticeCodes) < len(wantNotices) {
+		t.Fatalf("len(NoticeCodes) = %d, want at least %d", len(NoticeCodes), len(wantNotices))
 	}
 	for i, code := range wantNotices {
 		if NoticeCodes[i] != code {
@@ -45,5 +45,26 @@ func TestRegistriesOfCodes(t *testing.T) {
 		if len(params) != 1 || params[0] != "count" {
 			t.Errorf("NoticeParams[%q] = %v, want [\"count\"]", code, params)
 		}
+	}
+}
+
+// TestNoticeAndWarningCodesGrew holds the nine warnings and three notices,
+// and the count parameter of the newest notice.
+func TestNoticeAndWarningCodesGrew(t *testing.T) {
+	if len(WarningCodes) != 9 {
+		t.Fatalf("len(WarningCodes) = %d, want 9", len(WarningCodes))
+	}
+	if WarningCodes[7] != "HPA_AMBIGUOUS_SPEC" || WarningCodes[8] != "HPA_AMBIGUOUS_TARGET" {
+		t.Errorf("WarningCodes[7:] = %v, want HPA_AMBIGUOUS_SPEC, HPA_AMBIGUOUS_TARGET", WarningCodes[7:])
+	}
+	if len(NoticeCodes) != 3 {
+		t.Fatalf("len(NoticeCodes) = %d, want 3", len(NoticeCodes))
+	}
+	if NoticeCodes[2] != "WORKLOADS_OMITTED_SCALE_ZERO" {
+		t.Errorf("NoticeCodes[2] = %q, want WORKLOADS_OMITTED_SCALE_ZERO", NoticeCodes[2])
+	}
+	params := NoticeParams["WORKLOADS_OMITTED_SCALE_ZERO"]
+	if len(params) != 1 || params[0] != "count" {
+		t.Errorf("NoticeParams = %v, want [count]", params)
 	}
 }

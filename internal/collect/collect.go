@@ -65,6 +65,9 @@ const (
 	WarningWorkloadHistoryCurrentAssociation  = "WORKLOAD_HISTORY_CURRENT_ASSOCIATION"
 	NoticeWorkloadsOmittedNoUsage             = "WORKLOADS_OMITTED_NO_USAGE"
 	NoticeJobsOmitted                         = "JOBS_OMITTED"
+	WarningHPAAmbiguousSpec                   = "HPA_AMBIGUOUS_SPEC"
+	WarningHPAAmbiguousTarget                 = "HPA_AMBIGUOUS_TARGET"
+	NoticeWorkloadsOmittedScaleZero           = "WORKLOADS_OMITTED_SCALE_ZERO"
 )
 
 // WarningCodes lists every warning code, in the order above.
@@ -76,18 +79,22 @@ var WarningCodes = []string{
 	WarningWorkloadRequestsLimitsIncomplete,
 	WarningWorkloadRequestsLimitsUnavailable,
 	WarningWorkloadHistoryCurrentAssociation,
+	WarningHPAAmbiguousSpec,
+	WarningHPAAmbiguousTarget,
 }
 
 // NoticeCodes lists every notice code, in the order above.
 var NoticeCodes = []string{
 	NoticeWorkloadsOmittedNoUsage,
 	NoticeJobsOmitted,
+	NoticeWorkloadsOmittedScaleZero,
 }
 
 // NoticeParams names the parameters of each notice: count, for both.
 var NoticeParams = map[string][]string{
-	NoticeWorkloadsOmittedNoUsage: {"count"},
-	NoticeJobsOmitted:             {"count"},
+	NoticeWorkloadsOmittedNoUsage:   {"count"},
+	NoticeJobsOmitted:               {"count"},
+	NoticeWorkloadsOmittedScaleZero: {"count"},
 }
 
 // findCapability returns the capability named name from capabilities. A
