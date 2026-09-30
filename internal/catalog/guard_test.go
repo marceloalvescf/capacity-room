@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -534,6 +535,111 @@ func TestNoReservedSegment(t *testing.T) {
 				t.Errorf("key %q has segment %q, which go-i18n reserves", key, segment)
 			}
 		}
+	}
+}
+
+// The invisible characters whiteSpaceProblems checks for, named by code
+// point rather than written as a character in this file, so that no
+// invisible character hides in the source itself.
+const (
+	nonBreakingSpace   rune = 0x00A0
+	narrowNoBreakSpace rune = 0x202F
+	zeroWidthSpace     rune = 0x200B
+	zeroWidthNonJoiner rune = 0x200C
+	zeroWidthJoiner    rune = 0x200D
+	byteOrderMark      rune = 0xFEFF
+)
+
+// whiteSpaceFaults are the checks whiteSpaceProblems tries, in order: the
+// first that matches an entry's text is the one reported for it.
+var whiteSpaceFaults = []struct {
+	name  string
+	match func(text string) bool
+}{
+	{"starts with white space", func(t string) bool {
+		return strings.HasPrefix(t, " ") || strings.HasPrefix(t, "\t") || strings.HasPrefix(t, "\n")
+	}},
+	{"ends with white space", func(t string) bool {
+		return strings.HasSuffix(t, " ") || strings.HasSuffix(t, "\t") || strings.HasSuffix(t, "\n")
+	}},
+	{"holds two spaces in a row", func(t string) bool { return strings.Contains(t, "  ") }},
+	{"holds a tab", func(t string) bool { return strings.Contains(t, "\t") }},
+	{"holds a line break", func(t string) bool { return strings.ContainsAny(t, "\n\r") }},
+	{"holds a non-breaking space", func(t string) bool { return strings.ContainsRune(t, nonBreakingSpace) }},
+	{"holds a narrow no-break space", func(t string) bool { return strings.ContainsRune(t, narrowNoBreakSpace) }},
+	{"holds a zero-width space", func(t string) bool { return strings.ContainsRune(t, zeroWidthSpace) }},
+	{"holds a zero-width non-joiner", func(t string) bool { return strings.ContainsRune(t, zeroWidthNonJoiner) }},
+	{"holds a zero-width joiner", func(t string) bool { return strings.ContainsRune(t, zeroWidthJoiner) }},
+	{"holds a byte order mark", func(t string) bool { return strings.ContainsRune(t, byteOrderMark) }},
+}
+
+// whiteSpaceProblems returns, for each entry of entries whose text matches
+// one of whiteSpaceFaults, one line naming its key and the fault, keys
+// visited in sorted order so a test's output is stable. It takes entries
+// directly, rather than a language, so a test can give it entries of its
+// own instead of the real locale files.
+func whiteSpaceProblems(entries map[Key]string) []string {
+	keys := make([]Key, 0, len(entries))
+	for key := range entries {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+
+	var problems []string
+	for _, key := range keys {
+		text := entries[key]
+		for _, fault := range whiteSpaceFaults {
+			if fault.match(text) {
+				problems = append(problems, fmt.Sprintf("%s: %s", key, fault.name))
+				break
+			}
+		}
+	}
+	return problems
+}
+
+// TestNoStrayWhiteSpaceInAnEntry checks that no entry of either locale file
+// holds a fault whiteSpaceProblems reports.
+func TestNoStrayWhiteSpaceInAnEntry(t *testing.T) {
+	for _, lang := range Languages() {
+		if problems := whiteSpaceProblems(fileEntries(t, lang)); len(problems) > 0 {
+			t.Errorf("locales/%s.toml: %v", lang, problems)
+		}
+	}
+}
+
+// TestWhiteSpaceGuardCanFail proves whiteSpaceProblems actually catches
+// each of the ten faults it reports, giving it entries of its own rather
+// than the real locale files.
+func TestWhiteSpaceGuardCanFail(t *testing.T) {
+	tests := []struct {
+		name  string
+		text  string
+		fault string
+	}{
+		{"starts or ends with white space", " both ", "starts with white space"},
+		{"two spaces in a row", "a  b", "holds two spaces in a row"},
+		{"a tab", "a\tb", "holds a tab"},
+		{"a line break", "a\nb", "holds a line break"},
+		{"a non-breaking space", fmt.Sprintf("a%cb", nonBreakingSpace), "holds a non-breaking space"},
+		{"a narrow no-break space", fmt.Sprintf("a%cb", narrowNoBreakSpace), "holds a narrow no-break space"},
+		{"a zero-width space", fmt.Sprintf("a%cb", zeroWidthSpace), "holds a zero-width space"},
+		{"a zero-width non-joiner", fmt.Sprintf("a%cb", zeroWidthNonJoiner), "holds a zero-width non-joiner"},
+		{"a zero-width joiner", fmt.Sprintf("a%cb", zeroWidthJoiner), "holds a zero-width joiner"},
+		{"a byte order mark", fmt.Sprintf("a%cb", byteOrderMark), "holds a byte order mark"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entries := map[Key]string{"only.entry": tt.text}
+			problems := whiteSpaceProblems(entries)
+			if len(problems) != 1 {
+				t.Fatalf("whiteSpaceProblems() = %v, want exactly one problem", problems)
+			}
+			if !strings.Contains(problems[0], "only.entry") || !strings.Contains(problems[0], tt.fault) {
+				t.Errorf("problems[0] = %q, want it to name only.entry and %q", problems[0], tt.fault)
+			}
+		})
 	}
 }
 
