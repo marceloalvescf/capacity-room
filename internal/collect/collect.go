@@ -94,7 +94,7 @@ var NoticeCodes = []string{
 	NoticeWorkloadsOmittedScaleZero,
 }
 
-// NoticeParams names the parameters of each notice: count, for both.
+// NoticeParams names the parameters of each notice: count, for all three.
 var NoticeParams = map[string][]string{
 	NoticeWorkloadsOmittedNoUsage:   {"count"},
 	NoticeJobsOmitted:               {"count"},

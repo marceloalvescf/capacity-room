@@ -427,3 +427,84 @@ func TestCoverageUnavailableSendsNothing(t *testing.T) {
 		t.Errorf("coverage = %+v, want non-nil empty rows and notices, one warning", coverage)
 	}
 }
+
+func replicasInput(evidence ...string) Input {
+	return hpaInput(
+		hpaCapability("hpa_history", discovery.StateUnavailable, nil, nil),
+		hpaCapability("workloads_without_hpa", discovery.StateAvailable, evidence, nil),
+	)
+}
+
+func countNotice(count float64) []Message {
+	return []Message{{Code: "WORKLOADS_OMITTED_SCALE_ZERO", Params: map[string]float64{"count": count}}}
+}
+
+func TestCoverageCountsZeroScaleInAnAmbiguousNamespace(t *testing.T) {
+	q := hpaQuerier(map[string][]prom.Sample{
+		hpaInfoMetric: {
+			infoSample("web", "Deployment", "web"),
+			infoSample("web", "Deployment", "api"),
+		},
+		"kube_deployment_spec_replicas": {workloadSample("deployment", "web", 3), workloadSample("deployment", "batch", 0)},
+	}, nil)
+	coverage := coverageRows(t, q, replicasInput("kube_deployment_spec_replicas"))
+	if len(coverage.Rows) != 0 {
+		t.Errorf("rows = %v, want none", coverage.Rows)
+	}
+	if !reflect.DeepEqual(coverage.Notices, countNotice(1)) {
+		t.Errorf("notices = %v, want %v", coverage.Notices, countNotice(1))
+	}
+}
+
+func TestCoverageAmbiguousInventoryKeyIsNeitherKeptNorCounted(t *testing.T) {
+	q := hpaQuerier(map[string][]prom.Sample{
+		"kube_deployment_spec_replicas": {
+			workloadSample("deployment", "dup", 0),
+			workloadSample("deployment", "dup", 2),
+			workloadSample("deployment", "batch", 0),
+			workloadSample("deployment", "web", 3),
+		},
+	}, nil)
+	coverage := coverageRows(t, q, replicasInput("kube_deployment_spec_replicas"))
+	want := []WorkloadRef{{Namespace: "payments", Kind: "Deployment", Name: "web"}}
+	if !reflect.DeepEqual(coverage.Rows, want) {
+		t.Errorf("rows = %v, want %v", coverage.Rows, want)
+	}
+	if !reflect.DeepEqual(coverage.Notices, countNotice(1)) {
+		t.Errorf("notices = %v, want %v", coverage.Notices, countNotice(1))
+	}
+}
+
+func TestCoverageStatefulSetReplicasFamily(t *testing.T) {
+	q := hpaQuerier(map[string][]prom.Sample{
+		"kube_statefulset_replicas": {workloadSample("statefulset", "queue", 2), workloadSample("statefulset", "idle", 0)},
+	}, nil)
+	coverage := coverageRows(t, q, replicasInput("kube_statefulset_replicas"))
+	want := []WorkloadRef{{Namespace: "payments", Kind: "StatefulSet", Name: "queue"}}
+	if !reflect.DeepEqual(coverage.Rows, want) {
+		t.Errorf("rows = %v, want %v", coverage.Rows, want)
+	}
+	if !reflect.DeepEqual(coverage.Notices, countNotice(1)) {
+		t.Errorf("notices = %v, want %v", coverage.Notices, countNotice(1))
+	}
+	wantQueries := []string{hpaInfoMetric + hpaSelector, "kube_statefulset_replicas" + hpaSelector}
+	if !reflect.DeepEqual(q.queries, wantQueries) {
+		t.Errorf("queries = %q, want %q", q.queries, wantQueries)
+	}
+}
+
+func TestCoveragePrefersLabelsOverReplicas(t *testing.T) {
+	q := hpaQuerier(map[string][]prom.Sample{
+		"kube_deployment_labels":        {workloadSample("deployment", "batch", 1)},
+		"kube_deployment_spec_replicas": {workloadSample("deployment", "web", 3)},
+	}, nil)
+	coverage := coverageRows(t, q, replicasInput("kube_deployment_spec_replicas", "kube_deployment_labels"))
+	want := []WorkloadRef{{Namespace: "payments", Kind: "Deployment", Name: "batch"}}
+	if !reflect.DeepEqual(coverage.Rows, want) {
+		t.Errorf("rows = %v, want %v", coverage.Rows, want)
+	}
+	wantQueries := []string{hpaInfoMetric + hpaSelector, "kube_deployment_labels" + hpaSelector}
+	if !reflect.DeepEqual(q.queries, wantQueries) {
+		t.Errorf("queries = %q, want %q", q.queries, wantQueries)
+	}
+}
