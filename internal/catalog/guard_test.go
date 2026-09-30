@@ -153,32 +153,32 @@ var wordingTable = []struct {
 	{StateAvailable, "Disponível", "Available"},
 	{StatePartial, "Parcial", "Partial"},
 	{StateUnavailable, "Indisponível", "Unavailable"},
-	{StrategyRecordingRule, "Regra de gravação", "Recording rule"},
-	{StrategyRawMetrics, "Métricas brutas", "Raw metrics"},
+	{StrategyRecordingRule, "Recording rule", "Recording rule"},
+	{StrategyRawMetrics, "Raw metrics", "Raw metrics"},
 	{StrategyConfigured, "Configuração", "Configuration"},
 	{StrategyNone, "Sem fonte", "No source"},
 	{CapabilityNameNamespaceUsage, "Uso por namespace", "Usage by namespace"},
-	{CapabilityNameWorkloadUsage, "Uso por carga de trabalho", "Usage by workload"},
-	{CapabilityNameRequestsLimits, "Solicitações e limites", "Requests and limits"},
+	{CapabilityNameWorkloadUsage, "Uso por workload", "Usage by workload"},
+	{CapabilityNameRequestsLimits, "Requests e limits", "Requests and limits"},
 	{CapabilityNameHPAHistory, "Histórico de HPA", "HPA history"},
-	{CapabilityNameWorkloadsWithoutHPA, "Cobertura de cargas de trabalho sem HPA", "Coverage of workloads without HPA"},
-	{CapabilityNameIPNodeMapping, "Associação entre endereço e nó", "Mapping between address and node"},
-	{CapabilityNameNodepoolDiscovery, "Identificação de pools de nós", "Identification of node pools"},
-	{CapabilityNameNodeUtilization, "Utilização dos nós", "Node utilization"},
-	{CapabilityNameNodeAutoscaling, "Escalonamento automático de nós", "Node autoscaling"},
+	{CapabilityNameWorkloadsWithoutHPA, "Cobertura de workloads sem HPA", "Coverage of workloads without HPA"},
+	{CapabilityNameIPNodeMapping, "Associação entre endereço e node", "Mapping between address and node"},
+	{CapabilityNameNodepoolDiscovery, "Identificação de node pools", "Identification of node pools"},
+	{CapabilityNameNodeUtilization, "Utilização dos nodes", "Node utilization"},
+	{CapabilityNameNodeAutoscaling, "Autoscaling de nodes", "Node autoscaling"},
 	{CapabilityReasonMetricsNotFound, "As métricas necessárias não foram encontradas.", "The required metrics were not found."},
 	{CapabilityReasonCPUUsageMetricNotFound, "A métrica de uso de CPU não foi encontrada.", "The CPU usage metric was not found."},
 	{CapabilityReasonMemoryUsageMetricNotFound, "A métrica de uso de memória não foi encontrada.", "The memory usage metric was not found."},
 	{CapabilityReasonUsageMetricsNotFound, "As métricas de uso de CPU e memória não foram encontradas.", "The CPU and memory usage metrics were not found."},
-	{CapabilityReasonWorkloadHistoryInexact, "A associação histórica entre pods e cargas de trabalho não pôde ser reconstruída com exatidão.", "The history of which pod belonged to which workload could not be rebuilt exactly."},
-	{CapabilityReasonWorkloadAssociationUnavailable, "A associação por carga de trabalho não está disponível; a cobertura está limitada a pods.", "Pods cannot be matched to workloads; coverage is limited to pods."},
-	{CapabilityReasonRequestsLimitsIncomplete, "A cobertura de solicitações e limites está incompleta para CPU ou memória.", "The coverage of requests and limits is incomplete for CPU or memory."},
+	{CapabilityReasonWorkloadHistoryInexact, "A associação histórica entre pods e workloads não pôde ser reconstruída com exatidão.", "The history of which pod belonged to which workload could not be rebuilt exactly."},
+	{CapabilityReasonWorkloadAssociationUnavailable, "A associação por workload não está disponível; a cobertura está limitada a pods.", "Pods cannot be matched to workloads; coverage is limited to pods."},
+	{CapabilityReasonRequestsLimitsIncomplete, "A cobertura de requests e limits está incompleta para CPU ou memória.", "The coverage of requests and limits is incomplete for CPU or memory."},
 	{CapabilityReasonLegacyMetricsPartial, "As métricas legadas oferecem cobertura parcial de recursos.", "The legacy metrics give partial coverage of resources."},
 	{CapabilityReasonHPAHistoryIncomplete, "A cobertura histórica dos HPAs está incompleta.", "The historical coverage of the HPAs is incomplete."},
-	{CapabilityReasonWorkloadInventoryIncomplete, "O inventário de cargas de trabalho ou alvos de HPA está incompleto.", "The inventory of workloads or of HPA targets is incomplete."},
-	{CapabilityReasonNodeAddressMappingIncomplete, "A associação entre endereços e nós pode estar incompleta.", "The mapping between addresses and nodes may be incomplete."},
-	{CapabilityReasonNodepoolLabelsNotFound, "Os rótulos de pools de nós não foram encontrados.", "The node pool labels were not found."},
-	{CapabilityReasonNodeAutoscalingUndetermined, "O estado do escalonamento automático de nós não pôde ser determinado.", "The state of node autoscaling could not be determined."},
+	{CapabilityReasonWorkloadInventoryIncomplete, "O inventário de workloads ou alvos de HPA está incompleto.", "The inventory of workloads or of HPA targets is incomplete."},
+	{CapabilityReasonNodeAddressMappingIncomplete, "A associação entre endereços e nodes pode estar incompleta.", "The mapping between addresses and nodes may be incomplete."},
+	{CapabilityReasonNodepoolLabelsNotFound, "Os labels de node pools não foram encontrados.", "The node pool labels were not found."},
+	{CapabilityReasonNodeAutoscalingUndetermined, "O estado do autoscaling de nodes não pôde ser determinado.", "The state of node autoscaling could not be determined."},
 }
 
 // evidenceSubjects and evidenceEndings hold the two small tables that cross
@@ -189,14 +189,14 @@ var evidenceSubjects = []struct {
 	pt, en string
 }{
 	{"namespace_usage", "Os dados de utilização de CPU e memória por namespace", "CPU and memory usage data by namespace"},
-	{"workload_usage", "Os dados de utilização por carga de trabalho", "Workload usage data"},
-	{"requests_limits", "Os dados de solicitações e limites de recursos", "Data on resource requests and limits"},
+	{"workload_usage", "Os dados de utilização por workload", "Workload usage data"},
+	{"requests_limits", "Os dados de requests e limits de recursos", "Data on resource requests and limits"},
 	{"hpa_history", "Os dados históricos e de configuração dos HPAs", "HPA history and configuration data"},
-	{"workloads_without_hpa", "Os dados de cobertura das cargas de trabalho sem HPA", "Coverage data for workloads without HPA"},
-	{"ip_node_mapping", "Os dados de associação entre endereço e nó", "Data on the mapping between address and node"},
-	{"nodepool_discovery", "Os dados de identificação dos pools de nós", "Node pool identification data"},
-	{"node_utilization", "Os dados de utilização dos nós", "Node utilization data"},
-	{"node_autoscaling", "Os dados de escalonamento automático dos nós", "Node autoscaling data"},
+	{"workloads_without_hpa", "Os dados de cobertura dos workloads sem HPA", "Coverage data for workloads without HPA"},
+	{"ip_node_mapping", "Os dados de associação entre endereço e node", "Data on the mapping between address and node"},
+	{"nodepool_discovery", "Os dados de identificação dos node pools", "Node pool identification data"},
+	{"node_utilization", "Os dados de utilização dos nodes", "Node utilization data"},
+	{"node_autoscaling", "Os dados de autoscaling dos nodes", "Node autoscaling data"},
 }
 
 var evidenceEndings = []struct {
@@ -265,9 +265,9 @@ func TestEveryRegistryCodeHasAnEntry(t *testing.T) {
 }
 
 // sectionsWordingTable holds the expected Portuguese text of the sections
-// "Capacity by namespace" and "Resources by workload", transcribed
+// "Capacidade por Namespace" and "Recursos por workload", transcribed
 // independently of locales/pt-BR.toml, so a change to the file is caught
-// against the wording that was approved.
+// against the approved wording.
 var sectionsWordingTable = []struct {
 	key Key
 	pt  string
@@ -278,24 +278,24 @@ var sectionsWordingTable = []struct {
 	{SectionsNamespacesHeaderResource, "Recurso"},
 	{SectionsNamespacesHeaderAverage, "Uso médio"},
 	{SectionsNamespacesHeaderPeak, "Pico"},
-	{SectionsNamespacesHeaderRequest, "Solicitação"},
-	{SectionsNamespacesHeaderLimit, "Limite"},
-	{SectionsNamespacesHeaderPeakRequest, "% Pico/Solicitação"},
-	{SectionsNamespacesHeaderPeakLimit, "% Pico/Limite"},
+	{SectionsNamespacesHeaderRequest, "Request"},
+	{SectionsNamespacesHeaderLimit, "Limit"},
+	{SectionsNamespacesHeaderPeakRequest, "% Pico/Request"},
+	{SectionsNamespacesHeaderPeakLimit, "% Pico/Limit"},
 	{SectionsNamespacesRowCPU, "CPU"},
 	{SectionsNamespacesRowMemory, "Memória"},
-	{SectionsWorkloadsHeading, "Recursos por carga de trabalho"},
-	{SectionsWorkloadsEmpty, "Nenhum dado de carga de trabalho está disponível para os filtros atuais."},
-	{SectionsWorkloadsHeaderWorkload, "Carga de trabalho"},
+	{SectionsWorkloadsHeading, "Recursos por workload"},
+	{SectionsWorkloadsEmpty, "Nenhum dado de workload está disponível para os filtros atuais."},
+	{SectionsWorkloadsHeaderWorkload, "Workload"},
 	{SectionsWorkloadsHeaderPods, "Pods"},
 	{SectionsWorkloadsHeaderCPUAverage, "CPU média"},
 	{SectionsWorkloadsHeaderCPUPeak, "CPU pico"},
-	{SectionsWorkloadsHeaderCPURequest, "% CPU/Solicitação"},
-	{SectionsWorkloadsHeaderCPULimit, "% CPU/Limite"},
+	{SectionsWorkloadsHeaderCPURequest, "% CPU/Request"},
+	{SectionsWorkloadsHeaderCPULimit, "% CPU/Limit"},
 	{SectionsWorkloadsHeaderMemoryAverage, "Memória média"},
 	{SectionsWorkloadsHeaderMemoryPeak, "Memória pico"},
-	{SectionsWorkloadsHeaderMemoryRequest, "% Memória/Solicitação"},
-	{SectionsWorkloadsHeaderMemoryLimit, "% Memória/Limite"},
+	{SectionsWorkloadsHeaderMemoryRequest, "% Memória/Request"},
+	{SectionsWorkloadsHeaderMemoryLimit, "% Memória/Limit"},
 	{PlaceholderUnavailable, "Indisponível"},
 	{PlaceholderNoBase, "Não definido"},
 	{NotesHeading, "Avisos de interpretação"},
@@ -311,12 +311,12 @@ var warningWordingTable = []struct {
 	pt   string
 }{
 	{collect.WarningNamespaceUsageIncomplete, "As métricas de uso dos namespaces estão incompletas."},
-	{collect.WarningNamespaceRequestsLimitsIncomplete, "As métricas de solicitações e limites dos namespaces estão incompletas."},
-	{collect.WarningNamespaceRequestsLimitsUnavailable, "As métricas de solicitações e limites dos namespaces estão indisponíveis."},
-	{collect.WarningWorkloadUsageIncomplete, "As métricas de uso das cargas de trabalho estão incompletas."},
-	{collect.WarningWorkloadRequestsLimitsIncomplete, "As métricas de solicitações e limites das cargas de trabalho estão incompletas."},
-	{collect.WarningWorkloadRequestsLimitsUnavailable, "As métricas de solicitações e limites das cargas de trabalho estão indisponíveis."},
-	{collect.WarningWorkloadHistoryCurrentAssociation, "O histórico usa a associação atual entre pods ativos e cargas de trabalho."},
+	{collect.WarningNamespaceRequestsLimitsIncomplete, "As métricas de requests e limits dos namespaces estão incompletas."},
+	{collect.WarningNamespaceRequestsLimitsUnavailable, "As métricas de requests e limits dos namespaces estão indisponíveis."},
+	{collect.WarningWorkloadUsageIncomplete, "As métricas de uso dos workloads estão incompletas."},
+	{collect.WarningWorkloadRequestsLimitsIncomplete, "As métricas de requests e limits dos workloads estão incompletas."},
+	{collect.WarningWorkloadRequestsLimitsUnavailable, "As métricas de requests e limits dos workloads estão indisponíveis."},
+	{collect.WarningWorkloadHistoryCurrentAssociation, "O histórico usa a associação atual entre pods ativos e workloads."},
 }
 
 var noticeWordingTable = []struct {
@@ -325,18 +325,19 @@ var noticeWordingTable = []struct {
 	ptPlural   string
 }{
 	{collect.NoticeWorkloadsOmittedNoUsage,
-		"1 carga de trabalho deixada de fora por não ter consumo observado no período.",
-		"{{.Count}} cargas de trabalho deixadas de fora por não terem consumo observado no período."},
+		"1 workload deixado de fora por não ter consumo observado no período.",
+		"{{.Count}} workloads deixados de fora por não terem consumo observado no período."},
 	{collect.NoticeJobsOmitted,
-		"1 Job foi deixado de fora do inventário de cargas de trabalho; o consumo continua contabilizado no total do namespace.",
-		"{{.Count}} Jobs foram deixados de fora do inventário de cargas de trabalho; o consumo continua contabilizado nos totais dos namespaces."},
+		"1 Job foi deixado de fora do inventário de workloads; o consumo continua contabilizado no total do namespace.",
+		"{{.Count}} Jobs foram deixados de fora do inventário de workloads; o consumo continua contabilizado nos totais dos namespaces."},
 }
 
-// TestPortugueseOfThisPartEqualsTheOriginal proves that the Portuguese text
-// of the sections "Capacity by namespace" and "Resources by workload", and
-// of the warnings and notices they use, equals the wording that was
-// approved, letter for letter.
-func TestPortugueseOfThisPartEqualsTheOriginal(t *testing.T) {
+// TestPortugueseOfTheSectionsMatchesThePlan proves that the Portuguese text
+// of the sections "Capacidade por Namespace" and "Recursos por workload",
+// and of the warnings and notices they use, equals the wording the owner
+// approved, letter for letter. The wording follows the vocabulary of spec
+// 9.3, which writes every technical term in English.
+func TestPortugueseOfTheSectionsMatchesThePlan(t *testing.T) {
 	pt := fileEntries(t, PortugueseBrazil)
 
 	for _, row := range sectionsWordingTable {
@@ -664,21 +665,31 @@ var wordPattern = regexp.MustCompile(`[\p{L}\p{N}_-]+`)
 
 // bannedTermsFor returns, for lang, the words banned in any letter case,
 // the phrases banned in any letter case (each phrase a sequence of
-// lower-cased words), and the words banned only as written.
+// lower-cased words), and the words banned only as written. In Portuguese it
+// bans the translations of the technical terms that spec 9.3 writes in
+// English, the single word nodepool, the two words headroom and right-sizing
+// that have Portuguese common nouns, and English function words that betray
+// a pasted English sentence.
 func bannedTermsFor(lang Language) (anyCase map[string]bool, phrases [][]string, asWritten map[string]bool) {
 	asWritten = map[string]bool{"cpu": true}
 
 	if lang == PortugueseBrazil {
 		anyCase = wordSet(
-			"request", "requests", "limit", "limits", "workload", "workloads",
-			"right-sizing", "headroom", "autoscaling", "autoscaler", "throttling",
+			"solicitação", "solicitações", "limite", "limites",
+			"rótulo", "rótulos", "nó", "nós", "réplica", "réplicas",
+			"nodepool", "nodepools", "right-sizing", "headroom",
 			"unknown", "memory",
 			"the", "is", "are", "was", "were", "not", "found", "with", "from",
 			"omitted", "cannot", "may", "only", "uses",
 		)
 		phrases = [][]string{
-			{"node", "pool"}, {"node", "pools"},
+			{"carga", "de", "trabalho"}, {"cargas", "de", "trabalho"},
+			{"pool", "de", "nós"}, {"pools", "de", "nós"},
 			{"grupo", "de", "nós"}, {"grupos", "de", "nós"},
+			{"regra", "de", "gravação"}, {"regras", "de", "gravação"},
+			{"métricas", "brutas"},
+			{"escalonamento", "automático"},
+			{"limitação", "de", "cpu"},
 		}
 		return anyCase, phrases, asWritten
 	}
@@ -753,40 +764,76 @@ func TestBannedTermsFinder(t *testing.T) {
 		want []string
 	}{
 		{
-			name: "request in any case",
+			name: "solicitação in any case",
+			lang: PortugueseBrazil,
+			text: "Revisar a Solicitação de CPU e o consumo observado.",
+			want: []string{"solicitação"},
+		},
+		{
+			name: "request is the English word the rule asks for",
 			lang: PortugueseBrazil,
 			text: "Revisar o request de CPU e o consumo observado.",
-			want: []string{"request"},
+			want: nil,
+		},
+		{
+			name: "limite is banned, limit is not",
+			lang: PortugueseBrazil,
+			text: "Definir o limite de memória. Definir o limit de memória.",
+			want: []string{"limite"},
+		},
+		{
+			name: "the phrase carga de trabalho",
+			lang: PortugueseBrazil,
+			text: "Recursos por carga de trabalho e por cargas de trabalho.",
+			want: []string{"carga de trabalho", "cargas de trabalho"},
+		},
+		{
+			name: "nós in every sense",
+			lang: PortugueseBrazil,
+			text: "Utilização dos nós.",
+			want: []string{"nós"},
+		},
+		{
+			name: "node pool is allowed and nodepool is not",
+			lang: PortugueseBrazil,
+			text: "Identificação de node pools; nodepool.",
+			want: []string{"nodepool"},
+		},
+		{
+			name: "the phrase escalonamento automático",
+			lang: PortugueseBrazil,
+			text: "Escalonamento automático de nodes.",
+			want: []string{"escalonamento automático"},
 		},
 		{
 			name: "cpu as written",
 			lang: PortugueseBrazil,
-			text: "Uso observado de cpu no nó.",
+			text: "Uso observado de cpu no node.",
 			want: []string{"cpu"},
 		},
 		{
 			name: "the phrase grupo de nós",
 			lang: PortugueseBrazil,
 			text: "O grupo de nós não pôde ser determinado.",
-			want: []string{"grupo de nós"},
+			want: []string{"grupo de nós", "nós"},
 		},
 		{
 			name: "english leftovers",
 			lang: PortugueseBrazil,
 			text: "autoscaling state is unknown",
-			want: []string{"autoscaling", "is", "unknown"},
+			want: []string{"is", "unknown"},
 		},
 		{
-			name: "correctly translated request",
+			name: "memory is a common noun and stays Portuguese",
 			lang: PortugueseBrazil,
-			text: "Revisar a solicitação de CPU e o consumo observado.",
-			want: nil,
+			text: "Uso de memory acima do limit.",
+			want: []string{"memory"},
 		},
 		{
-			name: "memory limit is proper Portuguese",
+			name: "headroom keeps its Portuguese noun",
 			lang: PortugueseBrazil,
-			text: "Definir o limite de memória.",
-			want: nil,
+			text: "Margem observada; headroom.",
+			want: []string{"headroom"},
 		},
 		{
 			name: "identifiers are one word each",

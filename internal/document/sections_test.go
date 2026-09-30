@@ -311,7 +311,7 @@ func TestBlocksFollowTheOrderOfTheOriginal(t *testing.T) {
 	}
 	wantHeading(2, 1, true)   // Capacidade por Namespace
 	wantHeading(3, 2, false)  // Namespace: payments
-	wantHeading(5, 1, true)   // Recursos por carga de trabalho
+	wantHeading(5, 1, true)   // Recursos por workload
 	wantHeading(6, 2, false)  // Namespace: payments
 	wantHeading(9, 1, true)   // Apêndice técnico de qualidade
 	wantHeading(11, 2, false) // Avisos de interpretação
@@ -514,7 +514,7 @@ func TestEmptySections(t *testing.T) {
 // the original report and keeps the original's words; the document writes
 // the words of the catalog. The parity comparison reads the current text of
 // each key so that it compares numbers, statuses, identifiers, and shape,
-// and not the words, which the owner may change.
+// and not the words, which may change.
 var parityTexts = map[string]catalog.Key{
 	"Capacidade por Namespace":       catalog.SectionsNamespacesHeading,
 	"Recurso":                        catalog.SectionsNamespacesHeaderResource,

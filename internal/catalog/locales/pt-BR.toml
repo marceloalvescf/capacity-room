@@ -60,36 +60,36 @@ partial = "Parcial"
 unavailable = "Indisponível"
 
 [strategy]
-recording_rule = "Regra de gravação"
-raw_metrics = "Métricas brutas"
+recording_rule = "Recording rule"
+raw_metrics = "Raw metrics"
 configured = "Configuração"
 none = "Sem fonte"
 
 [capability.name]
 namespace_usage = "Uso por namespace"
-workload_usage = "Uso por carga de trabalho"
-requests_limits = "Solicitações e limites"
+workload_usage = "Uso por workload"
+requests_limits = "Requests e limits"
 hpa_history = "Histórico de HPA"
-workloads_without_hpa = "Cobertura de cargas de trabalho sem HPA"
-ip_node_mapping = "Associação entre endereço e nó"
-nodepool_discovery = "Identificação de pools de nós"
-node_utilization = "Utilização dos nós"
-node_autoscaling = "Escalonamento automático de nós"
+workloads_without_hpa = "Cobertura de workloads sem HPA"
+ip_node_mapping = "Associação entre endereço e node"
+nodepool_discovery = "Identificação de node pools"
+node_utilization = "Utilização dos nodes"
+node_autoscaling = "Autoscaling de nodes"
 
 [capability.reason]
 METRICS_NOT_FOUND = "As métricas necessárias não foram encontradas."
 CPU_USAGE_METRIC_NOT_FOUND = "A métrica de uso de CPU não foi encontrada."
 MEMORY_USAGE_METRIC_NOT_FOUND = "A métrica de uso de memória não foi encontrada."
 USAGE_METRICS_NOT_FOUND = "As métricas de uso de CPU e memória não foram encontradas."
-WORKLOAD_HISTORY_INEXACT = "A associação histórica entre pods e cargas de trabalho não pôde ser reconstruída com exatidão."
-WORKLOAD_ASSOCIATION_UNAVAILABLE = "A associação por carga de trabalho não está disponível; a cobertura está limitada a pods."
-REQUESTS_LIMITS_INCOMPLETE = "A cobertura de solicitações e limites está incompleta para CPU ou memória."
+WORKLOAD_HISTORY_INEXACT = "A associação histórica entre pods e workloads não pôde ser reconstruída com exatidão."
+WORKLOAD_ASSOCIATION_UNAVAILABLE = "A associação por workload não está disponível; a cobertura está limitada a pods."
+REQUESTS_LIMITS_INCOMPLETE = "A cobertura de requests e limits está incompleta para CPU ou memória."
 LEGACY_METRICS_PARTIAL = "As métricas legadas oferecem cobertura parcial de recursos."
 HPA_HISTORY_INCOMPLETE = "A cobertura histórica dos HPAs está incompleta."
-WORKLOAD_INVENTORY_INCOMPLETE = "O inventário de cargas de trabalho ou alvos de HPA está incompleto."
-NODE_ADDRESS_MAPPING_INCOMPLETE = "A associação entre endereços e nós pode estar incompleta."
-NODEPOOL_LABELS_NOT_FOUND = "Os rótulos de pools de nós não foram encontrados."
-NODE_AUTOSCALING_UNDETERMINED = "O estado do escalonamento automático de nós não pôde ser determinado."
+WORKLOAD_INVENTORY_INCOMPLETE = "O inventário de workloads ou alvos de HPA está incompleto."
+NODE_ADDRESS_MAPPING_INCOMPLETE = "A associação entre endereços e nodes pode estar incompleta."
+NODEPOOL_LABELS_NOT_FOUND = "Os labels de node pools não foram encontrados."
+NODE_AUTOSCALING_UNDETERMINED = "O estado do autoscaling de nodes não pôde ser determinado."
 
 [capability.evidence.namespace_usage]
 available = "Os dados de utilização de CPU e memória por namespace estão disponíveis para o período analisado."
@@ -97,14 +97,14 @@ partial = "Os dados de utilização de CPU e memória por namespace estão dispo
 unavailable = "Os dados de utilização de CPU e memória por namespace não foram localizados para o período analisado."
 
 [capability.evidence.workload_usage]
-available = "Os dados de utilização por carga de trabalho estão disponíveis para o período analisado."
-partial = "Os dados de utilização por carga de trabalho estão disponíveis parcialmente para o período analisado."
-unavailable = "Os dados de utilização por carga de trabalho não foram localizados para o período analisado."
+available = "Os dados de utilização por workload estão disponíveis para o período analisado."
+partial = "Os dados de utilização por workload estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de utilização por workload não foram localizados para o período analisado."
 
 [capability.evidence.requests_limits]
-available = "Os dados de solicitações e limites de recursos estão disponíveis para o período analisado."
-partial = "Os dados de solicitações e limites de recursos estão disponíveis parcialmente para o período analisado."
-unavailable = "Os dados de solicitações e limites de recursos não foram localizados para o período analisado."
+available = "Os dados de requests e limits de recursos estão disponíveis para o período analisado."
+partial = "Os dados de requests e limits de recursos estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de requests e limits de recursos não foram localizados para o período analisado."
 
 [capability.evidence.hpa_history]
 available = "Os dados históricos e de configuração dos HPAs estão disponíveis para o período analisado."
@@ -112,29 +112,29 @@ partial = "Os dados históricos e de configuração dos HPAs estão disponíveis
 unavailable = "Os dados históricos e de configuração dos HPAs não foram localizados para o período analisado."
 
 [capability.evidence.workloads_without_hpa]
-available = "Os dados de cobertura das cargas de trabalho sem HPA estão disponíveis para o período analisado."
-partial = "Os dados de cobertura das cargas de trabalho sem HPA estão disponíveis parcialmente para o período analisado."
-unavailable = "Os dados de cobertura das cargas de trabalho sem HPA não foram localizados para o período analisado."
+available = "Os dados de cobertura dos workloads sem HPA estão disponíveis para o período analisado."
+partial = "Os dados de cobertura dos workloads sem HPA estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de cobertura dos workloads sem HPA não foram localizados para o período analisado."
 
 [capability.evidence.ip_node_mapping]
-available = "Os dados de associação entre endereço e nó estão disponíveis para o período analisado."
-partial = "Os dados de associação entre endereço e nó estão disponíveis parcialmente para o período analisado."
-unavailable = "Os dados de associação entre endereço e nó não foram localizados para o período analisado."
+available = "Os dados de associação entre endereço e node estão disponíveis para o período analisado."
+partial = "Os dados de associação entre endereço e node estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de associação entre endereço e node não foram localizados para o período analisado."
 
 [capability.evidence.nodepool_discovery]
-available = "Os dados de identificação dos pools de nós estão disponíveis para o período analisado."
-partial = "Os dados de identificação dos pools de nós estão disponíveis parcialmente para o período analisado."
-unavailable = "Os dados de identificação dos pools de nós não foram localizados para o período analisado."
+available = "Os dados de identificação dos node pools estão disponíveis para o período analisado."
+partial = "Os dados de identificação dos node pools estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de identificação dos node pools não foram localizados para o período analisado."
 
 [capability.evidence.node_utilization]
-available = "Os dados de utilização dos nós estão disponíveis para o período analisado."
-partial = "Os dados de utilização dos nós estão disponíveis parcialmente para o período analisado."
-unavailable = "Os dados de utilização dos nós não foram localizados para o período analisado."
+available = "Os dados de utilização dos nodes estão disponíveis para o período analisado."
+partial = "Os dados de utilização dos nodes estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de utilização dos nodes não foram localizados para o período analisado."
 
 [capability.evidence.node_autoscaling]
-available = "Os dados de escalonamento automático dos nós estão disponíveis para o período analisado."
-partial = "Os dados de escalonamento automático dos nós estão disponíveis parcialmente para o período analisado."
-unavailable = "Os dados de escalonamento automático dos nós não foram localizados para o período analisado."
+available = "Os dados de autoscaling dos nodes estão disponíveis para o período analisado."
+partial = "Os dados de autoscaling dos nodes estão disponíveis parcialmente para o período analisado."
+unavailable = "Os dados de autoscaling dos nodes não foram localizados para o período analisado."
 
 [sections]
 namespace_label = "Namespace:"
@@ -145,26 +145,26 @@ empty = "Nenhum dado de namespace está disponível para os filtros atuais."
 header_resource = "Recurso"
 header_average = "Uso médio"
 header_peak = "Pico"
-header_request = "Solicitação"
-header_limit = "Limite"
-header_peak_request = "% Pico/Solicitação"
-header_peak_limit = "% Pico/Limite"
+header_request = "Request"
+header_limit = "Limit"
+header_peak_request = "% Pico/Request"
+header_peak_limit = "% Pico/Limit"
 row_cpu = "CPU"
 row_memory = "Memória"
 
 [sections.workloads]
-heading = "Recursos por carga de trabalho"
-empty = "Nenhum dado de carga de trabalho está disponível para os filtros atuais."
-header_workload = "Carga de trabalho"
+heading = "Recursos por workload"
+empty = "Nenhum dado de workload está disponível para os filtros atuais."
+header_workload = "Workload"
 header_pods = "Pods"
 header_cpu_average = "CPU média"
 header_cpu_peak = "CPU pico"
-header_cpu_request = "% CPU/Solicitação"
-header_cpu_limit = "% CPU/Limite"
+header_cpu_request = "% CPU/Request"
+header_cpu_limit = "% CPU/Limit"
 header_memory_average = "Memória média"
 header_memory_peak = "Memória pico"
-header_memory_request = "% Memória/Solicitação"
-header_memory_limit = "% Memória/Limite"
+header_memory_request = "% Memória/Request"
+header_memory_limit = "% Memória/Limit"
 
 [placeholder]
 unavailable = "Indisponível"
@@ -176,17 +176,17 @@ header_remark = "Observação"
 
 [warning]
 NAMESPACE_USAGE_INCOMPLETE = "As métricas de uso dos namespaces estão incompletas."
-NAMESPACE_REQUESTS_LIMITS_INCOMPLETE = "As métricas de solicitações e limites dos namespaces estão incompletas."
-NAMESPACE_REQUESTS_LIMITS_UNAVAILABLE = "As métricas de solicitações e limites dos namespaces estão indisponíveis."
-WORKLOAD_USAGE_INCOMPLETE = "As métricas de uso das cargas de trabalho estão incompletas."
-WORKLOAD_REQUESTS_LIMITS_INCOMPLETE = "As métricas de solicitações e limites das cargas de trabalho estão incompletas."
-WORKLOAD_REQUESTS_LIMITS_UNAVAILABLE = "As métricas de solicitações e limites das cargas de trabalho estão indisponíveis."
-WORKLOAD_HISTORY_CURRENT_ASSOCIATION = "O histórico usa a associação atual entre pods ativos e cargas de trabalho."
+NAMESPACE_REQUESTS_LIMITS_INCOMPLETE = "As métricas de requests e limits dos namespaces estão incompletas."
+NAMESPACE_REQUESTS_LIMITS_UNAVAILABLE = "As métricas de requests e limits dos namespaces estão indisponíveis."
+WORKLOAD_USAGE_INCOMPLETE = "As métricas de uso dos workloads estão incompletas."
+WORKLOAD_REQUESTS_LIMITS_INCOMPLETE = "As métricas de requests e limits dos workloads estão incompletas."
+WORKLOAD_REQUESTS_LIMITS_UNAVAILABLE = "As métricas de requests e limits dos workloads estão indisponíveis."
+WORKLOAD_HISTORY_CURRENT_ASSOCIATION = "O histórico usa a associação atual entre pods ativos e workloads."
 
 [notice.WORKLOADS_OMITTED_NO_USAGE]
-singular = "1 carga de trabalho deixada de fora por não ter consumo observado no período."
-plural = "{{.Count}} cargas de trabalho deixadas de fora por não terem consumo observado no período."
+singular = "1 workload deixado de fora por não ter consumo observado no período."
+plural = "{{.Count}} workloads deixados de fora por não terem consumo observado no período."
 
 [notice.JOBS_OMITTED]
-singular = "1 Job foi deixado de fora do inventário de cargas de trabalho; o consumo continua contabilizado no total do namespace."
-plural = "{{.Count}} Jobs foram deixados de fora do inventário de cargas de trabalho; o consumo continua contabilizado nos totais dos namespaces."
+singular = "1 Job foi deixado de fora do inventário de workloads; o consumo continua contabilizado no total do namespace."
+plural = "{{.Count}} Jobs foram deixados de fora do inventário de workloads; o consumo continua contabilizado nos totais dos namespaces."
