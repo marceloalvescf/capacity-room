@@ -346,8 +346,9 @@ func TestChangelogReportsUnreleasedAfterAVersion(t *testing.T) {
 
 // TestChangelogIgnoresAFencedBlock proves that a heading-shaped line inside
 // a fenced code block, such as a worked example of the changelog's own
-// format, is not read as a real heading: the reviewer of this very phase
-// found this exact input broke the guard before this fix.
+// format, is not read as a real heading: a fenced "## [1.0.0] - 2020-01-01"
+// standing above two real, well-ordered headings must not be counted
+// against their order, and must not itself be returned as a version.
 func TestChangelogIgnoresAFencedBlock(t *testing.T) {
 	changelog := "# Changelog\n\nExample:\n\n```\n## [1.0.0] - 2020-01-01\n```\n\n## [1.2.0] - 2026-01-01\n## [1.1.0] - 2025-01-01\n"
 
@@ -411,8 +412,8 @@ func TestChangelogFences(t *testing.T) {
 }
 
 // TestChangelogReportsAnImpossibleDate covers the same rule as
-// TestNewestVersionHeadingRejectsImpossibleDate with the exact values the
-// review brief named.
+// TestNewestVersionHeadingRejectsImpossibleDate, with a month above 12, a
+// day above what its month holds, and a zero month.
 func TestChangelogReportsAnImpossibleDate(t *testing.T) {
 	cases := []string{
 		"## [1.0.0] - 2026-13-45",

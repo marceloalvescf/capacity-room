@@ -412,9 +412,13 @@ func TestSnapshotIsTheSameTwice(t *testing.T) {
 	}
 }
 
-// withoutAddressFields decodes a snapshot and clears the two fields the
-// brief says are allowed to differ between direct-complete and one of its
-// stand-ins: scope.discovered_values and settings.endpoint_type.
+// withoutAddressFields decodes a snapshot and clears the two fields that
+// may legitimately differ between direct-complete and one of its
+// stand-ins: scope.discovered_values and settings.endpoint_type each
+// describe how the client reached the endpoint (which cluster label value
+// it found, whether as Prometheus or as a Grafana datasource proxy), not
+// the resources measured, so a scenario that only changes the endpoint's
+// shape still produces the same document once these two are set aside.
 func withoutAddressFields(t *testing.T, data []byte) snapshot.Snapshot {
 	t.Helper()
 	snap, err := snapshot.Decode(data)
