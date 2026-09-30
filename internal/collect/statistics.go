@@ -69,14 +69,14 @@ func isFinite(value float64) bool {
 
 // samplesByTimestamp groups the valid points of series by key and
 // timestamp, following _samples_by_timestamp of the original: the points
-// of several series that share one key and one timestamp are added, in the
-// order the series stand in series; a sum that ends up non-finite is left
-// out; and a key left with no timestamp has no entry. A point whose
+// of several series that share one key and one timestamp are combined with
+// combine, in the order the series stand in series; a combined value that
+// ends up non-finite is left out; and a key left with no timestamp has no entry. A point whose
 // timestamp is NaN or infinite is left out as well: the client itself now
 // refuses such a timestamp before it reaches this package, but a caller of
 // this package can still build a Point by hand with one, and a NaN
 // timestamp can never be found again once used as a map key.
-func samplesByTimestamp(series []prom.Series, labels []string) map[Key]map[float64]float64 {
+func samplesByTimestamp(series []prom.Series, labels []string, combine func(a, b float64) float64) map[Key]map[float64]float64 {
 	grouped := make(map[Key]map[float64]float64)
 	for _, item := range series {
 		key := keyOf(item.Labels, labels)
@@ -90,7 +90,7 @@ func samplesByTimestamp(series []prom.Series, labels []string) map[Key]map[float
 				grouped[key] = values
 			}
 			if existing, ok := values[point.Time]; ok {
-				values[point.Time] = existing + point.Value
+				values[point.Time] = combine(existing, point.Value)
 			} else {
 				values[point.Time] = point.Value
 			}
@@ -158,7 +158,16 @@ func statisticsOf(values map[float64]float64) Statistics {
 // by the values of labels and by timestamp with samplesByTimestamp, and
 // each key left with a point is reduced with statisticsOf.
 func Reduce(series []prom.Series, labels []string) map[Key]Statistics {
-	grouped := samplesByTimestamp(series, labels)
+	return reduceWith(series, labels, add)
+}
+
+// add is the combination of Reduce.
+func add(a, b float64) float64 { return a + b }
+
+// reduceWith groups series with samplesByTimestamp, combining points of one
+// key and timestamp with combine, and reduces each key with statisticsOf.
+func reduceWith(series []prom.Series, labels []string, combine func(a, b float64) float64) map[Key]Statistics {
+	grouped := samplesByTimestamp(series, labels, combine)
 	result := make(map[Key]Statistics, len(grouped))
 	for key, values := range grouped {
 		result[key] = statisticsOf(values)
@@ -200,8 +209,8 @@ func latestOf(values map[float64]float64) (float64, bool) {
 // whatever baseState is, or when the key has usage, the base has no point
 // for it, and baseState is "available"; otherwise the key has no entry.
 func Ratios(usage, base []prom.Series, labels []string, baseState string) (map[Key]Statistics, map[Key]bool) {
-	usageValues := samplesByTimestamp(usage, labels)
-	baseValues := samplesByTimestamp(base, labels)
+	usageValues := samplesByTimestamp(usage, labels, add)
+	baseValues := samplesByTimestamp(base, labels, add)
 
 	ratios := make(map[Key]Statistics)
 	approximate := make(map[Key]bool)
