@@ -43,8 +43,8 @@ func compareGolden(path string, got []byte) error {
 	return nil
 }
 
-// TestGoldenSnapshots runs each of the six scenarios through Snapshot and
-// compares the result with its golden file.
+// TestGoldenSnapshots runs every scenario of promtest.Scenarios through
+// Snapshot and compares the result with its golden file.
 func TestGoldenSnapshots(t *testing.T) {
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
@@ -122,9 +122,9 @@ func jsonStems(t *testing.T, dir string) []string {
 	return fileStems(t, dir, ".json")
 }
 
-// TestGoldenQueries runs each of the six scenarios through Queries and
-// compares the result with its golden file: the queries the program sends
-// for that scenario are pinned exactly like its snapshot.
+// TestGoldenQueries runs every scenario of promtest.Scenarios through
+// Queries and compares the result with its golden file: the queries the
+// program sends for that scenario are pinned exactly like its snapshot.
 func TestGoldenQueries(t *testing.T) {
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {

@@ -1,7 +1,7 @@
 // Package goldentest runs the whole chain — connect, resolve the scope,
 // detect the capabilities, collect, analyze, build a snapshot, build a
-// document — against one of the six recorded scenarios of internal/promtest,
-// with one fixed input held constant across every run. It is not a test
+// document — against one scenario of promtest.Scenarios, with one fixed
+// input held constant across every run. It is not a test
 // file: golden_test.go uses it to compare against the golden files, and
 // cmd/update-testdata uses it to rewrite them. Neither the production binary
 // nor any package outside this chain of tests may import it; internal/guard

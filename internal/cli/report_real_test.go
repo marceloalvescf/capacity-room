@@ -1,10 +1,10 @@
 //go:build template
 
 // This file exercises `report` end to end with the real typst compiler and
-// the real pdftotext, from each of the six scenarios: through the real
-// client, the real template, and the real compiler, to a PDF whose text is
-// read back and checked. It needs no Docker; the native toolchain the
-// Makefile's test-template target also expects is enough.
+// the real pdftotext, from every scenario of promtest.Scenarios: through
+// the real client, the real template, and the real compiler, to a PDF
+// whose text is read back and checked. It needs no Docker; the native
+// toolchain the Makefile's test-template target also expects is enough.
 package cli
 
 import (
@@ -104,10 +104,10 @@ func requirePDF(t *testing.T, path string) {
 }
 
 // TestRealReportFromEachScenario compiles a real PDF, in each language, from
-// every one of the six scenarios, and checks that the cover title and the
-// nine capability names of that language, taken from the catalog by their
-// keys, and the cluster name every scenario config carries ("prod"), all
-// reach the text layer.
+// every scenario of promtest.Scenarios, and checks that the cover title and
+// the nine capability names of that language, taken from the catalog by
+// their keys, and the cluster name every scenario config carries ("prod"),
+// all reach the text layer.
 func TestRealReportFromEachScenario(t *testing.T) {
 	for _, scenario := range promtest.Scenarios {
 		for _, lang := range catalog.Languages() {

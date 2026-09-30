@@ -13,12 +13,11 @@ type Layer struct {
 	Rank int
 }
 
-// Layers is the table of known layers. Several of the layers named here
-// (internal/redact, internal/promtest, internal/config, internal/prom,
-// internal/discovery, internal/snapshot, internal/catalog,
-// internal/document, internal/goldentest) have no package yet; rank 60 is
-// kept for analysis, added later. A layer with no package yet is not a
-// violation; only a package that matches no layer is.
+// Layers is the table of every package of this module ranked for the
+// import-direction rule: a package may import a package of a lower rank,
+// or of its own layer, never one of a higher rank. A package that matches
+// no layer here is reported at the import that reaches it, whatever
+// imports it.
 var Layers = []Layer{
 	{Path: "internal/guard", Rank: 0},
 	{Path: "internal/typst", Rank: 0},

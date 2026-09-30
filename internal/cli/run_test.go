@@ -1755,7 +1755,7 @@ func clearCollectionTimes(s *snapshot.Snapshot) {
 // fixed clock and identifier internal/goldentest also uses, and with the
 // same organization, classification, and author given through its own
 // configuration file, produces the same snapshot internal/goldentest
-// builds for the same scenario, for every one of the six scenarios.
+// builds for the same scenario, for every scenario of promtest.Scenarios.
 func TestGoldenFlowEqualsTheCommand(t *testing.T) {
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
