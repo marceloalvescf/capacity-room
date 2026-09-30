@@ -1,6 +1,7 @@
 package prom
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -118,8 +119,8 @@ func parseSampleValue(raw interface{}) (value float64, valid bool, err error) {
 	if !ok {
 		return 0, false, invalid
 	}
-	value, err = strconv.ParseFloat(encoded, 64)
-	if err != nil {
+	value, ok = readEncodedValue(encoded)
+	if !ok {
 		return 0, false, invalid
 	}
 	return value, !math.IsNaN(value) && !math.IsInf(value, 0), nil
@@ -154,4 +155,21 @@ func numberValue(v interface{}) (float64, bool) {
 // isFinite reports whether value is neither NaN nor infinite.
 func isFinite(value float64) bool {
 	return !math.IsNaN(value) && !math.IsInf(value, 0)
+}
+
+// readEncodedValue reads the text of a sample's value member: a number
+// strconv.ParseFloat can read. A value that is well formed but too large
+// or too small for float64's range still parses, to an infinity or to
+// zero, the same way the original's float() does with no exception; only
+// a text that is not a number at all is refused.
+func readEncodedValue(encoded string) (float64, bool) {
+	value, err := strconv.ParseFloat(encoded, 64)
+	if err == nil {
+		return value, true
+	}
+	var numErr *strconv.NumError
+	if errors.As(err, &numErr) && numErr.Err == strconv.ErrRange {
+		return value, true
+	}
+	return 0, false
 }

@@ -253,6 +253,116 @@ func TestQueryAcceptsTimeAsNumberOrText(t *testing.T) {
 	}
 }
 
+// TestValueOutOfRangeIsNoData checks that a value too large for a
+// float64, well formed but out of range, reads as no data in both readers
+// rather than aborting the query, the same way the original's float()
+// saturates to an infinity with no exception.
+func TestValueOutOfRangeIsNoData(t *testing.T) {
+	cases := []string{"1e400", "-1e400"}
+	for _, encoded := range cases {
+		t.Run(encoded, func(t *testing.T) {
+			t.Run("vector", func(t *testing.T) {
+				body := fmt.Sprintf(`{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1000,%q]}]}}`, encoded)
+				client := connectedClient(t, func(int32) (int, string) { return http.StatusOK, body })
+
+				samples, err := client.Query(context.Background(), "up", time.Unix(1000, 0))
+				if err != nil {
+					t.Fatalf("Query: %v", err)
+				}
+				if len(samples) != 1 {
+					t.Fatalf("len(samples) = %d, want 1", len(samples))
+				}
+				if samples[0].Valid {
+					t.Errorf("Valid = true for %q, want false", encoded)
+				}
+			})
+			t.Run("matrix", func(t *testing.T) {
+				body := fmt.Sprintf(`{"status":"success","data":{"resultType":"matrix","result":[{"metric":{},"values":[[1000,%q]]}]}}`, encoded)
+				client := rangeClient(t, body)
+
+				got, err := client.QueryRange(context.Background(), "up", time.Unix(1, 0), time.Unix(2, 0), "1s")
+				if err != nil {
+					t.Fatalf("QueryRange: %v", err)
+				}
+				if len(got) != 1 || len(got[0].Points) != 1 {
+					t.Fatalf("QueryRange() = %+v, want one series of one point", got)
+				}
+				if got[0].Points[0].Valid {
+					t.Errorf("Valid = true for %q, want false", encoded)
+				}
+			})
+		})
+	}
+}
+
+// TestValueBelowTheSmallestIsZero checks that a value too small for a
+// float64 to represent reads as zero, valid, in both readers, the same
+// value Python's float() gives for the same text.
+func TestValueBelowTheSmallestIsZero(t *testing.T) {
+	t.Run("vector", func(t *testing.T) {
+		body := `{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1000,"1e-400"]}]}}`
+		client := connectedClient(t, func(int32) (int, string) { return http.StatusOK, body })
+
+		samples, err := client.Query(context.Background(), "up", time.Unix(1000, 0))
+		if err != nil {
+			t.Fatalf("Query: %v", err)
+		}
+		if len(samples) != 1 {
+			t.Fatalf("len(samples) = %d, want 1", len(samples))
+		}
+		if !samples[0].Valid {
+			t.Error("Valid = false, want true")
+		}
+		if samples[0].Value != 0 {
+			t.Errorf("Value = %v, want 0", samples[0].Value)
+		}
+	})
+	t.Run("matrix", func(t *testing.T) {
+		body := `{"status":"success","data":{"resultType":"matrix","result":[{"metric":{},"values":[[1000,"1e-400"]]}]}}`
+		client := rangeClient(t, body)
+
+		got, err := client.QueryRange(context.Background(), "up", time.Unix(1, 0), time.Unix(2, 0), "1s")
+		if err != nil {
+			t.Fatalf("QueryRange: %v", err)
+		}
+		if len(got) != 1 || len(got[0].Points) != 1 {
+			t.Fatalf("QueryRange() = %+v, want one series of one point", got)
+		}
+		point := got[0].Points[0]
+		if !point.Valid {
+			t.Error("Valid = false, want true")
+		}
+		if point.Value != 0 {
+			t.Errorf("Value = %v, want 0", point.Value)
+		}
+	})
+}
+
+// TestValueThatIsNoNumberIsStillRefused checks that a value that is not a
+// number at all is still refused as an invalid sample in both readers,
+// unlike a value that merely overflows.
+func TestValueThatIsNoNumberIsStillRefused(t *testing.T) {
+	cases := []string{"abc", "", "1e", "0x10"}
+	for _, encoded := range cases {
+		t.Run(encoded, func(t *testing.T) {
+			t.Run("vector", func(t *testing.T) {
+				body := fmt.Sprintf(`{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1000,%q]}]}}`, encoded)
+				client := connectedClient(t, func(int32) (int, string) { return http.StatusOK, body })
+
+				_, err := client.Query(context.Background(), "up", time.Unix(1000, 0))
+				assertPromError(t, err, KindQuery, "Prometheus response contains an invalid sample")
+			})
+			t.Run("matrix", func(t *testing.T) {
+				body := fmt.Sprintf(`{"status":"success","data":{"resultType":"matrix","result":[{"metric":{},"values":[[1000,%q]]}]}}`, encoded)
+				client := rangeClient(t, body)
+
+				_, err := client.QueryRange(context.Background(), "up", time.Unix(1, 0), time.Unix(2, 0), "1s")
+				assertPromError(t, err, KindQuery, "Prometheus response contains an invalid sample")
+			})
+		})
+	}
+}
+
 // TestQueryRefusesANonFiniteTimestamp checks that a sample whose timestamp
 // text reads as NaN or an infinity is refused as an invalid sample, rather
 // than treated as a valid time.

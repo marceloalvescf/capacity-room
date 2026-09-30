@@ -135,8 +135,8 @@ func parsePoint(raw interface{}) (Point, error) {
 	if !ok {
 		return Point{}, invalid
 	}
-	value, err := strconv.ParseFloat(encoded, 64)
-	if err != nil {
+	value, ok := readEncodedValue(encoded)
+	if !ok {
 		return Point{}, invalid
 	}
 	return Point{Time: when, Value: value, Valid: !math.IsNaN(value) && !math.IsInf(value, 0)}, nil
