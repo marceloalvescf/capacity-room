@@ -1390,8 +1390,13 @@ func TestEachLineIsOneWrite(t *testing.T) {
 // /query_range, still prints exactly the preflight lines it printed before
 // this part, and sends exactly the requests of the preflight: the same
 // requests, one by one and in order, by path and by the text of the query,
-// as the first requests of a --snapshot run of the same scenario, which
-// sends exactly fourteen more.
+// as the first requests of a --snapshot run of the same scenario.
+//
+// For direct-complete the check sends 29 requests: the connect probe, the
+// scope query, and the probes of the nine capabilities. The run sends 40
+// more, 69 in all: 14 of the namespace and workload collectors, 7 of the
+// HPA and coverage collector, 13 of the node collector, and 6 of the
+// cluster autoscaling collector.
 func TestCheckSendsNoRangeQuery(t *testing.T) {
 	checkServer, checkHandler, checkScenario := startScenario(t, "direct-complete")
 	defer checkServer.Close()
@@ -1402,6 +1407,9 @@ func TestCheckSendsNoRangeQuery(t *testing.T) {
 		t.Fatalf("check: code = %d, want 0; stderr = %q", code, stderr)
 	}
 	checkSeen := checkHandler.Seen()
+	if len(checkSeen) != 29 {
+		t.Fatalf("check sent %d requests, want 29", len(checkSeen))
+	}
 
 	for _, seen := range checkSeen {
 		if strings.HasSuffix(seen.Path, "query_range") {
@@ -1425,8 +1433,8 @@ func TestCheckSendsNoRangeQuery(t *testing.T) {
 	}
 	snapSeen := snapHandler.Seen()
 
-	if len(snapSeen) != len(checkSeen)+14 {
-		t.Fatalf("snapshot sent %d requests, want %d (the check's %d preflight requests, plus 14)", len(snapSeen), len(checkSeen)+14, len(checkSeen))
+	if len(snapSeen) != 69 {
+		t.Fatalf("snapshot sent %d requests, want 69 (the check's 29, plus 40 of the collectors)", len(snapSeen))
 	}
 	for i, wantSeen := range checkSeen {
 		gotSeen := snapSeen[i]
@@ -1436,9 +1444,12 @@ func TestCheckSendsNoRangeQuery(t *testing.T) {
 	}
 }
 
-// TestSnapshotRunSendsTheCollectorQueries establishes the preflight's own
-// request count through a --check run, then proves a --snapshot run of the
-// same scenario sends exactly fourteen more.
+// TestSnapshotRunSendsTheCollectorQueries proves a --snapshot run of
+// direct-complete sends 69 requests, and a --check run 29. The 29 are the
+// connect probe, the scope query, and the probes of the nine capabilities.
+// The 40 of the collectors are 14 of the namespace and workload collectors,
+// 7 of the HPA and coverage collector, 13 of the node collector, and 6 of
+// the cluster autoscaling collector.
 func TestSnapshotRunSendsTheCollectorQueries(t *testing.T) {
 	baseServer, baseHandler, baseScenario := startScenario(t, "direct-complete")
 	defer baseServer.Close()
@@ -1447,7 +1458,9 @@ func TestSnapshotRunSendsTheCollectorQueries(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("check: code = %d, want 0; stderr = %q", code, stderr)
 	}
-	preflightCount := len(baseHandler.Seen())
+	if got := len(baseHandler.Seen()); got != 29 {
+		t.Fatalf("check requests = %d, want 29", got)
+	}
 
 	server, handler, scenario := startScenario(t, "direct-complete")
 	defer server.Close()
@@ -1459,10 +1472,8 @@ func TestSnapshotRunSendsTheCollectorQueries(t *testing.T) {
 		t.Fatalf("snapshot: code = %d, want 0; stderr = %q", code, stderr)
 	}
 
-	got := len(handler.Seen())
-	want := preflightCount + 14
-	if got != want {
-		t.Fatalf("requests = %d, want %d (preflight %d + 14 collector requests)", got, want, preflightCount)
+	if got := len(handler.Seen()); got != 69 {
+		t.Fatalf("requests = %d, want 69 (29 of the preflight, 14 of namespaces and workloads, 7 of HPAs, 13 of nodes, 6 of autoscaling)", got)
 	}
 }
 

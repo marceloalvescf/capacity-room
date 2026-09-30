@@ -16,6 +16,7 @@ import (
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
@@ -122,18 +123,22 @@ type pythonFinding struct {
 
 // pythonRecording is one decoded testdata/python/<scenario>.json file.
 type pythonRecording struct {
-	Scenario            string               `json:"scenario"`
-	Source              string               `json:"source"`
-	PeriodStart         int64                `json:"period_start"`
-	PeriodEnd           int64                `json:"period_end"`
-	Step                string               `json:"step"`
-	NamespaceCollection string               `json:"namespace_collection"`
-	WorkloadCollection  string               `json:"workload_collection"`
-	Namespaces          []pythonNamespaceRow `json:"namespaces"`
-	Workloads           []pythonWorkloadRow  `json:"workloads"`
-	Findings            []pythonFinding      `json:"findings"`
-	Warnings            []string             `json:"warnings"`
-	Notices             []string             `json:"notices"`
+	Scenario              string               `json:"scenario"`
+	Source                string               `json:"source"`
+	PeriodStart           int64                `json:"period_start"`
+	PeriodEnd             int64                `json:"period_end"`
+	Step                  string               `json:"step"`
+	NamespaceCollection   string               `json:"namespace_collection"`
+	WorkloadCollection    string               `json:"workload_collection"`
+	HPACollection         string               `json:"hpa_collection"`
+	HPACoverageCollection string               `json:"hpa_coverage_collection"`
+	NodeCollection        string               `json:"node_collection"`
+	AutoscalingStatus     string               `json:"autoscaling_status"`
+	Namespaces            []pythonNamespaceRow `json:"namespaces"`
+	Workloads             []pythonWorkloadRow  `json:"workloads"`
+	Findings              []pythonFinding      `json:"findings"`
+	Warnings              []string             `json:"warnings"`
+	Notices               []string             `json:"notices"`
 }
 
 // pythonRecordingPath returns the place of a scenario's recorded file of
@@ -531,6 +536,26 @@ var originalWarnings = map[string]string{
 	collect.WarningWorkloadRequestsLimitsIncomplete:   "As métricas de solicitações e limites das cargas de trabalho estão incompletas.",
 	collect.WarningWorkloadRequestsLimitsUnavailable:  "As métricas de solicitações e limites das cargas de trabalho estão indisponíveis.",
 	collect.WarningWorkloadHistoryCurrentAssociation:  "O histórico usa a associação atual entre pods ativos e cargas de trabalho.",
+	collect.WarningHPAAmbiguousSpec:                   "Valores ambíguos de configuração ou alvo de HPA foram omitidos.",
+	collect.WarningHPAAmbiguousTarget:                 "Alvos ambíguos de HPA impedem uma cobertura confiável das cargas de trabalho.",
+	collect.WarningNodeIdentityUnavailable:            "As métricas de identidade dos nós estão indisponíveis.",
+	collect.WarningNodeCapacityEvidenceIncomplete:     "As evidências de capacidade dos nós estão incompletas.",
+
+	// The reasons a capability carries, which the original adds to the
+	// warnings as they stand.
+	"METRICS_NOT_FOUND":                "As métricas necessárias não foram encontradas.",
+	"CPU_USAGE_METRIC_NOT_FOUND":       "A métrica de uso de CPU não foi encontrada.",
+	"MEMORY_USAGE_METRIC_NOT_FOUND":    "A métrica de uso de memória não foi encontrada.",
+	"USAGE_METRICS_NOT_FOUND":          "As métricas de uso de CPU e memória não foram encontradas.",
+	"WORKLOAD_HISTORY_INEXACT":         "A associação histórica entre pods e cargas de trabalho não pôde ser reconstruída com exatidão.",
+	"WORKLOAD_ASSOCIATION_UNAVAILABLE": "A associação por carga de trabalho não está disponível; a cobertura está limitada a pods.",
+	"REQUESTS_LIMITS_INCOMPLETE":       "A cobertura de solicitações e limites está incompleta para CPU ou memória.",
+	"LEGACY_METRICS_PARTIAL":           "As métricas legadas oferecem cobertura parcial de recursos.",
+	"HPA_HISTORY_INCOMPLETE":           "A cobertura histórica dos HPAs está incompleta.",
+	"WORKLOAD_INVENTORY_INCOMPLETE":    "O inventário de cargas de trabalho ou alvos de HPA está incompleto.",
+	"NODE_ADDRESS_MAPPING_INCOMPLETE":  "A associação entre endereços e nós pode estar incompleta.",
+	"NODEPOOL_LABELS_NOT_FOUND":        "Os rótulos de pools de nós não foram encontrados.",
+	"NODE_AUTOSCALING_UNDETERMINED":    "O estado do escalonamento automático de nós não pôde ser determinado.",
 }
 
 // originalNotice holds the two forms of a notice of the original: the
@@ -549,6 +574,10 @@ var originalNotices = map[string]originalNotice{
 	collect.NoticeJobsOmitted: {
 		singular: "1 Job foi deixado de fora do inventário de cargas de trabalho; o consumo continua contabilizado no total do namespace.",
 		plural:   "%s Jobs foram deixados de fora do inventário de cargas de trabalho; o consumo continua contabilizado nos totais dos namespaces.",
+	},
+	collect.NoticeWorkloadsOmittedScaleZero: {
+		singular: "1 carga deixada de fora do inventário de cobertura por estar com escala zero.",
+		plural:   "%s cargas deixadas de fora do inventário de cobertura por estarem com escala zero.",
 	},
 }
 
@@ -674,9 +703,9 @@ func TestNumbersEqualTheOriginal(t *testing.T) {
 }
 
 // TestCollectionStatesEqualTheOriginal checks, for each of the seven
-// scenarios, that the state of the namespace collector and of the workload
-// collector equal namespace_collection and workload_collection of the
-// recorded file.
+// scenarios, that the states of the five collectors equal the five
+// collection states of the recorded file, and that the status of the
+// cluster autoscaling evidence equals autoscaling_status.
 func TestCollectionStatesEqualTheOriginal(t *testing.T) {
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
@@ -699,6 +728,18 @@ func TestCollectionStatesEqualTheOriginal(t *testing.T) {
 			}
 			if out.Collected.Workloads.State != want.WorkloadCollection {
 				t.Errorf("%s: workload collector state: got %q, want %q", scenario.Name, out.Collected.Workloads.State, want.WorkloadCollection)
+			}
+			if out.Collected.HPAs.State != want.HPACollection {
+				t.Errorf("%s: hpa collector state: got %q, want %q", scenario.Name, out.Collected.HPAs.State, want.HPACollection)
+			}
+			if out.Collected.Coverage.State != want.HPACoverageCollection {
+				t.Errorf("%s: hpa coverage collector state: got %q, want %q", scenario.Name, out.Collected.Coverage.State, want.HPACoverageCollection)
+			}
+			if out.Collected.Nodes.State != want.NodeCollection {
+				t.Errorf("%s: node collector state: got %q, want %q", scenario.Name, out.Collected.Nodes.State, want.NodeCollection)
+			}
+			if out.Collected.Autoscaling.Status != want.AutoscalingStatus {
+				t.Errorf("%s: autoscaling status: got %q, want %q", scenario.Name, out.Collected.Autoscaling.Status, want.AutoscalingStatus)
 			}
 		})
 	}
@@ -758,48 +799,26 @@ func readQueriesLines(t *testing.T, path string) []string {
 	return strings.Split(strings.TrimRight(string(data), "\n"), "\n")
 }
 
-// collectorQueryFloor is the fewest lines the project's own golden queries
-// file can hold for any scenario today: the fourteen queries the
-// namespace collector and the workload collector send between them, and
-// at least one query of the preflight that precedes them. A list shorter
-// than this is never a real run: it is empty, or holds only the
-// preflight.
-const collectorQueryFloor = 14 + 1
-
-// TestQueriesBeginTheListOfTheOriginal checks, for each of the seven
-// scenarios, that the project's own golden queries file holds at least
-// collectorQueryFloor lines, that every one of them equals the line of
-// the same number of the recorded queries file of the original, and that
-// the recorded list is strictly longer.
-func TestQueriesBeginTheListOfTheOriginal(t *testing.T) {
+// TestQueriesEqualTheOriginal checks, for each of the seven scenarios,
+// that the project's own golden queries file equals the recorded queries
+// file of the original line for line, whole, and that neither is longer
+// than the other.
+func TestQueriesEqualTheOriginal(t *testing.T) {
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
 			projectLines := queriesLines(t, scenario)
-			if len(projectLines) < collectorQueryFloor {
-				t.Fatalf("%s: the project's own list holds %d lines; the floor is the fourteen queries of the collectors and at least one of the preflight, %d",
-					scenario.Name, len(projectLines), collectorQueryFloor)
-			}
-
 			originalPath, err := pythonQueriesPath(scenario.Name)
 			if err != nil {
 				t.Fatalf("pythonQueriesPath(%s): %v", scenario.Name, err)
 			}
 			originalLines := readQueriesLines(t, originalPath)
 
-			if len(originalLines) < len(projectLines) {
-				t.Fatalf("%s: the original holds %d lines, shorter than the project's %d", scenario.Name, len(originalLines), len(projectLines))
+			if len(projectLines) != len(originalLines) {
+				t.Errorf("%s: the project's list holds %d lines, the original's %d", scenario.Name, len(projectLines), len(originalLines))
 			}
-			// The original goes on to query the autoscalers, the nodes,
-			// and the cluster autoscaling after the namespaces and the
-			// workloads, which this project does not send yet, so its
-			// list is always strictly longer; this assertion changes once
-			// the project sends those queries too.
-			if len(originalLines) <= len(projectLines) {
-				t.Errorf("%s: the original holds %d lines, not more than the project's %d", scenario.Name, len(originalLines), len(projectLines))
-			}
-			for i, line := range projectLines {
-				if originalLines[i] != line {
-					t.Errorf("%s: query line %d: got %q, want %q", scenario.Name, i+1, line, originalLines[i])
+			for i := 0; i < len(projectLines) && i < len(originalLines); i++ {
+				if projectLines[i] != originalLines[i] {
+					t.Errorf("%s: query line %d: got %q, want %q", scenario.Name, i+1, projectLines[i], originalLines[i])
 				}
 			}
 		})
@@ -1081,12 +1100,18 @@ func TestComparisonCanFail(t *testing.T) {
 }
 
 // TestOriginalSentencesCoverEveryCode wants a sentence of the original for
-// every warning code and for both forms of every notice code, so that the
-// comparison with the recorded files never passes by comparing nothing.
+// every warning code, every reason code, and both forms of every notice
+// code, so that the comparison with the recorded files never passes by
+// comparing nothing.
 func TestOriginalSentencesCoverEveryCode(t *testing.T) {
 	for _, code := range collect.WarningCodes {
 		if _, err := originalWarningText(code); err != nil {
 			t.Errorf("warning %s: %v", code, err)
+		}
+	}
+	for _, code := range discovery.ReasonCodes {
+		if _, err := originalWarningText(code); err != nil {
+			t.Errorf("reason %s: %v", code, err)
 		}
 	}
 	for _, code := range collect.NoticeCodes {
