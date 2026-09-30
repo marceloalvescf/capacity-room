@@ -186,6 +186,39 @@ reviewing this plan. The numbering continues that of part 2.1.
 | R34 | Ruling: a run that collects prints one line for each collector after the lines of the capabilities, `namespace collection: <state>` and `workload collection: <state>`, as the original does — scripts may read them (R13) — none known |
 | R35 | Ruling: the document classifies a percentage with the thresholds stored in the snapshot; the original keeps a second copy of the two thresholds in its render options — one source, and a PDF from a snapshot then judges as the run that made it — none known |
 
+## Rulings made during the execution
+
+The rulings R17 to R35 above were made when the plan was written, and the
+owner approved them with it on 2026-09-29. The ones below were made while
+the tasks ran, when an implementer, a review, or a real run showed something
+the plan had not foreseen. Each is written as decision, reason, and cost if
+wrong. The owner may overturn any of them.
+
+| ID | Task | Ruling |
+|---|---|---|
+| E45 | 0 | the helper of Task 4 that reads a key with no entry is `Lookup(statistics, key)`, which returns a statistic of state `unavailable` — the collectors of Tasks 6 and 7 need one name — if wrong, a rename in three files |
+| E46 | 0 | between Task 9 and Task 13 the tests of `internal/cli`, `internal/goldentest`, and `internal/document` that build a snapshot fail, on rule 5 of `Check` or on a golden comparison — moving the flow of the command into Task 9 would merge two tasks that a reviewer can judge apart; the third package was forgotten at first and added when Task 9 reported it — if wrong, the command cannot write a snapshot for the tasks in between, on a branch that releases nothing |
+| E47 | 0 | every dispatch says that `\|` in a table of a brief stands for the pipe — a brief is cut from a Markdown table — if wrong, a test pins a backslash that the original does not write |
+| E48 | 2 | the fix of F-39 wraps every bare error of `Unpack`, seven in all, and not the two that the finding named — a fix closes the class, and the sentence of the brief that forbade other changes protects the wording of a message, not its lack of a prefix — if wrong, messages carry a prefix that no caller reads |
+| E49 | 3 | the expected text of a quote inside a literal has one backslash, `(?:a\"b)`; the plan said two — `re.escape` of Python leaves a quote alone, which the controller confirmed by running the original — if wrong, nothing: the original is the reference |
+| E50 | 3 | `Literals` of an empty list panics with a fixed message — it is a fault of the program, not of an input: the configuration refuses an empty list of namespaces, and the list of excluded containers always holds two built-in values — if wrong, a caller that can pass an empty list needs an error, which changes the signature of `Selector.String` |
+| E51 | 4 | a label that a series lacks is keyed as the text `unknown`, and a workload type that is absent or empty is `Unknown`; the plan said the empty text — the original does so, and a row with an empty kind would fail the integrity rules of the snapshot and stop the run — if wrong, nothing: the original is the reference |
+| E52 | 7 | in the raw strategy the pod count of a workload adds the pods of every ownership record that gives the same namespace, name, and canonical kind; the original keeps the count of the last spelling of a kind and loses the others — the usage of the same pods is added in both tools — if wrong, a pod count differs from the original for a workload whose pods name their owner kind in two letter cases |
+| E53 | 10, 11 | Tasks 10 and 11 ran before Task 7 — they touch the catalog alone, and Task 7 builds on the code of Task 6, whose review was still open — if wrong, nothing: no task reads what another had not yet written |
+| E54 | 11 | the two entries of a notice are named `singular` and `plural`; the plan said `one` and `other` — the library reads a table made of those two words as one message with plural forms, and a guard of part 2.1 refuses them as segments of a key; R31 is otherwise unchanged — if wrong, a rename of four entries in two files |
+| E55 | 12 | the interpretation notes are not compared with the last two blocks of the parity fixture — the one note of the fixture is a text that no collector of this part writes; their shape was compared by hand; recorded as F-62 for part 2.3 — if wrong, a difference of shape in the notes is found one part later |
+| E56 | 13 | the queries of the original are recorded too, as `testdata/python/<scenario>.queries.txt`, with a test that the list of each scenario is the beginning of the list of the original — the recorded server answers by a part of the text, so only a list can show that a query is the one of the original — if wrong, seven more recorded files |
+| E57 | 15 | the script that recorded the original stays under `.cache/` and is not tracked; the README of `testdata/python/` says in words how the recording was made — the design keeps the tooling of the project in Go — if wrong, a second recording needs the script written again from the README |
+| E58 | 16 | no golden page is taken from `raw-fallback` — its one note is a row of the table that `command-edge-pt` shows with two rows, and the golden data file pins the text of the warning — if wrong, a change of how a warning prints is seen in the data file and not on a page |
+| E59 | 16 | the check of the repeated hyphen leaves the test of the real reports, and step 4 loses its last clause — no name of a recorded scenario breaks across two lines, so the check could not fail; the rule is protected by the tests of the template, by a fixture built to break a long name — if wrong, a fault that doubles a hyphen in a real report and not in the fixture is not seen; both pass through the same template function |
+| E60 | 18 | a timestamp of an answer that is not a finite number makes the answer malformed, in both readers, and the statistics carry each value with its timestamp through the sort (F-63) — Prometheus writes a timestamp as a number; a fault that is named stops the run, where a point that is dropped would hide it — if wrong, a run against an endpoint that writes one bad timestamp among good ones stops, where the original went on |
+| E61 | 18 | a value that is well formed and out of the range of a number is infinite, which is no data, as in the original (F-64) — the rule of the design — if wrong, nothing |
+| E62 | 18 | a value that arrives as a JSON number and not as a text stays refused (F-65) — Prometheus and the APIs compatible with it write a text, and the refusal is named — if wrong, an endpoint that writes numbers cannot be read until the reader accepts them |
+| E63 | 18 | a name with no place to break that is wider than its cell is left as the design has it, a known limit of the template, and put before the owner for part 2.4 (F-66); the reviewer rated it critical — section 10.4 names the limit; a change of the template changes the pages of the parity snapshot — if wrong, a report of a cluster with such a name has one row that cannot be read |
+| E64 | 18 | `Count` writes a large number as it is, and `Decimal` removes zeros only after a decimal mark (F-67, F-68) — the first is what the original prints; the second changes nothing that the original prints — if wrong, nothing |
+| E65 | 18 | a name that holds a slash is refused where it enters: by the configuration for a namespace, by the workload collector for an answer, and by the integrity rules for a snapshot file; the rules key a workload by its three fields (F-70) — a name of Kubernetes holds no slash, and two workloads could otherwise share one scope name — if wrong, a cluster whose exporter writes a slash into a name cannot be reported until the rule is changed |
+| E66 | 18 | the changelog guard refuses a second heading of the unreleased changes, does not read inside a fenced code block, and refuses a date that the calendar does not have (F-71, F-72) — members of the class that the part before this one kept finding — if wrong, nothing |
+
 ## Findings this plan closes or records
 
 | ID | What happens in this part |
@@ -196,6 +229,10 @@ reviewing this plan. The numbering continues that of part 2.1.
 | F-40 | Closed by Task 14 (R24) |
 | F-47 | Closed by Task 13 (R23) |
 | F-61 | Recorded while this plan was written: the wall clock of a skipped hour is moved forward east of UTC and back west of it, so the period of F-47 is empty or inverted in the first case and differs from the original in the second. Task 4 pins both by tests |
+| F-62 | Recorded by Task 12: the notes are not compared with the parity fixture; assigned to part 2.3 (E55) |
+| F-63, F-64, F-67 to F-73 | Found by the adversarial review of the branch and closed by the fix round of Task 18 (E60, E61, E64 to E66) |
+| F-65 | Found by the adversarial review; deferred with a reason (E62) |
+| F-66 | Found by the adversarial review; deferred to part 2.4, for the owner (E63) |
 
 ---
 
@@ -2144,9 +2181,11 @@ the comparison of this part is the test
   - `command-partial-en` keeps what it protects, with its page number
     corrected.
 - [ ] **Step 4:** Extend `report_real_test.go`: for each scenario and
-  language, the text of the PDF holds the heading of each section, the name
-  of the workload as written in the snapshot, and no repeated hyphen at a
-  line break.
+  language, the text of the PDF holds, each on its own page, the heading of
+  each section and the name of every namespace and workload as written in
+  the snapshot. The rule of the repeated hyphen at a line break stays with
+  the tests of the template, whose fixture holds a name long enough to
+  break; no name of a recorded scenario is.
 - [ ] **Step 5:** Run `make update-golden`. Open every page that changed.
   A page that changed without a reason that can be named is a defect. The
   pages of `capacity-parity` must not change.

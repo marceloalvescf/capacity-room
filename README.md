@@ -113,10 +113,14 @@ average, a minimum, a peak, and the last value.
 After the lines of the capabilities, a run that collects prints one line for
 each collection, such as `namespace collection: available`.
 
-Two limits stop a run:
+Three rules stop a run:
 
 - An answer of the endpoint larger than 256 MiB is refused, with exit
   code 3.
+- A namespace of `cluster.namespaces` that holds a slash is refused, with
+  exit code 2; a workload that the endpoint answers with a slash in its
+  namespace, its name, or its kind stops the run with exit code 3. No name
+  of Kubernetes holds a slash, so such a name is a fault of the endpoint.
 - A period that is empty stops the run with exit code 2, before any request.
   This happens only in a time zone that changes its offset, when the period
   is shorter than the hour that the change skips and the run starts inside

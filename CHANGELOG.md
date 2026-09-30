@@ -34,3 +34,6 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - An answer of the endpoint larger than 256 MiB stops the run.
 - A period that is empty, because the offset of the time zone changes inside
   it, stops the run with a message that names the period and the zone.
+- A namespace of the configuration, or a workload that the endpoint answers,
+  whose name holds a slash stops the run, because no name of Kubernetes
+  holds one.
