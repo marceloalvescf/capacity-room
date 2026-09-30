@@ -57,10 +57,18 @@ func Workloads(rows []collect.Workload, t config.Thresholds) []Finding {
 	return findings
 }
 
-// All gives the findings of the namespaces and of the workloads of c,
-// sorted together.
+// All gives the findings of c in the order of the original: namespaces,
+// workloads, HPAs with the coverage rows, nodes, pools, and autoscaling,
+// sorted together. The node pressure is worked out from the node and pool
+// findings only.
 func All(c collect.Collected, t config.Thresholds) []Finding {
 	findings := append(Namespaces(c.Namespaces.Rows, t), Workloads(c.Workloads.Rows, t)...)
+	findings = append(findings, HPAs(c.HPAs.Rows, c.Coverage.Rows, t)...)
+	nodeFindings := Nodes(c.Nodes.Rows, t)
+	poolFindings := Pools(collect.Pools(c.Nodes.Rows), c.Nodes.Rows, t)
+	findings = append(findings, nodeFindings...)
+	findings = append(findings, poolFindings...)
+	findings = append(findings, Autoscaling(c.Autoscaling, t, NodePressure(nodeFindings, poolFindings))...)
 	Sort(findings)
 	return findings
 }

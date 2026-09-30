@@ -32,9 +32,9 @@ func TestClassifyBoundaries(t *testing.T) {
 	}
 }
 
-func TestRegistryHoldsFortyCodes(t *testing.T) {
-	if len(Registry) != 40 {
-		t.Fatalf("len(Registry) = %d, want 40", len(Registry))
+func TestRegistryHoldsSixtySixCodes(t *testing.T) {
+	if len(Registry) != 66 {
+		t.Fatalf("len(Registry) = %d, want 66", len(Registry))
 	}
 
 	seen := make(map[string]bool, len(Registry))
@@ -87,6 +87,82 @@ func TestRegistryHoldsFortyCodes(t *testing.T) {
 			}
 		}
 	}
+
+	if index != 40 {
+		t.Fatalf("checked %d definitions of namespaces and workloads, want 40", index)
+	}
+	for _, w := range wantClusterDefinitions {
+		definition := Registry[index]
+		if definition.Code != w.code || definition.Family != w.family || definition.ScopeType != w.scope ||
+			!equalStrings(definition.Severities, w.severities) || !equalSpecs(definition.Evidence, w.evidence) {
+			t.Errorf("Registry[%d] = %+v, want %+v", index, definition, w)
+		}
+		index++
+	}
+}
+
+type wantDefinition struct {
+	code, family, scope string
+	severities          []string
+	evidence            []EvidenceSpec
+}
+
+func wantNumbers(names ...string) []EvidenceSpec {
+	specs := []EvidenceSpec{}
+	for _, name := range names {
+		specs = append(specs, EvidenceSpec{Name: name, Kind: KindNumber})
+	}
+	return specs
+}
+
+var (
+	wantUsage = []EvidenceSpec{
+		{Name: "average_percent", Kind: KindNumber, Optional: true},
+		{Name: "peak_percent", Kind: KindNumber, Optional: true},
+	}
+	wantPressure = []EvidenceSpec{{Name: "node_pressure", Kind: KindBoolean}}
+	one          = func(s string) []string { return []string{s} }
+
+	wantClusterDefinitions = []wantDefinition{
+		{"NODE_CPU_USAGE_HEALTHY", "node_usage", "node", one("healthy"), wantUsage},
+		{"NODE_CPU_USAGE_ATTENTION", "node_usage", "node", one("attention"), wantUsage},
+		{"NODE_CPU_USAGE_CRITICAL", "node_usage", "node", one("critical"), wantUsage},
+		{"NODE_MEMORY_USAGE_HEALTHY", "node_usage", "node", one("healthy"), wantUsage},
+		{"NODE_MEMORY_USAGE_ATTENTION", "node_usage", "node", one("attention"), wantUsage},
+		{"NODE_MEMORY_USAGE_CRITICAL", "node_usage", "node", one("critical"), wantUsage},
+		{"NODE_CPU_REQUEST_HIGH", "node_request_high", "node", []string{"attention", "critical"}, wantNumbers("percent")},
+		{"NODE_MEMORY_REQUEST_HIGH", "node_request_high", "node", []string{"attention", "critical"}, wantNumbers("percent")},
+		{"NODE_OVERREQUESTED", "node_overrequested", "node", one("attention"), []EvidenceSpec{{Name: "resources", Kind: KindText}}},
+		{"NODE_LOW_UTILIZATION", "node_low_utilization", "node", one("attention"), wantNumbers("maximum_average_percent")},
+		{"NODEPOOL_UNKNOWN", "nodepool_unknown", "nodepool", one("attention"), wantNumbers("affected_nodes")},
+		{"NODEPOOL_CPU_UNEVEN", "nodepool_uneven", "nodepool", one("attention"), wantNumbers("minimum_peak_percent", "maximum_peak_percent", "spread_percent")},
+		{"NODEPOOL_MEMORY_UNEVEN", "nodepool_uneven", "nodepool", one("attention"), wantNumbers("minimum_peak_percent", "maximum_peak_percent", "spread_percent")},
+		{"HPA_PINNED_REPLICAS", "hpa_pinned", "hpa", one("healthy"), wantNumbers("spec_min", "spec_max")},
+		{"HPA_MAX_REPLICAS_REACHED", "hpa_max_reached", "hpa", one("critical"), wantNumbers("current_peak", "spec_max")},
+		{"HPA_NEAR_MAX_REPLICAS", "hpa_near_max", "hpa", one("attention"), wantNumbers("current_average", "spec_max")},
+		{"HPA_REPLICA_DIVERGENCE", "hpa_divergence", "hpa", one("attention"), wantNumbers("average_difference")},
+		{"DEPLOYMENT_WITHOUT_HPA", "deployment_without_hpa", "workload", one("attention"), wantNumbers()},
+		{"STATEFULSET_WITHOUT_HPA_INFO", "statefulset_without_hpa", "workload", one("healthy"), wantNumbers()},
+		{"NODE_AUTOSCALING_UNKNOWN", "autoscaling_unknown", "cluster", one("attention"), wantNumbers()},
+		{"NODE_AUTOSCALING_DISABLED", "autoscaling_disabled", "cluster", one("attention"), wantPressure},
+		{"NODE_AUTOSCALING_DISABLED_PRESSURE", "autoscaling_disabled", "cluster", one("critical"), wantPressure},
+		{"NODE_AUTOSCALING_NEAR_MAX", "autoscaling_near_max", "cluster", one("attention"), wantNumbers("current_nodes", "max_nodes")},
+		{"NODE_AUTOSCALING_BOUNDS_UNKNOWN", "autoscaling_bounds_unknown", "cluster", one("healthy"), wantNumbers()},
+		{"NODE_AUTOSCALING_AT_MIN", "autoscaling_at_min", "cluster", one("healthy"), wantNumbers("min_nodes")},
+		{"NODE_AUTOSCALING_ENABLED", "autoscaling_enabled", "cluster", one("healthy"), wantNumbers()},
+	}
+)
+
+func equalSpecs(a, b []EvidenceSpec) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // TestRegistryRiskFollowsTheResource covers the twelve LIMIT_ codes of
@@ -154,18 +230,27 @@ func evidenceNames(definition Definition) []string {
 }
 
 // TestRegistryHoldsTheKindOfEveryEvidence covers the kind of each evidence
-// and the list of severities of each of the 40 definitions.
+// and the list of severities: the first 40 definitions carry one severity
+// and numbers only; the 26 after them are checked against the design in
+// TestRegistryHoldsSixtySixCodes.
 func TestRegistryHoldsTheKindOfEveryEvidence(t *testing.T) {
-	if len(Registry) != 40 {
-		t.Fatalf("Registry holds %d definitions, want 40", len(Registry))
+	if len(Registry) != 66 {
+		t.Fatalf("Registry holds %d definitions, want 66", len(Registry))
 	}
-	for _, definition := range Registry {
+	for _, definition := range Registry[:40] {
 		if len(definition.Severities) != 1 {
 			t.Errorf("%s: Severities = %v, want a list of one", definition.Code, definition.Severities)
 		}
 		for _, spec := range definition.Evidence {
-			if spec.Kind != KindNumber {
-				t.Errorf("%s: evidence %s has kind %q, want %q", definition.Code, spec.Name, spec.Kind, KindNumber)
+			if spec.Kind != KindNumber || spec.Optional {
+				t.Errorf("%s: evidence %s has kind %q optional %v, want a required number", definition.Code, spec.Name, spec.Kind, spec.Optional)
+			}
+		}
+	}
+	for _, definition := range Registry[40:] {
+		for _, spec := range definition.Evidence {
+			if spec.Optional && definition.Family != "node_usage" {
+				t.Errorf("%s: evidence %s is optional outside node_usage", definition.Code, spec.Name)
 			}
 		}
 	}

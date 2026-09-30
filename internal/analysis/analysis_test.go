@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
@@ -139,7 +140,7 @@ func TestFindingsOfDirectComplete(t *testing.T) {
 		Workloads:  collect.Result[collect.Workload]{Rows: workloads},
 	}
 
-	findings := All(collected, defaultThresholds())
+	findings := slices.DeleteFunc(All(collected, defaultThresholds()), func(f Finding) bool { return f.ScopeType == ScopeCluster })
 
 	want := []struct {
 		code    string
@@ -215,9 +216,77 @@ func criticalResources() collect.Resources {
 	}
 }
 
+// clusterFindings builds inputs that give each of the 26 codes of HPAs,
+// nodes, pools, and autoscaling, and returns the findings of all of them.
+func clusterFindings() []Finding {
+	thresholds := defaultThresholds()
+	node := func(name, pool, confidence string, cpu, memory collect.Statistics) collect.Node {
+		return collect.Node{Name: name, Pool: pool, PoolConfidence: confidence, CPUUsagePercent: cpu, MemoryUsagePercent: memory}
+	}
+	n1 := node("n1", "p1", discovery.ConfidenceExact, valueStats(50, 50), valueStats(75, 75))
+	n2 := node("n2", "p1", discovery.ConfidenceExact, valueStats(75, 75), valueStats(90, 90))
+	n3 := node("n3", "p1", discovery.ConfidenceExact, valueStats(90, 90), valueStats(50, 50))
+	n4 := node("n4", "p2", discovery.ConfidenceExact, valueStats(20, 20), valueStats(25, 25))
+	n4.CPURequestPercent = known(90)
+	n4.MemoryRequestPercent = known(72)
+	n5 := node("n5", "unknown", discovery.ConfidenceUnknown, collect.Statistics{}, collect.Statistics{})
+	nodes := []collect.Node{n1, n2, n3, n4, n5}
+
+	hpas := []collect.HPA{
+		{Namespace: "a", Name: "pinned", SpecMin: known(3), SpecMax: known(3), Current: valueStats(3, 3)},
+		{Namespace: "a", Name: "max", SpecMin: known(1), SpecMax: known(4), Current: valueStats(2, 4)},
+		{Namespace: "a", Name: "near", SpecMin: known(1), SpecMax: known(5), Current: valueStats(4, 4), Desired: valueStats(2, 2)},
+	}
+	uncovered := []collect.WorkloadRef{
+		{Namespace: "a", Kind: "Deployment", Name: "d"},
+		{Namespace: "a", Kind: "StatefulSet", Name: "s"},
+	}
+
+	findings := HPAs(hpas, uncovered, thresholds)
+	nodeFindings := Nodes(nodes, thresholds)
+	poolFindings := Pools(collect.Pools(nodes), nodes, thresholds)
+	findings = append(findings, nodeFindings...)
+	findings = append(findings, poolFindings...)
+
+	none := collect.Number{}
+	for _, e := range []struct {
+		evidence collect.AutoscalingEvidence
+		pressure bool
+	}{
+		{evidenceOf("unknown", discovery.ConfidenceUnknown, none, none, none), false},
+		{evidenceOf("disabled", discovery.ConfidenceExact, none, none, none), false},
+		{evidenceOf("disabled", discovery.ConfidenceExact, none, none, none), true},
+		{evidenceOf("enabled", discovery.ConfidenceInferred, known(4), known(1), known(5)), false},
+		{evidenceOf("enabled", discovery.ConfidenceExact, none, none, none), false},
+		{evidenceOf("enabled", discovery.ConfidenceInferred, known(2), known(2), known(10)), false},
+		{evidenceOf("enabled", discovery.ConfidenceInferred, known(3), known(2), known(10)), false},
+	} {
+		findings = append(findings, Autoscaling(e.evidence, thresholds, e.pressure)...)
+	}
+	return findings
+}
+
+// matchesSpecs reports whether the evidence of a finding follows specs: the
+// same names in order, where a spec marked optional may be left out.
+func matchesSpecs(evidence []Evidence, specs []EvidenceSpec) bool {
+	i := 0
+	for _, spec := range specs {
+		if i < len(evidence) && evidence[i].Name == spec.Name {
+			if evidence[i].Value.Kind != spec.Kind {
+				return false
+			}
+			i++
+		} else if !spec.Optional {
+			return false
+		}
+	}
+	return i == len(evidence)
+}
+
 // TestEveryFindingFollowsItsDefinition builds rows that give each of the
-// 40 codes and checks that each finding agrees with its registry
-// definition in severity, scope type, and evidence names.
+// 66 codes and checks that each finding agrees with its registry
+// definition in severity, scope type, and evidence names and kinds. A
+// code of nodes may come from more than one node.
 func TestEveryFindingFollowsItsDefinition(t *testing.T) {
 	t.Parallel()
 	thresholds := defaultThresholds()
@@ -234,6 +303,7 @@ func TestEveryFindingFollowsItsDefinition(t *testing.T) {
 	}
 
 	findings := append(Namespaces(namespaces, thresholds), Workloads(workloads, thresholds)...)
+	findings = append(findings, clusterFindings()...)
 
 	for _, definition := range Registry {
 		var matches []Finding
@@ -242,28 +312,83 @@ func TestEveryFindingFollowsItsDefinition(t *testing.T) {
 				matches = append(matches, f)
 			}
 		}
-		if len(matches) != 1 {
+		if len(matches) == 0 {
+			t.Errorf("%s: no finding", definition.Code)
+		}
+		if len(matches) != 1 && !strings.HasPrefix(definition.Code, "NODE_") {
 			t.Errorf("%s: found %d findings, want 1", definition.Code, len(matches))
-			continue
 		}
-		got := matches[0]
-		if !slices.Contains(definition.Severities, got.Severity) {
-			t.Errorf("%s: Severity = %q, want one of %v", definition.Code, got.Severity, definition.Severities)
-		}
-		if got.ScopeType != definition.ScopeType {
-			t.Errorf("%s: ScopeType = %q, want %q", definition.Code, got.ScopeType, definition.ScopeType)
-		}
-		if len(got.Evidence) != len(definition.Evidence) {
-			t.Errorf("%s: Evidence = %+v, want specs %v", definition.Code, got.Evidence, definition.Evidence)
-			continue
-		}
-		for i, spec := range definition.Evidence {
-			if got.Evidence[i].Name != spec.Name {
-				t.Errorf("%s: Evidence[%d].Name = %q, want %q", definition.Code, i, got.Evidence[i].Name, spec.Name)
+		for _, got := range matches {
+			if !slices.Contains(definition.Severities, got.Severity) {
+				t.Errorf("%s: Severity = %q, want one of %v", definition.Code, got.Severity, definition.Severities)
 			}
-			if got.Evidence[i].Value.Kind != spec.Kind {
-				t.Errorf("%s: Evidence[%d].Kind = %q, want %q", definition.Code, i, got.Evidence[i].Value.Kind, spec.Kind)
+			if got.ScopeType != definition.ScopeType {
+				t.Errorf("%s: ScopeType = %q, want %q", definition.Code, got.ScopeType, definition.ScopeType)
+			}
+			if !matchesSpecs(got.Evidence, definition.Evidence) {
+				t.Errorf("%s: Evidence = %+v, want specs %v", definition.Code, got.Evidence, definition.Evidence)
 			}
 		}
+	}
+}
+
+// TestNodeRequestHighSeverities covers both severities the two request
+// high codes may carry.
+func TestNodeRequestHighSeverities(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		percent  float64
+		severity string
+	}{{72, SeverityAttention}, {90, SeverityCritical}} {
+		n := testNode("n1")
+		n.MemoryRequestPercent = known(c.percent)
+		f := only(t, byCode(Nodes([]collect.Node{n}, defaultThresholds()), "NODE_MEMORY_REQUEST_HIGH"))
+		if f.Severity != c.severity {
+			t.Errorf("percent %v: Severity = %q, want %q", c.percent, f.Severity, c.severity)
+		}
+	}
+	n := testNode("n1")
+	n.CPURequestPercent = known(69)
+	if got := Nodes([]collect.Node{n}, defaultThresholds()); len(got) != 0 {
+		t.Errorf("request 69: findings = %+v, want none", got)
+	}
+}
+
+// TestAllOrdersSixGroups gives one finding of each group and checks that
+// All sorts them together, and that the node pressure is worked out from
+// the node and pool findings only.
+func TestAllOrdersSixGroups(t *testing.T) {
+	t.Parallel()
+	collected := collect.Collected{
+		Namespaces: collect.Result[collect.Namespace]{Rows: []collect.Namespace{
+			{Name: "ns", Resources: collect.Resources{CPURequestPercent: valueStats(90, 95)}},
+		}},
+		Workloads: collect.Result[collect.Workload]{Rows: []collect.Workload{
+			{Namespace: "w", Kind: "Deployment", Name: "x", Resources: collect.Resources{MemoryRequestPercent: valueStats(40, 40)}},
+		}},
+		HPAs: collect.Result[collect.HPA]{Rows: []collect.HPA{
+			{Namespace: "a", Name: "h", SpecMin: known(1), SpecMax: known(4), Current: valueStats(2, 4)},
+		}},
+		Nodes: collect.Result[collect.Node]{Rows: []collect.Node{
+			{Name: "n1", Pool: "p", PoolConfidence: discovery.ConfidenceExact, CPUUsagePercent: valueStats(50, 50)},
+		}},
+		Autoscaling: evidenceOf("disabled", discovery.ConfidenceExact, collect.Number{}, collect.Number{}, collect.Number{}),
+	}
+
+	got := codesOf(All(collected, defaultThresholds()))
+
+	want := []string{"HPA_MAX_REPLICAS_REACHED", "NAMESPACE_CPU_REQUEST_CRITICAL", "NODE_AUTOSCALING_DISABLED", "NODE_CPU_USAGE_HEALTHY", "WORKLOAD_MEMORY_REQUEST_HEALTHY"}
+	if !slices.Equal(got, want) {
+		t.Errorf("without pressure: codes = %v, want %v", got, want)
+	}
+
+	collected.Nodes.Rows = append(collected.Nodes.Rows,
+		collect.Node{Name: "n2", Pool: "p", PoolConfidence: discovery.ConfidenceExact, CPUUsagePercent: valueStats(10, 10)})
+	got = codesOf(All(collected, defaultThresholds()))
+	if !slices.Contains(got, "NODE_AUTOSCALING_DISABLED_PRESSURE") || slices.Contains(got, "NODE_AUTOSCALING_DISABLED") {
+		t.Errorf("with pressure: codes = %v, want DISABLED_PRESSURE", got)
+	}
+	if got[0] != "HPA_MAX_REPLICAS_REACHED" || got[1] != "NODE_AUTOSCALING_DISABLED_PRESSURE" || got[2] != "NAMESPACE_CPU_REQUEST_CRITICAL" {
+		t.Errorf("with pressure: critical findings first, sorted by scope: %v", got)
 	}
 }

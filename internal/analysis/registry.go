@@ -23,6 +23,10 @@ var Severities = []string{SeverityHealthy, SeverityAttention, SeverityCritical}
 const (
 	ScopeNamespace = "namespace"
 	ScopeWorkload  = "workload"
+	ScopeHPA       = "hpa"
+	ScopeNode      = "node"
+	ScopeNodepool  = "nodepool"
+	ScopeCluster   = "cluster"
 )
 
 // ValueKind names the kind an evidence value carries.
@@ -60,8 +64,9 @@ type Evidence struct {
 
 // EvidenceSpec names one evidence of a definition and the kind it carries.
 type EvidenceSpec struct {
-	Name string
-	Kind ValueKind
+	Name     string
+	Kind     ValueKind
+	Optional bool // a finding may omit it when its number is unknown
 }
 
 // Finding is one judgment of the analysis. It carries no sentence.
@@ -129,11 +134,12 @@ var resources = []struct {
 	{"memory", "oomkill"},
 }
 
-// buildRegistry lists the 40 codes in the order of the design: prefix
-// NAMESPACE then WORKLOAD; resource CPU then MEMORY; ending in the order
-// of endings.
+// buildRegistry lists the 40 codes of namespaces and workloads in the order
+// of the design: prefix NAMESPACE then WORKLOAD; resource CPU then MEMORY;
+// ending in the order of endings. The 26 codes of HPAs, nodes, pools, and
+// autoscaling follow.
 func buildRegistry() []Definition {
-	registry := make([]Definition, 0, len(prefixes)*len(resources)*len(endings))
+	registry := make([]Definition, 0, 66)
 	for _, prefix := range prefixes {
 		for _, resource := range resources {
 			for _, e := range endings {
@@ -156,7 +162,90 @@ func buildRegistry() []Definition {
 			}
 		}
 	}
-	return registry
+	return append(registry, clusterDefinitions()...)
+}
+
+// numbers makes the evidence specs of a definition, all of kind number.
+func numbers(names ...string) []EvidenceSpec {
+	specs := make([]EvidenceSpec, 0, len(names))
+	for _, name := range names {
+		specs = append(specs, EvidenceSpec{Name: name, Kind: KindNumber})
+	}
+	return specs
+}
+
+// usageEvidence lists the evidence of a node usage code: the average and
+// the peak, each optional.
+func usageEvidence() []EvidenceSpec {
+	return []EvidenceSpec{
+		{Name: "average_percent", Kind: KindNumber, Optional: true},
+		{Name: "peak_percent", Kind: KindNumber, Optional: true},
+	}
+}
+
+// clusterDefinitions lists the 26 codes of nodes, pools, HPAs, and
+// autoscaling, in the order of the design.
+func clusterDefinitions() []Definition {
+	definitions := []Definition{}
+	for _, resource := range []string{"cpu", "memory"} {
+		for _, severity := range Severities {
+			definitions = append(definitions, Definition{
+				Code:       "NODE_" + strings.ToUpper(resource) + "_USAGE_" + strings.ToUpper(severity),
+				Family:     "node_usage",
+				Severities: []string{severity},
+				ScopeType:  ScopeNode,
+				Params:     map[string]string{"resource": resource},
+				Evidence:   usageEvidence(),
+			})
+		}
+	}
+	for _, resource := range []string{"cpu", "memory"} {
+		definitions = append(definitions, Definition{
+			Code:       "NODE_" + strings.ToUpper(resource) + "_REQUEST_HIGH",
+			Family:     "node_request_high",
+			Severities: []string{SeverityAttention, SeverityCritical},
+			ScopeType:  ScopeNode,
+			Params:     map[string]string{"resource": resource},
+			Evidence:   numbers("percent"),
+		})
+	}
+	definitions = append(definitions,
+		Definition{Code: "NODE_OVERREQUESTED", Family: "node_overrequested", Severities: []string{SeverityAttention}, ScopeType: ScopeNode, Params: map[string]string{},
+			Evidence: []EvidenceSpec{{Name: "resources", Kind: KindText}}},
+		Definition{Code: "NODE_LOW_UTILIZATION", Family: "node_low_utilization", Severities: []string{SeverityAttention}, ScopeType: ScopeNode, Params: map[string]string{},
+			Evidence: numbers("maximum_average_percent")},
+		Definition{Code: "NODEPOOL_UNKNOWN", Family: "nodepool_unknown", Severities: []string{SeverityAttention}, ScopeType: ScopeNodepool, Params: map[string]string{},
+			Evidence: numbers("affected_nodes")},
+	)
+	for _, resource := range []string{"cpu", "memory"} {
+		definitions = append(definitions, Definition{
+			Code:       "NODEPOOL_" + strings.ToUpper(resource) + "_UNEVEN",
+			Family:     "nodepool_uneven",
+			Severities: []string{SeverityAttention},
+			ScopeType:  ScopeNodepool,
+			Params:     map[string]string{"resource": resource},
+			Evidence:   numbers("minimum_peak_percent", "maximum_peak_percent", "spread_percent"),
+		})
+	}
+	plain := func(code, family, severity, scopeType string, evidence []EvidenceSpec) Definition {
+		return Definition{Code: code, Family: family, Severities: []string{severity}, ScopeType: scopeType, Params: map[string]string{}, Evidence: evidence}
+	}
+	pressure := []EvidenceSpec{{Name: "node_pressure", Kind: KindBoolean}}
+	return append(definitions,
+		plain("HPA_PINNED_REPLICAS", "hpa_pinned", SeverityHealthy, ScopeHPA, numbers("spec_min", "spec_max")),
+		plain("HPA_MAX_REPLICAS_REACHED", "hpa_max_reached", SeverityCritical, ScopeHPA, numbers("current_peak", "spec_max")),
+		plain("HPA_NEAR_MAX_REPLICAS", "hpa_near_max", SeverityAttention, ScopeHPA, numbers("current_average", "spec_max")),
+		plain("HPA_REPLICA_DIVERGENCE", "hpa_divergence", SeverityAttention, ScopeHPA, numbers("average_difference")),
+		plain("DEPLOYMENT_WITHOUT_HPA", "deployment_without_hpa", SeverityAttention, ScopeWorkload, numbers()),
+		plain("STATEFULSET_WITHOUT_HPA_INFO", "statefulset_without_hpa", SeverityHealthy, ScopeWorkload, numbers()),
+		plain("NODE_AUTOSCALING_UNKNOWN", "autoscaling_unknown", SeverityAttention, ScopeCluster, numbers()),
+		plain("NODE_AUTOSCALING_DISABLED", "autoscaling_disabled", SeverityAttention, ScopeCluster, pressure),
+		plain("NODE_AUTOSCALING_DISABLED_PRESSURE", "autoscaling_disabled", SeverityCritical, ScopeCluster, pressure),
+		plain("NODE_AUTOSCALING_NEAR_MAX", "autoscaling_near_max", SeverityAttention, ScopeCluster, numbers("current_nodes", "max_nodes")),
+		plain("NODE_AUTOSCALING_BOUNDS_UNKNOWN", "autoscaling_bounds_unknown", SeverityHealthy, ScopeCluster, numbers()),
+		plain("NODE_AUTOSCALING_AT_MIN", "autoscaling_at_min", SeverityHealthy, ScopeCluster, numbers("min_nodes")),
+		plain("NODE_AUTOSCALING_ENABLED", "autoscaling_enabled", SeverityHealthy, ScopeCluster, numbers()),
+	)
 }
 
 // Registry lists every code this version can write.
