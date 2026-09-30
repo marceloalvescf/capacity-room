@@ -4,6 +4,7 @@ import (
 	"math"
 	"sort"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/arith"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
 )
 
@@ -117,9 +118,9 @@ type timestamped struct {
 }
 
 // statisticsOf reduces values, keyed by timestamp, to a Statistics,
-// following _statistics of the original: the average is the sum of the
-// values divided by their count, the values added in the order of their
-// timestamps; the current value is the one of the largest timestamp. Each
+// following _statistics of the original: the average is the compensated
+// sum of the values divided by their count, the values added in the order of
+// their timestamps; the current value is the one of the largest timestamp. Each
 // value is carried through the sort together with its timestamp, and never
 // looked up again by it: a map lookup keyed by a timestamp read back out of
 // the same map is exactly what let a NaN timestamp stand for a real value
@@ -131,11 +132,11 @@ func statisticsOf(values map[float64]float64) Statistics {
 	}
 	sort.Slice(pairs, func(i, j int) bool { return pairs[i].timestamp < pairs[j].timestamp })
 
-	sum := 0.0
+	sorted := make([]float64, len(pairs))
 	minimum := pairs[0].value
 	peak := minimum
-	for _, pair := range pairs {
-		sum += pair.value
+	for i, pair := range pairs {
+		sorted[i] = pair.value
 		if pair.value < minimum {
 			minimum = pair.value
 		}
@@ -146,7 +147,7 @@ func statisticsOf(values map[float64]float64) Statistics {
 
 	return Statistics{
 		State:   StateValue,
-		Average: sum / float64(len(pairs)),
+		Average: arith.Mean(sorted),
 		Minimum: minimum,
 		Peak:    peak,
 		Current: pairs[len(pairs)-1].value,

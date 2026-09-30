@@ -301,6 +301,7 @@ func checkLayerRanks(t *testing.T, want map[string]int) map[string]int {
 func TestLayersHoldEveryPackageOfThisPart(t *testing.T) {
 	want := map[string]int{
 		"internal/guard":      0,
+		"internal/arith":      0,
 		"internal/typst":      0,
 		"internal/redact":     0,
 		"internal/promtest":   0,
@@ -392,4 +393,8 @@ func TestRepositoryImportsPointOneWay(t *testing.T) {
 	if len(got) != 0 {
 		t.Fatalf("ImportViolations = %v, want empty", got)
 	}
+}
+
+func TestLayersHoldArith(t *testing.T) {
+	checkLayerRanks(t, map[string]int{"internal/arith": 0})
 }

@@ -20,6 +20,7 @@ type Layer struct {
 // imports it.
 var Layers = []Layer{
 	{Path: "internal/guard", Rank: 0},
+	{Path: "internal/arith", Rank: 0},
 	{Path: "internal/typst", Rank: 0},
 	{Path: "internal/redact", Rank: 0},
 	{Path: "internal/promtest", Rank: 0},

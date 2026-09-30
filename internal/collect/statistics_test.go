@@ -504,3 +504,24 @@ func TestRatiosScenarioNumbers(t *testing.T) {
 		t.Errorf("approximate[%v] = true, want false", Key{"payments"})
 	}
 }
+
+// TestAverageIsCompensated covers the average of three points whose plain
+// sum is 6.6000000000000005: the compensated sum is 6.6, so the average is
+// 2.1999999999999997.
+func TestAverageIsCompensated(t *testing.T) {
+	series := []prom.Series{
+		{
+			Labels: map[string]string{"namespace": "payments"},
+			Points: []prom.Point{
+				{Time: 1, Value: 3.3, Valid: true},
+				{Time: 2, Value: 1.1, Valid: true},
+				{Time: 3, Value: 2.2, Valid: true},
+			},
+		},
+	}
+
+	stats := Lookup(Reduce(series, []string{"namespace"}), Key{"payments"})
+	if stats.Average != 2.1999999999999997 {
+		t.Errorf("Average = %v, want 2.1999999999999997", stats.Average)
+	}
+}

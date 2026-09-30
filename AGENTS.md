@@ -139,7 +139,7 @@ rank, or of its own layer.
 
 | Rank | Packages |
 |---|---|
-| 0 | `internal/guard`, `internal/typst`, `internal/redact`, `internal/promtest`, `template` |
+| 0 | `internal/guard`, `internal/arith`, `internal/typst`, `internal/redact`, `internal/promtest`, `template` |
 | 10 | `template/golden` |
 | 20 | `internal/config` |
 | 30 | `internal/prom` |
