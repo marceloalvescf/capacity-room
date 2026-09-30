@@ -334,7 +334,7 @@ var noticeWordingTable = []struct {
 
 // TestPortugueseOfTheSectionsMatchesThePlan proves that the Portuguese text
 // of the sections "Capacidade por Namespace" and "Recursos por workload",
-// and of the warnings and notices they use, equals the wording the owner
+// and of the warnings and notices they use, equals the wording that was
 // approved, letter for letter. The wording follows the vocabulary of spec
 // 9.3, which writes every technical term in English.
 func TestPortugueseOfTheSectionsMatchesThePlan(t *testing.T) {
