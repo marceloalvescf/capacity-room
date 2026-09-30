@@ -222,7 +222,7 @@ func askNodes(ctx context.Context, q Querier, in Input, utilization, pools, requ
 	}
 
 	if requests.State != discovery.StateUnavailable {
-		legacy := usesLegacyResourceNames(requests.Evidence)
+		unified := holdsName(requests.Evidence, "kube_pod_container_resource_requests")
 		for _, request := range []struct {
 			kind, legacyName string
 			target           *[]prom.Sample
@@ -231,7 +231,7 @@ func askNodes(ctx context.Context, q Querier, in Input, utilization, pools, requ
 			{"memory", "kube_pod_container_resource_requests_memory_bytes", &a.requestsMemory},
 		} {
 			metric, extra := "kube_pod_container_resource_requests", map[string]string{"resource": request.kind}
-			if legacy {
+			if !unified {
 				if !holdsName(requests.Evidence, request.legacyName) {
 					continue
 				}

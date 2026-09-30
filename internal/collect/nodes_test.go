@@ -499,3 +499,34 @@ func TestPools(t *testing.T) {
 		t.Errorf("Pools(nil) = %#v, want empty and not nil", got)
 	}
 }
+
+func TestNodeRequestsNeedTheUnifiedName(t *testing.T) {
+	instant, ranges := completeNodeAnswers()
+	in := withCapability(nodeInput(), nodeCapability("requests_limits", discovery.StatePartial, discovery.StrategyRawMetrics, []string{"kube_pod_container_resource_limits"}, nil))
+	result, q := collectNodes(t, in, instant, ranges)
+	want := []string{
+		nodeInfoQuery, nodeUnameQuery, nodeLabelsQuery,
+		nodeCapCPUQuery, nodeCapMemoryQuery, nodeAllocCPUQuery, nodeAllocMemoryQuery,
+		nodeReadyQuery, nodeUnschedQuery,
+		nodeUsageCPUQuery, nodeUsageMemoryQuery,
+	}
+	if !reflect.DeepEqual(q.queries, want) {
+		t.Errorf("queries =\n%q\nwant\n%q", q.queries, want)
+	}
+	row := rowNamed(t, result, "node-1")
+	if row.CPURequestPercent.Known || row.MemoryRequestPercent.Known {
+		t.Errorf("request percents = %+v, %+v, want unknown", row.CPURequestPercent, row.MemoryRequestPercent)
+	}
+}
+
+func TestNodeWarningsKeepTheOrderOfTheCapabilities(t *testing.T) {
+	instant, ranges := completeNodeAnswers()
+	in := withCapability(nodeInput(), nodeCapability("node_utilization", discovery.StatePartial, discovery.StrategyRecordingRule, nil, []string{"UTILIZATION_REASON"}))
+	in = withCapability(in, nodeCapability("nodepool_discovery", discovery.StatePartial, discovery.StrategyRawMetrics, nil, []string{"NODEPOOL_REASON"}))
+	in = withCapability(in, nodeCapability("requests_limits", discovery.StatePartial, discovery.StrategyRawMetrics, []string{"kube_pod_container_resource_requests"}, []string{"REQUESTS_REASON"}))
+	result, _ := collectNodes(t, in, instant, ranges)
+	want := []string{"UTILIZATION_REASON", "NODEPOOL_REASON", "REQUESTS_REASON"}
+	if got := warningCodes(result.Warnings); !reflect.DeepEqual(got, want) {
+		t.Errorf("warnings = %v, want %v", got, want)
+	}
+}
