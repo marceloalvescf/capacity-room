@@ -446,17 +446,16 @@ func classify(ctx context.Context, err error) (int, string) {
 // collected is the result of connecting, resolving the scope, and detecting
 // the capabilities: everything runCheck, runSnapshot, and runPDF share.
 type collected struct {
-	client                *prom.Client
-	scope                 discovery.Scope
-	capabilities          []discovery.Capability
-	collectionCompletedAt time.Time
+	client       *prom.Client
+	scope        discovery.Scope
+	capabilities []discovery.Capability
 }
 
 // preflight connects, resolves the scope, detects the capabilities, and
 // checks they are sufficient, with at as the time of every instant query
-// this stage sends. It reads the clock nowhere itself: runSnapshot and
-// runPDF read it again only once collect.All has returned, and runCheck's
-// own collect wrapper below reads it right after preflight returns instead.
+// this stage sends. It reads the clock nowhere itself: a check reads it once,
+// before the preflight, and a run that collects reads it again when the
+// collectors return.
 func preflight(ctx context.Context, cfg config.Config, token string, at time.Time) (collected, error) {
 	client, err := prom.Connect(ctx, prom.Options{Metrics: cfg.Metrics, Token: token})
 	if err != nil {
@@ -477,19 +476,6 @@ func preflight(ctx context.Context, cfg config.Config, token string, at time.Tim
 	return collected{client: client, scope: scope, capabilities: capabilities}, nil
 }
 
-// collect runs preflight and then reads the clock a second time, for the
-// collection-completed time. runCheck is its only caller: a check never
-// collects namespaces or workloads, so preflight's own return is its last
-// chance to read the clock again and keep it read exactly twice.
-func collect(ctx context.Context, env Env, cfg config.Config, token string, at time.Time) (collected, error) {
-	c, err := preflight(ctx, cfg, token, at)
-	if err != nil {
-		return collected{}, err
-	}
-	c.collectionCompletedAt = env.Now()
-	return c, nil
-}
-
 // runCheck runs the preflight and reports it; it builds no snapshot. It
 // computes the window before the preflight, exactly like every mode that
 // collects, so that an empty period stops a check the same way it stops a
@@ -507,7 +493,7 @@ func runCheck(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 		return nil, &exitError{2, err}
 	}
 
-	c, err := collect(ctx, env, loaded.Config, loaded.Token, window.End)
+	c, err := preflight(ctx, loaded.Config, loaded.Token, window.End)
 	if err != nil {
 		return nil, err
 	}
@@ -628,7 +614,7 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 
 	outputPath := f.output
 	if !cmd.Flags().Changed("output") {
-		name := defaultOutputName(loaded.Config.Cluster.Name, loaded.Config.Report.MinSeverity, loaded.Config.Report.Language, emittedAt.In(loc))
+		name := defaultOutputName(loaded.Config.Cluster.Name, loaded.Config.Report.Profile, loaded.Config.Report.MinSeverity, loaded.Config.Report.Language, emittedAt.In(loc))
 		outputPath = filepath.Join(loaded.Config.Report.OutputDirectory, name)
 	}
 	outputPath, err = filepath.Abs(outputPath)
@@ -769,7 +755,7 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 
 	outputPath := f.output
 	if !cmd.Flags().Changed("output") {
-		name := defaultOutputName(snap.Scope.ClusterName, severity, opts.Language, emittedAt)
+		name := defaultOutputName(snap.Scope.ClusterName, profile, severity, opts.Language, emittedAt)
 		outputPath = filepath.Join(outputDir, name)
 	}
 	outputPath, err = filepath.Abs(outputPath)

@@ -632,47 +632,50 @@ func clockCounter(calls *int) func() time.Time {
 	}
 }
 
-// TestClockIsReadTwice proves the clock is read exactly twice in every mode
-// that collects — once for when collection finishes, once for when the
-// report is emitted — and not at all in the mode from snapshot.
+// TestCheckReadsTheClockOnce proves a check reads the clock once, before the
+// preflight, and never when a collection would finish.
+func TestCheckReadsTheClockOnce(t *testing.T) {
+	server, _, scenario := startScenario(t, "direct-complete")
+	defer server.Close()
+	cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+
+	env := testEnv(t)
+	var calls int
+	env.Now = clockCounter(&calls)
+
+	_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--check"})
+	if code != 0 {
+		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+	}
+	if calls != 1 {
+		t.Fatalf("Env.Now was called %d times, want 1", calls)
+	}
+}
+
+// TestSnapshotReadsTheClockTwice proves the snapshot mode reads the clock
+// once for when the report is emitted and once for when collection finishes.
+func TestSnapshotReadsTheClockTwice(t *testing.T) {
+	server, _, scenario := startScenario(t, "direct-complete")
+	defer server.Close()
+	cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+
+	env := testEnv(t)
+	var calls int
+	env.Now = clockCounter(&calls)
+	env.NewID = fixedID("00000000-0000-4000-8000-000000000099")
+
+	_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--snapshot", filepath.Join(t.TempDir(), "s.json")})
+	if code != 0 {
+		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+	}
+	if calls != 2 {
+		t.Fatalf("Env.Now was called %d times, want 2", calls)
+	}
+}
+
+// TestClockIsReadTwice proves the clock is read exactly twice in the PDF
+// mode, which collects, and not at all in the mode from snapshot.
 func TestClockIsReadTwice(t *testing.T) {
-	t.Run("check", func(t *testing.T) {
-		server, _, scenario := startScenario(t, "direct-complete")
-		defer server.Close()
-		cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
-
-		env := testEnv(t)
-		var calls int
-		env.Now = clockCounter(&calls)
-
-		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--check"})
-		if code != 0 {
-			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
-		}
-		if calls != 2 {
-			t.Fatalf("Env.Now was called %d times, want 2", calls)
-		}
-	})
-
-	t.Run("snapshot", func(t *testing.T) {
-		server, _, scenario := startScenario(t, "direct-complete")
-		defer server.Close()
-		cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
-
-		env := testEnv(t)
-		var calls int
-		env.Now = clockCounter(&calls)
-		env.NewID = fixedID("00000000-0000-4000-8000-000000000099")
-
-		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--snapshot", filepath.Join(t.TempDir(), "s.json")})
-		if code != 0 {
-			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
-		}
-		if calls != 2 {
-			t.Fatalf("Env.Now was called %d times, want 2", calls)
-		}
-	})
-
 	t.Run("pdf", func(t *testing.T) {
 		server, _, scenario := startScenario(t, "direct-complete")
 		defer server.Close()

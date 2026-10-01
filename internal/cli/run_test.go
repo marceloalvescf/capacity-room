@@ -856,8 +856,8 @@ func TestSnapshotFileRefusals(t *testing.T) {
 // TestPanicWithATokenOfTheEnvironment proves that a panic that happens
 // after the configuration's own token is known (here, loaded from an
 // environment variable, not --token) but before the mode function returns
-// is still redacted. The clock's second call, inside collect() itself, is
-// the one that panics, well after runCheck has already added the token to
+// is still redacted. The clock's second call, after the collectors return, is
+// the one that panics, well after runSnapshot has already added the token to
 // the Redactor.
 func TestPanicWithATokenOfTheEnvironment(t *testing.T) {
 	const token = "s3cr3t-value"
@@ -885,7 +885,7 @@ func TestPanicWithATokenOfTheEnvironment(t *testing.T) {
 	}
 	env = withTypst(t, env)
 
-	stdout, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--check"})
+	stdout, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--snapshot", filepath.Join(t.TempDir(), "s.json")})
 	if code != 1 {
 		t.Fatalf("code = %d, want 1; stderr = %q", code, stderr)
 	}
