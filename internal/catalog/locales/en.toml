@@ -245,12 +245,6 @@ memory = "Memory: average of {{.Percent}} utilization"
 cpu = "CPU: {{.Percent}} of the allocatable requested"
 memory = "Memory: {{.Percent}} of the allocatable requested"
 
-[finding.node_overrequested]
-summary = "High requests coexist with low observed utilization."
-
-[finding.node_low_utilization]
-summary = "The node showed low average utilization."
-
 [placeholder]
 unavailable = "Unavailable"
 no_base = "Not defined"
@@ -300,3 +294,144 @@ plural = "minutes"
 [period.second]
 singular = "second"
 plural = "seconds"
+
+[finding.resource_request_usage.cpu]
+summary = "CPU usage against the request."
+action = "Review the CPU request and the observed consumption."
+
+[finding.resource_request_usage.memory]
+summary = "Memory usage against the request."
+action = "Review the memory request and the observed consumption."
+
+[finding.resource_limit_usage.cpu]
+summary = "CPU usage against the limit indicates an increased risk of CPU throttling."
+action = "Review the CPU limit and the observed consumption profile."
+
+[finding.resource_limit_usage.memory]
+summary = "Memory usage against the limit indicates an increased risk of OOMKill."
+action = "Review the memory limit and the observed consumption profile."
+
+[finding.resource_request_missing.cpu]
+summary = "There is a configuration gap: no CPU request was observed."
+action = "Set the CPU request from the observed consumption."
+
+[finding.resource_request_missing.memory]
+summary = "There is a configuration gap: no memory request was observed."
+action = "Set the memory request from the observed consumption."
+
+[finding.resource_limit_missing.cpu]
+summary = "There is a configuration gap: no CPU limit was observed."
+action = "Set or justify the CPU limit according to the policy of the workload."
+
+[finding.resource_limit_missing.memory]
+summary = "There is a configuration gap: no memory limit was observed."
+action = "Set or justify the memory limit according to the policy of the workload."
+
+[finding.resource_overrequested.cpu]
+summary = "Average CPU usage was low against the request."
+action = "Review the sizing of the CPU request."
+
+[finding.resource_overrequested.memory]
+summary = "Average memory usage was low against the request."
+action = "Review the sizing of the memory request."
+
+[finding.resource_bursty.cpu]
+summary = "CPU consumption varied markedly between average and peak."
+action = "Inspect the CPU burst profile before sizing."
+
+[finding.resource_bursty.memory]
+summary = "Memory consumption varied markedly between average and peak."
+action = "Inspect the memory burst profile before sizing."
+
+[finding.node_usage.cpu]
+summary = "Observed CPU usage on the node."
+action = "Follow the pressure and the capacity of the node."
+observation = "CPU usage needs attention"
+
+[finding.node_usage.memory]
+summary = "Observed memory usage on the node."
+action = "Follow the pressure and the capacity of the node."
+observation = "Memory usage needs attention"
+
+[finding.node_request_high.cpu]
+summary = "CPU requests take a high share of the node."
+action = "Review the requests and the scheduling headroom."
+observation = "High CPU requests"
+
+[finding.node_request_high.memory]
+summary = "Memory requests take a high share of the node."
+action = "Review the requests and the scheduling headroom."
+observation = "High memory requests"
+
+[finding.node_overrequested]
+summary = "High requests coexist with low observed utilization."
+action = "Review the sizing of the workloads scheduled on the node."
+observation = "High requests with low utilization"
+
+[finding.node_low_utilization]
+summary = "The node showed low average utilization."
+action = "Assess consolidation and a safe reduction of capacity."
+observation = "Low average utilization"
+
+[finding.nodepool_unknown]
+summary = "The node pool could not be determined."
+action = "Confirm the node pool without inferring the identity of the provider."
+observation = "Pool identification unavailable"
+
+[finding.nodepool_uneven.cpu]
+summary = "Peak CPU pressure varied among the nodes of the pool."
+action = "Investigate the load distribution and the scheduling constraints."
+observation = "Uneven CPU distribution"
+
+[finding.nodepool_uneven.memory]
+summary = "Peak memory pressure varied among the nodes of the pool."
+action = "Investigate the load distribution and the scheduling constraints."
+observation = "Uneven memory distribution"
+
+[finding.hpa_pinned]
+summary = "The HPA is pinned to a constant number of replicas."
+action = "Confirm whether autoscaling is wanted for this workload."
+
+[finding.hpa_max_reached]
+summary = "The HPA reached its observed maximum of replicas."
+action = "Review the configured maximum and the capacity of the workload."
+
+[finding.hpa_near_max]
+summary = "The HPA often ran close to its observed maximum."
+action = "Validate the headroom and the configured maximum of the HPA."
+
+[finding.hpa_divergence]
+summary = "There is a persistent average difference between current and desired replicas."
+action = "Investigate the events, the scheduling constraints, and the stabilization time."
+
+[finding.deployment_without_hpa]
+summary = "Deployment observed without HPA."
+action = "Validate whether horizontal autoscaling is needed for this Deployment."
+
+[finding.statefulset_without_hpa]
+summary = "StatefulSet observed without HPA; for information."
+action = "Confirm the scaling strategy suited to the StatefulSet."
+
+[finding.autoscaling_unknown]
+summary = "The state of node autoscaling could not be determined."
+action = "Confirm operationally whether cluster autoscaling is enabled."
+
+[finding.autoscaling_disabled]
+summary = "Node autoscaling is configured as disabled."
+action = "Plan capacity by hand and review the autoscaling decision."
+
+[finding.autoscaling_near_max]
+summary = "The number of nodes is close to the observed maximum."
+action = "Review the configured maximum and the headroom of the cluster."
+
+[finding.autoscaling_bounds_unknown]
+summary = "Autoscaling enabled with no observable bounds in the metrics."
+action = "Record the operational bounds without inferring absent values."
+
+[finding.autoscaling_at_min]
+summary = "Autoscaling running at the observed minimum with no node pressure."
+action = "Keep following the demand."
+
+[finding.autoscaling_enabled]
+summary = "Node autoscaling enabled with observed headroom."
+action = "Keep following the bounds and the scaling events."

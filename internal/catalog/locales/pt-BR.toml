@@ -245,12 +245,6 @@ memory = "Memória: média de {{.Percent}} de utilização"
 cpu = "CPU: {{.Percent}} solicitada do alocável"
 memory = "Memória: {{.Percent}} solicitada do alocável"
 
-[finding.node_overrequested]
-summary = "Requests elevados coexistem com baixa utilização real observada."
-
-[finding.node_low_utilization]
-summary = "O node apresentou baixa utilização real média."
-
 [placeholder]
 unavailable = "Indisponível"
 no_base = "Não definido"
@@ -300,3 +294,144 @@ plural = "minutos"
 [period.second]
 singular = "segundo"
 plural = "segundos"
+
+[finding.resource_request_usage.cpu]
+summary = "Uso de CPU em relação ao request."
+action = "Revisar o request de CPU e o consumo observado."
+
+[finding.resource_request_usage.memory]
+summary = "Uso de memória em relação ao request."
+action = "Revisar o request de memória e o consumo observado."
+
+[finding.resource_limit_usage.cpu]
+summary = "O uso de CPU em relação ao limit indica risco aumentado de throttling de CPU."
+action = "Revisar o limit de CPU e o perfil de consumo observado."
+
+[finding.resource_limit_usage.memory]
+summary = "O uso de memória em relação ao limit indica risco aumentado de OOMKill."
+action = "Revisar o limit de memória e o perfil de consumo observado."
+
+[finding.resource_request_missing.cpu]
+summary = "Há uma lacuna de configuração: request de CPU não observado."
+action = "Definir o request de CPU com base no consumo observado."
+
+[finding.resource_request_missing.memory]
+summary = "Há uma lacuna de configuração: request de memória não observado."
+action = "Definir o request de memória com base no consumo observado."
+
+[finding.resource_limit_missing.cpu]
+summary = "Há uma lacuna de configuração: limit de CPU não observado."
+action = "Definir ou justificar o limit de CPU conforme a política do workload."
+
+[finding.resource_limit_missing.memory]
+summary = "Há uma lacuna de configuração: limit de memória não observado."
+action = "Definir ou justificar o limit de memória conforme a política do workload."
+
+[finding.resource_overrequested.cpu]
+summary = "O uso médio de CPU ficou baixo em relação ao request."
+action = "Revisar o dimensionamento do request de CPU."
+
+[finding.resource_overrequested.memory]
+summary = "O uso médio de memória ficou baixo em relação ao request."
+action = "Revisar o dimensionamento do request de memória."
+
+[finding.resource_bursty.cpu]
+summary = "O consumo de CPU apresentou variação relevante entre média e pico."
+action = "Inspecionar o perfil de rajadas de CPU antes do dimensionamento."
+
+[finding.resource_bursty.memory]
+summary = "O consumo de memória apresentou variação relevante entre média e pico."
+action = "Inspecionar o perfil de rajadas de memória antes do dimensionamento."
+
+[finding.node_usage.cpu]
+summary = "Uso observado de CPU no node."
+action = "Acompanhar pressão e capacidade do node."
+observation = "Uso de CPU requer atenção"
+
+[finding.node_usage.memory]
+summary = "Uso observado de memória no node."
+action = "Acompanhar pressão e capacidade do node."
+observation = "Uso de memória requer atenção"
+
+[finding.node_request_high.cpu]
+summary = "Requests de CPU ocupam parcela elevada do node."
+action = "Revisar requests e margem de agendamento."
+observation = "Requests de CPU elevados"
+
+[finding.node_request_high.memory]
+summary = "Requests de memória ocupam parcela elevada do node."
+action = "Revisar requests e margem de agendamento."
+observation = "Requests de memória elevados"
+
+[finding.node_overrequested]
+summary = "Requests elevados coexistem com baixa utilização real observada."
+action = "Revisar o dimensionamento dos workloads agendados no node."
+observation = "Requests elevados com baixa utilização"
+
+[finding.node_low_utilization]
+summary = "O node apresentou baixa utilização real média."
+action = "Avaliar consolidação e redução segura de capacidade."
+observation = "Baixa utilização média"
+
+[finding.nodepool_unknown]
+summary = "O node pool não pôde ser determinado."
+action = "Confirmar o node pool sem inferir identidade do provedor."
+observation = "Identificação do pool indisponível"
+
+[finding.nodepool_uneven.cpu]
+summary = "A pressão de pico de CPU variou entre nodes do pool."
+action = "Investigar distribuição de carga e restrições de agendamento."
+observation = "Distribuição desigual de CPU"
+
+[finding.nodepool_uneven.memory]
+summary = "A pressão de pico de memória variou entre nodes do pool."
+action = "Investigar distribuição de carga e restrições de agendamento."
+observation = "Distribuição desigual de memória"
+
+[finding.hpa_pinned]
+summary = "O HPA está fixado em um número constante de replicas."
+action = "Confirmar se o autoscaling é desejado para este workload."
+
+[finding.hpa_max_reached]
+summary = "O HPA atingiu o máximo observado de replicas."
+action = "Revisar o máximo configurado e a capacidade do workload."
+
+[finding.hpa_near_max]
+summary = "O HPA operou frequentemente próximo ao máximo observado."
+action = "Validar a margem e o máximo configurado do HPA."
+
+[finding.hpa_divergence]
+summary = "Há diferença média persistente entre replicas atuais e desejados."
+action = "Investigar eventos, restrições de agendamento e tempo de estabilização."
+
+[finding.deployment_without_hpa]
+summary = "Deployment sem HPA observado."
+action = "Validar se o autoscaling horizontal é necessário para este Deployment."
+
+[finding.statefulset_without_hpa]
+summary = "StatefulSet sem HPA observado; registro informativo."
+action = "Confirmar a estratégia de escala adequada ao StatefulSet."
+
+[finding.autoscaling_unknown]
+summary = "O estado do autoscaling de nodes não pôde ser determinado."
+action = "Confirmar operacionalmente se o autoscaling do cluster está habilitado."
+
+[finding.autoscaling_disabled]
+summary = "O autoscaling de nodes está configurado como desabilitado."
+action = "Planejar capacidade manual e revisar a decisão de autoscaling."
+
+[finding.autoscaling_near_max]
+summary = "O número de nodes está próximo ao máximo observado."
+action = "Revisar o máximo configurado e a margem do cluster."
+
+[finding.autoscaling_bounds_unknown]
+summary = "Autoscaling habilitado sem mínimo e máximo observáveis nas métricas."
+action = "Registrar o mínimo e o máximo operacionais sem inferir valores ausentes."
+
+[finding.autoscaling_at_min]
+summary = "Autoscaling operando no mínimo observado sem pressão de nodes."
+action = "Manter acompanhamento da demanda."
+
+[finding.autoscaling_enabled]
+summary = "Autoscaling de nodes habilitado com margem observada."
+action = "Manter acompanhamento do mínimo, do máximo e dos eventos de escala."
