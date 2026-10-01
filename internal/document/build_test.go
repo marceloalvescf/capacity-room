@@ -3,7 +3,6 @@ package document
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -489,8 +488,30 @@ func TestBuildExecutiveRaisesTheMinimum(t *testing.T) {
 			}
 		}
 	}
-	if !reflect.DeepEqual(executive.Blocks[ew:], detailed.Blocks[dw:]) {
-		t.Error("the appendix and notes of the executive profile differ from those of the detailed profile at the same minimum")
+
+	if ew+2 >= len(executive.Blocks) {
+		t.Fatalf("the executive document ends at %d, after the weak break at %d", len(executive.Blocks), ew)
+	}
+	para, ok := executive.Blocks[ew+2].(Paragraph)
+	if !ok {
+		t.Fatalf("the executive appendix holds %T, want the fallback Paragraph", executive.Blocks[ew+2])
+	}
+	want, err := cat.Text(catalog.AppendixEmpty, nil)
+	if err != nil {
+		t.Fatalf("Text(AppendixEmpty): %v", err)
+	}
+	if got := runText(t, para.Runs[0]); got != want {
+		t.Errorf("executive appendix = %q, want %q", got, want)
+	}
+	for _, blk := range executive.Blocks[ew:] {
+		if table, ok := blk.(Table); ok && table.ID == "quality-appendix" {
+			t.Errorf("the executive profile holds the appendix table with %d rows, want none", len(table.Rows))
+		}
+	}
+
+	table := findTable(t, detailed.Blocks[dw:], "quality-appendix")
+	if len(table.Rows) != 9 {
+		t.Errorf("detailed appendix rows = %d, want 9", len(table.Rows))
 	}
 }
 

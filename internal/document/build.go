@@ -69,7 +69,9 @@ func (b *builder) period(start, end time.Time) string {
 // Build assembles the document of a snapshot: a cover, an opening page,
 // the five sections, and a quality appendix with its notes. The executive
 // profile keeps the cover, the opening page, the executive section, and the
-// appendix with its notes.
+// appendix with its notes, and raises the minimum severity to at least
+// attention for the whole document; the detailed profile raises it for the
+// executive section alone.
 func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, error) {
 	if err := s.Check(); err != nil {
 		return Document{}, err
@@ -104,7 +106,11 @@ func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, err
 	}
 	blocks = append(blocks, buildExecutiveSection(b, s, thresholds, severity, profile == "executive")...)
 	blocks = append(blocks, PageBreak{Weak: true})
-	blocks = append(blocks, buildAppendix(b, s, severity)...)
+	appendixSeverity := severity
+	if profile == "executive" {
+		appendixSeverity = raiseToAttention(severity)
+	}
+	blocks = append(blocks, buildAppendix(b, s, appendixSeverity)...)
 	blocks = append(blocks, buildNotes(b, s)...)
 
 	doc := Document{

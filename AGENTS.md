@@ -116,8 +116,9 @@ No guard checks these. The reviewer of each task does.
   they are the same `float64`. A test of the comparison has no tolerance,
   and an expected number in a test is a literal, never the expression of
   the code written again.
-- **The executive body raises the minimum severity to attention for its own
-  rows and never for the appendix.**
+- **The executive profile raises the minimum severity to at least attention
+  for the whole document, the appendix included; the detailed profile raises
+  it for section 5 alone and never for the appendix.**
 
 Build tags in use:
 

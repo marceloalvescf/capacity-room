@@ -91,8 +91,8 @@ The report profile is `detailed`, the default, or `executive`. Set it with
 `report.profile`, `--report-profile`, or `KCR_REPORT_PROFILE`. The `executive`
 profile writes the cover, the opening page, the executive summary as its only
 numbered section, 1, and the appendix as section 2. Its minimum severity is
-raised to at least attention for the summary, and stays as configured for the
-appendix. Its PDF is named
+raised to at least attention for the whole report, the appendix included. Its
+PDF is named
 `report-resources-<cluster>-executive-<language>-<date>-<time>.pdf`: the
 suffix `-executive` takes the place of the severity.
 
