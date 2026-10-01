@@ -144,6 +144,29 @@
     "collection_started_at": "2026-07-15T14:30:00-03:00",
     "collection_completed_at": "2026-07-15T14:30:42-03:00"
   },
+  "summary": {
+    "namespaces": 1,
+    "workloads": 1,
+    "hpas": 1,
+    "nodes": 1,
+    "nodepools": 1,
+    "findings": 13,
+    "healthy": 5,
+    "attention": 4,
+    "critical": 4,
+    "workloads_without_hpa": 1,
+    "autoscaling": {
+      "status": "disabled",
+      "source": "configured",
+      "confidence": "exact",
+      "managed_node_groups": null,
+      "current_nodes": null,
+      "min_nodes": null,
+      "max_nodes": null,
+      "scale_events": null,
+      "unschedulable_pods": null
+    }
+  },
   "namespaces": [
     {
       "name": "payments",
@@ -226,6 +249,8 @@
       "namespace": "payments",
       "kind": "Deployment",
       "name": "payments-web",
+      "observed_usage": true,
+      "hpa_coverage": "covered",
       "pods": 1,
       "approximate": false,
       "cpu_usage": {
@@ -298,6 +323,147 @@
         "peak": 12000,
         "current": 12000
       }
+    },
+    {
+      "namespace": "payments",
+      "kind": "StatefulSet",
+      "name": "payments-worker",
+      "observed_usage": false,
+      "hpa_coverage": "uncovered",
+      "pods": null,
+      "approximate": false,
+      "cpu_usage": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_usage": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "cpu_requests": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_requests": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "cpu_limits": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_limits": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "cpu_request_percent": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_request_percent": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "cpu_limit_percent": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_limit_percent": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      }
+    }
+  ],
+  "hpas": [
+    {
+      "namespace": "payments",
+      "name": "payments-web",
+      "target_kind": "Deployment",
+      "target_name": "payments-web",
+      "spec_min": 1,
+      "spec_max": 4,
+      "current": {
+        "state": "value",
+        "average": 2.5,
+        "minimum": 2,
+        "peak": 3,
+        "current": 3
+      },
+      "desired": {
+        "state": "value",
+        "average": 3.5,
+        "minimum": 3,
+        "peak": 4,
+        "current": 4
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "name": "node-1",
+      "pool": "pool-a",
+      "pool_confidence": "exact",
+      "cpu_capacity": 4,
+      "memory_capacity": 8,
+      "cpu_allocatable": 4,
+      "memory_allocatable": 8,
+      "cpu_usage_percent": {
+        "state": "value",
+        "average": 57.5,
+        "minimum": 55,
+        "peak": 60,
+        "current": 60
+      },
+      "memory_usage_percent": {
+        "state": "value",
+        "average": 62.5,
+        "minimum": 60,
+        "peak": 65,
+        "current": 65
+      },
+      "cpu_request_percent": 25,
+      "memory_request_percent": 25,
+      "ready": true,
+      "schedulable": true
+    }
+  ],
+  "nodepools": [
+    {
+      "name": "pool-a",
+      "confidence": "exact",
+      "nodes": [
+        "node-1"
+      ]
     }
   ],
   "findings": [
@@ -374,6 +540,20 @@
       "confidence": "exact"
     },
     {
+      "code": "NODE_AUTOSCALING_DISABLED",
+      "severity": "attention",
+      "scope_type": "cluster",
+      "scope_kind": "",
+      "scope_name": "cluster",
+      "evidence": [
+        {
+          "name": "node_pressure",
+          "value": false
+        }
+      ],
+      "confidence": "exact"
+    },
+    {
       "code": "NAMESPACE_CPU_REQUEST_ATTENTION",
       "severity": "attention",
       "scope_type": "namespace",
@@ -392,6 +572,20 @@
       "confidence": "exact"
     },
     {
+      "code": "HPA_REPLICA_DIVERGENCE",
+      "severity": "attention",
+      "scope_type": "hpa",
+      "scope_kind": "",
+      "scope_name": "payments/payments-web",
+      "evidence": [
+        {
+          "name": "average_difference",
+          "value": 1
+        }
+      ],
+      "confidence": "inferred"
+    },
+    {
       "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
       "severity": "attention",
       "scope_type": "workload",
@@ -405,6 +599,42 @@
         {
           "name": "peak_percent",
           "value": 80
+        }
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NODE_CPU_USAGE_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "node-1",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "value": 57.5
+        },
+        {
+          "name": "peak_percent",
+          "value": 60
+        }
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NODE_MEMORY_USAGE_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "node-1",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "value": 62.5
+        },
+        {
+          "name": "peak_percent",
+          "value": 65
         }
       ],
       "confidence": "exact"
@@ -443,6 +673,15 @@
           "value": 40
         }
       ],
+      "confidence": "exact"
+    },
+    {
+      "code": "STATEFULSET_WITHOUT_HPA_INFO",
+      "severity": "healthy",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/payments-worker",
+      "evidence": [],
       "confidence": "exact"
     }
   ]
