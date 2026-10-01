@@ -1,8 +1,10 @@
 package catalog
 
 import (
+	"slices"
 	"sort"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 )
@@ -268,13 +270,12 @@ var wordingKeys = []Key{
 	PeriodMinuteSingular, PeriodMinutePlural, PeriodSecondSingular, PeriodSecondPlural,
 }
 
-// Confidences, ReasonFamilies, ReasonResources, and FindingFamilies are the
-// values the key functions Confidence, Reason, and FindingSummary take.
+// Confidences, ReasonFamilies, and ReasonResources are the values the key
+// functions Confidence and Reason take.
 var (
 	Confidences     = []string{"exact", "inferred", "unknown"}
 	ReasonFamilies  = []string{"usage_peak", "usage_average", "request_high"}
 	ReasonResources = []string{"cpu", "memory"}
-	FindingFamilies = []string{"node_overrequested", "node_low_utilization"}
 )
 
 // CapabilityName returns the key that names capability name, one of
@@ -316,21 +317,64 @@ func Confidence(confidence string) Key { return Key("confidence." + confidence) 
 // ReasonFamilies, and resource, one of ReasonResources.
 func Reason(family, resource string) Key { return Key("reason." + family + "." + resource) }
 
-// FindingSummary returns the key of the summary of a node finding of family,
-// one of FindingFamilies.
-func FindingSummary(family string) Key { return Key("finding." + family + ".summary") }
+// ObservationFamilies lists the families that carry an observation: the
+// families of the codes of the node and nodepool scopes.
+var ObservationFamilies = []string{"node_usage", "node_request_high", "node_overrequested", "node_low_utilization", "nodepool_uneven", "nodepool_unknown"}
+
+// findingKey returns finding.<family>[.<resource>].<part>.
+func findingKey(family, resource, part string) Key {
+	if resource == "" {
+		return Key("finding." + family + "." + part)
+	}
+	return Key("finding." + family + "." + resource + "." + part)
+}
+
+// FindingSummary returns the key of the summary of the findings of
+// family, one of the families of analysis.Registry, for resource, the
+// "resource" parameter of the definition, or "" when it has none:
+// finding.<family>.<resource>.summary, or finding.<family>.summary.
+func FindingSummary(family, resource string) Key { return findingKey(family, resource, "summary") }
+
+// FindingAction returns the key of the action of the same family and
+// resource: finding.<family>[.<resource>].action.
+func FindingAction(family, resource string) Key { return findingKey(family, resource, "action") }
+
+// FindingObservation returns the key of the short observation the
+// executive pool table prints for the family, one of ObservationFamilies,
+// and resource: finding.<family>[.<resource>].observation.
+func FindingObservation(family, resource string) Key {
+	return findingKey(family, resource, "observation")
+}
+
+// FindingPair is a family of findings and the resource of its definition,
+// empty when the family has none.
+type FindingPair struct{ Family, Resource string }
+
+// FindingPairs returns the distinct pairs of family and resource of
+// analysis.Registry, in the order of the registry.
+func FindingPairs() []FindingPair {
+	var pairs []FindingPair
+	for _, definition := range analysis.Registry {
+		pair := FindingPair{definition.Family, definition.Params["resource"]}
+		if !slices.Contains(pairs, pair) {
+			pairs = append(pairs, pair)
+		}
+	}
+	return pairs
+}
 
 // Keys returns every valid key, sorted: the constants of this file and the
-// keys made from the registries of discovery and collect. The registries of
-// discovery give only the capability evidence sentences — every other
+// keys made from the registries of discovery, collect, and analysis. The
+// registries of discovery give only the capability evidence sentences — every other
 // family (capability names, capability reasons, states, strategies) already
 // has a row, and so a constant, in the wording table. The registries of
 // collect give both families of the second wording table: every warning
-// code, and both entries of every notice code. Confidence, Reason, and
-// FindingSummary give the confidences, the node finding reasons, and the
-// node finding summaries.
+// code, and both entries of every notice code. Confidence and Reason give
+// the confidences and the node finding reasons, and the pairs of analysis
+// give, for each pair, the summary, the action, and, for a family of
+// ObservationFamilies, the observation.
 func Keys() []Key {
-	keys := make([]Key, 0, len(wordingKeys)+len(discovery.Names)*len(discovery.States)+len(collect.WarningCodes)+len(collect.NoticeCodes)*2+len(Confidences)+len(ReasonFamilies)*len(ReasonResources)+len(FindingFamilies))
+	keys := make([]Key, 0, len(wordingKeys)+len(discovery.Names)*len(discovery.States)+len(collect.WarningCodes)+len(collect.NoticeCodes)*2+len(Confidences)+len(ReasonFamilies)*len(ReasonResources))
 	keys = append(keys, wordingKeys...)
 	for _, name := range discovery.Names {
 		for _, state := range discovery.States {
@@ -352,8 +396,11 @@ func Keys() []Key {
 			keys = append(keys, Reason(family, resource))
 		}
 	}
-	for _, family := range FindingFamilies {
-		keys = append(keys, FindingSummary(family))
+	for _, pair := range FindingPairs() {
+		keys = append(keys, FindingSummary(pair.Family, pair.Resource), FindingAction(pair.Family, pair.Resource))
+		if slices.Contains(ObservationFamilies, pair.Family) {
+			keys = append(keys, FindingObservation(pair.Family, pair.Resource))
+		}
 	}
 	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 	return keys

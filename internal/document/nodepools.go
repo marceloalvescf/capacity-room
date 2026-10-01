@@ -377,9 +377,9 @@ func reasonFragment(b *builder, f snapshot.Finding) string {
 			return b.text(catalog.Reason("usage_average", resource), catalog.Params{"Percent": b.cat.Percent(average)})
 		}
 	case f.Code == "NODE_OVERREQUESTED":
-		return strings.TrimRight(b.text(catalog.FindingSummary("node_overrequested"), nil), ".")
+		return strings.TrimRight(b.text(catalog.FindingSummary("node_overrequested", ""), nil), ".")
 	case f.Code == "NODE_LOW_UTILIZATION":
-		return strings.TrimRight(b.text(catalog.FindingSummary("node_low_utilization"), nil), ".")
+		return strings.TrimRight(b.text(catalog.FindingSummary("node_low_utilization", ""), nil), ".")
 	}
 	if b.err == nil {
 		b.err = fmt.Errorf("finding %s has no reason text", f.Code)

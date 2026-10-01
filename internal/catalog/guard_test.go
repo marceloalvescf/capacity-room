@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 )
@@ -245,8 +246,6 @@ var wordingTable = []struct {
 	{Reason("usage_average", "memory"), "Memória: média de {{.Percent}} de utilização", "Memory: average of {{.Percent}} utilization"},
 	{Reason("request_high", "cpu"), "CPU: {{.Percent}} solicitada do alocável", "CPU: {{.Percent}} of the allocatable requested"},
 	{Reason("request_high", "memory"), "Memória: {{.Percent}} solicitada do alocável", "Memory: {{.Percent}} of the allocatable requested"},
-	{FindingSummary("node_overrequested"), "Requests elevados coexistem com baixa utilização real observada.", "High requests coexist with low observed utilization."},
-	{FindingSummary("node_low_utilization"), "O node apresentou baixa utilização real média.", "The node showed low average utilization."},
 }
 
 // evidenceSubjects and evidenceEndings hold the two small tables that cross
@@ -434,8 +433,6 @@ var sectionsWordingTable = []struct {
 	{Reason("usage_average", "memory"), "Memória: média de {{.Percent}} de utilização"},
 	{Reason("request_high", "cpu"), "CPU: {{.Percent}} solicitada do alocável"},
 	{Reason("request_high", "memory"), "Memória: {{.Percent}} solicitada do alocável"},
-	{FindingSummary("node_overrequested"), "Requests elevados coexistem com baixa utilização real observada."},
-	{FindingSummary("node_low_utilization"), "O node apresentou baixa utilização real média."},
 }
 
 // warningWordingTable and noticeWordingTable hold the expected Portuguese
@@ -1419,8 +1416,12 @@ func TestKeysHoldEveryConstant(t *testing.T) {
 			derived[Reason(family, resource)] = true
 		}
 	}
-	for _, family := range FindingFamilies {
-		derived[FindingSummary(family)] = true
+	for _, pair := range FindingPairs() {
+		derived[FindingSummary(pair.Family, pair.Resource)] = true
+		derived[FindingAction(pair.Family, pair.Resource)] = true
+		if slices.Contains(ObservationFamilies, pair.Family) {
+			derived[FindingObservation(pair.Family, pair.Resource)] = true
+		}
 	}
 
 	constantValues := make(map[Key]bool, len(constants))
@@ -1450,6 +1451,172 @@ func TestEntriesUseThePlainFormOnly(t *testing.T) {
 			if span, bad := templateSpan(text); bad {
 				t.Errorf("locales/%s.toml: entry %q uses a template form that is not {{.Name}}: %s", lang, key, span)
 			}
+		}
+	}
+}
+
+// findingWordingTable holds the approved summary and action of every pair of
+// family and resource, in both languages, transcribed independently of
+// locales/*.toml.
+var findingWordingTable = []struct {
+	family, resource    string
+	ptSummary, ptAction string
+	enSummary, enAction string
+}{
+	{"resource_request_usage", "cpu", "Uso de CPU em relação ao request.", "Revisar o request de CPU e o consumo observado.", "CPU usage against the request.", "Review the CPU request and the observed consumption."},
+	{"resource_request_usage", "memory", "Uso de memória em relação ao request.", "Revisar o request de memória e o consumo observado.", "Memory usage against the request.", "Review the memory request and the observed consumption."},
+	{"resource_limit_usage", "cpu", "O uso de CPU em relação ao limit indica risco aumentado de throttling de CPU.", "Revisar o limit de CPU e o perfil de consumo observado.", "CPU usage against the limit indicates an increased risk of CPU throttling.", "Review the CPU limit and the observed consumption profile."},
+	{"resource_limit_usage", "memory", "O uso de memória em relação ao limit indica risco aumentado de OOMKill.", "Revisar o limit de memória e o perfil de consumo observado.", "Memory usage against the limit indicates an increased risk of OOMKill.", "Review the memory limit and the observed consumption profile."},
+	{"resource_request_missing", "cpu", "Há uma lacuna de configuração: request de CPU não observado.", "Definir o request de CPU com base no consumo observado.", "There is a configuration gap: no CPU request was observed.", "Set the CPU request from the observed consumption."},
+	{"resource_request_missing", "memory", "Há uma lacuna de configuração: request de memória não observado.", "Definir o request de memória com base no consumo observado.", "There is a configuration gap: no memory request was observed.", "Set the memory request from the observed consumption."},
+	{"resource_limit_missing", "cpu", "Há uma lacuna de configuração: limit de CPU não observado.", "Definir ou justificar o limit de CPU conforme a política do workload.", "There is a configuration gap: no CPU limit was observed.", "Set or justify the CPU limit according to the policy of the workload."},
+	{"resource_limit_missing", "memory", "Há uma lacuna de configuração: limit de memória não observado.", "Definir ou justificar o limit de memória conforme a política do workload.", "There is a configuration gap: no memory limit was observed.", "Set or justify the memory limit according to the policy of the workload."},
+	{"resource_overrequested", "cpu", "O uso médio de CPU ficou baixo em relação ao request.", "Revisar o dimensionamento do request de CPU.", "Average CPU usage was low against the request.", "Review the sizing of the CPU request."},
+	{"resource_overrequested", "memory", "O uso médio de memória ficou baixo em relação ao request.", "Revisar o dimensionamento do request de memória.", "Average memory usage was low against the request.", "Review the sizing of the memory request."},
+	{"resource_bursty", "cpu", "O consumo de CPU apresentou variação relevante entre média e pico.", "Inspecionar o perfil de rajadas de CPU antes do dimensionamento.", "CPU consumption varied markedly between average and peak.", "Inspect the CPU burst profile before sizing."},
+	{"resource_bursty", "memory", "O consumo de memória apresentou variação relevante entre média e pico.", "Inspecionar o perfil de rajadas de memória antes do dimensionamento.", "Memory consumption varied markedly between average and peak.", "Inspect the memory burst profile before sizing."},
+	{"node_usage", "cpu", "Uso observado de CPU no node.", "Acompanhar pressão e capacidade do node.", "Observed CPU usage on the node.", "Follow the pressure and the capacity of the node."},
+	{"node_usage", "memory", "Uso observado de memória no node.", "Acompanhar pressão e capacidade do node.", "Observed memory usage on the node.", "Follow the pressure and the capacity of the node."},
+	{"node_request_high", "cpu", "Requests de CPU ocupam parcela elevada do node.", "Revisar requests e margem de agendamento.", "CPU requests take a high share of the node.", "Review the requests and the scheduling headroom."},
+	{"node_request_high", "memory", "Requests de memória ocupam parcela elevada do node.", "Revisar requests e margem de agendamento.", "Memory requests take a high share of the node.", "Review the requests and the scheduling headroom."},
+	{"node_overrequested", "", "Requests elevados coexistem com baixa utilização real observada.", "Revisar o dimensionamento dos workloads agendados no node.", "High requests coexist with low observed utilization.", "Review the sizing of the workloads scheduled on the node."},
+	{"node_low_utilization", "", "O node apresentou baixa utilização real média.", "Avaliar consolidação e redução segura de capacidade.", "The node showed low average utilization.", "Assess consolidation and a safe reduction of capacity."},
+	{"nodepool_unknown", "", "O node pool não pôde ser determinado.", "Confirmar o node pool sem inferir identidade do provedor.", "The node pool could not be determined.", "Confirm the node pool without inferring the identity of the provider."},
+	{"nodepool_uneven", "cpu", "A pressão de pico de CPU variou entre nodes do pool.", "Investigar distribuição de carga e restrições de agendamento.", "Peak CPU pressure varied among the nodes of the pool.", "Investigate the load distribution and the scheduling constraints."},
+	{"nodepool_uneven", "memory", "A pressão de pico de memória variou entre nodes do pool.", "Investigar distribuição de carga e restrições de agendamento.", "Peak memory pressure varied among the nodes of the pool.", "Investigate the load distribution and the scheduling constraints."},
+	{"hpa_pinned", "", "O HPA está fixado em um número constante de replicas.", "Confirmar se o autoscaling é desejado para este workload.", "The HPA is pinned to a constant number of replicas.", "Confirm whether autoscaling is wanted for this workload."},
+	{"hpa_max_reached", "", "O HPA atingiu o máximo observado de replicas.", "Revisar o máximo configurado e a capacidade do workload.", "The HPA reached its observed maximum of replicas.", "Review the configured maximum and the capacity of the workload."},
+	{"hpa_near_max", "", "O HPA operou frequentemente próximo ao máximo observado.", "Validar a margem e o máximo configurado do HPA.", "The HPA often ran close to its observed maximum.", "Validate the headroom and the configured maximum of the HPA."},
+	{"hpa_divergence", "", "Há diferença média persistente entre replicas atuais e desejados.", "Investigar eventos, restrições de agendamento e tempo de estabilização.", "There is a persistent average difference between current and desired replicas.", "Investigate the events, the scheduling constraints, and the stabilization time."},
+	{"deployment_without_hpa", "", "Deployment sem HPA observado.", "Validar se o autoscaling horizontal é necessário para este Deployment.", "Deployment observed without HPA.", "Validate whether horizontal autoscaling is needed for this Deployment."},
+	{"statefulset_without_hpa", "", "StatefulSet sem HPA observado; registro informativo.", "Confirmar a estratégia de escala adequada ao StatefulSet.", "StatefulSet observed without HPA; for information.", "Confirm the scaling strategy suited to the StatefulSet."},
+	{"autoscaling_unknown", "", "O estado do autoscaling de nodes não pôde ser determinado.", "Confirmar operacionalmente se o autoscaling do cluster está habilitado.", "The state of node autoscaling could not be determined.", "Confirm operationally whether cluster autoscaling is enabled."},
+	{"autoscaling_disabled", "", "O autoscaling de nodes está configurado como desabilitado.", "Planejar capacidade manual e revisar a decisão de autoscaling.", "Node autoscaling is configured as disabled.", "Plan capacity by hand and review the autoscaling decision."},
+	{"autoscaling_near_max", "", "O número de nodes está próximo ao máximo observado.", "Revisar o máximo configurado e a margem do cluster.", "The number of nodes is close to the observed maximum.", "Review the configured maximum and the headroom of the cluster."},
+	{"autoscaling_bounds_unknown", "", "Autoscaling habilitado sem mínimo e máximo observáveis nas métricas.", "Registrar o mínimo e o máximo operacionais sem inferir valores ausentes.", "Autoscaling enabled with no observable bounds in the metrics.", "Record the operational bounds without inferring absent values."},
+	{"autoscaling_at_min", "", "Autoscaling operando no mínimo observado sem pressão de nodes.", "Manter acompanhamento da demanda.", "Autoscaling running at the observed minimum with no node pressure.", "Keep following the demand."},
+	{"autoscaling_enabled", "", "Autoscaling de nodes habilitado com margem observada.", "Manter acompanhamento do mínimo, do máximo e dos eventos de escala.", "Node autoscaling enabled with observed headroom.", "Keep following the bounds and the scaling events."},
+}
+
+// observationWordingTable holds the approved observation of every pair of
+// an observation family, in both languages.
+var observationWordingTable = []struct {
+	family, resource string
+	pt, en           string
+}{
+	{"node_usage", "cpu", "Uso de CPU requer atenção", "CPU usage needs attention"},
+	{"node_usage", "memory", "Uso de memória requer atenção", "Memory usage needs attention"},
+	{"node_request_high", "cpu", "Requests de CPU elevados", "High CPU requests"},
+	{"node_request_high", "memory", "Requests de memória elevados", "High memory requests"},
+	{"node_overrequested", "", "Requests elevados com baixa utilização", "High requests with low utilization"},
+	{"node_low_utilization", "", "Baixa utilização média", "Low average utilization"},
+	{"nodepool_uneven", "cpu", "Distribuição desigual de CPU", "Uneven CPU distribution"},
+	{"nodepool_uneven", "memory", "Distribuição desigual de memória", "Uneven memory distribution"},
+	{"nodepool_unknown", "", "Identificação do pool indisponível", "Pool identification unavailable"},
+}
+
+func TestFindingPairs(t *testing.T) {
+	pairs := FindingPairs()
+	if len(pairs) != 33 {
+		t.Fatalf("FindingPairs() holds %d pairs, want 33", len(pairs))
+	}
+	if first := (FindingPair{"resource_request_usage", "cpu"}); pairs[0] != first {
+		t.Errorf("first pair = %+v, want %+v", pairs[0], first)
+	}
+	if last := (FindingPair{"autoscaling_enabled", ""}); pairs[len(pairs)-1] != last {
+		t.Errorf("last pair = %+v, want %+v", pairs[len(pairs)-1], last)
+	}
+	count := 0
+	seen := make(map[FindingPair]bool)
+	for _, pair := range pairs {
+		if seen[pair] {
+			t.Errorf("pair %+v appears twice", pair)
+		}
+		seen[pair] = true
+		if pair.Family == "autoscaling_disabled" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("autoscaling_disabled appears %d times, want 1", count)
+	}
+}
+
+func TestEveryDefinitionHasItsSentences(t *testing.T) {
+	for _, lang := range Languages() {
+		t.Run(string(lang), func(t *testing.T) {
+			file := fileEntries(t, lang)
+			for _, definition := range analysis.Registry {
+				family, resource := definition.Family, definition.Params["resource"]
+				for _, key := range []Key{FindingSummary(family, resource), FindingAction(family, resource)} {
+					text, ok := file[key]
+					if !ok {
+						t.Errorf("%s: code %s has no entry %q", lang, definition.Code, key)
+						continue
+					}
+					if strings.Contains(text, "{{") {
+						t.Errorf("%s: entry %q takes a parameter: %q", lang, key, text)
+					}
+				}
+				_, has := file[FindingObservation(family, resource)]
+				if want := slices.Contains(ObservationFamilies, family); has != want {
+					t.Errorf("%s: entry %q present = %v, want %v", lang, FindingObservation(family, resource), has, want)
+				}
+			}
+		})
+	}
+}
+
+// TestFindingActionsAreDistinct requires that no two families give one
+// action, or one summary, in one language. The two resources of one family
+// may share a sentence when the sentence names no resource.
+func TestFindingActionsAreDistinct(t *testing.T) {
+	for _, lang := range Languages() {
+		t.Run(string(lang), func(t *testing.T) {
+			file := fileEntries(t, lang)
+			owners := make(map[string]string)
+			for _, pair := range FindingPairs() {
+				for _, key := range []Key{FindingSummary(pair.Family, pair.Resource), FindingAction(pair.Family, pair.Resource)} {
+					text := file[key]
+					if owner, ok := owners[text]; ok && owner != pair.Family {
+						t.Errorf("%s: %q gives the text %q, which families %s and %s share", lang, key, text, owner, pair.Family)
+					}
+					owners[text] = pair.Family
+				}
+			}
+		})
+	}
+}
+
+func TestFindingWordingMatchesThePlan(t *testing.T) {
+	pt := fileEntries(t, PortugueseBrazil)
+	en := fileEntries(t, English)
+	if len(findingWordingTable) != 33 || len(observationWordingTable) != 9 {
+		t.Fatalf("tables hold %d and %d rows, want 33 and 9", len(findingWordingTable), len(observationWordingTable))
+	}
+	for _, row := range findingWordingTable {
+		summary, action := FindingSummary(row.family, row.resource), FindingAction(row.family, row.resource)
+		for _, check := range []struct {
+			lang string
+			file map[Key]string
+			key  Key
+			want string
+		}{
+			{"pt-BR", pt, summary, row.ptSummary}, {"pt-BR", pt, action, row.ptAction},
+			{"en", en, summary, row.enSummary}, {"en", en, action, row.enAction},
+		} {
+			if got := check.file[check.key]; got != check.want {
+				t.Errorf("%s %q = %q, want %q", check.lang, check.key, got, check.want)
+			}
+		}
+	}
+	for _, row := range observationWordingTable {
+		key := FindingObservation(row.family, row.resource)
+		if got := pt[key]; got != row.pt {
+			t.Errorf("pt-BR %q = %q, want %q", key, got, row.pt)
+		}
+		if got := en[key]; got != row.en {
+			t.Errorf("en %q = %q, want %q", key, got, row.en)
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
@@ -140,7 +141,36 @@ func TestKeysHoldThePartFamilies(t *testing.T) {
 	if Reason("usage_peak", "cpu") != "reason.usage_peak.cpu" {
 		t.Errorf("Reason(usage_peak, cpu) = %q", Reason("usage_peak", "cpu"))
 	}
-	if FindingSummary("node_overrequested") != "finding.node_overrequested.summary" {
-		t.Errorf("FindingSummary(node_overrequested) = %q", FindingSummary("node_overrequested"))
+	if FindingSummary("node_overrequested", "") != "finding.node_overrequested.summary" {
+		t.Errorf("FindingSummary(node_overrequested) = %q", FindingSummary("node_overrequested", ""))
+	}
+}
+
+func TestFindingKeyFunctions(t *testing.T) {
+	tests := []struct {
+		got, want Key
+	}{
+		{FindingSummary("resource_bursty", "cpu"), "finding.resource_bursty.cpu.summary"},
+		{FindingAction("resource_bursty", "memory"), "finding.resource_bursty.memory.action"},
+		{FindingSummary("hpa_pinned", ""), "finding.hpa_pinned.summary"},
+		{FindingObservation("node_usage", "cpu"), "finding.node_usage.cpu.observation"},
+		{FindingObservation("nodepool_unknown", ""), "finding.nodepool_unknown.observation"},
+	}
+	for _, tt := range tests {
+		if tt.got != tt.want {
+			t.Errorf("got %q, want %q", tt.got, tt.want)
+		}
+	}
+}
+
+func TestKeysHoldTheFindingKeys(t *testing.T) {
+	count := 0
+	for _, k := range Keys() {
+		if strings.HasPrefix(string(k), "finding.") {
+			count++
+		}
+	}
+	if count != 75 {
+		t.Errorf("Keys() holds %d finding keys, want 75", count)
 	}
 }
