@@ -121,24 +121,87 @@ type pythonFinding struct {
 	Evidence   []pythonEvidencePair `json:"evidence"`
 }
 
+// pythonHPA is one row of the "hpas" list of a recorded file.
+type pythonHPA struct {
+	Namespace  string           `json:"namespace"`
+	Name       string           `json:"name"`
+	TargetKind string           `json:"target_kind"`
+	TargetName string           `json:"target_name"`
+	SpecMin    *float64         `json:"spec_min"`
+	SpecMax    *float64         `json:"spec_max"`
+	Current    pythonStatistics `json:"current"`
+	Desired    pythonStatistics `json:"desired"`
+}
+
+// pythonWorkloadWithoutHPA is one row of the "workloads_without_hpa" list
+// of a recorded file.
+type pythonWorkloadWithoutHPA struct {
+	Namespace string `json:"namespace"`
+	Kind      string `json:"kind"`
+	Name      string `json:"name"`
+}
+
+// pythonNode is one row of the "nodes" list of a recorded file.
+type pythonNode struct {
+	Name                 string           `json:"name"`
+	Pool                 string           `json:"pool"`
+	PoolConfidence       string           `json:"pool_confidence"`
+	CPUCapacity          *float64         `json:"cpu_capacity"`
+	MemoryCapacity       *float64         `json:"memory_capacity"`
+	CPUAllocatable       *float64         `json:"cpu_allocatable"`
+	MemoryAllocatable    *float64         `json:"memory_allocatable"`
+	CPUUsagePercent      pythonStatistics `json:"cpu_usage_percent"`
+	MemoryUsagePercent   pythonStatistics `json:"memory_usage_percent"`
+	CPURequestPercent    *float64         `json:"cpu_request_percent"`
+	MemoryRequestPercent *float64         `json:"memory_request_percent"`
+	Ready                *bool            `json:"ready"`
+	Schedulable          *bool            `json:"schedulable"`
+}
+
+// pythonNodepool is one row of the "nodepools" list of a recorded file.
+type pythonNodepool struct {
+	Name       string   `json:"name"`
+	Confidence string   `json:"confidence"`
+	Nodes      []string `json:"nodes"`
+}
+
+// pythonAutoscaling is the "autoscaling" object of a recorded file.
+type pythonAutoscaling struct {
+	Status            string   `json:"status"`
+	Source            string   `json:"source"`
+	Confidence        string   `json:"confidence"`
+	ManagedNodeGroups *float64 `json:"managed_node_groups"`
+	CurrentNodes      *float64 `json:"current_nodes"`
+	MinNodes          *float64 `json:"min_nodes"`
+	MaxNodes          *float64 `json:"max_nodes"`
+	ScaleEvents       *float64 `json:"scale_events"`
+	UnschedulablePods *float64 `json:"unschedulable_pods"`
+}
+
 // pythonRecording is one decoded testdata/python/<scenario>.json file.
 type pythonRecording struct {
-	Scenario              string               `json:"scenario"`
-	Source                string               `json:"source"`
-	PeriodStart           int64                `json:"period_start"`
-	PeriodEnd             int64                `json:"period_end"`
-	Step                  string               `json:"step"`
-	NamespaceCollection   string               `json:"namespace_collection"`
-	WorkloadCollection    string               `json:"workload_collection"`
-	HPACollection         string               `json:"hpa_collection"`
-	HPACoverageCollection string               `json:"hpa_coverage_collection"`
-	NodeCollection        string               `json:"node_collection"`
-	AutoscalingStatus     string               `json:"autoscaling_status"`
-	Namespaces            []pythonNamespaceRow `json:"namespaces"`
-	Workloads             []pythonWorkloadRow  `json:"workloads"`
-	Findings              []pythonFinding      `json:"findings"`
-	Warnings              []string             `json:"warnings"`
-	Notices               []string             `json:"notices"`
+	Scenario              string                     `json:"scenario"`
+	Source                string                     `json:"source"`
+	PeriodStart           int64                      `json:"period_start"`
+	PeriodEnd             int64                      `json:"period_end"`
+	Step                  string                     `json:"step"`
+	NamespaceCollection   string                     `json:"namespace_collection"`
+	WorkloadCollection    string                     `json:"workload_collection"`
+	HPACollection         string                     `json:"hpa_collection"`
+	HPACoverageCollection string                     `json:"hpa_coverage_collection"`
+	NodeCollection        string                     `json:"node_collection"`
+	AutoscalingStatus     string                     `json:"autoscaling_status"`
+	Namespaces            []pythonNamespaceRow       `json:"namespaces"`
+	Workloads             []pythonWorkloadRow        `json:"workloads"`
+	HPAs                  []pythonHPA                `json:"hpas"`
+	WorkloadsWithoutHPA   []pythonWorkloadWithoutHPA `json:"workloads_without_hpa"`
+	Nodes                 []pythonNode               `json:"nodes"`
+	Nodepools             []pythonNodepool           `json:"nodepools"`
+	Autoscaling           pythonAutoscaling          `json:"autoscaling"`
+	NodePressure          bool                       `json:"node_pressure"`
+	Findings              []pythonFinding            `json:"findings"`
+	Warnings              []string                   `json:"warnings"`
+	Notices               []string                   `json:"notices"`
 }
 
 // pythonRecordingPath returns the place of a scenario's recorded file of
@@ -395,13 +458,18 @@ func compareWorkloads(scenario string, got []snapshot.Workload, collectedRows []
 	return diffs
 }
 
-// findingKey identifies a finding by code, scope name, and scope kind, the
-// keying the recorded file's set of findings is compared by.
-type findingKey struct{ Code, ScopeName, ScopeKind string }
+// findingKey identifies a finding by code, scope type, scope name, and
+// scope kind, the keying the recorded file's set of findings is compared by.
+type findingKey struct{ Code, ScopeType, ScopeName, ScopeKind string }
+
+// findingOrderKey identifies a finding by code, scope type, and scope name:
+// the keying of the order, which leaves the scope kind out because the
+// original sorts without it.
+type findingOrderKey struct{ Code, ScopeType, ScopeName string }
 
 // findingLabel names a finding for a difference message.
 func findingLabel(scenario string, key findingKey) string {
-	return fmt.Sprintf("%s: finding %s %s (%s)", scenario, key.Code, key.ScopeName, key.ScopeKind)
+	return fmt.Sprintf("%s: finding %s %s %s (%s)", scenario, key.Code, key.ScopeType, key.ScopeName, key.ScopeKind)
 }
 
 // describeValue names the kind of v and what it holds.
@@ -446,24 +514,26 @@ func compareEvidence(label string, got []snapshot.Evidence, want []pythonEvidenc
 }
 
 // compareFindings compares the findings of a snapshot with those of a
-// recorded file: first as sets keyed by code, scope name, and scope kind,
+// recorded file: first as sets keyed by code, scope type, scope name, and
+// scope kind,
 // so that a missing finding is named as missing and not as a shift of
 // every finding after it; then, for a key found on both sides, severity,
-// confidence, and evidence; then the order of the two lists of keys.
+// confidence, and evidence; then the order of the two lists of keys, with
+// the scope kind left out.
 func compareFindings(scenario string, got []snapshot.Finding, want []pythonFinding) []string {
 	var diffs []string
 
 	gotByKey := make(map[findingKey]snapshot.Finding, len(got))
 	gotOrder := make([]findingKey, len(got))
 	for i, f := range got {
-		key := findingKey{f.Code, f.ScopeName, f.ScopeKind}
+		key := findingKey{f.Code, f.ScopeType, f.ScopeName, f.ScopeKind}
 		gotByKey[key] = f
 		gotOrder[i] = key
 	}
 	wantByKey := make(map[findingKey]pythonFinding, len(want))
 	wantOrder := make([]findingKey, len(want))
 	for i, f := range want {
-		key := findingKey{f.Code, f.ScopeName, f.ScopeKind}
+		key := findingKey{f.Code, f.ScopeType, f.ScopeName, f.ScopeKind}
 		wantByKey[key] = f
 		wantOrder[i] = key
 	}
@@ -489,25 +559,32 @@ func compareFindings(scenario string, got []snapshot.Finding, want []pythonFindi
 		if gf.Severity != wf.Severity {
 			diffs = append(diffs, fmt.Sprintf("%s: severity: got %q, want %q", label, gf.Severity, wf.Severity))
 		}
-		if gf.ScopeType != wf.ScopeType {
-			diffs = append(diffs, fmt.Sprintf("%s: scope_type: got %q, want %q", label, gf.ScopeType, wf.ScopeType))
-		}
 		if gf.Confidence != wf.Confidence {
 			diffs = append(diffs, fmt.Sprintf("%s: confidence: got %q, want %q", label, gf.Confidence, wf.Confidence))
 		}
 		diffs = append(diffs, compareEvidence(label, gf.Evidence, wf.Evidence)...)
 	}
 
-	if sameKeySet(gotOrder, wantOrder) && !slices.Equal(gotOrder, wantOrder) {
-		for i := range gotOrder {
-			if gotOrder[i] != wantOrder[i] {
-				diffs = append(diffs, fmt.Sprintf("%s: findings[%d]: the order differs from the original: got %v, want %v", scenario, i, gotOrder[i], wantOrder[i]))
+	if sameKeySet(gotOrder, wantOrder) {
+		gotSequence, wantSequence := orderKeys(gotOrder), orderKeys(wantOrder)
+		for i := range gotSequence {
+			if gotSequence[i] != wantSequence[i] {
+				diffs = append(diffs, fmt.Sprintf("%s: findings[%d]: the order differs from the original: got %v, want %v", scenario, i, gotSequence[i], wantSequence[i]))
 				break
 			}
 		}
 	}
 
 	return diffs
+}
+
+// orderKeys drops the scope kind of every key.
+func orderKeys(keys []findingKey) []findingOrderKey {
+	out := make([]findingOrderKey, len(keys))
+	for i, key := range keys {
+		out[i] = findingOrderKey{key.Code, key.ScopeType, key.ScopeName}
+	}
+	return out
 }
 
 // sameKeySet reports whether a and b hold the same keys the same number of
@@ -660,6 +737,237 @@ func compareStrings(scenario, label string, got, want []string) []string {
 	return diffs
 }
 
+// hpaLabel names an HPA row for a difference message.
+func hpaLabel(scenario, namespace, name string) string {
+	return fmt.Sprintf("%s: hpa %s/%s", scenario, namespace, name)
+}
+
+// compareHPAs matches the HPAs of a snapshot with those of a recorded file
+// by namespace and name, and compares each pair found on both sides: the
+// target, the two specs, and the two statistics.
+func compareHPAs(scenario string, got []snapshot.HPA, want []pythonHPA) []string {
+	var diffs []string
+	type key struct{ Namespace, Name string }
+	wantByKey := make(map[key]pythonHPA, len(want))
+	for _, w := range want {
+		wantByKey[key{w.Namespace, w.Name}] = w
+	}
+	seen := make(map[key]bool, len(got))
+	for _, g := range got {
+		k := key{g.Namespace, g.Name}
+		seen[k] = true
+		label := hpaLabel(scenario, g.Namespace, g.Name)
+		w, ok := wantByKey[k]
+		if !ok {
+			diffs = append(diffs, fmt.Sprintf("%s: present in the project, missing from the original", label))
+			continue
+		}
+		if g.TargetKind != w.TargetKind {
+			diffs = append(diffs, fmt.Sprintf("%s: target_kind: got %q, want %q", label, g.TargetKind, w.TargetKind))
+		}
+		if g.TargetName != w.TargetName {
+			diffs = append(diffs, fmt.Sprintf("%s: target_name: got %q, want %q", label, g.TargetName, w.TargetName))
+		}
+		diffs = append(diffs, comparePointer(label, "spec_min", g.SpecMin, w.SpecMin)...)
+		diffs = append(diffs, comparePointer(label, "spec_max", g.SpecMax, w.SpecMax)...)
+		diffs = append(diffs, compareStatistic(label, "current", g.Current, w.Current)...)
+		diffs = append(diffs, compareStatistic(label, "desired", g.Desired, w.Desired)...)
+	}
+	for _, w := range want {
+		if !seen[key{w.Namespace, w.Name}] {
+			diffs = append(diffs, fmt.Sprintf("%s: present in the original, missing from the project", hpaLabel(scenario, w.Namespace, w.Name)))
+		}
+	}
+	return diffs
+}
+
+// compareUncovered compares the workloads of the snapshot whose HPA
+// coverage is uncovered with the recorded workloads_without_hpa, position
+// by position: namespace, kind, and name.
+func compareUncovered(scenario string, got []snapshot.Workload, want []pythonWorkloadWithoutHPA) []string {
+	var uncovered []snapshot.Workload
+	for _, row := range got {
+		if row.HPACoverage == snapshot.CoverageUncovered {
+			uncovered = append(uncovered, row)
+		}
+	}
+	var diffs []string
+	for i := 0; i < len(uncovered) || i < len(want); i++ {
+		label := fmt.Sprintf("%s: workloads_without_hpa[%d]", scenario, i)
+		switch {
+		case i >= len(want):
+			diffs = append(diffs, fmt.Sprintf("%s: present in the project, missing from the original: %s/%s (%s)", label, uncovered[i].Namespace, uncovered[i].Name, uncovered[i].Kind))
+		case i >= len(uncovered):
+			diffs = append(diffs, fmt.Sprintf("%s: present in the original, missing from the project: %s/%s (%s)", label, want[i].Namespace, want[i].Name, want[i].Kind))
+		default:
+			g, w := uncovered[i], want[i]
+			if g.Namespace != w.Namespace {
+				diffs = append(diffs, fmt.Sprintf("%s: namespace: got %q, want %q", label, g.Namespace, w.Namespace))
+			}
+			if g.Kind != w.Kind {
+				diffs = append(diffs, fmt.Sprintf("%s: kind: got %q, want %q", label, g.Kind, w.Kind))
+			}
+			if g.Name != w.Name {
+				diffs = append(diffs, fmt.Sprintf("%s: name: got %q, want %q", label, g.Name, w.Name))
+			}
+		}
+	}
+	return diffs
+}
+
+// nodeLabel names a node row for a difference message.
+func nodeLabel(scenario, name string) string {
+	return fmt.Sprintf("%s: node %s", scenario, name)
+}
+
+// boolText writes p as "null" when it is nil, and its value otherwise.
+func boolText(p *bool) string {
+	if p == nil {
+		return "null"
+	}
+	return strconv.FormatBool(*p)
+}
+
+// compareBoolPointer compares two optional booleans and reports a
+// difference naming label, field, and both values.
+func compareBoolPointer(label, field string, got, want *bool) []string {
+	if (got == nil) == (want == nil) && (got == nil || *got == *want) {
+		return nil
+	}
+	return []string{fmt.Sprintf("%s: %s: got %s, want %s", label, field, boolText(got), boolText(want))}
+}
+
+// compareNodes matches the nodes of a snapshot with those of a recorded
+// file by name, and compares every field of each pair found on both sides.
+func compareNodes(scenario string, got []snapshot.Node, want []pythonNode) []string {
+	var diffs []string
+	wantByName := make(map[string]pythonNode, len(want))
+	for _, w := range want {
+		wantByName[w.Name] = w
+	}
+	seen := make(map[string]bool, len(got))
+	for _, g := range got {
+		seen[g.Name] = true
+		label := nodeLabel(scenario, g.Name)
+		w, ok := wantByName[g.Name]
+		if !ok {
+			diffs = append(diffs, fmt.Sprintf("%s: present in the project, missing from the original", label))
+			continue
+		}
+		if g.Pool != w.Pool {
+			diffs = append(diffs, fmt.Sprintf("%s: pool: got %q, want %q", label, g.Pool, w.Pool))
+		}
+		if g.PoolConfidence != w.PoolConfidence {
+			diffs = append(diffs, fmt.Sprintf("%s: pool_confidence: got %q, want %q", label, g.PoolConfidence, w.PoolConfidence))
+		}
+		diffs = append(diffs, comparePointer(label, "cpu_capacity", g.CPUCapacity, w.CPUCapacity)...)
+		diffs = append(diffs, comparePointer(label, "memory_capacity", g.MemoryCapacity, w.MemoryCapacity)...)
+		diffs = append(diffs, comparePointer(label, "cpu_allocatable", g.CPUAllocatable, w.CPUAllocatable)...)
+		diffs = append(diffs, comparePointer(label, "memory_allocatable", g.MemoryAllocatable, w.MemoryAllocatable)...)
+		diffs = append(diffs, compareStatistic(label, "cpu_usage_percent", g.CPUUsagePercent, w.CPUUsagePercent)...)
+		diffs = append(diffs, compareStatistic(label, "memory_usage_percent", g.MemoryUsagePercent, w.MemoryUsagePercent)...)
+		diffs = append(diffs, comparePointer(label, "cpu_request_percent", g.CPURequestPercent, w.CPURequestPercent)...)
+		diffs = append(diffs, comparePointer(label, "memory_request_percent", g.MemoryRequestPercent, w.MemoryRequestPercent)...)
+		diffs = append(diffs, compareBoolPointer(label, "ready", g.Ready, w.Ready)...)
+		diffs = append(diffs, compareBoolPointer(label, "schedulable", g.Schedulable, w.Schedulable)...)
+	}
+	for _, w := range want {
+		if !seen[w.Name] {
+			diffs = append(diffs, fmt.Sprintf("%s: present in the original, missing from the project", nodeLabel(scenario, w.Name)))
+		}
+	}
+	return diffs
+}
+
+// nodepoolLabel names a node pool row for a difference message.
+func nodepoolLabel(scenario, name string) string {
+	return fmt.Sprintf("%s: nodepool %s", scenario, name)
+}
+
+// compareNodepools matches the pools of a snapshot with those of a
+// recorded file by name, and compares the confidence and the node names,
+// in order, of each pair found on both sides.
+func compareNodepools(scenario string, got []snapshot.NodePool, want []pythonNodepool) []string {
+	var diffs []string
+	wantByName := make(map[string]pythonNodepool, len(want))
+	for _, w := range want {
+		wantByName[w.Name] = w
+	}
+	seen := make(map[string]bool, len(got))
+	for _, g := range got {
+		seen[g.Name] = true
+		label := nodepoolLabel(scenario, g.Name)
+		w, ok := wantByName[g.Name]
+		if !ok {
+			diffs = append(diffs, fmt.Sprintf("%s: present in the project, missing from the original", label))
+			continue
+		}
+		if g.Confidence != w.Confidence {
+			diffs = append(diffs, fmt.Sprintf("%s: confidence: got %q, want %q", label, g.Confidence, w.Confidence))
+		}
+		diffs = append(diffs, compareStrings(label, "nodes", g.Nodes, w.Nodes)...)
+	}
+	for _, w := range want {
+		if !seen[w.Name] {
+			diffs = append(diffs, fmt.Sprintf("%s: present in the original, missing from the project", nodepoolLabel(scenario, w.Name)))
+		}
+	}
+	return diffs
+}
+
+// compareAutoscaling compares the autoscaling of the snapshot summary with
+// the recorded one, field by field.
+func compareAutoscaling(scenario string, got snapshot.Autoscaling, want pythonAutoscaling) []string {
+	label := scenario + ": autoscaling"
+	var diffs []string
+	if got.Status != want.Status {
+		diffs = append(diffs, fmt.Sprintf("%s: status: got %q, want %q", label, got.Status, want.Status))
+	}
+	if got.Source != want.Source {
+		diffs = append(diffs, fmt.Sprintf("%s: source: got %q, want %q", label, got.Source, want.Source))
+	}
+	if got.Confidence != want.Confidence {
+		diffs = append(diffs, fmt.Sprintf("%s: confidence: got %q, want %q", label, got.Confidence, want.Confidence))
+	}
+	diffs = append(diffs, comparePointer(label, "managed_node_groups", got.ManagedNodeGroups, want.ManagedNodeGroups)...)
+	diffs = append(diffs, comparePointer(label, "current_nodes", got.CurrentNodes, want.CurrentNodes)...)
+	diffs = append(diffs, comparePointer(label, "min_nodes", got.MinNodes, want.MinNodes)...)
+	diffs = append(diffs, comparePointer(label, "max_nodes", got.MaxNodes, want.MaxNodes)...)
+	diffs = append(diffs, comparePointer(label, "scale_events", got.ScaleEvents, want.ScaleEvents)...)
+	diffs = append(diffs, comparePointer(label, "unschedulable_pods", got.UnschedulablePods, want.UnschedulablePods)...)
+	return diffs
+}
+
+// nodePressure reports whether any finding of scope node or nodepool is at
+// attention or above.
+func nodePressure(findings []snapshot.Finding) bool {
+	for _, f := range findings {
+		if (f.ScopeType == analysis.ScopeNode || f.ScopeType == analysis.ScopeNodepool) && f.Severity != analysis.SeverityHealthy {
+			return true
+		}
+	}
+	return false
+}
+
+// compareCollectionStates compares the states of the five collectors and
+// the status of the cluster autoscaling evidence with the recorded ones.
+func compareCollectionStates(scenario string, collected collect.Collected, want pythonRecording) []string {
+	var diffs []string
+	for _, c := range []struct{ name, got, want string }{
+		{"namespace_collection", collected.Namespaces.State, want.NamespaceCollection},
+		{"workload_collection", collected.Workloads.State, want.WorkloadCollection},
+		{"hpa_collection", collected.HPAs.State, want.HPACollection},
+		{"hpa_coverage_collection", collected.Coverage.State, want.HPACoverageCollection},
+		{"node_collection", collected.Nodes.State, want.NodeCollection},
+		{"autoscaling_status", collected.Autoscaling.Status, want.AutoscalingStatus},
+	} {
+		if c.got != c.want {
+			diffs = append(diffs, fmt.Sprintf("%s: %s: got %q, want %q", scenario, c.name, c.got, c.want))
+		}
+	}
+	return diffs
+}
+
 // compareNumbers compares snap and collected, the snapshot and the
 // collectors' own result of one run of scenario, with want, a decoded
 // recorded file of the original, and returns every difference found: a
@@ -671,6 +979,15 @@ func compareNumbers(scenario string, snap snapshot.Snapshot, collected collect.C
 	var diffs []string
 	diffs = append(diffs, compareNamespaces(scenario, snap.Namespaces, collected.Namespaces.Rows, want.Namespaces)...)
 	diffs = append(diffs, compareWorkloads(scenario, snap.Workloads, collected.Workloads.Rows, want.Workloads)...)
+	diffs = append(diffs, compareHPAs(scenario, snap.HPAs, want.HPAs)...)
+	diffs = append(diffs, compareUncovered(scenario, snap.Workloads, want.WorkloadsWithoutHPA)...)
+	diffs = append(diffs, compareNodes(scenario, snap.Nodes, want.Nodes)...)
+	diffs = append(diffs, compareNodepools(scenario, snap.Nodepools, want.Nodepools)...)
+	diffs = append(diffs, compareAutoscaling(scenario, snap.Summary.Autoscaling, want.Autoscaling)...)
+	if got := nodePressure(snap.Findings); got != want.NodePressure {
+		diffs = append(diffs, fmt.Sprintf("%s: node_pressure: got %v, want %v", scenario, got, want.NodePressure))
+	}
+	diffs = append(diffs, compareCollectionStates(scenario, collected, want)...)
 	diffs = append(diffs, compareFindings(scenario, snap.Findings, want.Findings)...)
 
 	gotWarnings, gotNotices, err := originalTexts(snap.Quality.Warnings, snap.Quality.Notices)
@@ -1015,7 +1332,7 @@ func TestComparisonCanFail(t *testing.T) {
 		want := fresh(t)
 		removed := want.Findings[0]
 		want.Findings = append([]pythonFinding{}, want.Findings[1:]...)
-		key := findingKey{removed.Code, removed.ScopeName, removed.ScopeKind}
+		key := findingKey{removed.Code, removed.ScopeType, removed.ScopeName, removed.ScopeKind}
 		checkExact(t, want, []string{
 			findingLabel(scenario.Name, key) + ": present in the project, missing from the original",
 		})
@@ -1025,8 +1342,8 @@ func TestComparisonCanFail(t *testing.T) {
 		want := fresh(t)
 		original := want.Findings[0]
 		want.Findings[0].Code = original.Code + "_X"
-		originalKey := findingKey{original.Code, original.ScopeName, original.ScopeKind}
-		changedKey := findingKey{original.Code + "_X", original.ScopeName, original.ScopeKind}
+		originalKey := findingKey{original.Code, original.ScopeType, original.ScopeName, original.ScopeKind}
+		changedKey := findingKey{original.Code + "_X", original.ScopeType, original.ScopeName, original.ScopeKind}
 		checkExact(t, want, []string{
 			findingLabel(scenario.Name, originalKey) + ": present in the project, missing from the original",
 			findingLabel(scenario.Name, changedKey) + ": present in the original, missing from the project",
@@ -1036,7 +1353,7 @@ func TestComparisonCanFail(t *testing.T) {
 	t.Run("a number of the evidence of a finding changed", func(t *testing.T) {
 		want := fresh(t)
 		f := want.Findings[0]
-		key := findingKey{f.Code, f.ScopeName, f.ScopeKind}
+		key := findingKey{f.Code, f.ScopeType, f.ScopeName, f.ScopeKind}
 		want.Findings[0].Evidence[0].Value = analysis.Number(56)
 		checkExact(t, want, []string{
 			findingLabel(scenario.Name, key) + ": evidence[0].average_percent: got number 55, want number 56",
@@ -1056,7 +1373,7 @@ func TestComparisonCanFail(t *testing.T) {
 			t.Fatal("edge-values holds no finding of confidence inferred to change")
 		}
 		f := want.Findings[idx]
-		key := findingKey{f.Code, f.ScopeName, f.ScopeKind}
+		key := findingKey{f.Code, f.ScopeType, f.ScopeName, f.ScopeKind}
 		want.Findings[idx].Confidence = "exact"
 		checkExact(t, want, []string{
 			findingLabel(scenario.Name, key) + `: confidence: got "inferred", want "exact"`,
@@ -1065,14 +1382,23 @@ func TestComparisonCanFail(t *testing.T) {
 
 	t.Run("the scope type of a finding changed", func(t *testing.T) {
 		want := fresh(t)
-		f := want.Findings[2]
-		if f.ScopeType != "namespace" {
-			t.Fatalf("edge-values findings[2] has scope_type %q, want %q", f.ScopeType, "namespace")
+		idx := -1
+		for i := range want.Findings {
+			if want.Findings[i].ScopeType == "namespace" {
+				idx = i
+				break
+			}
 		}
-		key := findingKey{f.Code, f.ScopeName, f.ScopeKind}
-		want.Findings[2].ScopeType = "workload"
+		if idx < 0 {
+			t.Fatal("edge-values holds no finding of scope type namespace to change")
+		}
+		f := want.Findings[idx]
+		key := findingKey{f.Code, f.ScopeType, f.ScopeName, f.ScopeKind}
+		changedKey := findingKey{f.Code, "workload", f.ScopeName, f.ScopeKind}
+		want.Findings[idx].ScopeType = "workload"
 		checkExact(t, want, []string{
-			findingLabel(scenario.Name, key) + `: scope_type: got "namespace", want "workload"`,
+			findingLabel(scenario.Name, key) + ": present in the project, missing from the original",
+			findingLabel(scenario.Name, changedKey) + ": present in the original, missing from the project",
 		})
 	})
 
@@ -1080,8 +1406,8 @@ func TestComparisonCanFail(t *testing.T) {
 		want := fresh(t)
 		first, second := want.Findings[0], want.Findings[1]
 		want.Findings[0], want.Findings[1] = second, first
-		firstKey := findingKey{first.Code, first.ScopeName, first.ScopeKind}
-		secondKey := findingKey{second.Code, second.ScopeName, second.ScopeKind}
+		firstKey := findingOrderKey{first.Code, first.ScopeType, first.ScopeName}
+		secondKey := findingOrderKey{second.Code, second.ScopeType, second.ScopeName}
 		checkExact(t, want, []string{
 			fmt.Sprintf("%s: findings[0]: the order differs from the original: got %v, want %v", scenario.Name, firstKey, secondKey),
 		})
@@ -1103,6 +1429,137 @@ func TestComparisonCanFail(t *testing.T) {
 		want.Notices[0] = mutated
 		checkExact(t, want, []string{
 			fmt.Sprintf("%s: notices[0]: got %q, want %q", scenario.Name, original, mutated),
+		})
+	})
+
+	scaling := scenarioByName(t, "edge-scaling")
+	scalingOut, _, err := run(context.Background(), scaling)
+	if err != nil {
+		t.Fatalf("run(%s): %v", scaling.Name, err)
+	}
+	scalingPath, err := pythonRecordingPath(scaling.Name)
+	if err != nil {
+		t.Fatalf("pythonRecordingPath(%s): %v", scaling.Name, err)
+	}
+	freshScaling := func(t *testing.T) pythonRecording {
+		t.Helper()
+		want, err := loadPythonRecording(scalingPath)
+		if err != nil {
+			t.Fatalf("loadPythonRecording(%s): %v", scalingPath, err)
+		}
+		return want
+	}
+	checkScaling := func(t *testing.T, recording pythonRecording, want []string) {
+		t.Helper()
+		got := compareNumbers(scaling.Name, scalingOut.Snapshot, scalingOut.Collected, recording)
+		if !slices.Equal(got, want) {
+			t.Errorf("differences:\n got:  %s\n want: %s", strings.Join(got, "\n       "), strings.Join(want, "\n       "))
+		}
+	}
+
+	t.Run("a number of an hpa changed", func(t *testing.T) {
+		want := freshScaling(t)
+		idx := slices.IndexFunc(want.HPAs, func(h pythonHPA) bool { return h.Name == "web" })
+		if idx < 0 {
+			t.Fatal("edge-scaling holds no HPA named web")
+		}
+		original := *want.HPAs[idx].Current.Peak
+		want.HPAs[idx].Current.Peak = floatPtr(original + 1)
+		checkScaling(t, want, []string{
+			hpaLabel(scaling.Name, "payments", "web") + fmt.Sprintf(": current.peak: got %v, want %v", original, original+1),
+		})
+	})
+
+	t.Run("the spec of an hpa changed to null", func(t *testing.T) {
+		want := freshScaling(t)
+		idx := slices.IndexFunc(want.HPAs, func(h pythonHPA) bool { return h.Name == "fixed" })
+		if idx < 0 {
+			t.Fatal("edge-scaling holds no HPA named fixed")
+		}
+		want.HPAs[idx].SpecMax = nil
+		checkScaling(t, want, []string{
+			hpaLabel(scaling.Name, "payments", "fixed") + ": spec_max: got 3, want null",
+		})
+	})
+
+	t.Run("a workload without an hpa changed", func(t *testing.T) {
+		want := freshScaling(t)
+		want.WorkloadsWithoutHPA[1].Kind = "Deployment"
+		checkScaling(t, want, []string{
+			scaling.Name + `: workloads_without_hpa[1]: kind: got "StatefulSet", want "Deployment"`,
+		})
+	})
+
+	t.Run("a number of a node changed", func(t *testing.T) {
+		want := freshScaling(t)
+		idx := slices.IndexFunc(want.Nodes, func(n pythonNode) bool { return n.Name == "pool-a-1" })
+		if idx < 0 {
+			t.Fatal("edge-scaling holds no node named pool-a-1")
+		}
+		original := *want.Nodes[idx].CPURequestPercent
+		want.Nodes[idx].CPURequestPercent = floatPtr(original + 1)
+		checkScaling(t, want, []string{
+			nodeLabel(scaling.Name, "pool-a-1") + fmt.Sprintf(": cpu_request_percent: got %v, want %v", original, original+1),
+		})
+	})
+
+	t.Run("the readiness of a node changed", func(t *testing.T) {
+		want := freshScaling(t)
+		idx := slices.IndexFunc(want.Nodes, func(n pythonNode) bool { return n.Name == "pool-a-1" })
+		if idx < 0 {
+			t.Fatal("edge-scaling holds no node named pool-a-1")
+		}
+		flipped := want.Nodes[idx].Ready == nil || !*want.Nodes[idx].Ready
+		want.Nodes[idx].Ready = &flipped
+		got := compareNumbers(scaling.Name, scalingOut.Snapshot, scalingOut.Collected, want)
+		if len(got) != 1 || !strings.HasPrefix(got[0], nodeLabel(scaling.Name, "pool-a-1")+": ready: ") {
+			t.Errorf("differences: %q, want one difference naming node pool-a-1 and ready", got)
+		}
+	})
+
+	t.Run("a nodepool changed", func(t *testing.T) {
+		want := freshScaling(t)
+		want.Nodepools[1].Nodes = want.Nodepools[1].Nodes[:1]
+		checkScaling(t, want, []string{
+			fmt.Sprintf("%s: nodes[1]: got %q, want %q", nodepoolLabel(scaling.Name, "pool-a"), "pool-a-2", ""),
+		})
+	})
+
+	t.Run("a number of the autoscaling changed", func(t *testing.T) {
+		want := freshScaling(t)
+		want.Autoscaling.MaxNodes = floatPtr(4)
+		checkScaling(t, want, []string{
+			scaling.Name + ": autoscaling: max_nodes: got 3, want 4",
+		})
+	})
+
+	t.Run("node pressure changed", func(t *testing.T) {
+		want := freshScaling(t)
+		want.NodePressure = false
+		checkScaling(t, want, []string{
+			scaling.Name + ": node_pressure: got true, want false",
+		})
+	})
+
+	t.Run("a collection state changed", func(t *testing.T) {
+		want := freshScaling(t)
+		want.NodeCollection = "available"
+		checkScaling(t, want, []string{
+			scaling.Name + `: node_collection: got "partial", want "available"`,
+		})
+	})
+
+	t.Run("a text of an evidence changed", func(t *testing.T) {
+		want := freshScaling(t)
+		idx := slices.IndexFunc(want.Findings, func(f pythonFinding) bool { return f.Code == "NODE_OVERREQUESTED" })
+		if idx < 0 {
+			t.Fatal("edge-scaling holds no finding NODE_OVERREQUESTED")
+		}
+		f := want.Findings[idx]
+		key := findingKey{f.Code, f.ScopeType, f.ScopeName, f.ScopeKind}
+		want.Findings[idx].Evidence[0].Value = analysis.Text("memory")
+		checkScaling(t, want, []string{
+			findingLabel(scaling.Name, key) + `: evidence[0].resources: got text "cpu", want text "memory"`,
 		})
 	})
 }
