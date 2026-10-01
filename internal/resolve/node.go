@@ -10,7 +10,8 @@ var tabsAndBreaks = strings.NewReplacer("\t", "", "\r", "", "\n", "")
 
 // InstanceHost returns the host of an instance label, as the original does
 // with the host of "//" plus the instance: the port, IPv6 brackets, and any
-// user information removed, the host in lower case; the text itself when it
+// user information removed, the host in lower case but for the zone of an
+// IPv6 address, which keeps its case; the text itself when it
 // has no host part; the empty text for an empty instance or a malformed one.
 func InstanceHost(instance string) string {
 	if instance == "" {
@@ -43,6 +44,10 @@ func InstanceHost(instance string) string {
 	}
 	if host == "" {
 		return instance
+	}
+	addr, zone, hasZone := strings.Cut(host, "%")
+	if hasZone {
+		return strings.ToLower(addr) + "%" + zone
 	}
 	return strings.ToLower(host)
 }

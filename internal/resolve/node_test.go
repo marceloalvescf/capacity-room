@@ -86,3 +86,30 @@ func TestIndexEmptyHostMatchesNothing(t *testing.T) {
 		t.Errorf("empty instance resolved to %q", name)
 	}
 }
+
+func TestInstanceHostKeepsTheZone(t *testing.T) {
+	for in, want := range map[string]string{
+		"[fe80::1%ETH0]:9100": "fe80::1%ETH0",
+		"[FE80::1%eth0]:9100": "fe80::1%eth0",
+	} {
+		if got := InstanceHost(in); got != want {
+			t.Errorf("InstanceHost(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// TestInstanceHostLowersAsGoDoes pins the three places where Go's lower-casing
+// differs from, or agrees with, the original's (R70): the original lowers
+// U+0130 to "i" followed by U+0307 and a final sigma to a final sigma; Go
+// lowers them to "i" and to a plain sigma.
+func TestInstanceHostLowersAsGoDoes(t *testing.T) {
+	for in, want := range map[string]string{
+		"İSTANBUL:9100": "istanbul",
+		"ΟΔΥΣΣΕΎΣ:9100": "οδυσσεύσ",
+		"ẞ:1":           "ß",
+	} {
+		if got := InstanceHost(in); got != want {
+			t.Errorf("InstanceHost(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
