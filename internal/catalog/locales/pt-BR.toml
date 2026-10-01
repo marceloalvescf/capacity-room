@@ -198,3 +198,19 @@ plural = "{{.Count}} Jobs foram deixados de fora do inventário de workloads; o 
 [notice.WORKLOADS_OMITTED_SCALE_ZERO]
 singular = "1 workload deixado de fora do inventário de cobertura por estar com escala zero."
 plural = "{{.Count}} workloads deixados de fora do inventário de cobertura por estarem com escala zero."
+
+[period.day]
+singular = "dia"
+plural = "dias"
+
+[period.hour]
+singular = "hora"
+plural = "horas"
+
+[period.minute]
+singular = "minuto"
+plural = "minutos"
+
+[period.second]
+singular = "segundo"
+plural = "segundos"

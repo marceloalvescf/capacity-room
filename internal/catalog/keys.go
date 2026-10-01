@@ -126,6 +126,15 @@ const (
 
 	NotesHeading      Key = "notes.heading"
 	NotesHeaderRemark Key = "notes.header_remark"
+
+	PeriodDaySingular    Key = "period.day.singular"
+	PeriodDayPlural      Key = "period.day.plural"
+	PeriodHourSingular   Key = "period.hour.singular"
+	PeriodHourPlural     Key = "period.hour.plural"
+	PeriodMinuteSingular Key = "period.minute.singular"
+	PeriodMinutePlural   Key = "period.minute.plural"
+	PeriodSecondSingular Key = "period.second.singular"
+	PeriodSecondPlural   Key = "period.second.plural"
 )
 
 // wordingKeys lists every constant above, in the order of the wording
@@ -173,6 +182,8 @@ var wordingKeys = []Key{
 	SectionsWorkloadsHeaderMemoryPeak, SectionsWorkloadsHeaderMemoryRequest, SectionsWorkloadsHeaderMemoryLimit,
 	PlaceholderUnavailable, PlaceholderNoBase,
 	NotesHeading, NotesHeaderRemark,
+	PeriodDaySingular, PeriodDayPlural, PeriodHourSingular, PeriodHourPlural,
+	PeriodMinuteSingular, PeriodMinutePlural, PeriodSecondSingular, PeriodSecondPlural,
 }
 
 // CapabilityName returns the key that names capability name, one of

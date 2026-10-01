@@ -80,3 +80,35 @@ func (c *Catalog) Count(value float64) string {
 	whole, _ := new(big.Float).SetFloat64(rounded).Int(nil)
 	return whole.String()
 }
+
+// Period writes the length of a period as the original does: whole seconds
+// rounded half to even, then days for seven days or more when the count is
+// exact, else hours when exact, else minutes when exact, else seconds; the
+// unit word from the catalog, plural for every value but 1.
+func (c *Catalog) Period(start, end time.Time) (string, error) {
+	seconds := int(math.Max(0, math.RoundToEven(end.Sub(start).Seconds())))
+
+	count := seconds
+	singular, plural := PeriodSecondSingular, PeriodSecondPlural
+	switch {
+	case seconds >= 7*86400 && seconds%86400 == 0:
+		count = seconds / 86400
+		singular, plural = PeriodDaySingular, PeriodDayPlural
+	case seconds >= 3600 && seconds%3600 == 0:
+		count = seconds / 3600
+		singular, plural = PeriodHourSingular, PeriodHourPlural
+	case seconds >= 60 && seconds%60 == 0:
+		count = seconds / 60
+		singular, plural = PeriodMinuteSingular, PeriodMinutePlural
+	}
+
+	key := plural
+	if count == 1 {
+		key = singular
+	}
+	word, err := c.Text(key, nil)
+	if err != nil {
+		return "", err
+	}
+	return c.Integer(count) + " " + word, nil
+}

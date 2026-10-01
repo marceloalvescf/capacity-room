@@ -198,3 +198,19 @@ plural = "{{.Count}} Jobs were left out of the workload inventory; their consump
 [notice.WORKLOADS_OMITTED_SCALE_ZERO]
 singular = "1 workload was left out of the coverage inventory because it is scaled to zero."
 plural = "{{.Count}} workloads were left out of the coverage inventory because they are scaled to zero."
+
+[period.day]
+singular = "day"
+plural = "days"
+
+[period.hour]
+singular = "hour"
+plural = "hours"
+
+[period.minute]
+singular = "minute"
+plural = "minutes"
+
+[period.second]
+singular = "second"
+plural = "seconds"

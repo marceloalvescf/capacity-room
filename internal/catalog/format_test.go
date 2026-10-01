@@ -1,7 +1,9 @@
 package catalog
 
 import (
+	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 )
 
@@ -318,5 +320,67 @@ func TestInteger(t *testing.T) {
 				t.Errorf("%s Integer(%d) = %q, want %q", lang, tt.n, got, tt.want)
 			}
 		}
+	}
+}
+
+func TestPeriod(t *testing.T) {
+	start := time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name   string
+		length time.Duration
+		pt     string
+		en     string
+	}{
+		{"24 hours", 24 * time.Hour, "24 horas", "24 hours"},
+		{"7 days", 7 * 24 * time.Hour, "7 dias", "7 days"},
+		{"6 days", 6 * 24 * time.Hour, "144 horas", "144 hours"},
+		{"1 hour", time.Hour, "1 hora", "1 hour"},
+		{"90 minutes", 90 * time.Minute, "90 minutos", "90 minutes"},
+		{"1 minute", time.Minute, "1 minuto", "1 minute"},
+		{"90 seconds", 90 * time.Second, "90 segundos", "90 seconds"},
+		{"1 second", time.Second, "1 segundo", "1 second"},
+		{"zero", 0, "0 segundos", "0 seconds"},
+		{"8 days", 8 * 24 * time.Hour, "8 dias", "8 days"},
+		{"7 days and 1 hour", 7*24*time.Hour + time.Hour, "169 horas", "169 hours"},
+		{"2.5 seconds", 2500 * time.Millisecond, "2 segundos", "2 seconds"},
+		{"3.5 seconds", 3500 * time.Millisecond, "4 segundos", "4 seconds"},
+		{"2.6 seconds", 2600 * time.Millisecond, "3 segundos", "3 seconds"},
+		{"negative", -5 * time.Hour, "0 segundos", "0 seconds"},
+	}
+
+	pt, err := Load(PortugueseBrazil)
+	if err != nil {
+		t.Fatalf("Load(pt-BR): %v", err)
+	}
+	en, err := Load(English)
+	if err != nil {
+		t.Fatalf("Load(en): %v", err)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			end := start.Add(tt.length)
+			if got, err := pt.Period(start, end); err != nil || got != tt.pt {
+				t.Errorf("pt Period = %q, %v, want %q", got, err, tt.pt)
+			}
+			if got, err := en.Period(start, end); err != nil || got != tt.en {
+				t.Errorf("en Period = %q, %v, want %q", got, err, tt.en)
+			}
+		})
+	}
+}
+
+func TestPeriodNeedsTheEntries(t *testing.T) {
+	fsys := fstest.MapFS{
+		"locales/en.toml": &fstest.MapFile{Data: []byte("value = \"x\"\n")},
+	}
+	cat, err := load(fsys, English)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	start := time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)
+	_, err = cat.Period(start, start.Add(time.Hour))
+	if err == nil || !strings.Contains(err.Error(), string(PeriodHourSingular)) {
+		t.Errorf("Period without entries: err = %v, want one naming %q", err, PeriodHourSingular)
 	}
 }
