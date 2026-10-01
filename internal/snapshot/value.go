@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,7 +28,13 @@ func (v Value) MarshalJSON() ([]byte, error) {
 	case kindBoolean:
 		return json.Marshal(v.Boolean)
 	case kindText:
-		return json.Marshal(v.Text)
+		var buf bytes.Buffer
+		encoder := json.NewEncoder(&buf)
+		encoder.SetEscapeHTML(false)
+		if err := encoder.Encode(v.Text); err != nil {
+			return nil, err
+		}
+		return bytes.TrimRight(buf.Bytes(), "\n"), nil
 	}
 	return nil, fmt.Errorf("snapshot value has an unknown kind: %q", v.Kind)
 }

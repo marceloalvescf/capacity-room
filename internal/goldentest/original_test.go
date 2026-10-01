@@ -407,7 +407,35 @@ func compareNamespaces(scenario string, got []snapshot.Namespace, collectedRows 
 			diffs = append(diffs, fmt.Sprintf("%s: present in the original, missing from the project", namespaceLabel(scenario, w.Namespace)))
 		}
 	}
-	return diffs
+	gotNames := make([]string, len(got))
+	for i, g := range got {
+		gotNames[i] = g.Name
+	}
+	wantNames := make([]string, len(want))
+	for i, w := range want {
+		wantNames[i] = w.Namespace
+	}
+	return append(diffs, compareKeyOrder(scenario, "namespaces", gotNames, wantNames)...)
+}
+
+// compareKeyOrder compares the sequence of keys of a list of the snapshot
+// with that of the recording, on the keys both hold: a key held by one
+// side only is reported by the comparison by key, and is left out here.
+func compareKeyOrder[K comparable](scenario, list string, got, want []K) []string {
+	common := func(keys, other []K) []K {
+		var kept []K
+		for _, k := range keys {
+			if slices.Contains(other, k) {
+				kept = append(kept, k)
+			}
+		}
+		return kept
+	}
+	gotKept, wantKept := common(got, want), common(want, got)
+	if slices.Equal(gotKept, wantKept) {
+		return nil
+	}
+	return []string{fmt.Sprintf("%s: %s: the order differs from the original: got %v, want %v", scenario, list, gotKept, wantKept)}
 }
 
 // workloadRowKey identifies a workload row by namespace, kind, and name.
@@ -455,7 +483,15 @@ func compareWorkloads(scenario string, got []snapshot.Workload, collectedRows []
 			diffs = append(diffs, fmt.Sprintf("%s: present in the original, missing from the project", workloadLabel(scenario, w.Namespace, w.Kind, w.Name)))
 		}
 	}
-	return diffs
+	gotKeys := make([]workloadRowKey, len(got))
+	for i, g := range got {
+		gotKeys[i] = workloadRowKey{g.Namespace, g.Kind, g.Name}
+	}
+	wantKeys := make([]workloadRowKey, len(want))
+	for i, w := range want {
+		wantKeys[i] = workloadRowKey{w.Namespace, w.Kind, w.Name}
+	}
+	return append(diffs, compareKeyOrder(scenario, "workloads", gotKeys, wantKeys)...)
 }
 
 // findingKey identifies a finding by code, scope type, scope name, and
@@ -778,7 +814,15 @@ func compareHPAs(scenario string, got []snapshot.HPA, want []pythonHPA) []string
 			diffs = append(diffs, fmt.Sprintf("%s: present in the original, missing from the project", hpaLabel(scenario, w.Namespace, w.Name)))
 		}
 	}
-	return diffs
+	gotKeys := make([]key, len(got))
+	for i, g := range got {
+		gotKeys[i] = key{g.Namespace, g.Name}
+	}
+	wantKeys := make([]key, len(want))
+	for i, w := range want {
+		wantKeys[i] = key{w.Namespace, w.Name}
+	}
+	return append(diffs, compareKeyOrder(scenario, "hpas", gotKeys, wantKeys)...)
 }
 
 // compareUncovered compares the workloads of the snapshot whose HPA
@@ -876,7 +920,15 @@ func compareNodes(scenario string, got []snapshot.Node, want []pythonNode) []str
 			diffs = append(diffs, fmt.Sprintf("%s: present in the original, missing from the project", nodeLabel(scenario, w.Name)))
 		}
 	}
-	return diffs
+	gotNames := make([]string, len(got))
+	for i, g := range got {
+		gotNames[i] = g.Name
+	}
+	wantNames := make([]string, len(want))
+	for i, w := range want {
+		wantNames[i] = w.Name
+	}
+	return append(diffs, compareKeyOrder(scenario, "nodes", gotNames, wantNames)...)
 }
 
 // nodepoolLabel names a node pool row for a difference message.
@@ -912,7 +964,15 @@ func compareNodepools(scenario string, got []snapshot.NodePool, want []pythonNod
 			diffs = append(diffs, fmt.Sprintf("%s: present in the original, missing from the project", nodepoolLabel(scenario, w.Name)))
 		}
 	}
-	return diffs
+	gotNames := make([]string, len(got))
+	for i, g := range got {
+		gotNames[i] = g.Name
+	}
+	wantNames := make([]string, len(want))
+	for i, w := range want {
+		wantNames[i] = w.Name
+	}
+	return append(diffs, compareKeyOrder(scenario, "nodepools", gotNames, wantNames)...)
 }
 
 // compareAutoscaling compares the autoscaling of the snapshot summary with
@@ -1467,6 +1527,25 @@ func TestComparisonCanFail(t *testing.T) {
 		want.HPAs[idx].Current.Peak = floatPtr(original + 1)
 		checkScaling(t, want, []string{
 			hpaLabel(scaling.Name, "payments", "web") + fmt.Sprintf(": current.peak: got %v, want %v", original, original+1),
+		})
+	})
+
+	t.Run("two hpas exchanged", func(t *testing.T) {
+		want := freshScaling(t)
+		if len(want.HPAs) < 2 {
+			t.Fatal("edge-scaling holds fewer than two HPAs")
+		}
+		type hpaKey struct{ Namespace, Name string }
+		var original, exchanged []hpaKey
+		for _, h := range want.HPAs {
+			original = append(original, hpaKey{h.Namespace, h.Name})
+		}
+		want.HPAs[0], want.HPAs[1] = want.HPAs[1], want.HPAs[0]
+		for _, h := range want.HPAs {
+			exchanged = append(exchanged, hpaKey{h.Namespace, h.Name})
+		}
+		checkScaling(t, want, []string{
+			fmt.Sprintf("%s: hpas: the order differs from the original: got %v, want %v", scaling.Name, original, exchanged),
 		})
 	})
 

@@ -2,6 +2,7 @@ package collect
 
 import (
 	"context"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -152,6 +153,26 @@ func TestAutoscalingGroupLabelOrder(t *testing.T) {
 	evidence, _ := collectAutoscaling(t, autoscalingInput("auto"), answers)
 	if evidence.CurrentNodes != known(7) {
 		t.Errorf("CurrentNodes = %+v, want 7", evidence.CurrentNodes)
+	}
+}
+
+func TestAutoscalingSumsGroupsInTheOrderOfTheirFirstSample(t *testing.T) {
+	invalid := prom.Series{
+		Labels: map[string]string{"node_group": "a"},
+		Points: []prom.Point{{Time: 1, Value: 7, Valid: false}},
+	}
+	answers := map[string][]prom.Series{metricNodes: {invalid, grouped("b", 1e308), grouped("c", -1e308), grouped("a", 1e308)}}
+	evidence, _ := collectAutoscaling(t, autoscalingInput("auto"), answers)
+	if evidence.CurrentNodes != known(1e308) {
+		t.Errorf("CurrentNodes = %+v, want 1e308, the sum in the order b, c, a", evidence.CurrentNodes)
+	}
+}
+
+func TestAutoscalingTruncatesToPositiveZero(t *testing.T) {
+	answers := map[string][]prom.Series{metricNodes: {usageSeries(map[string]string{}, -0.3)}}
+	evidence, _ := collectAutoscaling(t, autoscalingInput("auto"), answers)
+	if evidence.CurrentNodes != known(0) || math.Signbit(evidence.CurrentNodes.Value) {
+		t.Errorf("CurrentNodes = %+v with sign bit %v, want a positive zero", evidence.CurrentNodes, math.Signbit(evidence.CurrentNodes.Value))
 	}
 }
 

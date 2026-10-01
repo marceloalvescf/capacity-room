@@ -1985,12 +1985,12 @@ func TestCheckRefusesTheClusterSections(t *testing.T) {
 			s.Summary.Autoscaling.Status = "unknown"
 			s.Summary.Autoscaling.Source = "none"
 		}, "summary.autoscaling is unknown and has a source or a confidence other than none and unknown"},
-		{"autoscaling managed_node_groups not whole", func(s *Snapshot) { s.Summary.Autoscaling.ManagedNodeGroups = ptr(1.5) }, "summary.autoscaling.managed_node_groups must be a whole number, zero or above"},
-		{"autoscaling current_nodes negative", func(s *Snapshot) { s.Summary.Autoscaling.CurrentNodes = ptr(-1) }, "summary.autoscaling.current_nodes must be a whole number, zero or above"},
-		{"autoscaling min_nodes infinite", func(s *Snapshot) { s.Summary.Autoscaling.MinNodes = ptr(math.Inf(1)) }, "summary.autoscaling.min_nodes must be a whole number, zero or above"},
-		{"autoscaling max_nodes NaN", func(s *Snapshot) { s.Summary.Autoscaling.MaxNodes = ptr(math.NaN()) }, "summary.autoscaling.max_nodes must be a whole number, zero or above"},
-		{"autoscaling scale_events negative", func(s *Snapshot) { s.Summary.Autoscaling.ScaleEvents = ptr(-0.5) }, "summary.autoscaling.scale_events must be a finite number, zero or above"},
-		{"autoscaling unschedulable_pods NaN", func(s *Snapshot) { s.Summary.Autoscaling.UnschedulablePods = ptr(math.NaN()) }, "summary.autoscaling.unschedulable_pods must be a finite number, zero or above"},
+		{"autoscaling managed_node_groups not whole", func(s *Snapshot) { s.Summary.Autoscaling.ManagedNodeGroups = ptr(1.5) }, "summary.autoscaling.managed_node_groups must be a finite whole number"},
+		{"autoscaling min_nodes infinite", func(s *Snapshot) { s.Summary.Autoscaling.MinNodes = ptr(math.Inf(1)) }, "summary.autoscaling.min_nodes must be a finite whole number"},
+		{"autoscaling max_nodes NaN", func(s *Snapshot) { s.Summary.Autoscaling.MaxNodes = ptr(math.NaN()) }, "summary.autoscaling.max_nodes must be a finite whole number"},
+		{"autoscaling max_nodes not whole", func(s *Snapshot) { s.Summary.Autoscaling.MaxNodes = ptr(2.5) }, "summary.autoscaling.max_nodes must be a finite whole number"},
+		{"autoscaling scale_events infinite", func(s *Snapshot) { s.Summary.Autoscaling.ScaleEvents = ptr(math.Inf(1)) }, "summary.autoscaling.scale_events is not a finite number"},
+		{"autoscaling unschedulable_pods NaN", func(s *Snapshot) { s.Summary.Autoscaling.UnschedulablePods = ptr(math.NaN()) }, "summary.autoscaling.unschedulable_pods is not a finite number"},
 
 		{"hpas repeat", func(s *Snapshot) {
 			s.HPAs = append(s.HPAs, s.HPAs[0])
@@ -2092,5 +2092,45 @@ func TestDecodeReadsTheClusterSections(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, snap) {
 		t.Fatalf("Decode(Encode(s)) = %+v, want %+v", got, snap)
+	}
+}
+
+func TestCheckKeepsANegativeAutoscalerCount(t *testing.T) {
+	snap := clusterSnapshot(t)
+	snap.Summary.Autoscaling.MaxNodes = ptr(-2)
+	snap.Summary.Autoscaling.ScaleEvents = ptr(-1)
+	if err := snap.Check(); err != nil {
+		t.Fatalf("Check() error = %v, want nil", err)
+	}
+}
+
+func TestDecodeRefusesAUsageFindingWithNoEvidence(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/snapshot/edge-scaling.json")
+	if err != nil {
+		t.Fatalf("reading the snapshot: %v", err)
+	}
+	var tree map[string]any
+	if err := json.Unmarshal(data, &tree); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	emptied := false
+	for _, f := range tree["findings"].([]any) {
+		finding := f.(map[string]any)
+		if strings.HasPrefix(finding["code"].(string), "NODE_CPU_USAGE_") {
+			finding["evidence"] = []any{}
+			emptied = true
+			break
+		}
+	}
+	if !emptied {
+		t.Fatal("the snapshot holds no NODE_CPU_USAGE finding")
+	}
+	mutated, err := json.Marshal(tree)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	_, err = Decode(mutated)
+	if err == nil || !strings.Contains(err.Error(), "evidence does not match the definition of NODE_CPU_USAGE_") {
+		t.Fatalf("Decode() error = %v, want an evidence error naming the finding", err)
 	}
 }

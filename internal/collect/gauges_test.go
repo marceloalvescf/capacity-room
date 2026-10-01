@@ -110,3 +110,25 @@ func TestPercent(t *testing.T) {
 		}
 	}
 }
+
+func TestReduceMaxKeepsTheFirstOfTwoZeros(t *testing.T) {
+	negativeZero := math.Copysign(0, -1)
+	cases := []struct {
+		name        string
+		first, last float64
+		wantNegZero bool
+	}{
+		{"positive then negative", 0, negativeZero, false},
+		{"negative then positive", negativeZero, 0, true},
+	}
+	for _, c := range cases {
+		series := []prom.Series{
+			gaugeSeries("a", prom.Point{Time: 1, Value: c.first, Valid: true}),
+			gaugeSeries("a", prom.Point{Time: 1, Value: c.last, Valid: true}),
+		}
+		got := ReduceMax(series, []string{"namespace"})[Key{"a"}].Peak
+		if got != 0 || math.Signbit(got) != c.wantNegZero {
+			t.Errorf("%s: peak = %v with sign bit %v, want sign bit %v", c.name, got, math.Signbit(got), c.wantNegZero)
+		}
+	}
+}

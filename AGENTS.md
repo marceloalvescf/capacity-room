@@ -191,9 +191,9 @@ the snapshot and nothing else.
 - **`--check` is the preflight and nothing else.** It sends no query of a
   collector, and the requests it sends are the first requests of a run.
 - **A run with nothing to report stops with exit code 5.** When the five
-  collectors return no row and the status of the cluster autoscaling is
-  unknown, the run stops after the collectors and before the clock is read
-  the second time.
+  collectors return no row in a state other than unavailable and the status
+  of the cluster autoscaling is unknown, the run stops after the collectors
+  and before the clock is read the second time.
 - **The period is judged before the first request.** A period whose start is
   not before its end stops the run with exit code 2.
 - **The clock is read twice in a run that collects:** for the emission time,

@@ -1,8 +1,6 @@
 package collect
 
 import (
-	"math"
-
 	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
 )
 
@@ -22,7 +20,12 @@ type Flag struct {
 // share a key and a timestamp. It is the gauge aggregation of the original,
 // aggregate_gauge_statistics.
 func ReduceMax(series []prom.Series, labels []string) map[Key]Statistics {
-	return reduceWith(series, labels, math.Max)
+	return reduceWith(series, labels, func(a, b float64) float64 {
+		if b > a {
+			return b
+		}
+		return a
+	})
 }
 
 // InstantValues reads the value of each key from instant samples, following

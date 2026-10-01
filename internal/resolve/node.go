@@ -1,6 +1,12 @@
 package resolve
 
-import "strings"
+import (
+	"net/netip"
+	"strings"
+)
+
+// tabsAndBreaks removes the characters urlsplit deletes from its input.
+var tabsAndBreaks = strings.NewReplacer("\t", "", "\r", "", "\n", "")
 
 // InstanceHost returns the host of an instance label, as the original does
 // with the host of "//" plus the instance: the port, IPv6 brackets, and any
@@ -10,7 +16,7 @@ func InstanceHost(instance string) string {
 	if instance == "" {
 		return ""
 	}
-	netloc := instance
+	netloc := tabsAndBreaks.Replace(instance)
 	if i := strings.IndexAny(netloc, "/?#"); i >= 0 {
 		netloc = netloc[:i]
 	}
@@ -24,7 +30,14 @@ func InstanceHost(instance string) string {
 	var host string
 	if open {
 		_, rest, _ := strings.Cut(netloc, "[")
-		host, _, _ = strings.Cut(rest, "]")
+		var after string
+		host, after, _ = strings.Cut(rest, "]")
+		if after != "" && after[0] != ':' {
+			return ""
+		}
+		if addr, err := netip.ParseAddr(host); (err != nil || !addr.Is6()) && !strings.HasPrefix(host, "v") && !strings.HasPrefix(host, "V") {
+			return ""
+		}
 	} else {
 		host, _, _ = strings.Cut(netloc, ":")
 	}

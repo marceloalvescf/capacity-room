@@ -3,6 +3,7 @@ package collect
 import (
 	"context"
 	"math"
+	"slices"
 	"strconv"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/arith"
@@ -99,10 +100,11 @@ func Autoscaling(ctx context.Context, q Querier, in Input) (AutoscalingEvidence,
 	}, nil
 }
 
-// truncated drops the fraction of a known number, toward zero.
+// truncated drops the fraction of a known number, toward zero. The sum with
+// zero turns a negative zero into a positive one, as int() does.
 func truncated(n Number) Number {
 	if n.Known {
-		n.Value = math.Trunc(n.Value)
+		n.Value = math.Trunc(n.Value) + 0
 	}
 	return n
 }
@@ -110,7 +112,7 @@ func truncated(n Number) Number {
 // observedValue follows _observed_value of the original. The group of a
 // series is its first non-empty group label. With grouped series and sum,
 // the current of each group is taken and the currents are added in the order
-// the groups first appear; without sum, the grouped series alone are merged
+// the groups first hold a sample; without sum, the grouped series alone are merged
 // into one. With no grouped series, every series is merged into one. The
 // merge takes the maximum per timestamp.
 func observedValue(series []prom.Series, sum bool) Number {
@@ -122,13 +124,10 @@ func observedValue(series []prom.Series, sum bool) Number {
 			continue
 		}
 		groupedSeries = append(groupedSeries, prom.Series{Labels: map[string]string{autoscalerGroupKey: group}, Points: item.Points})
-		seen := false
-		for _, name := range order {
-			seen = seen || name == group
+		if !hasFinitePoint(item) || slices.Contains(order, group) {
+			continue
 		}
-		if !seen {
-			order = append(order, group)
-		}
+		order = append(order, group)
 	}
 
 	if len(groupedSeries) > 0 && sum {
@@ -153,6 +152,14 @@ func observedValue(series []prom.Series, sum bool) Number {
 		}
 	}
 	return Number{}
+}
+
+// hasFinitePoint reports whether the series holds a point that the reduction
+// keeps: a valid one, with a finite time and a finite value.
+func hasFinitePoint(series prom.Series) bool {
+	return slices.ContainsFunc(series.Points, func(p prom.Point) bool {
+		return p.Valid && isFinite(p.Time) && isFinite(p.Value)
+	})
 }
 
 // groupOf returns the first non-empty node group label, or the empty text.

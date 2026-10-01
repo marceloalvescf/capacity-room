@@ -1021,6 +1021,9 @@ func checkFindingRegistry(findings []Finding) error {
 // evidenceMatches reports whether evidence carries the names of specs, in
 // order, leaving out only the specs that are optional.
 func evidenceMatches(evidence []Evidence, specs []analysis.EvidenceSpec) bool {
+	if len(specs) > 0 && len(evidence) == 0 {
+		return false
+	}
 	next := 0
 	for _, e := range evidence {
 		for next < len(specs) && specs[next].Name != e.Name {
@@ -1265,14 +1268,14 @@ func checkAutoscaling(a Autoscaling) error {
 		{"max_nodes", a.MaxNodes},
 	}
 	for _, n := range wholes {
-		if n.value != nil && (!isFinite(*n.value) || *n.value != math.Trunc(*n.value) || *n.value < 0) {
-			return fmt.Errorf("summary.autoscaling.%s must be a whole number, zero or above", n.name)
+		if n.value != nil && (!isFinite(*n.value) || *n.value != math.Trunc(*n.value)) {
+			return fmt.Errorf("summary.autoscaling.%s must be a finite whole number", n.name)
 		}
 	}
-	if err := checkNonNegative("summary.autoscaling.scale_events", a.ScaleEvents); err != nil {
+	if err := checkFinite("summary.autoscaling.scale_events", a.ScaleEvents); err != nil {
 		return err
 	}
-	return checkNonNegative("summary.autoscaling.unschedulable_pods", a.UnschedulablePods)
+	return checkFinite("summary.autoscaling.unschedulable_pods", a.UnschedulablePods)
 }
 
 // checkNonNegative refuses value, when present, that is NaN, infinite, or

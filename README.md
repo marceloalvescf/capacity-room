@@ -93,7 +93,9 @@ A run that writes a PDF or a snapshot asks the endpoint about the period
 `analysis.period`, which ends when the run starts. For each namespace of
 `cluster.namespaces`, and for each workload in them, it reads the consumption
 of CPU and memory, the requests, and the limits, and reduces each to an
-average, a minimum, a peak, and the last value.
+average, a minimum, a peak, and the last value. It also reads the HPAs of
+those workloads, the coverage of each workload by an HPA, the nodes and the
+node pools with their capacity and usage, and the cluster autoscaling.
 
 - **The report judges the peak.** The columns of percentages show the
   highest ratio of consumption to request, and to limit, that the period

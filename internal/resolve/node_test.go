@@ -11,6 +11,12 @@ func TestInstanceHost(t *testing.T) {
 		{"host", "host"},
 		{"", ""},
 		{"[abc", ""},
+		{"[foo]:9100", ""},
+		{"[10.0.0.1]:9100", ""},
+		{"[v1.x]:1", "v1.x"},
+		{"[::1]x", ""},
+		{"ho\tst:1", "host"},
+		{"host\n:9100", "host"},
 	}
 	for _, c := range cases {
 		if got := InstanceHost(c.in); got != c.want {

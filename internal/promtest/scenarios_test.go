@@ -129,3 +129,26 @@ func TestOriginalScenariosAreUntouched(t *testing.T) {
 		}
 	}
 }
+
+// TestOwnScenariosMatchTheirChecksums checks both files of
+// testdata/prometheus-own against the checksum its README names for each.
+func TestOwnScenariosMatchTheirChecksums(t *testing.T) {
+	root, err := moduleRoot()
+	if err != nil {
+		t.Fatalf("moduleRoot: %v", err)
+	}
+	dir := filepath.Join(root, "testdata", "prometheus-own")
+	readmePath := filepath.Join(dir, "README.md")
+	checksums := readmeChecksums(t, readmePath)
+
+	if len(checksums) != 2 {
+		t.Fatalf("%s names %d checksums, want 2: %v", readmePath, len(checksums), checksums)
+	}
+
+	for name, want := range checksums {
+		got := sha256File(t, filepath.Join(dir, name))
+		if got != want {
+			t.Errorf("%s: sha256 = %s, want %s (from %s)", name, got, want, readmePath)
+		}
+	}
+}

@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"slices"
 	"sort"
 	"time"
 
@@ -433,11 +434,11 @@ func buildEvidence(evidence []analysis.Evidence) []Evidence {
 	return out
 }
 
-// sortedCopy returns a sorted copy of values, never nil.
+// sortedCopy returns a sorted copy of values without repeats, never nil.
 func sortedCopy(values []string) []string {
 	out := append([]string{}, values...)
 	sort.Strings(out)
-	return out
+	return slices.Compact(out)
 }
 
 // nonNilStrings returns values, or an empty list in place of nil. Never

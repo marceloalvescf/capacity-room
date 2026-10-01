@@ -85,9 +85,9 @@ func Sort(findings []Finding) {
 		if a.ScopeName != b.ScopeName {
 			return a.ScopeName < b.ScopeName
 		}
-		if a.ScopeKind != b.ScopeKind {
-			return a.ScopeKind < b.ScopeKind
+		if a.Code != b.Code {
+			return a.Code < b.Code
 		}
-		return a.Code < b.Code
+		return a.ScopeKind < b.ScopeKind
 	})
 }

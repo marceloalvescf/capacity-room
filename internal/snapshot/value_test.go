@@ -177,3 +177,21 @@ func TestGoldenSnapshotsAreUnchanged(t *testing.T) {
 		}
 	}
 }
+
+func TestValueKeepsTheCharactersJSONEscapesForHTML(t *testing.T) {
+	value := Value{Kind: "text", Text: "a<b&c>"}
+	data, err := value.MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON: %v", err)
+	}
+	if got, want := string(data), `"a<b&c>"`; got != want {
+		t.Errorf("MarshalJSON = %s, want %s", got, want)
+	}
+	var back Value
+	if err := json.Unmarshal(data, &back); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if back != value {
+		t.Errorf("round trip = %+v, want %+v", back, value)
+	}
+}

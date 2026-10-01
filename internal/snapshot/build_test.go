@@ -1194,3 +1194,35 @@ func TestBuildRefusesAnOptionalEvidenceOutOfOrder(t *testing.T) {
 		t.Errorf("Build() error = %q, want %q", got, want)
 	}
 }
+
+func TestBuildDropsARepeatedNamespace(t *testing.T) {
+	in := baseInput()
+	in.Config.Cluster.Namespaces = []string{"payments", "payments"}
+	in.Config.Analysis.ExcludedContainers = []string{"istio-proxy", "istio-proxy"}
+	in.Collected.Namespaces.Rows = baseCollectedNamespaces([]string{"payments"})
+
+	snap := mustBuild(t, in)
+
+	if got, want := strings.Join(snap.Scope.Namespaces, ","), "payments"; got != want {
+		t.Errorf("Scope.Namespaces = %q, want %q", got, want)
+	}
+	if got, want := strings.Join(snap.Scope.ExcludedContainers, ","), "istio-proxy"; got != want {
+		t.Errorf("Scope.ExcludedContainers = %q, want %q", got, want)
+	}
+	if err := snap.Check(); err != nil {
+		t.Errorf("Check() error = %v, want nil", err)
+	}
+}
+
+func TestBuildRefusesAUsageFindingWithNoEvidence(t *testing.T) {
+	in := clusterInput()
+	in.Findings = []analysis.Finding{{
+		Code: "NODE_CPU_USAGE_HEALTHY", Severity: analysis.SeverityHealthy, ScopeType: analysis.ScopeNode, ScopeName: "node-a1",
+		Confidence: discovery.ConfidenceExact,
+		Evidence:   []analysis.Evidence{},
+	}}
+	want := "findings[0].evidence does not match the definition of NODE_CPU_USAGE_HEALTHY"
+	if got := mustBuildError(t, in); got != want {
+		t.Errorf("Build() error = %q, want %q", got, want)
+	}
+}

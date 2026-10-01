@@ -250,8 +250,9 @@ var Snapshots = []Snapshot{
 		Data:   "tests/capacity/fixtures/command/edge-scaling.en.json",
 		Pages:  []int{2, 3},
 		Omits: "page 1: it differs from page 1 of command-complete-en " +
-			"only in the three counts of the data quality list, which " +
-			"are plain text; page 4: the appendix and the notes equal " +
+			"in the page numbers of the outline (section 4.3 and section 5 " +
+			"move to pages 3 and 4) and in two of the three counts of the " +
+			"data quality list, all plain text; page 4: the appendix and the notes equal " +
 			"those of command-scaling-pt but for the wording, which " +
 			"command-partial-en already pins in English",
 		Protects: "sections 3 and 4 in English: the headers of the five " +

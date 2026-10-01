@@ -79,7 +79,7 @@ func TestTwoWorkloadsOfOneName(t *testing.T) {
 
 // TestSortOrder covers findings of three severities, two scopes, and two
 // kinds: Sort orders by severity from the highest, then scope name, then
-// scope kind, then code.
+// code, then scope kind.
 func TestSortOrder(t *testing.T) {
 	t.Parallel()
 	findings := []Finding{
@@ -93,8 +93,8 @@ func TestSortOrder(t *testing.T) {
 	Sort(findings)
 
 	want := []string{
-		"critical/a/Deployment/A_CODE_2",
 		"critical/a/StatefulSet/A_CODE",
+		"critical/a/Deployment/A_CODE_2",
 		"critical/b/Deployment/B_CODE",
 		"attention/a/Deployment/A_CODE",
 		"healthy/b/Deployment/B_CODE",
@@ -390,5 +390,21 @@ func TestAllOrdersSixGroups(t *testing.T) {
 	}
 	if got[0] != "HPA_MAX_REPLICAS_REACHED" || got[1] != "NODE_AUTOSCALING_DISABLED_PRESSURE" || got[2] != "NAMESPACE_CPU_REQUEST_CRITICAL" {
 		t.Errorf("with pressure: critical findings first, sorted by scope: %v", got)
+	}
+}
+
+// TestSortRanksTheCodeBeforeTheKind covers two workloads of different kinds
+// that share a name: the code decides before the kind does.
+func TestSortRanksTheCodeBeforeTheKind(t *testing.T) {
+	t.Parallel()
+	findings := []Finding{
+		{Code: "WORKLOAD_MEMORY_REQUEST_ATTENTION", Severity: SeverityAttention, ScopeName: "ns/web", ScopeKind: "Deployment"},
+		{Code: "WORKLOAD_CPU_REQUEST_ATTENTION", Severity: SeverityAttention, ScopeName: "ns/web", ScopeKind: "StatefulSet"},
+	}
+
+	Sort(findings)
+
+	if got, want := findings[0].Code, "WORKLOAD_CPU_REQUEST_ATTENTION"; got != want {
+		t.Errorf("findings[0].Code = %q, want %q", got, want)
 	}
 }
