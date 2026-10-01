@@ -344,7 +344,7 @@ func TestNamespacesAtRiskRows(t *testing.T) {
 	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
 
 	assertRows(t, subsection(t, blocks, 2),
-		[]string{"ident:payments", "status/healthy:49,9%", "status/attention:76,8%", "text:" + reason(t, "request_peak", "cpu", "97%"), "text:1 crítica", "status/critical:" + pt(t, catalog.Priority("critical"), nil)},
+		[]string{"ident:payments", "status/healthy:49,9%", "status/attention:76,8%", "text:" + reason(t, "request_peak", "cpu", "97%"), "text:" + pt(t, catalog.RiskCount("critical", 1), nil), "status/critical:" + pt(t, catalog.Priority("critical"), nil)},
 		[]string{"ident:stock", "status/healthy:37,9%", "status/healthy:45,4%", "text:" + reason(t, "request_peak", "cpu", "75%"), "text:" + pt(t, catalog.RiskCount("attention", 1), nil), "status/attention:" + pt(t, catalog.Priority("attention"), nil)})
 }
 
@@ -447,8 +447,8 @@ func TestReplicaCeilingUnidentifiedTarget(t *testing.T) {
 	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
 
 	assertRows(t, subsection(t, blocks, 3),
-		[]string{"ident:payments", "ident:api-cpu|text: |placeholder:(alvo não identificado)", "text:" + pt(t, catalog.PlaceholderUnavailable, nil), "text:" + pt(t, catalog.SectionsExecutiveReplicasObserved, catalog.Params{"Peak": "10", "Max": "10"}), "status/critical:" + pt(t, catalog.SectionsExecutiveSituationHPAMax, nil)},
-		[]string{"ident:payments", "ident:api-hpa|text: |placeholder:(alvo não identificado)", "text:" + pt(t, catalog.PlaceholderUnavailable, nil), "text:" + pt(t, catalog.SectionsExecutiveReplicasObserved, catalog.Params{"Peak": "10", "Max": "10"}), "status/critical:" + pt(t, catalog.SectionsExecutiveSituationHPAMax, nil)})
+		[]string{"ident:payments", "ident:api-cpu|text: |placeholder:" + pt(t, catalog.SectionsExecutiveTargetUnknown, nil), "text:" + pt(t, catalog.PlaceholderUnavailable, nil), "text:" + pt(t, catalog.SectionsExecutiveReplicasObserved, catalog.Params{"Peak": "10", "Max": "10"}), "status/critical:" + pt(t, catalog.SectionsExecutiveSituationHPAMax, nil)},
+		[]string{"ident:payments", "ident:api-hpa|text: |placeholder:" + pt(t, catalog.SectionsExecutiveTargetUnknown, nil), "text:" + pt(t, catalog.PlaceholderUnavailable, nil), "text:" + pt(t, catalog.SectionsExecutiveReplicasObserved, catalog.Params{"Peak": "10", "Max": "10"}), "status/critical:" + pt(t, catalog.SectionsExecutiveSituationHPAMax, nil)})
 }
 
 func TestReplicaCeilingDeduplicatesTargets(t *testing.T) {
