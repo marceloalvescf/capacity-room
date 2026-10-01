@@ -16,8 +16,9 @@ committed.
 | `<scenario>.json` | The namespaces, the workloads, the HPAs, the workloads without an HPA, the nodes, the node pools, the cluster autoscaling evidence, the node pressure, every finding, and the warnings and notices of the five collectors |
 | `<scenario>.queries.txt` | Every request the original sends for the scenario, in order, one line for each: the path, a tab, the query |
 
-There is one pair of files for each of the seven scenarios: the six of
-`testdata/prometheus/` and `edge-values` of `testdata/prometheus-own/`.
+There is one pair of files for each of the eight scenarios: the six of
+`testdata/prometheus/` and `edge-values` and `edge-scaling` of
+`testdata/prometheus-own/`.
 
 In a `.json` file:
 
@@ -78,6 +79,7 @@ changed.
 
 ```text
 0b8c536e6540f1f78be730180a185977cab053049a1665a0df44e5635735f483  direct-complete.json
+0dcd39ce6b68ed24069fb24c0344983073a24850b2d7e8390937404ef03bdf3a  edge-scaling.json
 2119d8db5ae47393789134b5a9c529e78f59a39a165d1aa735256a83b676665b  edge-values.json
 af6dacd88fa5f7bf4621b53c92243a62c99b3d17b38bcd0a82c6aa3b0134363d  grafana-authenticated.json
 f7248d344bc709270d7d9d14a43eaf6e57908e4ece8e872f29801d460b28cff6  partial-data.json
@@ -85,6 +87,7 @@ f7248d344bc709270d7d9d14a43eaf6e57908e4ece8e872f29801d460b28cff6  partial-data.j
 1406129bc402d2d494b9efc6fc5405ecae2fce1c3729025c7ece2921908ddc0d  thanos-multicluster.json
 79fc52777ea677af285cc572722cb8becf96b78bf9840a39b997fb02a77e132b  value-edge-cases.json
 51ea605045169cf7397bef8c6887d931ad86fb4c0d7c03b639645f68cd33a540  direct-complete.queries.txt
+f552ed8b6bb6b27dec20c03c3e7bc5a2db2292b3f3d32c06f16e79dec02bedaa  edge-scaling.queries.txt
 51ea605045169cf7397bef8c6887d931ad86fb4c0d7c03b639645f68cd33a540  edge-values.queries.txt
 d538e9fc978df2e9fb8789da1ec1d713b1c9593bbd429e82b7dcc1475870982d  grafana-authenticated.queries.txt
 664f32e829cad22af13e9802cf1c59cef455b2b74b7ff8a88a34d1a461796787  partial-data.queries.txt
