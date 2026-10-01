@@ -835,10 +835,6 @@ func compareCoverage(scenario string, got []snapshot.Workload, want []pythonCove
 	return diffs
 }
 
-// numberToken matches a number of a Portuguese text: digits, an optional
-// decimal part after a comma, and an optional percent sign.
-var numberToken = regexp.MustCompile(`[0-9]+(,[0-9]+)?%?`)
-
 // runsOf reads the runs of a built cell through their JSON form, which is
 // the one place that names a run's kind, status, and text.
 func runsOf(runs []document.Run) ([]pythonRun, error) {
@@ -893,17 +889,18 @@ func headingText(block document.Block, level int) (string, bool) {
 // compareExecutive builds the Portuguese executive document of the
 // snapshot at each of the two minimums the original recorded, and compares
 // the rows of its seven tables with the recorded ones: the count of rows,
-// and for every cell the count of runs and, for every run, its kind and its
-// status. An ident run is compared letter for letter; a text, placeholder,
-// or status run by its number tokens in order; the action cell of the plan
-// also by whether its text ends with a closing parenthesis. The note of the
-// HPA data is compared by the title of the callout that follows the replica
-// ceiling.
+// and for every cell the count of runs and, for every run, its kind, its
+// status, and its text as compareRun says. The note of the HPA data is
+// compared by the title of the callout that follows the replica ceiling.
 func compareExecutive(scenario string, snap snapshot.Snapshot, want map[string]pythonExecutive) []string {
 	var diffs []string
 	cat, err := catalog.Load(catalog.PortugueseBrazil)
 	if err != nil {
 		return []string{fmt.Sprintf("%s: loading the catalog: %v", scenario, err)}
+	}
+	indexes, err := executiveIndexes()
+	if err != nil {
+		return []string{fmt.Sprintf("%s: reading the catalog entries: %v", scenario, err)}
 	}
 	title := func(key catalog.Key) string {
 		text, err := cat.Text(key, nil)
@@ -954,7 +951,7 @@ func compareExecutive(scenario string, snap snapshot.Snapshot, want map[string]p
 			if table, ok := doc.Blocks[pos+1].(document.Table); ok {
 				rows = table.Rows
 			}
-			diffs = append(diffs, compareExecutiveRows(label, sub.name, rows, sub.rows(recorded))...)
+			diffs = append(diffs, compareExecutiveRows(label, indexes, rows, sub.rows(recorded))...)
 
 			if sub.name == "replica_ceiling" && pos+2 < len(doc.Blocks) {
 				if callout, ok := doc.Blocks[pos+2].(document.Callout); ok {
@@ -980,8 +977,9 @@ func compareExecutive(scenario string, snap snapshot.Snapshot, want map[string]p
 }
 
 // compareExecutiveRows compares the rows of one table with the recorded
-// ones, as compareExecutive describes.
-func compareExecutiveRows(label, subsection string, got [][][]document.Run, want [][][]pythonRun) []string {
+// ones, as compareExecutive describes. indexes holds the index of the
+// original's texts and the reverse index of the catalog.
+func compareExecutiveRows(label string, indexes [2]textIndex, got [][][]document.Run, want [][][]pythonRun) []string {
 	var diffs []string
 	if len(got) != len(want) {
 		return []string{fmt.Sprintf("%s: rows: got %d, want %d", label, len(got), len(want))}
@@ -1003,32 +1001,21 @@ func compareExecutiveRows(label, subsection string, got [][][]document.Run, want
 				continue
 			}
 			for i := range runs {
-				diffs = append(diffs, compareRun(fmt.Sprintf("%s, run %d", cellLabel, i), runs[i], want[r][c][i])...)
-			}
-			if subsection == "action_plan" && c == 2 {
-				gotEnd, wantEnd := cellEndsWithParenthesis(runs), cellEndsWithParenthesis(want[r][c])
-				if gotEnd != wantEnd {
-					diffs = append(diffs, fmt.Sprintf("%s: ends with a closing parenthesis: got %v, want %v", cellLabel, gotEnd, wantEnd))
-				}
+				diffs = append(diffs, compareRun(fmt.Sprintf("%s, run %d", cellLabel, i), indexes, runs[i], want[r][c][i])...)
 			}
 		}
 	}
 	return diffs
 }
 
-// cellEndsWithParenthesis reports whether the text of the cell ends with a
-// closing parenthesis.
-func cellEndsWithParenthesis(runs []pythonRun) bool {
-	var text strings.Builder
-	for _, r := range runs {
-		text.WriteString(r.Text)
-	}
-	return strings.HasSuffix(text.String(), ")")
-}
-
-// compareRun compares one run: the kind, the status, and the text, whole
-// for an ident and by its number tokens for the other kinds.
-func compareRun(label string, got, want pythonRun) []string {
+// compareRun compares one run: the kind, the status, and the text. An
+// ident is compared letter for letter. Any other run is compared by the
+// catalog keys behind its text: the original's text is read through
+// originalExecutiveTexts, the program's through the reverse index of the
+// Portuguese catalog. When both have a reading, they must share one, keys
+// and parameters alike; when neither has one, the texts must be equal
+// letter for letter; when only one has a reading, they differ.
+func compareRun(label string, indexes [2]textIndex, got, want pythonRun) []string {
 	var diffs []string
 	if got.Kind != want.Kind {
 		diffs = append(diffs, fmt.Sprintf("%s: kind: got %q, want %q", label, got.Kind, want.Kind))
@@ -1042,9 +1029,18 @@ func compareRun(label string, got, want pythonRun) []string {
 		}
 		return diffs
 	}
-	gotNumbers, wantNumbers := numberToken.FindAllString(got.Text, -1), numberToken.FindAllString(want.Text, -1)
-	if !slices.Equal(gotNumbers, wantNumbers) {
-		diffs = append(diffs, fmt.Sprintf("%s: numbers: got %v, want %v", label, gotNumbers, wantNumbers))
+	wantForms, gotForms := indexes[0].resolve(want.Text), indexes[1].resolve(got.Text)
+	switch {
+	case len(gotForms) == 0 && len(wantForms) == 0:
+		if got.Text != want.Text {
+			diffs = append(diffs, fmt.Sprintf("%s: text: got %q, want %q", label, got.Text, want.Text))
+		}
+	case len(wantForms) == 0:
+		diffs = append(diffs, fmt.Sprintf("%s: text: got %q as %s, want %q with no catalog key", label, got.Text, strings.Join(gotForms, " or "), want.Text))
+	case len(gotForms) == 0:
+		diffs = append(diffs, fmt.Sprintf("%s: text: got %q with no catalog key, want %q as %s", label, got.Text, want.Text, strings.Join(wantForms, " or ")))
+	case !slices.ContainsFunc(gotForms, func(form string) bool { return slices.Contains(wantForms, form) }):
+		diffs = append(diffs, fmt.Sprintf("%s: text: got %q as %s, want %q as %s", label, got.Text, strings.Join(gotForms, " or "), want.Text, strings.Join(wantForms, " or ")))
 	}
 	return diffs
 }
@@ -2129,7 +2125,109 @@ func TestComparisonCanFail(t *testing.T) {
 		rows := want.Executive["attention"].ReplicaCeiling
 		rows[0][3][0].Text = "5 observadas / máximo 4"
 		checkScaling(t, want, []string{
-			scaling.Name + ": executive.attention.replica_ceiling: row 0, cell 3, run 0: numbers: got [4 4], want [5 4]",
+			scaling.Name + `: executive.attention.replica_ceiling: row 0, cell 3, run 0: text: got "4 observados / máximo 4" as sections.executive.replicas_observed(Max="4", Peak="4"), want "5 observadas / máximo 4" as sections.executive.replicas_observed(Max="4", Peak="5")`,
+		})
+	})
+
+	t.Run("the note of the hpa data changed", func(t *testing.T) {
+		want := freshScaling(t)
+		e := want.Executive["attention"]
+		e.HPANote = "incomplete"
+		want.Executive["attention"] = e
+		checkScaling(t, want, []string{
+			scaling.Name + `: executive.attention: hpa_note: got "partial", want "incomplete"`,
+		})
+	})
+
+	t.Run("the two minimums swapped", func(t *testing.T) {
+		want := freshScaling(t)
+		want.Executive["attention"], want.Executive["critical"] = want.Executive["critical"], want.Executive["attention"]
+		checkScaling(t, want, []string{
+			scaling.Name + `: executive.attention.replica_ceiling: rows: got 2, want 1`,
+			scaling.Name + `: executive.attention.action_plan: rows: got 10, want 7`,
+			scaling.Name + `: executive.critical.replica_ceiling: rows: got 1, want 2`,
+			scaling.Name + `: executive.critical.action_plan: rows: got 7, want 10`,
+		})
+	})
+
+	t.Run("two recommendations swapped", func(t *testing.T) {
+		want := freshScaling(t)
+		want.Recommendations[0], want.Recommendations[1] = want.Recommendations[1], want.Recommendations[0]
+		checkScaling(t, want, []string{
+			scaling.Name + `: recommendations[0]: the order differs from the original: got {NODE_CPU_USAGE_CRITICAL node}, want {WORKLOAD_MEMORY_LIMIT_CRITICAL workload}`,
+		})
+	})
+
+	t.Run("the kind of a run changed", func(t *testing.T) {
+		want := freshScaling(t)
+		want.Executive["attention"].ActionPlan[0][0][0].Kind = "placeholder"
+		checkScaling(t, want, []string{
+			scaling.Name + `: executive.attention.action_plan: row 0, cell 0, run 0: kind: got "text", want "placeholder"`,
+		})
+	})
+
+	t.Run("the status of a run changed", func(t *testing.T) {
+		want := freshScaling(t)
+		want.Executive["attention"].NodepoolStatus[0][1][0].Status = "attention"
+		checkScaling(t, want, []string{
+			scaling.Name + `: executive.attention.nodepool_status: row 0, cell 1, run 0: status: got "critical", want "attention"`,
+		})
+	})
+
+	t.Run("the executive entry of a minimum removed", func(t *testing.T) {
+		want := freshScaling(t)
+		delete(want.Executive, "critical")
+		checkScaling(t, want, []string{
+			scaling.Name + `: executive.critical: missing from the original`,
+		})
+	})
+
+	t.Run("a row removed from a table", func(t *testing.T) {
+		want := freshScaling(t)
+		e := want.Executive["attention"]
+		e.NodepoolStatus = e.NodepoolStatus[:2]
+		want.Executive["attention"] = e
+		checkScaling(t, want, []string{
+			scaling.Name + `: executive.attention.nodepool_status: rows: got 3, want 2`,
+		})
+	})
+
+	t.Run("the actions of two plan rows swapped", func(t *testing.T) {
+		want := freshScaling(t)
+		plan := want.Executive["attention"].ActionPlan
+		plan[0][2], plan[1][2] = plan[1][2], plan[0][2]
+		checkScaling(t, want, []string{
+			scaling.Name + `: executive.attention.action_plan: row 0, cell 2, run 0: text: got "Revisar o máximo configurado e a capacidade do workload." as finding.hpa_max_reached.action or front.metadata.period_range(End="capacidade do workload.", Start="Revisar o máximo configurado e"), want "Revisar o limite de CPU e o perfil de consumo observado." as finding.resource_limit_usage.cpu.action`,
+			scaling.Name + `: executive.attention.action_plan: row 1, cell 2, run 0: text: got "Revisar o limit de CPU e o perfil de consumo observado." as finding.resource_limit_usage.cpu.action, want "Revisar o limite máximo e a capacidade da carga de trabalho." as finding.hpa_max_reached.action`,
+		})
+	})
+
+	t.Run("a qualifier moved to another plan row", func(t *testing.T) {
+		want := freshScaling(t)
+		plan := want.Executive["attention"].ActionPlan
+		plan[1][2][0].Text += " (namespaces)"
+		plan[2][2][0].Text = strings.TrimSuffix(plan[2][2][0].Text, " (namespaces)")
+		checkScaling(t, want, []string{
+			scaling.Name + `: executive.attention.action_plan: row 1, cell 2, run 0: text: got "Revisar o limit de CPU e o perfil de consumo observado." as finding.resource_limit_usage.cpu.action, want "Revisar o limite de CPU e o perfil de consumo observado. (namespaces)" as sections.executive.action_qualified(Action=finding.resource_limit_usage.cpu.action, Qualifier=scope_qualifier.namespace)`,
+			scaling.Name + `: executive.attention.action_plan: row 2, cell 2, run 0: text: got "Revisar o request de CPU e o consumo observado. (namespaces)" as sections.executive.action_qualified(Action=finding.resource_request_usage.cpu.action, Qualifier=scope_qualifier.namespace), want "Revisar a solicitação de CPU e o consumo observado." as finding.resource_request_usage.cpu.action`,
+		})
+	})
+
+	t.Run("a kind of the replica ceiling changed", func(t *testing.T) {
+		want := freshScaling(t)
+		want.Executive["attention"].ReplicaCeiling[0][2][0].Text = "StatefulSet"
+		checkScaling(t, want, []string{
+			scaling.Name + `: executive.attention.replica_ceiling: row 0, cell 2, run 0: text: got "Deployment", want "StatefulSet"`,
+		})
+	})
+
+	t.Run("two limitation labels swapped", func(t *testing.T) {
+		want := freshScaling(t)
+		rows := want.Executive["attention"].MaterialLimitations
+		rows[0][0], rows[1][0] = rows[1][0], rows[0][0]
+		checkScaling(t, want, []string{
+			scaling.Name + `: executive.attention.material_limitations: row 0, cell 0, run 0: text: got "Histórico de HPA" as capability.name.hpa_history or sections.hpas.heading, want "Interpretação" as sections.executive.interpretation`,
+			scaling.Name + `: executive.attention.material_limitations: row 1, cell 0, run 0: text: got "Interpretação" as front.legend.header_meaning or sections.executive.interpretation, want "Histórico de HPA" as capability.name.hpa_history`,
 		})
 	})
 }
