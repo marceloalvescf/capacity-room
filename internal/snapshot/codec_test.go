@@ -63,19 +63,28 @@ func TestEncodeKeepsNamesAsTheyAre(t *testing.T) {
 }
 
 func TestDecodeReadsWhatEncodeWrote(t *testing.T) {
-	snap := validSnapshot(t)
-
-	data, err := Encode(snap)
-	if err != nil {
-		t.Fatalf("Encode() error = %v", err)
+	tests := []struct {
+		name string
+		snap Snapshot
+	}{
+		{"no recommendation", validSnapshot(t)},
+		{"two recommendations", clusterSnapshot(t)},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := Encode(tt.snap)
+			if err != nil {
+				t.Fatalf("Encode() error = %v", err)
+			}
 
-	got, err := Decode(data)
-	if err != nil {
-		t.Fatalf("Decode() error = %v", err)
-	}
-	if !reflect.DeepEqual(got, snap) {
-		t.Fatalf("Decode(Encode(s)) = %+v, want %+v", got, snap)
+			got, err := Decode(data)
+			if err != nil {
+				t.Fatalf("Decode() error = %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.snap) {
+				t.Fatalf("Decode(Encode(s)) = %+v, want %+v", got, tt.snap)
+			}
+		})
 	}
 }
 
@@ -290,18 +299,18 @@ func parentAndKey(t *testing.T, tree map[string]any, path string) (map[string]an
 	return nil, ""
 }
 
-// TestDecodeRefusesAnotherLetterCase builds, for each of the 74 paths of
+// TestDecodeRefusesAnotherLetterCase builds, for each of the 81 paths of
 // the contract, a valid snapshot with one more key beside the real one: the
 // same name, its first letter capitalised, holding a forged value. The
 // walk of the map compares a key letter for letter, so every one of these
 // is refused as an unknown key, never silently merged into the real one by
 // a case-insensitive struct decode.
 func TestDecodeRefusesAnotherLetterCase(t *testing.T) {
-	if len(contractPaths) != 74 {
-		t.Fatalf("contractPaths has %d entries, want 74", len(contractPaths))
+	if len(contractPaths) != 81 {
+		t.Fatalf("contractPaths has %d entries, want 81", len(contractPaths))
 	}
 
-	snap := validSnapshot(t)
+	snap := fullSnapshot(t)
 	good, err := Encode(snap)
 	if err != nil {
 		t.Fatalf("Encode() error = %v", err)
@@ -733,6 +742,9 @@ func contractKeyPaths(index int) []string {
 	for _, p := range typePaths(reflect.TypeOf(Capability{}), "") {
 		paths = append(paths, capPrefix+"."+p)
 	}
+	for _, p := range typePaths(reflect.TypeOf(Recommendation{}), "") {
+		paths = append(paths, "recommendations[0]."+p)
+	}
 	return paths
 }
 
@@ -852,7 +864,7 @@ func nullJSONKey(t *testing.T, good []byte, path string) []byte {
 }
 
 func TestDecodeRefusesAMissingKey(t *testing.T) {
-	snap := validSnapshot(t)
+	snap := fullSnapshot(t)
 	good, err := Encode(snap)
 	if err != nil {
 		t.Fatalf("Encode() error = %v", err)
@@ -874,7 +886,7 @@ func TestDecodeRefusesAMissingKey(t *testing.T) {
 	}
 }
 
-// contractPaths is the 74 key paths of the snapshot contract, written by
+// contractPaths is the 81 key paths of the snapshot contract, written by
 // hand, in the order the types declare them. TestKeyPathsAreTheContract
 // compares it against contractKeyPaths(3), the same list built by walking
 // the types with reflect, so that the two can actually drift apart if a
@@ -930,6 +942,7 @@ var contractPaths = []string{
 	"summary.nodes",
 	"summary.nodepools",
 	"summary.findings",
+	"summary.recommendations",
 	"summary.healthy",
 	"summary.attention",
 	"summary.critical",
@@ -950,11 +963,17 @@ var contractPaths = []string{
 	"nodes",
 	"nodepools",
 	"findings",
+	"recommendations",
 	"quality.capabilities[3].name",
 	"quality.capabilities[3].state",
 	"quality.capabilities[3].strategy",
 	"quality.capabilities[3].evidence",
 	"quality.capabilities[3].reasons",
+	"recommendations[0].code",
+	"recommendations[0].severity",
+	"recommendations[0].scope_type",
+	"recommendations[0].scopes",
+	"recommendations[0].confidence",
 }
 
 // nullableContractPaths holds the paths of contractPaths whose value is a
@@ -1012,9 +1031,9 @@ func TestDecodeReportsTheFirstMissingKey(t *testing.T) {
 // TestDecodeRefusesNull mirrors TestDecodeRefusesAMissingKey exactly, but
 // leaves every key in place and sets its value to JSON null instead of
 // removing it: the writer never writes null, so a snapshot holding one at
-// any of the 74 paths of the contract must be refused, by its own message.
+// any of the 81 paths of the contract must be refused, by its own message.
 func TestDecodeRefusesNull(t *testing.T) {
-	snap := validSnapshot(t)
+	snap := fullSnapshot(t)
 	good, err := Encode(snap)
 	if err != nil {
 		t.Fatalf("Encode() error = %v", err)
@@ -1351,6 +1370,7 @@ func TestEncodeDecodeRoundTrip(t *testing.T) {
 	}{
 		{"every new section filled", fullSnapshot(t)},
 		{"every new section empty but the namespaces of the scope", validSnapshot(t)},
+		{"two recommendations", clusterSnapshot(t)},
 	}
 
 	for _, tt := range tests {
@@ -2133,4 +2153,60 @@ func TestDecodeRefusesAUsageFindingWithNoEvidence(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "evidence does not match the definition of NODE_CPU_USAGE_") {
 		t.Fatalf("Decode() error = %v, want an evidence error naming the finding", err)
 	}
+}
+
+func TestDecodeRefusesMissingRecommendations(t *testing.T) {
+	good, err := Encode(validSnapshot(t))
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+	for _, path := range []string{"recommendations", "summary.recommendations"} {
+		t.Run(path, func(t *testing.T) {
+			_, err := Decode(removeJSONKey(t, good, path))
+			want := "snapshot lacks the key " + path
+			if err == nil || err.Error() != want {
+				t.Fatalf("Decode() error = %v, want %q", err, want)
+			}
+		})
+	}
+}
+
+func TestCheckRecomputesTheRecommendations(t *testing.T) {
+	tests := []struct {
+		name    string
+		mutate  func(*Snapshot)
+		message string
+	}{
+		{"an entry removed", func(s *Snapshot) {
+			s.Recommendations = s.Recommendations[:1]
+			s.Summary.Recommendations = 1
+		}, "recommendations holds 1 entries, want 2 from the findings"},
+		{"an entry added", func(s *Snapshot) {
+			s.Recommendations = append(s.Recommendations, s.Recommendations[0])
+			s.Summary.Recommendations = 3
+		}, "recommendations holds 3 entries, want 2 from the findings"},
+		{"two entries swapped", func(s *Snapshot) {
+			s.Recommendations[0], s.Recommendations[1] = s.Recommendations[1], s.Recommendations[0]
+		}, "recommendations[0] differs from the findings: got NODE_LOW_UTILIZATION attention node [node-b1] inferred, want HPA_MAX_REPLICAS_REACHED critical hpa [payments/web] exact"},
+		{"a scope renamed", func(s *Snapshot) {
+			s.Recommendations[0].Scopes = []string{"payments/other"}
+		}, "recommendations[0] differs from the findings: got HPA_MAX_REPLICAS_REACHED critical hpa [payments/other] exact, want HPA_MAX_REPLICAS_REACHED critical hpa [payments/web] exact"},
+		{"a confidence changed", func(s *Snapshot) {
+			s.Recommendations[1].Confidence = "exact"
+		}, "recommendations[1] differs from the findings: got NODE_LOW_UTILIZATION attention node [node-b1] exact, want NODE_LOW_UTILIZATION attention node [node-b1] inferred"},
+		{"the severity changed", func(s *Snapshot) {
+			s.Recommendations[1].Severity = "critical"
+		}, "recommendations[1] differs from the findings: got NODE_LOW_UTILIZATION critical node [node-b1] inferred, want NODE_LOW_UTILIZATION attention node [node-b1] inferred"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checkRefuses(t, tt.mutate, tt.message)
+		})
+	}
+}
+
+func TestCheckCountsTheRecommendations(t *testing.T) {
+	checkRefuses(t, func(s *Snapshot) {
+		s.Summary.Recommendations = 3
+	}, "summary.recommendations is 3, want 2")
 }

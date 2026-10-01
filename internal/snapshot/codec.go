@@ -553,6 +553,9 @@ func (s Snapshot) Check() error {
 	if err := checkFindingsOrder(s.Findings); err != nil {
 		return err
 	}
+	if err := checkRecommendations(s); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -1181,6 +1184,42 @@ func checkFindingsOrder(findings []Finding) error {
 	return nil
 }
 
+// checkRecommendations refuses a recommendations list that differs, entry
+// by entry, from the one analysis.Recommendations gives for the findings.
+func checkRecommendations(s Snapshot) error {
+	findings := make([]analysis.Finding, len(s.Findings))
+	for i, f := range s.Findings {
+		findings[i] = analysis.Finding{
+			Code:       f.Code,
+			Severity:   f.Severity,
+			ScopeType:  f.ScopeType,
+			ScopeKind:  f.ScopeKind,
+			ScopeName:  f.ScopeName,
+			Confidence: f.Confidence,
+		}
+	}
+	want := analysis.Recommendations(findings)
+	if len(s.Recommendations) != len(want) {
+		return fmt.Errorf("recommendations holds %d entries, want %d from the findings", len(s.Recommendations), len(want))
+	}
+	for i, got := range s.Recommendations {
+		w := want[i]
+		if got.Code != w.Code || got.Severity != w.Severity || got.ScopeType != w.ScopeType ||
+			!slices.Equal(got.Scopes, w.Scopes) || got.Confidence != w.Confidence {
+			return fmt.Errorf("recommendations[%d] differs from the findings: got %s, want %s", i,
+				describeRecommendation(got.Code, got.Severity, got.ScopeType, got.Scopes, got.Confidence),
+				describeRecommendation(w.Code, w.Severity, w.ScopeType, w.Scopes, w.Confidence))
+		}
+	}
+	return nil
+}
+
+// describeRecommendation writes a recommendation as its code, severity,
+// scope type, scopes, and confidence.
+func describeRecommendation(code, severity, scopeType string, scopes []string, confidence string) string {
+	return fmt.Sprintf("%s %s %s %v %s", code, severity, scopeType, scopes, confidence)
+}
+
 // validAutoscalingStatuses and validAutoscalingSources are the values of
 // summary.autoscaling.status and summary.autoscaling.source.
 var (
@@ -1189,8 +1228,8 @@ var (
 )
 
 // checkSummary refuses a count of the summary that differs from the number
-// of rows or findings it counts: the observed workloads, the uncovered
-// workloads, and the findings of each severity.
+// of rows, findings, or recommendations it counts: the observed workloads, the
+// uncovered workloads, and the findings of each severity.
 func checkSummary(s Snapshot) error {
 	var observed, uncovered, healthy, attention, critical float64
 	for _, wl := range s.Workloads {
@@ -1222,6 +1261,7 @@ func checkSummary(s Snapshot) error {
 		{"nodes", s.Summary.Nodes, float64(len(s.Nodes))},
 		{"nodepools", s.Summary.Nodepools, float64(len(s.Nodepools))},
 		{"findings", s.Summary.Findings, float64(len(s.Findings))},
+		{"recommendations", s.Summary.Recommendations, float64(len(s.Recommendations))},
 		{"healthy", s.Summary.Healthy, healthy},
 		{"attention", s.Summary.Attention, attention},
 		{"critical", s.Summary.Critical, critical},

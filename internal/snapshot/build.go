@@ -45,6 +45,7 @@ func Build(in Input) (Snapshot, error) {
 	nodes := buildNodes(in.Collected.Nodes.Rows)
 	nodepools := buildNodepools(collect.Pools(in.Collected.Nodes.Rows))
 	findings := buildFindings(in.Findings)
+	recommendations := buildRecommendations(analysis.Recommendations(in.Findings))
 
 	snap := Snapshot{
 		SchemaVersion: SchemaVersion,
@@ -95,13 +96,14 @@ func Build(in Input) (Snapshot, error) {
 			CollectionStartedAt:   formatTime(in.CollectionStarted, loc),
 			CollectionCompletedAt: formatTime(in.CollectionCompleted, loc),
 		},
-		Summary:    buildSummary(namespaces, workloads, hpas, nodes, nodepools, findings, in.Collected.Autoscaling),
-		Namespaces: namespaces,
-		Workloads:  workloads,
-		HPAs:       hpas,
-		Nodes:      nodes,
-		Nodepools:  nodepools,
-		Findings:   findings,
+		Summary:         buildSummary(namespaces, workloads, hpas, nodes, nodepools, findings, recommendations, in.Collected.Autoscaling),
+		Namespaces:      namespaces,
+		Workloads:       workloads,
+		HPAs:            hpas,
+		Nodes:           nodes,
+		Nodepools:       nodepools,
+		Findings:        findings,
+		Recommendations: recommendations,
 	}
 
 	if err := snap.Check(); err != nil {
@@ -366,13 +368,14 @@ func buildNodepools(pools []collect.Pool) []NodePool {
 
 // buildSummary counts the lists of the snapshot and copies the evidence of
 // the autoscaling.
-func buildSummary(namespaces []Namespace, workloads []Workload, hpas []HPA, nodes []Node, nodepools []NodePool, findings []Finding, autoscaling collect.AutoscalingEvidence) Summary {
+func buildSummary(namespaces []Namespace, workloads []Workload, hpas []HPA, nodes []Node, nodepools []NodePool, findings []Finding, recommendations []Recommendation, autoscaling collect.AutoscalingEvidence) Summary {
 	summary := Summary{
-		Namespaces: float64(len(namespaces)),
-		HPAs:       float64(len(hpas)),
-		Nodes:      float64(len(nodes)),
-		Nodepools:  float64(len(nodepools)),
-		Findings:   float64(len(findings)),
+		Namespaces:      float64(len(namespaces)),
+		HPAs:            float64(len(hpas)),
+		Nodes:           float64(len(nodes)),
+		Nodepools:       float64(len(nodepools)),
+		Findings:        float64(len(findings)),
+		Recommendations: float64(len(recommendations)),
 		Autoscaling: Autoscaling{
 			Status:            autoscaling.Status,
 			Source:            autoscaling.Source,
@@ -419,6 +422,22 @@ func buildFindings(findings []analysis.Finding) []Finding {
 			ScopeName:  f.ScopeName,
 			Evidence:   buildEvidence(f.Evidence),
 			Confidence: f.Confidence,
+		}
+	}
+	return out
+}
+
+// buildRecommendations copies each analysis.Recommendation into the
+// snapshot's own Recommendation type, field by field, never nil.
+func buildRecommendations(recommendations []analysis.Recommendation) []Recommendation {
+	out := make([]Recommendation, len(recommendations))
+	for i, r := range recommendations {
+		out[i] = Recommendation{
+			Code:       r.Code,
+			Severity:   r.Severity,
+			ScopeType:  r.ScopeType,
+			Scopes:     nonNilStrings(append([]string(nil), r.Scopes...)),
+			Confidence: r.Confidence,
 		}
 	}
 	return out

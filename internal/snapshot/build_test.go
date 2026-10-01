@@ -943,7 +943,7 @@ func TestBuildFillsTheNewSections(t *testing.T) {
 
 	wantSummary := Summary{
 		Namespaces: 2, Workloads: 2, HPAs: 1, Nodes: 3, Nodepools: 2,
-		Findings: 3, Healthy: 1, Attention: 1, Critical: 1,
+		Findings: 3, Recommendations: 2, Healthy: 1, Attention: 1, Critical: 1,
 		WorkloadsWithoutHPA: 1,
 		Autoscaling: Autoscaling{
 			Status: "enabled", Source: "raw_metrics", Confidence: "inferred",
@@ -1224,5 +1224,70 @@ func TestBuildRefusesAUsageFindingWithNoEvidence(t *testing.T) {
 	want := "findings[0].evidence does not match the definition of NODE_CPU_USAGE_HEALTHY"
 	if got := mustBuildError(t, in); got != want {
 		t.Errorf("Build() error = %q, want %q", got, want)
+	}
+}
+
+func TestBuildFillsTheRecommendations(t *testing.T) {
+	snap := mustBuild(t, clusterInput())
+
+	want := []Recommendation{
+		{Code: "HPA_MAX_REPLICAS_REACHED", Severity: "critical", ScopeType: "hpa", Scopes: []string{"payments/web"}, Confidence: "exact"},
+		{Code: "NODE_LOW_UTILIZATION", Severity: "attention", ScopeType: "node", Scopes: []string{"node-b1"}, Confidence: "inferred"},
+	}
+	if !reflect.DeepEqual(snap.Recommendations, want) {
+		t.Errorf("Recommendations = %+v, want %+v", snap.Recommendations, want)
+	}
+	if snap.Summary.Recommendations != 2 {
+		t.Errorf("Summary.Recommendations = %v, want 2", snap.Summary.Recommendations)
+	}
+}
+
+func TestBuildWritesNoRecommendationForHealthy(t *testing.T) {
+	in := clusterInput()
+	in.Findings = in.Findings[2:]
+	snap := mustBuild(t, in)
+
+	if snap.Recommendations == nil || len(snap.Recommendations) != 0 {
+		t.Errorf("Recommendations = %#v, want an empty list that is not nil", snap.Recommendations)
+	}
+	if snap.Summary.Recommendations != 0 {
+		t.Errorf("Summary.Recommendations = %v, want 0", snap.Summary.Recommendations)
+	}
+	data, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+	if !strings.Contains(string(data), `"recommendations": []`) {
+		t.Errorf("Encode() does not write \"recommendations\": []: %s", data)
+	}
+}
+
+func TestBuildFindingSeverityChangesTheRecommendations(t *testing.T) {
+	finding := func(code, severity string) analysis.Finding {
+		return analysis.Finding{
+			Code: code, Severity: severity,
+			ScopeType: analysis.ScopeNamespace, ScopeName: "payments", Confidence: discovery.ConfidenceExact,
+			Evidence: []analysis.Evidence{{Name: "average_percent", Value: analysis.Number(60)}, {Name: "peak_percent", Value: analysis.Number(80)}},
+		}
+	}
+	healthy := baseInput()
+	healthy.Findings = []analysis.Finding{finding("NAMESPACE_CPU_REQUEST_HEALTHY", analysis.SeverityHealthy)}
+	raised := baseInput()
+	raised.Findings = []analysis.Finding{finding("NAMESPACE_CPU_REQUEST_ATTENTION", analysis.SeverityAttention)}
+
+	var parts [2]struct {
+		Recommendations json.RawMessage `json:"recommendations"`
+	}
+	for i, in := range []Input{healthy, raised} {
+		data, err := Encode(mustBuild(t, in))
+		if err != nil {
+			t.Fatalf("Encode() error = %v", err)
+		}
+		if err := json.Unmarshal(data, &parts[i]); err != nil {
+			t.Fatalf("Unmarshal() error = %v", err)
+		}
+	}
+	if string(parts[0].Recommendations) == string(parts[1].Recommendations) {
+		t.Fatalf("raising a finding from healthy to attention did not change the bytes of recommendations: %s", parts[0].Recommendations)
 	}
 }

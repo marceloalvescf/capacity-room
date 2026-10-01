@@ -3,9 +3,9 @@
 // reads and nothing else. The same snapshot gives a report in Portuguese or
 // in English, so it holds codes and numbers, never a sentence.
 //
-// This part of the project fills eleven of its sections: report, scope,
-// quality, summary, namespaces, workloads, HPAs, nodes, nodepools, and
-// findings. A later part adds recommendations (spec 8).
+// The twelve sections are all filled: report, scope, quality, summary,
+// namespaces, workloads, HPAs, nodes, nodepools, findings, and
+// recommendations. No part is left.
 package snapshot
 
 // SchemaVersion is the only schema version this package writes, and the
@@ -14,17 +14,18 @@ const SchemaVersion = "1.0"
 
 // Snapshot is the stored contract of one report run.
 type Snapshot struct {
-	SchemaVersion string      `json:"schema_version"`
-	Report        Report      `json:"report"`
-	Scope         Scope       `json:"scope"`
-	Quality       Quality     `json:"quality"`
-	Summary       Summary     `json:"summary"`
-	Namespaces    []Namespace `json:"namespaces"` // sorted, never nil
-	Workloads     []Workload  `json:"workloads"`  // sorted, never nil
-	HPAs          []HPA       `json:"hpas"`       // sorted, never nil
-	Nodes         []Node      `json:"nodes"`      // sorted, never nil
-	Nodepools     []NodePool  `json:"nodepools"`  // sorted, never nil
-	Findings      []Finding   `json:"findings"`   // sorted, never nil
+	SchemaVersion   string           `json:"schema_version"`
+	Report          Report           `json:"report"`
+	Scope           Scope            `json:"scope"`
+	Quality         Quality          `json:"quality"`
+	Summary         Summary          `json:"summary"`
+	Namespaces      []Namespace      `json:"namespaces"`      // sorted, never nil
+	Workloads       []Workload       `json:"workloads"`       // sorted, never nil
+	HPAs            []HPA            `json:"hpas"`            // sorted, never nil
+	Nodes           []Node           `json:"nodes"`           // sorted, never nil
+	Nodepools       []NodePool       `json:"nodepools"`       // sorted, never nil
+	Findings        []Finding        `json:"findings"`        // sorted, never nil
+	Recommendations []Recommendation `json:"recommendations"` // in the order analysis.Recommendations gives, never nil
 }
 
 // Report identifies the run and carries the settings that shaped it: the
@@ -159,6 +160,7 @@ type Summary struct {
 	Nodes               float64     `json:"nodes"`
 	Nodepools           float64     `json:"nodepools"`
 	Findings            float64     `json:"findings"`
+	Recommendations     float64     `json:"recommendations"`
 	Healthy             float64     `json:"healthy"`
 	Attention           float64     `json:"attention"`
 	Critical            float64     `json:"critical"`
@@ -265,4 +267,14 @@ type Finding struct {
 	ScopeName  string     `json:"scope_name"`
 	Evidence   []Evidence `json:"evidence"` // never nil
 	Confidence string     `json:"confidence"`
+}
+
+// Recommendation is one action of the report, spec 7.4: the findings of
+// one code above healthy, merged. It carries no sentence.
+type Recommendation struct {
+	Code       string   `json:"code"`
+	Severity   string   `json:"severity"`
+	ScopeType  string   `json:"scope_type"`
+	Scopes     []string `json:"scopes"` // sorted, never empty
+	Confidence string   `json:"confidence"`
 }
