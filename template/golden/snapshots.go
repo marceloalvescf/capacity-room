@@ -286,8 +286,9 @@ var Snapshots = []Snapshot{
 			"section of the detailed report before it, the " +
 			"partial-coverage callout after the replica ceiling table, " +
 			"the undetermined pool in the situation table, the plan " +
-			"running over a page break, and the appendix with the notes " +
-			"as section 2",
+			"running over a page break, and the appendix as section 2 " +
+			"at the raised minimum, with the one partial capability and " +
+			"the notes",
 	},
 	{
 		Name:   "command-executive-en",
@@ -297,6 +298,8 @@ var Snapshots = []Snapshot{
 		Protects: "the executive profile in English on three pages: the " +
 			"English headers of the four tables that have rows and the " +
 			"three fallback sentences of the subsections that have " +
-			"none, with the appendix alone on the last page",
+			"none, with the appendix alone on the last page as its " +
+			"fallback sentence, since no capability reaches the raised " +
+			"minimum",
 	},
 }
