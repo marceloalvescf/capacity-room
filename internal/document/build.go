@@ -67,7 +67,7 @@ func (b *builder) period(start, end time.Time) string {
 }
 
 // Build assembles the document of a snapshot: a cover, an opening page,
-// the four sections, and a quality appendix with its notes.
+// the five sections, and a quality appendix with its notes.
 func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, error) {
 	if err := s.Check(); err != nil {
 		return Document{}, err
@@ -97,6 +97,7 @@ func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, err
 	workloads := buildWorkloadsSection(b, s.Workloads, s.Findings, thresholds, severity)
 	hpas := buildHPAsSection(b, s)
 	nodepools := buildNodepoolsSection(b, s, thresholds, severity)
+	executive := buildExecutiveSection(b, s, thresholds, severity, false)
 	appendix := buildAppendix(b, s, severity)
 	notes := buildNotes(b, s)
 
@@ -105,6 +106,7 @@ func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, err
 	blocks = append(blocks, workloads...)
 	blocks = append(blocks, hpas...)
 	blocks = append(blocks, nodepools...)
+	blocks = append(blocks, executive...)
 	blocks = append(blocks, PageBreak{Weak: true})
 	blocks = append(blocks, appendix...)
 	blocks = append(blocks, notes...)

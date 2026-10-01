@@ -300,6 +300,12 @@ func TestBlocksFollowTheOrderOfTheOriginal(t *testing.T) {
 		"heading", "heading", "table",
 		"heading", "paragraph", "heading", "paragraph",
 		"heading", "heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
+		// The executive section: heading, introduction, six subsections that
+		// are a heading and a table or a paragraph, and the limitations table.
+		"heading", "paragraph",
+		"heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
+		"heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
+		"heading", "table",
 		"pagebreak",
 		"heading", "table",
 		"heading", "table",
@@ -325,14 +331,15 @@ func TestBlocksFollowTheOrderOfTheOriginal(t *testing.T) {
 	wantHeading(8, 1, true)   // Histórico de HPA
 	wantHeading(10, 2, false) // Namespace: payments
 	wantHeading(12, 1, true)  // Uso de recursos por node pool
-	wantHeading(20, 1, true)  // Apêndice técnico de qualidade
-	wantHeading(22, 2, false) // Avisos de interpretação
+	wantHeading(19, 1, true)  // Resumo executivo
+	wantHeading(36, 1, true)  // Apêndice técnico de qualidade
+	wantHeading(38, 2, false) // Avisos de interpretação
 
 	if pb, ok := doc.Blocks[1].(PageBreak); !ok || pb.Weak {
 		t.Errorf("Blocks[1] = %+v, want a non-weak pagebreak", doc.Blocks[1])
 	}
-	if pb, ok := doc.Blocks[19].(PageBreak); !ok || !pb.Weak {
-		t.Errorf("Blocks[19] = %+v, want a weak pagebreak", doc.Blocks[19])
+	if pb, ok := doc.Blocks[35].(PageBreak); !ok || !pb.Weak {
+		t.Errorf("Blocks[35] = %+v, want a weak pagebreak", doc.Blocks[35])
 	}
 
 	wantTable := func(i int, id string) {
@@ -344,8 +351,8 @@ func TestBlocksFollowTheOrderOfTheOriginal(t *testing.T) {
 	}
 	wantTable(4, "namespace-capacity")
 	wantTable(7, "workload-resources")
-	wantTable(21, "quality-appendix")
-	wantTable(23, "interpretation-notes")
+	wantTable(37, "quality-appendix")
+	wantTable(39, "interpretation-notes")
 }
 
 func TestHeadingOfANamespaceHasTwoRuns(t *testing.T) {
@@ -586,6 +593,39 @@ var parityTexts = map[string]catalog.Key{
 	"Avisos de interpretação":                catalog.NotesHeading,
 	"Observação":                             catalog.NotesHeaderRemark,
 	"Exata":                                  catalog.Confidence("exact"),
+	// The executive body. "Motivo" and "Observação" are read once, by the key
+	// that already holds them: the executive tables use keys that read the
+	// same one word, so the two keys stand for one text.
+	"Resumo executivo":                                                catalog.SectionsExecutiveHeading,
+	"Cargas de trabalho com prioridade crítica":                       catalog.SectionsExecutiveCriticalHeading,
+	"Cargas de trabalho com prioridade alta":                          catalog.SectionsExecutiveAttentionHeading,
+	"Nenhuma carga de trabalho com prioridade alta foi identificada.": catalog.SectionsExecutiveAttentionEmpty,
+	"Namespaces com carga de trabalho em risco":                       catalog.SectionsExecutiveNamespacesHeading,
+	"Cargas de trabalho com máximo de réplicas e sem HPA":             catalog.SectionsExecutiveScalingHeading,
+	"Situação dos pools de nós":                                       catalog.SectionsExecutiveNodepoolsHeading,
+	"Plano de ação priorizado":                                        catalog.SectionsExecutiveActionsHeading,
+	"Limitações materiais":                                            catalog.SectionsExecutiveLimitationsHeading,
+	"CPU % / Lim":                                                     catalog.SectionsExecutiveHeaderCPULimit,
+	"Mem % / Lim":                                                     catalog.SectionsExecutiveHeaderMemoryLimit,
+	"Status":                                                          catalog.SectionsExecutiveHeaderStatus,
+	"Prioridade":                                                      catalog.SectionsExecutiveHeaderPriority,
+	"Réplicas":                                                        catalog.SectionsExecutiveHeaderReplicas,
+	"Ordem":                                                           catalog.SectionsExecutiveHeaderOrder,
+	"Ação":                                                            catalog.SectionsExecutiveHeaderAction,
+	"Cargas de trabalho / Escopo":                                     catalog.SectionsExecutiveHeaderScope,
+	"Capacidade":                                                      catalog.SectionsExecutiveHeaderCapability,
+	"Cobertura":                                                       catalog.SectionsExecutiveHeaderCoverage,
+	"Atenção":                                                         catalog.SectionsExecutivePoolAttention,
+	"Máximo do HPA atingido":                                          catalog.SectionsExecutiveSituationHPAMax,
+	"Crítica":                                                         catalog.Priority("critical"),
+	"Alta":                                                            catalog.Priority("attention"),
+	"Interpretação":                                                   catalog.SectionsExecutiveInterpretation,
+	"Parcial":                                                         catalog.State("partial"),
+	"Escalonamento automático de nós":                                 catalog.CapabilityName("node_autoscaling"),
+	"Eventos históricos indisponíveis.":                               catalog.CapabilityReason("NODE_AUTOSCALING_UNDETERMINED"),
+	"Uso de memória requer atenção":                                   catalog.FindingObservation("node_usage", "memory"),
+	"Revisar a solicitação de CPU e o consumo observado.": catalog.FindingAction("resource_request_usage", "cpu"),
+	"Validar a margem e o limite máximo do HPA.":          catalog.FindingAction("hpa_near_max", ""),
 	// The fixture's own note is a stand-in sentence of the original for
 	// the one warning of the snapshot, whose text the catalog writes.
 	"A série de eventos possui cobertura parcial.": catalog.Warning(collect.WarningWorkloadHistoryCurrentAssociation),
@@ -617,6 +657,11 @@ func parityComposed(t *testing.T, cat *catalog.Catalog) map[string]string {
 		"Comportamento dos Horizontal Pod Autoscalers no período de 24 horas. A situação indica se o máximo configurado foi observado.": text(catalog.SectionsHPAsIntro, catalog.Params{"Period": "24 horas"}),
 		"Pronto; Agendável":                  text(catalog.NodeStateReady, nil) + "; " + text(catalog.NodeStateSchedulable, nil),
 		"Memória: pico de 80% de utilização": text(catalog.Reason("usage_peak", "memory"), catalog.Params{"Percent": "80%"}),
+		"Síntese dos principais riscos identificados no período de 24 horas, com foco em pontos de prioridade crítica e alta que requerem atenção imediata.": text(catalog.SectionsExecutiveIntro, catalog.Params{"Period": "24 horas"}),
+		"CPU: pico de 97% da solicitação": text(catalog.Reason("request_peak", "cpu"), catalog.Params{"Percent": "97%"}),
+		"10 observadas / máximo 10":       text(catalog.SectionsExecutiveReplicasObserved, catalog.Params{"Peak": "10", "Max": "10"}),
+		"2 ativas":                        text(catalog.SectionsExecutiveActiveReplicasPlural, catalog.Params{"Count": "2"}),
+		"1 crítica":                       text(catalog.RiskCount("critical", 1), nil),
 	}
 }
 
@@ -754,30 +799,28 @@ func paritySnapshot(t *testing.T) (fixtureOrder, sorted snapshot.Snapshot) {
 	s.Nodes = []snapshot.Node{node}
 	s.Nodepools = []snapshot.NodePool{{Name: "apps", Confidence: "exact", Nodes: []string{"worker-a"}}}
 
+	// The findings are in the order analysis.Sort gives.
 	s.Findings = []snapshot.Finding{
+		workloadFinding("WORKLOAD_CPU_REQUEST_CRITICAL", analysis.SeverityCritical, "payments", "api", "Deployment", parityEvidence(88, 97)...),
+		{Code: "HPA_NEAR_MAX_REPLICAS", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeHPA, ScopeName: "payments/api",
+			Evidence: []snapshot.Evidence{number("current_average", 7), number("spec_max", 10)}, Confidence: "exact"},
 		nodeFinding("NODE_MEMORY_USAGE_ATTENTION", analysis.SeverityAttention, "worker-a", parityEvidence(64, 80)...),
+		workloadFinding("WORKLOAD_CPU_REQUEST_HEALTHY", analysis.SeverityHealthy, "payments", "worker", "Deployment", parityEvidence(40, 50)...),
 	}
+	// Every capability is available but the autoscaling of the nodes.
+	s.Quality.Capabilities = availableCapabilities()
+	s.Quality.Capabilities[8].State = discovery.StateUnavailable
+	s.Quality.Capabilities[8].Strategy = discovery.StrategyNone
+	s.Quality.Capabilities[8].Reasons = []string{"NODE_AUTOSCALING_UNDETERMINED"}
 	s.Quality.Warnings = []snapshot.Message{{Code: collect.WarningWorkloadHistoryCurrentAssociation, Params: map[string]float64{}}}
+	s.Recommendations = deriveRecommendations(s.Findings)
 	s.Summary = snapshot.Summary{
 		Namespaces: 1, Workloads: 2, HPAs: 1, Nodes: 1, Nodepools: 1,
-		Findings: 1, Attention: 1, WorkloadsWithoutHPA: 1,
-		Autoscaling: unknownAutoscaling(),
+		Findings: 4, Critical: 1, Attention: 2, Healthy: 1,
+		Recommendations:     float64(len(s.Recommendations)),
+		WorkloadsWithoutHPA: 1,
+		Autoscaling:         unknownAutoscaling(),
 	}
-	findings := make([]analysis.Finding, len(s.Findings))
-	for i, f := range s.Findings {
-		findings[i] = analysis.Finding{
-			Code: f.Code, Severity: f.Severity, ScopeType: f.ScopeType,
-			ScopeKind: f.ScopeKind, ScopeName: f.ScopeName, Confidence: f.Confidence,
-		}
-	}
-	s.Recommendations = []snapshot.Recommendation{}
-	for _, r := range analysis.Recommendations(findings) {
-		s.Recommendations = append(s.Recommendations, snapshot.Recommendation{
-			Code: r.Code, Severity: r.Severity, ScopeType: r.ScopeType,
-			Scopes: append([]string(nil), r.Scopes...), Confidence: r.Confidence,
-		})
-	}
-	s.Summary.Recommendations = float64(len(s.Recommendations))
 
 	sorted = s
 	sorted.Workloads = []snapshot.Workload{api, worker}
@@ -787,7 +830,8 @@ func paritySnapshot(t *testing.T) (fixtureOrder, sorted snapshot.Snapshot) {
 // TestDocumentEqualsParityForItsSections proves that the sections built
 // straight from a snapshot holding the numbers of
 // template/tests/capacity/fixtures/parity.pt-BR.json equal its blocks 2 to
-// 22 and its last two, the interpretation notes, in every number, status,
+// 38, the four sections and the executive body, and its last two, the
+// interpretation notes, in every number, status,
 // identifier, and block, with the words of the fixture read through the
 // catalog.
 func TestDocumentEqualsParityForItsSections(t *testing.T) {
@@ -804,6 +848,7 @@ func TestDocumentEqualsParityForItsSections(t *testing.T) {
 	blocks = append(blocks, buildWorkloadsSection(b, s.Workloads, s.Findings, thresholds, "all")...)
 	blocks = append(blocks, buildHPAsSection(b, s)...)
 	blocks = append(blocks, buildNodepoolsSection(b, s, thresholds, "all")...)
+	blocks = append(blocks, buildExecutiveSection(b, s, thresholds, "all", false)...)
 	blocks = append(blocks, buildNotes(b, s)...)
 	if b.err != nil {
 		t.Fatalf("builder error = %v", b.err)
@@ -827,7 +872,7 @@ func TestDocumentEqualsParityForItsSections(t *testing.T) {
 	if len(doc.Blocks) != 44 {
 		t.Fatalf("fixture has %d blocks, want 44", len(doc.Blocks))
 	}
-	wanted := append(slices.Clone(doc.Blocks[2:23]), doc.Blocks[42:44]...)
+	wanted := append(slices.Clone(doc.Blocks[2:39]), doc.Blocks[42:44]...)
 	want, err := json.Marshal(wanted)
 	if err != nil {
 		t.Fatalf("marshal want: %v", err)

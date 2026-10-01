@@ -329,6 +329,12 @@ func TestBuildBlockOrder(t *testing.T) {
 		"heading", "paragraph",
 		"heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
 		"heading", "heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
+		// The executive section: heading, introduction, six subsections that
+		// are a heading and a table or a paragraph, and the limitations table.
+		"heading", "paragraph",
+		"heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
+		"heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
+		"heading", "table",
 		"pagebreak",
 		"heading", "table",
 	}
@@ -366,10 +372,32 @@ func TestBuildOrdersTheSections(t *testing.T) {
 	}
 	want := []string{
 		"Capacity by namespace", "Resources by workload", "HPA history",
-		"Resource usage by node pool", "Technical quality appendix",
+		"Resource usage by node pool", "Executive summary", "Technical quality appendix",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("level-1 headings = %v, want %v", got, want)
+	}
+
+	// The executive section sits between the pools and the weak page break,
+	// and the appendix comes after the break.
+	var executive, weakBreak, appendix int
+	for i, blk := range doc.Blocks {
+		switch x := blk.(type) {
+		case Heading:
+			switch runText(t, x.Runs[0]) {
+			case "Executive summary":
+				executive = i
+			case "Technical quality appendix":
+				appendix = i
+			}
+		case PageBreak:
+			if x.Weak {
+				weakBreak = i
+			}
+		}
+	}
+	if executive <= 0 || executive >= weakBreak || weakBreak+1 != appendix {
+		t.Errorf("executive at %d, weak break at %d, appendix at %d", executive, weakBreak, appendix)
 	}
 }
 
@@ -693,12 +721,12 @@ func TestBuildAppendixEmpty(t *testing.T) {
 	cat := mustCatalog(t, catalog.English)
 	doc := mustBuild(t, s, cat, Options{MinSeverity: "attention"})
 
-	if len(doc.Blocks) != 22 {
-		t.Fatalf("len(Blocks) = %d, want 22", len(doc.Blocks))
+	if len(doc.Blocks) != 38 {
+		t.Fatalf("len(Blocks) = %d, want 38", len(doc.Blocks))
 	}
-	para, ok := doc.Blocks[21].(Paragraph)
+	para, ok := doc.Blocks[37].(Paragraph)
 	if !ok {
-		t.Fatalf("Blocks[21] is %T, want Paragraph", doc.Blocks[21])
+		t.Fatalf("Blocks[37] is %T, want Paragraph", doc.Blocks[37])
 	}
 	want, err := cat.Text(catalog.AppendixEmpty, nil)
 	if err != nil {

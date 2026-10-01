@@ -126,6 +126,15 @@ func appendixRemark(b *builder, reasons []string) string {
 	return strings.Join(sentences, " ")
 }
 
+// warningText writes a warning: the sentence of its reason code when the
+// warning is one, else the sentence of the warning.
+func warningText(b *builder, code string) string {
+	if slices.Contains(discovery.ReasonCodes, code) {
+		return b.text(catalog.CapabilityReason(code), nil)
+	}
+	return b.text(catalog.Warning(code), nil)
+}
+
 // buildNotes assembles the interpretation notes that follow the appendix:
 // one row for every warning, then every notice, of the snapshot, each text
 // written once; or no block at all when there is neither. The minimum
@@ -142,11 +151,7 @@ func buildNotes(b *builder, s snapshot.Snapshot) []Block {
 	}
 
 	for _, w := range s.Quality.Warnings {
-		if slices.Contains(discovery.ReasonCodes, w.Code) {
-			add(b.text(catalog.CapabilityReason(w.Code), nil))
-			continue
-		}
-		add(b.text(catalog.Warning(w.Code), nil))
+		add(warningText(b, w.Code))
 	}
 	for _, n := range s.Quality.Notices {
 		count := n.Params["count"]

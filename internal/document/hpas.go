@@ -166,6 +166,17 @@ func specRun(b *builder, spec *float64) Run {
 	return Text(b.cat.Count(*spec))
 }
 
+// hpaAtMax reports whether an HPA reached its maximum: the maximum and the
+// peak are known, the HPA is not pinned, and the peak is at or above the
+// maximum.
+func hpaAtMax(h snapshot.HPA) bool {
+	if h.SpecMax == nil || h.Current.State != stateValue || h.Current.Peak == nil {
+		return false
+	}
+	pinned := h.SpecMin != nil && *h.SpecMin == *h.SpecMax
+	return !pinned && *h.Current.Peak >= *h.SpecMax
+}
+
 // hpaSituation judges an HPA, the first case that holds: the maximum was
 // reached when the maximum and the peak are known and the HPA is not
 // pinned; pinned when both bounds are known and equal; below the maximum
@@ -176,7 +187,7 @@ func hpaSituation(b *builder, h snapshot.HPA) Run {
 	pinned := h.SpecMin != nil && maxKnown && *h.SpecMin == *h.SpecMax
 
 	switch {
-	case maxKnown && peakKnown && !pinned && *h.Current.Peak >= *h.SpecMax:
+	case hpaAtMax(h):
 		return StatusText("critical", b.text(catalog.SectionsHPAsSituationMaxReached, nil))
 	case pinned:
 		return StatusText("healthy", b.text(catalog.SectionsHPAsSituationPinned, nil))

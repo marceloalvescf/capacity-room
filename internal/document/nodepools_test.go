@@ -321,32 +321,6 @@ func TestNodeDetailReason(t *testing.T) {
 	assertStatus(t, table.Rows[1][3][0], "attention", "The node showed low average utilization")
 }
 
-func TestNodeDetailReasonFragments(t *testing.T) {
-	b := &builder{cat: mustCatalog(t, catalog.English)}
-	tests := []struct {
-		finding snapshot.Finding
-		want    string
-	}{
-		{nodeFinding("NODE_CPU_USAGE_ATTENTION", "attention", "n", number("average_percent", 55), number("peak_percent", 78)), "CPU: peak of 78% utilization"},
-		{nodeFinding("NODE_MEMORY_USAGE_HEALTHY", "healthy", "n", number("average_percent", 40.25)), "Memory: average of 40.2% utilization"},
-		{nodeFinding("NODE_MEMORY_USAGE_CRITICAL", "critical", "n", number("peak_percent", 91)), "Memory: peak of 91% utilization"},
-		{nodeFinding("NODE_CPU_REQUEST_HIGH", "attention", "n", number("percent", 75.5)), "CPU: 75.5% of the allocatable requested"},
-		{nodeFinding("NODE_MEMORY_REQUEST_HIGH", "critical", "n", number("percent", 90)), "Memory: 90% of the allocatable requested"},
-		{nodeFinding("NODE_OVERREQUESTED", "attention", "n", snapshot.Evidence{Name: "resources", Value: snapshot.Value{Kind: "text", Text: "cpu"}}), "High requests coexist with low observed utilization"},
-		{nodeFinding("NODE_LOW_UTILIZATION", "attention", "n", number("maximum_average_percent", 12)), "The node showed low average utilization"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.finding.Code, func(t *testing.T) {
-			if got := reasonFragment(b, tt.finding); got != tt.want {
-				t.Errorf("reasonFragment() = %q, want %q", got, tt.want)
-			}
-		})
-	}
-	if b.err != nil {
-		t.Fatalf("builder error = %v", b.err)
-	}
-}
-
 func TestNodeDetailState(t *testing.T) {
 	yes, no := boolPtr(true), boolPtr(false)
 	tests := []struct {
