@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"unicode"
@@ -493,18 +494,30 @@ func TestWordAppears(t *testing.T) {
 	}
 }
 
+// headingPage returns the 0-based index of the first page after the opening
+// page whose text holds want, or -1 when none does. The opening page carries
+// the outline, which names every heading without being its place.
+func headingPage(pages []string, want string) int {
+	for i := 1; i < len(pages); i++ {
+		if containsText(pages[i], want) {
+			return i
+		}
+	}
+	return -1
+}
+
 // TestRealReportTextOfEveryScenario checks, for every one of the seven
-// scenarios and both languages, that the compiled PDF: has three pages;
-// names the numbered heading of section 1, section 2, and the appendix
-// in the outline, on page 1; carries the heading of section 1 and of
-// section 2, each with its number, on page 2, and the heading of the
-// appendix, with its number, on page 3; carries the name of every
-// namespace and every workload the scenario's snapshot holds, as a word
-// of its own, on page 2; carries the interpretation notes heading, after
-// the appendix heading, on page 3, exactly when the snapshot holds a
-// warning or a notice, and on no page otherwise; and, for edge-values,
-// carries neither of the two workload names its snapshot omits, as a
-// word of its own, on any page.
+// scenarios and both languages, that the compiled PDF: names the numbered
+// headings of the five parts (namespaces 1, workloads 2, HPA history 3,
+// node pools 4, appendix 5) in the outline, on page 1; carries each of
+// those headings, with its number, on a page after the first, in the order
+// of the numbers; carries the name of every namespace and every workload
+// the scenario's snapshot holds, as a word of its own, on the pages from
+// section 1 through the start of section 3; carries the interpretation
+// notes heading, after the appendix heading, exactly when the snapshot
+// holds a warning or a notice, and on no page otherwise; and, for
+// edge-values, carries neither of the two workload names its snapshot
+// omits, as a word of its own, on any page.
 //
 // The names and the notes expectation come from
 // testdata/snapshot/<scenario>.json, not from a second collecting run:
@@ -545,8 +558,8 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 					}
 
 					pages := pdfPages(pdfText(t, outPath))
-					if len(pages) != 3 {
-						t.Fatalf("PDF has %d page(s), want 3", len(pages))
+					if len(pages) < 3 {
+						t.Fatalf("PDF has %d page(s), want at least 3", len(pages))
 					}
 
 					cat, err := catalog.Load(lang)
@@ -557,18 +570,19 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 					headings := []struct {
 						number int
 						key    catalog.Key
-						page   int // 0-based: the page the heading itself, not the outline entry, belongs on
 					}{
-						{1, catalog.SectionsNamespacesHeading, 1},
-						{2, catalog.SectionsWorkloadsHeading, 1},
-						{3, catalog.AppendixHeading, 2},
+						{1, catalog.SectionsNamespacesHeading},
+						{2, catalog.SectionsWorkloadsHeading},
+						{3, catalog.SectionsHPAsHeading},
+						{4, catalog.SectionsNodepoolsHeading},
+						{5, catalog.AppendixHeading},
 					}
 
-					// Page 1's own outline names all three, each with its
-					// number, whether or not the heading it names still
-					// reaches the page it promises: a separate assertion
-					// from the one below, so a lost section and a lost
-					// outline entry are never reported as the same fault.
+					// Page 1's own outline names every heading, whether or
+					// not the heading it names reaches a page: a separate
+					// assertion from the one below, so a lost section and a
+					// lost outline entry are never reported as the same
+					// fault.
 					for _, h := range headings {
 						want := numberedHeading(t, cat, h.number, h.key)
 						if !containsText(pages[0], want) {
@@ -576,22 +590,34 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 						}
 					}
 
-					// The heading itself, on the page it belongs on.
-					for _, h := range headings {
+					// The heading itself, on a later page, in the order of
+					// the numbers.
+					found := make([]int, len(headings))
+					for i, h := range headings {
 						want := numberedHeading(t, cat, h.number, h.key)
-						if !containsText(pages[h.page], want) {
-							t.Errorf("page %d does not contain the heading %q", h.page+1, want)
+						found[i] = headingPage(pages, want)
+						if found[i] == -1 {
+							t.Errorf("no page after the first contains the heading %q", want)
+						}
+						if i > 0 && found[i] != -1 && found[i] < found[i-1] {
+							t.Errorf("the heading %q is on page %d, before the heading of the part before it, on page %d", want, found[i]+1, found[i-1]+1)
 						}
 					}
+					if slices.Contains(found, -1) {
+						return
+					}
 
+					// The names of the rows: from the page of section 1
+					// through the page where section 3 starts.
+					rowPages := strings.Join(pages[found[0]:found[2]+1], "\f")
 					for _, ns := range snap.Namespaces {
-						if !wordAppears(pages[1], ns.Name) {
-							t.Errorf("page 2 does not contain the namespace name %q as a word of its own", ns.Name)
+						if !wordAppears(rowPages, ns.Name) {
+							t.Errorf("the pages of sections 1 and 2 do not contain the namespace name %q as a word of its own", ns.Name)
 						}
 					}
 					for _, wl := range snap.Workloads {
-						if !wordAppears(pages[1], wl.Name) {
-							t.Errorf("page 2 does not contain the workload name %q as a word of its own", wl.Name)
+						if !wordAppears(rowPages, wl.Name) {
+							t.Errorf("the pages of sections 1 and 2 do not contain the workload name %q as a word of its own", wl.Name)
 						}
 					}
 
@@ -600,15 +626,15 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 						t.Fatalf("NotesHeading text: %v", err)
 					}
 					if wantNotes {
-						appendixWant := numberedHeading(t, cat, 3, catalog.AppendixHeading)
-						strippedPage3 := stripWhitespace(pages[2])
-						appendixIdx := strings.Index(strippedPage3, stripWhitespace(appendixWant))
-						notesIdx := strings.Index(strippedPage3, stripWhitespace(notesHeading))
+						appendixWant := numberedHeading(t, cat, 5, catalog.AppendixHeading)
+						strippedTail := stripWhitespace(strings.Join(pages[found[4]:], "\f"))
+						appendixIdx := strings.Index(strippedTail, stripWhitespace(appendixWant))
+						notesIdx := strings.Index(strippedTail, stripWhitespace(notesHeading))
 						switch {
 						case notesIdx == -1:
-							t.Errorf("page 3 does not contain the interpretation notes heading %q, though the snapshot holds a warning or a notice", notesHeading)
+							t.Errorf("the appendix does not contain the interpretation notes heading %q, though the snapshot holds a warning or a notice", notesHeading)
 						case appendixIdx != -1 && notesIdx < appendixIdx:
-							t.Errorf("the interpretation notes heading %q appears before the appendix heading on page 3", notesHeading)
+							t.Errorf("the interpretation notes heading %q appears before the appendix heading", notesHeading)
 						}
 					} else {
 						for i, page := range pages {
@@ -625,6 +651,51 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 									t.Errorf("page %d contains %q as a word of its own, though the snapshot omits that workload", i+1, omitted)
 								}
 							}
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
+// TestRealReportHoldsSectionsThreeAndFour checks, for every scenario and
+// both languages, that the headings of section 3 (HPA history) and of
+// section 4 (node pools) each appear once in the text of the pages after
+// the opening page.
+func TestRealReportHoldsSectionsThreeAndFour(t *testing.T) {
+	for _, scenario := range promtest.Scenarios {
+		t.Run(scenario.Name, func(t *testing.T) {
+			for _, lang := range catalog.Languages() {
+				t.Run(string(lang), func(t *testing.T) {
+					server, _, sc := startScenario(t, scenario.Name)
+					defer server.Close()
+
+					outDir := t.TempDir()
+					cfgPath := writeConfig(t, scenarioConfig(server, sc, outDir))
+					outPath := filepath.Join(outDir, "r.pdf")
+					args := scenarioArgs(cfgPath, sc, "--lang", string(lang), "--output", outPath)
+					_, stderr, code := runArgs(context.Background(), realEnv(t), args)
+					if code != 0 {
+						t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+					}
+
+					cat, err := catalog.Load(lang)
+					if err != nil {
+						t.Fatalf("catalog.Load(%s): %v", lang, err)
+					}
+					pages := pdfPages(pdfText(t, outPath))
+					body := stripWhitespace(strings.Join(pages[1:], "\f"))
+					for _, h := range []struct {
+						number int
+						key    catalog.Key
+					}{
+						{3, catalog.SectionsHPAsHeading},
+						{4, catalog.SectionsNodepoolsHeading},
+					} {
+						want := stripWhitespace(numberedHeading(t, cat, h.number, h.key))
+						if got := strings.Count(body, want); got != 1 {
+							t.Errorf("the heading %q appears %d times after the opening page, want 1", want, got)
 						}
 					}
 				})

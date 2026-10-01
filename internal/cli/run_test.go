@@ -1809,3 +1809,146 @@ func TestGoldenFlowEqualsTheCommand(t *testing.T) {
 		})
 	}
 }
+
+// preflightRequests is the number of requests of the preflight of
+// direct-complete: the connect probe, the scope query, and the probes of
+// the nine capabilities.
+const preflightRequests = 29
+
+// emptyCollectorsServer answers the preflight requests of direct-complete
+// as recorded, except the probe of the cluster autoscaler metrics, which
+// answers nothing, and every later request with an empty result. It counts
+// the requests it receives after the preflight.
+func emptyCollectorsServer(t *testing.T) (*httptest.Server, promtest.Scenario, *int) {
+	t.Helper()
+	var scenario promtest.Scenario
+	for _, s := range promtest.Scenarios {
+		if s.Name == "direct-complete" {
+			scenario = s
+		}
+	}
+	path, err := promtest.Path("direct-complete")
+	if err != nil {
+		t.Fatalf("promtest.Path: %v", err)
+	}
+	fixture, err := promtest.Load(path)
+	if err != nil {
+		t.Fatalf("promtest.Load: %v", err)
+	}
+	recorded := promtest.NewServer(fixture)
+
+	var mu sync.Mutex
+	received := 0
+	collectorRequests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		mu.Lock()
+		received++
+		inPreflight := received <= preflightRequests
+		if !inPreflight {
+			collectorRequests++
+		}
+		mu.Unlock()
+
+		if inPreflight && !strings.Contains(r.PostFormValue("query"), "cluster_autoscaler_") {
+			recorded.ServeHTTP(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		resultType := "vector"
+		if strings.HasSuffix(r.URL.Path, "query_range") {
+			resultType = "matrix"
+		}
+		_, _ = fmt.Fprintf(w, `{"status":"success","data":{"resultType":%q,"result":[]}}`, resultType)
+	}))
+	t.Cleanup(server.Close)
+	return server, scenario, &collectorRequests
+}
+
+// TestNoUsefulSectionsExitsFive proves a run whose collectors find nothing
+// stops with exit code 5, one line, no output, and no file. With every
+// capability available and the recording rule, the collectors send 14 of
+// namespaces and workloads, 7 of HPAs, 13 of nodes, and 6 of autoscaling.
+func TestNoUsefulSectionsExitsFive(t *testing.T) {
+	for _, mode := range []string{"snapshot", "pdf"} {
+		t.Run(mode, func(t *testing.T) {
+			server, scenario, collectorRequests := emptyCollectorsServer(t)
+			outDir := t.TempDir()
+			cfgPath := writeConfig(t, scenarioConfig(server, scenario, outDir))
+			target := filepath.Join(t.TempDir(), "out.json")
+			args := []string{"report", "--config", cfgPath, "--snapshot", target}
+			env := testEnv(t)
+			if mode == "pdf" {
+				target = filepath.Join(t.TempDir(), "out.pdf")
+				args = []string{"report", "--config", cfgPath, "--output", target}
+				env = withTypst(t, env)
+			}
+
+			stdout, stderr, code := runArgs(context.Background(), env, args)
+			if code != 5 {
+				t.Fatalf("code = %d, want 5; stderr = %q", code, stderr)
+			}
+			if stderr != "error: no useful report sections were collected\n" {
+				t.Fatalf("stderr = %q, want the one line", stderr)
+			}
+			if stdout != "" {
+				t.Fatalf("stdout = %q, want empty", stdout)
+			}
+			if _, err := os.Stat(target); err == nil {
+				t.Fatalf("%s was written, want no file", target)
+			}
+			assertNoTempFilesBeside(t, filepath.Dir(target))
+			if *collectorRequests != 40 {
+				t.Fatalf("collector requests = %d, want 40", *collectorRequests)
+			}
+		})
+	}
+}
+
+// TestNoUsefulSectionsSavedByConfiguredAutoscaling proves a configured
+// autoscaling setting is a useful section by itself.
+func TestNoUsefulSectionsSavedByConfiguredAutoscaling(t *testing.T) {
+	server, scenario, _ := emptyCollectorsServer(t)
+	cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+	target := filepath.Join(t.TempDir(), "s.json")
+
+	stdout, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--config", cfgPath, "--snapshot", target, "--node-autoscaling", "disabled"})
+	if code != 0 {
+		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+	}
+	if !strings.Contains(stdout, "autoscaling collection: disabled\n") {
+		t.Fatalf("stdout = %q, want the autoscaling line", stdout)
+	}
+	if _, err := os.Stat(target); err != nil {
+		t.Fatalf("snapshot not written: %v", err)
+	}
+}
+
+// TestRunPrintsTheCollectionLines proves a --snapshot run of
+// direct-complete prints the six collection lines, in order, before the
+// final line.
+func TestRunPrintsTheCollectionLines(t *testing.T) {
+	server, _, scenario := startScenario(t, "direct-complete")
+	defer server.Close()
+	cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
+	snapPath := filepath.Join(t.TempDir(), "s.json")
+
+	stdout, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--config", cfgPath, "--snapshot", snapPath})
+	if code != 0 {
+		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+	}
+	lines := strings.Split(strings.TrimSuffix(stdout, "\n"), "\n")
+	got := lines[len(lines)-7:]
+	want := []string{
+		"namespace collection: available",
+		"workload collection: available",
+		"hpa collection: available",
+		"hpa coverage collection: available",
+		"node collection: available",
+		"autoscaling collection: enabled",
+		"snapshot: " + snapPath,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("last lines =\n%q\nwant\n%q", got, want)
+	}
+}

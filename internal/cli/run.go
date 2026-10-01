@@ -437,7 +437,7 @@ func classify(ctx context.Context, err error) (int, string) {
 	if errors.As(err, &se) {
 		return 4, err.Error()
 	}
-	if errors.Is(err, discovery.ErrInsufficient) {
+	if errors.Is(err, discovery.ErrInsufficient) || errors.Is(err, collectpkg.ErrNoUsefulSections) {
 		return 5, err.Error()
 	}
 	return 1, "internal failure: " + err.Error()
@@ -554,6 +554,9 @@ func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *c
 	if err != nil {
 		return nil, err
 	}
+	if err := collectpkg.CheckUseful(result); err != nil {
+		return nil, err
+	}
 
 	collectionCompletedAt := env.Now()
 
@@ -591,8 +594,7 @@ func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *c
 	}
 
 	lines := preflightLines(c.capabilities)
-	lines = append(lines, "namespace collection: "+result.Namespaces.State)
-	lines = append(lines, "workload collection: "+result.Workloads.State)
+	lines = append(lines, collectionLines(result)...)
 	lines = append(lines, "snapshot: "+outputPath)
 	if f.verbose {
 		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.capabilities)...)
@@ -660,6 +662,9 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 	if err != nil {
 		return nil, err
 	}
+	if err := collectpkg.CheckUseful(result); err != nil {
+		return nil, err
+	}
 
 	collectionCompletedAt := env.Now()
 
@@ -710,8 +715,7 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 	}
 
 	lines := preflightLines(c.capabilities)
-	lines = append(lines, "namespace collection: "+result.Namespaces.State)
-	lines = append(lines, "workload collection: "+result.Workloads.State)
+	lines = append(lines, collectionLines(result)...)
 	lines = append(lines, "report: "+outputPath)
 	if f.verbose {
 		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.capabilities)...)
@@ -817,6 +821,19 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 // snapshot.
 func executiveError(profile string) error {
 	return fmt.Errorf("report profile %q is not available in this version", profile)
+}
+
+// collectionLines names the state of each collection, in the order the
+// collectors run, and the autoscaling status.
+func collectionLines(c collectpkg.Collected) []string {
+	return []string{
+		"namespace collection: " + c.Namespaces.State,
+		"workload collection: " + c.Workloads.State,
+		"hpa collection: " + c.HPAs.State,
+		"hpa coverage collection: " + c.Coverage.State,
+		"node collection: " + c.Nodes.State,
+		"autoscaling collection: " + c.Autoscaling.Status,
+	}
 }
 
 // preflightLines are the four milestone lines every collecting mode prints
