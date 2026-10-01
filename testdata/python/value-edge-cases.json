@@ -468,6 +468,620 @@
       "evidence": []
     }
   ],
+  "recommendations": [
+    {
+      "code": "NAMESPACE_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact",
+      "action": "Revisar o limite de memória e o perfil de consumo observado."
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact",
+      "action": "Revisar a solicitação de memória e o consumo observado."
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "exact",
+      "action": "Revisar o limite de memória e o perfil de consumo observado."
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "exact",
+      "action": "Revisar a solicitação de memória e o consumo observado."
+    },
+    {
+      "code": "NODE_AUTOSCALING_DISABLED",
+      "severity": "attention",
+      "scope_type": "cluster",
+      "scopes": [
+        "cluster"
+      ],
+      "confidence": "exact",
+      "action": "Planejar capacidade manual e revisar a decisão de escalonamento automático."
+    },
+    {
+      "code": "NAMESPACE_CPU_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact",
+      "action": "Revisar a solicitação de CPU e o consumo observado."
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "exact",
+      "action": "Revisar a solicitação de CPU e o consumo observado."
+    },
+    {
+      "code": "HPA_REPLICA_DIVERGENCE",
+      "severity": "attention",
+      "scope_type": "hpa",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "inferred",
+      "action": "Investigar eventos, restrições de agendamento e tempo de estabilização."
+    }
+  ],
+  "summary": {
+    "namespaces": 1,
+    "workloads": 1,
+    "hpas": 1,
+    "nodes": 1,
+    "nodepools": 1,
+    "findings": 13,
+    "recommendations": 8,
+    "healthy": 5,
+    "attention": 4,
+    "critical": 4,
+    "workloads_without_hpa": 1
+  },
+  "workload_coverage": [
+    {
+      "namespace": "payments",
+      "kind": "Deployment",
+      "name": "payments-web",
+      "observed_usage": true,
+      "hpa_coverage": "covered"
+    },
+    {
+      "namespace": "payments",
+      "kind": "StatefulSet",
+      "name": "payments-worker",
+      "observed_usage": false,
+      "hpa_coverage": "uncovered"
+    }
+  ],
+  "executive": {
+    "attention": {
+      "critical_workloads": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limite; Memória: pico de 24000% da solicitação; CPU: pico de 80% da solicitação"
+            }
+          ]
+        ]
+      ],
+      "attention_workloads": [],
+      "namespaces_at_risk": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "40%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "12000%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limite; Memória: pico de 24000% da solicitação; CPU: pico de 80% da solicitação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 crítica"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ]
+        ]
+      ],
+      "replica_ceiling": [],
+      "hpa_note": "",
+      "nodepool_status": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Estável"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ]
+        ]
+      ],
+      "action_plan": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de memória e o perfil de consumo observado. (namespaces)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de memória e o consumo observado. (namespaces)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de memória e o perfil de consumo observado. (cargas de trabalho)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de memória e o consumo observado. (cargas de trabalho)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "5"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Investigar eventos, restrições de agendamento e tempo de estabilização."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "6"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de CPU e o consumo observado. (namespaces)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "7"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de CPU e o consumo observado. (cargas de trabalho)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ]
+      ],
+      "material_limitations": []
+    },
+    "critical": {
+      "critical_workloads": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limite; Memória: pico de 24000% da solicitação; CPU: pico de 80% da solicitação"
+            }
+          ]
+        ]
+      ],
+      "attention_workloads": [],
+      "namespaces_at_risk": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "40%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "12000%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limite; Memória: pico de 24000% da solicitação; CPU: pico de 80% da solicitação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 crítica"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ]
+        ]
+      ],
+      "replica_ceiling": [],
+      "hpa_note": "",
+      "nodepool_status": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Estável"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ]
+        ]
+      ],
+      "action_plan": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de memória e o perfil de consumo observado. (namespaces)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de memória e o consumo observado. (namespaces)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de memória e o perfil de consumo observado. (cargas de trabalho)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de memória e o consumo observado. (cargas de trabalho)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ]
+      ],
+      "material_limitations": []
+    }
+  },
   "warnings": [],
   "notices": []
 }

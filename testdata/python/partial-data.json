@@ -354,6 +354,778 @@
       "evidence": []
     }
   ],
+  "recommendations": [
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "exact",
+      "action": "Revisar o limite de memória e o perfil de consumo observado."
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "exact",
+      "action": "Revisar a solicitação de memória e o consumo observado."
+    },
+    {
+      "code": "NAMESPACE_CPU_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact",
+      "action": "Definir ou justificar o limite de CPU conforme a política da carga de trabalho."
+    },
+    {
+      "code": "NAMESPACE_CPU_REQUEST_MISSING",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact",
+      "action": "Definir a solicitação de CPU com base no consumo observado."
+    },
+    {
+      "code": "NAMESPACE_MEMORY_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact",
+      "action": "Definir ou justificar o limite de memória conforme a política da carga de trabalho."
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_MISSING",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact",
+      "action": "Definir a solicitação de memória com base no consumo observado."
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "exact",
+      "action": "Revisar a solicitação de CPU e o consumo observado."
+    },
+    {
+      "code": "NODE_AUTOSCALING_UNKNOWN",
+      "severity": "attention",
+      "scope_type": "cluster",
+      "scopes": [
+        "cluster"
+      ],
+      "confidence": "unknown",
+      "action": "Confirmar operacionalmente se o escalonamento automático do cluster está habilitado."
+    }
+  ],
+  "summary": {
+    "namespaces": 1,
+    "workloads": 1,
+    "hpas": 0,
+    "nodes": 1,
+    "nodepools": 1,
+    "findings": 10,
+    "recommendations": 8,
+    "healthy": 2,
+    "attention": 6,
+    "critical": 2,
+    "workloads_without_hpa": 1
+  },
+  "workload_coverage": [
+    {
+      "namespace": "payments",
+      "kind": "Deployment",
+      "name": "payments-web",
+      "observed_usage": true,
+      "hpa_coverage": "unknown"
+    },
+    {
+      "namespace": "payments",
+      "kind": "StatefulSet",
+      "name": "payments-worker",
+      "observed_usage": false,
+      "hpa_coverage": "uncovered"
+    }
+  ],
+  "executive": {
+    "attention": {
+      "critical_workloads": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limite; Memória: pico de 24000% da solicitação; CPU: pico de 80% da solicitação"
+            }
+          ]
+        ]
+      ],
+      "attention_workloads": [],
+      "namespaces_at_risk": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limite; Memória: pico de 24000% da solicitação; CPU: pico de 80% da solicitação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 crítica"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ]
+        ]
+      ],
+      "replica_ceiling": [],
+      "hpa_note": "incomplete",
+      "nodepool_status": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Estável"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ]
+        ]
+      ],
+      "action_plan": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de memória e o perfil de consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de memória e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir ou justificar o limite de CPU conforme a política da carga de trabalho."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir a solicitação de CPU com base no consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "5"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir ou justificar o limite de memória conforme a política da carga de trabalho."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "6"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir a solicitação de memória com base no consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "7"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de CPU e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ]
+      ],
+      "material_limitations": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Histórico de HPA"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "As métricas necessárias não foram encontradas."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Cobertura de cargas de trabalho sem HPA"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "O inventário de cargas de trabalho ou alvos de HPA está incompleto."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Identificação de pools de nós"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os rótulos de pools de nós não foram encontrados."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Utilização dos nós"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "As métricas necessárias não foram encontradas."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Escalonamento automático de nós"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "O estado do escalonamento automático de nós não pôde ser determinado."
+            }
+          ]
+        ]
+      ]
+    },
+    "critical": {
+      "critical_workloads": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limite; Memória: pico de 24000% da solicitação; CPU: pico de 80% da solicitação"
+            }
+          ]
+        ]
+      ],
+      "attention_workloads": [],
+      "namespaces_at_risk": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limite; Memória: pico de 24000% da solicitação; CPU: pico de 80% da solicitação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 crítica"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ]
+        ]
+      ],
+      "replica_ceiling": [],
+      "hpa_note": "incomplete",
+      "nodepool_status": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Estável"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ]
+        ]
+      ],
+      "action_plan": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de memória e o perfil de consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de memória e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ]
+      ],
+      "material_limitations": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Histórico de HPA"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "As métricas necessárias não foram encontradas."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Cobertura de cargas de trabalho sem HPA"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "O inventário de cargas de trabalho ou alvos de HPA está incompleto."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Identificação de pools de nós"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os rótulos de pools de nós não foram encontrados."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Utilização dos nós"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "As métricas necessárias não foram encontradas."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Escalonamento automático de nós"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "O estado do escalonamento automático de nós não pôde ser determinado."
+            }
+          ]
+        ]
+      ]
+    }
+  },
   "warnings": [
     "As métricas necessárias não foram encontradas.",
     "O inventário de cargas de trabalho ou alvos de HPA está incompleto.",

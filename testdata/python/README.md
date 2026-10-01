@@ -13,7 +13,7 @@ committed.
 
 | File | Holds |
 |---|---|
-| `<scenario>.json` | The namespaces, the workloads, the HPAs, the workloads without an HPA, the nodes, the node pools, the cluster autoscaling evidence, the node pressure, every finding, and the warnings and notices of the five collectors |
+| `<scenario>.json` | The namespaces, the workloads, the HPAs, the workloads without an HPA, the nodes, the node pools, the cluster autoscaling evidence, the node pressure, every finding, the recommendations, the summary counts, the coverage of every workload row, the rows of the seven tables of the executive body at the two effective minimums, and the warnings and notices of the five collectors |
 | `<scenario>.queries.txt` | Every request the original sends for the scenario, in order, one line for each: the path, a tab, the query |
 
 There is one pair of files for each of the eight scenarios: the six of
@@ -47,6 +47,21 @@ In a `.json` file:
   is a number, `true` or `false`, or a text, as the original writes it. The
   pair `approximate` is a mark of the original that this project does not
   store: the confidence `inferred` of the finding says the same.
+- A recommendation holds its code, severity, scope type, scopes (the
+  distinct scope names, sorted), confidence, and the action sentence of the
+  original, in Portuguese, which this project does not store and does not
+  compare.
+- `summary` holds the eleven counts the mapper of the original writes:
+  namespaces, workloads, hpas, nodes, nodepools, findings, recommendations,
+  healthy, attention, critical, workloads_without_hpa.
+- `workload_coverage` holds every row the mapper of the original publishes,
+  measured and coverage-only, with `observed_usage` and `hpa_coverage`.
+- `executive` holds, under `attention` and `critical` (the two effective
+  minimums of the executive body), the rows of its seven tables as the row
+  functions of the original's renderer give them, each cell a list of runs
+  read from the Typst snippets: a run is `ident`, `placeholder`, `text`,
+  or `status` with its status kind, and its text as the original writes
+  it, in Portuguese; `hpa_note` is `incomplete`, `partial`, or empty.
 - The warnings and notices are the sentences of the original, in Portuguese,
   in the order namespace, workload, hpa, hpa coverage, node, each once.
 - A number is written as Python writes it, which is the shortest text that
@@ -54,12 +69,12 @@ In a `.json` file:
 
 ## How it was recorded
 
-- Date: 2026-09-30. The query lists were recorded again on that date and
-  did not change from the recording of 2026-09-29.
+- Date: 2026-10-01. The query lists were recorded again on that date and
+  did not change from the recordings of 2026-09-29 and 2026-09-30.
 - Source: `kubernetes-report` 1.11.0, imported from its source folder.
 - Python 3.14.7 with `requests` 2.34.2, in an environment of its own.
 - The answers were served by `cmd/fake-prometheus` of this project, built
-  from the commit `e6c532e`, so that both tools read the same answers from
+  from the commit 156b9a6 of the branch of part 2.4, so that both tools read the same answers from
   the same server.
 - The input is the fixed input of the golden files of this project: cluster
   `prod`, namespace `payments`, excluded container `istio-proxy`, period
@@ -68,9 +83,17 @@ In a `.json` file:
   node autoscaling are those of each scenario, as `internal/promtest` lists
   them.
 - The numbers were read from the result of `preflight_report`,
-  `collect_evidence`, and `analyze_evidence` of the module `collection`. The
+  `collect_evidence`, and `analyze_evidence` of the module `collection`; the
+  summary and the coverage from `map_summary` and `map_workloads` of the
+  module `snapshots.mapper_v1`; the executive rows from the row functions of
+  the modules `renderers.workloads`, `renderers.nodes`, and
+  `renderers.capabilities`, with the options of the executive profile. The
   requests were read by a wrapper around the method of the client that sends
   a request.
+- The records of the mapper subclass a base class of the library `pydantic`,
+  which the environment does not hold; a stand-in of twenty lines that fills
+  the annotated fields of a record from its keyword arguments and class
+  defaults stood for it, which is all the mapper uses of the library.
 
 The script and its environment are not tracked. Nothing of the original was
 changed.
@@ -78,14 +101,14 @@ changed.
 ## SHA-256
 
 ```text
-0b8c536e6540f1f78be730180a185977cab053049a1665a0df44e5635735f483  direct-complete.json
-0dcd39ce6b68ed24069fb24c0344983073a24850b2d7e8390937404ef03bdf3a  edge-scaling.json
-2119d8db5ae47393789134b5a9c529e78f59a39a165d1aa735256a83b676665b  edge-values.json
-af6dacd88fa5f7bf4621b53c92243a62c99b3d17b38bcd0a82c6aa3b0134363d  grafana-authenticated.json
-f7248d344bc709270d7d9d14a43eaf6e57908e4ece8e872f29801d460b28cff6  partial-data.json
-7d1dd022702a34059a1e9e16b08c4f73c48da1d43aba33dbb796116bd1ceed5a  raw-fallback.json
-1406129bc402d2d494b9efc6fc5405ecae2fce1c3729025c7ece2921908ddc0d  thanos-multicluster.json
-79fc52777ea677af285cc572722cb8becf96b78bf9840a39b997fb02a77e132b  value-edge-cases.json
+90e491c7e2cb4132d5ef9774b515f636bf68b2e759275f3e2797da1aa1dcea79  direct-complete.json
+1fddbeab42ee6f9ca2b147f8ebe18d7f32f61c17ef4adfee84337e4a08947b6a  edge-scaling.json
+3bbd3804fda091d7efe9f97269b21dbfb79cca694b31a1779aa7805dbc968910  edge-values.json
+98f5d628bcf3781be9c1f694e911cdcaa79a66965f9b467f0ced023f735391ae  grafana-authenticated.json
+7f4eafc98755e3f9c0958974fb0530c43d8fd6044b962f9779ff4b3a3d46a720  partial-data.json
+fba40069ebeced6521d48a677e721b4e51b368b5619604c22cf0238f4f961cf1  raw-fallback.json
+9b61e84fd168ae9748f25bf912e4a192fd5106c0dff7b3e2595a6265a1d7a9e0  thanos-multicluster.json
+0c6c75bc9e1e07f58899ae6bca71a427d89d5b71c4ab621284bd8c9208c53c72  value-edge-cases.json
 51ea605045169cf7397bef8c6887d931ad86fb4c0d7c03b639645f68cd33a540  direct-complete.queries.txt
 f552ed8b6bb6b27dec20c03c3e7bc5a2db2292b3f3d32c06f16e79dec02bedaa  edge-scaling.queries.txt
 51ea605045169cf7397bef8c6887d931ad86fb4c0d7c03b639645f68cd33a540  edge-values.queries.txt

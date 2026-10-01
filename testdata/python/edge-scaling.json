@@ -872,6 +872,1170 @@
       ]
     }
   ],
+  "recommendations": [
+    {
+      "code": "NODE_CPU_USAGE_CRITICAL",
+      "severity": "critical",
+      "scope_type": "node",
+      "scopes": [
+        "aks-agentpool-12345678-vmss000000"
+      ],
+      "confidence": "exact",
+      "action": "Acompanhar pressão e capacidade do nó."
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "exact",
+      "action": "Revisar o limite de memória e o perfil de consumo observado."
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "exact",
+      "action": "Revisar a solicitação de memória e o consumo observado."
+    },
+    {
+      "code": "HPA_MAX_REPLICAS_REACHED",
+      "severity": "critical",
+      "scope_type": "hpa",
+      "scopes": [
+        "payments/web"
+      ],
+      "confidence": "exact",
+      "action": "Revisar o limite máximo e a capacidade da carga de trabalho."
+    },
+    {
+      "code": "NODE_CPU_REQUEST_HIGH",
+      "severity": "critical",
+      "scope_type": "node",
+      "scopes": [
+        "pool-a-1"
+      ],
+      "confidence": "exact",
+      "action": "Revisar solicitações e margem de agendamento."
+    },
+    {
+      "code": "NAMESPACE_CPU_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "inferred",
+      "action": "Revisar o limite de CPU e o perfil de consumo observado."
+    },
+    {
+      "code": "NAMESPACE_CPU_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "inferred",
+      "action": "Revisar a solicitação de CPU e o consumo observado."
+    },
+    {
+      "code": "NAMESPACE_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "inferred",
+      "action": "Revisar o limite de memória e o perfil de consumo observado."
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "inferred",
+      "action": "Revisar a solicitação de memória e o consumo observado."
+    },
+    {
+      "code": "NODE_MEMORY_USAGE_ATTENTION",
+      "severity": "attention",
+      "scope_type": "node",
+      "scopes": [
+        "aks-agentpool-12345678-vmss000000"
+      ],
+      "confidence": "exact",
+      "action": "Acompanhar pressão e capacidade do nó."
+    },
+    {
+      "code": "DEPLOYMENT_WITHOUT_HPA",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/api"
+      ],
+      "confidence": "exact",
+      "action": "Validar se o escalonamento horizontal é necessário para este Deployment."
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "exact",
+      "action": "Revisar a solicitação de CPU e o consumo observado."
+    },
+    {
+      "code": "NODEPOOL_CPU_UNEVEN",
+      "severity": "attention",
+      "scope_type": "nodepool",
+      "scopes": [
+        "pool-a"
+      ],
+      "confidence": "exact",
+      "action": "Investigar distribuição de carga e restrições de agendamento."
+    },
+    {
+      "code": "NODEPOOL_MEMORY_UNEVEN",
+      "severity": "attention",
+      "scope_type": "nodepool",
+      "scopes": [
+        "pool-a"
+      ],
+      "confidence": "exact",
+      "action": "Investigar distribuição de carga e restrições de agendamento."
+    },
+    {
+      "code": "NODE_LOW_UTILIZATION",
+      "severity": "attention",
+      "scope_type": "node",
+      "scopes": [
+        "pool-a-1"
+      ],
+      "confidence": "exact",
+      "action": "Avaliar consolidação e redução segura de capacidade."
+    },
+    {
+      "code": "NODE_AUTOSCALING_NEAR_MAX",
+      "severity": "attention",
+      "scope_type": "cluster",
+      "scopes": [
+        "cluster"
+      ],
+      "confidence": "inferred",
+      "action": "Revisar o máximo configurado e a margem do cluster."
+    },
+    {
+      "code": "HPA_REPLICA_DIVERGENCE",
+      "severity": "attention",
+      "scope_type": "hpa",
+      "scopes": [
+        "payments/idle"
+      ],
+      "confidence": "inferred",
+      "action": "Investigar eventos, restrições de agendamento e tempo de estabilização."
+    },
+    {
+      "code": "NODE_OVERREQUESTED",
+      "severity": "attention",
+      "scope_type": "node",
+      "scopes": [
+        "pool-a-1"
+      ],
+      "confidence": "inferred",
+      "action": "Revisar o dimensionamento das cargas de trabalho agendadas no nó."
+    },
+    {
+      "code": "NODEPOOL_UNKNOWN",
+      "severity": "attention",
+      "scope_type": "nodepool",
+      "scopes": [
+        "unknown"
+      ],
+      "confidence": "unknown",
+      "action": "Confirmar o pool de nós sem inferir identidade do provedor."
+    }
+  ],
+  "summary": {
+    "namespaces": 1,
+    "workloads": 1,
+    "hpas": 4,
+    "nodes": 4,
+    "nodepools": 3,
+    "findings": 26,
+    "recommendations": 19,
+    "healthy": 7,
+    "attention": 10,
+    "critical": 9,
+    "workloads_without_hpa": 2
+  },
+  "workload_coverage": [
+    {
+      "namespace": "payments",
+      "kind": "Deployment",
+      "name": "api",
+      "observed_usage": false,
+      "hpa_coverage": "uncovered"
+    },
+    {
+      "namespace": "payments",
+      "kind": "Deployment",
+      "name": "payments-web",
+      "observed_usage": true,
+      "hpa_coverage": "covered"
+    },
+    {
+      "namespace": "payments",
+      "kind": "StatefulSet",
+      "name": "queue",
+      "observed_usage": false,
+      "hpa_coverage": "uncovered"
+    }
+  ],
+  "executive": {
+    "attention": {
+      "critical_workloads": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limite; Memória: pico de 24000% da solicitação; CPU: pico de 80% da solicitação"
+            }
+          ]
+        ]
+      ],
+      "attention_workloads": [],
+      "namespaces_at_risk": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "330%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "12000%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limite; Memória: pico de 24000% da solicitação; CPU: pico de 80% da solicitação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 crítica"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ]
+        ]
+      ],
+      "replica_ceiling": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Deployment"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4 observadas / máximo 4"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Máximo do HPA atingido"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Deployment"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Sem HPA"
+            }
+          ]
+        ]
+      ],
+      "hpa_note": "partial",
+      "nodepool_status": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "agentpool"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Uso de CPU requer atenção"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Solicitações de CPU elevadas"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "placeholder",
+              "text": "Indeterminado"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Atenção"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Identificação do pool indisponível"
+            }
+          ]
+        ]
+      ],
+      "action_plan": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite máximo e a capacidade da carga de trabalho."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de CPU e o perfil de consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de CPU e o consumo observado. (namespaces)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de memória e o perfil de consumo observado. (namespaces)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "5"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de memória e o consumo observado. (namespaces)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "6"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de memória e o perfil de consumo observado. (cargas de trabalho)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "7"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de memória e o consumo observado. (cargas de trabalho)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "8"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Validar se o escalonamento horizontal é necessário para este Deployment."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "9"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Investigar eventos, restrições de agendamento e tempo de estabilização."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "idle"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "10"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de CPU e o consumo observado. (cargas de trabalho)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ]
+      ],
+      "material_limitations": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Histórico de HPA"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Valores ambíguos de configuração ou alvo de HPA foram omitidos."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Interpretação"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "As evidências de capacidade dos nós estão incompletas."
+            }
+          ]
+        ]
+      ]
+    },
+    "critical": {
+      "critical_workloads": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limite; Memória: pico de 24000% da solicitação; CPU: pico de 80% da solicitação"
+            }
+          ]
+        ]
+      ],
+      "attention_workloads": [],
+      "namespaces_at_risk": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "330%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "12000%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limite; Memória: pico de 24000% da solicitação; CPU: pico de 80% da solicitação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 crítica"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ]
+        ]
+      ],
+      "replica_ceiling": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Deployment"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4 observadas / máximo 4"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Máximo do HPA atingido"
+            }
+          ]
+        ]
+      ],
+      "hpa_note": "partial",
+      "nodepool_status": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "agentpool"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Uso de CPU requer atenção"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Solicitações de CPU elevadas"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "placeholder",
+              "text": "Indeterminado"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Atenção"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Identificação do pool indisponível"
+            }
+          ]
+        ]
+      ],
+      "action_plan": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite máximo e a capacidade da carga de trabalho."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de CPU e o perfil de consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de CPU e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de memória e o perfil de consumo observado. (namespaces)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "5"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de memória e o consumo observado. (namespaces)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "6"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de memória e o perfil de consumo observado. (cargas de trabalho)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "7"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de memória e o consumo observado. (cargas de trabalho)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ]
+      ],
+      "material_limitations": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Histórico de HPA"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Valores ambíguos de configuração ou alvo de HPA foram omitidos."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Interpretação"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "As evidências de capacidade dos nós estão incompletas."
+            }
+          ]
+        ]
+      ]
+    }
+  },
   "warnings": [
     "Valores ambíguos de configuração ou alvo de HPA foram omitidos.",
     "As evidências de capacidade dos nós estão incompletas."

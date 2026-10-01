@@ -585,6 +585,711 @@
       "evidence": []
     }
   ],
+  "recommendations": [
+    {
+      "code": "WORKLOAD_CPU_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/api"
+      ],
+      "confidence": "exact",
+      "action": "Revisar o limite de CPU e o perfil de consumo observado."
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/api"
+      ],
+      "confidence": "exact",
+      "action": "Revisar a solicitação de CPU e o consumo observado."
+    },
+    {
+      "code": "NAMESPACE_CPU_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact",
+      "action": "Definir ou justificar o limite de CPU conforme a política da carga de trabalho."
+    },
+    {
+      "code": "WORKLOAD_MEMORY_OVERREQUESTED",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/api"
+      ],
+      "confidence": "exact",
+      "action": "Revisar o dimensionamento da solicitação de memória."
+    },
+    {
+      "code": "WORKLOAD_CPU_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/queue"
+      ],
+      "confidence": "exact",
+      "action": "Definir ou justificar o limite de CPU conforme a política da carga de trabalho."
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/queue"
+      ],
+      "confidence": "exact",
+      "action": "Definir a solicitação de CPU com base no consumo observado."
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/queue"
+      ],
+      "confidence": "exact",
+      "action": "Definir ou justificar o limite de memória conforme a política da carga de trabalho."
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/queue"
+      ],
+      "confidence": "exact",
+      "action": "Definir a solicitação de memória com base no consumo observado."
+    },
+    {
+      "code": "NODE_AUTOSCALING_NEAR_MAX",
+      "severity": "attention",
+      "scope_type": "cluster",
+      "scopes": [
+        "cluster"
+      ],
+      "confidence": "inferred",
+      "action": "Revisar o máximo configurado e a margem do cluster."
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "inferred",
+      "action": "Revisar a solicitação de memória e o consumo observado."
+    },
+    {
+      "code": "HPA_REPLICA_DIVERGENCE",
+      "severity": "attention",
+      "scope_type": "hpa",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "inferred",
+      "action": "Investigar eventos, restrições de agendamento e tempo de estabilização."
+    }
+  ],
+  "summary": {
+    "namespaces": 1,
+    "workloads": 2,
+    "hpas": 1,
+    "nodes": 1,
+    "nodepools": 1,
+    "findings": 17,
+    "recommendations": 11,
+    "healthy": 6,
+    "attention": 9,
+    "critical": 2,
+    "workloads_without_hpa": 1
+  },
+  "workload_coverage": [
+    {
+      "namespace": "payments",
+      "kind": "Deployment",
+      "name": "api",
+      "observed_usage": true,
+      "hpa_coverage": "unknown"
+    },
+    {
+      "namespace": "payments",
+      "kind": "StatefulSet",
+      "name": "payments-worker",
+      "observed_usage": false,
+      "hpa_coverage": "uncovered"
+    },
+    {
+      "namespace": "payments",
+      "kind": "StatefulSet",
+      "name": "queue",
+      "observed_usage": true,
+      "hpa_coverage": "unknown"
+    }
+  ],
+  "executive": {
+    "attention": {
+      "critical_workloads": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "CPU: pico de 90% do limite; CPU: pico de 90% da solicitação; Memória: média de 27,5% da solicitação"
+            }
+          ]
+        ]
+      ],
+      "attention_workloads": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "queue"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Solicitação e limite de CPU e memória não observados"
+            }
+          ]
+        ]
+      ],
+      "namespaces_at_risk": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "50%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "CPU: pico de 90% do limite; CPU: pico de 90% da solicitação; Memória: média de 27,5% da solicitação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 crítica · 1 alta"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ]
+        ]
+      ],
+      "replica_ceiling": [],
+      "hpa_note": "",
+      "nodepool_status": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Estável"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ]
+        ]
+      ],
+      "action_plan": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de CPU e o perfil de consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de CPU e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Investigar eventos, restrições de agendamento e tempo de estabilização."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir ou justificar o limite de CPU conforme a política da carga de trabalho. (namespaces)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "5"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de memória e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "6"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir ou justificar o limite de CPU conforme a política da carga de trabalho. (cargas de trabalho)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "queue"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "7"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir a solicitação de CPU com base no consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "queue"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "8"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir ou justificar o limite de memória conforme a política da carga de trabalho."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "queue"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "9"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o dimensionamento da solicitação de memória."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "10"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir a solicitação de memória com base no consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "queue"
+            }
+          ]
+        ]
+      ],
+      "material_limitations": []
+    },
+    "critical": {
+      "critical_workloads": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "CPU: pico de 90% do limite; CPU: pico de 90% da solicitação; Memória: média de 27,5% da solicitação"
+            }
+          ]
+        ]
+      ],
+      "attention_workloads": [],
+      "namespaces_at_risk": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "50%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "CPU: pico de 90% do limite; CPU: pico de 90% da solicitação; Memória: média de 27,5% da solicitação"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 crítica"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ]
+        ]
+      ],
+      "replica_ceiling": [],
+      "hpa_note": "",
+      "nodepool_status": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Estável"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ]
+        ]
+      ],
+      "action_plan": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limite de CPU e o perfil de consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar a solicitação de CPU e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ]
+        ]
+      ],
+      "material_limitations": []
+    }
+  },
   "warnings": [],
   "notices": [
     "1 carga de trabalho deixada de fora por não ter consumo observado no período.",
