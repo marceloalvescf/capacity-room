@@ -166,9 +166,95 @@ header_memory_peak = "Memória pico"
 header_memory_request = "% Memória/Request"
 header_memory_limit = "% Memória/Limit"
 
+[sections.hpas]
+heading = "Histórico de HPA"
+intro = "Comportamento dos Horizontal Pod Autoscalers no período de {{.Period}}. A situação indica se o máximo configurado foi observado."
+observed_heading = "HPAs observados"
+uncovered_heading = "Workloads sem HPA"
+header_hpa = "HPA"
+header_spec_min = "Spec Min"
+header_spec_max = "Spec Max"
+header_current_average = "Atual (Avg)"
+header_min_reached = "Mín Atingido"
+header_max_reached = "Máx Atingido"
+header_situation = "Situação"
+header_kind = "Tipo"
+header_workload = "Workload"
+header_pods = "Qtde. Pods"
+situation_max_reached = "Máximo atingido"
+situation_pinned = "Fixado"
+situation_below_max = "Abaixo do máximo"
+situation_no_hpa = "Sem HPA"
+situation_specific_strategy = "Estratégia de escala específica"
+empty_namespace = "Nenhum HPA ou workload sem HPA foi observado."
+empty_namespace_partial = "Nenhum registro válido foi obtido para este namespace."
+note_incomplete_title = "Dados incompletos"
+note_incomplete = "Parte dos dados de HPA está indisponível para o período analisado."
+note_partial_title = "Cobertura parcial"
+note_partial = "A cobertura de HPA está parcial; somente registros válidos são exibidos."
+
+[sections.nodepools]
+heading = "Uso de recursos por node pool"
+summary_heading = "Sumário por node pool"
+profile_heading = "Perfil de uso agregado por node pool"
+detail_heading = "Detalhamento por node"
+pool_label = "Node pool:"
+header_pool = "Node pool"
+header_nodes = "Nodes"
+header_cpu_average = "CPU média"
+header_cpu_peak = "CPU pico"
+header_memory_average = "Memória média"
+header_memory_peak = "Memória pico"
+header_confidence = "Confiança"
+header_cpu_allocatable = "CPU alocável/node"
+header_cpu_used = "CPU usada/node"
+header_cpu_requested = "CPU solicitada/node"
+header_memory_allocatable = "Memória alocável/node"
+header_memory_used = "Memória usada/node"
+header_memory_requested = "Memória solicitada/node"
+header_node = "Node"
+header_cpu_avg_peak = "CPU méd/pico"
+header_memory_avg_peak = "Mem méd/pico"
+header_reason = "Motivo"
+header_state = "Estado"
+empty_summary = "Nenhum node pool foi identificado."
+empty_profile = "Nenhum perfil agregado está disponível."
+empty_detail = "Nenhum node foi identificado para os filtros atuais."
+no_finding = "Sem achado"
+
+[node_state]
+ready = "Pronto"
+not_ready = "Não pronto"
+schedulable = "Agendável"
+unschedulable = "Não agendável"
+
+[confidence]
+exact = "Exata"
+inferred = "Inferida"
+unknown = "Desconhecida"
+
+[reason.usage_peak]
+cpu = "CPU: pico de {{.Percent}} de utilização"
+memory = "Memória: pico de {{.Percent}} de utilização"
+
+[reason.usage_average]
+cpu = "CPU: média de {{.Percent}} de utilização"
+memory = "Memória: média de {{.Percent}} de utilização"
+
+[reason.request_high]
+cpu = "CPU: {{.Percent}} solicitada do alocável"
+memory = "Memória: {{.Percent}} solicitada do alocável"
+
+[finding.node_overrequested]
+summary = "Requests elevados coexistem com baixa utilização real observada."
+
+[finding.node_low_utilization]
+summary = "O node apresentou baixa utilização real média."
+
 [placeholder]
 unavailable = "Indisponível"
 no_base = "Não definido"
+undetermined = "Indeterminado"
 
 [notes]
 heading = "Avisos de interpretação"
