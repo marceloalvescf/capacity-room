@@ -617,10 +617,10 @@ The observations:
 | `TestEveryDefinitionHasItsSentences` | every definition of `analysis.Registry`, both files | `FindingSummary` and `FindingAction` of its family and resource are entries with no parameter; `FindingObservation` is an entry exactly when the family is in `ObservationFamilies` |
 | `TestFindingActionsAreDistinct` | both files | no two pairs give one action text in one language (R65); the same for the summaries |
 | `TestFindingWordingMatchesThePlan` | the tables above as a Go table (`findingWordingTable` with pair, pt summary, pt action, en summary, en action; `observationWordingTable`) | every row equals the file |
-| `TestKeysEqualTheFiles` | | passes with the 74 keys of the two tables (66 plus 8 observations) and without `finding.node_overrequested.summary` counted twice |
+| `TestKeysEqualTheFiles` | | passes with the 75 keys of the two tables (66 plus 9 observations) and without `finding.node_overrequested.summary` counted twice |
 | `TestNoBannedTerm` | | no entry named |
 | `TestEveryKeyIsUsed` | | red on `FindingAction` and `FindingObservation`, which Task 6 calls; the brief says so (E74) |
-| `TestKeysHoldTheNewFamilies` (keys_test.go) | | adds the count of `finding.` keys: 74 |
+| `TestKeysHoldTheNewFamilies` (keys_test.go) | | adds the count of `finding.` keys: 75 |
 
 - [ ] **Step 1 (main thread):** Write the entries into both files. Commit them alone, so the subagent starts from a committed tree.
 
