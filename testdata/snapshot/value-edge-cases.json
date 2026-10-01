@@ -151,6 +151,7 @@
     "nodes": 1,
     "nodepools": 1,
     "findings": 13,
+    "recommendations": 8,
     "healthy": 5,
     "attention": 4,
     "critical": 4,
@@ -683,6 +684,80 @@
       "scope_name": "payments/payments-worker",
       "evidence": [],
       "confidence": "exact"
+    }
+  ],
+  "recommendations": [
+    {
+      "code": "NAMESPACE_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NODE_AUTOSCALING_DISABLED",
+      "severity": "attention",
+      "scope_type": "cluster",
+      "scopes": [
+        "cluster"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NAMESPACE_CPU_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "HPA_REPLICA_DIVERGENCE",
+      "severity": "attention",
+      "scope_type": "hpa",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "inferred"
     }
   ]
 }

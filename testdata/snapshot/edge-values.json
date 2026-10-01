@@ -166,6 +166,7 @@
     "nodes": 1,
     "nodepools": 1,
     "findings": 17,
+    "recommendations": 11,
     "healthy": 6,
     "attention": 9,
     "critical": 2,
@@ -808,6 +809,107 @@
       "scope_name": "payments/payments-worker",
       "evidence": [],
       "confidence": "exact"
+    }
+  ],
+  "recommendations": [
+    {
+      "code": "WORKLOAD_CPU_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/api"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/api"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NAMESPACE_CPU_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_OVERREQUESTED",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/api"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_CPU_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/queue"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/queue"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/queue"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/queue"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NODE_AUTOSCALING_NEAR_MAX",
+      "severity": "attention",
+      "scope_type": "cluster",
+      "scopes": [
+        "cluster"
+      ],
+      "confidence": "inferred"
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "inferred"
+    },
+    {
+      "code": "HPA_REPLICA_DIVERGENCE",
+      "severity": "attention",
+      "scope_type": "hpa",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "inferred"
     }
   ]
 }
