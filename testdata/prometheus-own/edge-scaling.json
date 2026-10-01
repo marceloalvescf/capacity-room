@@ -1,0 +1,2317 @@
+{
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "vector(1)",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": []
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_node_info",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "cluster": "prod"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "container_cpu_usage_seconds_total",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "container_memory_working_set_bytes",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "namespace_workload_pod:kube_pod_owner:relabel",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_pod_owner",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_pod_container_resource_requests",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_pod_container_resource_requests",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_pod_container_resource_limits",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_pod_container_resource_limits",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_pod_container_resource_requests_cpu_cores",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_pod_container_resource_requests_memory_bytes",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_pod_container_resource_limits_cpu_cores",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_pod_container_resource_limits_memory_bytes",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_horizontalpodautoscaler_info",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_horizontalpodautoscaler_spec_min_replicas",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_horizontalpodautoscaler_spec_max_replicas",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_horizontalpodautoscaler_status_current_replicas",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_horizontalpodautoscaler_status_desired_replicas",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_deployment_labels",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": []
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_deployment_spec_replicas",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_statefulset_labels",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_node_info",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_node_labels",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "instance:node_cpu_utilisation:rate5m",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "instance:node_memory_utilisation:ratio",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "node_cpu_seconds_total",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "node_memory_MemAvailable_bytes",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "node_memory_MemTotal_bytes",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "cluster_autoscaler_",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {},
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_pod_status_phase",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments"
+              },
+              "value": [
+                1784136600,
+                "3"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "namespace_workload_pod:kube_pod_owner:relabel",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "workload": "payments-web",
+                "workload_type": "Deployment"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_horizontalpodautoscaler_info",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "web",
+                "scaletargetref_kind": "Deployment",
+                "scaletargetref_name": "payments-web"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "fixed",
+                "scaletargetref_kind": "Deployment",
+                "scaletargetref_name": "fixed"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "idle",
+                "scaletargetref_kind": "Deployment",
+                "scaletargetref_name": "idle"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "dup",
+                "scaletargetref_kind": "Deployment",
+                "scaletargetref_name": "dup"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_horizontalpodautoscaler_spec_min_replicas",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "web"
+              },
+              "value": [
+                1784136600,
+                "2"
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "fixed"
+              },
+              "value": [
+                1784136600,
+                "3"
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "idle"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "dup"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_horizontalpodautoscaler_spec_max_replicas",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "web"
+              },
+              "value": [
+                1784136600,
+                "4"
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "fixed"
+              },
+              "value": [
+                1784136600,
+                "3"
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "idle"
+              },
+              "value": [
+                1784136600,
+                "5"
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "dup",
+                "job": "ksm-a"
+              },
+              "value": [
+                1784136600,
+                "4"
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "dup",
+                "job": "ksm-b"
+              },
+              "value": [
+                1784136600,
+                "6"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_deployment_spec_replicas",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "deployment": "payments-web"
+              },
+              "value": [
+                1784136600,
+                "3"
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "deployment": "api"
+              },
+              "value": [
+                1784136600,
+                "2"
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "deployment": "batch"
+              },
+              "value": [
+                1784136600,
+                "0"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_statefulset_labels",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "statefulset": "queue"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_node_info",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1",
+                "internal_ip": "10.0.0.1",
+                "hostname": "pool-a-1"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2",
+                "internal_ip": "10.0.0.2"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "node": "aks-agentpool-12345678-vmss000000",
+                "internal_ip": "10.0.0.3"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "node_uname_info",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1",
+                "instance": "10.0.0.1:9100",
+                "nodename": "pool-a-1"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "instance": "10.0.0.2:9100",
+                "nodename": "pool-a-2"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "instance": "10.0.0.3:9100",
+                "nodename": "aks-agentpool-12345678-vmss000000"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_node_labels",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1",
+                "label_agentpool": "pool-a"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2",
+                "label_agentpool": "pool-a"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_node_status_capacity",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1"
+              },
+              "value": [
+                1784136600,
+                "4"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2"
+              },
+              "value": [
+                1784136600,
+                "4"
+              ]
+            },
+            {
+              "metric": {
+                "node": "aks-agentpool-12345678-vmss000000"
+              },
+              "value": [
+                1784136600,
+                "8"
+              ]
+            },
+            {
+              "metric": {
+                "node": "orphan"
+              },
+              "value": [
+                1784136600,
+                "2"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_node_status_capacity",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1"
+              },
+              "value": [
+                1784136600,
+                "8e9"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2"
+              },
+              "value": [
+                1784136600,
+                "8e9"
+              ]
+            },
+            {
+              "metric": {
+                "node": "aks-agentpool-12345678-vmss000000"
+              },
+              "value": [
+                1784136600,
+                "16e9"
+              ]
+            },
+            {
+              "metric": {
+                "node": "orphan"
+              },
+              "value": [
+                1784136600,
+                "4e9"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_node_status_allocatable",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1"
+              },
+              "value": [
+                1784136600,
+                "4"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2"
+              },
+              "value": [
+                1784136600,
+                "4"
+              ]
+            },
+            {
+              "metric": {
+                "node": "aks-agentpool-12345678-vmss000000"
+              },
+              "value": [
+                1784136600,
+                "8"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_node_status_allocatable",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1"
+              },
+              "value": [
+                1784136600,
+                "7e9"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2"
+              },
+              "value": [
+                1784136600,
+                "7e9"
+              ]
+            },
+            {
+              "metric": {
+                "node": "aks-agentpool-12345678-vmss000000"
+              },
+              "value": [
+                1784136600,
+                "15e9"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_node_status_condition",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1",
+                "status": "true"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-1",
+                "status": "false"
+              },
+              "value": [
+                1784136600,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-1",
+                "status": "unknown"
+              },
+              "value": [
+                1784136600,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2",
+                "status": "true"
+              },
+              "value": [
+                1784136600,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2",
+                "status": "false"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2",
+                "status": "unknown"
+              },
+              "value": [
+                1784136600,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "node": "aks-agentpool-12345678-vmss000000",
+                "status": "true"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_node_spec_unschedulable",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1"
+              },
+              "value": [
+                1784136600,
+                "0"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "node": "aks-agentpool-12345678-vmss000000"
+              },
+              "value": [
+                1784136600,
+                "0"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_pod_container_resource_requests",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1",
+                "instance": "10.0.0.1:9100"
+              },
+              "value": [
+                1784136600,
+                "3.6"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2",
+                "instance": "10.0.0.2:9100"
+              },
+              "value": [
+                1784136600,
+                "1"
+              ]
+            },
+            {
+              "metric": {
+                "node": "aks-agentpool-12345678-vmss000000",
+                "instance": "10.0.0.3:9100"
+              },
+              "value": [
+                1784136600,
+                "2"
+              ]
+            },
+            {
+              "metric": {
+                "node": "orphan",
+                "instance": "10.0.0.9:9100"
+              },
+              "value": [
+                1784136600,
+                "0.5"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query",
+      "query_contains": "kube_pod_container_resource_requests",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "vector",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1",
+                "instance": "10.0.0.1:9100"
+              },
+              "value": [
+                1784136600,
+                "3.5e9"
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2",
+                "instance": "10.0.0.2:9100"
+              },
+              "value": [
+                1784136600,
+                "1e9"
+              ]
+            },
+            {
+              "metric": {
+                "node": "aks-agentpool-12345678-vmss000000",
+                "instance": "10.0.0.3:9100"
+              },
+              "value": [
+                1784136600,
+                "3e9"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "container_cpu_usage_seconds_total",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "3.3"
+                ],
+                [
+                  1784071800,
+                  "1.1"
+                ],
+                [
+                  1784093400,
+                  "2.2"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "container_memory_working_set_bytes",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "100"
+                ],
+                [
+                  1784093400,
+                  "120"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "kube_pod_container_resource_requests",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "0.5"
+                ],
+                [
+                  1784093400,
+                  "0.5"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "kube_pod_container_resource_requests",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "0.5"
+                ],
+                [
+                  1784093400,
+                  "0.5"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "kube_pod_container_resource_limits",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1.0"
+                ],
+                [
+                  1784093400,
+                  "1.0"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "kube_pod_container_resource_limits",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1.0"
+                ],
+                [
+                  1784093400,
+                  "1.0"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "container_cpu_usage_seconds_total",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "workload": "payments-web",
+                "workload_type": "Deployment"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "0.2"
+                ],
+                [
+                  1784093400,
+                  "0.4"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "container_memory_working_set_bytes",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "workload": "payments-web",
+                "workload_type": "Deployment"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "100"
+                ],
+                [
+                  1784093400,
+                  "120"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "kube_pod_container_resource_requests",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "workload": "payments-web",
+                "workload_type": "Deployment"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "0.5"
+                ],
+                [
+                  1784093400,
+                  "0.5"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "kube_pod_container_resource_requests",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "workload": "payments-web",
+                "workload_type": "Deployment"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "0.5"
+                ],
+                [
+                  1784093400,
+                  "0.5"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "kube_pod_container_resource_limits",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "workload": "payments-web",
+                "workload_type": "Deployment"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1.0"
+                ],
+                [
+                  1784093400,
+                  "1.0"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "kube_pod_container_resource_limits",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "workload": "payments-web",
+                "workload_type": "Deployment"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1.0"
+                ],
+                [
+                  1784093400,
+                  "1.0"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "kube_horizontalpodautoscaler_status_current_replicas",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "web"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "2"
+                ],
+                [
+                  1784093400,
+                  "4"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "fixed"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "3"
+                ],
+                [
+                  1784093400,
+                  "3"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "idle"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "0"
+                ],
+                [
+                  1784093400,
+                  "0"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "dup"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1"
+                ],
+                [
+                  1784093400,
+                  "2"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "kube_horizontalpodautoscaler_status_desired_replicas",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "web"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "2"
+                ],
+                [
+                  1784093400,
+                  "4"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "fixed"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "3"
+                ],
+                [
+                  1784093400,
+                  "3"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "idle"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1"
+                ],
+                [
+                  1784093400,
+                  "1"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "namespace": "payments",
+                "horizontalpodautoscaler": "dup"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1"
+                ],
+                [
+                  1784093400,
+                  "2"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "instance:node_cpu_utilisation:rate5m",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "20"
+                ],
+                [
+                  1784093400,
+                  "20"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "55"
+                ],
+                [
+                  1784093400,
+                  "60"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "instance": "10.0.0.3:9100"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "90"
+                ],
+                [
+                  1784093400,
+                  "95"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "instance:node_memory_utilisation:ratio",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "node": "pool-a-1"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "25"
+                ],
+                [
+                  1784093400,
+                  "25"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "node": "pool-a-2"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "50"
+                ],
+                [
+                  1784093400,
+                  "55"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "instance": "10.0.0.3:9100"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "70"
+                ],
+                [
+                  1784093400,
+                  "72"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "cluster_autoscaler_node_groups_count",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "node_group": "pool-a"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1"
+                ],
+                [
+                  1784093400,
+                  "1"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "node_group": "agentpool"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1"
+                ],
+                [
+                  1784093400,
+                  "1"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "cluster_autoscaler_nodes_count",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "node_group": "pool-a"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "2"
+                ],
+                [
+                  1784093400,
+                  "2"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "node_group": "agentpool"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1"
+                ],
+                [
+                  1784093400,
+                  "1"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "cluster_autoscaler_node_group_min_nodes_count",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "node_group": "pool-a"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1"
+                ],
+                [
+                  1784093400,
+                  "1"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "node_group": "agentpool"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1"
+                ],
+                [
+                  1784093400,
+                  "1"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "cluster_autoscaler_node_group_max_nodes_count",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "node_group": "pool-a"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "2"
+                ],
+                [
+                  1784093400,
+                  "2"
+                ]
+              ]
+            },
+            {
+              "metric": {
+                "node_group": "agentpool"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "1"
+                ],
+                [
+                  1784093400,
+                  "1"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "cluster_autoscaler_scaled_up_nodes_total",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {
+                "node_group": "pool-a"
+              },
+              "values": [
+                [
+                  1784050200,
+                  "0"
+                ],
+                [
+                  1784093400,
+                  "1"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/query_range",
+      "query_contains": "cluster_autoscaler_unschedulable_pods_count",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "resultType": "matrix",
+          "result": [
+            {
+              "metric": {},
+              "values": [
+                [
+                  1784050200,
+                  "0"
+                ],
+                [
+                  1784093400,
+                  "2"
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
