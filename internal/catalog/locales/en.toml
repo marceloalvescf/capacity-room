@@ -249,6 +249,7 @@ memory = "Memory: {{.Percent}} of the allocatable requested"
 unavailable = "Unavailable"
 no_base = "Not defined"
 undetermined = "Undetermined"
+empty_cell = "—"
 
 [notes]
 heading = "Interpretation notes"
@@ -435,3 +436,105 @@ action = "Keep following the demand."
 [finding.autoscaling_enabled]
 summary = "Node autoscaling enabled with observed headroom."
 action = "Keep following the bounds and the scaling events."
+
+[sections.executive]
+heading = "Executive summary"
+intro = "Summary of the main risks identified over the period of {{.Period}}, with a focus on points of critical and high priority that need immediate attention."
+critical_heading = "Workloads with critical priority"
+critical_empty = "No workload with critical priority was identified."
+attention_heading = "Workloads with high priority"
+attention_empty = "No workload with high priority was identified."
+header_namespace = "Namespace"
+header_workload = "Workload"
+header_pods = "Pods"
+header_reason = "Reason"
+namespaces_heading = "Namespaces with workloads at risk"
+namespaces_empty = "No namespace with a workload at risk was identified."
+header_cpu_limit = "CPU % / Limit"
+header_memory_limit = "Mem % / Limit"
+header_status = "Status"
+header_priority = "Priority"
+scaling_heading = "Workloads at their replica maximum and without HPA"
+scaling_empty = "No workload reached its replica maximum or lacked an HPA with automatic risk in the analysis period."
+header_kind = "Kind"
+header_replicas = "Replicas"
+header_situation = "Situation"
+replicas_observed = "{{.Peak}} observed / maximum {{.Max}}"
+situation_hpa_max = "HPA maximum reached"
+target_unknown = "(target not identified)"
+nodepools_heading = "Situation of the node pools"
+header_pool = "Node pool"
+header_pool_situation = "Situation"
+header_remark = "Remark"
+pool_stable = "Stable"
+pool_attention = "Attention"
+pool_critical = "Critical"
+actions_heading = "Prioritized action plan"
+actions_empty = "No prioritized action was identified."
+header_order = "Order"
+header_action = "Action"
+header_scope = "Workloads / Scope"
+action_qualified = "{{.Action}} ({{.Qualifier}})"
+limitations_heading = "Material limitations"
+limitations_empty = "No material limitation was identified."
+header_capability = "Capability"
+header_coverage = "Coverage"
+interpretation = "Interpretation"
+reason_all_missing = "CPU and memory request and limit not observed"
+risk_status_both = "{{.Critical}} · {{.Attention}}"
+
+[sections.executive.active_replicas]
+singular = "1 active"
+plural = "{{.Count}} active"
+
+[priority]
+attention = "High"
+critical = "Critical"
+
+[risk_status.critical]
+singular = "1 critical"
+plural = "{{.Count}} critical"
+
+[risk_status.attention]
+singular = "1 high"
+plural = "{{.Count}} high"
+
+[scope_qualifier]
+namespace = "namespaces"
+workload = "workloads"
+hpa = "HPAs"
+cluster = "cluster"
+
+[scope_summary]
+namespace = "{{.Count}} namespaces identified"
+workload = "{{.Count}} workloads identified"
+hpa = "{{.Count}} HPAs identified"
+deployment = "{{.Count}} Deployments identified"
+
+[reason.request_peak]
+cpu = "CPU: peak of {{.Percent}} of the request"
+memory = "Memory: peak of {{.Percent}} of the request"
+
+[reason.request_average]
+cpu = "CPU: average of {{.Percent}} of the request"
+memory = "Memory: average of {{.Percent}} of the request"
+
+[reason.limit_peak]
+cpu = "CPU: peak of {{.Percent}} of the limit"
+memory = "Memory: peak of {{.Percent}} of the limit"
+
+[reason.limit_average]
+cpu = "CPU: average of {{.Percent}} of the limit"
+memory = "Memory: average of {{.Percent}} of the limit"
+
+[reason.request_missing]
+cpu = "CPU request not observed"
+memory = "Memory request not observed"
+
+[reason.limit_missing]
+cpu = "CPU limit not observed"
+memory = "Memory limit not observed"
+
+[reason.bursty]
+cpu = "CPU: variation of {{.Percent}}"
+memory = "Memory: variation of {{.Percent}}"

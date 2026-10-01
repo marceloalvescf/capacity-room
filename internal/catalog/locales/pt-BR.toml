@@ -249,6 +249,7 @@ memory = "Memória: {{.Percent}} solicitada do alocável"
 unavailable = "Indisponível"
 no_base = "Não definido"
 undetermined = "Indeterminado"
+empty_cell = "—"
 
 [notes]
 heading = "Avisos de interpretação"
@@ -435,3 +436,105 @@ action = "Manter acompanhamento da demanda."
 [finding.autoscaling_enabled]
 summary = "Autoscaling de nodes habilitado com margem observada."
 action = "Manter acompanhamento do mínimo, do máximo e dos eventos de escala."
+
+[sections.executive]
+heading = "Resumo executivo"
+intro = "Síntese dos principais riscos identificados no período de {{.Period}}, com foco em pontos de prioridade crítica e alta que requerem atenção imediata."
+critical_heading = "Workloads com prioridade crítica"
+critical_empty = "Nenhum workload com prioridade crítica foi identificado."
+attention_heading = "Workloads com prioridade alta"
+attention_empty = "Nenhum workload com prioridade alta foi identificado."
+header_namespace = "Namespace"
+header_workload = "Workload"
+header_pods = "Qtde. Pods"
+header_reason = "Motivo"
+namespaces_heading = "Namespaces com workload em risco"
+namespaces_empty = "Nenhum namespace com workload em risco foi identificado."
+header_cpu_limit = "CPU % / Limit"
+header_memory_limit = "Mem % / Limit"
+header_status = "Status"
+header_priority = "Prioridade"
+scaling_heading = "Workloads com máximo de replicas e sem HPA"
+scaling_empty = "Nenhum workload atingiu o máximo de replicas ou apresentou ausência de HPA com risco automático no período analisado."
+header_kind = "Tipo"
+header_replicas = "Replicas"
+header_situation = "Situação"
+replicas_observed = "{{.Peak}} observados / máximo {{.Max}}"
+situation_hpa_max = "Máximo do HPA atingido"
+target_unknown = "(alvo não identificado)"
+nodepools_heading = "Situação dos node pools"
+header_pool = "Node pool"
+header_pool_situation = "Situação"
+header_remark = "Observação"
+pool_stable = "Estável"
+pool_attention = "Atenção"
+pool_critical = "Crítica"
+actions_heading = "Plano de ação priorizado"
+actions_empty = "Nenhuma ação priorizada foi identificada."
+header_order = "Ordem"
+header_action = "Ação"
+header_scope = "Workloads / Escopo"
+action_qualified = "{{.Action}} ({{.Qualifier}})"
+limitations_heading = "Limitações materiais"
+limitations_empty = "Nenhuma limitação material foi identificada."
+header_capability = "Capacidade"
+header_coverage = "Cobertura"
+interpretation = "Interpretação"
+reason_all_missing = "Request e limit de CPU e memória não observados"
+risk_status_both = "{{.Critical}} · {{.Attention}}"
+
+[sections.executive.active_replicas]
+singular = "1 ativo"
+plural = "{{.Count}} ativos"
+
+[priority]
+attention = "Alta"
+critical = "Crítica"
+
+[risk_status.critical]
+singular = "1 crítica"
+plural = "{{.Count}} críticas"
+
+[risk_status.attention]
+singular = "1 alta"
+plural = "{{.Count}} altas"
+
+[scope_qualifier]
+namespace = "namespaces"
+workload = "workloads"
+hpa = "HPAs"
+cluster = "cluster"
+
+[scope_summary]
+namespace = "{{.Count}} namespaces identificados"
+workload = "{{.Count}} workloads identificados"
+hpa = "{{.Count}} HPAs identificados"
+deployment = "{{.Count}} Deployments identificados"
+
+[reason.request_peak]
+cpu = "CPU: pico de {{.Percent}} do request"
+memory = "Memória: pico de {{.Percent}} do request"
+
+[reason.request_average]
+cpu = "CPU: média de {{.Percent}} do request"
+memory = "Memória: média de {{.Percent}} do request"
+
+[reason.limit_peak]
+cpu = "CPU: pico de {{.Percent}} do limit"
+memory = "Memória: pico de {{.Percent}} do limit"
+
+[reason.limit_average]
+cpu = "CPU: média de {{.Percent}} do limit"
+memory = "Memória: média de {{.Percent}} do limit"
+
+[reason.request_missing]
+cpu = "Request de CPU não observado"
+memory = "Request de memória não observado"
+
+[reason.limit_missing]
+cpu = "Limit de CPU não observado"
+memory = "Limit de memória não observado"
+
+[reason.bursty]
+cpu = "CPU: variação de {{.Percent}}"
+memory = "Memória: variação de {{.Percent}}"
