@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-// Scenario names one of the seven scenarios and the settings the original
+// Scenario names one of the eight scenarios and the settings the original
 // tests, or this project, ran it with.
 type Scenario struct {
 	Name         string // file stem
@@ -20,8 +20,8 @@ type Scenario struct {
 }
 
 // Scenarios holds the six scenarios of the original Python tool, carried
-// over byte for byte in testdata/prometheus, and edge-values, written by
-// this project in testdata/prometheus-own. value-edge-cases holds the same
+// over byte for byte in testdata/prometheus, and edge-values and
+// edge-scaling, written by this project in testdata/prometheus-own. value-edge-cases holds the same
 // bytes as direct-complete; only the node autoscaling setting the original
 // tests ran it with tells the two apart.
 var Scenarios = []Scenario{
@@ -32,6 +32,7 @@ var Scenarios = []Scenario{
 	{Name: "partial-data", Folder: "prometheus", APIRoot: "/api/v1", EndpointType: "prometheus", Token: "", NodeAutoscaling: "auto"},
 	{Name: "value-edge-cases", Folder: "prometheus", APIRoot: "/api/v1", EndpointType: "prometheus", Token: "", NodeAutoscaling: "disabled"},
 	{Name: "edge-values", Folder: "prometheus-own", APIRoot: "/api/v1", EndpointType: "prometheus", Token: "", NodeAutoscaling: "auto"},
+	{Name: "edge-scaling", Folder: "prometheus-own", APIRoot: "/api/v1", EndpointType: "prometheus", Token: "", NodeAutoscaling: "auto"},
 }
 
 // Path returns the scenario file of name, under its own folder, found by

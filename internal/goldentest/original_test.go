@@ -683,7 +683,7 @@ func compareNumbers(scenario string, snap snapshot.Snapshot, collected collect.C
 	return diffs
 }
 
-// TestNumbersEqualTheOriginal runs each of the seven scenarios through
+// TestNumbersEqualTheOriginal runs each of the eight scenarios through
 // Snapshot and compares the result with its recorded file of the original,
 // row by row and number by number.
 func TestNumbersEqualTheOriginal(t *testing.T) {
@@ -710,7 +710,7 @@ func TestNumbersEqualTheOriginal(t *testing.T) {
 	}
 }
 
-// TestCollectionStatesEqualTheOriginal checks, for each of the seven
+// TestCollectionStatesEqualTheOriginal checks, for each of the eight
 // scenarios, that the states of the five collectors equal the five
 // collection states of the recorded file, and that the status of the
 // cluster autoscaling evidence equals autoscaling_status.
@@ -753,7 +753,7 @@ func TestCollectionStatesEqualTheOriginal(t *testing.T) {
 	}
 }
 
-// TestWindowEqualsTheOriginal checks, for each of the seven scenarios,
+// TestWindowEqualsTheOriginal checks, for each of the eight scenarios,
 // that the start and the end of the query window, in seconds since the
 // epoch, equal period_start and period_end of the recorded file, and that
 // the step collect.Step gives for the period equals its step.
@@ -807,7 +807,7 @@ func readQueriesLines(t *testing.T, path string) []string {
 	return strings.Split(strings.TrimRight(string(data), "\n"), "\n")
 }
 
-// TestQueriesEqualTheOriginal checks, for each of the seven scenarios,
+// TestQueriesEqualTheOriginal checks, for each of the eight scenarios,
 // that the project's own golden queries file equals the recorded queries
 // file of the original line for line, whole, and that neither is longer
 // than the other.

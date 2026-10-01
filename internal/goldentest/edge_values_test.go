@@ -61,3 +61,30 @@ func TestEdgeScenarioLeavesNoAnswerUnused(t *testing.T) {
 		}
 	}
 }
+
+// TestEdgeScenariosLeaveNoAnswerUnused runs each scenario written by this
+// project through the whole chain and pins the number of scripted answers
+// the server holds once the run is over. edge-values keeps one answer that
+// the program never asks: a second kube_horizontalpodautoscaler_info answer
+// copied from direct-complete, because the history of the autoscalers and
+// their coverage share one info answer. The file is not edited once its
+// numbers are recorded. edge-scaling keeps none.
+func TestEdgeScenariosLeaveNoAnswerUnused(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		want int
+	}{
+		{"edge-values", 1},
+		{"edge-scaling", 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, fake, err := run(context.Background(), scenarioByName(t, tc.name))
+			if err != nil {
+				t.Fatalf("run(%s): %v", tc.name, err)
+			}
+			if got := fake.Remaining(); got != tc.want {
+				t.Errorf("Remaining() = %d, want %d", got, tc.want)
+			}
+		})
+	}
+}

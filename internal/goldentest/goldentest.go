@@ -33,7 +33,7 @@ import (
 // other two, grafana-authenticated and thanos-multicluster give, in this
 // part, the same document as direct-complete.
 var DataFileScenarios = []string{
-	"direct-complete", "partial-data", "raw-fallback", "value-edge-cases", "edge-values",
+	"direct-complete", "partial-data", "raw-fallback", "value-edge-cases", "edge-values", "edge-scaling",
 }
 
 // The fixed input every scenario runs with, held constant so that only the

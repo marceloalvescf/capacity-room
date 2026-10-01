@@ -11,11 +11,11 @@ import (
 	"testing"
 )
 
-// TestScenariosHoldSeven checks that Scenarios holds seven entries, six
-// under the folder prometheus and one under prometheus-own.
-func TestScenariosHoldSeven(t *testing.T) {
-	if len(Scenarios) != 7 {
-		t.Fatalf("len(Scenarios) = %d, want 7", len(Scenarios))
+// TestScenariosHoldEight checks that Scenarios holds eight entries, six
+// under the folder prometheus and two under prometheus-own.
+func TestScenariosHoldEight(t *testing.T) {
+	if len(Scenarios) != 8 {
+		t.Fatalf("len(Scenarios) = %d, want 8", len(Scenarios))
 	}
 
 	var names []string
@@ -34,8 +34,8 @@ func TestScenariosHoldSeven(t *testing.T) {
 	if prometheus != 6 {
 		t.Errorf("%d scenarios hold the folder %q, want 6: %v", prometheus, "prometheus", names)
 	}
-	if own != 1 {
-		t.Errorf("%d scenarios hold the folder %q, want 1: %v", own, "prometheus-own", names)
+	if own != 2 {
+		t.Errorf("%d scenarios hold the folder %q, want 2: %v", own, "prometheus-own", names)
 	}
 }
 

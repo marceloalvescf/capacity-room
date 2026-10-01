@@ -506,7 +506,7 @@ func headingPage(pages []string, want string) int {
 	return -1
 }
 
-// TestRealReportTextOfEveryScenario checks, for every one of the seven
+// TestRealReportTextOfEveryScenario checks, for every one of the eight
 // scenarios and both languages, that the compiled PDF: names the numbered
 // headings of the five parts (namespaces 1, workloads 2, HPA history 3,
 // node pools 4, appendix 5) in the outline, on page 1; carries each of
