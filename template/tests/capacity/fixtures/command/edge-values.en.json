@@ -595,6 +595,409 @@
       ]
     },
     {
+      "type": "heading",
+      "level": 1,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "HPA history"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Behaviour of the Horizontal Pod Autoscalers over the period of 24 hours. The situation says whether the configured maximum was observed."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespace: "
+        },
+        {
+          "kind": "ident",
+          "text": "payments"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Observed HPAs"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "hpa-observed",
+      "headers": [
+        "HPA",
+        "Spec min",
+        "Spec max",
+        "Current (avg)",
+        "Min reached",
+        "Max reached",
+        "Situation"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2.5"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Below the maximum"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Workloads without HPA"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "workloads-without-hpa",
+      "headers": [
+        "Kind",
+        "Workload",
+        "Pods",
+        "Situation"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "StatefulSet"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-worker"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Unavailable"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Specific scaling strategy"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Resource usage by node pool"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Summary by node pool"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "nodepool-summary",
+      "headers": [
+        "Node pool",
+        "Nodes",
+        "Average CPU",
+        "Peak CPU",
+        "Average memory",
+        "Peak memory",
+        "Confidence"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "57.5%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "60%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "62.5%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "65%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Exact"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Aggregate usage profile by node pool"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "nodepool-profile",
+      "headers": [
+        "Node pool",
+        "Allocatable CPU/node",
+        "Used CPU/node",
+        "Requested CPU/node",
+        "Allocatable memory/node",
+        "Used memory/node",
+        "Requested memory/node"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2.3 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "8 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "5 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2 B"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Detail by node"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Node pool: "
+        },
+        {
+          "kind": "ident",
+          "text": "pool-a"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "node-detail",
+      "headers": [
+        "Node",
+        "CPU avg/peak",
+        "Mem avg/peak",
+        "Reason",
+        "State"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "node-1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "57.5%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "60%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "62.5%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "65%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "CPU: peak of 60% utilization; Memory: peak of 65% utilization"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Ready; Schedulable"
+            }
+          ]
+        ]
+      ]
+    },
+    {
       "type": "pagebreak",
       "weak": true
     },

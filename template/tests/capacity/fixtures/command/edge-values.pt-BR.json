@@ -595,6 +595,409 @@
       ]
     },
     {
+      "type": "heading",
+      "level": 1,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Histórico de HPA"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Comportamento dos Horizontal Pod Autoscalers no período de 24 horas. A situação indica se o máximo configurado foi observado."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespace: "
+        },
+        {
+          "kind": "ident",
+          "text": "payments"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "HPAs observados"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "hpa-observed",
+      "headers": [
+        "HPA",
+        "Spec Min",
+        "Spec Max",
+        "Atual (Avg)",
+        "Mín Atingido",
+        "Máx Atingido",
+        "Situação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2,5"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Abaixo do máximo"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Workloads sem HPA"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "workloads-without-hpa",
+      "headers": [
+        "Tipo",
+        "Workload",
+        "Qtde. Pods",
+        "Situação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "StatefulSet"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-worker"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Estratégia de escala específica"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Uso de recursos por node pool"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Sumário por node pool"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "nodepool-summary",
+      "headers": [
+        "Node pool",
+        "Nodes",
+        "CPU média",
+        "CPU pico",
+        "Memória média",
+        "Memória pico",
+        "Confiança"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "57,5%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "60%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "62,5%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "65%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Exata"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Perfil de uso agregado por node pool"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "nodepool-profile",
+      "headers": [
+        "Node pool",
+        "CPU alocável/node",
+        "CPU usada/node",
+        "CPU solicitada/node",
+        "Memória alocável/node",
+        "Memória usada/node",
+        "Memória solicitada/node"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2,3 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 cores"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "8 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "5 B"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2 B"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Detalhamento por node"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "numbered": false,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Node pool: "
+        },
+        {
+          "kind": "ident",
+          "text": "pool-a"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "node-detail",
+      "headers": [
+        "Node",
+        "CPU méd/pico",
+        "Mem méd/pico",
+        "Motivo",
+        "Estado"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "node-1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "57,5%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "60%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "62,5%"
+            },
+            {
+              "kind": "text",
+              "text": " / "
+            },
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "65%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "CPU: pico de 60% de utilização; Memória: pico de 65% de utilização"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Pronto; Agendável"
+            }
+          ]
+        ]
+      ]
+    },
+    {
       "type": "pagebreak",
       "weak": true
     },
