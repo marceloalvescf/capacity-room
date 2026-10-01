@@ -909,6 +909,39 @@ func TestSnapshotFileRefusals(t *testing.T) {
 	}
 }
 
+// TestFromSnapshotRefusesABadProfileOrSeverity proves that a profile or a
+// minimum severity outside its values stops a run from a snapshot with the
+// configuration's own message and exit code 2, before the output path is
+// checked: the path given lies in a folder that does not exist.
+func TestFromSnapshotRefusesABadProfileOrSeverity(t *testing.T) {
+	snapPath, err := snapshotFixturePath(t, "direct-complete")
+	if err != nil {
+		t.Fatalf("snapshotFixturePath: %v", err)
+	}
+	tests := []struct {
+		flag string
+		want string
+	}{
+		{"--report-profile=Executive", "error: report.profile must be detailed or executive\n"},
+		{"--min-severity=High", "error: report.min_severity must be all, attention, or critical\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.flag, func(t *testing.T) {
+			outPath := filepath.Join(t.TempDir(), "missing", "r.pdf")
+			stdout, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--from-snapshot", snapPath, tt.flag, "--output", outPath})
+			if code != 2 {
+				t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
+			}
+			if stderr != tt.want {
+				t.Errorf("stderr = %q, want %q", stderr, tt.want)
+			}
+			if stdout != "" {
+				t.Errorf("stdout = %q, want nothing", stdout)
+			}
+		})
+	}
+}
+
 // TestPanicWithATokenOfTheEnvironment proves that a panic that happens
 // after the configuration's own token is known (here, loaded from an
 // environment variable, not --token) but before the mode function returns

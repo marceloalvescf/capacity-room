@@ -591,6 +591,16 @@ func TestLoadRenderOptions(t *testing.T) {
 			return ""
 		}, Flags{Language: strPtr("pt-BR")}, RenderOptions{Language: "pt-BR"}, ""},
 		{"invalid language", noEnv, Flags{Language: strPtr("fr")}, RenderOptions{}, "report.language must be pt-BR or en"},
+		{"invalid profile", noEnv, Flags{ReportProfile: strPtr("Executive")}, RenderOptions{}, "report.profile must be detailed or executive"},
+		{"invalid profile from the environment", func(key string) string {
+			if key == "KCR_REPORT_PROFILE" {
+				return "weird"
+			}
+			return ""
+		}, Flags{}, RenderOptions{}, "report.profile must be detailed or executive"},
+		{"invalid minimum severity", noEnv, Flags{MinSeverity: strPtr("High")}, RenderOptions{}, "report.min_severity must be all, attention, or critical"},
+		{"valid profile and minimum severity", noEnv, Flags{ReportProfile: strPtr("executive"), MinSeverity: strPtr("critical")}, RenderOptions{Language: "pt-BR", Profile: "executive", MinSeverity: "critical"}, ""},
+		{"empty profile and minimum severity kept as stored", noEnv, Flags{ReportProfile: strPtr(""), MinSeverity: strPtr("")}, RenderOptions{Language: "pt-BR"}, ""},
 	}
 
 	for _, tt := range tests {

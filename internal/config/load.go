@@ -434,7 +434,8 @@ type RenderOptions struct {
 }
 
 // LoadRenderOptions builds RenderOptions from the environment, then the
-// flags, and validates its language.
+// flags, and validates its language, its profile, and its minimum
+// severity; an empty profile or minimum severity is left as stored.
 func LoadRenderOptions(getenv func(string) string, flags Flags) (RenderOptions, error) {
 	if getenv == nil {
 		getenv = func(string) string { return "" }
@@ -467,6 +468,16 @@ func LoadRenderOptions(getenv func(string) string, flags Flags) (RenderOptions, 
 
 	if opts.Language != "pt-BR" && opts.Language != "en" {
 		return RenderOptions{}, errReportLanguage
+	}
+	switch opts.Profile {
+	case "", "detailed", "executive":
+	default:
+		return RenderOptions{}, errReportProfile
+	}
+	switch opts.MinSeverity {
+	case "", "all", "attention", "critical":
+	default:
+		return RenderOptions{}, errReportSeverity
 	}
 	return opts, nil
 }
