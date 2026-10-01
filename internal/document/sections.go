@@ -178,6 +178,11 @@ func buildWorkloadsSection(b *builder, rows []snapshot.Workload, findings []snap
 	var order []string
 	grouped := make(map[string][][][]Run)
 	for _, row := range rows {
+		// A row with no observed usage comes from the coverage inventory
+		// alone and has no number to show.
+		if !row.ObservedUsage {
+			continue
+		}
 		// A namespace and a workload name are both refused if either holds a
 		// slash (internal/collect, internal/snapshot), so this join is the
 		// same reversible one internal/analysis builds a finding's scope

@@ -38,6 +38,13 @@ func Build(in Input) (Snapshot, error) {
 
 	emittedAt := formatTime(in.EmittedAt, loc)
 
+	namespaces := buildNamespaces(in.Collected.Namespaces.Rows)
+	workloads := buildWorkloads(in.Collected.Workloads.Rows, in.Collected.Coverage.Rows, in.Collected.HPAs.Rows)
+	hpas := buildHPAs(in.Collected.HPAs.Rows)
+	nodes := buildNodes(in.Collected.Nodes.Rows)
+	nodepools := buildNodepools(collect.Pools(in.Collected.Nodes.Rows))
+	findings := buildFindings(in.Findings)
+
 	snap := Snapshot{
 		SchemaVersion: SchemaVersion,
 		Report: Report{
@@ -87,9 +94,13 @@ func Build(in Input) (Snapshot, error) {
 			CollectionStartedAt:   formatTime(in.CollectionStarted, loc),
 			CollectionCompletedAt: formatTime(in.CollectionCompleted, loc),
 		},
-		Namespaces: buildNamespaces(in.Collected.Namespaces.Rows),
-		Workloads:  buildWorkloads(in.Collected.Workloads.Rows),
-		Findings:   buildFindings(in.Findings),
+		Summary:    buildSummary(namespaces, workloads, hpas, nodes, nodepools, findings, in.Collected.Autoscaling),
+		Namespaces: namespaces,
+		Workloads:  workloads,
+		HPAs:       hpas,
+		Nodes:      nodes,
+		Nodepools:  nodepools,
+		Findings:   findings,
 	}
 
 	if err := snap.Check(); err != nil {
@@ -196,15 +207,46 @@ func buildNamespaces(rows []collect.Namespace) []Namespace {
 	return out
 }
 
-// buildWorkloads copies each collect.Workload into the snapshot's own
-// Workload type, field by field.
-func buildWorkloads(rows []collect.Workload) []Workload {
-	out := make([]Workload, len(rows))
-	for i, row := range rows {
-		out[i] = Workload{
+// workloadKey identifies a workload by its namespace, name, and kind.
+type workloadKey struct {
+	namespace, name, kind string
+}
+
+// buildWorkloads makes the rows of the workloads section: one row for each
+// measured workload and, after sorting by namespace, name, and kind, one
+// row for each workload of the coverage inventory that no measured row
+// matches. A measured row is uncovered when the inventory lists it, covered
+// when an HPA targets it, and unknown otherwise.
+func buildWorkloads(measured []collect.Workload, inventory []collect.WorkloadRef, hpas []collect.HPA) []Workload {
+	uncovered := make(map[workloadKey]bool, len(inventory))
+	for _, ref := range inventory {
+		uncovered[workloadKey{ref.Namespace, ref.Name, ref.Kind}] = true
+	}
+	targeted := make(map[workloadKey]bool, len(hpas))
+	for _, hpa := range hpas {
+		if hpa.TargetKind != "" && hpa.TargetName != "" {
+			targeted[workloadKey{hpa.Namespace, hpa.TargetName, hpa.TargetKind}] = true
+		}
+	}
+
+	out := make([]Workload, 0, len(measured)+len(inventory))
+	seen := make(map[workloadKey]bool, len(measured))
+	for _, row := range measured {
+		key := workloadKey{row.Namespace, row.Name, row.Kind}
+		seen[key] = true
+		coverage := CoverageUnknown
+		switch {
+		case uncovered[key]:
+			coverage = CoverageUncovered
+		case targeted[key]:
+			coverage = CoverageCovered
+		}
+		out = append(out, Workload{
 			Namespace:            row.Namespace,
 			Kind:                 row.Kind,
 			Name:                 row.Name,
+			ObservedUsage:        true,
+			HPACoverage:          coverage,
 			Pods:                 buildPods(row.Pods, row.PodsKnown),
 			Approximate:          row.Approximate,
 			CPUUsage:             buildStatistics(row.Resources.CPUUsage),
@@ -217,9 +259,150 @@ func buildWorkloads(rows []collect.Workload) []Workload {
 			MemoryRequestPercent: buildStatistics(row.Resources.MemoryRequestPercent),
 			CPULimitPercent:      buildStatistics(row.Resources.CPULimitPercent),
 			MemoryLimitPercent:   buildStatistics(row.Resources.MemoryLimitPercent),
+		})
+	}
+
+	unavailable := Statistics{State: collect.StateUnavailable}
+	for _, ref := range inventory {
+		key := workloadKey{ref.Namespace, ref.Name, ref.Kind}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, Workload{
+			Namespace:            ref.Namespace,
+			Kind:                 ref.Kind,
+			Name:                 ref.Name,
+			HPACoverage:          CoverageUncovered,
+			CPUUsage:             unavailable,
+			MemoryUsage:          unavailable,
+			CPURequests:          unavailable,
+			MemoryRequests:       unavailable,
+			CPULimits:            unavailable,
+			MemoryLimits:         unavailable,
+			CPURequestPercent:    unavailable,
+			MemoryRequestPercent: unavailable,
+			CPULimitPercent:      unavailable,
+			MemoryLimitPercent:   unavailable,
+		})
+	}
+
+	sort.SliceStable(out, func(i, j int) bool { return workloadLess(out[i], out[j]) })
+	return out
+}
+
+// buildNumber returns nil when n is not known, and a pointer to its value
+// otherwise.
+func buildNumber(n collect.Number) *float64 {
+	if !n.Known {
+		return nil
+	}
+	return ptr(n.Value)
+}
+
+// buildFlag returns nil when f is not known, and a pointer to its value
+// otherwise.
+func buildFlag(f collect.Flag) *bool {
+	if !f.Known {
+		return nil
+	}
+	value := f.Value
+	return &value
+}
+
+// buildHPAs copies each collect.HPA into the snapshot's own HPA type, field
+// by field.
+func buildHPAs(rows []collect.HPA) []HPA {
+	out := make([]HPA, len(rows))
+	for i, row := range rows {
+		out[i] = HPA{
+			Namespace:  row.Namespace,
+			Name:       row.Name,
+			TargetKind: row.TargetKind,
+			TargetName: row.TargetName,
+			SpecMin:    buildNumber(row.SpecMin),
+			SpecMax:    buildNumber(row.SpecMax),
+			Current:    buildStatistics(row.Current),
+			Desired:    buildStatistics(row.Desired),
 		}
 	}
 	return out
+}
+
+// buildNodes copies each collect.Node into the snapshot's own Node type,
+// field by field.
+func buildNodes(rows []collect.Node) []Node {
+	out := make([]Node, len(rows))
+	for i, row := range rows {
+		out[i] = Node{
+			Name:                 row.Name,
+			Pool:                 row.Pool,
+			PoolConfidence:       row.PoolConfidence,
+			CPUCapacity:          buildNumber(row.CPUCapacity),
+			MemoryCapacity:       buildNumber(row.MemoryCapacity),
+			CPUAllocatable:       buildNumber(row.CPUAllocatable),
+			MemoryAllocatable:    buildNumber(row.MemoryAllocatable),
+			CPUUsagePercent:      buildStatistics(row.CPUUsagePercent),
+			MemoryUsagePercent:   buildStatistics(row.MemoryUsagePercent),
+			CPURequestPercent:    buildNumber(row.CPURequestPercent),
+			MemoryRequestPercent: buildNumber(row.MemoryRequestPercent),
+			Ready:                buildFlag(row.Ready),
+			Schedulable:          buildFlag(row.Schedulable),
+		}
+	}
+	return out
+}
+
+// buildNodepools copies each collect.Pool into the snapshot's own NodePool
+// type, field by field.
+func buildNodepools(pools []collect.Pool) []NodePool {
+	out := make([]NodePool, len(pools))
+	for i, pool := range pools {
+		out[i] = NodePool{Name: pool.Name, Confidence: pool.Confidence, Nodes: nonNilStrings(pool.Nodes)}
+	}
+	return out
+}
+
+// buildSummary counts the lists of the snapshot and copies the evidence of
+// the autoscaling.
+func buildSummary(namespaces []Namespace, workloads []Workload, hpas []HPA, nodes []Node, nodepools []NodePool, findings []Finding, autoscaling collect.AutoscalingEvidence) Summary {
+	summary := Summary{
+		Namespaces: float64(len(namespaces)),
+		HPAs:       float64(len(hpas)),
+		Nodes:      float64(len(nodes)),
+		Nodepools:  float64(len(nodepools)),
+		Findings:   float64(len(findings)),
+		Autoscaling: Autoscaling{
+			Status:            autoscaling.Status,
+			Source:            autoscaling.Source,
+			Confidence:        autoscaling.Confidence,
+			ManagedNodeGroups: buildNumber(autoscaling.ManagedNodeGroups),
+			CurrentNodes:      buildNumber(autoscaling.CurrentNodes),
+			MinNodes:          buildNumber(autoscaling.MinNodes),
+			MaxNodes:          buildNumber(autoscaling.MaxNodes),
+			ScaleEvents:       buildNumber(autoscaling.ScaleEvents),
+			UnschedulablePods: buildNumber(autoscaling.UnschedulablePods),
+		},
+	}
+	for _, workload := range workloads {
+		if workload.ObservedUsage {
+			summary.Workloads++
+		}
+		if workload.HPACoverage == CoverageUncovered {
+			summary.WorkloadsWithoutHPA++
+		}
+	}
+	for _, finding := range findings {
+		switch finding.Severity {
+		case analysis.SeverityHealthy:
+			summary.Healthy++
+		case analysis.SeverityAttention:
+			summary.Attention++
+		case analysis.SeverityCritical:
+			summary.Critical++
+		}
+	}
+	return summary
 }
 
 // buildFindings copies each analysis.Finding into the snapshot's own

@@ -290,15 +290,15 @@ func parentAndKey(t *testing.T, tree map[string]any, path string) (map[string]an
 	return nil, ""
 }
 
-// TestDecodeRefusesAnotherLetterCase builds, for each of the 50 paths of
+// TestDecodeRefusesAnotherLetterCase builds, for each of the 74 paths of
 // the contract, a valid snapshot with one more key beside the real one: the
 // same name, its first letter capitalised, holding a forged value. The
 // walk of the map compares a key letter for letter, so every one of these
 // is refused as an unknown key, never silently merged into the real one by
 // a case-insensitive struct decode.
 func TestDecodeRefusesAnotherLetterCase(t *testing.T) {
-	if len(contractPaths) != 50 {
-		t.Fatalf("contractPaths has %d entries, want 50", len(contractPaths))
+	if len(contractPaths) != 74 {
+		t.Fatalf("contractPaths has %d entries, want 74", len(contractPaths))
 	}
 
 	snap := validSnapshot(t)
@@ -635,7 +635,8 @@ func TestBuildOutputAlwaysPassesDecode(t *testing.T) {
 	}
 	in.Window = windowFor(in.Config.Analysis, in.EmittedAt)
 	in.Collected = collect.Collected{
-		Namespaces: collect.Result[collect.Namespace]{Rows: baseCollectedNamespaces(in.Config.Cluster.Namespaces)},
+		Autoscaling: unknownAutoscaling(),
+		Namespaces:  collect.Result[collect.Namespace]{Rows: baseCollectedNamespaces(in.Config.Cluster.Namespaces)},
 	}
 
 	snap, err := Build(in)
@@ -873,7 +874,7 @@ func TestDecodeRefusesAMissingKey(t *testing.T) {
 	}
 }
 
-// contractPaths is the 50 key paths of the snapshot contract, written by
+// contractPaths is the 74 key paths of the snapshot contract, written by
 // hand, in the order the types declare them. TestKeyPathsAreTheContract
 // compares it against contractKeyPaths(3), the same list built by walking
 // the types with reflect, so that the two can actually drift apart if a
@@ -922,14 +923,49 @@ var contractPaths = []string{
 	"quality.notices",
 	"quality.collection_started_at",
 	"quality.collection_completed_at",
+	"summary",
+	"summary.namespaces",
+	"summary.workloads",
+	"summary.hpas",
+	"summary.nodes",
+	"summary.nodepools",
+	"summary.findings",
+	"summary.healthy",
+	"summary.attention",
+	"summary.critical",
+	"summary.workloads_without_hpa",
+	"summary.autoscaling",
+	"summary.autoscaling.status",
+	"summary.autoscaling.source",
+	"summary.autoscaling.confidence",
+	"summary.autoscaling.managed_node_groups",
+	"summary.autoscaling.current_nodes",
+	"summary.autoscaling.min_nodes",
+	"summary.autoscaling.max_nodes",
+	"summary.autoscaling.scale_events",
+	"summary.autoscaling.unschedulable_pods",
 	"namespaces",
 	"workloads",
+	"hpas",
+	"nodes",
+	"nodepools",
 	"findings",
 	"quality.capabilities[3].name",
 	"quality.capabilities[3].state",
 	"quality.capabilities[3].strategy",
 	"quality.capabilities[3].evidence",
 	"quality.capabilities[3].reasons",
+}
+
+// nullableContractPaths holds the paths of contractPaths whose value is a
+// number that may be unknown, so that null is a value of it.
+var nullableContractPaths = map[string]bool{
+	"summary.autoscaling.managed_node_groups": true,
+	"summary.autoscaling.current_nodes":       true,
+	"summary.autoscaling.min_nodes":           true,
+	"summary.autoscaling.max_nodes":           true,
+	"summary.autoscaling.scale_events":        true,
+	"summary.autoscaling.unschedulable_pods":  true,
 }
 
 // TestKeyPathsAreTheContract compares contractPaths, written by hand, with
@@ -976,7 +1012,7 @@ func TestDecodeReportsTheFirstMissingKey(t *testing.T) {
 // TestDecodeRefusesNull mirrors TestDecodeRefusesAMissingKey exactly, but
 // leaves every key in place and sets its value to JSON null instead of
 // removing it: the writer never writes null, so a snapshot holding one at
-// any of the 50 paths of the contract must be refused, by its own message.
+// any of the 74 paths of the contract must be refused, by its own message.
 func TestDecodeRefusesNull(t *testing.T) {
 	snap := validSnapshot(t)
 	good, err := Encode(snap)
@@ -989,6 +1025,12 @@ func TestDecodeRefusesNull(t *testing.T) {
 			data := nullJSONKey(t, good, path)
 
 			_, err := Decode(data)
+			if nullableContractPaths[path] {
+				if err != nil {
+					t.Fatalf("Decode() error = %v, want nil: a number that is not known is null", err)
+				}
+				return
+			}
 			want := fmt.Sprintf("snapshot holds null at %s", path)
 			if err == nil {
 				t.Fatalf("Decode() = nil, want error %q", want)
@@ -1195,6 +1237,7 @@ func validSnapshotWithRows(t *testing.T) Snapshot {
 		RequestsLimitsState: discovery.StateAvailable, Resources: resources,
 	}}
 	collected := collect.Collected{
+		Autoscaling: unknownAutoscaling(),
 		Namespaces: collect.Result[collect.Namespace]{
 			Rows:    namespaces,
 			Notices: []collect.Message{{Code: collect.NoticeJobsOmitted, Params: map[string]float64{"count": 2}}},
@@ -1214,6 +1257,7 @@ func unavailableSnapshotWorkload(namespace, kind, name string) Workload {
 	u := Statistics{State: collect.StateUnavailable}
 	return Workload{
 		Namespace: namespace, Kind: kind, Name: name,
+		ObservedUsage: true, HPACoverage: CoverageUnknown,
 		CPUUsage: u, MemoryUsage: u, CPURequests: u, MemoryRequests: u,
 		CPULimits: u, MemoryLimits: u, CPURequestPercent: u, MemoryRequestPercent: u,
 		CPULimitPercent: u, MemoryLimitPercent: u,
@@ -1262,6 +1306,7 @@ func fullSnapshot(t *testing.T) Snapshot {
 	}
 
 	in.Collected = collect.Collected{
+		Autoscaling: unknownAutoscaling(),
 		Namespaces: collect.Result[collect.Namespace]{
 			Rows:     namespaces,
 			Warnings: []collect.Message{{Code: collect.WarningNamespaceUsageIncomplete, Params: map[string]float64{}}},
@@ -1577,6 +1622,7 @@ func TestCheckAcceptsTwoWorkloadsOfOneName(t *testing.T) {
 	in := baseInput()
 	in.Config.Cluster.Namespaces = []string{"payments"}
 	in.Collected = collect.Collected{
+		Autoscaling: unknownAutoscaling(),
 		Namespaces: collect.Result[collect.Namespace]{Rows: []collect.Namespace{
 			{Name: "payments", Resources: unavailableResources()},
 		}},
@@ -1698,6 +1744,8 @@ func TestCheckRules(t *testing.T) {
 		}, `findings[0].code has an unknown value: "BOGUS_CODE"`},
 		{"findings[0].severity does not match its definition", func(s *Snapshot) {
 			s.Findings[0].Severity = analysis.SeverityHealthy
+			s.Summary.Critical--
+			s.Summary.Healthy++
 		}, "findings[0].severity does not match the definition of NAMESPACE_MEMORY_LIMIT_CRITICAL"},
 		{"findings[0].scope_type does not match its definition", func(s *Snapshot) {
 			s.Findings[0].ScopeType = analysis.ScopeWorkload
@@ -1736,19 +1784,22 @@ func TestCheckRules(t *testing.T) {
 		{"findings[2].scope_name not a workload of the snapshot", func(s *Snapshot) {
 			s.Findings[2].ScopeName = "payments/unknown-workload"
 		}, "findings[2].scope_name is not a workload of the snapshot"},
-		{"findings[7].scope_name a workload by name, not by this kind", func(s *Snapshot) {
-			// findings[7] (WORKLOAD_CPU_LIMIT_HEALTHY) is the only finding
+		{"findings[8].scope_name a workload by name, not by this kind", func(s *Snapshot) {
+			// findings[8] (WORKLOAD_CPU_LIMIT_HEALTHY) is the only finding
 			// of its severity and scope name, so changing its scope kind
 			// cannot also disturb the order rule 9 checks: this case is
 			// isolated to rule 8 alone.
 			s.Workloads = append(s.Workloads, unavailableSnapshotWorkload("payments", "StatefulSet", "payments-web"))
-			s.Findings[7].ScopeKind = "ReplicaSet"
-		}, "findings[7].scope_name is not a workload of the snapshot"},
+			s.Summary.Workloads = 2
+			s.Findings[8].ScopeKind = "ReplicaSet"
+		}, "findings[8].scope_name is not a workload of the snapshot"},
 
 		// Rule 9: the findings are in the order of analysis.Sort, none
 		// twice.
 		{"findings holds a repeated finding", func(s *Snapshot) {
 			s.Findings = append(s.Findings, s.Findings[0])
+			s.Summary.Findings++
+			s.Summary.Critical++
 		}, "findings holds a repeated finding"},
 		{"findings not in the order of analysis.Sort", func(s *Snapshot) {
 			s.Findings[0], s.Findings[1] = s.Findings[1], s.Findings[0]
@@ -1822,6 +1873,7 @@ func TestCheckKeysAWorkloadByItsFields(t *testing.T) {
 	in.Config.Cluster.Namespaces = []string{"payments"}
 	resources := directCompleteResources()
 	collected := collect.Collected{
+		Autoscaling: unknownAutoscaling(),
 		Namespaces: collect.Result[collect.Namespace]{Rows: []collect.Namespace{
 			{Name: "payments", Resources: unavailableResources()},
 		}},
@@ -1854,5 +1906,191 @@ func TestCheckKeysAWorkloadByItsFields(t *testing.T) {
 	want := fmt.Sprintf("findings[%d].scope_name is not a workload of the snapshot", workloadFinding)
 	if err == nil || err.Error() != want {
 		t.Fatalf("Check() = %v, want %q", err, want)
+	}
+}
+
+// clusterSnapshot returns the snapshot of clusterInput: two workloads and
+// a coverage-only row, one HPA, three nodes in two pools, an enabled
+// autoscaling, and three findings.
+func clusterSnapshot(t *testing.T) Snapshot {
+	t.Helper()
+	return mustBuild(t, clusterInput())
+}
+
+// checkRefuses mutates the cluster snapshot and expects Check to refuse it
+// with message.
+func checkRefuses(t *testing.T, mutate func(*Snapshot), message string) {
+	t.Helper()
+	snap := clusterSnapshot(t)
+	mutate(&snap)
+	err := snap.Check()
+	if err == nil {
+		t.Fatalf("Check() = nil, want error %q", message)
+	}
+	if err.Error() != message {
+		t.Fatalf("Check() = %q, want %q", err.Error(), message)
+	}
+}
+
+func TestBuildRefusesAPoolNamingAnAbsentNode(t *testing.T) {
+	checkRefuses(t, func(s *Snapshot) {
+		s.Nodepools[0].Nodes = []string{"ghost", "node-a1", "node-a2"}
+	}, `nodepools[0] (a) names node "ghost", which is not a node of the snapshot`)
+}
+
+func TestBuildRefusesANodeInTwoPools(t *testing.T) {
+	checkRefuses(t, func(s *Snapshot) {
+		s.Nodepools[1].Nodes = []string{"node-a1", "node-b1"}
+	}, `node "node-a1" is listed by more than one nodepool`)
+}
+
+func TestBuildRefusesAWrongSummary(t *testing.T) {
+	checkRefuses(t, func(s *Snapshot) {
+		s.Summary.Nodes = 4
+	}, "summary.nodes is 4, want 3")
+}
+
+func TestBuildRefusesAnAutoscalingContradiction(t *testing.T) {
+	checkRefuses(t, func(s *Snapshot) {
+		s.Summary.Autoscaling.Status = "unknown"
+		s.Summary.Autoscaling.Source = "configured"
+	}, "summary.autoscaling is configured and its status is unknown")
+}
+
+func TestCheckRefusesTheClusterSections(t *testing.T) {
+	tests := []struct {
+		name    string
+		mutate  func(*Snapshot)
+		message string
+	}{
+		{"summary.namespaces", func(s *Snapshot) { s.Summary.Namespaces = 1 }, "summary.namespaces is 1, want 2"},
+		{"summary.workloads counts observed rows only", func(s *Snapshot) { s.Summary.Workloads = 3 }, "summary.workloads is 3, want 2"},
+		{"summary.hpas", func(s *Snapshot) { s.Summary.HPAs = 0 }, "summary.hpas is 0, want 1"},
+		{"summary.nodepools", func(s *Snapshot) { s.Summary.Nodepools = 3 }, "summary.nodepools is 3, want 2"},
+		{"summary.findings", func(s *Snapshot) { s.Summary.Findings = 4 }, "summary.findings is 4, want 3"},
+		{"summary.healthy", func(s *Snapshot) { s.Summary.Healthy = 2 }, "summary.healthy is 2, want 1"},
+		{"summary.attention", func(s *Snapshot) { s.Summary.Attention = 0 }, "summary.attention is 0, want 1"},
+		{"summary.critical", func(s *Snapshot) { s.Summary.Critical = 3 }, "summary.critical is 3, want 1"},
+		{"summary.workloads_without_hpa", func(s *Snapshot) { s.Summary.WorkloadsWithoutHPA = 0 }, "summary.workloads_without_hpa is 0, want 1"},
+
+		{"autoscaling status", func(s *Snapshot) { s.Summary.Autoscaling.Status = "bogus" }, `summary.autoscaling.status has an unknown value: "bogus"`},
+		{"autoscaling source", func(s *Snapshot) { s.Summary.Autoscaling.Source = "bogus" }, `summary.autoscaling.source has an unknown value: "bogus"`},
+		{"autoscaling source recording_rule", func(s *Snapshot) { s.Summary.Autoscaling.Source = "recording_rule" }, `summary.autoscaling.source has an unknown value: "recording_rule"`},
+		{"autoscaling confidence", func(s *Snapshot) { s.Summary.Autoscaling.Confidence = "bogus" }, `summary.autoscaling.confidence has an unknown value: "bogus"`},
+		{"autoscaling unknown with a source", func(s *Snapshot) {
+			s.Summary.Autoscaling.Status = "unknown"
+			s.Summary.Autoscaling.Source = "raw_metrics"
+		}, "summary.autoscaling is unknown and has a source or a confidence other than none and unknown"},
+		{"autoscaling unknown with a confidence", func(s *Snapshot) {
+			s.Summary.Autoscaling.Status = "unknown"
+			s.Summary.Autoscaling.Source = "none"
+		}, "summary.autoscaling is unknown and has a source or a confidence other than none and unknown"},
+		{"autoscaling managed_node_groups not whole", func(s *Snapshot) { s.Summary.Autoscaling.ManagedNodeGroups = ptr(1.5) }, "summary.autoscaling.managed_node_groups must be a whole number, zero or above"},
+		{"autoscaling current_nodes negative", func(s *Snapshot) { s.Summary.Autoscaling.CurrentNodes = ptr(-1) }, "summary.autoscaling.current_nodes must be a whole number, zero or above"},
+		{"autoscaling min_nodes infinite", func(s *Snapshot) { s.Summary.Autoscaling.MinNodes = ptr(math.Inf(1)) }, "summary.autoscaling.min_nodes must be a whole number, zero or above"},
+		{"autoscaling max_nodes NaN", func(s *Snapshot) { s.Summary.Autoscaling.MaxNodes = ptr(math.NaN()) }, "summary.autoscaling.max_nodes must be a whole number, zero or above"},
+		{"autoscaling scale_events negative", func(s *Snapshot) { s.Summary.Autoscaling.ScaleEvents = ptr(-0.5) }, "summary.autoscaling.scale_events must be a finite number, zero or above"},
+		{"autoscaling unschedulable_pods NaN", func(s *Snapshot) { s.Summary.Autoscaling.UnschedulablePods = ptr(math.NaN()) }, "summary.autoscaling.unschedulable_pods must be a finite number, zero or above"},
+
+		{"hpas repeat", func(s *Snapshot) {
+			s.HPAs = append(s.HPAs, s.HPAs[0])
+			s.Summary.HPAs = 2
+		}, "hpas is not sorted or holds a repeated value"},
+		{"hpas[0].namespace outside the scope", func(s *Snapshot) { s.HPAs[0].Namespace = "other" }, "hpas[0].namespace is not a namespace of the scope"},
+		{"hpas[0].name empty", func(s *Snapshot) { s.HPAs[0].Name = "" }, "hpas[0].name is empty"},
+		{"hpas[0].name slash", func(s *Snapshot) { s.HPAs[0].Name = "a/b" }, `hpas[0].name holds a slash: "a/b"`},
+		{"hpas[0].namespace slash", func(s *Snapshot) { s.HPAs[0].Namespace = "a/b" }, `hpas[0].namespace holds a slash: "a/b"`},
+		{"hpas[0].target_name empty", func(s *Snapshot) { s.HPAs[0].TargetName = "" }, "hpas[0].target_kind and hpas[0].target_name must both be set or both be empty"},
+		{"hpas[0].target_kind empty", func(s *Snapshot) { s.HPAs[0].TargetKind = "" }, "hpas[0].target_kind and hpas[0].target_name must both be set or both be empty"},
+		{"hpas[0].spec_max not finite", func(s *Snapshot) { s.HPAs[0].SpecMax = ptr(math.Inf(1)) }, "hpas[0].spec_max is not a finite number"},
+		{"hpas[0].spec_min not finite", func(s *Snapshot) { s.HPAs[0].SpecMin = ptr(math.NaN()) }, "hpas[0].spec_min is not a finite number"},
+		{"hpas[0].current state", func(s *Snapshot) { s.HPAs[0].Current.State = "bogus" }, `hpas[0].current.state has an unknown value: "bogus"`},
+
+		{"nodes repeat", func(s *Snapshot) {
+			s.Nodes = append(s.Nodes, s.Nodes[2])
+			s.Summary.Nodes = 4
+		}, "nodes is not sorted or holds a repeated value"},
+		{"nodes[0].name empty", func(s *Snapshot) { s.Nodes[0].Name = "" }, "nodes[0].name is empty"},
+		{"nodes[0].pool empty", func(s *Snapshot) { s.Nodes[0].Pool = "" }, "nodes[0].pool is empty"},
+		{"nodes[0].pool_confidence", func(s *Snapshot) { s.Nodes[0].PoolConfidence = "bogus" }, `nodes[0].pool_confidence has an unknown value: "bogus"`},
+		{"nodes[0].cpu_capacity negative", func(s *Snapshot) { s.Nodes[0].CPUCapacity = ptr(-1) }, "nodes[0].cpu_capacity must be a finite number, zero or above"},
+		{"nodes[0].memory_capacity NaN", func(s *Snapshot) { s.Nodes[0].MemoryCapacity = ptr(math.NaN()) }, "nodes[0].memory_capacity must be a finite number, zero or above"},
+		{"nodes[0].cpu_allocatable negative", func(s *Snapshot) { s.Nodes[0].CPUAllocatable = ptr(-1) }, "nodes[0].cpu_allocatable must be a finite number, zero or above"},
+		{"nodes[0].memory_allocatable infinite", func(s *Snapshot) { s.Nodes[0].MemoryAllocatable = ptr(math.Inf(1)) }, "nodes[0].memory_allocatable must be a finite number, zero or above"},
+		{"nodes[0].cpu_request_percent negative", func(s *Snapshot) { s.Nodes[0].CPURequestPercent = ptr(-1) }, "nodes[0].cpu_request_percent must be a finite number, zero or above"},
+		{"nodes[0].memory_request_percent negative", func(s *Snapshot) { s.Nodes[0].MemoryRequestPercent = ptr(-1) }, "nodes[0].memory_request_percent must be a finite number, zero or above"},
+		{"nodes[0].cpu_usage_percent state", func(s *Snapshot) { s.Nodes[0].CPUUsagePercent.State = "bogus" }, `nodes[0].cpu_usage_percent.state has an unknown value: "bogus"`},
+		{"nodes[0].memory_usage_percent not finite", func(s *Snapshot) { s.Nodes[0].MemoryUsagePercent.Peak = ptr(math.NaN()) }, "nodes[0].memory_usage_percent.peak is not a finite number"},
+
+		{"nodepools out of order", func(s *Snapshot) { s.Nodepools[0], s.Nodepools[1] = s.Nodepools[1], s.Nodepools[0] }, "nodepools is not sorted or holds a repeated value"},
+		{"nodepools[1].nodes empty", func(s *Snapshot) { s.Nodepools[1].Nodes = []string{} }, "nodepools[1].nodes is empty"},
+		{"nodepools[0].nodes not sorted", func(s *Snapshot) { s.Nodepools[0].Nodes = []string{"node-a2", "node-a1"} }, "nodepools[0].nodes is not sorted or holds a repeated value"},
+		{"a node listed by no pool", func(s *Snapshot) { s.Nodepools[0].Nodes = []string{"node-a1"} }, `node "node-a2" is listed by no nodepool`},
+		{"a pool with a confidence above its nodes", func(s *Snapshot) { s.Nodepools[0].Confidence = "exact" }, `nodepools[0].confidence is "exact", want "inferred", the lowest of its nodes`},
+		{"a node row whose pool differs from the pool that lists it", func(s *Snapshot) { s.Nodes[2].Pool = "a" }, `nodes[2].pool is "a", but nodepools[1] (b) lists it`},
+
+		{"workloads[1].hpa_coverage", func(s *Snapshot) { s.Workloads[1].HPACoverage = "bogus" }, `workloads[1].hpa_coverage has an unknown value: "bogus"`},
+		{"an uncovered row that an HPA targets", func(s *Snapshot) {
+			s.Workloads[1].HPACoverage = "uncovered"
+			s.Summary.WorkloadsWithoutHPA = 2
+		}, "workloads[1] (payments/web) is uncovered and is the target of hpas[0]"},
+		{"an unobserved row that is not uncovered", func(s *Snapshot) {
+			s.Workloads[0].HPACoverage = "unknown"
+			s.Summary.WorkloadsWithoutHPA = 0
+		}, "workloads[0] has no observed usage and is not uncovered"},
+		{"an unobserved row with pods", func(s *Snapshot) { s.Workloads[0].Pods = ptr(1) }, "workloads[0] has no observed usage and holds pods"},
+		{"an unobserved row with a statistic", func(s *Snapshot) {
+			s.Workloads[0].CPUUsage = Statistics{State: collect.StateNoBase}
+		}, "workloads[0].cpu_usage must be unavailable for a row with no observed usage"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checkRefuses(t, tt.mutate, tt.message)
+		})
+	}
+}
+
+func TestDecodeNullBoolean(t *testing.T) {
+	good, err := Encode(clusterSnapshot(t))
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+
+	got, err := Decode(nullJSONKey(t, good, "nodes[0].ready"))
+	if err != nil {
+		t.Fatalf("Decode(null ready) error = %v, want nil", err)
+	}
+	if got.Nodes[0].Ready != nil {
+		t.Errorf("Nodes[0].Ready = %v, want nil", *got.Nodes[0].Ready)
+	}
+
+	var tree map[string]any
+	if err := json.Unmarshal(good, &tree); err != nil {
+		t.Fatalf("Unmarshal(good): %v", err)
+	}
+	tree["nodes"].([]any)[0].(map[string]any)["ready"] = 1.0
+	data, err := json.Marshal(tree)
+	if err != nil {
+		t.Fatalf("Marshal(tree): %v", err)
+	}
+	_, err = Decode(data)
+	want := "snapshot holds a value of the wrong kind at nodes[0].ready"
+	if err == nil || err.Error() != want {
+		t.Fatalf("Decode(ready 1) = %v, want error %q", err, want)
+	}
+}
+
+func TestDecodeReadsTheClusterSections(t *testing.T) {
+	snap := clusterSnapshot(t)
+	good, err := Encode(snap)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+	got, err := Decode(good)
+	if err != nil {
+		t.Fatalf("Decode() error = %v", err)
+	}
+	if !reflect.DeepEqual(got, snap) {
+		t.Fatalf("Decode(Encode(s)) = %+v, want %+v", got, snap)
 	}
 }

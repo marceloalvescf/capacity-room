@@ -3,9 +3,9 @@
 // reads and nothing else. The same snapshot gives a report in Portuguese or
 // in English, so it holds codes and numbers, never a sentence.
 //
-// This part of the project fills six of its sections: report, scope,
-// quality, namespaces, workloads, and findings. Later parts add summary,
-// HPAs, nodes, nodepools, and recommendations (spec 8).
+// This part of the project fills eleven of its sections: report, scope,
+// quality, summary, namespaces, workloads, HPAs, nodes, nodepools, and
+// findings. A later part adds recommendations (spec 8).
 package snapshot
 
 // SchemaVersion is the only schema version this package writes, and the
@@ -18,8 +18,12 @@ type Snapshot struct {
 	Report        Report      `json:"report"`
 	Scope         Scope       `json:"scope"`
 	Quality       Quality     `json:"quality"`
+	Summary       Summary     `json:"summary"`
 	Namespaces    []Namespace `json:"namespaces"` // sorted, never nil
 	Workloads     []Workload  `json:"workloads"`  // sorted, never nil
+	HPAs          []HPA       `json:"hpas"`       // sorted, never nil
+	Nodes         []Node      `json:"nodes"`      // sorted, never nil
+	Nodepools     []NodePool  `json:"nodepools"`  // sorted, never nil
 	Findings      []Finding   `json:"findings"`   // sorted, never nil
 }
 
@@ -137,11 +141,54 @@ type Namespace struct {
 	MemoryLimitPercent   Statistics `json:"memory_limit_percent"`
 }
 
-// Workload is the row of one workload, spec 8, "workloads".
+// The three values of Workload.HPACoverage.
+const (
+	CoverageCovered   = "covered"   // an HPA targets the workload
+	CoverageUncovered = "uncovered" // the coverage inventory lists it and no HPA targets it
+	CoverageUnknown   = "unknown"   // the run could not tell
+)
+
+// validCoverages lists the values of Workload.HPACoverage.
+var validCoverages = []string{CoverageCovered, CoverageUncovered, CoverageUnknown}
+
+// Summary holds the counts of the run and its autoscaling, spec 8.
+type Summary struct {
+	Namespaces          float64     `json:"namespaces"`
+	Workloads           float64     `json:"workloads"` // rows with observed usage only
+	HPAs                float64     `json:"hpas"`
+	Nodes               float64     `json:"nodes"`
+	Nodepools           float64     `json:"nodepools"`
+	Findings            float64     `json:"findings"`
+	Healthy             float64     `json:"healthy"`
+	Attention           float64     `json:"attention"`
+	Critical            float64     `json:"critical"`
+	WorkloadsWithoutHPA float64     `json:"workloads_without_hpa"` // rows whose hpa_coverage is uncovered
+	Autoscaling         Autoscaling `json:"autoscaling"`
+}
+
+// Autoscaling is what the run learned about the autoscaling of the nodes.
+// A count is nil when the run did not learn it.
+type Autoscaling struct {
+	Status            string   `json:"status"` // enabled, disabled, unknown
+	Source            string   `json:"source"` // configured, raw_metrics, none
+	Confidence        string   `json:"confidence"`
+	ManagedNodeGroups *float64 `json:"managed_node_groups"`
+	CurrentNodes      *float64 `json:"current_nodes"`
+	MinNodes          *float64 `json:"min_nodes"`
+	MaxNodes          *float64 `json:"max_nodes"`
+	ScaleEvents       *float64 `json:"scale_events"`
+	UnschedulablePods *float64 `json:"unschedulable_pods"`
+}
+
+// Workload is the row of one workload, spec 8, "workloads". A row whose
+// ObservedUsage is false names a workload that only the coverage inventory
+// lists: it has no pods and no number.
 type Workload struct {
 	Namespace            string     `json:"namespace"`
 	Kind                 string     `json:"kind"`
 	Name                 string     `json:"name"`
+	ObservedUsage        bool       `json:"observed_usage"`
+	HPACoverage          string     `json:"hpa_coverage"`
 	Pods                 *float64   `json:"pods"` // nil when unknown
 	Approximate          bool       `json:"approximate"`
 	CPUUsage             Statistics `json:"cpu_usage"`
@@ -154,6 +201,43 @@ type Workload struct {
 	MemoryRequestPercent Statistics `json:"memory_request_percent"`
 	CPULimitPercent      Statistics `json:"cpu_limit_percent"`
 	MemoryLimitPercent   Statistics `json:"memory_limit_percent"`
+}
+
+// HPA is the row of one horizontal pod autoscaler, spec 8, "hpas". Its
+// target is empty when the run could not tell it.
+type HPA struct {
+	Namespace  string     `json:"namespace"`
+	Name       string     `json:"name"`
+	TargetKind string     `json:"target_kind"`
+	TargetName string     `json:"target_name"`
+	SpecMin    *float64   `json:"spec_min"`
+	SpecMax    *float64   `json:"spec_max"`
+	Current    Statistics `json:"current"`
+	Desired    Statistics `json:"desired"`
+}
+
+// Node is the row of one node, spec 8, "nodes".
+type Node struct {
+	Name                 string     `json:"name"`
+	Pool                 string     `json:"pool"`
+	PoolConfidence       string     `json:"pool_confidence"`
+	CPUCapacity          *float64   `json:"cpu_capacity"`
+	MemoryCapacity       *float64   `json:"memory_capacity"`
+	CPUAllocatable       *float64   `json:"cpu_allocatable"`
+	MemoryAllocatable    *float64   `json:"memory_allocatable"`
+	CPUUsagePercent      Statistics `json:"cpu_usage_percent"`
+	MemoryUsagePercent   Statistics `json:"memory_usage_percent"`
+	CPURequestPercent    *float64   `json:"cpu_request_percent"`
+	MemoryRequestPercent *float64   `json:"memory_request_percent"`
+	Ready                *bool      `json:"ready"`
+	Schedulable          *bool      `json:"schedulable"`
+}
+
+// NodePool is the row of one node pool, spec 8, "nodepools".
+type NodePool struct {
+	Name       string   `json:"name"`
+	Confidence string   `json:"confidence"` // the lowest of its nodes
+	Nodes      []string `json:"nodes"`      // names, sorted, never nil
 }
 
 // Value is the value of an evidence as the snapshot writes it: a JSON

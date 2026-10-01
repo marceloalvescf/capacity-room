@@ -32,6 +32,7 @@ func unavailableWorkload(namespace, kind, name string) snapshot.Workload {
 		Namespace:            namespace,
 		Kind:                 kind,
 		Name:                 name,
+		ObservedUsage:        true,
 		CPUUsage:             unavailable,
 		MemoryUsage:          unavailable,
 		CPURequests:          unavailable,
@@ -258,11 +259,14 @@ func scenarioSnapshot(t *testing.T) snapshot.Snapshot {
 			CollectionStartedAt:   "2026-07-15T14:25:00-03:00",
 			CollectionCompletedAt: "2026-07-15T14:29:00-03:00",
 		},
+		Summary:    snapshot.Summary{Namespaces: 1, Workloads: 1, Autoscaling: unknownAutoscaling()},
 		Namespaces: []snapshot.Namespace{directCompleteNamespace()},
 		Workloads: []snapshot.Workload{{
 			Namespace:            "payments",
 			Kind:                 "Deployment",
 			Name:                 "payments-web",
+			ObservedUsage:        true,
+			HPACoverage:          "unknown",
 			Pods:                 floatPtr(1),
 			CPUUsage:             valueStat(0.3, 0.4),
 			MemoryUsage:          valueStat(110, 120),
@@ -275,7 +279,10 @@ func scenarioSnapshot(t *testing.T) snapshot.Snapshot {
 			CPULimitPercent:      valueStat(30, 40),
 			MemoryLimitPercent:   valueStat(11000, 12000),
 		}},
-		Findings: []snapshot.Finding{},
+		HPAs:      []snapshot.HPA{},
+		Nodes:     []snapshot.Node{},
+		Nodepools: []snapshot.NodePool{},
+		Findings:  []snapshot.Finding{},
 	}
 	if err := s.Check(); err != nil {
 		t.Fatalf("scenarioSnapshot: Check() error = %v", err)
@@ -642,6 +649,7 @@ func TestDocumentEqualsParityForItsSections(t *testing.T) {
 	workloads := []snapshot.Workload{
 		{
 			Namespace: "payments", Kind: "Deployment", Name: "worker",
+			ObservedUsage:        true,
 			Pods:                 floatPtr(2),
 			CPUUsage:             valueStat(0.5, 0.8),
 			MemoryUsage:          valueStat(1, 1.5),
@@ -652,6 +660,7 @@ func TestDocumentEqualsParityForItsSections(t *testing.T) {
 		},
 		{
 			Namespace: "payments", Kind: "Deployment", Name: "api",
+			ObservedUsage:        true,
 			Pods:                 floatPtr(4),
 			CPUUsage:             valueStat(3, 5.4),
 			MemoryUsage:          valueStat(11, 17),
@@ -758,5 +767,39 @@ func TestParitySubstitutionChangesTheFixture(t *testing.T) {
 	// The input is not changed in place.
 	if in["headers"].([]any)[1] != "Solicitação" {
 		t.Error("withCatalogTexts changed its input")
+	}
+}
+
+func TestWorkloadsSectionSkipsCoverageOnlyRows(t *testing.T) {
+	b := &builder{cat: mustCatalog(t, catalog.English)}
+	observed := unavailableWorkload("payments", "Deployment", "api")
+	coverageOnly := unavailableWorkload("payments", "Deployment", "worker")
+	coverageOnly.ObservedUsage = false
+	coverageOnly.HPACoverage = "uncovered"
+
+	blocks := buildWorkloadsSection(b, []snapshot.Workload{observed, coverageOnly}, nil, config.Default().Thresholds, "all")
+	table, ok := blocks[2].(Table)
+	if !ok {
+		t.Fatalf("blocks[2] is %T, want Table", blocks[2])
+	}
+	if len(table.Rows) != 1 {
+		t.Fatalf("len(Rows) = %d, want 1", len(table.Rows))
+	}
+	if got := runText(t, table.Rows[0][0][0]); got != "api" {
+		t.Errorf("workload name = %q, want %q", got, "api")
+	}
+}
+
+func TestWorkloadsSectionIsEmptyWithOnlyCoverageRows(t *testing.T) {
+	b := &builder{cat: mustCatalog(t, catalog.English)}
+	coverageOnly := unavailableWorkload("payments", "Deployment", "worker")
+	coverageOnly.ObservedUsage = false
+
+	blocks := buildWorkloadsSection(b, []snapshot.Workload{coverageOnly}, nil, config.Default().Thresholds, "all")
+	if len(blocks) != 2 {
+		t.Fatalf("len(blocks) = %d, want 2", len(blocks))
+	}
+	if _, ok := blocks[1].(Paragraph); !ok {
+		t.Errorf("blocks[1] is %T, want Paragraph", blocks[1])
 	}
 }

@@ -76,6 +76,12 @@ func unavailableNamespace(name string) snapshot.Namespace {
 // optional field of the metadata table already set, so a table test can
 // clear exactly one of them, and one row for each namespace of its scope,
 // sorted, every statistic unavailable and every pod count unknown.
+// unknownAutoscaling is the autoscaling of a run that learned nothing
+// about it.
+func unknownAutoscaling() snapshot.Autoscaling {
+	return snapshot.Autoscaling{Status: "unknown", Source: "none", Confidence: "unknown"}
+}
+
 func baseSnapshot(t *testing.T) snapshot.Snapshot {
 	t.Helper()
 
@@ -126,10 +132,16 @@ func baseSnapshot(t *testing.T) snapshot.Snapshot {
 			CollectionStartedAt:   "2026-07-15T14:25:00-03:00",
 			CollectionCompletedAt: "2026-07-15T14:29:00-03:00",
 		},
+		Summary: snapshot.Summary{Namespaces: 2, Autoscaling: unknownAutoscaling()},
 		Namespaces: []snapshot.Namespace{
 			unavailableNamespace("checkout"),
 			unavailableNamespace("payments"),
 		},
+		Workloads: []snapshot.Workload{},
+		HPAs:      []snapshot.HPA{},
+		Nodes:     []snapshot.Node{},
+		Nodepools: []snapshot.NodePool{},
+		Findings:  []snapshot.Finding{},
 	}
 	if err := snap.Check(); err != nil {
 		t.Fatalf("baseSnapshot: Check() error = %v", err)
@@ -383,6 +395,7 @@ func TestBuildMetadataJoinsNames(t *testing.T) {
 		unavailableNamespace("b"),
 		unavailableNamespace("c"),
 	}
+	s.Summary.Namespaces = 3
 	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{})
 	table := findTable(t, frontBlock(t, doc).Blocks, "report-metadata")
 	got := runText(t, table.Rows[2][1][0])

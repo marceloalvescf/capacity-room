@@ -191,7 +191,7 @@ const unsupportedKeyFmt = "snapshot type %s has a field the key walk does not su
 // tagged with a bare name (no "-", no option such as omitempty), and of a
 // kind whose JSON value the walk can look at on its own — a string, a
 // bool, a float, a struct, a slice of strings or of structs, a pointer to
-// a float, a map of strings to floats, or a Value (a struct, which checkKeys
+// a float or to a bool, a map of strings to floats, or a Value (a struct, which checkKeys
 // treats as one leaf). Anything else (any other
 // pointer, any other map, an interface, an embedded struct, a field with
 // no json tag, a "-" tag, or a tag carrying an option) would let the walk
@@ -214,7 +214,7 @@ func supportedKey(field reflect.StructField) (string, bool) {
 			return tag, true
 		}
 	case reflect.Pointer:
-		if field.Type.Elem().Kind() == reflect.Float64 {
+		if elem := field.Type.Elem().Kind(); elem == reflect.Float64 || elem == reflect.Bool {
 			return tag, true
 		}
 	case reflect.Map:
@@ -226,21 +226,28 @@ func supportedKey(field reflect.StructField) (string, bool) {
 }
 
 // kindMatches reports whether value, one leaf of the generic decoding of
-// the document, is of the JSON kind that field's Go type expects: a
-// string, a bool, a number for a float or for the value a pointer points
+// the document, is of the JSON kind that typ expects: a string, a bool, a
+// number for a float, a number or a bool for the value a pointer points
 // to, an object for a struct or for a map, or an array for a slice. It is
 // the one place that decides "the wrong kind", so that a text where a
 // number belongs, an object for a list, and so on are all refused by the
 // same rule.
-func kindMatches(kind reflect.Kind, value any) bool {
-	switch kind {
+func kindMatches(typ reflect.Type, value any) bool {
+	switch typ.Kind() {
 	case reflect.String:
 		_, ok := value.(string)
 		return ok
 	case reflect.Bool:
 		_, ok := value.(bool)
 		return ok
-	case reflect.Float32, reflect.Float64, reflect.Pointer:
+	case reflect.Float32, reflect.Float64:
+		_, ok := value.(float64)
+		return ok
+	case reflect.Pointer:
+		if typ.Elem().Kind() == reflect.Bool {
+			_, ok := value.(bool)
+			return ok
+		}
 		_, ok := value.(float64)
 		return ok
 	case reflect.Struct, reflect.Map:
@@ -281,8 +288,8 @@ func joinPath(prefix, name string) string {
 // letter (obj's keys are visited in sorted order, so the same file always
 // names the same key first); then, for each field of t in its declared
 // order, a key t declares that obj does not hold, a key present with the
-// JSON value null (the writer never writes one, except at a field of type
-// *float64, where null is the value of an unmeasured statistic), or a
+// JSON value null (the writer never writes one, except at a pointer field,
+// where null is the value of a number or a flag that is not known), or a
 // value of the kind kindMatches refuses. A struct field is followed into
 // its own object; a slice field whose element is itself a struct is
 // followed into each element obj actually holds, named by its index, and
@@ -339,7 +346,7 @@ func checkKeys(t reflect.Type, obj map[string]any, prefix string) error {
 			}
 			return fmt.Errorf("snapshot holds a value of the wrong kind at %s", path)
 		}
-		if !kindMatches(f.decl.Type.Kind(), value) {
+		if !kindMatches(f.decl.Type, value) {
 			return fmt.Errorf("snapshot holds a value of the wrong kind at %s", path)
 		}
 
@@ -349,7 +356,7 @@ func checkKeys(t reflect.Type, obj map[string]any, prefix string) error {
 				return err
 			}
 		case reflect.Map:
-			elemKind := f.decl.Type.Elem().Kind()
+			elemType := f.decl.Type.Elem()
 			mapObj := value.(map[string]any)
 			for _, key := range sortedKeys(mapObj) {
 				elemPath := joinPath(path, key)
@@ -357,7 +364,7 @@ func checkKeys(t reflect.Type, obj map[string]any, prefix string) error {
 				if elem == nil {
 					return fmt.Errorf("snapshot holds null at %s", elemPath)
 				}
-				if !kindMatches(elemKind, elem) {
+				if !kindMatches(elemType, elem) {
 					return fmt.Errorf("snapshot holds a value of the wrong kind at %s", elemPath)
 				}
 			}
@@ -369,7 +376,7 @@ func checkKeys(t reflect.Type, obj map[string]any, prefix string) error {
 					return fmt.Errorf("snapshot holds null at %s", elemPath)
 				}
 				if elemType.Kind() != reflect.Struct {
-					if !kindMatches(elemType.Kind(), elem) {
+					if !kindMatches(elemType, elem) {
 						return fmt.Errorf("snapshot holds a value of the wrong kind at %s", elemPath)
 					}
 					continue
@@ -519,10 +526,28 @@ func (s Snapshot) Check() error {
 	if err := checkWorkloadRows(s.Workloads, s.Scope.Namespaces); err != nil {
 		return err
 	}
+	if err := checkSummary(s); err != nil {
+		return err
+	}
+	if err := checkAutoscaling(s.Summary.Autoscaling); err != nil {
+		return err
+	}
+	if err := checkHPARows(s.HPAs, s.Scope.Namespaces); err != nil {
+		return err
+	}
+	if err := checkNodeRows(s.Nodes); err != nil {
+		return err
+	}
+	if err := checkNodepoolRows(s.Nodes, s.Nodepools); err != nil {
+		return err
+	}
+	if err := checkWorkloadCoverage(s.Workloads, s.HPAs); err != nil {
+		return err
+	}
 	if err := checkFindingRegistry(s.Findings); err != nil {
 		return err
 	}
-	if err := checkFindingScope(s.Findings, s.Namespaces, s.Workloads); err != nil {
+	if err := checkFindingScope(s); err != nil {
 		return err
 	}
 	if err := checkFindingsOrder(s.Findings); err != nil {
@@ -972,12 +997,13 @@ func checkFindingRegistry(findings []Finding) error {
 		if f.ScopeType != def.ScopeType {
 			return fmt.Errorf("findings[%d].scope_type does not match the definition of %s", i, f.Code)
 		}
-		if !evidenceNamesMatch(f.Evidence, def.Evidence) {
+		if !evidenceMatches(f.Evidence, def.Evidence) {
 			return fmt.Errorf("findings[%d].evidence does not match the definition of %s", i, f.Code)
 		}
 		for j, e := range f.Evidence {
-			if want := def.Evidence[j].Kind; e.Value.Kind != string(want) {
-				return fmt.Errorf("findings[%d].evidence[%d] of %s: %s holds a value of kind %s, want %s", i, j, f.Code, e.Name, e.Value.Kind, want)
+			spec := def.Evidence[slices.IndexFunc(def.Evidence, func(spec analysis.EvidenceSpec) bool { return spec.Name == e.Name })]
+			if e.Value.Kind != string(spec.Kind) {
+				return fmt.Errorf("findings[%d].evidence[%d] of %s: %s holds a value of kind %s, want %s", i, j, f.Code, e.Name, e.Value.Kind, spec.Kind)
 			}
 		}
 		if !slices.Contains(validConfidences, f.Confidence) {
@@ -992,14 +1018,24 @@ func checkFindingRegistry(findings []Finding) error {
 	return nil
 }
 
-// evidenceNamesMatch reports whether evidence carries exactly the names of
-// specs, in order.
-func evidenceNamesMatch(evidence []Evidence, specs []analysis.EvidenceSpec) bool {
-	if len(evidence) != len(specs) {
-		return false
+// evidenceMatches reports whether evidence carries the names of specs, in
+// order, leaving out only the specs that are optional.
+func evidenceMatches(evidence []Evidence, specs []analysis.EvidenceSpec) bool {
+	next := 0
+	for _, e := range evidence {
+		for next < len(specs) && specs[next].Name != e.Name {
+			if !specs[next].Optional {
+				return false
+			}
+			next++
+		}
+		if next == len(specs) {
+			return false
+		}
+		next++
 	}
-	for i, spec := range specs {
-		if evidence[i].Name != spec.Name {
+	for ; next < len(specs); next++ {
+		if !specs[next].Optional {
 			return false
 		}
 	}
@@ -1014,26 +1050,52 @@ type workloadIdentity struct {
 	namespace, name, kind string
 }
 
-// checkFindingScope refuses a namespace finding with a non-empty scope kind
-// or a scope name that is not a namespace of the snapshot, and a workload
-// finding whose scope name and scope kind do not name a workload of the
-// snapshot.
-func checkFindingScope(findings []Finding, namespaces []Namespace, workloads []Workload) error {
-	namespaceNames := make(map[string]bool, len(namespaces))
-	for _, ns := range namespaces {
+// clusterScopeName is the one name of a finding whose scope is the cluster.
+const clusterScopeName = "cluster"
+
+// coverageCodes are the two codes of a workload that no HPA targets.
+var coverageCodes = []string{"DEPLOYMENT_WITHOUT_HPA", "STATEFULSET_WITHOUT_HPA_INFO"}
+
+// checkFindingScope refuses a finding whose scope does not name a row of
+// the snapshot: a namespace finding names a namespace; a workload finding
+// names a workload by its scope name and its scope kind, and one of the two
+// coverage codes names an uncovered one; an hpa finding names an HPA by
+// namespace/name; a node finding names a node; a nodepool finding names a
+// pool; a cluster finding is named cluster. Only a workload finding carries
+// a scope kind.
+func checkFindingScope(s Snapshot) error {
+	namespaceNames := make(map[string]bool, len(s.Namespaces))
+	for _, ns := range s.Namespaces {
 		namespaceNames[ns.Name] = true
 	}
-	workloadKeys := make(map[workloadIdentity]bool, len(workloads))
-	for _, wl := range workloads {
-		workloadKeys[workloadIdentity{wl.Namespace, wl.Name, wl.Kind}] = true
+	workloadKeys := make(map[workloadIdentity]bool, len(s.Workloads))
+	uncoveredKeys := make(map[workloadIdentity]bool)
+	for _, wl := range s.Workloads {
+		key := workloadIdentity{wl.Namespace, wl.Name, wl.Kind}
+		workloadKeys[key] = true
+		if wl.HPACoverage == CoverageUncovered {
+			uncoveredKeys[key] = true
+		}
+	}
+	hpaNames := make(map[string]bool, len(s.HPAs))
+	for _, hpa := range s.HPAs {
+		hpaNames[hpa.Namespace+"/"+hpa.Name] = true
+	}
+	nodeNames := make(map[string]bool, len(s.Nodes))
+	for _, node := range s.Nodes {
+		nodeNames[node.Name] = true
+	}
+	poolNames := make(map[string]bool, len(s.Nodepools))
+	for _, pool := range s.Nodepools {
+		poolNames[pool.Name] = true
 	}
 
-	for i, f := range findings {
+	for i, f := range s.Findings {
+		if f.ScopeType != analysis.ScopeWorkload && f.ScopeKind != "" {
+			return fmt.Errorf("findings[%d].scope_kind must be empty for a %s finding", i, f.ScopeType)
+		}
 		switch f.ScopeType {
 		case analysis.ScopeNamespace:
-			if f.ScopeKind != "" {
-				return fmt.Errorf("findings[%d].scope_kind must be empty for a namespace finding", i)
-			}
 			if !namespaceNames[f.ScopeName] {
 				return fmt.Errorf("findings[%d].scope_name is not a namespace of the snapshot", i)
 			}
@@ -1044,8 +1106,31 @@ func checkFindingScope(findings []Finding, namespaces []Namespace, workloads []W
 			// and cutting there recovers the two fields exactly, with no other
 			// slash left to be ambiguous about.
 			namespace, name, cut := strings.Cut(f.ScopeName, "/")
-			if !cut || !workloadKeys[workloadIdentity{namespace, name, f.ScopeKind}] {
+			key := workloadIdentity{namespace, name, f.ScopeKind}
+			if slices.Contains(coverageCodes, f.Code) {
+				if !cut || !uncoveredKeys[key] {
+					return fmt.Errorf("findings[%d].scope_name is not an uncovered workload of the snapshot", i)
+				}
+				continue
+			}
+			if !cut || !workloadKeys[key] {
 				return fmt.Errorf("findings[%d].scope_name is not a workload of the snapshot", i)
+			}
+		case analysis.ScopeHPA:
+			if !hpaNames[f.ScopeName] {
+				return fmt.Errorf("findings[%d].scope_name is not an HPA of the snapshot", i)
+			}
+		case analysis.ScopeNode:
+			if !nodeNames[f.ScopeName] {
+				return fmt.Errorf("findings[%d].scope_name is not a node of the snapshot", i)
+			}
+		case analysis.ScopeNodepool:
+			if !poolNames[f.ScopeName] {
+				return fmt.Errorf("findings[%d].scope_name is not a nodepool of the snapshot", i)
+			}
+		case analysis.ScopeCluster:
+			if f.ScopeName != clusterScopeName {
+				return fmt.Errorf("findings[%d].scope_name must be %s", i, clusterScopeName)
 			}
 		}
 	}
@@ -1088,6 +1173,304 @@ func checkFindingsOrder(findings []Finding) error {
 			sorted[i].ScopeKind != original[i].ScopeKind ||
 			sorted[i].ScopeName != original[i].ScopeName {
 			return errors.New("findings is not in the order analysis.Sort gives")
+		}
+	}
+	return nil
+}
+
+// validAutoscalingStatuses and validAutoscalingSources are the values of
+// summary.autoscaling.status and summary.autoscaling.source.
+var (
+	validAutoscalingStatuses = []string{collect.AutoscalingEnabled, collect.AutoscalingDisabled, collect.AutoscalingUnknown}
+	validAutoscalingSources  = []string{discovery.StrategyConfigured, discovery.StrategyRawMetrics, discovery.StrategyNone}
+)
+
+// checkSummary refuses a count of the summary that differs from the number
+// of rows or findings it counts: the observed workloads, the uncovered
+// workloads, and the findings of each severity.
+func checkSummary(s Snapshot) error {
+	var observed, uncovered, healthy, attention, critical float64
+	for _, wl := range s.Workloads {
+		if wl.ObservedUsage {
+			observed++
+		}
+		if wl.HPACoverage == CoverageUncovered {
+			uncovered++
+		}
+	}
+	for _, f := range s.Findings {
+		switch f.Severity {
+		case analysis.SeverityHealthy:
+			healthy++
+		case analysis.SeverityAttention:
+			attention++
+		case analysis.SeverityCritical:
+			critical++
+		}
+	}
+
+	counts := []struct {
+		name      string
+		got, want float64
+	}{
+		{"namespaces", s.Summary.Namespaces, float64(len(s.Namespaces))},
+		{"workloads", s.Summary.Workloads, observed},
+		{"hpas", s.Summary.HPAs, float64(len(s.HPAs))},
+		{"nodes", s.Summary.Nodes, float64(len(s.Nodes))},
+		{"nodepools", s.Summary.Nodepools, float64(len(s.Nodepools))},
+		{"findings", s.Summary.Findings, float64(len(s.Findings))},
+		{"healthy", s.Summary.Healthy, healthy},
+		{"attention", s.Summary.Attention, attention},
+		{"critical", s.Summary.Critical, critical},
+		{"workloads_without_hpa", s.Summary.WorkloadsWithoutHPA, uncovered},
+	}
+	for _, c := range counts {
+		if c.got != c.want {
+			return fmt.Errorf("summary.%s is %v, want %v", c.name, c.got, c.want)
+		}
+	}
+	return nil
+}
+
+// checkAutoscaling refuses an autoscaling whose status, source, or
+// confidence is outside its values, whose configured source comes with a
+// status that is unknown, whose unknown status comes with a source or a
+// confidence, or whose counts are not numbers of the right kind: the four
+// counts of nodes and groups are whole numbers, zero or above; the two
+// others are finite numbers, zero or above.
+func checkAutoscaling(a Autoscaling) error {
+	if err := checkEnum("summary.autoscaling.status", a.Status, validAutoscalingStatuses); err != nil {
+		return err
+	}
+	if err := checkEnum("summary.autoscaling.source", a.Source, validAutoscalingSources); err != nil {
+		return err
+	}
+	if err := checkEnum("summary.autoscaling.confidence", a.Confidence, validConfidences); err != nil {
+		return err
+	}
+	if a.Source == discovery.StrategyConfigured && a.Status == collect.AutoscalingUnknown {
+		return errors.New("summary.autoscaling is configured and its status is unknown")
+	}
+	if a.Status == collect.AutoscalingUnknown && (a.Source != discovery.StrategyNone || a.Confidence != discovery.ConfidenceUnknown) {
+		return errors.New("summary.autoscaling is unknown and has a source or a confidence other than none and unknown")
+	}
+
+	wholes := []struct {
+		name  string
+		value *float64
+	}{
+		{"managed_node_groups", a.ManagedNodeGroups},
+		{"current_nodes", a.CurrentNodes},
+		{"min_nodes", a.MinNodes},
+		{"max_nodes", a.MaxNodes},
+	}
+	for _, n := range wholes {
+		if n.value != nil && (!isFinite(*n.value) || *n.value != math.Trunc(*n.value) || *n.value < 0) {
+			return fmt.Errorf("summary.autoscaling.%s must be a whole number, zero or above", n.name)
+		}
+	}
+	if err := checkNonNegative("summary.autoscaling.scale_events", a.ScaleEvents); err != nil {
+		return err
+	}
+	return checkNonNegative("summary.autoscaling.unschedulable_pods", a.UnschedulablePods)
+}
+
+// checkNonNegative refuses value, when present, that is NaN, infinite, or
+// below zero.
+func checkNonNegative(path string, value *float64) error {
+	if value != nil && (!isFinite(*value) || *value < 0) {
+		return fmt.Errorf("%s must be a finite number, zero or above", path)
+	}
+	return nil
+}
+
+// checkFinite refuses value, when present, that is NaN or infinite.
+func checkFinite(path string, value *float64) error {
+	if value != nil && !isFinite(*value) {
+		return fmt.Errorf("%s is not a finite number", path)
+	}
+	return nil
+}
+
+// checkHPARows refuses an hpas list that is not sorted by namespace and
+// name, holds a repeated row, or holds a row with a namespace outside the
+// scope, an empty name, a slash in its namespace or name, a target that is
+// only half named, or a number that is not finite.
+func checkHPARows(hpas []HPA, scopeNamespaces []string) error {
+	for i := 1; i < len(hpas); i++ {
+		prev, cur := hpas[i-1], hpas[i]
+		if prev.Namespace > cur.Namespace || (prev.Namespace == cur.Namespace && prev.Name >= cur.Name) {
+			return errors.New("hpas is not sorted or holds a repeated value")
+		}
+	}
+	for i, hpa := range hpas {
+		if strings.Contains(hpa.Namespace, "/") {
+			return fmt.Errorf("hpas[%d].namespace holds a slash: %q", i, hpa.Namespace)
+		}
+		if hpa.Name == "" {
+			return fmt.Errorf("hpas[%d].name is empty", i)
+		}
+		if strings.Contains(hpa.Name, "/") {
+			return fmt.Errorf("hpas[%d].name holds a slash: %q", i, hpa.Name)
+		}
+		if !slices.Contains(scopeNamespaces, hpa.Namespace) {
+			return fmt.Errorf("hpas[%d].namespace is not a namespace of the scope", i)
+		}
+		if (hpa.TargetKind == "") != (hpa.TargetName == "") {
+			return fmt.Errorf("hpas[%d].target_kind and hpas[%d].target_name must both be set or both be empty", i, i)
+		}
+		if err := checkFinite(fmt.Sprintf("hpas[%d].spec_min", i), hpa.SpecMin); err != nil {
+			return err
+		}
+		if err := checkFinite(fmt.Sprintf("hpas[%d].spec_max", i), hpa.SpecMax); err != nil {
+			return err
+		}
+		if err := checkStatistics(fmt.Sprintf("hpas[%d].current", i), hpa.Current); err != nil {
+			return err
+		}
+		if err := checkStatistics(fmt.Sprintf("hpas[%d].desired", i), hpa.Desired); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkNodeRows refuses a nodes list that is not sorted by name, holds a
+// repeated name, or holds a row with an empty name or pool, a confidence
+// outside its values, or a number that is not finite and zero or above.
+func checkNodeRows(nodes []Node) error {
+	names := make([]string, len(nodes))
+	for i, node := range nodes {
+		names[i] = node.Name
+	}
+	if err := checkSorted("nodes", names); err != nil {
+		return err
+	}
+	for i, node := range nodes {
+		if node.Name == "" {
+			return fmt.Errorf("nodes[%d].name is empty", i)
+		}
+		if node.Pool == "" {
+			return fmt.Errorf("nodes[%d].pool is empty", i)
+		}
+		if err := checkEnum(fmt.Sprintf("nodes[%d].pool_confidence", i), node.PoolConfidence, validConfidences); err != nil {
+			return err
+		}
+		numbers := []struct {
+			name  string
+			value *float64
+		}{
+			{"cpu_capacity", node.CPUCapacity},
+			{"memory_capacity", node.MemoryCapacity},
+			{"cpu_allocatable", node.CPUAllocatable},
+			{"memory_allocatable", node.MemoryAllocatable},
+			{"cpu_request_percent", node.CPURequestPercent},
+			{"memory_request_percent", node.MemoryRequestPercent},
+		}
+		for _, n := range numbers {
+			if err := checkNonNegative(fmt.Sprintf("nodes[%d].%s", i, n.name), n.value); err != nil {
+				return err
+			}
+		}
+		if err := checkStatistics(fmt.Sprintf("nodes[%d].cpu_usage_percent", i), node.CPUUsagePercent); err != nil {
+			return err
+		}
+		if err := checkStatistics(fmt.Sprintf("nodes[%d].memory_usage_percent", i), node.MemoryUsagePercent); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkNodepoolRows refuses a nodepools list that is not sorted by name,
+// holds a pool with no node, a pool that names a node the snapshot does
+// not hold, a node listed by two pools or by none, a pool whose confidence
+// is not the lowest of its nodes, and a node whose pool is not the pool
+// that lists it.
+func checkNodepoolRows(nodes []Node, pools []NodePool) error {
+	names := make([]string, len(pools))
+	for i, pool := range pools {
+		names[i] = pool.Name
+	}
+	if err := checkSorted("nodepools", names); err != nil {
+		return err
+	}
+
+	nodeIndex := make(map[string]int, len(nodes))
+	for i, node := range nodes {
+		nodeIndex[node.Name] = i
+	}
+	owner := make(map[string]int, len(nodes))
+	for i, pool := range pools {
+		if len(pool.Nodes) == 0 {
+			return fmt.Errorf("nodepools[%d].nodes is empty", i)
+		}
+		if err := checkSorted(fmt.Sprintf("nodepools[%d].nodes", i), pool.Nodes); err != nil {
+			return err
+		}
+		for _, name := range pool.Nodes {
+			if _, ok := nodeIndex[name]; !ok {
+				return fmt.Errorf("nodepools[%d] (%s) names node %q, which is not a node of the snapshot", i, pool.Name, name)
+			}
+			if _, ok := owner[name]; ok {
+				return fmt.Errorf("node %q is listed by more than one nodepool", name)
+			}
+			owner[name] = i
+		}
+	}
+	for _, node := range nodes {
+		if _, ok := owner[node.Name]; !ok {
+			return fmt.Errorf("node %q is listed by no nodepool", node.Name)
+		}
+	}
+
+	for i, pool := range pools {
+		lowest := 0
+		for _, name := range pool.Nodes {
+			lowest = max(lowest, slices.Index(validConfidences, nodes[nodeIndex[name]].PoolConfidence))
+		}
+		if want := validConfidences[lowest]; pool.Confidence != want {
+			return fmt.Errorf("nodepools[%d].confidence is %q, want %q, the lowest of its nodes", i, pool.Confidence, want)
+		}
+	}
+	for i, node := range nodes {
+		if pool := pools[owner[node.Name]]; node.Pool != pool.Name {
+			return fmt.Errorf("nodes[%d].pool is %q, but nodepools[%d] (%s) lists it", i, node.Pool, owner[node.Name], pool.Name)
+		}
+	}
+	return nil
+}
+
+// checkWorkloadCoverage refuses a workload whose hpa_coverage is outside
+// its values, an uncovered workload that an HPA targets, and a row with no
+// observed usage that is not uncovered, holds pods, or holds a statistic
+// that is not unavailable.
+func checkWorkloadCoverage(workloads []Workload, hpas []HPA) error {
+	for i, wl := range workloads {
+		if err := checkEnum(fmt.Sprintf("workloads[%d].hpa_coverage", i), wl.HPACoverage, validCoverages); err != nil {
+			return err
+		}
+		if wl.HPACoverage == CoverageUncovered {
+			for j, hpa := range hpas {
+				if hpa.TargetKind != "" && hpa.TargetName != "" &&
+					hpa.Namespace == wl.Namespace && hpa.TargetName == wl.Name && hpa.TargetKind == wl.Kind {
+					return fmt.Errorf("workloads[%d] (%s/%s) is uncovered and is the target of hpas[%d]", i, wl.Namespace, wl.Name, j)
+				}
+			}
+		}
+		if wl.ObservedUsage {
+			continue
+		}
+		if wl.HPACoverage != CoverageUncovered {
+			return fmt.Errorf("workloads[%d] has no observed usage and is not uncovered", i)
+		}
+		if wl.Pods != nil {
+			return fmt.Errorf("workloads[%d] has no observed usage and holds pods", i)
+		}
+		for _, field := range workloadStatisticsFields(wl) {
+			if field.stat.State != collect.StateUnavailable {
+				return fmt.Errorf("workloads[%d].%s must be unavailable for a row with no observed usage", i, field.name)
+			}
 		}
 	}
 	return nil

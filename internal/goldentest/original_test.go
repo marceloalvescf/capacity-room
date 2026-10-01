@@ -353,11 +353,19 @@ type workloadRowKey struct{ Namespace, Kind, Name string }
 // compareWorkloads matches the workloads of a snapshot with those of a
 // recorded file by namespace, kind, and name, and compares each pair found
 // on both sides. collectedRows is collect.Collected.Workloads.Rows of the
-// same run: it holds the same rows as got, in the same order, since
-// buildWorkloads (internal/snapshot/build.go) copies them across one for
-// one with no filtering or reordering, so collectedRows[i] is the row
-// got[i] was built from.
+// same run: it holds the same rows as the observed rows of got, in the same
+// order, since buildWorkloads (internal/snapshot/build.go) copies them
+// across one for one and only adds rows of the coverage inventory, which
+// have no observed usage and are left out here, so collectedRows[i] is the
+// row the i-th observed row of got was built from.
 func compareWorkloads(scenario string, got []snapshot.Workload, collectedRows []collect.Workload, want []pythonWorkloadRow) []string {
+	observed := make([]snapshot.Workload, 0, len(got))
+	for _, row := range got {
+		if row.ObservedUsage {
+			observed = append(observed, row)
+		}
+	}
+	got = observed
 	if len(got) != len(collectedRows) {
 		return []string{fmt.Sprintf("%s: workloads: the snapshot holds %d rows, the collector %d", scenario, len(got), len(collectedRows))}
 	}

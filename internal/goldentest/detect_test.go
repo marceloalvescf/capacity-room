@@ -228,7 +228,8 @@ func TestEverythingDetectGivesPassesCheck(t *testing.T) {
 		t.Fatalf("NewWindow: %v", err)
 	}
 	collected := collect.Collected{
-		Namespaces: collect.Result[collect.Namespace]{Rows: unavailableNamespaceRows(cfg.Cluster.Namespaces)},
+		Namespaces:  collect.Result[collect.Namespace]{Rows: unavailableNamespaceRows(cfg.Cluster.Namespaces)},
+		Autoscaling: collect.AutoscalingEvidence{Status: collect.AutoscalingUnknown, Source: discovery.StrategyNone, Confidence: discovery.ConfidenceUnknown},
 	}
 
 	sets := detectSets()

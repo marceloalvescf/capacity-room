@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"encoding/json"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -151,7 +152,8 @@ func baseInput() Input {
 	}
 	in.Window = windowFor(in.Config.Analysis, in.EmittedAt)
 	in.Collected = collect.Collected{
-		Namespaces: collect.Result[collect.Namespace]{Rows: baseCollectedNamespaces(in.Config.Cluster.Namespaces)},
+		Autoscaling: unknownAutoscaling(),
+		Namespaces:  collect.Result[collect.Namespace]{Rows: baseCollectedNamespaces(in.Config.Cluster.Namespaces)},
 	}
 	return in
 }
@@ -386,6 +388,67 @@ func TestBuildEveryFieldChangesTheBytes(t *testing.T) {
 		{"Config.Report.Author", func(in *Input) { in.Config.Report.Author = "other-author" }},
 	}
 
+	clusterTests := []struct {
+		name   string
+		mutate func(*Input)
+	}{
+		{"Collected.Coverage.Namespace", func(in *Input) { in.Collected.Coverage.Rows[0].Namespace = "checkout" }},
+		{"Collected.Coverage.Kind", func(in *Input) { in.Collected.Coverage.Rows[0].Kind = "StatefulSet" }},
+		{"Collected.Coverage.Name", func(in *Input) { in.Collected.Coverage.Rows[0].Name = "api-2" }},
+		{"Collected.HPAs.Namespace", func(in *Input) { in.Collected.HPAs.Rows[0].Namespace = "checkout" }},
+		{"Collected.HPAs.Name", func(in *Input) { in.Collected.HPAs.Rows[0].Name = "web-2" }},
+		{"Collected.HPAs.TargetKind", func(in *Input) { in.Collected.HPAs.Rows[0].TargetKind = "StatefulSet" }},
+		{"Collected.HPAs.TargetName", func(in *Input) { in.Collected.HPAs.Rows[0].TargetName = "web-2" }},
+		{"Collected.HPAs.SpecMin", func(in *Input) { in.Collected.HPAs.Rows[0].SpecMin = known(3) }},
+		{"Collected.HPAs.SpecMax", func(in *Input) { in.Collected.HPAs.Rows[0].SpecMax = known(11) }},
+		{"Collected.HPAs.Current", func(in *Input) { in.Collected.HPAs.Rows[0].Current = valueStatistics(4, 2, 4, 3) }},
+		{"Collected.HPAs.Desired", func(in *Input) { in.Collected.HPAs.Rows[0].Desired = valueStatistics(3, 2, 4, 3) }},
+		{"Collected.Nodes.Name", func(in *Input) { in.Collected.Nodes.Rows[0].Name = "node-a0" }},
+		{"Collected.Nodes.Pool", func(in *Input) { in.Collected.Nodes.Rows[2].Pool = "c" }},
+		{"Collected.Nodes.PoolConfidence", func(in *Input) { in.Collected.Nodes.Rows[2].PoolConfidence = discovery.ConfidenceExact }},
+		{"Collected.Nodes.CPUCapacity", func(in *Input) { in.Collected.Nodes.Rows[0].CPUCapacity = known(8) }},
+		{"Collected.Nodes.MemoryCapacity", func(in *Input) { in.Collected.Nodes.Rows[0].MemoryCapacity = known(32) }},
+		{"Collected.Nodes.CPUAllocatable", func(in *Input) { in.Collected.Nodes.Rows[0].CPUAllocatable = known(3.75) }},
+		{"Collected.Nodes.MemoryAllocatable", func(in *Input) { in.Collected.Nodes.Rows[0].MemoryAllocatable = known(15) }},
+		{"Collected.Nodes.CPUUsagePercent", func(in *Input) { in.Collected.Nodes.Rows[0].CPUUsagePercent = valueStatistics(41, 20, 60, 50) }},
+		{"Collected.Nodes.MemoryUsagePercent", func(in *Input) { in.Collected.Nodes.Rows[0].MemoryUsagePercent = valueStatistics(46, 25, 65, 55) }},
+		{"Collected.Nodes.CPURequestPercent", func(in *Input) { in.Collected.Nodes.Rows[0].CPURequestPercent = known(71) }},
+		{"Collected.Nodes.MemoryRequestPercent", func(in *Input) { in.Collected.Nodes.Rows[0].MemoryRequestPercent = known(76) }},
+		{"Collected.Nodes.Ready", func(in *Input) { in.Collected.Nodes.Rows[0].Ready = collect.Flag{Value: false, Known: true} }},
+		{"Collected.Nodes.Schedulable", func(in *Input) { in.Collected.Nodes.Rows[0].Schedulable = collect.Flag{Value: true, Known: true} }},
+		{"Collected.Autoscaling.Status", func(in *Input) { in.Collected.Autoscaling.Status = collect.AutoscalingDisabled }},
+		{"Collected.Autoscaling.Source", func(in *Input) { in.Collected.Autoscaling.Source = discovery.StrategyConfigured }},
+		{"Collected.Autoscaling.Confidence", func(in *Input) { in.Collected.Autoscaling.Confidence = discovery.ConfidenceExact }},
+		{"Collected.Autoscaling.ManagedNodeGroups", func(in *Input) { in.Collected.Autoscaling.ManagedNodeGroups = known(3) }},
+		{"Collected.Autoscaling.CurrentNodes", func(in *Input) { in.Collected.Autoscaling.CurrentNodes = known(6) }},
+		{"Collected.Autoscaling.MinNodes", func(in *Input) { in.Collected.Autoscaling.MinNodes = known(3) }},
+		{"Collected.Autoscaling.MaxNodes", func(in *Input) { in.Collected.Autoscaling.MaxNodes = known(11) }},
+		{"Collected.Autoscaling.ScaleEvents", func(in *Input) { in.Collected.Autoscaling.ScaleEvents = known(2.5) }},
+		{"Collected.Autoscaling.UnschedulablePods", func(in *Input) { in.Collected.Autoscaling.UnschedulablePods = known(2) }},
+	}
+	clusterBase := func() Input {
+		in := clusterInput()
+		in.Findings = nil
+		return in
+	}
+	clusterBaseBytes, err := Encode(mustBuild(t, clusterBase()))
+	if err != nil {
+		t.Fatalf("Encode(clusterBase) error = %v", err)
+	}
+	for _, tt := range clusterTests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := clusterBase()
+			tt.mutate(&in)
+			changedBytes, err := Encode(mustBuild(t, in))
+			if err != nil {
+				t.Fatalf("Encode(changed) error = %v", err)
+			}
+			if string(changedBytes) == string(clusterBaseBytes) {
+				t.Fatalf("changing %s did not change the encoded bytes", tt.name)
+			}
+		})
+	}
+
 	base := mustBuild(t, baseInput())
 	baseBytes, err := Encode(base)
 	if err != nil {
@@ -491,6 +554,11 @@ func TestBuildNeverWritesNull(t *testing.T) {
 	// null, on purpose: that is covered by TestBuildWritesNullForNoNumber
 	// and TestBuildWritesUnknownPodsAsNull, not by this test.
 	in.Collected.Namespaces.Rows = knownResourcesNamespaces(in.Config.Cluster.Namespaces)
+	in.Collected.Autoscaling = collect.AutoscalingEvidence{
+		Status: collect.AutoscalingEnabled, Source: discovery.StrategyRawMetrics, Confidence: discovery.ConfidenceInferred,
+		ManagedNodeGroups: known(1), CurrentNodes: known(2), MinNodes: known(1), MaxNodes: known(3),
+		ScaleEvents: known(0), UnschedulablePods: known(0),
+	}
 
 	snap := mustBuild(t, in)
 	data, err := Encode(snap)
@@ -593,8 +661,9 @@ func TestBuildCopiesEveryRow(t *testing.T) {
 		RequestsLimitsState: discovery.StateAvailable, Resources: resources,
 	}}
 	collected := collect.Collected{
-		Namespaces: collect.Result[collect.Namespace]{Rows: namespaces},
-		Workloads:  collect.Result[collect.Workload]{Rows: workloads},
+		Autoscaling: unknownAutoscaling(),
+		Namespaces:  collect.Result[collect.Namespace]{Rows: namespaces},
+		Workloads:   collect.Result[collect.Workload]{Rows: workloads},
 	}
 	in.Collected = collected
 	in.Findings = analysis.All(collected, in.Config.Thresholds)
@@ -652,7 +721,7 @@ func TestBuildCopiesEveryRow(t *testing.T) {
 	wantCodes := []string{
 		"NAMESPACE_MEMORY_LIMIT_CRITICAL", "NAMESPACE_MEMORY_REQUEST_CRITICAL",
 		"WORKLOAD_MEMORY_LIMIT_CRITICAL", "WORKLOAD_MEMORY_REQUEST_CRITICAL",
-		"NAMESPACE_CPU_REQUEST_ATTENTION", "WORKLOAD_CPU_REQUEST_ATTENTION",
+		"NODE_AUTOSCALING_UNKNOWN", "NAMESPACE_CPU_REQUEST_ATTENTION", "WORKLOAD_CPU_REQUEST_ATTENTION",
 		"NAMESPACE_CPU_LIMIT_HEALTHY", "WORKLOAD_CPU_LIMIT_HEALTHY",
 	}
 	if len(snap.Findings) != len(wantCodes) {
@@ -699,6 +768,7 @@ func TestBuildWritesNullForNoNumber(t *testing.T) {
 	resources := unavailableResources()
 	resources.CPURequestPercent = collect.Statistics{State: collect.StateNoBase}
 	in.Collected = collect.Collected{
+		Autoscaling: unknownAutoscaling(),
 		Namespaces: collect.Result[collect.Namespace]{Rows: []collect.Namespace{{
 			Name: "payments", Resources: resources,
 		}}},
@@ -739,6 +809,7 @@ func TestBuildWritesUnknownPodsAsNull(t *testing.T) {
 	in := baseInput()
 	in.Config.Cluster.Namespaces = []string{"payments"}
 	in.Collected = collect.Collected{
+		Autoscaling: unknownAutoscaling(),
 		Namespaces: collect.Result[collect.Namespace]{Rows: []collect.Namespace{{
 			Name: "payments", PodsKnown: false, Resources: unavailableResources(),
 		}}},
@@ -760,5 +831,366 @@ func TestBuildWritesUnknownPodsAsNull(t *testing.T) {
 	namespace := tree["namespaces"].([]any)[0].(map[string]any)
 	if value, ok := namespace["pods"]; !ok || value != nil {
 		t.Fatalf("namespaces[0].pods = %v, want null", value)
+	}
+}
+
+// unknownAutoscaling is the evidence of a run that learned nothing about
+// the cluster autoscaling.
+func unknownAutoscaling() collect.AutoscalingEvidence {
+	return collect.AutoscalingEvidence{
+		Status:     collect.AutoscalingUnknown,
+		Source:     discovery.StrategyNone,
+		Confidence: discovery.ConfidenceUnknown,
+	}
+}
+
+// known returns a Number that is known and holds value.
+func known(value float64) collect.Number {
+	return collect.Number{Value: value, Known: true}
+}
+
+// valueStatistics returns a Statistics of state value.
+func valueStatistics(average, minimum, peak, current float64) collect.Statistics {
+	return collect.Statistics{State: collect.StateValue, Average: average, Minimum: minimum, Peak: peak, Current: current}
+}
+
+// measuredWorkload returns a measured row with no number, in the namespace
+// payments.
+func measuredWorkload(kind, name string) collect.Workload {
+	return collect.Workload{
+		Namespace: "payments", Kind: kind, Name: name,
+		RequestsLimitsState: discovery.StateUnavailable, Resources: unavailableResources(),
+	}
+}
+
+// clusterNode returns a node of the cluster fixture: capacity 4 and 16,
+// allocatable 3.5 and 14, usage and request percents, ready and with the
+// schedulable flag unknown.
+func clusterNode(name, pool, confidence string) collect.Node {
+	return collect.Node{
+		Name: name, Pool: pool, PoolConfidence: confidence,
+		CPUCapacity: known(4), MemoryCapacity: known(16),
+		CPUAllocatable: known(3.5), MemoryAllocatable: known(14),
+		CPUUsagePercent:      valueStatistics(40, 20, 60, 50),
+		MemoryUsagePercent:   valueStatistics(45, 25, 65, 55),
+		CPURequestPercent:    known(70),
+		MemoryRequestPercent: known(75),
+		Ready:                collect.Flag{Value: true, Known: true},
+	}
+}
+
+// clusterInput is baseInput with one of each new kind of row: the
+// workloads payments/Deployment/web (target of an HPA) and
+// payments/StatefulSet/worker (no coverage fact), the coverage-only
+// workload payments/Deployment/api, one HPA, three nodes in two pools, an
+// autoscaling that is enabled, and one finding of each severity.
+func clusterInput() Input {
+	in := baseInput()
+	in.Collected.Workloads.Rows = []collect.Workload{
+		measuredWorkload("Deployment", "web"),
+		measuredWorkload("StatefulSet", "worker"),
+	}
+	in.Collected.Coverage.Rows = []collect.WorkloadRef{{Namespace: "payments", Kind: "Deployment", Name: "api"}}
+	in.Collected.HPAs.Rows = []collect.HPA{{
+		Namespace: "payments", Name: "web", TargetKind: "Deployment", TargetName: "web",
+		SpecMin: known(2), SpecMax: known(10),
+		Current: valueStatistics(3, 2, 4, 3),
+		Desired: collect.Statistics{State: collect.StateUnavailable},
+	}}
+	in.Collected.Nodes.Rows = []collect.Node{
+		clusterNode("node-a1", "a", discovery.ConfidenceExact),
+		clusterNode("node-a2", "a", discovery.ConfidenceInferred),
+		clusterNode("node-b1", "b", discovery.ConfidenceInferred),
+	}
+	in.Collected.Autoscaling = collect.AutoscalingEvidence{
+		Status: collect.AutoscalingEnabled, Source: discovery.StrategyRawMetrics, Confidence: discovery.ConfidenceInferred,
+		ManagedNodeGroups: known(2), CurrentNodes: known(5), MinNodes: known(2), MaxNodes: known(10),
+		ScaleEvents: known(1.5),
+	}
+	in.Findings = []analysis.Finding{
+		{
+			Code: "HPA_MAX_REPLICAS_REACHED", Severity: analysis.SeverityCritical,
+			ScopeType: analysis.ScopeHPA, ScopeName: "payments/web", Confidence: discovery.ConfidenceExact,
+			Evidence: []analysis.Evidence{{Name: "current_peak", Value: analysis.Number(10)}, {Name: "spec_max", Value: analysis.Number(10)}},
+		},
+		{
+			Code: "NODE_LOW_UTILIZATION", Severity: analysis.SeverityAttention,
+			ScopeType: analysis.ScopeNode, ScopeName: "node-b1", Confidence: discovery.ConfidenceInferred,
+			Evidence: []analysis.Evidence{{Name: "maximum_average_percent", Value: analysis.Number(12)}},
+		},
+		{
+			Code: "NODE_AUTOSCALING_ENABLED", Severity: analysis.SeverityHealthy,
+			ScopeType: analysis.ScopeCluster, ScopeName: "cluster", Confidence: discovery.ConfidenceInferred,
+			Evidence: []analysis.Evidence{},
+		},
+	}
+	return in
+}
+
+// mustBuildError builds in and returns the message of its error, failing
+// the test when Build accepts it.
+func mustBuildError(t *testing.T, in Input) string {
+	t.Helper()
+	_, err := Build(in)
+	if err == nil {
+		t.Fatal("Build() = nil, want an error")
+	}
+	return err.Error()
+}
+
+func TestBuildFillsTheNewSections(t *testing.T) {
+	snap := mustBuild(t, clusterInput())
+
+	wantSummary := Summary{
+		Namespaces: 2, Workloads: 2, HPAs: 1, Nodes: 3, Nodepools: 2,
+		Findings: 3, Healthy: 1, Attention: 1, Critical: 1,
+		WorkloadsWithoutHPA: 1,
+		Autoscaling: Autoscaling{
+			Status: "enabled", Source: "raw_metrics", Confidence: "inferred",
+			ManagedNodeGroups: ptr(2), CurrentNodes: ptr(5), MinNodes: ptr(2), MaxNodes: ptr(10),
+			ScaleEvents: ptr(1.5),
+		},
+	}
+	if !reflect.DeepEqual(snap.Summary, wantSummary) {
+		t.Errorf("Summary = %+v, want %+v", snap.Summary, wantSummary)
+	}
+
+	type coverage struct {
+		name, kind, hpa string
+		observed        bool
+	}
+	wantRows := []coverage{
+		{"api", "Deployment", "uncovered", false},
+		{"web", "Deployment", "covered", true},
+		{"worker", "StatefulSet", "unknown", true},
+	}
+	if len(snap.Workloads) != len(wantRows) {
+		t.Fatalf("len(Workloads) = %d, want %d", len(snap.Workloads), len(wantRows))
+	}
+	for i, want := range wantRows {
+		got := snap.Workloads[i]
+		if got.Name != want.name || got.Kind != want.kind || got.HPACoverage != want.hpa || got.ObservedUsage != want.observed {
+			t.Errorf("Workloads[%d] = %s %s %s observed=%v, want %s %s %s observed=%v",
+				i, got.Kind, got.Name, got.HPACoverage, got.ObservedUsage, want.kind, want.name, want.hpa, want.observed)
+		}
+	}
+
+	if len(snap.HPAs) != 1 {
+		t.Fatalf("len(HPAs) = %d, want 1", len(snap.HPAs))
+	}
+	hpa := snap.HPAs[0]
+	if hpa.Namespace != "payments" || hpa.Name != "web" || hpa.TargetKind != "Deployment" || hpa.TargetName != "web" {
+		t.Errorf("HPAs[0] = %+v, want payments/web targeting Deployment/web", hpa)
+	}
+	checkPtr(t, "HPAs[0].SpecMin", hpa.SpecMin, 2)
+	checkPtr(t, "HPAs[0].SpecMax", hpa.SpecMax, 10)
+	checkSnapshotStatistics(t, "HPAs[0].Current", hpa.Current, valueStatistics(3, 2, 4, 3))
+	if hpa.Desired.State != collect.StateUnavailable || hpa.Desired.Average != nil || hpa.Desired.Current != nil {
+		t.Errorf("HPAs[0].Desired = %+v, want unavailable with no number", hpa.Desired)
+	}
+
+	if len(snap.Nodes) != 3 {
+		t.Fatalf("len(Nodes) = %d, want 3", len(snap.Nodes))
+	}
+	node := snap.Nodes[1]
+	if node.Name != "node-a2" || node.Pool != "a" || node.PoolConfidence != "inferred" {
+		t.Errorf("Nodes[1] = %s %s %s, want node-a2 a inferred", node.Name, node.Pool, node.PoolConfidence)
+	}
+	checkPtr(t, "Nodes[1].CPUCapacity", node.CPUCapacity, 4)
+	checkPtr(t, "Nodes[1].MemoryCapacity", node.MemoryCapacity, 16)
+	checkPtr(t, "Nodes[1].CPUAllocatable", node.CPUAllocatable, 3.5)
+	checkPtr(t, "Nodes[1].MemoryAllocatable", node.MemoryAllocatable, 14)
+	checkSnapshotStatistics(t, "Nodes[1].CPUUsagePercent", node.CPUUsagePercent, valueStatistics(40, 20, 60, 50))
+	checkSnapshotStatistics(t, "Nodes[1].MemoryUsagePercent", node.MemoryUsagePercent, valueStatistics(45, 25, 65, 55))
+	checkPtr(t, "Nodes[1].CPURequestPercent", node.CPURequestPercent, 70)
+	checkPtr(t, "Nodes[1].MemoryRequestPercent", node.MemoryRequestPercent, 75)
+	if node.Ready == nil || !*node.Ready {
+		t.Errorf("Nodes[1].Ready = %v, want true", node.Ready)
+	}
+	if node.Schedulable != nil {
+		t.Errorf("Nodes[1].Schedulable = %v, want nil", *node.Schedulable)
+	}
+
+	wantPools := []NodePool{
+		{Name: "a", Confidence: "inferred", Nodes: []string{"node-a1", "node-a2"}},
+		{Name: "b", Confidence: "inferred", Nodes: []string{"node-b1"}},
+	}
+	if !reflect.DeepEqual(snap.Nodepools, wantPools) {
+		t.Errorf("Nodepools = %+v, want %+v", snap.Nodepools, wantPools)
+	}
+}
+
+func TestBuildAddsUncoveredRows(t *testing.T) {
+	in := baseInput()
+	in.Collected.Workloads.Rows = []collect.Workload{measuredWorkload("Deployment", "web")}
+	in.Collected.Coverage.Rows = []collect.WorkloadRef{{Namespace: "payments", Kind: "Deployment", Name: "api"}}
+	in.Collected.HPAs.Rows = []collect.HPA{{
+		Namespace: "payments", Name: "web-hpa", TargetKind: "Deployment", TargetName: "web",
+		Current: collect.Statistics{State: collect.StateUnavailable}, Desired: collect.Statistics{State: collect.StateUnavailable},
+	}}
+
+	snap := mustBuild(t, in)
+
+	if len(snap.Workloads) != 2 {
+		t.Fatalf("len(Workloads) = %d, want 2", len(snap.Workloads))
+	}
+	api, web := snap.Workloads[0], snap.Workloads[1]
+	if api.Name != "api" || api.HPACoverage != "uncovered" || api.ObservedUsage || api.Pods != nil || api.Approximate {
+		t.Errorf("Workloads[0] = %+v, want the unobserved, uncovered api with no pods", api)
+	}
+	for _, field := range workloadStatisticsFields(api) {
+		if field.stat.State != collect.StateUnavailable || field.stat.Average != nil {
+			t.Errorf("Workloads[0].%s = %+v, want unavailable with no number", field.name, field.stat)
+		}
+	}
+	if web.Name != "web" || web.HPACoverage != "covered" || !web.ObservedUsage {
+		t.Errorf("Workloads[1] = %+v, want the observed, covered web", web)
+	}
+	if snap.Summary.Workloads != 1 || snap.Summary.WorkloadsWithoutHPA != 1 {
+		t.Errorf("Summary.Workloads, WorkloadsWithoutHPA = %v, %v, want 1, 1", snap.Summary.Workloads, snap.Summary.WorkloadsWithoutHPA)
+	}
+}
+
+func TestBuildMarksUnknownCoverage(t *testing.T) {
+	in := baseInput()
+	in.Collected.Workloads.Rows = []collect.Workload{measuredWorkload("Deployment", "web")}
+
+	snap := mustBuild(t, in)
+
+	if got := snap.Workloads[0].HPACoverage; got != "unknown" {
+		t.Errorf("Workloads[0].HPACoverage = %q, want %q", got, "unknown")
+	}
+	if snap.Summary.WorkloadsWithoutHPA != 0 {
+		t.Errorf("Summary.WorkloadsWithoutHPA = %v, want 0", snap.Summary.WorkloadsWithoutHPA)
+	}
+}
+
+func TestBuildIgnoresAnHPAWithoutATarget(t *testing.T) {
+	in := baseInput()
+	in.Collected.Workloads.Rows = []collect.Workload{measuredWorkload("Deployment", "web")}
+	in.Collected.HPAs.Rows = []collect.HPA{{
+		Namespace: "payments", Name: "web",
+		Current: collect.Statistics{State: collect.StateUnavailable}, Desired: collect.Statistics{State: collect.StateUnavailable},
+	}}
+
+	snap := mustBuild(t, in)
+
+	if got := snap.Workloads[0].HPACoverage; got != "unknown" {
+		t.Errorf("Workloads[0].HPACoverage = %q, want %q", got, "unknown")
+	}
+}
+
+func TestBuildRefusesAnUncoveredTarget(t *testing.T) {
+	in := clusterInput()
+	in.Collected.Coverage.Rows = []collect.WorkloadRef{{Namespace: "payments", Kind: "Deployment", Name: "web"}}
+
+	want := "workloads[0] (payments/web) is uncovered and is the target of hpas[0]"
+	if got := mustBuildError(t, in); got != want {
+		t.Errorf("Build() error = %q, want %q", got, want)
+	}
+}
+
+func TestBuildRefusesAnHPAOutOfOrder(t *testing.T) {
+	in := clusterInput()
+	in.Findings = nil
+	second := in.Collected.HPAs.Rows[0]
+	second.Name = "a"
+	in.Collected.HPAs.Rows = append([]collect.HPA{{
+		Namespace: "payments", Name: "b",
+		Current: collect.Statistics{State: collect.StateUnavailable}, Desired: collect.Statistics{State: collect.StateUnavailable},
+	}}, second)
+
+	want := "hpas is not sorted or holds a repeated value"
+	if got := mustBuildError(t, in); got != want {
+		t.Errorf("Build() error = %q, want %q", got, want)
+	}
+}
+
+func TestBuildRefusesAScopeThatDoesNotExist(t *testing.T) {
+	tests := []struct {
+		name    string
+		finding analysis.Finding
+		want    string
+	}{
+		{"a node finding for a node that is not there", analysis.Finding{
+			Code: "NODE_LOW_UTILIZATION", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeNode, ScopeName: "ghost",
+			Confidence: discovery.ConfidenceInferred,
+			Evidence:   []analysis.Evidence{{Name: "maximum_average_percent", Value: analysis.Number(12)}},
+		}, "findings[0].scope_name is not a node of the snapshot"},
+		{"an HPA finding for an HPA that is not there", analysis.Finding{
+			Code: "HPA_PINNED_REPLICAS", Severity: analysis.SeverityHealthy, ScopeType: analysis.ScopeHPA, ScopeName: "x/y",
+			Confidence: discovery.ConfidenceExact,
+			Evidence:   []analysis.Evidence{{Name: "spec_min", Value: analysis.Number(2)}, {Name: "spec_max", Value: analysis.Number(2)}},
+		}, "findings[0].scope_name is not an HPA of the snapshot"},
+		{"a nodepool finding for a pool that is not there", analysis.Finding{
+			Code: "NODEPOOL_UNKNOWN", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeNodepool, ScopeName: "ghost",
+			Confidence: discovery.ConfidenceUnknown,
+			Evidence:   []analysis.Evidence{{Name: "affected_nodes", Value: analysis.Number(1)}},
+		}, "findings[0].scope_name is not a nodepool of the snapshot"},
+		{"a cluster finding that does not name the cluster", analysis.Finding{
+			Code: "NODE_AUTOSCALING_ENABLED", Severity: analysis.SeverityHealthy, ScopeType: analysis.ScopeCluster, ScopeName: "other",
+			Confidence: discovery.ConfidenceInferred, Evidence: []analysis.Evidence{},
+		}, "findings[0].scope_name must be cluster"},
+		{"a coverage finding for a covered row", analysis.Finding{
+			Code: "DEPLOYMENT_WITHOUT_HPA", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeWorkload,
+			ScopeKind: "Deployment", ScopeName: "payments/web", Confidence: discovery.ConfidenceExact, Evidence: []analysis.Evidence{},
+		}, "findings[0].scope_name is not an uncovered workload of the snapshot"},
+		{"a coverage finding of another kind", analysis.Finding{
+			Code: "STATEFULSET_WITHOUT_HPA_INFO", Severity: analysis.SeverityHealthy, ScopeType: analysis.ScopeWorkload,
+			ScopeKind: "StatefulSet", ScopeName: "payments/api", Confidence: discovery.ConfidenceExact, Evidence: []analysis.Evidence{},
+		}, "findings[0].scope_name is not an uncovered workload of the snapshot"},
+		{"a node finding that names a kind", analysis.Finding{
+			Code: "NODE_LOW_UTILIZATION", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeNode, ScopeKind: "Node", ScopeName: "node-b1",
+			Confidence: discovery.ConfidenceInferred,
+			Evidence:   []analysis.Evidence{{Name: "maximum_average_percent", Value: analysis.Number(12)}},
+		}, "findings[0].scope_kind must be empty for a node finding"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := clusterInput()
+			in.Findings = []analysis.Finding{tt.finding}
+			if got := mustBuildError(t, in); got != tt.want {
+				t.Errorf("Build() error = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildAcceptsTheScopesOfTheClusterSections(t *testing.T) {
+	in := clusterInput()
+	in.Findings = []analysis.Finding{
+		{
+			Code: "NODEPOOL_UNKNOWN", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeNodepool, ScopeName: "a",
+			Confidence: discovery.ConfidenceUnknown,
+			Evidence:   []analysis.Evidence{{Name: "affected_nodes", Value: analysis.Number(1)}},
+		},
+		{
+			Code: "DEPLOYMENT_WITHOUT_HPA", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeWorkload,
+			ScopeKind: "Deployment", ScopeName: "payments/api", Confidence: discovery.ConfidenceExact, Evidence: []analysis.Evidence{},
+		},
+	}
+	mustBuild(t, in)
+}
+
+func TestBuildAcceptsAnOptionalEvidenceLeftOut(t *testing.T) {
+	in := clusterInput()
+	in.Findings = []analysis.Finding{{
+		Code: "NODE_CPU_USAGE_HEALTHY", Severity: analysis.SeverityHealthy, ScopeType: analysis.ScopeNode, ScopeName: "node-a1",
+		Confidence: discovery.ConfidenceExact,
+		Evidence:   []analysis.Evidence{{Name: "peak_percent", Value: analysis.Number(60)}},
+	}}
+	mustBuild(t, in)
+}
+
+func TestBuildRefusesAnOptionalEvidenceOutOfOrder(t *testing.T) {
+	in := clusterInput()
+	in.Findings = []analysis.Finding{{
+		Code: "NODE_CPU_USAGE_HEALTHY", Severity: analysis.SeverityHealthy, ScopeType: analysis.ScopeNode, ScopeName: "node-a1",
+		Confidence: discovery.ConfidenceExact,
+		Evidence:   []analysis.Evidence{{Name: "peak_percent", Value: analysis.Number(60)}, {Name: "average_percent", Value: analysis.Number(40)}},
+	}}
+	want := "findings[0].evidence does not match the definition of NODE_CPU_USAGE_HEALTHY"
+	if got := mustBuildError(t, in); got != want {
+		t.Errorf("Build() error = %q, want %q", got, want)
 	}
 }
