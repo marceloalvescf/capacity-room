@@ -597,10 +597,6 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 	}
 	redactor.Add(loaded.Token)
 
-	if loaded.Config.Report.Profile == "executive" {
-		return nil, &exitError{2, executiveError(loaded.Config.Report.Profile)}
-	}
-
 	emittedAt := env.Now()
 	window, err := collectpkg.NewWindow(loaded.Config.Analysis, emittedAt)
 	if err != nil {
@@ -736,10 +732,6 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 	if profile == "" {
 		profile = snap.Report.Profile
 	}
-	if profile == "executive" {
-		return nil, &exitError{2, executiveError(profile)}
-	}
-
 	outputDir := opts.OutputDirectory
 	if outputDir == "" {
 		outputDir = "."
@@ -800,13 +792,6 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 		lines = append(lines, "generator: "+snap.Report.GeneratorVersion)
 	}
 	return lines, nil
-}
-
-// executiveError is the one message a refused executive profile always
-// prints, whether the profile came from the configuration or from a stored
-// snapshot.
-func executiveError(profile string) error {
-	return fmt.Errorf("report profile %q is not available in this version", profile)
 }
 
 // collectionLines names the state of each collection, in the order the

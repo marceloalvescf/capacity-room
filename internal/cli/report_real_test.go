@@ -158,12 +158,16 @@ func TestRealReportFromEachScenario(t *testing.T) {
 	}
 }
 
-// TestRealReportHasThreePages checks that direct-complete, whose fixture
-// backs every one of the nine capabilities and gives payments-web its own
-// rows, renders as exactly three pages: the opening page; the page of
-// sections 1 and 2 (capacity by namespace, capacity by workload); and the
-// quality appendix, with its interpretation notes.
-func TestRealReportHasThreePages(t *testing.T) {
+// TestRealReportPageCount checks that direct-complete, whose fixture backs
+// every one of the nine capabilities and gives payments-web its own rows,
+// renders as exactly four pages in the detailed profile: the opening page;
+// the page of sections 1 to 4; the page of section 5, the executive
+// summary; and the quality appendix, with its interpretation notes. The
+// executive summary is the page the detailed profile gained when it
+// printed section 5, and the executive profile drops sections 1 to 4, so it
+// renders as three pages: the opening page, the executive summary, and the
+// appendix.
+func TestRealReportPageCount(t *testing.T) {
 	server, _, scenario := startScenario(t, "direct-complete")
 	defer server.Close()
 
@@ -178,8 +182,8 @@ func TestRealReportHasThreePages(t *testing.T) {
 	}
 
 	text := pdfText(t, outPath)
-	if got := strings.Count(text, "\f"); got != 3 {
-		t.Fatalf("form feed count = %d, want 3 (the opening page, sections 1 and 2, and the quality appendix)", got)
+	if got := strings.Count(text, "\f"); got != 4 {
+		t.Fatalf("form feed count = %d, want 4 (the opening page, sections 1 to 4, the executive summary, and the quality appendix)", got)
 	}
 }
 
@@ -421,6 +425,10 @@ func TestFromSnapshotPrintsTheSections(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SectionsNamespacesHeading text: %v", err)
 	}
+	executive, err := cat.Text(catalog.SectionsExecutiveHeading, nil)
+	if err != nil {
+		t.Fatalf("SectionsExecutiveHeading text: %v", err)
+	}
 
 	text := pdfText(t, outPath)
 	if !containsText(text, "payments-web") {
@@ -428,6 +436,76 @@ func TestFromSnapshotPrintsTheSections(t *testing.T) {
 	}
 	if !containsText(text, heading) {
 		t.Errorf("text does not contain %q", heading)
+	}
+	if !containsText(text, executive) {
+		t.Errorf("text does not contain %q", executive)
+	}
+}
+
+// TestRealReportExecutiveProfile checks, in both languages, that the
+// executive profile prints the executive summary and the appendix and none
+// of the headings of sections 1 to 4, and that the outline on page 1 lists
+// the two sections it prints and no more.
+func TestRealReportExecutiveProfile(t *testing.T) {
+	for _, lang := range catalog.Languages() {
+		t.Run(string(lang), func(t *testing.T) {
+			server, _, scenario := startScenario(t, "direct-complete")
+			defer server.Close()
+
+			outDir := t.TempDir()
+			cfgPath := writeConfig(t, scenarioConfig(server, scenario, outDir))
+			outPath := filepath.Join(outDir, "r.pdf")
+			args := scenarioArgs(cfgPath, scenario, "--lang", string(lang), "--report-profile", "executive", "--output", outPath)
+			_, stderr, code := runArgs(context.Background(), realEnv(t), args)
+			if code != 0 {
+				t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+			}
+
+			cat, err := catalog.Load(lang)
+			if err != nil {
+				t.Fatalf("catalog.Load(%s): %v", lang, err)
+			}
+			pages := pdfPages(pdfText(t, outPath))
+			if len(pages) != 3 {
+				t.Fatalf("PDF has %d page(s), want 3", len(pages))
+			}
+
+			for _, h := range []struct {
+				number int
+				key    catalog.Key
+			}{
+				{1, catalog.SectionsExecutiveHeading},
+				{2, catalog.AppendixHeading},
+			} {
+				want := numberedHeading(t, cat, h.number, h.key)
+				if !containsText(pages[0], want) {
+					t.Errorf("the outline on page 1 does not contain %q", want)
+				}
+				if headingPage(pages, want) == -1 {
+					t.Errorf("no page after the first contains the heading %q", want)
+				}
+			}
+
+			for number, key := range map[int]catalog.Key{
+				1: catalog.SectionsNamespacesHeading,
+				2: catalog.SectionsWorkloadsHeading,
+				3: catalog.SectionsHPAsHeading,
+				4: catalog.SectionsNodepoolsHeading,
+			} {
+				// The title of section 3 is also a capability name of the
+				// quality table, so only the numbered heading counts.
+				text, err := cat.Text(key, nil)
+				if err != nil {
+					t.Fatalf("%s text: %v", key, err)
+				}
+				absent := fmt.Sprintf("%d %s", number, text)
+				for i, page := range pages[1:] {
+					if containsText(page, absent) {
+						t.Errorf("page %d contains the heading %q of a section the executive profile leaves out", i+2, absent)
+					}
+				}
+			}
+		})
 	}
 }
 
@@ -508,8 +586,8 @@ func headingPage(pages []string, want string) int {
 
 // TestRealReportTextOfEveryScenario checks, for every one of the eight
 // scenarios and both languages, that the compiled PDF: names the numbered
-// headings of the five parts (namespaces 1, workloads 2, HPA history 3,
-// node pools 4, appendix 5) in the outline, on page 1; carries each of
+// headings of the six parts (namespaces 1, workloads 2, HPA history 3,
+// node pools 4, executive summary 5, appendix 6) in the outline, on page 1; carries each of
 // those headings, with its number, on a page after the first, in the order
 // of the numbers; carries the name of every namespace and every workload
 // the scenario's snapshot holds, as a word of its own, on the pages from
@@ -575,7 +653,8 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 						{2, catalog.SectionsWorkloadsHeading},
 						{3, catalog.SectionsHPAsHeading},
 						{4, catalog.SectionsNodepoolsHeading},
-						{5, catalog.AppendixHeading},
+						{5, catalog.SectionsExecutiveHeading},
+						{6, catalog.AppendixHeading},
 					}
 
 					// Page 1's own outline names every heading, whether or
@@ -626,8 +705,8 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 						t.Fatalf("NotesHeading text: %v", err)
 					}
 					if wantNotes {
-						appendixWant := numberedHeading(t, cat, 5, catalog.AppendixHeading)
-						strippedTail := stripWhitespace(strings.Join(pages[found[4]:], "\f"))
+						appendixWant := numberedHeading(t, cat, 6, catalog.AppendixHeading)
+						strippedTail := stripWhitespace(strings.Join(pages[found[5]:], "\f"))
 						appendixIdx := strings.Index(strippedTail, stripWhitespace(appendixWant))
 						notesIdx := strings.Index(strippedTail, stripWhitespace(notesHeading))
 						switch {

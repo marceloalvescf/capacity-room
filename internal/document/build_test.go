@@ -3,6 +3,7 @@ package document
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -401,6 +402,98 @@ func TestBuildOrdersTheSections(t *testing.T) {
 	}
 }
 
+func goldenSnapshot(t *testing.T, name string) snapshot.Snapshot {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", "testdata", "snapshot", name+".json"))
+	if err != nil {
+		t.Fatalf("reading the golden snapshot: %v", err)
+	}
+	s, err := snapshot.Decode(data)
+	if err != nil {
+		t.Fatalf("Decode() error = %v", err)
+	}
+	return s
+}
+
+func TestBuildExecutiveProfile(t *testing.T) {
+	cat := mustCatalog(t, catalog.English)
+	doc := mustBuild(t, goldenSnapshot(t, "direct-complete"), cat, Options{Profile: "executive"})
+
+	var headings []string
+	for _, blk := range doc.Blocks {
+		if h, ok := blk.(Heading); ok && h.Level == 1 {
+			headings = append(headings, runText(t, h.Runs[0]))
+		}
+	}
+	want := []string{
+		catText(t, cat, catalog.SectionsExecutiveHeading, nil),
+		catText(t, cat, catalog.AppendixHeading, nil),
+	}
+	if !slices.Equal(headings, want) {
+		t.Fatalf("level-1 headings = %v, want %v", headings, want)
+	}
+
+	if _, ok := doc.Blocks[0].(Front); !ok {
+		t.Fatalf("first block is %T, want the front", doc.Blocks[0])
+	}
+	if pb, ok := doc.Blocks[1].(PageBreak); !ok || pb.Weak {
+		t.Fatalf("second block = %#v, want the hard page break", doc.Blocks[1])
+	}
+	if h, ok := doc.Blocks[2].(Heading); !ok || runText(t, h.Runs[0]) != want[0] {
+		t.Fatalf("third block = %#v, want the executive heading", doc.Blocks[2])
+	}
+	weak := slices.IndexFunc(doc.Blocks, func(b Block) bool { pb, ok := b.(PageBreak); return ok && pb.Weak })
+	if weak < 0 {
+		t.Fatal("no weak page break")
+	}
+	if h, ok := doc.Blocks[weak+1].(Heading); !ok || runText(t, h.Runs[0]) != want[1] {
+		t.Fatalf("block after the weak page break = %#v, want the appendix heading", doc.Blocks[weak+1])
+	}
+
+	// A snapshot that carries warnings ends with the notes table.
+	noted := mustBuild(t, goldenSnapshot(t, "partial-data"), cat, Options{Profile: "executive"})
+	notes := catText(t, cat, catalog.NotesHeading, nil)
+	n := len(noted.Blocks)
+	if h, ok := noted.Blocks[n-2].(Heading); !ok || runText(t, h.Runs[0]) != notes {
+		t.Errorf("the block before the last = %#v, want the notes heading", noted.Blocks[n-2])
+	}
+	if table, ok := noted.Blocks[n-1].(Table); !ok || table.ID != "interpretation-notes" {
+		t.Errorf("the last block = %#v, want the notes table", noted.Blocks[n-1])
+	}
+}
+
+func TestBuildExecutiveRaisesTheMinimum(t *testing.T) {
+	cat := mustCatalog(t, catalog.English)
+	s := goldenSnapshot(t, "direct-complete")
+	executive := mustBuild(t, s, cat, Options{Profile: "executive", MinSeverity: "all"})
+	detailed := mustBuild(t, s, cat, Options{Profile: "detailed", MinSeverity: "all"})
+
+	isWeak := func(b Block) bool { pb, ok := b.(PageBreak); return ok && pb.Weak }
+	ew := slices.IndexFunc(executive.Blocks, isWeak)
+	dw := slices.IndexFunc(detailed.Blocks, isWeak)
+	if ew < 0 || dw < 0 {
+		t.Fatalf("weak page breaks at %d and %d", ew, dw)
+	}
+	for _, blk := range executive.Blocks[2:ew] {
+		table, ok := blk.(Table)
+		if !ok || table.ID != "priority-workloads" {
+			continue
+		}
+		for _, row := range table.Rows {
+			for _, cell := range row {
+				for _, r := range cell {
+					if r.status == "healthy" {
+						t.Errorf("table %s holds a healthy run %s", table.ID, runString(r))
+					}
+				}
+			}
+		}
+	}
+	if !reflect.DeepEqual(executive.Blocks[ew:], detailed.Blocks[dw:]) {
+		t.Error("the appendix and notes of the executive profile differ from those of the detailed profile at the same minimum")
+	}
+}
+
 func TestBuildMetadataRows(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -765,17 +858,10 @@ func TestBuildOptionsOverrideTheSnapshot(t *testing.T) {
 func TestBuildRefuses(t *testing.T) {
 	cat := mustCatalog(t, catalog.English)
 
-	t.Run("profile executive", func(t *testing.T) {
-		_, err := Build(baseSnapshot(t), cat, Options{Profile: "executive"})
-		if err == nil || !strings.Contains(err.Error(), `"executive"`) {
-			t.Fatalf("Build() error = %v, want a message naming \"executive\"", err)
-		}
-	})
-
 	t.Run("profile x", func(t *testing.T) {
 		_, err := Build(baseSnapshot(t), cat, Options{Profile: "x"})
-		if err == nil || !strings.Contains(err.Error(), `"x"`) {
-			t.Fatalf("Build() error = %v, want a message naming \"x\"", err)
+		if err == nil || err.Error() != `unknown report profile "x"` {
+			t.Fatalf("Build() error = %v, want unknown report profile \"x\"", err)
 		}
 	})
 

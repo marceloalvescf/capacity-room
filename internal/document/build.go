@@ -67,7 +67,9 @@ func (b *builder) period(start, end time.Time) string {
 }
 
 // Build assembles the document of a snapshot: a cover, an opening page,
-// the five sections, and a quality appendix with its notes.
+// the five sections, and a quality appendix with its notes. The executive
+// profile keeps the cover, the opening page, the executive section, and the
+// appendix with its notes.
 func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, error) {
 	if err := s.Check(); err != nil {
 		return Document{}, err
@@ -77,8 +79,8 @@ func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, err
 	if profile == "" {
 		profile = s.Report.Profile
 	}
-	if profile != "detailed" {
-		return Document{}, fmt.Errorf("report profile %q is not available in this version", profile)
+	if profile != "detailed" && profile != "executive" {
+		return Document{}, fmt.Errorf("unknown report profile %q", profile)
 	}
 
 	severity := opts.MinSeverity
@@ -93,23 +95,17 @@ func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, err
 	thresholds := thresholdsFromSnapshot(s.Report.Thresholds)
 
 	front := buildFront(b, s)
-	namespaces := buildNamespacesSection(b, s.Namespaces, s.Findings, thresholds, severity)
-	workloads := buildWorkloadsSection(b, s.Workloads, s.Findings, thresholds, severity)
-	hpas := buildHPAsSection(b, s)
-	nodepools := buildNodepoolsSection(b, s, thresholds, severity)
-	executive := buildExecutiveSection(b, s, thresholds, severity, false)
-	appendix := buildAppendix(b, s, severity)
-	notes := buildNotes(b, s)
-
 	blocks := []Block{front, PageBreak{Weak: false}}
-	blocks = append(blocks, namespaces...)
-	blocks = append(blocks, workloads...)
-	blocks = append(blocks, hpas...)
-	blocks = append(blocks, nodepools...)
-	blocks = append(blocks, executive...)
+	if profile == "detailed" {
+		blocks = append(blocks, buildNamespacesSection(b, s.Namespaces, s.Findings, thresholds, severity)...)
+		blocks = append(blocks, buildWorkloadsSection(b, s.Workloads, s.Findings, thresholds, severity)...)
+		blocks = append(blocks, buildHPAsSection(b, s)...)
+		blocks = append(blocks, buildNodepoolsSection(b, s, thresholds, severity)...)
+	}
+	blocks = append(blocks, buildExecutiveSection(b, s, thresholds, severity, profile == "executive")...)
 	blocks = append(blocks, PageBreak{Weak: true})
-	blocks = append(blocks, appendix...)
-	blocks = append(blocks, notes...)
+	blocks = append(blocks, buildAppendix(b, s, severity)...)
+	blocks = append(blocks, buildNotes(b, s)...)
 
 	doc := Document{
 		Schema:   Schema,

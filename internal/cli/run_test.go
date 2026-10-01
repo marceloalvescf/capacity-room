@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,11 +11,13 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/goldentest"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
@@ -237,76 +240,106 @@ func TestEveryFailureHasThePrefix(t *testing.T) {
 	}
 }
 
-func TestExecutiveIsRefused(t *testing.T) {
-	wantMsg := `error: report profile "executive" is not available in this version` + "\n"
+// assertExecutiveFile checks that path is a PDF whose data holds, as
+// level-1 headings, the executive heading and the appendix heading and
+// nothing else.
+func assertExecutiveFile(t *testing.T, path string) {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	if !strings.HasPrefix(string(raw), "%PDF") {
+		t.Fatalf("%s does not start as a PDF", path)
+	}
+	_, data, _ := strings.Cut(string(raw), "\n")
+	var doc struct {
+		Blocks []struct {
+			Type  string `json:"type"`
+			Level int    `json:"level"`
+			Runs  []struct {
+				Text string `json:"text"`
+			} `json:"runs"`
+		} `json:"blocks"`
+	}
+	if err := json.Unmarshal([]byte(data), &doc); err != nil {
+		t.Fatalf("decoding the data of %s: %v", path, err)
+	}
+	var got []string
+	for _, blk := range doc.Blocks {
+		if blk.Type == "heading" && blk.Level == 1 && len(blk.Runs) > 0 {
+			got = append(got, blk.Runs[0].Text)
+		}
+	}
+	cat, err := catalog.Load(catalog.English)
+	if err != nil {
+		t.Fatalf("catalog.Load: %v", err)
+	}
+	var want []string
+	for _, key := range []catalog.Key{catalog.SectionsExecutiveHeading, catalog.AppendixHeading} {
+		heading, err := cat.Text(key, nil)
+		if err != nil {
+			t.Fatalf("Text(%s): %v", key, err)
+		}
+		want = append(want, heading)
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("level-1 headings = %q, want %q", got, want)
+	}
+}
 
-	t.Run("flag", func(t *testing.T) {
-		cfgPath := writeConfig(t, minimalConfig(t.TempDir()))
+func TestExecutiveProfile(t *testing.T) {
+	// runCase serves direct-complete and runs the command with the profile
+	// given by the flag, the file, or the environment, as selected.
+	runCase := func(t *testing.T, viaFlag, viaFile, viaEnv bool) {
+		server, _, scenario := startScenario(t, "direct-complete")
+		defer server.Close()
+
+		outDir := t.TempDir()
+		cfg := scenarioConfig(server, scenario, outDir)
+		if viaFile {
+			cfg += "profile = \"executive\"\n"
+		}
+		cfgPath := writeConfig(t, cfg)
+		outPath := filepath.Join(outDir, "r.pdf")
+
 		env := withTypst(t, testEnv(t))
-		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--report-profile", "executive"})
-		if code != 2 {
-			t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
-		}
-		if stderr != wantMsg {
-			t.Fatalf("stderr = %q, want %q", stderr, wantMsg)
-		}
-	})
-
-	t.Run("configuration file", func(t *testing.T) {
-		text := fmt.Sprintf(`[metrics]
-url = "http://127.0.0.1:1/api/v1"
-
-[cluster]
-name = "prod"
-namespaces = ["payments"]
-
-[report]
-output_directory = %q
-profile = "executive"
-`, t.TempDir())
-		cfgPath := writeConfig(t, text)
-		env := withTypst(t, testEnv(t))
-		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath})
-		if code != 2 {
-			t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
-		}
-		if stderr != wantMsg {
-			t.Fatalf("stderr = %q, want %q", stderr, wantMsg)
-		}
-	})
-
-	t.Run("environment", func(t *testing.T) {
-		cfgPath := writeConfig(t, minimalConfig(t.TempDir()))
-		env := withTypst(t, testEnv(t))
-		env.Getenv = func(k string) string {
-			if k == "KCR_REPORT_PROFILE" {
-				return "executive"
+		if viaEnv {
+			inner := env.Getenv
+			env.Getenv = func(k string) string {
+				if k == "KCR_REPORT_PROFILE" {
+					return "executive"
+				}
+				return inner(k)
 			}
-			return ""
 		}
-		env = withTypst(t, env)
-		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath})
-		if code != 2 {
-			t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
+		extra := []string{"--lang", "en", "--output", outPath}
+		if viaFlag {
+			extra = append(extra, "--report-profile", "executive")
 		}
-		if stderr != wantMsg {
-			t.Fatalf("stderr = %q, want %q", stderr, wantMsg)
+		_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, scenario, extra...))
+		if code != 0 {
+			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
 		}
-	})
+		assertExecutiveFile(t, outPath)
+	}
+
+	t.Run("flag", func(t *testing.T) { runCase(t, true, false, false) })
+	t.Run("configuration file", func(t *testing.T) { runCase(t, false, true, false) })
+	t.Run("environment", func(t *testing.T) { runCase(t, false, false, true) })
 
 	t.Run("from snapshot, flag", func(t *testing.T) {
 		snapPath, err := snapshotFixturePath(t, "direct-complete")
 		if err != nil {
 			t.Fatalf("snapshotFixturePath: %v", err)
 		}
+		outPath := filepath.Join(t.TempDir(), "r.pdf")
 		env := withTypst(t, testEnv(t))
-		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--from-snapshot", snapPath, "--report-profile", "executive"})
-		if code != 2 {
-			t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
+		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--from-snapshot", snapPath, "--report-profile", "executive", "--lang", "en", "--output", outPath})
+		if code != 0 {
+			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
 		}
-		if stderr != wantMsg {
-			t.Fatalf("stderr = %q, want %q", stderr, wantMsg)
-		}
+		assertExecutiveFile(t, outPath)
 	})
 
 	t.Run("from snapshot, environment", func(t *testing.T) {
@@ -314,6 +347,7 @@ profile = "executive"
 		if err != nil {
 			t.Fatalf("snapshotFixturePath: %v", err)
 		}
+		outPath := filepath.Join(t.TempDir(), "r.pdf")
 		env := testEnv(t)
 		env.Getenv = func(k string) string {
 			if k == "KCR_REPORT_PROFILE" {
@@ -322,18 +356,40 @@ profile = "executive"
 			return ""
 		}
 		env = withTypst(t, env)
-		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--from-snapshot", snapPath})
-		if code != 2 {
-			t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
+		_, stderr, code := runArgs(context.Background(), env, []string{"report", "--from-snapshot", snapPath, "--lang", "en", "--output", outPath})
+		if code != 0 {
+			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
 		}
-		if stderr != wantMsg {
-			t.Fatalf("stderr = %q, want %q", stderr, wantMsg)
-		}
+		assertExecutiveFile(t, outPath)
 	})
 }
 
+func TestExecutiveOutputName(t *testing.T) {
+	snapPath, err := snapshotFixturePath(t, "direct-complete")
+	if err != nil {
+		t.Fatalf("snapshotFixturePath: %v", err)
+	}
+	outDir := t.TempDir()
+	env := withTypst(t, testEnv(t))
+	inner := env.Getenv
+	env.Getenv = func(k string) string {
+		if k == "KCR_OUTPUT_DIRECTORY" {
+			return outDir
+		}
+		return inner(k)
+	}
+	_, stderr, code := runArgs(context.Background(), env, []string{"report", "--from-snapshot", snapPath, "--report-profile", "executive", "--lang", "en"})
+	if code != 0 {
+		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
+	}
+	want := "report-resources-prod-executive-en-20260715-143000.pdf"
+	if _, err := os.Stat(filepath.Join(outDir, want)); err != nil {
+		t.Fatalf("%s was not written in %s: %v", want, outDir, err)
+	}
+}
+
 // snapshotFixturePath returns the path of a committed golden snapshot; every
-// TestExecutiveIsRefused/from-snapshot case only needs a valid, decodable
+// TestExecutiveProfile from-snapshot case only needs a valid, decodable
 // file, and its stored profile ("detailed") never matters since the flag or
 // the environment always wins.
 func snapshotFixturePath(t *testing.T, name string) (string, error) {
@@ -1744,7 +1800,7 @@ func TestFromSnapshotRefusesASnapshotOfThePartBefore(t *testing.T) {
 	}
 
 	outPath := filepath.Join(t.TempDir(), "r.pdf")
-	_, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--from-snapshot", snapPath, "--output", outPath})
+	_, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--from-snapshot", snapPath, "--lang", "en", "--output", outPath})
 	if code != 2 {
 		t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
 	}
