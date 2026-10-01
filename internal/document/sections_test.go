@@ -763,6 +763,21 @@ func paritySnapshot(t *testing.T) (fixtureOrder, sorted snapshot.Snapshot) {
 		Findings: 1, Attention: 1, WorkloadsWithoutHPA: 1,
 		Autoscaling: unknownAutoscaling(),
 	}
+	findings := make([]analysis.Finding, len(s.Findings))
+	for i, f := range s.Findings {
+		findings[i] = analysis.Finding{
+			Code: f.Code, Severity: f.Severity, ScopeType: f.ScopeType,
+			ScopeKind: f.ScopeKind, ScopeName: f.ScopeName, Confidence: f.Confidence,
+		}
+	}
+	s.Recommendations = []snapshot.Recommendation{}
+	for _, r := range analysis.Recommendations(findings) {
+		s.Recommendations = append(s.Recommendations, snapshot.Recommendation{
+			Code: r.Code, Severity: r.Severity, ScopeType: r.ScopeType,
+			Scopes: append([]string(nil), r.Scopes...), Confidence: r.Confidence,
+		})
+	}
+	s.Summary.Recommendations = float64(len(s.Recommendations))
 
 	sorted = s
 	sorted.Workloads = []snapshot.Workload{api, worker}
