@@ -37,8 +37,26 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A namespace of the configuration, or a workload that the endpoint answers,
   whose name holds a slash stops the run, because no name of Kubernetes
   holds one.
+- The report holds the history of the HPAs of each namespace and the
+  workloads without one, with the situation of each against its configured
+  maximum.
+- The report holds the usage of the node pools, a profile of allocatable,
+  used, and requested resources per node, and the detail of each node with
+  the reason of its status.
+- The snapshot file holds the HPAs, the nodes, the node pools, the coverage
+  of each workload, the cluster autoscaling evidence, and the counts of the
+  report.
+- A run that collects prints one line for each of the five collections and
+  one for the cluster autoscaling.
+- A run whose collectors return nothing, with the state of the cluster
+  autoscaling unknown, stops with exit code 5.
 
 ### Changed
 
 - The Portuguese report writes the technical terms of Kubernetes in English:
   request, limit, workload, node, node pool, label, and autoscaling.
+
+### Fixed
+
+- The average of a series equals the original's when the series has more
+  than two samples.

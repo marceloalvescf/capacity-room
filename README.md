@@ -14,9 +14,9 @@ full design is in
 - The command `report`. It checks a Prometheus-compatible endpoint, stores
   what it found in a snapshot, and writes a PDF.
 - The PDF holds the cover, the report metadata, the status legend, the
-  capacity of each namespace, the resources of each workload, the data
-  quality appendix, and the interpretation notes of the collection.
-  **The sections on autoscalers and on nodes are not built yet.**
+  capacity of each namespace, the resources of each workload, the HPA
+  history, the resource usage by node pool, the data quality appendix, and
+  the interpretation notes of the collection.
 - A container image that carries the binary and Typst 0.15.1.
 - The report template, in two layers under [template/](template/): a generic
   page shell and the layout of the capacity report.
@@ -103,6 +103,11 @@ average, a minimum, a peak, and the last value.
   of data that is unavailable, when the value could not be measured; and the
   mark of no base, when consumption was measured and no request or limit
   exists to compare it with.
+- **The snapshot holds every section.** Besides the namespaces and the
+  workloads, it holds the summary (the counts and the evidence of the
+  cluster autoscaling), the HPAs, the nodes, the node pools, and, on each
+  workload, its HPA coverage: covered, uncovered, or unknown. A workload
+  that only the coverage found is a row with no observed usage.
 - **A Job is left out of the list of workloads**, and so is a workload that
   consumed nothing in the period. What they consumed still counts in the
   total of their namespace. The interpretation notes, after the quality
@@ -110,10 +115,27 @@ average, a minimum, a peak, and the last value.
 - **`--check` collects nothing.** It sends the requests of the preflight
   and stops.
 
-After the lines of the capabilities, a run that collects prints one line for
-each collection, such as `namespace collection: available`.
+The report holds four sections, numbered 1 to 4, and the appendix, 5:
 
-Three rules stop a run:
+- **HPA history** (section 3). For each namespace, the HPAs that were
+  observed, with their specs, the current average, the minimum and the
+  maximum they reached, and their situation; the workloads without an HPA,
+  with their pods and their situation; and a note when the HPA data is
+  incomplete or partial.
+- **Resource usage by node pool** (section 4). A summary of each pool, with
+  its average and peak usage and the confidence in the identity of the pool;
+  an aggregate profile of the allocatable, used, and requested CPU and memory
+  of each node; and the detail of each node, with its usage, the reason of
+  its state, and whether it is ready and schedulable.
+
+After the lines of the capabilities, a run that collects prints six lines:
+`namespace collection`, `workload collection`, `hpa collection`,
+`hpa coverage collection`, and `node collection`, each with a state
+(`available`, `partial`, or `unavailable`), such as
+`namespace collection: available`, and `autoscaling collection`, with
+`enabled`, `disabled`, or `unknown`.
+
+Four rules stop a run:
 
 - An answer of the endpoint larger than 256 MiB is refused, with exit
   code 3.
@@ -126,6 +148,10 @@ Three rules stop a run:
   is shorter than the hour that the change skips and the run starts inside
   the hour after it. The message names the period and the zone; a longer
   period avoids it.
+- No collector returns a row with a state other than unavailable, and the
+  state of the cluster autoscaling is unknown: the run stops with
+  `error: no useful report sections were collected` and exit code 5, the
+  code of the insufficient capabilities of the preflight.
 
 ### Exit codes
 
@@ -144,11 +170,12 @@ nothing on standard output.
 
 ### Trying it without a Prometheus
 
-The repository holds seven scenarios and a server that answers from them.
-Six are recorded answers, in `testdata/prometheus/`. The seventh,
-`testdata/prometheus-own/edge-values.json`, was written for this project and
-holds values at the edge: a sample that is not a number, a request of zero,
-a workload with no request at all. Each answer is given once, so the server
+The repository holds eight scenarios and a server that answers from them.
+Six are recorded answers, in `testdata/prometheus/`. The other two were
+written for this project, in `testdata/prometheus-own/`: `edge-values` holds
+values at the edge, such as a sample that is not a number, a request of zero,
+and a workload with no request at all; `edge-scaling` holds the edges of the
+HPAs and of the nodes. Each answer is given once, so the server
 is started again for each run that collects.
 
 ```bash
@@ -198,6 +225,8 @@ make update-testdata  # rewrites the golden snapshots and data files
 | [docs/reference/](docs/reference/) | Documents and inventories of the two original projects |
 | [template/graphite/README.md](template/graphite/README.md) | The generic template package |
 | [testdata/prometheus/README.md](testdata/prometheus/README.md) | The six recorded scenarios |
+| [testdata/prometheus-own/README.md](testdata/prometheus-own/README.md) | The two scenarios written for this project |
+| [testdata/python/README.md](testdata/python/README.md) | The numbers and queries of the original, for the eight scenarios |
 
 ## Licence
 

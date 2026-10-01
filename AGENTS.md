@@ -185,10 +185,15 @@ the snapshot and nothing else.
   fake server answers a query with the first recorded answer whose text is
   part of the query, so another order consumes the wrong answers.
 - **The collectors keep the order of the original too:** the namespaces,
-  then the workloads, and inside each the queries in its order. The text of
+  then the workloads, then the HPAs and their coverage, then the nodes, then
+  the cluster autoscaling, and inside each the queries in its order. The text of
   every query equals the original letter for letter.
 - **`--check` is the preflight and nothing else.** It sends no query of a
   collector, and the requests it sends are the first requests of a run.
+- **A run with nothing to report stops with exit code 5.** When the five
+  collectors return no row and the status of the cluster autoscaling is
+  unknown, the run stops after the collectors and before the clock is read
+  the second time.
 - **The period is judged before the first request.** A period whose start is
   not before its end stops the run with exit code 2.
 - **The clock is read twice in a run that collects:** for the emission time,
@@ -208,11 +213,14 @@ the snapshot and nothing else.
 - The files of `testdata/prometheus/` are the recorded answers of the
   original, byte for byte. They are never edited.
 - `testdata/prometheus-own/` holds the scenarios that this project wrote,
-  for values that no recorded answer holds. Its README says what each
+  for values that no recorded answer holds. It holds two scenarios,
+  `edge-values` and `edge-scaling`. Its README says what each
   answer exercises. A file there is not edited once its recorded numbers
   exist.
-- `testdata/python/` holds what the original computes and asks for each
-  scenario: its numbers, and its queries in order. A test compares this
+- `testdata/python/` holds what the original computes and asks for each of
+  the eight scenarios: its numbers for every section the program computes,
+  and its queries in order. The recording script lives under
+  `.cache/phase-2/part-3/python/`. A test compares this
   project with them on every run. They are never edited; they are replaced
   only by recording the original again, and its README says how.
 - A test that walks the scenarios or reads a list of queries counts what it
