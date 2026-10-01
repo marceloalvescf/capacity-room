@@ -185,19 +185,21 @@ var Snapshots = []Snapshot{
 		Name:   "command-complete-pt",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/direct-complete.pt-BR.json",
-		Pages:  []int{1, 2, 3},
+		Pages:  []int{1, 2, 3, 4},
 		Protects: "the report as the command writes it, from a data file " +
-			"that Go built and no hand wrote: the outline of five " +
+			"that Go built and no hand wrote: the outline of six " +
 			"numbered sections, the capacity of a namespace, the " +
 			"resources of a workload, the HPA history, and the node " +
-			"pool tables on one page, and the appendix on the next, " +
-			"with no empty page between",
+			"pool tables on one page, the executive summary on the " +
+			"next with its seven subsections, four of them tables and " +
+			"three of them fallback sentences, and the appendix on the " +
+			"last, with no empty page between",
 	},
 	{
 		Name:   "command-complete-en",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/direct-complete.en.json",
-		Pages:  []int{1, 2, 3},
+		Pages:  []int{1, 2, 3, 4},
 		Protects: "the same report in English, with the wording of the " +
 			"catalog: the English headers of the ten columns of the " +
 			"workload table, each wrapped inside its own cell",
@@ -206,7 +208,7 @@ var Snapshots = []Snapshot{
 		Name:   "command-partial-en",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/partial-data.en.json",
-		Pages:  []int{2, 3},
+		Pages:  []int{2, 3, 4, 5},
 		Omits: "page 1: it differs from page 1 of command-complete-en " +
 			"only in the three counts of the data quality list, which " +
 			"are plain text",
@@ -214,26 +216,32 @@ var Snapshots = []Snapshot{
 			"each with its mark, and a remark that wraps beside an " +
 			"evidence sentence that wraps; and, in English, a namespace " +
 			"whose requests and limits are unavailable and whose four " +
-			"ratios have no base",
+			"ratios have no base; and the material limitations of " +
+			"section 5 with five rows, two of them unavailable, over a " +
+			"page break",
 	},
 	{
 		Name:   "command-edge-pt",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/edge-values.pt-BR.json",
-		Pages:  []int{2, 3},
+		Pages:  []int{2, 3, 4},
 		Omits: "page 1: it equals page 1 of command-complete-pt, the " +
 			"opening page of the same cluster with the same nine " +
 			"capabilities available",
 		Protects: "a request of zero printed as a number beside a limit " +
 			"that is unavailable; the mark of no base in a cell of the " +
-			"workload table, where its text wraps to two lines; and the " +
+			"workload table, where its text wraps to two lines; a " +
+			"workload of high priority whose four missing requests and " +
+			"limits collapse into one reason, a namespace at risk that " +
+			"counts one critical and one high workload, and a plan of " +
+			"ten rows with qualifiers in section 5; and the " +
 			"interpretation notes, two rows under the appendix",
 	},
 	{
 		Name:   "command-scaling-pt",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/edge-scaling.pt-BR.json",
-		Pages:  []int{1, 2, 3, 4},
+		Pages:  []int{1, 2, 3, 4, 5},
 		Protects: "the edges of the HPA and node pool tables in " +
 			"Portuguese: the partial-coverage note of section 3 as a " +
 			"callout, an HPA scaled to zero hidden from the table, a " +
@@ -241,23 +249,52 @@ var Snapshots = []Snapshot{
 			"of the undetermined pool in the summary, the profile, and " +
 			"a detail heading, a reason of two fragments, and a node " +
 			"whose state is unavailable twice; the tables run over a " +
-			"page break, and the appendix on page 4 marks the HPA " +
-			"history partial with the warning as its remark",
+			"page break; section 5 with an HPA at its maximum beside an " +
+			"uncovered Deployment without pods, the undetermined pool " +
+			"in the situation table, a plan whose qualifiers depend on " +
+			"the included rows, and two material limitations; and the " +
+			"appendix on page 5 marks the HPA history partial with the " +
+			"warning as its remark",
 	},
 	{
 		Name:   "command-scaling-en",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/edge-scaling.en.json",
-		Pages:  []int{2, 3},
+		Pages:  []int{2, 3, 4},
 		Omits: "page 1: it differs from page 1 of command-complete-en " +
-			"in the page numbers of the outline (section 4.3 and section 5 " +
-			"move to pages 3 and 4) and in two of the three counts of the " +
-			"data quality list, all plain text; page 4: the appendix and the notes equal " +
-			"those of command-scaling-pt but for the wording, which " +
+			"in the page numbers of the outline (sections 4.3, 5, 5.6, " +
+			"and 6 move to pages 3, 3, 4, and 5) and in two of the three " +
+			"counts of the data quality list, all plain text; page 5: " +
+			"the appendix and the notes equal those of " +
+			"command-scaling-pt but for the wording, which " +
 			"command-partial-en already pins in English",
-		Protects: "sections 3 and 4 in English: the headers of the five " +
-			"tables of this part in the wording of the catalog, each " +
-			"wrapped inside its own cell, and the English callout, " +
-			"placeholder, situations, reasons, and node states",
+		Protects: "sections 3, 4, and 5 in English: the headers of the " +
+			"twelve tables of these sections in the wording of the " +
+			"catalog, each wrapped inside its own cell, and the English " +
+			"callout, placeholders, situations, reasons, node states, " +
+			"observations, qualifiers, and limitations",
+	},
+	{
+		Name:   "command-executive-pt",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/command/edge-scaling.executive.pt-BR.json",
+		Pages:  []int{1, 2, 3, 4},
+		Protects: "the executive profile in Portuguese: an outline of two " +
+			"sections, the executive summary as section 1 with no " +
+			"section of the detailed report before it, the " +
+			"partial-coverage callout after the replica ceiling table, " +
+			"the undetermined pool in the situation table, the plan " +
+			"running over a page break, and the appendix with the notes " +
+			"as section 2",
+	},
+	{
+		Name:   "command-executive-en",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/command/direct-complete.executive.en.json",
+		Pages:  []int{1, 2, 3},
+		Protects: "the executive profile in English on three pages: the " +
+			"English headers of the four tables that have rows and the " +
+			"three fallback sentences of the subsections that have " +
+			"none, with the appendix alone on the last page",
 	},
 }
