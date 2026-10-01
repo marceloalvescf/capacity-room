@@ -210,8 +210,9 @@ var Snapshots = []Snapshot{
 		Data:   "tests/capacity/fixtures/command/partial-data.en.json",
 		Pages:  []int{2, 3, 4, 5},
 		Omits: "page 1: it differs from page 1 of command-complete-en " +
-			"only in the three counts of the data quality list, which " +
-			"are plain text",
+			"in the three counts of the data quality list and in the " +
+			"page number of section 6 in the outline (5 instead of 4), " +
+			"all plain text",
 		Protects: "the three states in the coverage column of one table, " +
 			"each with its mark, and a remark that wraps beside an " +
 			"evidence sentence that wraps; and, in English, a namespace " +
@@ -262,8 +263,9 @@ var Snapshots = []Snapshot{
 		Data:   "tests/capacity/fixtures/command/edge-scaling.en.json",
 		Pages:  []int{2, 3, 4},
 		Omits: "page 1: it differs from page 1 of command-complete-en " +
-			"in the page numbers of the outline (sections 4.3, 5, 5.6, " +
-			"and 6 move to pages 3, 3, 4, and 5) and in two of the three " +
+			"in the page numbers of the outline (sections 4.3, 5.6, 5.7, " +
+			"and 6 on pages 3, 4, 4, and 5 instead of 2, 3, 3, and 4) " +
+			"and in two of the three " +
 			"counts of the data quality list, all plain text; page 5: " +
 			"the appendix and the notes equal those of " +
 			"command-scaling-pt but for the wording, which " +
