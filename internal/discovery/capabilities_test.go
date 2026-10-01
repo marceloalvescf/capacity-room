@@ -1129,6 +1129,10 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 		"partial-data":     26,
 		"value-edge-cases": 29,
 		"edge-values":      29,
+		// the 29 requests of direct-complete, plus the one probe of
+		// kube_deployment_spec_replicas that follows the empty
+		// kube_deployment_labels probe.
+		"edge-scaling": 30,
 	}
 
 	// windowLen is how many of the fixture's own scripted requests (in its
@@ -1147,6 +1151,7 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 		"partial-data":          29,
 		"value-edge-cases":      29,
 		"edge-values":           29,
+		"edge-scaling":          30,
 	}
 
 	// wantUnused is the query_contains text of every scripted request within
@@ -1165,6 +1170,7 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 		"partial-data":          {"instance:node_memory_utilisation:ratio", "node_memory_MemAvailable_bytes", "node_memory_MemTotal_bytes"},
 		"value-edge-cases":      {},
 		"edge-values":           {},
+		"edge-scaling":          {},
 	}
 
 	for _, scenario := range promtest.Scenarios {
@@ -1287,6 +1293,14 @@ func scenarioWant(name string) []scenarioCapability {
 	case "value-edge-cases":
 		return set(baseline, map[string]scenarioCapability{
 			"node_autoscaling": {"node_autoscaling", StateAvailable, StrategyConfigured, []string{}, []string{}},
+		})
+	case "edge-scaling":
+		return set(baseline, map[string]scenarioCapability{
+			"workloads_without_hpa": {
+				"workloads_without_hpa", StateAvailable, StrategyRawMetrics,
+				[]string{metricKubeDeploymentSpecReplicas, metricKubeStatefulSetLabels, metricKubeHorizontalPodAutoscalerInfo},
+				[]string{},
+			},
 		})
 	case "raw-fallback":
 		return set(baseline, map[string]scenarioCapability{

@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
 )
 
 // numberValue is a Value that holds a number.
@@ -152,8 +154,8 @@ func TestGoldenSnapshotsAreUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) != 7 {
-		t.Fatalf("found %d golden snapshots, want 7", len(files))
+	if len(files) != len(promtest.Scenarios) {
+		t.Fatalf("found %d golden snapshots, want %d", len(files), len(promtest.Scenarios))
 	}
 	for _, file := range files {
 		data, err := os.ReadFile(file)
