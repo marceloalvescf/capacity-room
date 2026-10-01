@@ -17,8 +17,8 @@ full design is in
   capacity of each namespace, the resources of each workload, the HPA
   history, the resource usage by node pool, the executive summary, the
   technical quality appendix, and the interpretation notes of the
-  collection. The `executive` profile writes the summary and the appendix
-  alone.
+  collection. The `executive` profile writes the cover, the opening page,
+  the executive summary, and the appendix.
 - A container image that carries the binary and Typst 0.15.1.
 - The report template, in two layers under [template/](template/): a generic
   page shell and the layout of the capacity report.
@@ -79,8 +79,10 @@ The modes exclude each other. One collection gives a PDF in both languages
 through `--snapshot` followed by `--from-snapshot`, once for each language.
 
 `--from-snapshot` reads no configuration file. It takes `--lang`,
-`--min-severity`, and `--output`, and the variables `KCR_LANGUAGE`,
-`KCR_MIN_SEVERITY`, and `KCR_OUTPUT_DIRECTORY`.
+`--report-profile`, `--min-severity`, and `--output`, and the variables
+`KCR_LANGUAGE`, `KCR_REPORT_PROFILE`, `KCR_MIN_SEVERITY`, and
+`KCR_OUTPUT_DIRECTORY`. The profile and the minimum severity come from the
+flag, else from the variable, else from the stored snapshot.
 
 Without `--output`, the PDF is written to `report.output_directory` under the
 name `report-resources-<cluster>-<language>-<date>-<time>.pdf`. When the
@@ -131,10 +133,14 @@ node pools with their capacity and usage, and the cluster autoscaling.
 - **`--check` collects nothing.** It sends the requests of the preflight
   and stops.
 
-The detailed report holds five sections, numbered 1 to 5, and the appendix, 6.
-The first two are the capacity of each namespace and the resources of each
-workload:
+The detailed report holds five sections, numbered 1 to 5, and the appendix, 6:
 
+- **Capacity by namespace** (section 1). For each namespace, the average and
+  peak usage of CPU and memory, its requests and limits, and the two ratios
+  of the peak to the request and to the limit.
+- **Resources by workload** (section 2). For each workload, its pods, the
+  average and peak usage of CPU and memory, and the four ratios of usage to
+  request and to limit.
 - **HPA history** (section 3). For each namespace, the HPAs that were
   observed, with their specs, the current average, the minimum and the
   maximum they reached, and their situation; the workloads without an HPA,
