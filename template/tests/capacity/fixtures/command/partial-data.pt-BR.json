@@ -876,6 +876,579 @@
       ]
     },
     {
+      "type": "heading",
+      "level": 1,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Resumo executivo"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Síntese dos principais riscos identificados no período de 24 horas, com foco em pontos de prioridade crítica e alta que requerem atenção imediata."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Workloads com prioridade crítica"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "priority-workloads",
+      "headers": [
+        "Namespace",
+        "Workload",
+        "Qtde. Pods",
+        "Motivo"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limit; Memória: pico de 24000% do request; CPU: pico de 80% do request"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Workloads com prioridade alta"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Nenhum workload com prioridade alta foi identificado."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespaces com workload em risco"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "namespaces-at-risk",
+      "headers": [
+        "Namespace",
+        "CPU % / Limit",
+        "Mem % / Limit",
+        "Motivo",
+        "Status",
+        "Prioridade"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 12000% do limit; Memória: pico de 24000% do request; CPU: pico de 80% do request"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 crítica"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Workloads com máximo de replicas e sem HPA"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Nenhum workload atingiu o máximo de replicas ou apresentou ausência de HPA com risco automático no período analisado."
+        }
+      ]
+    },
+    {
+      "type": "callout",
+      "kind": "note",
+      "title": [
+        {
+          "kind": "text",
+          "text": "Dados incompletos"
+        }
+      ],
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Parte dos dados de HPA está indisponível para o período analisado."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Situação dos node pools"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "nodepool-status",
+      "headers": [
+        "Node pool",
+        "Situação",
+        "Observação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Estável"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Plano de ação priorizado"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "action-plan",
+      "headers": [
+        "Ordem",
+        "Prioridade",
+        "Ação",
+        "Workloads / Escopo"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limit de memória e o perfil de consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o request de memória e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir ou justificar o limit de CPU conforme a política do workload."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir o request de CPU com base no consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "5"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir ou justificar o limit de memória conforme a política do workload."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "6"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir o request de memória com base no consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "7"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o request de CPU e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Limitações materiais"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "material-limitations",
+      "headers": [
+        "Capacidade",
+        "Cobertura",
+        "Observação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Histórico de HPA"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "As métricas necessárias não foram encontradas."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Cobertura de workloads sem HPA"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "O inventário de workloads ou alvos de HPA está incompleto."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Identificação de node pools"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os labels de node pools não foram encontrados."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Utilização dos nodes"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "As métricas necessárias não foram encontradas."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Autoscaling de nodes"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "O estado do autoscaling de nodes não pôde ser determinado."
+            }
+          ]
+        ]
+      ]
+    },
+    {
       "type": "pagebreak",
       "weak": true
     },

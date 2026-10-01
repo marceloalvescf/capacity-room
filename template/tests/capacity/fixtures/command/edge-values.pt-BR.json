@@ -998,6 +998,566 @@
       ]
     },
     {
+      "type": "heading",
+      "level": 1,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Resumo executivo"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Síntese dos principais riscos identificados no período de 24 horas, com foco em pontos de prioridade crítica e alta que requerem atenção imediata."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Workloads com prioridade crítica"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "priority-workloads",
+      "headers": [
+        "Namespace",
+        "Workload",
+        "Qtde. Pods",
+        "Motivo"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "CPU: pico de 90% do limit; CPU: pico de 90% do request; Memória: média de 27,5% do request"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Workloads com prioridade alta"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "priority-workloads",
+      "headers": [
+        "Namespace",
+        "Workload",
+        "Qtde. Pods",
+        "Motivo"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "queue"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Request e limit de CPU e memória não observados"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespaces com workload em risco"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "namespaces-at-risk",
+      "headers": [
+        "Namespace",
+        "CPU % / Limit",
+        "Mem % / Limit",
+        "Motivo",
+        "Status",
+        "Prioridade"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "unavailable",
+              "text": "Indisponível"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "50%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "CPU: pico de 90% do limit; CPU: pico de 90% do request; Memória: média de 27,5% do request"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1 crítica · 1 alta"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Workloads com máximo de replicas e sem HPA"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Nenhum workload atingiu o máximo de replicas ou apresentou ausência de HPA com risco automático no período analisado."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Situação dos node pools"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "nodepool-status",
+      "headers": [
+        "Node pool",
+        "Situação",
+        "Observação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Estável"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Plano de ação priorizado"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "action-plan",
+      "headers": [
+        "Ordem",
+        "Prioridade",
+        "Ação",
+        "Workloads / Escopo"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limit de CPU e o perfil de consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítica"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o request de CPU e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Investigar eventos, restrições de agendamento e tempo de estabilização."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir ou justificar o limit de CPU conforme a política do workload. (namespaces)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "5"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o request de memória e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "6"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir ou justificar o limit de CPU conforme a política do workload. (workloads)"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "queue"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "7"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir o request de CPU com base no consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "queue"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "8"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir ou justificar o limit de memória conforme a política do workload."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "queue"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "9"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o dimensionamento do request de memória."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "api"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "10"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Alta"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Definir o request de memória com base no consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "queue"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Limitações materiais"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Nenhuma limitação material foi identificada."
+        }
+      ]
+    },
+    {
       "type": "pagebreak",
       "weak": true
     },
