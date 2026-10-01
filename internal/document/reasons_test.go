@@ -49,13 +49,13 @@ func TestReasonFragmentOfWorkloads(t *testing.T) {
 		finding snapshot.Finding
 		want    string
 	}{
-		{"request peak", workloadFinding("WORKLOAD_CPU_REQUEST_CRITICAL", "critical", "p", "api", "Deployment", number("average_percent", 88), number("peak_percent", 97)), "CPU: pico de 97% do request"},
-		{"request average", workloadFinding("WORKLOAD_CPU_REQUEST_CRITICAL", "critical", "p", "api", "Deployment", number("average_percent", 72)), "CPU: média de 72% do request"},
-		{"limit peak", workloadFinding("WORKLOAD_MEMORY_LIMIT_ATTENTION", "attention", "p", "api", "Deployment", number("peak_percent", 78)), "Memória: pico de 78% do limit"},
-		{"overrequested", workloadFinding("WORKLOAD_CPU_OVERREQUESTED", "attention", "p", "api", "Deployment", number("average_percent", 7.1)), "CPU: média de 7,1% do request"},
-		{"bursty", workloadFinding("WORKLOAD_CPU_BURSTY", "attention", "p", "api", "Deployment", number("gap_percent", 96.1)), "CPU: variação de 96,1%"},
-		{"request missing", workloadFinding("WORKLOAD_CPU_REQUEST_MISSING", "attention", "p", "api", "Deployment"), "Request de CPU não observado"},
-		{"limit missing", workloadFinding("WORKLOAD_MEMORY_LIMIT_MISSING", "attention", "p", "api", "Deployment"), "Limit de memória não observado"},
+		{"request peak", workloadFinding("WORKLOAD_CPU_REQUEST_CRITICAL", "critical", "p", "api", "Deployment", number("average_percent", 88), number("peak_percent", 97)), reason(t, "request_peak", "cpu", "97%")},
+		{"request average", workloadFinding("WORKLOAD_CPU_REQUEST_CRITICAL", "critical", "p", "api", "Deployment", number("average_percent", 72)), reason(t, "request_average", "cpu", "72%")},
+		{"limit peak", workloadFinding("WORKLOAD_MEMORY_LIMIT_ATTENTION", "attention", "p", "api", "Deployment", number("peak_percent", 78)), reason(t, "limit_peak", "memory", "78%")},
+		{"overrequested", workloadFinding("WORKLOAD_CPU_OVERREQUESTED", "attention", "p", "api", "Deployment", number("average_percent", 7.1)), reason(t, "request_average", "cpu", "7,1%")},
+		{"bursty", workloadFinding("WORKLOAD_CPU_BURSTY", "attention", "p", "api", "Deployment", number("gap_percent", 96.1)), reason(t, "bursty", "cpu", "96,1%")},
+		{"request missing", workloadFinding("WORKLOAD_CPU_REQUEST_MISSING", "attention", "p", "api", "Deployment"), pt(t, catalog.Reason("request_missing", "cpu"), nil)},
+		{"limit missing", workloadFinding("WORKLOAD_MEMORY_LIMIT_MISSING", "attention", "p", "api", "Deployment"), pt(t, catalog.Reason("limit_missing", "memory"), nil)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -94,7 +94,7 @@ func TestWorkloadReasonCollapsesTheFourMissing(t *testing.T) {
 	findings = append(findings,
 		workloadFinding("WORKLOAD_CPU_BURSTY", "attention", "p", "api", "Deployment", number("gap_percent", 50)),
 		workloadFinding("WORKLOAD_MEMORY_REQUEST_MISSING", "attention", "p", "api", "Deployment"))
-	want := "Request e limit de CPU e memória não observados; CPU: variação de 50%"
+	want := pt(t, catalog.SectionsExecutiveReasonAllMissing, nil) + "; " + reason(t, "bursty", "cpu", "50%")
 	if got := workloadReason(b, findings); got != want {
 		t.Errorf("workloadReason() = %q, want %q", got, want)
 	}
@@ -106,12 +106,16 @@ func TestWorkloadReasonCollapsesTheFourMissing(t *testing.T) {
 func TestWorkloadReasonKeepsThreeMissingApart(t *testing.T) {
 	b := &builder{cat: mustCatalog(t, catalog.PortugueseBrazil)}
 	findings := missingFindings("WORKLOAD_CPU_LIMIT_MISSING", "WORKLOAD_CPU_REQUEST_MISSING", "WORKLOAD_MEMORY_LIMIT_MISSING")
-	want := "Limit de CPU não observado; Request de CPU não observado; Limit de memória não observado"
+	want := strings.Join([]string{
+		pt(t, catalog.Reason("limit_missing", "cpu"), nil),
+		pt(t, catalog.Reason("request_missing", "cpu"), nil),
+		pt(t, catalog.Reason("limit_missing", "memory"), nil),
+	}, "; ")
 	got := workloadReason(b, findings)
 	if got != want {
 		t.Errorf("workloadReason() = %q, want %q", got, want)
 	}
-	if strings.Contains(got, "e limit") {
+	if strings.Contains(got, pt(t, catalog.SectionsExecutiveReasonAllMissing, nil)) {
 		t.Errorf("workloadReason() = %q holds the collapsed sentence", got)
 	}
 }
@@ -122,7 +126,7 @@ func TestWorkloadReasonDeduplicates(t *testing.T) {
 		workloadFinding("WORKLOAD_CPU_REQUEST_CRITICAL", "critical", "p", "api", "Deployment", number("peak_percent", 97)),
 		workloadFinding("WORKLOAD_CPU_REQUEST_ATTENTION", "attention", "p", "api", "Deployment", number("peak_percent", 97)),
 	}
-	if got, want := workloadReason(b, findings), "CPU: pico de 97% do request"; got != want {
+	if got, want := workloadReason(b, findings), reason(t, "request_peak", "cpu", "97%"); got != want {
 		t.Errorf("workloadReason() = %q, want %q", got, want)
 	}
 }

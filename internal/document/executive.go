@@ -587,9 +587,11 @@ func recommendationScope(b *builder, r snapshot.Recommendation) Run {
 	if kind == analysis.ScopeWorkload && strings.HasPrefix(r.Code, "DEPLOYMENT_") {
 		kind = "deployment"
 	}
-	if !slices.Contains(catalog.ScopeSummaries, kind) {
+	// A StatefulSet recommendation has no summary: its only code is healthy
+	// and never recommended.
+	if !slices.Contains(catalog.ScopeSummaries, kind) || strings.HasPrefix(r.Code, "STATEFULSET_") {
 		if b.err == nil {
-			b.err = fmt.Errorf("recommendation of scope type %q has no summary", r.ScopeType)
+			b.err = fmt.Errorf("recommendation %s of scope type %q has no summary", r.Code, r.ScopeType)
 		}
 		return Placeholder("")
 	}
