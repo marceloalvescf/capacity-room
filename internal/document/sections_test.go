@@ -298,6 +298,8 @@ func TestBlocksFollowTheOrderOfTheOriginal(t *testing.T) {
 		"front", "pagebreak",
 		"heading", "heading", "table",
 		"heading", "heading", "table",
+		"heading", "paragraph", "heading", "paragraph",
+		"heading", "heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
 		"pagebreak",
 		"heading", "table",
 		"heading", "table",
@@ -320,14 +322,17 @@ func TestBlocksFollowTheOrderOfTheOriginal(t *testing.T) {
 	wantHeading(3, 2, false)  // Namespace: payments
 	wantHeading(5, 1, true)   // Recursos por workload
 	wantHeading(6, 2, false)  // Namespace: payments
-	wantHeading(9, 1, true)   // Apêndice técnico de qualidade
-	wantHeading(11, 2, false) // Avisos de interpretação
+	wantHeading(8, 1, true)   // Histórico de HPA
+	wantHeading(10, 2, false) // Namespace: payments
+	wantHeading(12, 1, true)  // Uso de recursos por node pool
+	wantHeading(20, 1, true)  // Apêndice técnico de qualidade
+	wantHeading(22, 2, false) // Avisos de interpretação
 
 	if pb, ok := doc.Blocks[1].(PageBreak); !ok || pb.Weak {
 		t.Errorf("Blocks[1] = %+v, want a non-weak pagebreak", doc.Blocks[1])
 	}
-	if pb, ok := doc.Blocks[8].(PageBreak); !ok || !pb.Weak {
-		t.Errorf("Blocks[8] = %+v, want a weak pagebreak", doc.Blocks[8])
+	if pb, ok := doc.Blocks[19].(PageBreak); !ok || !pb.Weak {
+		t.Errorf("Blocks[19] = %+v, want a weak pagebreak", doc.Blocks[19])
 	}
 
 	wantTable := func(i int, id string) {
@@ -339,8 +344,8 @@ func TestBlocksFollowTheOrderOfTheOriginal(t *testing.T) {
 	}
 	wantTable(4, "namespace-capacity")
 	wantTable(7, "workload-resources")
-	wantTable(10, "quality-appendix")
-	wantTable(12, "interpretation-notes")
+	wantTable(21, "quality-appendix")
+	wantTable(23, "interpretation-notes")
 }
 
 func TestHeadingOfANamespaceHasTwoRuns(t *testing.T) {
@@ -523,48 +528,115 @@ func TestEmptySections(t *testing.T) {
 // each key so that it compares numbers, statuses, identifiers, and shape,
 // and not the words, which may change.
 var parityTexts = map[string]catalog.Key{
-	"Capacidade por Namespace":       catalog.SectionsNamespacesHeading,
-	"Recurso":                        catalog.SectionsNamespacesHeaderResource,
-	"Uso médio":                      catalog.SectionsNamespacesHeaderAverage,
-	"Pico":                           catalog.SectionsNamespacesHeaderPeak,
-	"Solicitação":                    catalog.SectionsNamespacesHeaderRequest,
-	"Limite":                         catalog.SectionsNamespacesHeaderLimit,
-	"% Pico/Solicitação":             catalog.SectionsNamespacesHeaderPeakRequest,
-	"% Pico/Limite":                  catalog.SectionsNamespacesHeaderPeakLimit,
-	"CPU":                            catalog.SectionsNamespacesRowCPU,
-	"Memória":                        catalog.SectionsNamespacesRowMemory,
-	"Recursos por carga de trabalho": catalog.SectionsWorkloadsHeading,
-	"Carga de trabalho":              catalog.SectionsWorkloadsHeaderWorkload,
-	"Pods":                           catalog.SectionsWorkloadsHeaderPods,
-	"CPU média":                      catalog.SectionsWorkloadsHeaderCPUAverage,
-	"CPU pico":                       catalog.SectionsWorkloadsHeaderCPUPeak,
-	"% CPU/Solicitação":              catalog.SectionsWorkloadsHeaderCPURequest,
-	"% CPU/Limite":                   catalog.SectionsWorkloadsHeaderCPULimit,
-	"Memória média":                  catalog.SectionsWorkloadsHeaderMemoryAverage,
-	"Memória pico":                   catalog.SectionsWorkloadsHeaderMemoryPeak,
-	"% Memória/Solicitação":          catalog.SectionsWorkloadsHeaderMemoryRequest,
-	"% Memória/Limite":               catalog.SectionsWorkloadsHeaderMemoryLimit,
-	"Indisponível":                   catalog.PlaceholderUnavailable,
-	"Não definido":                   catalog.PlaceholderNoBase,
+	"Capacidade por Namespace":        catalog.SectionsNamespacesHeading,
+	"Recurso":                         catalog.SectionsNamespacesHeaderResource,
+	"Uso médio":                       catalog.SectionsNamespacesHeaderAverage,
+	"Pico":                            catalog.SectionsNamespacesHeaderPeak,
+	"Solicitação":                     catalog.SectionsNamespacesHeaderRequest,
+	"Limite":                          catalog.SectionsNamespacesHeaderLimit,
+	"% Pico/Solicitação":              catalog.SectionsNamespacesHeaderPeakRequest,
+	"% Pico/Limite":                   catalog.SectionsNamespacesHeaderPeakLimit,
+	"CPU":                             catalog.SectionsNamespacesRowCPU,
+	"Memória":                         catalog.SectionsNamespacesRowMemory,
+	"Recursos por carga de trabalho":  catalog.SectionsWorkloadsHeading,
+	"Carga de trabalho":               catalog.SectionsWorkloadsHeaderWorkload,
+	"Pods":                            catalog.SectionsWorkloadsHeaderPods,
+	"CPU média":                       catalog.SectionsWorkloadsHeaderCPUAverage,
+	"CPU pico":                        catalog.SectionsWorkloadsHeaderCPUPeak,
+	"% CPU/Solicitação":               catalog.SectionsWorkloadsHeaderCPURequest,
+	"% CPU/Limite":                    catalog.SectionsWorkloadsHeaderCPULimit,
+	"Memória média":                   catalog.SectionsWorkloadsHeaderMemoryAverage,
+	"Memória pico":                    catalog.SectionsWorkloadsHeaderMemoryPeak,
+	"% Memória/Solicitação":           catalog.SectionsWorkloadsHeaderMemoryRequest,
+	"% Memória/Limite":                catalog.SectionsWorkloadsHeaderMemoryLimit,
+	"Indisponível":                    catalog.PlaceholderUnavailable,
+	"Não definido":                    catalog.PlaceholderNoBase,
+	"Histórico de HPA":                catalog.SectionsHPAsHeading,
+	"HPAs observados":                 catalog.SectionsHPAsObservedHeading,
+	"Cargas de trabalho sem HPA":      catalog.SectionsHPAsUncoveredHeading,
+	"HPA":                             catalog.SectionsHPAsHeaderHPA,
+	"Spec Min":                        catalog.SectionsHPAsHeaderSpecMin,
+	"Spec Max":                        catalog.SectionsHPAsHeaderSpecMax,
+	"Atual (Avg)":                     catalog.SectionsHPAsHeaderCurrentAverage,
+	"Mín Atingido":                    catalog.SectionsHPAsHeaderMinReached,
+	"Máx Atingido":                    catalog.SectionsHPAsHeaderMaxReached,
+	"Situação":                        catalog.SectionsHPAsHeaderSituation,
+	"Tipo":                            catalog.SectionsHPAsHeaderKind,
+	"Qtde. Pods":                      catalog.SectionsHPAsHeaderPods,
+	"Máximo atingido":                 catalog.SectionsHPAsSituationMaxReached,
+	"Sem HPA":                         catalog.SectionsHPAsSituationNoHPA,
+	"Uso de recursos por pool de nós": catalog.SectionsNodepoolsHeading,
+	"Sumário por pool de nós":         catalog.SectionsNodepoolsSummaryHeading,
+	"Perfil de uso agregado por pool de nós": catalog.SectionsNodepoolsProfileHeading,
+	"Detalhamento por nó":                    catalog.SectionsNodepoolsDetailHeading,
+	"Pool de nós":                            catalog.SectionsNodepoolsHeaderPool,
+	"Nós":                                    catalog.SectionsNodepoolsHeaderNodes,
+	"CPU alocável/nó":                        catalog.SectionsNodepoolsHeaderCPUAllocatable,
+	"CPU usada/nó":                           catalog.SectionsNodepoolsHeaderCPUUsed,
+	"CPU solicitada/nó":                      catalog.SectionsNodepoolsHeaderCPURequested,
+	"Memória alocável/nó":                    catalog.SectionsNodepoolsHeaderMemoryAllocatable,
+	"Memória usada/nó":                       catalog.SectionsNodepoolsHeaderMemoryUsed,
+	"Memória solicitada/nó":                  catalog.SectionsNodepoolsHeaderMemoryRequested,
+	"Confiança":                              catalog.SectionsNodepoolsHeaderConfidence,
+	"Nó":                                     catalog.SectionsNodepoolsHeaderNode,
+	"CPU méd/pico":                           catalog.SectionsNodepoolsHeaderCPUAvgPeak,
+	"Mem méd/pico":                           catalog.SectionsNodepoolsHeaderMemoryAvgPeak,
+	"Motivo":                                 catalog.SectionsNodepoolsHeaderReason,
+	"Estado":                                 catalog.SectionsNodepoolsHeaderState,
+	"Avisos de interpretação":                catalog.NotesHeading,
+	"Observação":                             catalog.NotesHeaderRemark,
+	"Exata":                                  catalog.Confidence("exact"),
+	// The fixture's own note is a stand-in sentence of the original for
+	// the one warning of the snapshot, whose text the catalog writes.
+	"A série de eventos possui cobertura parcial.": catalog.Warning(collect.WarningWorkloadHistoryCurrentAssociation),
 }
 
-// parityLabelText is the one run of the fixture that is a catalog text
-// followed by a space: the namespace label before the identifier.
-const parityLabelText = "Namespace: "
+// parityLabels holds the two texts of the fixture that are a catalog label
+// followed by one space, before an identifier.
+var parityLabels = map[string]catalog.Key{
+	"Namespace: ":   catalog.SectionsNamespaceLabel,
+	"Pool de nós: ": catalog.SectionsNodepoolsPoolLabel,
+}
+
+// parityComposed returns the texts of the fixture that the document builds
+// from several parts, so that no one key can stand for them: the
+// introduction of section 3 with its period filled in, the state of a node
+// as two words joined, and the reason of a node as a template with its
+// percentage filled in. The period and the percentage are the literals the
+// fixture holds.
+func parityComposed(t *testing.T, cat *catalog.Catalog) map[string]string {
+	t.Helper()
+	text := func(key catalog.Key, params catalog.Params) string {
+		s, err := cat.Text(key, params)
+		if err != nil {
+			t.Fatalf("Text(%q): %v", key, err)
+		}
+		return s
+	}
+	return map[string]string{
+		"Comportamento dos Horizontal Pod Autoscalers no período de 24 horas. A situação indica se o máximo configurado foi observado.": text(catalog.SectionsHPAsIntro, catalog.Params{"Period": "24 horas"}),
+		"Pronto; Agendável":                  text(catalog.NodeStateReady, nil) + "; " + text(catalog.NodeStateSchedulable, nil),
+		"Memória: pico de 80% de utilização": text(catalog.Reason("usage_peak", "memory"), catalog.Params{"Percent": "80%"}),
+	}
+}
 
 // withCatalogTexts returns a copy of v, a decoded JSON value, in which every
-// header and every run that is not an identifier and whose text parityTexts
-// knows carries the current catalog text of its key. Every other value is
-// copied as it is.
+// header and every run that is not an identifier and whose text parityTexts,
+// parityLabels, or parityComposed knows carries the current catalog text.
+// Every other value is copied as it is.
 func withCatalogTexts(t *testing.T, cat *catalog.Catalog, v any) any {
 	t.Helper()
+	composed := parityComposed(t, cat)
 	replace := func(s string) string {
-		if s == parityLabelText {
-			text, err := cat.Text(catalog.SectionsNamespaceLabel, nil)
+		if key, ok := parityLabels[s]; ok {
+			text, err := cat.Text(key, nil)
 			if err != nil {
-				t.Fatalf("Text(%q): %v", catalog.SectionsNamespaceLabel, err)
+				t.Fatalf("Text(%q): %v", key, err)
 			}
 			return text + " "
+		}
+		if text, ok := composed[s]; ok {
+			return text
 		}
 		key, ok := parityTexts[s]
 		if !ok {
@@ -617,17 +689,22 @@ func withCatalogTexts(t *testing.T, cat *catalog.Catalog, v any) any {
 	}
 }
 
-// TestDocumentEqualsParityForItsSections proves that the namespace and
-// workload sections built straight from a snapshot holding the numbers of
-// template/tests/capacity/fixtures/parity.pt-BR.json equal its blocks 2 to
-// 7 in every number, status, identifier, and block, with the words of the
-// fixture read through the catalog.
-func TestDocumentEqualsParityForItsSections(t *testing.T) {
-	b := &builder{cat: mustCatalog(t, catalog.PortugueseBrazil)}
-	thresholds := config.Thresholds{WarningPercent: 70, CriticalPercent: 85}
+// parityEvidence returns a finding's evidence of numbers.
+func parityEvidence(average, peak float64) []snapshot.Evidence {
+	return []snapshot.Evidence{number("average_percent", average), number("peak_percent", peak)}
+}
+
+// paritySnapshot returns a snapshot holding the numbers of
+// template/tests/capacity/fixtures/parity.pt-BR.json, with the workloads in
+// the order of the fixture. Its second return value is the same snapshot
+// with the workloads sorted, which is the order Check accepts.
+func paritySnapshot(t *testing.T) (fixtureOrder, sorted snapshot.Snapshot) {
+	t.Helper()
 	noBase := snapshot.Statistics{State: stateUnavailable}
 
-	namespace := snapshot.Namespace{
+	s := baseSnapshot(t)
+	s.Scope.Namespaces = []string{"payments"}
+	s.Namespaces = []snapshot.Namespace{{
 		Name:                 "payments",
 		CPUUsage:             valueStat(3.5, 6.2),
 		MemoryUsage:          valueStat(12, 18),
@@ -639,41 +716,80 @@ func TestDocumentEqualsParityForItsSections(t *testing.T) {
 		MemoryRequestPercent: valueStat(0, 79),
 		CPULimitPercent:      noBase,
 		MemoryLimitPercent:   noBase,
+	}}
+
+	worker := unavailableWorkload("payments", "Deployment", "worker")
+	worker.HPACoverage = snapshot.CoverageUncovered
+	worker.Pods = floatPtr(2)
+	worker.CPUUsage = valueStat(0.5, 0.8)
+	worker.MemoryUsage = valueStat(1, 1.5)
+	worker.CPURequestPercent = valueStat(0, 50)
+	worker.MemoryRequestPercent = valueStat(0, 55)
+
+	api := unavailableWorkload("payments", "Deployment", "api")
+	api.HPACoverage = snapshot.CoverageCovered
+	api.Pods = floatPtr(4)
+	api.CPUUsage = valueStat(3, 5.4)
+	api.MemoryUsage = valueStat(11, 17)
+	api.CPURequestPercent = valueStat(0, 97)
+	api.MemoryRequestPercent = valueStat(0, 95)
+
+	// The fixture names worker before api, which is not the order the
+	// collectors produce, and which Check refuses.
+	s.Workloads = []snapshot.Workload{worker, api}
+
+	// The minimum is absent, as in the original's fixture: its cell reads
+	// as unavailable beside a known average and peak.
+	average, peak, current := 7.0, 10.0, 10.0
+	s.HPAs = []snapshot.HPA{{
+		Namespace: "payments", Name: "api", TargetKind: "Deployment", TargetName: "api",
+		SpecMin: floatPtr(2), SpecMax: floatPtr(10),
+		Current: snapshot.Statistics{State: stateValue, Average: &average, Peak: &peak, Current: &current},
+		Desired: noBase,
+	}}
+
+	node := testNode("worker-a", "apps", valueStat(55, 78), valueStat(64, 80))
+	node.CPUAllocatable, node.MemoryAllocatable = floatPtr(7.5), floatPtr(30)
+	node.CPURequestPercent, node.MemoryRequestPercent = floatPtr(60), floatPtr(70)
+	s.Nodes = []snapshot.Node{node}
+	s.Nodepools = []snapshot.NodePool{{Name: "apps", Confidence: "exact", Nodes: []string{"worker-a"}}}
+
+	s.Findings = []snapshot.Finding{
+		nodeFinding("NODE_MEMORY_USAGE_ATTENTION", analysis.SeverityAttention, "worker-a", parityEvidence(64, 80)...),
+	}
+	s.Quality.Warnings = []snapshot.Message{{Code: collect.WarningWorkloadHistoryCurrentAssociation, Params: map[string]float64{}}}
+	s.Summary = snapshot.Summary{
+		Namespaces: 1, Workloads: 2, HPAs: 1, Nodes: 1, Nodepools: 1,
+		Findings: 1, Attention: 1, WorkloadsWithoutHPA: 1,
+		Autoscaling: unknownAutoscaling(),
 	}
 
-	// The fixture names "worker" before "api", which is not the order the
-	// collectors would produce (sorted by name). The rows go straight to
-	// the section builder, in the fixture's own order, without passing
-	// through Snapshot.Check, which would otherwise refuse them as
-	// unsorted.
-	workloads := []snapshot.Workload{
-		{
-			Namespace: "payments", Kind: "Deployment", Name: "worker",
-			ObservedUsage:        true,
-			Pods:                 floatPtr(2),
-			CPUUsage:             valueStat(0.5, 0.8),
-			MemoryUsage:          valueStat(1, 1.5),
-			CPURequestPercent:    valueStat(0, 50),
-			MemoryRequestPercent: valueStat(0, 55),
-			CPULimitPercent:      noBase,
-			MemoryLimitPercent:   noBase,
-		},
-		{
-			Namespace: "payments", Kind: "Deployment", Name: "api",
-			ObservedUsage:        true,
-			Pods:                 floatPtr(4),
-			CPUUsage:             valueStat(3, 5.4),
-			MemoryUsage:          valueStat(11, 17),
-			CPURequestPercent:    valueStat(0, 97),
-			MemoryRequestPercent: valueStat(0, 95),
-			CPULimitPercent:      noBase,
-			MemoryLimitPercent:   noBase,
-		},
+	sorted = s
+	sorted.Workloads = []snapshot.Workload{api, worker}
+	return s, sorted
+}
+
+// TestDocumentEqualsParityForItsSections proves that the sections built
+// straight from a snapshot holding the numbers of
+// template/tests/capacity/fixtures/parity.pt-BR.json equal its blocks 2 to
+// 22 and its last two, the interpretation notes, in every number, status,
+// identifier, and block, with the words of the fixture read through the
+// catalog.
+func TestDocumentEqualsParityForItsSections(t *testing.T) {
+	b := &builder{cat: mustCatalog(t, catalog.PortugueseBrazil)}
+	thresholds := config.Thresholds{WarningPercent: 70, CriticalPercent: 85}
+
+	s, sorted := paritySnapshot(t)
+	if err := sorted.Check(); err != nil {
+		t.Fatalf("the parity snapshot fails Check: %v", err)
 	}
 
 	var blocks []Block
-	blocks = append(blocks, buildNamespacesSection(b, []snapshot.Namespace{namespace}, nil, thresholds, "all")...)
-	blocks = append(blocks, buildWorkloadsSection(b, workloads, nil, thresholds, "all")...)
+	blocks = append(blocks, buildNamespacesSection(b, s.Namespaces, s.Findings, thresholds, "all")...)
+	blocks = append(blocks, buildWorkloadsSection(b, s.Workloads, s.Findings, thresholds, "all")...)
+	blocks = append(blocks, buildHPAsSection(b, s)...)
+	blocks = append(blocks, buildNodepoolsSection(b, s, thresholds, "all")...)
+	blocks = append(blocks, buildNotes(b, s)...)
 	if b.err != nil {
 		t.Fatalf("builder error = %v", b.err)
 	}
@@ -693,10 +809,11 @@ func TestDocumentEqualsParityForItsSections(t *testing.T) {
 	if err := json.Unmarshal(fixture, &doc); err != nil {
 		t.Fatalf("unmarshal fixture: %v", err)
 	}
-	if len(doc.Blocks) < 8 {
-		t.Fatalf("fixture has %d blocks, want at least 8", len(doc.Blocks))
+	if len(doc.Blocks) != 44 {
+		t.Fatalf("fixture has %d blocks, want 44", len(doc.Blocks))
 	}
-	want, err := json.Marshal(doc.Blocks[2:8])
+	wanted := append(slices.Clone(doc.Blocks[2:23]), doc.Blocks[42:44]...)
+	want, err := json.Marshal(wanted)
 	if err != nil {
 		t.Fatalf("marshal want: %v", err)
 	}

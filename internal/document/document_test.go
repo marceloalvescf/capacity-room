@@ -161,3 +161,44 @@ func TestEncodeNeverWritesNullLists(t *testing.T) {
 		t.Fatalf("encoded table has no \"[]\" for the empty cell: %s", data)
 	}
 }
+
+func TestCalloutMarshals(t *testing.T) {
+	tests := []struct {
+		name    string
+		callout Callout
+		want    string
+	}{
+		{
+			"with a title",
+			Callout{Kind: "note", Title: []Run{Text("Title")}, Runs: []Run{Text("Body")}},
+			`{"type":"callout","kind":"note","title":[{"kind":"text","text":"Title"}],"runs":[{"kind":"text","text":"Body"}]}`,
+		},
+		{
+			"without a title",
+			Callout{Kind: "note", Runs: []Run{Text("Body")}},
+			`{"type":"callout","kind":"note","title":null,"runs":[{"kind":"text","text":"Body"}]}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := json.Marshal(tt.callout)
+			if err != nil {
+				t.Fatalf("Marshal() error = %v", err)
+			}
+			if string(data) != tt.want {
+				t.Errorf("Marshal() = %s, want %s", data, tt.want)
+			}
+		})
+	}
+}
+
+func TestPlaceholderRun(t *testing.T) {
+	data, err := json.Marshal(Placeholder("Undetermined"))
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	want := `{"kind":"placeholder","text":"Undetermined"}`
+	if string(data) != want {
+		t.Errorf("Marshal() = %s, want %s", data, want)
+	}
+}

@@ -1244,6 +1244,40 @@ func missingRegistryConstants(constants map[string]Key) []string {
 	return problems
 }
 
+// namedByFormatters returns the names of the key constants that a non-test
+// file of this package other than keys.go names: a formatter such as Period
+// reads its own keys, and the document, which calls the formatter, never
+// names them.
+func namedByFormatters(t *testing.T, constants map[string]Key) map[string]bool {
+	t.Helper()
+
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("reading the package folder: %v", err)
+	}
+	named := make(map[string]bool)
+	fset := token.NewFileSet()
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") || name == "keys.go" {
+			continue
+		}
+		file, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", name, err)
+		}
+		ast.Inspect(file, func(n ast.Node) bool {
+			if ident, ok := n.(*ast.Ident); ok {
+				if _, isKey := constants[ident.Name]; isKey {
+					named[ident.Name] = true
+				}
+			}
+			return true
+		})
+	}
+	return named
+}
+
 // TestEveryKeyIsUsed proves that internal/document, which is the only
 // non-test, non-catalog reader of these keys in this part of the project,
 // leaves no key of the catalog unused: every exported Key constant of
@@ -1257,6 +1291,9 @@ func missingRegistryConstants(constants map[string]Key) []string {
 func TestEveryKeyIsUsed(t *testing.T) {
 	constants, functions := keyDeclarations(t)
 	all, called := scanCatalogSelectors(t, filepath.Join("..", "document"))
+	for name := range namedByFormatters(t, constants) {
+		all[name] = true
+	}
 
 	for _, problem := range unusedKeyProblems(constants, functions, all, called) {
 		t.Errorf("internal/document %s", problem)

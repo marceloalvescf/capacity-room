@@ -184,6 +184,30 @@ func (t Table) MarshalJSON() ([]byte, error) {
 	}{"table", t.ID, t.Headers, rows})
 }
 
+// Callout is a note beside the flow of the text.
+type Callout struct {
+	Kind  string // note, info, warning
+	Title []Run  // nil for no title
+	Runs  []Run
+}
+
+func (Callout) blockType() string { return "callout" }
+
+// MarshalJSON writes the keys "type", "kind", "title", and "runs", in that
+// order; the title is null when there is none.
+func (c Callout) MarshalJSON() ([]byte, error) {
+	var title []Run
+	if c.Title != nil {
+		title = nonNilRuns(c.Title)
+	}
+	return marshalNoEscape(struct {
+		Type  string `json:"type"`
+		Kind  string `json:"kind"`
+		Title []Run  `json:"title"`
+		Runs  []Run  `json:"runs"`
+	}{"callout", c.Kind, title, nonNilRuns(c.Runs)})
+}
+
 // PageBreak forces a new page, or, when Weak is set, forces one only if a
 // page break has not already happened since the last content.
 type PageBreak struct{ Weak bool }
@@ -223,6 +247,10 @@ func Strong(text string) Run { return Run{kind: "strong", text: &text} }
 // Ident returns a real name run: a namespace, a workload, set without
 // hyphenation.
 func Ident(text string) Run { return Run{kind: "ident", text: &text} }
+
+// Placeholder returns a run that stands for a value the language names,
+// such as an undetermined pool.
+func Placeholder(text string) Run { return Run{kind: "placeholder", text: &text} }
 
 // Status returns a status mark alone: its text is null.
 func Status(status string) Run { return Run{kind: "status", status: status} }

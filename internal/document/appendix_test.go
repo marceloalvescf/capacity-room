@@ -1,10 +1,12 @@
 package document
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
 
@@ -107,5 +109,63 @@ func TestNotesIgnoreTheMinimumSeverity(t *testing.T) {
 	table := findTable(t, doc.Blocks, "interpretation-notes")
 	if len(table.Rows) != 1 {
 		t.Errorf("len(Rows) = %d, want 1", len(table.Rows))
+	}
+}
+
+func TestEffectiveCapabilities(t *testing.T) {
+	tests := []struct {
+		name     string
+		warning  string
+		capIndex int
+	}{
+		{"ambiguous spec turns hpa_history partial", collect.WarningHPAAmbiguousSpec, 3},
+		{"ambiguous target turns workloads_without_hpa partial", collect.WarningHPAAmbiguousTarget, 4},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := baseSnapshot(t)
+			s.Quality.Warnings = []snapshot.Message{{Code: tt.warning, Params: map[string]float64{}}}
+
+			got := effectiveCapabilities(s)
+			if got[tt.capIndex].State != discovery.StatePartial {
+				t.Errorf("state = %q, want partial", got[tt.capIndex].State)
+			}
+			if want := []string{tt.warning}; !slices.Equal(got[tt.capIndex].Reasons, want) {
+				t.Errorf("reasons = %v, want %v", got[tt.capIndex].Reasons, want)
+			}
+			if s.Quality.Capabilities[tt.capIndex].State != discovery.StateAvailable {
+				t.Errorf("the snapshot's own capability changed to %q", s.Quality.Capabilities[tt.capIndex].State)
+			}
+
+			cat := mustCatalog(t, catalog.English)
+			doc := mustBuild(t, s, cat, Options{})
+			list := frontBlock(t, doc).Blocks[6].(List)
+			for i, want := range []string{" 5", " 3", " 1"} {
+				if got := runText(t, list.Items[i][1]); got != want {
+					t.Errorf("front count %d = %q, want %q", i, got, want)
+				}
+			}
+			table := findTable(t, doc.Blocks, "quality-appendix")
+			wantRemark, err := cat.Text(catalog.Warning(tt.warning), nil)
+			if err != nil {
+				t.Fatalf("Text(Warning): %v", err)
+			}
+			if got := runText(t, table.Rows[tt.capIndex][3][0]); got != wantRemark {
+				t.Errorf("remark = %q, want %q", got, wantRemark)
+			}
+			assertStatus(t, table.Rows[tt.capIndex][1][0], "attention", "Partial")
+		})
+	}
+}
+
+func TestEffectiveCapabilitiesLeaveOtherStatesAlone(t *testing.T) {
+	s := baseSnapshot(t)
+	s.Quality.Capabilities[3].State = discovery.StateUnavailable
+	s.Quality.Capabilities[3].Reasons = []string{discovery.ReasonCodes[0]}
+	s.Quality.Warnings = []snapshot.Message{{Code: collect.WarningHPAAmbiguousSpec, Params: map[string]float64{}}}
+
+	got := effectiveCapabilities(s)
+	if got[3].State != discovery.StateUnavailable || !slices.Equal(got[3].Reasons, []string{discovery.ReasonCodes[0]}) {
+		t.Errorf("hpa_history = %+v, want it left unavailable with its own reason", got[3])
 	}
 }

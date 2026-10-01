@@ -1,6 +1,7 @@
 package document
 
 import (
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -326,6 +327,8 @@ func TestBuildBlockOrder(t *testing.T) {
 		"front", "pagebreak",
 		"heading", "heading", "table", "heading", "table",
 		"heading", "paragraph",
+		"heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
+		"heading", "heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
 		"pagebreak",
 		"heading", "table",
 	}
@@ -337,6 +340,36 @@ func TestBuildBlockOrder(t *testing.T) {
 	front := frontBlock(t, doc)
 	if got := blockTypes(front.Blocks); !slices.Equal(got, wantFront) {
 		t.Fatalf("front block order = %v, want %v", got, wantFront)
+	}
+}
+
+func TestBuildOrdersTheSections(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "testdata", "snapshot", "direct-complete.json"))
+	if err != nil {
+		t.Fatalf("reading the golden snapshot: %v", err)
+	}
+	s, err := snapshot.Decode(data)
+	if err != nil {
+		t.Fatalf("Decode() error = %v", err)
+	}
+	cat := mustCatalog(t, catalog.English)
+	doc := mustBuild(t, s, cat, Options{})
+
+	var got []string
+	for _, blk := range doc.Blocks {
+		if h, ok := blk.(Heading); ok && h.Level == 1 {
+			if !h.Numbered {
+				t.Errorf("level-1 heading %q is not numbered", runText(t, h.Runs[0]))
+			}
+			got = append(got, runText(t, h.Runs[0]))
+		}
+	}
+	want := []string{
+		"Capacity by namespace", "Resources by workload", "HPA history",
+		"Resource usage by node pool", "Technical quality appendix",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("level-1 headings = %v, want %v", got, want)
 	}
 }
 
@@ -660,12 +693,12 @@ func TestBuildAppendixEmpty(t *testing.T) {
 	cat := mustCatalog(t, catalog.English)
 	doc := mustBuild(t, s, cat, Options{MinSeverity: "attention"})
 
-	if len(doc.Blocks) != 9 {
-		t.Fatalf("len(Blocks) = %d, want 9", len(doc.Blocks))
+	if len(doc.Blocks) != 22 {
+		t.Fatalf("len(Blocks) = %d, want 22", len(doc.Blocks))
 	}
-	para, ok := doc.Blocks[8].(Paragraph)
+	para, ok := doc.Blocks[21].(Paragraph)
 	if !ok {
-		t.Fatalf("Blocks[8] is %T, want Paragraph", doc.Blocks[8])
+		t.Fatalf("Blocks[21] is %T, want Paragraph", doc.Blocks[21])
 	}
 	want, err := cat.Text(catalog.AppendixEmpty, nil)
 	if err != nil {

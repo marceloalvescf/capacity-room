@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
@@ -15,7 +16,7 @@ import (
 func buildAppendix(b *builder, s snapshot.Snapshot, severity string) []Block {
 	heading := Heading{Level: 1, Numbered: true, Runs: []Run{Text(b.text(catalog.AppendixHeading, nil))}}
 
-	rows := appendixRows(b, s, severity)
+	rows := appendixRows(b, effectiveCapabilities(s), severity)
 	if len(rows) == 0 {
 		return []Block{heading, Paragraph{Runs: []Run{Text(b.text(catalog.AppendixEmpty, nil))}}}
 	}
@@ -64,9 +65,9 @@ func passesSeverity(state, severity string) bool {
 
 // appendixRows builds one row per capability that passes severity, in the
 // order the snapshot stores them.
-func appendixRows(b *builder, s snapshot.Snapshot, severity string) [][][]Run {
+func appendixRows(b *builder, capabilities []snapshot.Capability, severity string) [][][]Run {
 	var rows [][][]Run
-	for _, c := range s.Quality.Capabilities {
+	for _, c := range capabilities {
 		if !passesSeverity(c.State, severity) {
 			continue
 		}
@@ -81,6 +82,33 @@ func appendixRows(b *builder, s snapshot.Snapshot, severity string) [][][]Run {
 	return rows
 }
 
+// ambiguityWarnings names, for the two capabilities an ambiguous HPA
+// weakens, the warning that weakens each.
+var ambiguityWarnings = map[string]string{
+	"hpa_history":           collect.WarningHPAAmbiguousSpec,
+	"workloads_without_hpa": collect.WarningHPAAmbiguousTarget,
+}
+
+// effectiveCapabilities returns the capabilities of the snapshot with an
+// available hpa_history turned partial when the warning HPA_AMBIGUOUS_SPEC
+// is present, and an available workloads_without_hpa turned partial when
+// HPA_AMBIGUOUS_TARGET is, the warning's code standing as the one reason.
+// The snapshot is left as it is.
+func effectiveCapabilities(s snapshot.Snapshot) []snapshot.Capability {
+	out := slices.Clone(s.Quality.Capabilities)
+	for i, c := range out {
+		code, weakened := ambiguityWarnings[c.Name]
+		if !weakened || c.State != discovery.StateAvailable {
+			continue
+		}
+		if slices.ContainsFunc(s.Quality.Warnings, func(w snapshot.Message) bool { return w.Code == code }) {
+			out[i].State = discovery.StatePartial
+			out[i].Reasons = []string{code}
+		}
+	}
+	return out
+}
+
 // appendixRemark joins the sentences of every reason code with one space,
 // or, when there is none, returns the catalog's "no remark" sentence.
 func appendixRemark(b *builder, reasons []string) string {
@@ -89,6 +117,10 @@ func appendixRemark(b *builder, reasons []string) string {
 	}
 	sentences := make([]string, len(reasons))
 	for i, code := range reasons {
+		if slices.Contains(collect.WarningCodes, code) {
+			sentences[i] = b.text(catalog.Warning(code), nil)
+			continue
+		}
 		sentences[i] = b.text(catalog.CapabilityReason(code), nil)
 	}
 	return strings.Join(sentences, " ")

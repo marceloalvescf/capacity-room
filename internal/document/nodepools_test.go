@@ -1,0 +1,376 @@
+package document
+
+import (
+	"slices"
+	"testing"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+)
+
+func boolPtr(value bool) *bool { return &value }
+
+// testNode returns a node of pool with the usage statistics given, an
+// exact pool, ready and schedulable, and nothing else known.
+func testNode(name, pool string, cpu, memory snapshot.Statistics) snapshot.Node {
+	return snapshot.Node{
+		Name: name, Pool: pool, PoolConfidence: "exact",
+		CPUUsagePercent: cpu, MemoryUsagePercent: memory,
+		Ready: boolPtr(true), Schedulable: boolPtr(true),
+	}
+}
+
+// nodeFinding returns a finding of a node with its evidence.
+func nodeFinding(code, severity, node string, evidence ...snapshot.Evidence) snapshot.Finding {
+	return snapshot.Finding{Code: code, Severity: severity, ScopeType: analysis.ScopeNode, ScopeName: node, Evidence: evidence, Confidence: "exact"}
+}
+
+func number(name string, value float64) snapshot.Evidence {
+	return snapshot.Evidence{Name: name, Value: snapshot.Value{Kind: "number", Number: value}}
+}
+
+// poolSnapshot returns the base snapshot holding nodes, one pool for each
+// pool name among them, in order of first appearance, and findings.
+func poolSnapshot(t *testing.T, nodes []snapshot.Node, findings ...snapshot.Finding) snapshot.Snapshot {
+	t.Helper()
+	s := baseSnapshot(t)
+	s.Nodes = nodes
+	s.Findings = findings
+	var pools []snapshot.NodePool
+	for _, node := range nodes {
+		i := slices.IndexFunc(pools, func(p snapshot.NodePool) bool { return p.Name == node.Pool })
+		if i < 0 {
+			pools = append(pools, snapshot.NodePool{Name: node.Pool, Confidence: node.PoolConfidence})
+			i = len(pools) - 1
+		}
+		pools[i].Nodes = append(pools[i].Nodes, node.Name)
+	}
+	s.Nodepools = pools
+	return s
+}
+
+// poolBlocks builds section 4 of s in lang with the default thresholds.
+func poolBlocks(t *testing.T, s snapshot.Snapshot, lang catalog.Language, severity string) []Block {
+	t.Helper()
+	b := &builder{cat: mustCatalog(t, lang)}
+	blocks := buildNodepoolsSection(b, s, config.Default().Thresholds, severity)
+	if b.err != nil {
+		t.Fatalf("builder error = %v", b.err)
+	}
+	return blocks
+}
+
+func TestPoolSectionHeadings(t *testing.T) {
+	s := poolSnapshot(t, []snapshot.Node{testNode("n1", "apps", valueStat(10, 20), valueStat(10, 20))})
+	blocks := poolBlocks(t, s, catalog.English, "all")
+
+	want := []string{"heading", "heading", "table", "heading", "table", "heading", "heading", "table"}
+	if got := blockTypes(blocks); !slices.Equal(got, want) {
+		t.Fatalf("block order = %v, want %v", got, want)
+	}
+	levels := []struct {
+		index    int
+		level    int
+		numbered bool
+		text     string
+	}{
+		{0, 1, true, "Resource usage by node pool"},
+		{1, 2, true, "Summary by node pool"},
+		{3, 2, true, "Aggregate usage profile by node pool"},
+		{5, 2, true, "Detail by node"},
+		{6, 3, false, "Node pool: "},
+	}
+	for _, l := range levels {
+		h := blocks[l.index].(Heading)
+		if h.Level != l.level || h.Numbered != l.numbered || runText(t, h.Runs[0]) != l.text {
+			t.Errorf("blocks[%d] = level %d numbered %v %q, want level %d numbered %v %q",
+				l.index, h.Level, h.Numbered, runText(t, h.Runs[0]), l.level, l.numbered, l.text)
+		}
+	}
+	if h := blocks[6].(Heading); len(h.Runs) != 2 || h.Runs[1].kind != "ident" || runText(t, h.Runs[1]) != "apps" {
+		t.Errorf("pool heading runs = %+v, want the pool as an ident", h.Runs)
+	}
+}
+
+func TestPoolFilterReadsPoolFindingsOnly(t *testing.T) {
+	s := poolSnapshot(t,
+		[]snapshot.Node{testNode("n1", "apps", valueStat(90, 95), valueStat(10, 20))},
+		nodeFinding("NODE_CPU_USAGE_CRITICAL", analysis.SeverityCritical, "n1", number("average_percent", 90), number("peak_percent", 95)),
+	)
+	blocks := poolBlocks(t, s, catalog.English, "attention")
+
+	want := []string{"heading", "heading", "paragraph", "heading", "paragraph", "heading", "heading", "table"}
+	if got := blockTypes(blocks); !slices.Equal(got, want) {
+		t.Fatalf("block order = %v, want %v", got, want)
+	}
+	detail := blocks[7].(Table)
+	if detail.ID != "node-detail" || runText(t, detail.Rows[0][0][0]) != "n1" {
+		t.Errorf("detail = %q first row %q, want node-detail with n1", detail.ID, runText(t, detail.Rows[0][0][0]))
+	}
+}
+
+func TestPoolFilterKeepsAPoolWithAPoolFinding(t *testing.T) {
+	s := poolSnapshot(t,
+		[]snapshot.Node{testNode("n1", "apps", valueStat(10, 20), valueStat(10, 20))},
+		snapshot.Finding{Code: "NODEPOOL_UNKNOWN", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeNodepool, ScopeName: "apps", Evidence: []snapshot.Evidence{number("affected_nodes", 1)}, Confidence: "exact"},
+	)
+	blocks := poolBlocks(t, s, catalog.English, "attention")
+	if got := findTable(t, blocks, "nodepool-summary"); len(got.Rows) != 1 {
+		t.Errorf("summary rows = %d, want 1", len(got.Rows))
+	}
+	if got := findTable(t, blocks, "nodepool-profile"); len(got.Rows) != 1 {
+		t.Errorf("profile rows = %d, want 1", len(got.Rows))
+	}
+	for _, blk := range blocks {
+		if table, ok := blk.(Table); ok && table.ID == "node-detail" {
+			t.Errorf("the detail shows a node with no node finding at attention")
+		}
+	}
+}
+
+func TestPoolSummaryMeans(t *testing.T) {
+	s := poolSnapshot(t, []snapshot.Node{
+		testNode("n1", "apps", valueStat(20, 20), valueStat(50, 90)),
+		testNode("n2", "apps", valueStat(57.5, 60), valueStat(70, 75)),
+	})
+	table := findTable(t, poolBlocks(t, s, catalog.PortugueseBrazil, "all"), "nodepool-summary")
+	row := table.Rows[0]
+
+	if len(table.Headers) != 7 || len(row) != 7 {
+		t.Fatalf("headers = %d, cells = %d, want 7 and 7", len(table.Headers), len(row))
+	}
+	if row[0][0].kind != "ident" || runText(t, row[0][0]) != "apps" {
+		t.Errorf("pool cell = %+v, want the ident apps", row[0][0])
+	}
+	if got := runText(t, row[1][0]); got != "2" {
+		t.Errorf("nodes = %q, want 2", got)
+	}
+	assertStatus(t, row[2][0], "healthy", "38,8%")
+	assertStatus(t, row[3][0], "healthy", "60%")
+	assertStatus(t, row[4][0], "healthy", "60%")
+	assertStatus(t, row[5][0], "critical", "90%")
+	if got := runText(t, row[6][0]); got != "Exata" {
+		t.Errorf("confidence = %q, want Exata", got)
+	}
+}
+
+func TestPoolSummaryUnknownNumbers(t *testing.T) {
+	unknown := snapshot.Statistics{State: stateUnavailable}
+	s := poolSnapshot(t, []snapshot.Node{testNode("n1", "apps", unknown, unknown)})
+	row := findTable(t, poolBlocks(t, s, catalog.English, "all"), "nodepool-summary").Rows[0]
+	for i := 2; i <= 5; i++ {
+		assertStatus(t, row[i][0], "unavailable", "Unavailable")
+	}
+}
+
+func TestPoolSummaryUnknownPool(t *testing.T) {
+	n := testNode("n1", "unknown", valueStat(10, 20), valueStat(10, 20))
+	n.PoolConfidence = "unknown"
+	s := poolSnapshot(t, []snapshot.Node{n})
+	blocks := poolBlocks(t, s, catalog.PortugueseBrazil, "all")
+
+	summary := findTable(t, blocks, "nodepool-summary").Rows[0]
+	if summary[0][0].kind != "placeholder" || runText(t, summary[0][0]) != "Indeterminado" {
+		t.Errorf("summary pool = %+v, want the placeholder Indeterminado", summary[0][0])
+	}
+	if got := runText(t, summary[6][0]); got != "Desconhecida" {
+		t.Errorf("confidence = %q, want Desconhecida", got)
+	}
+	profile := findTable(t, blocks, "nodepool-profile").Rows[0]
+	if profile[0][0].kind != "placeholder" {
+		t.Errorf("profile pool kind = %q, want placeholder", profile[0][0].kind)
+	}
+	heading := blocks[6].(Heading)
+	if heading.Runs[1].kind != "placeholder" || runText(t, heading.Runs[1]) != "Indeterminado" {
+		t.Errorf("detail heading pool = %+v, want the placeholder", heading.Runs[1])
+	}
+}
+
+func TestPoolProfileMeans(t *testing.T) {
+	n := testNode("n1", "apps", valueStat(55, 78), valueStat(64, 80))
+	n.CPUAllocatable, n.MemoryAllocatable = floatPtr(7.5), floatPtr(30)
+	n.CPURequestPercent, n.MemoryRequestPercent = floatPtr(60), floatPtr(70)
+	s := poolSnapshot(t, []snapshot.Node{n})
+	row := findTable(t, poolBlocks(t, s, catalog.PortugueseBrazil, "all"), "nodepool-profile").Rows[0]
+
+	want := []string{"apps", "7,5 cores", "4,12 cores", "4,5 cores", "30 B", "19,2 B", "21 B"}
+	for i, text := range want {
+		if got := runText(t, row[i][0]); got != text {
+			t.Errorf("cell %d = %q, want %q", i, got, text)
+		}
+	}
+}
+
+func TestPoolProfileSubsetMeans(t *testing.T) {
+	unknown := snapshot.Statistics{State: stateUnavailable}
+	n := testNode("n1", "apps", unknown, unknown)
+	n.CPUAllocatable, n.MemoryAllocatable = floatPtr(4), floatPtr(2048)
+	s := poolSnapshot(t, []snapshot.Node{n})
+	row := findTable(t, poolBlocks(t, s, catalog.English, "all"), "nodepool-profile").Rows[0]
+
+	want := []string{"apps", "4 cores", "Unavailable", "Unavailable", "2 KiB", "Unavailable", "Unavailable"}
+	for i, text := range want {
+		if got := runText(t, row[i][0]); got != text {
+			t.Errorf("cell %d = %q, want %q", i, got, text)
+		}
+	}
+}
+
+func TestPoolProfileDivisorIsTheSubset(t *testing.T) {
+	a := testNode("a", "apps", valueStat(50, 50), valueStat(50, 50))
+	a.CPUAllocatable = floatPtr(4)
+	b := testNode("b", "apps", valueStat(50, 50), valueStat(50, 50))
+	c := testNode("c", "apps", snapshot.Statistics{State: stateUnavailable}, valueStat(50, 50))
+	c.CPUAllocatable = floatPtr(8)
+	s := poolSnapshot(t, []snapshot.Node{a, b, c})
+	row := findTable(t, poolBlocks(t, s, catalog.English, "all"), "nodepool-profile").Rows[0]
+
+	// Allocatable: mean of 4 and 8. Used: only a has both numbers, so 4 * 50 / 100.
+	if got := runText(t, row[1][0]); got != "6 cores" {
+		t.Errorf("allocatable = %q, want 6 cores", got)
+	}
+	if got := runText(t, row[2][0]); got != "2 cores" {
+		t.Errorf("used = %q, want 2 cores", got)
+	}
+}
+
+func TestPoolSectionEmptyParagraphs(t *testing.T) {
+	cat := mustCatalog(t, catalog.English)
+	blocks := poolBlocks(t, poolSnapshot(t, nil), catalog.English, "all")
+
+	want := []string{"heading", "heading", "paragraph", "heading", "paragraph", "heading", "paragraph"}
+	if got := blockTypes(blocks); !slices.Equal(got, want) {
+		t.Fatalf("block order = %v, want %v", got, want)
+	}
+	for index, key := range map[int]catalog.Key{2: catalog.SectionsNodepoolsEmptySummary, 4: catalog.SectionsNodepoolsEmptyProfile, 6: catalog.SectionsNodepoolsEmptyDetail} {
+		text, err := cat.Text(key, nil)
+		if err != nil {
+			t.Fatalf("Text(%q): %v", key, err)
+		}
+		if got := runText(t, blocks[index].(Paragraph).Runs[0]); got != text {
+			t.Errorf("blocks[%d] = %q, want %q", index, got, text)
+		}
+	}
+}
+
+func TestNodeDetailEmpty(t *testing.T) {
+	s := poolSnapshot(t, []snapshot.Node{testNode("n1", "apps", valueStat(10, 20), valueStat(10, 20))})
+	blocks := poolBlocks(t, s, catalog.English, "critical")
+	last := blocks[len(blocks)-1]
+	if _, ok := last.(Paragraph); !ok {
+		t.Fatalf("last block is %T, want the empty paragraph", last)
+	}
+	if h, ok := blocks[len(blocks)-2].(Heading); !ok || h.Level != 2 {
+		t.Errorf("the empty paragraph does not stand under the detail heading: %T", blocks[len(blocks)-2])
+	}
+}
+
+// detailRow builds the detail table of s in lang and returns the row of
+// its first node.
+func detailRow(t *testing.T, s snapshot.Snapshot, lang catalog.Language) [][]Run {
+	t.Helper()
+	return findTable(t, poolBlocks(t, s, lang, "all"), "node-detail").Rows[0]
+}
+
+func TestNodeDetailCells(t *testing.T) {
+	unknown := snapshot.Statistics{State: stateUnavailable}
+	s := poolSnapshot(t, []snapshot.Node{testNode("worker-a", "apps", valueStat(55, 78), unknown)})
+	row := detailRow(t, s, catalog.PortugueseBrazil)
+
+	if len(row) != 5 {
+		t.Fatalf("cells = %d, want 5", len(row))
+	}
+	if row[0][0].kind != "ident" || runText(t, row[0][0]) != "worker-a" {
+		t.Errorf("name = %+v", row[0][0])
+	}
+	if len(row[1]) != 3 {
+		t.Fatalf("cpu cell has %d runs, want 3", len(row[1]))
+	}
+	assertStatus(t, row[1][0], "healthy", "55%")
+	if row[1][1].kind != "text" || runText(t, row[1][1]) != " / " {
+		t.Errorf("separator = %+v, want the text \" / \"", row[1][1])
+	}
+	assertStatus(t, row[1][2], "attention", "78%")
+	assertStatus(t, row[2][0], "unavailable", "Indisponível")
+	assertStatus(t, row[2][2], "unavailable", "Indisponível")
+}
+
+func TestNodeDetailNoFinding(t *testing.T) {
+	s := poolSnapshot(t, []snapshot.Node{testNode("n1", "apps", valueStat(10, 20), valueStat(10, 20))})
+	row := detailRow(t, s, catalog.PortugueseBrazil)
+	if got := runText(t, row[3][0]); got != "Sem achado" || row[3][0].kind != "text" {
+		t.Errorf("reason = %+v %q, want the text Sem achado", row[3][0], got)
+	}
+}
+
+func TestNodeDetailReason(t *testing.T) {
+	s := poolSnapshot(t,
+		[]snapshot.Node{testNode("n1", "apps", valueStat(10, 20), valueStat(10, 20)), testNode("n2", "apps", valueStat(10, 20), valueStat(10, 20))},
+		nodeFinding("NODE_CPU_REQUEST_HIGH", analysis.SeverityCritical, "n1", number("percent", 91)),
+		nodeFinding("NODE_CPU_USAGE_ATTENTION", analysis.SeverityAttention, "n1", number("average_percent", 70), number("peak_percent", 78)),
+		nodeFinding("NODE_MEMORY_REQUEST_HIGH", analysis.SeverityCritical, "n1", number("percent", 88.5)),
+		nodeFinding("NODE_MEMORY_REQUEST_HIGH", analysis.SeverityCritical, "n1", number("percent", 88.5)),
+		nodeFinding("NODE_LOW_UTILIZATION", analysis.SeverityAttention, "n2", number("maximum_average_percent", 10)),
+	)
+	table := findTable(t, poolBlocks(t, s, catalog.English, "all"), "node-detail")
+
+	want := "CPU: 91% of the allocatable requested; Memory: 88.5% of the allocatable requested"
+	assertStatus(t, table.Rows[0][3][0], "critical", want)
+	assertStatus(t, table.Rows[1][3][0], "attention", "The node showed low average utilization")
+}
+
+func TestNodeDetailReasonFragments(t *testing.T) {
+	b := &builder{cat: mustCatalog(t, catalog.English)}
+	tests := []struct {
+		finding snapshot.Finding
+		want    string
+	}{
+		{nodeFinding("NODE_CPU_USAGE_ATTENTION", "attention", "n", number("average_percent", 55), number("peak_percent", 78)), "CPU: peak of 78% utilization"},
+		{nodeFinding("NODE_MEMORY_USAGE_HEALTHY", "healthy", "n", number("average_percent", 40.25)), "Memory: average of 40.2% utilization"},
+		{nodeFinding("NODE_MEMORY_USAGE_CRITICAL", "critical", "n", number("peak_percent", 91)), "Memory: peak of 91% utilization"},
+		{nodeFinding("NODE_CPU_REQUEST_HIGH", "attention", "n", number("percent", 75.5)), "CPU: 75.5% of the allocatable requested"},
+		{nodeFinding("NODE_MEMORY_REQUEST_HIGH", "critical", "n", number("percent", 90)), "Memory: 90% of the allocatable requested"},
+		{nodeFinding("NODE_OVERREQUESTED", "attention", "n", snapshot.Evidence{Name: "resources", Value: snapshot.Value{Kind: "text", Text: "cpu"}}), "High requests coexist with low observed utilization"},
+		{nodeFinding("NODE_LOW_UTILIZATION", "attention", "n", number("maximum_average_percent", 12)), "The node showed low average utilization"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.finding.Code, func(t *testing.T) {
+			if got := reasonFragment(b, tt.finding); got != tt.want {
+				t.Errorf("reasonFragment() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+	if b.err != nil {
+		t.Fatalf("builder error = %v", b.err)
+	}
+}
+
+func TestNodeDetailState(t *testing.T) {
+	yes, no := boolPtr(true), boolPtr(false)
+	tests := []struct {
+		ready, schedulable *bool
+		want               string
+	}{
+		{yes, yes, "Ready; Schedulable"},
+		{yes, no, "Ready; Unschedulable"},
+		{yes, nil, "Ready; Unavailable"},
+		{no, yes, "Not ready; Schedulable"},
+		{no, no, "Not ready; Unschedulable"},
+		{no, nil, "Not ready; Unavailable"},
+		{nil, yes, "Unavailable; Schedulable"},
+		{nil, no, "Unavailable; Unschedulable"},
+		{nil, nil, "Unavailable; Unavailable"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			n := testNode("n1", "apps", valueStat(10, 20), valueStat(10, 20))
+			n.Ready, n.Schedulable = tt.ready, tt.schedulable
+			row := detailRow(t, poolSnapshot(t, []snapshot.Node{n}), catalog.English)
+			if got := runText(t, row[4][0]); got != tt.want || row[4][0].kind != "text" {
+				t.Errorf("state = %q (%s), want the text %q", got, row[4][0].kind, tt.want)
+			}
+		})
+	}
+}

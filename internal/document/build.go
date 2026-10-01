@@ -52,9 +52,22 @@ func (b *builder) time(value string) time.Time {
 	return t
 }
 
+// period writes the length between start and end, and keeps the first
+// error.
+func (b *builder) period(start, end time.Time) string {
+	if b.err != nil {
+		return ""
+	}
+	text, err := b.cat.Period(start, end)
+	if err != nil {
+		b.err = err
+		return ""
+	}
+	return text
+}
+
 // Build assembles the document of a snapshot: a cover, an opening page,
-// and a quality appendix. Later parts of the project add the sections
-// between them.
+// the four sections, and a quality appendix with its notes.
 func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, error) {
 	if err := s.Check(); err != nil {
 		return Document{}, err
@@ -82,12 +95,16 @@ func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, err
 	front := buildFront(b, s)
 	namespaces := buildNamespacesSection(b, s.Namespaces, s.Findings, thresholds, severity)
 	workloads := buildWorkloadsSection(b, s.Workloads, s.Findings, thresholds, severity)
+	hpas := buildHPAsSection(b, s)
+	nodepools := buildNodepoolsSection(b, s, thresholds, severity)
 	appendix := buildAppendix(b, s, severity)
 	notes := buildNotes(b, s)
 
 	blocks := []Block{front, PageBreak{Weak: false}}
 	blocks = append(blocks, namespaces...)
 	blocks = append(blocks, workloads...)
+	blocks = append(blocks, hpas...)
+	blocks = append(blocks, nodepools...)
 	blocks = append(blocks, PageBreak{Weak: true})
 	blocks = append(blocks, appendix...)
 	blocks = append(blocks, notes...)
