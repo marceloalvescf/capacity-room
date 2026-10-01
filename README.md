@@ -15,8 +15,10 @@ full design is in
   what it found in a snapshot, and writes a PDF.
 - The PDF holds the cover, the report metadata, the status legend, the
   capacity of each namespace, the resources of each workload, the HPA
-  history, the resource usage by node pool, the data quality appendix, and
-  the interpretation notes of the collection.
+  history, the resource usage by node pool, the executive summary, the
+  technical quality appendix, and the interpretation notes of the
+  collection. The `executive` profile writes the summary and the appendix
+  alone.
 - A container image that carries the binary and Typst 0.15.1.
 - The report template, in two layers under [template/](template/): a generic
   page shell and the layout of the capacity report.
@@ -85,6 +87,15 @@ name `report-resources-<cluster>-<language>-<date>-<time>.pdf`. When the
 minimum severity is not `all`, it comes after the cluster:
 `report-resources-<cluster>-<severity>-<language>-<date>-<time>.pdf`.
 
+The report profile is `detailed`, the default, or `executive`. Set it with
+`report.profile`, `--report-profile`, or `KCR_REPORT_PROFILE`. The `executive`
+profile writes the cover, the opening page, the executive summary as its only
+numbered section, 1, and the appendix as section 2. Its minimum severity is
+raised to at least attention for the summary, and stays as configured for the
+appendix. Its PDF is named
+`report-resources-<cluster>-executive-<language>-<date>-<time>.pdf`: the
+suffix `-executive` takes the place of the severity.
+
 Add `--verbose` to any mode for a few more lines about the run.
 
 ### What a run collects
@@ -107,8 +118,11 @@ node pools with their capacity and usage, and the cluster autoscaling.
   exists to compare it with.
 - **The snapshot holds every section.** Besides the namespaces and the
   workloads, it holds the summary (the counts and the evidence of the
-  cluster autoscaling), the HPAs, the nodes, the node pools, and, on each
-  workload, its HPA coverage: covered, uncovered, or unknown. A workload
+  cluster autoscaling), the HPAs, the nodes, the node pools, the
+  recommendations, and, on each workload, its HPA coverage: covered,
+  uncovered, or unknown. The recommendations are the findings above healthy,
+  merged by code, with their severity, scopes, and confidence. A snapshot
+  file whose recommendations disagree with its findings is refused. A workload
   that only the coverage found is a row with no observed usage.
 - **A Job is left out of the list of workloads**, and so is a workload that
   consumed nothing in the period. What they consumed still counts in the
@@ -117,7 +131,9 @@ node pools with their capacity and usage, and the cluster autoscaling.
 - **`--check` collects nothing.** It sends the requests of the preflight
   and stops.
 
-The report holds four sections, numbered 1 to 4, and the appendix, 5:
+The detailed report holds five sections, numbered 1 to 5, and the appendix, 6.
+The first two are the capacity of each namespace and the resources of each
+workload:
 
 - **HPA history** (section 3). For each namespace, the HPAs that were
   observed, with their specs, the current average, the minimum and the
@@ -129,6 +145,14 @@ The report holds four sections, numbered 1 to 4, and the appendix, 5:
   an aggregate profile of the allocatable, used, and requested CPU and memory
   of each node; and the detail of each node, with its usage, the reason of
   its state, and whether it is ready and schedulable.
+- **Executive summary** (section 5). The workloads with critical priority and
+  those with high priority; the namespaces with workloads at risk; the
+  workloads at their replica maximum and without an HPA; the situation of the
+  node pools; the prioritized action plan; and the material limitations. Its
+  rows start at the severity attention, whatever the minimum.
+
+The appendix, 6, holds the technical quality of the data and the
+interpretation notes.
 
 After the lines of the capabilities, a run that collects prints six lines:
 `namespace collection`, `workload collection`, `hpa collection`,

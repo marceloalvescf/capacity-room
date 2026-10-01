@@ -116,6 +116,8 @@ No guard checks these. The reviewer of each task does.
   they are the same `float64`. A test of the comparison has no tolerance,
   and an expected number in a test is a literal, never the expression of
   the code written again.
+- **The executive body raises the minimum severity to attention for its own
+  rows and never for the appendix.**
 
 Build tags in use:
 
@@ -220,9 +222,16 @@ the snapshot and nothing else.
 - `testdata/python/` holds what the original computes and asks for each of
   the eight scenarios: its numbers for every section the program computes,
   and its queries in order. The recording script lives under
-  `.cache/phase-2/part-3/python/`. A test compares this
+  `.cache/phase-2/part-4/python/`. It also records the recommendations, the
+  summary counts, the coverage of every row, and the executive rows, with a
+  stand-in for pydantic that its README describes. A test compares this
   project with them on every run. They are never edited; they are replaced
   only by recording the original again, and its README says how.
+- `template/tests/capacity/fixtures/command/` holds four executive data
+  files, `<scenario>.executive.<lang>.json` for `direct-complete` and
+  `edge-scaling`, written by `make update-testdata` like the others. The
+  snapshots `command-executive-pt` and `command-executive-en` take pages
+  from them.
 - A test that walks the scenarios or reads a list of queries counts what it
   means to count. A filter that matched one thing when it was written
   matches more when the program asks more.

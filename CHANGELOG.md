@@ -50,6 +50,15 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   one for the cluster autoscaling.
 - A run whose collectors return nothing, with the state of the cluster
   autoscaling unknown, stops with exit code 5.
+- The report holds an executive summary, section 5: the workloads with
+  critical and high priority, the namespaces with a workload at risk, the
+  workloads at their replica maximum and without HPA, the situation of the
+  node pools, the prioritized action plan, and the material limitations.
+- The `executive` report profile writes the opening page, the executive
+  summary, and the quality appendix, with the minimum severity raised to at
+  least attention; the default name of its PDF ends in `-executive` in place
+  of the severity.
+- The snapshot file holds the recommendations and their count.
 
 ### Changed
 
@@ -60,3 +69,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The average of a series equals the original's when the series has more
   than two samples.
+- A threshold or a timeout that is not a finite number is refused by the
+  configuration.
+- The host of an IPv6 instance keeps the letter case of its zone when it is
+  matched to a node.
