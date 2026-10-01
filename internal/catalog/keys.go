@@ -189,6 +189,54 @@ const (
 	NodeStateUnschedulable Key = "node_state.unschedulable"
 
 	PlaceholderUndetermined Key = "placeholder.undetermined"
+	PlaceholderEmptyCell    Key = "placeholder.empty_cell"
+
+	SectionsExecutiveHeading                Key = "sections.executive.heading"
+	SectionsExecutiveIntro                  Key = "sections.executive.intro"
+	SectionsExecutiveCriticalHeading        Key = "sections.executive.critical_heading"
+	SectionsExecutiveCriticalEmpty          Key = "sections.executive.critical_empty"
+	SectionsExecutiveAttentionHeading       Key = "sections.executive.attention_heading"
+	SectionsExecutiveAttentionEmpty         Key = "sections.executive.attention_empty"
+	SectionsExecutiveHeaderNamespace        Key = "sections.executive.header_namespace"
+	SectionsExecutiveHeaderWorkload         Key = "sections.executive.header_workload"
+	SectionsExecutiveHeaderPods             Key = "sections.executive.header_pods"
+	SectionsExecutiveHeaderReason           Key = "sections.executive.header_reason"
+	SectionsExecutiveNamespacesHeading      Key = "sections.executive.namespaces_heading"
+	SectionsExecutiveNamespacesEmpty        Key = "sections.executive.namespaces_empty"
+	SectionsExecutiveHeaderCPULimit         Key = "sections.executive.header_cpu_limit"
+	SectionsExecutiveHeaderMemoryLimit      Key = "sections.executive.header_memory_limit"
+	SectionsExecutiveHeaderStatus           Key = "sections.executive.header_status"
+	SectionsExecutiveHeaderPriority         Key = "sections.executive.header_priority"
+	SectionsExecutiveScalingHeading         Key = "sections.executive.scaling_heading"
+	SectionsExecutiveScalingEmpty           Key = "sections.executive.scaling_empty"
+	SectionsExecutiveHeaderKind             Key = "sections.executive.header_kind"
+	SectionsExecutiveHeaderReplicas         Key = "sections.executive.header_replicas"
+	SectionsExecutiveHeaderSituation        Key = "sections.executive.header_situation"
+	SectionsExecutiveReplicasObserved       Key = "sections.executive.replicas_observed"
+	SectionsExecutiveActiveReplicasSingular Key = "sections.executive.active_replicas.singular"
+	SectionsExecutiveActiveReplicasPlural   Key = "sections.executive.active_replicas.plural"
+	SectionsExecutiveSituationHPAMax        Key = "sections.executive.situation_hpa_max"
+	SectionsExecutiveTargetUnknown          Key = "sections.executive.target_unknown"
+	SectionsExecutiveNodepoolsHeading       Key = "sections.executive.nodepools_heading"
+	SectionsExecutiveHeaderPool             Key = "sections.executive.header_pool"
+	SectionsExecutiveHeaderPoolSituation    Key = "sections.executive.header_pool_situation"
+	SectionsExecutiveHeaderRemark           Key = "sections.executive.header_remark"
+	SectionsExecutivePoolStable             Key = "sections.executive.pool_stable"
+	SectionsExecutivePoolAttention          Key = "sections.executive.pool_attention"
+	SectionsExecutivePoolCritical           Key = "sections.executive.pool_critical"
+	SectionsExecutiveActionsHeading         Key = "sections.executive.actions_heading"
+	SectionsExecutiveActionsEmpty           Key = "sections.executive.actions_empty"
+	SectionsExecutiveHeaderOrder            Key = "sections.executive.header_order"
+	SectionsExecutiveHeaderAction           Key = "sections.executive.header_action"
+	SectionsExecutiveHeaderScope            Key = "sections.executive.header_scope"
+	SectionsExecutiveActionQualified        Key = "sections.executive.action_qualified"
+	SectionsExecutiveLimitationsHeading     Key = "sections.executive.limitations_heading"
+	SectionsExecutiveLimitationsEmpty       Key = "sections.executive.limitations_empty"
+	SectionsExecutiveHeaderCapability       Key = "sections.executive.header_capability"
+	SectionsExecutiveHeaderCoverage         Key = "sections.executive.header_coverage"
+	SectionsExecutiveInterpretation         Key = "sections.executive.interpretation"
+	SectionsExecutiveReasonAllMissing       Key = "sections.executive.reason_all_missing"
+	SectionsExecutiveRiskStatusBoth         Key = "sections.executive.risk_status_both"
 
 	PeriodDaySingular    Key = "period.day.singular"
 	PeriodDayPlural      Key = "period.day.plural"
@@ -264,8 +312,31 @@ var wordingKeys = []Key{
 	SectionsNodepoolsHeaderReason, SectionsNodepoolsHeaderState, SectionsNodepoolsEmptySummary,
 	SectionsNodepoolsEmptyProfile, SectionsNodepoolsEmptyDetail, SectionsNodepoolsNoFinding,
 	NodeStateReady, NodeStateNotReady, NodeStateSchedulable, NodeStateUnschedulable,
-	PlaceholderUndetermined,
+	PlaceholderUndetermined, PlaceholderEmptyCell,
 	NotesHeading, NotesHeaderRemark,
+	SectionsExecutiveHeading, SectionsExecutiveIntro, SectionsExecutiveCriticalHeading,
+	SectionsExecutiveCriticalEmpty, SectionsExecutiveAttentionHeading,
+	SectionsExecutiveAttentionEmpty, SectionsExecutiveHeaderNamespace,
+	SectionsExecutiveHeaderWorkload, SectionsExecutiveHeaderPods,
+	SectionsExecutiveHeaderReason, SectionsExecutiveNamespacesHeading,
+	SectionsExecutiveNamespacesEmpty, SectionsExecutiveHeaderCPULimit,
+	SectionsExecutiveHeaderMemoryLimit, SectionsExecutiveHeaderStatus,
+	SectionsExecutiveHeaderPriority, SectionsExecutiveScalingHeading,
+	SectionsExecutiveScalingEmpty, SectionsExecutiveHeaderKind,
+	SectionsExecutiveHeaderReplicas, SectionsExecutiveHeaderSituation,
+	SectionsExecutiveReplicasObserved, SectionsExecutiveActiveReplicasSingular,
+	SectionsExecutiveActiveReplicasPlural, SectionsExecutiveSituationHPAMax,
+	SectionsExecutiveTargetUnknown, SectionsExecutiveNodepoolsHeading,
+	SectionsExecutiveHeaderPool, SectionsExecutiveHeaderPoolSituation,
+	SectionsExecutiveHeaderRemark, SectionsExecutivePoolStable,
+	SectionsExecutivePoolAttention, SectionsExecutivePoolCritical,
+	SectionsExecutiveActionsHeading, SectionsExecutiveActionsEmpty,
+	SectionsExecutiveHeaderOrder, SectionsExecutiveHeaderAction,
+	SectionsExecutiveHeaderScope, SectionsExecutiveActionQualified,
+	SectionsExecutiveLimitationsHeading, SectionsExecutiveLimitationsEmpty,
+	SectionsExecutiveHeaderCapability, SectionsExecutiveHeaderCoverage,
+	SectionsExecutiveInterpretation, SectionsExecutiveReasonAllMissing,
+	SectionsExecutiveRiskStatusBoth,
 	PeriodDaySingular, PeriodDayPlural, PeriodHourSingular, PeriodHourPlural,
 	PeriodMinuteSingular, PeriodMinutePlural, PeriodSecondSingular, PeriodSecondPlural,
 }
@@ -274,8 +345,20 @@ var wordingKeys = []Key{
 // functions Confidence and Reason take.
 var (
 	Confidences     = []string{"exact", "inferred", "unknown"}
-	ReasonFamilies  = []string{"usage_peak", "usage_average", "request_high"}
+	ReasonFamilies  = []string{"usage_peak", "usage_average", "request_high", "request_peak", "request_average", "limit_peak", "limit_average", "request_missing", "limit_missing", "bursty"}
 	ReasonResources = []string{"cpu", "memory"}
+)
+
+// Priorities lists the priorities the executive body prints: attention and
+// critical. RiskSeverities lists the two severities a namespace at risk
+// counts. ScopeQualifiers lists the scope types whose action the plan may
+// qualify. ScopeSummaries lists the kinds of a scope list of more than
+// three names.
+var (
+	Priorities      = []string{"attention", "critical"}
+	RiskSeverities  = []string{"critical", "attention"}
+	ScopeQualifiers = []string{"namespace", "workload", "hpa", "cluster"}
+	ScopeSummaries  = []string{"namespace", "workload", "hpa", "deployment"}
 )
 
 // CapabilityName returns the key that names capability name, one of
@@ -316,6 +399,28 @@ func Confidence(confidence string) Key { return Key("confidence." + confidence) 
 // Reason returns the key of the reason of a node finding for family, one of
 // ReasonFamilies, and resource, one of ReasonResources.
 func Reason(family, resource string) Key { return Key("reason." + family + "." + resource) }
+
+// Priority returns the key of the label of priority severity, one of
+// Priorities: priority.<severity>.
+func Priority(severity string) Key { return Key("priority." + severity) }
+
+// RiskCount returns the key of the count of workloads at severity, one of
+// RiskSeverities: risk_status.<severity>.singular for a count of 1,
+// risk_status.<severity>.plural for any other count.
+func RiskCount(severity string, count float64) Key {
+	if count == 1 {
+		return Key("risk_status." + severity + ".singular")
+	}
+	return Key("risk_status." + severity + ".plural")
+}
+
+// ScopeQualifier returns the key of the qualifier of an action whose scope
+// has type scopeType, one of ScopeQualifiers: scope_qualifier.<scopeType>.
+func ScopeQualifier(scopeType string) Key { return Key("scope_qualifier." + scopeType) }
+
+// ScopeSummary returns the key of the summary of a scope list of kind, one
+// of ScopeSummaries: scope_summary.<kind>.
+func ScopeSummary(kind string) Key { return Key("scope_summary." + kind) }
 
 // ObservationFamilies lists the families that carry an observation: the
 // families of the codes of the node and nodepool scopes.
@@ -401,6 +506,18 @@ func Keys() []Key {
 		if slices.Contains(ObservationFamilies, pair.Family) {
 			keys = append(keys, FindingObservation(pair.Family, pair.Resource))
 		}
+	}
+	for _, severity := range Priorities {
+		keys = append(keys, Priority(severity))
+	}
+	for _, severity := range RiskSeverities {
+		keys = append(keys, RiskCount(severity, 1), RiskCount(severity, 2))
+	}
+	for _, scopeType := range ScopeQualifiers {
+		keys = append(keys, ScopeQualifier(scopeType))
+	}
+	for _, kind := range ScopeSummaries {
+		keys = append(keys, ScopeSummary(kind))
 	}
 	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 	return keys

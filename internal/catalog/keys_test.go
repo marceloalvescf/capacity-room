@@ -43,6 +43,34 @@ var newSectionConstants = []Key{
 	NotesHeading, NotesHeaderRemark,
 }
 
+// prefixed returns the keys of set that start with prefix.
+func prefixed(set map[Key]bool, prefix string) []Key {
+	var found []Key
+	for k := range set {
+		if strings.HasPrefix(string(k), prefix) {
+			found = append(found, k)
+		}
+	}
+	return found
+}
+
+func TestRiskCountChoosesTheEntry(t *testing.T) {
+	tests := []struct {
+		severity string
+		count    float64
+		want     Key
+	}{
+		{"critical", 1, "risk_status.critical.singular"},
+		{"critical", 2, "risk_status.critical.plural"},
+		{"attention", 0, "risk_status.attention.plural"},
+	}
+	for _, tt := range tests {
+		if got := RiskCount(tt.severity, tt.count); got != tt.want {
+			t.Errorf("RiskCount(%q, %v) = %q, want %q", tt.severity, tt.count, got, tt.want)
+		}
+	}
+}
+
 func TestKeysHoldTheNewFamilies(t *testing.T) {
 	if len(newSectionConstants) != 28 {
 		t.Fatalf("newSectionConstants has %d entries, want 28", len(newSectionConstants))
@@ -56,6 +84,47 @@ func TestKeysHoldTheNewFamilies(t *testing.T) {
 	for _, k := range newSectionConstants {
 		if !keys[k] {
 			t.Errorf("Keys() does not hold %q", k)
+		}
+	}
+
+	var executive int
+	for _, k := range Keys() {
+		if strings.HasPrefix(string(k), "sections.executive.") {
+			executive++
+		}
+	}
+	if executive != 46 {
+		t.Errorf("Keys() holds %d executive keys, want 46", executive)
+	}
+	for _, k := range []Key{PlaceholderEmptyCell, SectionsExecutiveHeading, SectionsExecutiveActiveReplicasSingular, SectionsExecutiveActiveReplicasPlural} {
+		if !keys[k] {
+			t.Errorf("Keys() does not hold %q", k)
+		}
+	}
+	for _, group := range []struct {
+		name  string
+		count int
+		want  int
+		keys  []Key
+	}{
+		{"priorities", len(Priorities), 2, prefixed(keys, "priority.")},
+		{"risk counts", len(RiskSeverities) * 2, 4, prefixed(keys, "risk_status.")},
+		{"qualifiers", len(ScopeQualifiers), 4, prefixed(keys, "scope_qualifier.")},
+		{"summaries", len(ScopeSummaries), 4, prefixed(keys, "scope_summary.")},
+		{"reasons", len(ReasonFamilies) * len(ReasonResources), 20, prefixed(keys, "reason.")},
+	} {
+		if group.count != group.want {
+			t.Errorf("%s: lists give %d keys, want %d", group.name, group.count, group.want)
+		}
+		if group.keys != nil && len(group.keys) != group.want {
+			t.Errorf("Keys() holds %d %s, want %d", len(group.keys), group.name, group.want)
+		}
+	}
+	for _, family := range []string{"request_peak", "request_average", "limit_peak", "limit_average", "request_missing", "limit_missing", "bursty"} {
+		for _, resource := range ReasonResources {
+			if !keys[Reason(family, resource)] {
+				t.Errorf("Keys() does not hold %q", Reason(family, resource))
+			}
 		}
 	}
 
