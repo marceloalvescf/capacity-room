@@ -63,30 +63,42 @@ func TestGoldenSnapshots(t *testing.T) {
 	}
 }
 
-// TestGoldenDataFiles runs each of the four scenarios with a golden data
-// file through Snapshot and DataFile, in each language, and compares the
-// result with its golden file.
+// TestGoldenDataFiles runs each scenario with golden data files through
+// Snapshot and DataFile, in each language, and compares the result with its
+// golden file: the files of the detailed profile for DataFileScenarios, and
+// the files of the executive profile for ExecutiveDataFileScenarios.
 func TestGoldenDataFiles(t *testing.T) {
-	for _, name := range DataFileScenarios {
-		scenario := scenarioByName(t, name)
-		snap, err := Snapshot(context.Background(), scenario)
-		if err != nil {
-			t.Fatalf("Snapshot(%s): %v", name, err)
-		}
-		for _, lang := range catalog.Languages() {
-			t.Run(name+"/"+string(lang), func(t *testing.T) {
-				got, err := DataFile(snap, lang)
-				if err != nil {
-					t.Fatalf("DataFile(%s, %s): %v", name, lang, err)
-				}
-				path, err := DataFilePath(name, lang)
-				if err != nil {
-					t.Fatalf("DataFilePath(%s, %s): %v", name, lang, err)
-				}
-				if err := compareGolden(path, got); err != nil {
-					t.Fatal(err)
-				}
-			})
+	kinds := []struct {
+		name      string
+		profile   string
+		scenarios []string
+		path      func(scenario string, lang catalog.Language) (string, error)
+	}{
+		{"detailed", "", DataFileScenarios, DataFilePath},
+		{"executive", "executive", ExecutiveDataFileScenarios, ExecutiveDataFilePath},
+	}
+	for _, kind := range kinds {
+		for _, name := range kind.scenarios {
+			scenario := scenarioByName(t, name)
+			snap, err := Snapshot(context.Background(), scenario)
+			if err != nil {
+				t.Fatalf("Snapshot(%s): %v", name, err)
+			}
+			for _, lang := range catalog.Languages() {
+				t.Run(kind.name+"/"+name+"/"+string(lang), func(t *testing.T) {
+					got, err := DataFile(snap, lang, kind.profile)
+					if err != nil {
+						t.Fatalf("DataFile(%s, %s, %q): %v", name, lang, kind.profile, err)
+					}
+					path, err := kind.path(name, lang)
+					if err != nil {
+						t.Fatalf("path(%s, %s): %v", name, lang, err)
+					}
+					if err := compareGolden(path, got); err != nil {
+						t.Fatal(err)
+					}
+				})
+			}
 		}
 	}
 }
@@ -367,6 +379,14 @@ func TestGoldenFoldersHoldNoStranger(t *testing.T) {
 				want = append(want, name+"."+string(lang))
 			}
 		}
+		for _, name := range ExecutiveDataFileScenarios {
+			for _, lang := range catalog.Languages() {
+				want = append(want, name+".executive."+string(lang))
+			}
+		}
+		if len(want) != 16 {
+			t.Fatalf("the folder is expected to hold 16 files, the lists give %d", len(want))
+		}
 		sort.Strings(want)
 
 		got := jsonStems(t, filepath.Dir(anyPath))
@@ -457,11 +477,11 @@ func TestOtherScenariosGiveTheSameDocument(t *testing.T) {
 			}
 
 			for _, lang := range catalog.Languages() {
-				gotDoc, err := DataFile(snap, lang)
+				gotDoc, err := DataFile(snap, lang, "")
 				if err != nil {
 					t.Fatalf("DataFile(%s, %s): %v", name, lang, err)
 				}
-				wantDoc, err := DataFile(baselineSnap, lang)
+				wantDoc, err := DataFile(baselineSnap, lang, "")
 				if err != nil {
 					t.Fatalf("DataFile(direct-complete, %s): %v", lang, err)
 				}

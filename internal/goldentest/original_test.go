@@ -15,8 +15,10 @@ import (
 	"testing"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
@@ -178,6 +180,61 @@ type pythonAutoscaling struct {
 	UnschedulablePods *float64 `json:"unschedulable_pods"`
 }
 
+// pythonRecommendation is one recommendation of the original. Its action
+// sentence is kept for reference and never compared.
+type pythonRecommendation struct {
+	Code       string   `json:"code"`
+	Severity   string   `json:"severity"`
+	ScopeType  string   `json:"scope_type"`
+	Scopes     []string `json:"scopes"`
+	Confidence string   `json:"confidence"`
+	Action     string   `json:"action"`
+}
+
+// pythonSummary holds the eleven counts of the summary of the original.
+type pythonSummary struct {
+	Namespaces          float64 `json:"namespaces"`
+	Workloads           float64 `json:"workloads"`
+	HPAs                float64 `json:"hpas"`
+	Nodes               float64 `json:"nodes"`
+	Nodepools           float64 `json:"nodepools"`
+	Findings            float64 `json:"findings"`
+	Recommendations     float64 `json:"recommendations"`
+	Healthy             float64 `json:"healthy"`
+	Attention           float64 `json:"attention"`
+	Critical            float64 `json:"critical"`
+	WorkloadsWithoutHPA float64 `json:"workloads_without_hpa"`
+}
+
+// pythonCoverageRow is one row of the workload coverage of the original.
+type pythonCoverageRow struct {
+	Namespace     string `json:"namespace"`
+	Kind          string `json:"kind"`
+	Name          string `json:"name"`
+	ObservedUsage bool   `json:"observed_usage"`
+	HPACoverage   string `json:"hpa_coverage"`
+}
+
+// pythonRun is one run of a cell of an executive table.
+type pythonRun struct {
+	Kind   string `json:"kind"`
+	Status string `json:"status"`
+	Text   string `json:"text"`
+}
+
+// pythonExecutive holds the rows of the seven tables of the executive
+// body at one effective minimum, and the kind of its note of the HPA data.
+type pythonExecutive struct {
+	CriticalWorkloads   [][][]pythonRun `json:"critical_workloads"`
+	AttentionWorkloads  [][][]pythonRun `json:"attention_workloads"`
+	NamespacesAtRisk    [][][]pythonRun `json:"namespaces_at_risk"`
+	ReplicaCeiling      [][][]pythonRun `json:"replica_ceiling"`
+	HPANote             string          `json:"hpa_note"`
+	NodepoolStatus      [][][]pythonRun `json:"nodepool_status"`
+	ActionPlan          [][][]pythonRun `json:"action_plan"`
+	MaterialLimitations [][][]pythonRun `json:"material_limitations"`
+}
+
 // pythonRecording is one decoded testdata/python/<scenario>.json file.
 type pythonRecording struct {
 	Scenario              string                     `json:"scenario"`
@@ -200,6 +257,10 @@ type pythonRecording struct {
 	Autoscaling           pythonAutoscaling          `json:"autoscaling"`
 	NodePressure          bool                       `json:"node_pressure"`
 	Findings              []pythonFinding            `json:"findings"`
+	Recommendations       []pythonRecommendation     `json:"recommendations"`
+	Summary               pythonSummary              `json:"summary"`
+	WorkloadCoverage      []pythonCoverageRow        `json:"workload_coverage"`
+	Executive             map[string]pythonExecutive `json:"executive"`
 	Warnings              []string                   `json:"warnings"`
 	Notices               []string                   `json:"notices"`
 }
@@ -611,6 +672,380 @@ func compareFindings(scenario string, got []snapshot.Finding, want []pythonFindi
 		}
 	}
 
+	return diffs
+}
+
+// recommendationKey identifies a recommendation: its code and scope type.
+type recommendationKey struct{ Code, ScopeType string }
+
+// compareRecommendations compares the recommendations of the snapshot
+// with those of the original, matched by code and scope type: the
+// severity, the scopes, and the confidence of each, the entries present on
+// one side only, and, when both sides hold the same entries, their order.
+func compareRecommendations(scenario string, got []snapshot.Recommendation, want []pythonRecommendation) []string {
+	var diffs []string
+	label := func(k recommendationKey) string {
+		return fmt.Sprintf("%s: recommendation %s (%s)", scenario, k.Code, k.ScopeType)
+	}
+
+	gotByKey := make(map[recommendationKey]snapshot.Recommendation, len(got))
+	gotOrder := make([]recommendationKey, len(got))
+	for i, r := range got {
+		key := recommendationKey{r.Code, r.ScopeType}
+		gotByKey[key] = r
+		gotOrder[i] = key
+	}
+	wantByKey := make(map[recommendationKey]pythonRecommendation, len(want))
+	wantOrder := make([]recommendationKey, len(want))
+	for i, r := range want {
+		key := recommendationKey{r.Code, r.ScopeType}
+		wantByKey[key] = r
+		wantOrder[i] = key
+	}
+
+	for _, key := range gotOrder {
+		if _, ok := wantByKey[key]; !ok {
+			diffs = append(diffs, fmt.Sprintf("%s: present in the project, missing from the original", label(key)))
+		}
+	}
+	for _, key := range wantOrder {
+		if _, ok := gotByKey[key]; !ok {
+			diffs = append(diffs, fmt.Sprintf("%s: present in the original, missing from the project", label(key)))
+		}
+	}
+	for _, key := range gotOrder {
+		g, gok := gotByKey[key]
+		w, wok := wantByKey[key]
+		if !gok || !wok {
+			continue
+		}
+		if g.Severity != w.Severity {
+			diffs = append(diffs, fmt.Sprintf("%s: severity: got %q, want %q", label(key), g.Severity, w.Severity))
+		}
+		if !slices.Equal(g.Scopes, w.Scopes) {
+			diffs = append(diffs, fmt.Sprintf("%s: scopes: got %v, want %v", label(key), g.Scopes, w.Scopes))
+		}
+		if g.Confidence != w.Confidence {
+			diffs = append(diffs, fmt.Sprintf("%s: confidence: got %q, want %q", label(key), g.Confidence, w.Confidence))
+		}
+	}
+	if len(gotOrder) == len(wantOrder) && len(gotByKey) == len(wantByKey) && !slices.ContainsFunc(gotOrder, func(k recommendationKey) bool {
+		_, ok := wantByKey[k]
+		return !ok
+	}) {
+		for i := range gotOrder {
+			if gotOrder[i] != wantOrder[i] {
+				diffs = append(diffs, fmt.Sprintf("%s: recommendations[%d]: the order differs from the original: got %v, want %v", scenario, i, gotOrder[i], wantOrder[i]))
+				break
+			}
+		}
+	}
+	return diffs
+}
+
+// compareSummary compares the eleven counts of the summary.
+func compareSummary(scenario string, got snapshot.Summary, want pythonSummary) []string {
+	var diffs []string
+	counts := []struct {
+		name      string
+		got, want float64
+	}{
+		{"namespaces", got.Namespaces, want.Namespaces},
+		{"workloads", got.Workloads, want.Workloads},
+		{"hpas", got.HPAs, want.HPAs},
+		{"nodes", got.Nodes, want.Nodes},
+		{"nodepools", got.Nodepools, want.Nodepools},
+		{"findings", got.Findings, want.Findings},
+		{"recommendations", got.Recommendations, want.Recommendations},
+		{"healthy", got.Healthy, want.Healthy},
+		{"attention", got.Attention, want.Attention},
+		{"critical", got.Critical, want.Critical},
+		{"workloads_without_hpa", got.WorkloadsWithoutHPA, want.WorkloadsWithoutHPA},
+	}
+	for _, c := range counts {
+		if c.got != c.want {
+			diffs = append(diffs, fmt.Sprintf("%s: summary.%s: got %v, want %v", scenario, c.name, c.got, c.want))
+		}
+	}
+	return diffs
+}
+
+// coverageKey identifies a workload row of the coverage.
+type coverageKey struct{ Namespace, Kind, Name string }
+
+// compareCoverage compares every workload row of the snapshot, those with
+// observed usage and those only in the coverage, with the rows of the
+// original, matched by namespace, kind, and name: observed_usage and
+// hpa_coverage, the rows on one side only, and the order of the keys.
+func compareCoverage(scenario string, got []snapshot.Workload, want []pythonCoverageRow) []string {
+	var diffs []string
+	label := func(k coverageKey) string {
+		return fmt.Sprintf("%s: coverage %s/%s/%s", scenario, k.Namespace, k.Kind, k.Name)
+	}
+
+	gotByKey := make(map[coverageKey]snapshot.Workload, len(got))
+	gotOrder := make([]coverageKey, len(got))
+	for i, w := range got {
+		key := coverageKey{w.Namespace, w.Kind, w.Name}
+		gotByKey[key] = w
+		gotOrder[i] = key
+	}
+	wantByKey := make(map[coverageKey]pythonCoverageRow, len(want))
+	wantOrder := make([]coverageKey, len(want))
+	for i, w := range want {
+		key := coverageKey{w.Namespace, w.Kind, w.Name}
+		wantByKey[key] = w
+		wantOrder[i] = key
+	}
+
+	for _, key := range gotOrder {
+		if _, ok := wantByKey[key]; !ok {
+			diffs = append(diffs, fmt.Sprintf("%s: present in the project, missing from the original", label(key)))
+		}
+	}
+	for _, key := range wantOrder {
+		if _, ok := gotByKey[key]; !ok {
+			diffs = append(diffs, fmt.Sprintf("%s: present in the original, missing from the project", label(key)))
+		}
+	}
+	for _, key := range gotOrder {
+		g, gok := gotByKey[key]
+		w, wok := wantByKey[key]
+		if !gok || !wok {
+			continue
+		}
+		if g.ObservedUsage != w.ObservedUsage {
+			diffs = append(diffs, fmt.Sprintf("%s: observed_usage: got %v, want %v", label(key), g.ObservedUsage, w.ObservedUsage))
+		}
+		if g.HPACoverage != w.HPACoverage {
+			diffs = append(diffs, fmt.Sprintf("%s: hpa_coverage: got %q, want %q", label(key), g.HPACoverage, w.HPACoverage))
+		}
+	}
+	if len(gotOrder) == len(wantOrder) && len(gotByKey) == len(wantByKey) && !slices.ContainsFunc(gotOrder, func(k coverageKey) bool {
+		_, ok := wantByKey[k]
+		return !ok
+	}) {
+		for i := range gotOrder {
+			if gotOrder[i] != wantOrder[i] {
+				diffs = append(diffs, fmt.Sprintf("%s: coverage[%d]: the order differs from the original: got %v, want %v", scenario, i, gotOrder[i], wantOrder[i]))
+				break
+			}
+		}
+	}
+	return diffs
+}
+
+// numberToken matches a number of a Portuguese text: digits, an optional
+// decimal part after a comma, and an optional percent sign.
+var numberToken = regexp.MustCompile(`[0-9]+(,[0-9]+)?%?`)
+
+// runsOf reads the runs of a built cell through their JSON form, which is
+// the one place that names a run's kind, status, and text.
+func runsOf(runs []document.Run) ([]pythonRun, error) {
+	data, err := json.Marshal(runs)
+	if err != nil {
+		return nil, err
+	}
+	var out []pythonRun
+	if err := json.Unmarshal(data, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// executiveSubsection is one of the seven subsections of the executive
+// body: the recorded name, the key of its heading, and the rows and the
+// note the original recorded for it.
+type executiveSubsection struct {
+	name    string
+	heading catalog.Key
+	rows    func(pythonExecutive) [][][]pythonRun
+}
+
+var executiveSubsections = []executiveSubsection{
+	{"critical_workloads", catalog.SectionsExecutiveCriticalHeading, func(e pythonExecutive) [][][]pythonRun { return e.CriticalWorkloads }},
+	{"attention_workloads", catalog.SectionsExecutiveAttentionHeading, func(e pythonExecutive) [][][]pythonRun { return e.AttentionWorkloads }},
+	{"namespaces_at_risk", catalog.SectionsExecutiveNamespacesHeading, func(e pythonExecutive) [][][]pythonRun { return e.NamespacesAtRisk }},
+	{"replica_ceiling", catalog.SectionsExecutiveScalingHeading, func(e pythonExecutive) [][][]pythonRun { return e.ReplicaCeiling }},
+	{"nodepool_status", catalog.SectionsExecutiveNodepoolsHeading, func(e pythonExecutive) [][][]pythonRun { return e.NodepoolStatus }},
+	{"action_plan", catalog.SectionsExecutiveActionsHeading, func(e pythonExecutive) [][][]pythonRun { return e.ActionPlan }},
+	{"material_limitations", catalog.SectionsExecutiveLimitationsHeading, func(e pythonExecutive) [][][]pythonRun { return e.MaterialLimitations }},
+}
+
+// headingText returns the text of a heading block, or false when the
+// block is not a heading of the level.
+func headingText(block document.Block, level int) (string, bool) {
+	h, ok := block.(document.Heading)
+	if !ok || h.Level != level {
+		return "", false
+	}
+	runs, err := runsOf(h.Runs)
+	if err != nil {
+		return "", false
+	}
+	var text strings.Builder
+	for _, r := range runs {
+		text.WriteString(r.Text)
+	}
+	return text.String(), true
+}
+
+// compareExecutive builds the Portuguese executive document of the
+// snapshot at each of the two minimums the original recorded, and compares
+// the rows of its seven tables with the recorded ones: the count of rows,
+// and for every cell the count of runs and, for every run, its kind and its
+// status. An ident run is compared letter for letter; a text, placeholder,
+// or status run by its number tokens in order; the action cell of the plan
+// also by whether its text ends with a closing parenthesis. The note of the
+// HPA data is compared by the title of the callout that follows the replica
+// ceiling.
+func compareExecutive(scenario string, snap snapshot.Snapshot, want map[string]pythonExecutive) []string {
+	var diffs []string
+	cat, err := catalog.Load(catalog.PortugueseBrazil)
+	if err != nil {
+		return []string{fmt.Sprintf("%s: loading the catalog: %v", scenario, err)}
+	}
+	title := func(key catalog.Key) string {
+		text, err := cat.Text(key, nil)
+		if err != nil {
+			diffs = append(diffs, fmt.Sprintf("%s: reading the catalog text %s: %v", scenario, key, err))
+		}
+		return text
+	}
+	executiveHeading := title(catalog.SectionsExecutiveHeading)
+	incompleteTitle := title(catalog.SectionsHPAsNoteIncompleteTitle)
+	partialTitle := title(catalog.SectionsHPAsNotePartialTitle)
+
+	for _, minimum := range []string{"attention", "critical"} {
+		recorded, ok := want[minimum]
+		if !ok {
+			diffs = append(diffs, fmt.Sprintf("%s: executive.%s: missing from the original", scenario, minimum))
+			continue
+		}
+		doc, err := document.Build(snap, cat, document.Options{Profile: "executive", MinSeverity: minimum})
+		if err != nil {
+			diffs = append(diffs, fmt.Sprintf("%s: executive.%s: building the document: %v", scenario, minimum, err))
+			continue
+		}
+
+		pos := slices.IndexFunc(doc.Blocks, func(b document.Block) bool {
+			text, ok := headingText(b, 1)
+			return ok && text == executiveHeading
+		})
+		if pos < 0 {
+			diffs = append(diffs, fmt.Sprintf("%s: executive.%s: the document holds no executive heading", scenario, minimum))
+			continue
+		}
+
+		note := ""
+		for _, sub := range executiveSubsections {
+			label := fmt.Sprintf("%s: executive.%s.%s", scenario, minimum, sub.name)
+			wantText := title(sub.heading)
+			next := slices.IndexFunc(doc.Blocks[pos+1:], func(b document.Block) bool {
+				text, ok := headingText(b, 2)
+				return ok && text == wantText
+			})
+			if next < 0 || pos+2+next >= len(doc.Blocks) {
+				diffs = append(diffs, fmt.Sprintf("%s: the document holds no subsection with the heading %q", label, wantText))
+				continue
+			}
+			pos += 1 + next
+			var rows [][][]document.Run
+			if table, ok := doc.Blocks[pos+1].(document.Table); ok {
+				rows = table.Rows
+			}
+			diffs = append(diffs, compareExecutiveRows(label, sub.name, rows, sub.rows(recorded))...)
+
+			if sub.name == "replica_ceiling" && pos+2 < len(doc.Blocks) {
+				if callout, ok := doc.Blocks[pos+2].(document.Callout); ok {
+					runs, err := runsOf(callout.Title)
+					switch {
+					case err != nil:
+						diffs = append(diffs, fmt.Sprintf("%s: reading the note: %v", label, err))
+					case len(runs) == 1 && runs[0].Text == incompleteTitle:
+						note = "incomplete"
+					case len(runs) == 1 && runs[0].Text == partialTitle:
+						note = "partial"
+					default:
+						diffs = append(diffs, fmt.Sprintf("%s: the note has an unknown title", label))
+					}
+				}
+			}
+		}
+		if note != recorded.HPANote {
+			diffs = append(diffs, fmt.Sprintf("%s: executive.%s: hpa_note: got %q, want %q", scenario, minimum, note, recorded.HPANote))
+		}
+	}
+	return diffs
+}
+
+// compareExecutiveRows compares the rows of one table with the recorded
+// ones, as compareExecutive describes.
+func compareExecutiveRows(label, subsection string, got [][][]document.Run, want [][][]pythonRun) []string {
+	var diffs []string
+	if len(got) != len(want) {
+		return []string{fmt.Sprintf("%s: rows: got %d, want %d", label, len(got), len(want))}
+	}
+	for r := range got {
+		if len(got[r]) != len(want[r]) {
+			diffs = append(diffs, fmt.Sprintf("%s: row %d: cells: got %d, want %d", label, r, len(got[r]), len(want[r])))
+			continue
+		}
+		for c := range got[r] {
+			cellLabel := fmt.Sprintf("%s: row %d, cell %d", label, r, c)
+			runs, err := runsOf(got[r][c])
+			if err != nil {
+				diffs = append(diffs, fmt.Sprintf("%s: reading the runs: %v", cellLabel, err))
+				continue
+			}
+			if len(runs) != len(want[r][c]) {
+				diffs = append(diffs, fmt.Sprintf("%s: runs: got %d, want %d", cellLabel, len(runs), len(want[r][c])))
+				continue
+			}
+			for i := range runs {
+				diffs = append(diffs, compareRun(fmt.Sprintf("%s, run %d", cellLabel, i), runs[i], want[r][c][i])...)
+			}
+			if subsection == "action_plan" && c == 2 {
+				gotEnd, wantEnd := cellEndsWithParenthesis(runs), cellEndsWithParenthesis(want[r][c])
+				if gotEnd != wantEnd {
+					diffs = append(diffs, fmt.Sprintf("%s: ends with a closing parenthesis: got %v, want %v", cellLabel, gotEnd, wantEnd))
+				}
+			}
+		}
+	}
+	return diffs
+}
+
+// cellEndsWithParenthesis reports whether the text of the cell ends with a
+// closing parenthesis.
+func cellEndsWithParenthesis(runs []pythonRun) bool {
+	var text strings.Builder
+	for _, r := range runs {
+		text.WriteString(r.Text)
+	}
+	return strings.HasSuffix(text.String(), ")")
+}
+
+// compareRun compares one run: the kind, the status, and the text, whole
+// for an ident and by its number tokens for the other kinds.
+func compareRun(label string, got, want pythonRun) []string {
+	var diffs []string
+	if got.Kind != want.Kind {
+		diffs = append(diffs, fmt.Sprintf("%s: kind: got %q, want %q", label, got.Kind, want.Kind))
+	}
+	if got.Status != want.Status {
+		diffs = append(diffs, fmt.Sprintf("%s: status: got %q, want %q", label, got.Status, want.Status))
+	}
+	if want.Kind == "ident" {
+		if got.Text != want.Text {
+			diffs = append(diffs, fmt.Sprintf("%s: text: got %q, want %q", label, got.Text, want.Text))
+		}
+		return diffs
+	}
+	gotNumbers, wantNumbers := numberToken.FindAllString(got.Text, -1), numberToken.FindAllString(want.Text, -1)
+	if !slices.Equal(gotNumbers, wantNumbers) {
+		diffs = append(diffs, fmt.Sprintf("%s: numbers: got %v, want %v", label, gotNumbers, wantNumbers))
+	}
 	return diffs
 }
 
@@ -1049,6 +1484,10 @@ func compareNumbers(scenario string, snap snapshot.Snapshot, collected collect.C
 	}
 	diffs = append(diffs, compareCollectionStates(scenario, collected, want)...)
 	diffs = append(diffs, compareFindings(scenario, snap.Findings, want.Findings)...)
+	diffs = append(diffs, compareRecommendations(scenario, snap.Recommendations, want.Recommendations)...)
+	diffs = append(diffs, compareSummary(scenario, snap.Summary, want.Summary)...)
+	diffs = append(diffs, compareCoverage(scenario, snap.Workloads, want.WorkloadCoverage)...)
+	diffs = append(diffs, compareExecutive(scenario, snap, want.Executive)...)
 
 	gotWarnings, gotNotices, err := originalTexts(snap.Quality.Warnings, snap.Quality.Notices)
 	if err != nil {
@@ -1639,6 +2078,58 @@ func TestComparisonCanFail(t *testing.T) {
 		want.Findings[idx].Evidence[0].Value = analysis.Text("memory")
 		checkScaling(t, want, []string{
 			findingLabel(scaling.Name, key) + `: evidence[0].resources: got text "cpu", want text "memory"`,
+		})
+	})
+
+	t.Run("a scope of a recommendation renamed", func(t *testing.T) {
+		want := freshScaling(t)
+		idx := slices.IndexFunc(want.Recommendations, func(r pythonRecommendation) bool {
+			return r.Code == "WORKLOAD_MEMORY_LIMIT_CRITICAL"
+		})
+		if idx < 0 {
+			t.Fatal("edge-scaling holds no recommendation WORKLOAD_MEMORY_LIMIT_CRITICAL")
+		}
+		want.Recommendations[idx].Scopes = []string{"payments/other"}
+		checkScaling(t, want, []string{
+			scaling.Name + ": recommendation WORKLOAD_MEMORY_LIMIT_CRITICAL (workload): scopes: got [payments/payments-web], want [payments/other]",
+		})
+	})
+
+	t.Run("a count of the summary changed", func(t *testing.T) {
+		want := freshScaling(t)
+		want.Summary.Recommendations = 20
+		checkScaling(t, want, []string{
+			scaling.Name + ": summary.recommendations: got 19, want 20",
+		})
+	})
+
+	t.Run("a coverage of a row changed", func(t *testing.T) {
+		want := freshScaling(t)
+		idx := slices.IndexFunc(want.WorkloadCoverage, func(r pythonCoverageRow) bool { return r.Name == "api" })
+		if idx < 0 {
+			t.Fatal("edge-scaling holds no coverage row named api")
+		}
+		want.WorkloadCoverage[idx].HPACoverage = "covered"
+		checkScaling(t, want, []string{
+			scaling.Name + ": coverage payments/Deployment/api: hpa_coverage: got \"uncovered\", want \"covered\"",
+		})
+	})
+
+	t.Run("an ident of the action plan renamed", func(t *testing.T) {
+		want := freshScaling(t)
+		plan := want.Executive["attention"].ActionPlan
+		plan[0][3][0].Text = "other"
+		checkScaling(t, want, []string{
+			scaling.Name + ": executive.attention.action_plan: row 0, cell 3, run 0: text: got \"web\", want \"other\"",
+		})
+	})
+
+	t.Run("a number of a replicas cell changed", func(t *testing.T) {
+		want := freshScaling(t)
+		rows := want.Executive["attention"].ReplicaCeiling
+		rows[0][3][0].Text = "5 observadas / máximo 4"
+		checkScaling(t, want, []string{
+			scaling.Name + ": executive.attention.replica_ceiling: row 0, cell 3, run 0: numbers: got [4 4], want [5 4]",
 		})
 	})
 }

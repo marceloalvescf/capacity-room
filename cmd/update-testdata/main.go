@@ -121,19 +121,29 @@ func run(ctx context.Context) error {
 		}
 	}
 
-	for _, name := range goldentest.DataFileScenarios {
-		for _, lang := range catalog.Languages() {
-			doc, err := goldentest.DataFile(snapshots[name], lang)
-			if err != nil {
-				return fmt.Errorf("%s (%s): %w", name, lang, err)
-			}
+	kinds := []struct {
+		profile   string
+		scenarios []string
+		path      func(scenario string, lang catalog.Language) (string, error)
+	}{
+		{"", goldentest.DataFileScenarios, goldentest.DataFilePath},
+		{"executive", goldentest.ExecutiveDataFileScenarios, goldentest.ExecutiveDataFilePath},
+	}
+	for _, kind := range kinds {
+		for _, name := range kind.scenarios {
+			for _, lang := range catalog.Languages() {
+				doc, err := goldentest.DataFile(snapshots[name], lang, kind.profile)
+				if err != nil {
+					return fmt.Errorf("%s (%s): %w", name, lang, err)
+				}
 
-			path, err := goldentest.DataFilePath(name, lang)
-			if err != nil {
-				return err
-			}
-			if err := writeIfChanged(root, path, doc); err != nil {
-				return err
+				path, err := kind.path(name, lang)
+				if err != nil {
+					return err
+				}
+				if err := writeIfChanged(root, path, doc); err != nil {
+					return err
+				}
 			}
 		}
 	}

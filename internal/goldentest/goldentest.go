@@ -36,6 +36,10 @@ var DataFileScenarios = []string{
 	"direct-complete", "partial-data", "raw-fallback", "value-edge-cases", "edge-values", "edge-scaling",
 }
 
+// ExecutiveDataFileScenarios names the scenarios that have golden data files
+// of the executive profile too.
+var ExecutiveDataFileScenarios = []string{"direct-complete", "edge-scaling"}
+
 // The fixed input every scenario runs with, held constant so that only the
 // scenario itself can change a byte of the result.
 const (
@@ -224,8 +228,9 @@ func Queries(ctx context.Context, scenario promtest.Scenario) ([]byte, error) {
 }
 
 // DataFile decodes an encoded snapshot and returns the encoded document in
-// one language, with the profile and the severity stored in the snapshot.
-func DataFile(snap []byte, lang catalog.Language) ([]byte, error) {
+// one language and one profile, with the severity stored in the snapshot.
+// An empty profile keeps the snapshot's.
+func DataFile(snap []byte, lang catalog.Language, profile string) ([]byte, error) {
 	decoded, err := snapshot.Decode(snap)
 	if err != nil {
 		return nil, fmt.Errorf("decoding the snapshot: %w", err)
@@ -236,7 +241,7 @@ func DataFile(snap []byte, lang catalog.Language) ([]byte, error) {
 		return nil, fmt.Errorf("loading the %s catalog: %w", lang, err)
 	}
 
-	doc, err := document.Build(decoded, cat, document.Options{})
+	doc, err := document.Build(decoded, cat, document.Options{Profile: profile})
 	if err != nil {
 		return nil, fmt.Errorf("building the document: %w", err)
 	}
@@ -266,6 +271,16 @@ func DataFilePath(scenario string, lang catalog.Language) (string, error) {
 		return "", err
 	}
 	return filepath.Join(root, "template", "tests", "capacity", "fixtures", "command", scenario+"."+string(lang)+".json"), nil
+}
+
+// ExecutiveDataFilePath returns the place of a scenario's golden data file
+// of the executive profile, in one language.
+func ExecutiveDataFilePath(scenario string, lang catalog.Language) (string, error) {
+	root, err := moduleRoot()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "template", "tests", "capacity", "fixtures", "command", scenario+".executive."+string(lang)+".json"), nil
 }
 
 // QueriesPath returns the place of a scenario's golden file of queries.
