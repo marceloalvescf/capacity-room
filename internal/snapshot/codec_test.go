@@ -2210,3 +2210,30 @@ func TestCheckCountsTheRecommendations(t *testing.T) {
 		s.Summary.Recommendations = 3
 	}, "summary.recommendations is 3, want 2")
 }
+
+func TestCheckRefusesANonFiniteThreshold(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*Snapshot)
+	}{
+		{"report.thresholds.warning_percent", func(s *Snapshot) { s.Report.Thresholds.WarningPercent = math.NaN() }},
+		{"report.thresholds.critical_percent", func(s *Snapshot) { s.Report.Thresholds.CriticalPercent = math.NaN() }},
+		{"report.thresholds.low_utilization_percent", func(s *Snapshot) { s.Report.Thresholds.LowUtilizationPercent = math.NaN() }},
+		{"report.thresholds.autoscaler_near_max_percent", func(s *Snapshot) { s.Report.Thresholds.AutoscalerNearMaxPercent = math.NaN() }},
+		{"report.thresholds.nodepool_spread_points", func(s *Snapshot) { s.Report.Thresholds.NodepoolSpreadPoints = math.NaN() }},
+		{"report.thresholds.bursty_gap_percent", func(s *Snapshot) { s.Report.Thresholds.BurstyGapPercent = math.NaN() }},
+		{"report.thresholds.hpa_replica_divergence", func(s *Snapshot) { s.Report.Thresholds.HPAReplicaDivergence = math.NaN() }},
+		{"report.settings.timeout_seconds", func(s *Snapshot) { s.Report.Settings.TimeoutSeconds = math.Inf(1) }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := validSnapshot(t)
+			tt.mutate(&s)
+			err := s.Check()
+			want := tt.name + " must be a finite number"
+			if err == nil || err.Error() != want {
+				t.Fatalf("Check() error = %v, want %q", err, want)
+			}
+		})
+	}
+}

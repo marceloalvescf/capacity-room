@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"regexp"
@@ -16,33 +17,35 @@ var labelRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 // Duration, Location), so each is defined once here to guarantee the exact
 // wording never drifts between call sites.
 var (
-	errPeriodShape     = errors.New("analysis.period must look like 30m, 4h, 24h, or 7d")
-	errPeriodTooLong   = errors.New("analysis.period is too long")
-	errTimezoneUnknown = errors.New("analysis.timezone is unknown")
-	errTokenTooShort   = errors.New("the token must hold at least 8 characters")
-	errMetricsURLShape = errors.New("metrics.url must be an absolute HTTP or HTTPS URL")
-	errMetricsURLCreds = errors.New("metrics.url must not embed credentials")
-	errMetricsURLQuery = errors.New("metrics.url must not include a query string")
-	errMetricsURLFrag  = errors.New("metrics.url must not include a fragment")
-	errMetricsURLGraf  = errors.New("metrics.url must identify a Grafana datasource proxy API root")
-	errMetricsCABundle = errors.New("metrics.ca_bundle must be an existing file")
-	errMetricsTimeout  = errors.New("metrics.timeout_seconds must be positive")
-	errMetricsURLReq   = errors.New("metrics.url is required")
-	errEndpointType    = errors.New("metrics.endpoint_type must be auto, prometheus, or grafana")
-	errClusterName     = errors.New("cluster.name is required")
-	errClusterNS       = errors.New("cluster.namespaces must contain at least one non-empty namespace")
-	errClusterLabel    = errors.New("cluster.label must be a valid Prometheus label name")
-	errClusterFilter   = errors.New("cluster.filter_mode must be required, auto, or none")
-	errClusterNodepool = errors.New("cluster.nodepool_label must be a valid Prometheus label name")
-	errNodeAutoscaling = errors.New("analysis.node_autoscaling must be auto, enabled, or disabled")
-	errThresholdRange  = errors.New("threshold values must be within 0..100")
-	errBurstyGap       = errors.New("thresholds.bursty_gap_percent must not be negative")
-	errHPADivergence   = errors.New("thresholds.hpa_replica_divergence must not be negative")
-	errWarningCritical = errors.New("thresholds.warning_percent must be lower than critical_percent")
-	errReportProfile   = errors.New("report.profile must be detailed or executive")
-	errReportSeverity  = errors.New("report.min_severity must be all, attention, or critical")
-	errReportLanguage  = errors.New("report.language must be pt-BR or en")
-	errReportOutputDir = errors.New("report.output_directory must exist and be writable")
+	errPeriodShape          = errors.New("analysis.period must look like 30m, 4h, 24h, or 7d")
+	errPeriodTooLong        = errors.New("analysis.period is too long")
+	errTimezoneUnknown      = errors.New("analysis.timezone is unknown")
+	errTokenTooShort        = errors.New("the token must hold at least 8 characters")
+	errMetricsURLShape      = errors.New("metrics.url must be an absolute HTTP or HTTPS URL")
+	errMetricsURLCreds      = errors.New("metrics.url must not embed credentials")
+	errMetricsURLQuery      = errors.New("metrics.url must not include a query string")
+	errMetricsURLFrag       = errors.New("metrics.url must not include a fragment")
+	errMetricsURLGraf       = errors.New("metrics.url must identify a Grafana datasource proxy API root")
+	errMetricsCABundle      = errors.New("metrics.ca_bundle must be an existing file")
+	errMetricsTimeout       = errors.New("metrics.timeout_seconds must be positive")
+	errMetricsURLReq        = errors.New("metrics.url is required")
+	errEndpointType         = errors.New("metrics.endpoint_type must be auto, prometheus, or grafana")
+	errClusterName          = errors.New("cluster.name is required")
+	errClusterNS            = errors.New("cluster.namespaces must contain at least one non-empty namespace")
+	errClusterLabel         = errors.New("cluster.label must be a valid Prometheus label name")
+	errClusterFilter        = errors.New("cluster.filter_mode must be required, auto, or none")
+	errClusterNodepool      = errors.New("cluster.nodepool_label must be a valid Prometheus label name")
+	errNodeAutoscaling      = errors.New("analysis.node_autoscaling must be auto, enabled, or disabled")
+	errThresholdRange       = errors.New("threshold values must be within 0..100")
+	errThresholdFinite      = errors.New("threshold values must be finite numbers")
+	errMetricsTimeoutFinite = errors.New("metrics.timeout_seconds must be a finite number")
+	errBurstyGap            = errors.New("thresholds.bursty_gap_percent must not be negative")
+	errHPADivergence        = errors.New("thresholds.hpa_replica_divergence must not be negative")
+	errWarningCritical      = errors.New("thresholds.warning_percent must be lower than critical_percent")
+	errReportProfile        = errors.New("report.profile must be detailed or executive")
+	errReportSeverity       = errors.New("report.min_severity must be all, attention, or critical")
+	errReportLanguage       = errors.New("report.language must be pt-BR or en")
+	errReportOutputDir      = errors.New("report.output_directory must exist and be writable")
 )
 
 // Validate checks every rule of spec 5.2 and returns the first failure, in
@@ -98,6 +101,9 @@ func validateMetrics(m Metrics) error {
 			return errMetricsCABundle
 		}
 	}
+	if math.IsNaN(m.TimeoutSeconds) || math.IsInf(m.TimeoutSeconds, 0) {
+		return errMetricsTimeoutFinite
+	}
 	if m.TimeoutSeconds <= 0 {
 		return errMetricsTimeout
 	}
@@ -152,6 +158,19 @@ func validateAnalysis(a Analysis) error {
 }
 
 func validateThresholds(th Thresholds) error {
+	for _, v := range []float64{
+		th.WarningPercent,
+		th.CriticalPercent,
+		th.LowUtilizationPercent,
+		th.AutoscalerNearMaxPercent,
+		th.NodepoolSpreadPoints,
+		th.BurstyGapPercent,
+		th.HPAReplicaDivergence,
+	} {
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return errThresholdFinite
+		}
+	}
 	percents := []float64{
 		th.WarningPercent,
 		th.CriticalPercent,

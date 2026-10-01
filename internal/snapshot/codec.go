@@ -482,8 +482,29 @@ func (s Snapshot) Check() error {
 	if s.Scope.ClusterLabel == "" {
 		return errors.New("scope.cluster_label is empty")
 	}
+	if !isFinite(s.Report.Settings.TimeoutSeconds) {
+		return errors.New("report.settings.timeout_seconds must be a finite number")
+	}
 	if s.Report.Settings.TimeoutSeconds <= 0 {
 		return errors.New("report.settings.timeout_seconds must be positive")
+	}
+
+	th := s.Report.Thresholds
+	for _, t := range []struct {
+		name  string
+		value float64
+	}{
+		{"warning_percent", th.WarningPercent},
+		{"critical_percent", th.CriticalPercent},
+		{"low_utilization_percent", th.LowUtilizationPercent},
+		{"autoscaler_near_max_percent", th.AutoscalerNearMaxPercent},
+		{"nodepool_spread_points", th.NodepoolSpreadPoints},
+		{"bursty_gap_percent", th.BurstyGapPercent},
+		{"hpa_replica_divergence", th.HPAReplicaDivergence},
+	} {
+		if !isFinite(t.value) {
+			return fmt.Errorf("report.thresholds.%s must be a finite number", t.name)
+		}
 	}
 
 	percents := []float64{

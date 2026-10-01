@@ -281,3 +281,48 @@ func TestWritableCheckRefusesAReadOnlyFolder(t *testing.T) {
 		t.Fatalf("dir has %d entries after checkWritableDir, want 0: %v", len(entries), entries)
 	}
 }
+
+// loadWith loads a minimal configuration with extra lines appended under the
+// given table.
+func loadWith(t *testing.T, table, line string) error {
+	t.Helper()
+	content := "[metrics]\nurl = \"https://prom.example.org\"\n\n[cluster]\nname = \"prod\"\nnamespaces = [\"default\"]\n"
+	if table == "metrics" {
+		content = strings.Replace(content, "[cluster]", line+"\n\n[cluster]", 1)
+	} else {
+		content += "\n[" + table + "]\n" + line + "\n"
+	}
+	_, err := Load(Source{File: writeFile(t, content), Getenv: noEnv})
+	return err
+}
+
+func TestValidateRefusesANonFiniteThreshold(t *testing.T) {
+	for _, line := range []string{
+		"warning_percent = nan",
+		"bursty_gap_percent = inf",
+		"hpa_replica_divergence = -inf",
+		"low_utilization_percent = inf",
+	} {
+		t.Run(line, func(t *testing.T) {
+			if err := loadWith(t, "thresholds", line); !errors.Is(err, errThresholdFinite) {
+				t.Fatalf("Load() error = %v, want %v", err, errThresholdFinite)
+			}
+		})
+	}
+}
+
+func TestValidateRefusesANonFiniteTimeout(t *testing.T) {
+	for _, line := range []string{"timeout_seconds = nan", "timeout_seconds = inf"} {
+		t.Run(line, func(t *testing.T) {
+			if err := loadWith(t, "metrics", line); !errors.Is(err, errMetricsTimeoutFinite) {
+				t.Fatalf("Load() error = %v, want %v", err, errMetricsTimeoutFinite)
+			}
+		})
+	}
+}
+
+func TestValidateAcceptsTheBoundaries(t *testing.T) {
+	if err := loadWith(t, "thresholds", "warning_percent = 0\ncritical_percent = 100"); err != nil {
+		t.Fatalf("Load() error = %v, want nil", err)
+	}
+}
