@@ -2,17 +2,25 @@ package resolve
 
 import (
 	"net/netip"
+	"regexp"
 	"strings"
 )
 
 // tabsAndBreaks removes the characters urlsplit deletes from its input.
 var tabsAndBreaks = strings.NewReplacer("\t", "", "\r", "", "\n", "")
 
+// ipvFuture matches the IPvFuture form urlsplit accepts between brackets:
+// "v", hexadecimal digits, a dot, and at least one more character.
+var ipvFuture = regexp.MustCompile(`^[vV][0-9A-Fa-f]+\..+$`)
+
 // InstanceHost returns the host of an instance label, as the original does
 // with the host of "//" plus the instance: the port, IPv6 brackets, and any
 // user information removed, the host in lower case but for the zone of an
 // IPv6 address, which keeps its case; the text itself when it
 // has no host part; the empty text for an empty instance or a malformed one.
+// An instance that holds brackets anywhere is malformed unless its host
+// part, after the user information, starts with the opening bracket or
+// holds none, and the host is an IPv6 address or an IPvFuture form.
 func InstanceHost(instance string) string {
 	if instance == "" {
 		return ""
@@ -29,18 +37,20 @@ func InstanceHost(instance string) string {
 		netloc = netloc[i+1:]
 	}
 	var host string
-	if open {
-		_, rest, _ := strings.Cut(netloc, "[")
+	if before, rest, found := strings.Cut(netloc, "["); found {
+		if before != "" {
+			return ""
+		}
 		var after string
 		host, after, _ = strings.Cut(rest, "]")
 		if after != "" && after[0] != ':' {
 			return ""
 		}
-		if addr, err := netip.ParseAddr(host); (err != nil || !addr.Is6()) && !strings.HasPrefix(host, "v") && !strings.HasPrefix(host, "V") {
-			return ""
-		}
 	} else {
 		host, _, _ = strings.Cut(netloc, ":")
+	}
+	if open && !bracketedHost(host) {
+		return ""
 	}
 	if host == "" {
 		return instance
@@ -50,6 +60,20 @@ func InstanceHost(instance string) string {
 		return strings.ToLower(addr) + "%" + zone
 	}
 	return strings.ToLower(host)
+}
+
+// bracketedHost reports whether host may stand between brackets: an
+// IPvFuture form, or an IPv6 address whose zone holds no percent sign.
+func bracketedHost(host string) bool {
+	if strings.HasPrefix(host, "v") || strings.HasPrefix(host, "V") {
+		return ipvFuture.MatchString(host)
+	}
+	addr, err := netip.ParseAddr(host)
+	if err != nil || !addr.Is6() {
+		return false
+	}
+	_, zone, _ := strings.Cut(host, "%")
+	return !strings.Contains(zone, "%")
 }
 
 // NodeRecord is what the index knows of a node.

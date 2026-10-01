@@ -25,6 +25,37 @@ func TestInstanceHost(t *testing.T) {
 	}
 }
 
+// TestInstanceHostRefusesTheBracketFormsOfTheOriginal pins the bracket
+// forms urlsplit refuses: text before the opening bracket, an IPvFuture
+// form without hexadecimal digits, a dot, and one more character, a zone
+// that holds a second percent sign, and brackets in the user information
+// around a host that is no IPv6 address.
+func TestInstanceHostRefusesTheBracketFormsOfTheOriginal(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"a[::1]", ""},
+		{"İ[::1]:abc", ""},
+		{"host-[v1.x]", ""},
+		{"user@a[::1]:9100", ""},
+		{"[v]", ""},
+		{"[vx]", ""},
+		{"[v1.]", ""},
+		{"[v1.x]", "v1.x"},
+		{"[V1.AB]", "v1.ab"},
+		{"[v1.x y]", "v1.x y"},
+		{"[fe80::1%a%b]", ""},
+		{"[fe80::1%a%b]:9100", ""},
+		{"[fe80::1%ETH0]:9100", "fe80::1%ETH0"},
+		{"x[y]@host", ""},
+		{"[x]@[::1]", "::1"},
+		{"[x]@::1", ""},
+	}
+	for _, c := range cases {
+		if got := InstanceHost(c.in); got != c.want {
+			t.Errorf("InstanceHost(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
 func TestIndexDropsASharedValue(t *testing.T) {
 	x := NewNodeIndex([]NodeRecord{
 		{Name: "a", InternalIP: "10.0.0.1"},
