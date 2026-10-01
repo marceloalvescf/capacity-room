@@ -79,3 +79,68 @@ func TestKeysHoldTheNewFamilies(t *testing.T) {
 		}
 	}
 }
+
+// partConstants lists the constants of the sections "HPA history" and
+// "Resource usage by node pool", the node states, and the undetermined
+// placeholder.
+var partConstants = []Key{
+	SectionsHPAsHeading, SectionsHPAsIntro, SectionsHPAsObservedHeading, SectionsHPAsUncoveredHeading,
+	SectionsHPAsHeaderHPA, SectionsHPAsHeaderSpecMin, SectionsHPAsHeaderSpecMax,
+	SectionsHPAsHeaderCurrentAverage, SectionsHPAsHeaderMinReached, SectionsHPAsHeaderMaxReached,
+	SectionsHPAsHeaderSituation, SectionsHPAsHeaderKind, SectionsHPAsHeaderWorkload,
+	SectionsHPAsHeaderPods, SectionsHPAsSituationMaxReached, SectionsHPAsSituationPinned,
+	SectionsHPAsSituationBelowMax, SectionsHPAsSituationNoHPA, SectionsHPAsSituationSpecificStrategy,
+	SectionsHPAsEmptyNamespace, SectionsHPAsEmptyNamespacePartial, SectionsHPAsNoteIncompleteTitle,
+	SectionsHPAsNoteIncomplete, SectionsHPAsNotePartialTitle, SectionsHPAsNotePartial,
+	SectionsNodepoolsHeading, SectionsNodepoolsSummaryHeading, SectionsNodepoolsProfileHeading,
+	SectionsNodepoolsDetailHeading, SectionsNodepoolsPoolLabel, SectionsNodepoolsHeaderPool,
+	SectionsNodepoolsHeaderNodes, SectionsNodepoolsHeaderCPUAverage, SectionsNodepoolsHeaderCPUPeak,
+	SectionsNodepoolsHeaderMemoryAverage, SectionsNodepoolsHeaderMemoryPeak,
+	SectionsNodepoolsHeaderConfidence, SectionsNodepoolsHeaderCPUAllocatable,
+	SectionsNodepoolsHeaderCPUUsed, SectionsNodepoolsHeaderCPURequested,
+	SectionsNodepoolsHeaderMemoryAllocatable, SectionsNodepoolsHeaderMemoryUsed,
+	SectionsNodepoolsHeaderMemoryRequested, SectionsNodepoolsHeaderNode,
+	SectionsNodepoolsHeaderCPUAvgPeak, SectionsNodepoolsHeaderMemoryAvgPeak,
+	SectionsNodepoolsHeaderReason, SectionsNodepoolsHeaderState, SectionsNodepoolsEmptySummary,
+	SectionsNodepoolsEmptyProfile, SectionsNodepoolsEmptyDetail, SectionsNodepoolsNoFinding,
+	NodeStateReady, NodeStateNotReady, NodeStateSchedulable, NodeStateUnschedulable,
+	PlaceholderUndetermined,
+}
+
+func TestKeysHoldThePartFamilies(t *testing.T) {
+	if len(partConstants) != 57 {
+		t.Fatalf("partConstants has %d entries, want 57", len(partConstants))
+	}
+
+	keys := make(map[Key]bool)
+	for _, k := range Keys() {
+		keys[k] = true
+	}
+	for _, k := range partConstants {
+		if !keys[k] {
+			t.Errorf("Keys() does not hold %q", k)
+		}
+	}
+
+	want := []Key{
+		"confidence.exact", "confidence.inferred", "confidence.unknown",
+		"reason.usage_peak.cpu", "reason.usage_peak.memory",
+		"reason.usage_average.cpu", "reason.usage_average.memory",
+		"reason.request_high.cpu", "reason.request_high.memory",
+		"finding.node_overrequested.summary", "finding.node_low_utilization.summary",
+	}
+	for _, k := range want {
+		if !keys[k] {
+			t.Errorf("Keys() does not hold %q", k)
+		}
+	}
+	if Confidence("exact") != "confidence.exact" {
+		t.Errorf("Confidence(exact) = %q", Confidence("exact"))
+	}
+	if Reason("usage_peak", "cpu") != "reason.usage_peak.cpu" {
+		t.Errorf("Reason(usage_peak, cpu) = %q", Reason("usage_peak", "cpu"))
+	}
+	if FindingSummary("node_overrequested") != "finding.node_overrequested.summary" {
+		t.Errorf("FindingSummary(node_overrequested) = %q", FindingSummary("node_overrequested"))
+	}
+}

@@ -127,6 +127,67 @@ const (
 	NotesHeading      Key = "notes.heading"
 	NotesHeaderRemark Key = "notes.header_remark"
 
+	SectionsHPAsHeading                   Key = "sections.hpas.heading"
+	SectionsHPAsIntro                     Key = "sections.hpas.intro"
+	SectionsHPAsObservedHeading           Key = "sections.hpas.observed_heading"
+	SectionsHPAsUncoveredHeading          Key = "sections.hpas.uncovered_heading"
+	SectionsHPAsHeaderHPA                 Key = "sections.hpas.header_hpa"
+	SectionsHPAsHeaderSpecMin             Key = "sections.hpas.header_spec_min"
+	SectionsHPAsHeaderSpecMax             Key = "sections.hpas.header_spec_max"
+	SectionsHPAsHeaderCurrentAverage      Key = "sections.hpas.header_current_average"
+	SectionsHPAsHeaderMinReached          Key = "sections.hpas.header_min_reached"
+	SectionsHPAsHeaderMaxReached          Key = "sections.hpas.header_max_reached"
+	SectionsHPAsHeaderSituation           Key = "sections.hpas.header_situation"
+	SectionsHPAsHeaderKind                Key = "sections.hpas.header_kind"
+	SectionsHPAsHeaderWorkload            Key = "sections.hpas.header_workload"
+	SectionsHPAsHeaderPods                Key = "sections.hpas.header_pods"
+	SectionsHPAsSituationMaxReached       Key = "sections.hpas.situation_max_reached"
+	SectionsHPAsSituationPinned           Key = "sections.hpas.situation_pinned"
+	SectionsHPAsSituationBelowMax         Key = "sections.hpas.situation_below_max"
+	SectionsHPAsSituationNoHPA            Key = "sections.hpas.situation_no_hpa"
+	SectionsHPAsSituationSpecificStrategy Key = "sections.hpas.situation_specific_strategy"
+	SectionsHPAsEmptyNamespace            Key = "sections.hpas.empty_namespace"
+	SectionsHPAsEmptyNamespacePartial     Key = "sections.hpas.empty_namespace_partial"
+	SectionsHPAsNoteIncompleteTitle       Key = "sections.hpas.note_incomplete_title"
+	SectionsHPAsNoteIncomplete            Key = "sections.hpas.note_incomplete"
+	SectionsHPAsNotePartialTitle          Key = "sections.hpas.note_partial_title"
+	SectionsHPAsNotePartial               Key = "sections.hpas.note_partial"
+
+	SectionsNodepoolsHeading                 Key = "sections.nodepools.heading"
+	SectionsNodepoolsSummaryHeading          Key = "sections.nodepools.summary_heading"
+	SectionsNodepoolsProfileHeading          Key = "sections.nodepools.profile_heading"
+	SectionsNodepoolsDetailHeading           Key = "sections.nodepools.detail_heading"
+	SectionsNodepoolsPoolLabel               Key = "sections.nodepools.pool_label"
+	SectionsNodepoolsHeaderPool              Key = "sections.nodepools.header_pool"
+	SectionsNodepoolsHeaderNodes             Key = "sections.nodepools.header_nodes"
+	SectionsNodepoolsHeaderCPUAverage        Key = "sections.nodepools.header_cpu_average"
+	SectionsNodepoolsHeaderCPUPeak           Key = "sections.nodepools.header_cpu_peak"
+	SectionsNodepoolsHeaderMemoryAverage     Key = "sections.nodepools.header_memory_average"
+	SectionsNodepoolsHeaderMemoryPeak        Key = "sections.nodepools.header_memory_peak"
+	SectionsNodepoolsHeaderConfidence        Key = "sections.nodepools.header_confidence"
+	SectionsNodepoolsHeaderCPUAllocatable    Key = "sections.nodepools.header_cpu_allocatable"
+	SectionsNodepoolsHeaderCPUUsed           Key = "sections.nodepools.header_cpu_used"
+	SectionsNodepoolsHeaderCPURequested      Key = "sections.nodepools.header_cpu_requested"
+	SectionsNodepoolsHeaderMemoryAllocatable Key = "sections.nodepools.header_memory_allocatable"
+	SectionsNodepoolsHeaderMemoryUsed        Key = "sections.nodepools.header_memory_used"
+	SectionsNodepoolsHeaderMemoryRequested   Key = "sections.nodepools.header_memory_requested"
+	SectionsNodepoolsHeaderNode              Key = "sections.nodepools.header_node"
+	SectionsNodepoolsHeaderCPUAvgPeak        Key = "sections.nodepools.header_cpu_avg_peak"
+	SectionsNodepoolsHeaderMemoryAvgPeak     Key = "sections.nodepools.header_memory_avg_peak"
+	SectionsNodepoolsHeaderReason            Key = "sections.nodepools.header_reason"
+	SectionsNodepoolsHeaderState             Key = "sections.nodepools.header_state"
+	SectionsNodepoolsEmptySummary            Key = "sections.nodepools.empty_summary"
+	SectionsNodepoolsEmptyProfile            Key = "sections.nodepools.empty_profile"
+	SectionsNodepoolsEmptyDetail             Key = "sections.nodepools.empty_detail"
+	SectionsNodepoolsNoFinding               Key = "sections.nodepools.no_finding"
+
+	NodeStateReady         Key = "node_state.ready"
+	NodeStateNotReady      Key = "node_state.not_ready"
+	NodeStateSchedulable   Key = "node_state.schedulable"
+	NodeStateUnschedulable Key = "node_state.unschedulable"
+
+	PlaceholderUndetermined Key = "placeholder.undetermined"
+
 	PeriodDaySingular    Key = "period.day.singular"
 	PeriodDayPlural      Key = "period.day.plural"
 	PeriodHourSingular   Key = "period.hour.singular"
@@ -181,10 +242,40 @@ var wordingKeys = []Key{
 	SectionsWorkloadsHeaderCPURequest, SectionsWorkloadsHeaderCPULimit, SectionsWorkloadsHeaderMemoryAverage,
 	SectionsWorkloadsHeaderMemoryPeak, SectionsWorkloadsHeaderMemoryRequest, SectionsWorkloadsHeaderMemoryLimit,
 	PlaceholderUnavailable, PlaceholderNoBase,
+	SectionsHPAsHeading, SectionsHPAsIntro, SectionsHPAsObservedHeading, SectionsHPAsUncoveredHeading,
+	SectionsHPAsHeaderHPA, SectionsHPAsHeaderSpecMin, SectionsHPAsHeaderSpecMax,
+	SectionsHPAsHeaderCurrentAverage, SectionsHPAsHeaderMinReached, SectionsHPAsHeaderMaxReached,
+	SectionsHPAsHeaderSituation, SectionsHPAsHeaderKind, SectionsHPAsHeaderWorkload,
+	SectionsHPAsHeaderPods, SectionsHPAsSituationMaxReached, SectionsHPAsSituationPinned,
+	SectionsHPAsSituationBelowMax, SectionsHPAsSituationNoHPA, SectionsHPAsSituationSpecificStrategy,
+	SectionsHPAsEmptyNamespace, SectionsHPAsEmptyNamespacePartial, SectionsHPAsNoteIncompleteTitle,
+	SectionsHPAsNoteIncomplete, SectionsHPAsNotePartialTitle, SectionsHPAsNotePartial,
+	SectionsNodepoolsHeading, SectionsNodepoolsSummaryHeading, SectionsNodepoolsProfileHeading,
+	SectionsNodepoolsDetailHeading, SectionsNodepoolsPoolLabel, SectionsNodepoolsHeaderPool,
+	SectionsNodepoolsHeaderNodes, SectionsNodepoolsHeaderCPUAverage, SectionsNodepoolsHeaderCPUPeak,
+	SectionsNodepoolsHeaderMemoryAverage, SectionsNodepoolsHeaderMemoryPeak,
+	SectionsNodepoolsHeaderConfidence, SectionsNodepoolsHeaderCPUAllocatable,
+	SectionsNodepoolsHeaderCPUUsed, SectionsNodepoolsHeaderCPURequested,
+	SectionsNodepoolsHeaderMemoryAllocatable, SectionsNodepoolsHeaderMemoryUsed,
+	SectionsNodepoolsHeaderMemoryRequested, SectionsNodepoolsHeaderNode,
+	SectionsNodepoolsHeaderCPUAvgPeak, SectionsNodepoolsHeaderMemoryAvgPeak,
+	SectionsNodepoolsHeaderReason, SectionsNodepoolsHeaderState, SectionsNodepoolsEmptySummary,
+	SectionsNodepoolsEmptyProfile, SectionsNodepoolsEmptyDetail, SectionsNodepoolsNoFinding,
+	NodeStateReady, NodeStateNotReady, NodeStateSchedulable, NodeStateUnschedulable,
+	PlaceholderUndetermined,
 	NotesHeading, NotesHeaderRemark,
 	PeriodDaySingular, PeriodDayPlural, PeriodHourSingular, PeriodHourPlural,
 	PeriodMinuteSingular, PeriodMinutePlural, PeriodSecondSingular, PeriodSecondPlural,
 }
+
+// Confidences, ReasonFamilies, ReasonResources, and FindingFamilies are the
+// values the key functions Confidence, Reason, and FindingSummary take.
+var (
+	Confidences     = []string{"exact", "inferred", "unknown"}
+	ReasonFamilies  = []string{"usage_peak", "usage_average", "request_high"}
+	ReasonResources = []string{"cpu", "memory"}
+	FindingFamilies = []string{"node_overrequested", "node_low_utilization"}
+)
 
 // CapabilityName returns the key that names capability name, one of
 // discovery.Names.
@@ -218,15 +309,28 @@ func Notice(code string, count float64) Key {
 	return Key("notice." + code + ".plural")
 }
 
+// Confidence returns the key that names confidence, one of Confidences.
+func Confidence(confidence string) Key { return Key("confidence." + confidence) }
+
+// Reason returns the key of the reason of a node finding for family, one of
+// ReasonFamilies, and resource, one of ReasonResources.
+func Reason(family, resource string) Key { return Key("reason." + family + "." + resource) }
+
+// FindingSummary returns the key of the summary of a node finding of family,
+// one of FindingFamilies.
+func FindingSummary(family string) Key { return Key("finding." + family + ".summary") }
+
 // Keys returns every valid key, sorted: the constants of this file and the
 // keys made from the registries of discovery and collect. The registries of
 // discovery give only the capability evidence sentences — every other
 // family (capability names, capability reasons, states, strategies) already
 // has a row, and so a constant, in the wording table. The registries of
 // collect give both families of the second wording table: every warning
-// code, and both entries of every notice code.
+// code, and both entries of every notice code. Confidence, Reason, and
+// FindingSummary give the confidences, the node finding reasons, and the
+// node finding summaries.
 func Keys() []Key {
-	keys := make([]Key, 0, len(wordingKeys)+len(discovery.Names)*len(discovery.States)+len(collect.WarningCodes)+len(collect.NoticeCodes)*2)
+	keys := make([]Key, 0, len(wordingKeys)+len(discovery.Names)*len(discovery.States)+len(collect.WarningCodes)+len(collect.NoticeCodes)*2+len(Confidences)+len(ReasonFamilies)*len(ReasonResources)+len(FindingFamilies))
 	keys = append(keys, wordingKeys...)
 	for _, name := range discovery.Names {
 		for _, state := range discovery.States {
@@ -239,6 +343,17 @@ func Keys() []Key {
 	for _, code := range collect.NoticeCodes {
 		keys = append(keys, Notice(code, 1))
 		keys = append(keys, Notice(code, 2))
+	}
+	for _, confidence := range Confidences {
+		keys = append(keys, Confidence(confidence))
+	}
+	for _, family := range ReasonFamilies {
+		for _, resource := range ReasonResources {
+			keys = append(keys, Reason(family, resource))
+		}
+	}
+	for _, family := range FindingFamilies {
+		keys = append(keys, FindingSummary(family))
 	}
 	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 	return keys
