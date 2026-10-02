@@ -64,6 +64,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The Portuguese report writes the technical terms of Kubernetes in English:
   request, limit, workload, node, node pool, label, and autoscaling.
+- Every table cell of the report, the header row included, is centred
+  horizontally and vertically.
 
 ### Fixed
 

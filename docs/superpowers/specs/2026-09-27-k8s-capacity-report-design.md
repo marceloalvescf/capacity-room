@@ -77,6 +77,7 @@ reference. That folder is never tracked by Git.
 | Tests skip when a tool is missing | Tests fail when a tool is missing | A skipped gate is not a checked gate |
 | Test harness and tooling in Python | Everything in Go, frontend in TypeScript | One toolchain per side |
 | Portuguese sentences translate every term: solicitação, limite, carga de trabalho, pool de nós | Every technical term is English in both languages; only a common noun is Portuguese | Owner's decision of 2026-09-30: Brazilian readers use the Kubernetes vocabulary in English |
+| Table cells set at the top left | Every table cell, the header row included, is centred horizontally and vertically | Owner's decision of 2026-10-02, after reading the report of a real cluster |
 
 Accepted consequences:
 

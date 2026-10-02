@@ -2,7 +2,9 @@
 // for every table id the capacity report can render, and the one helper
 // that reproduces `data-table` from the original Python renderer
 // (older/kubernetes-report/kube_capacity_report/renderers/sections.py,
-// lines 44-89). `validate.typ` reads `layouts` to check a table block's
+// lines 44-89), with one difference: every cell, the header row included,
+// is centred horizontally and vertically, where the original set them at
+// the top left. `validate.typ` reads `layouts` to check a table block's
 // column count before any content is built; `blocks.typ` calls
 // `render-table` once the shape is already known to be correct.
 
@@ -95,7 +97,7 @@
     #let header-cells = headers.map(item => text(weight: "bold", item))
     #table(
       columns: layout.columns,
-      align: left + top,
+      align: center + horizon,
       table.header(repeat: true, ..header-cells),
       ..rows.flatten(),
     )

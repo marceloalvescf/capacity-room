@@ -179,7 +179,8 @@ var Snapshots = []Snapshot{
 		Data:   "tests/capacity/fixtures/parity.pt-BR.json",
 		Pages:  []int{1, 2, 3, 4},
 		Protects: "the report layer reproduces the original generated " +
-			"document page for page",
+			"document page for page, every word and number in place, " +
+			"with its table cells centred by the decision of 2026-10-02",
 	},
 	{
 		Name:   "command-complete-pt",

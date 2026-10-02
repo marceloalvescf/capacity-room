@@ -274,9 +274,12 @@ looks.
 - After `make update-golden`, open every page that changed and review it
   before committing. A page that changed without a reason you can name is a
   defect, not a new golden page.
-- The pages of the snapshot `capacity-parity` equal, byte for byte, the pages
-  of the original report. A change that alters them has moved away from the
-  original, and needs a decision recorded in `ROADMAP.md`.
+- The pages of the snapshot `capacity-parity` equal the pages of the
+  original report in every word and number, and differ from them in one
+  decided way: every table cell is centred, where the original set it at
+  the top left (decision of 2026-10-02). A change that alters them in any
+  other way has moved away from the original, and needs a decision recorded
+  in `ROADMAP.md`.
 - Rendering was measured equal on linux/amd64, linux/arm64, and macOS
   (`docs/decisions/0001-golden-architecture.md`). Measure again when the
   pinned Typst version changes.

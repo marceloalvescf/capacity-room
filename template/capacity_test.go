@@ -302,23 +302,28 @@ func TestCapacityIdentDoesNotRepeatTheHyphen(t *testing.T) {
 // TestCapacityControlRepeatsTheHyphen checks identifiers.pt-BR's row 2, the
 // same identifier as a plain `text` run: ordinary Portuguese hyphenation
 // applies, and is expected to break right after the identifier's own
-// hyphen, producing a doubled hyphen once whitespace is removed. This is
-// the control for TestCapacityIdentDoesNotRepeatTheHyphen: if Typst never
-// wrapped this identifier at all, that test would pass for the wrong
-// reason, and this one catches it.
+// hyphen and repeat it, so that a line of the text layer starts with the
+// hyphen and the rest of the name. This is the control for
+// TestCapacityIdentDoesNotRepeatTheHyphen: if Typst never wrapped this
+// identifier at all, that test would pass for the wrong reason, and this
+// one catches it. The lines are read one by one, not as one stream,
+// because the cells beside the name are centred vertically and their text
+// falls between the two halves of the wrapped name.
 func TestCapacityControlRepeatsTheHyphen(t *testing.T) {
 	ws := workspace(t)
 	pdf, stderr, err := compileCapacityData(t, ws, capacityFixture(ws, "identifiers.pt-BR"))
 	assertCleanCompile(t, stderr, err)
-	leading := leadingCellStream(pdfText(t, pdf))
 
-	if !strings.Contains(leading, "--") {
-		t.Fatalf("text (whitespace removed) does not contain a doubled hyphen; " +
-			"row 2's plain-text identifier was expected to hyphenate right after " +
-			"its own hyphen. If this fails, TestCapacityIdentDoesNotRepeatTheHyphen " +
-			"proves nothing, because Typst may simply not be wrapping the " +
-			"identifier at all")
+	for _, line := range strings.Split(pdfText(t, pdf), "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "-vmss000001") {
+			return
+		}
 	}
+	t.Fatalf("no line of the text layer starts with %q; "+
+		"row 2's plain-text identifier was expected to hyphenate right after "+
+		"its own hyphen and repeat it. If this fails, TestCapacityIdentDoesNotRepeatTheHyphen "+
+		"proves nothing, because Typst may simply not be wrapping the "+
+		"identifier at all", "-vmss000001")
 }
 
 // literalStrings holds every string of literal.pt-BR.json that must print
