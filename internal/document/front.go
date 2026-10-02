@@ -1,8 +1,6 @@
 package document
 
 import (
-	"strings"
-
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
@@ -48,19 +46,20 @@ func frontHeading(b *builder, key catalog.Key) Heading {
 
 // metadataTable builds the "report-metadata" table: four rows always
 // present, and the organization and classification rows only when the
-// snapshot carries them.
+// snapshot carries them. A name is an ident run, so that it keeps its
+// letters and breaks only at its own hyphens.
 func metadataTable(b *builder, s snapshot.Snapshot) Table {
 	rows := [][][]Run{
-		metadataRow(b.text(catalog.FrontMetadataEnvironment, nil), s.Scope.ClusterName),
-		metadataRow(b.text(catalog.FrontMetadataPeriod, nil), periodRange(b, s)),
-		metadataRow(b.text(catalog.FrontMetadataNamespaces, nil), strings.Join(s.Scope.Namespaces, ", ")),
-		metadataRow(b.text(catalog.FrontMetadataExcludedContainers, nil), excludedContainers(b, s)),
+		metadataRow(b, catalog.FrontMetadataEnvironment, []Run{Ident(s.Scope.ClusterName)}),
+		metadataRow(b, catalog.FrontMetadataPeriod, []Run{Text(periodRange(b, s))}),
+		metadataRow(b, catalog.FrontMetadataNamespaces, identList(s.Scope.Namespaces)),
+		metadataRow(b, catalog.FrontMetadataExcludedContainers, excludedContainers(b, s)),
 	}
 	if s.Report.Organization != "" {
-		rows = append(rows, metadataRow(b.text(catalog.FrontMetadataOrganization, nil), s.Report.Organization))
+		rows = append(rows, metadataRow(b, catalog.FrontMetadataOrganization, []Run{Text(s.Report.Organization)}))
 	}
 	if s.Report.Classification != "" {
-		rows = append(rows, metadataRow(b.text(catalog.FrontMetadataClassification, nil), s.Report.Classification))
+		rows = append(rows, metadataRow(b, catalog.FrontMetadataClassification, []Run{Text(s.Report.Classification)}))
 	}
 
 	return Table{
@@ -70,9 +69,23 @@ func metadataTable(b *builder, s snapshot.Snapshot) Table {
 	}
 }
 
-// metadataRow builds one label/value row, both cells a single text run.
-func metadataRow(label, value string) [][]Run {
-	return [][]Run{{Text(label)}, {Text(value)}}
+// metadataRow builds one label/value row: the label a single text run from
+// the catalog, the value the runs given.
+func metadataRow(b *builder, key catalog.Key, value []Run) [][]Run {
+	return [][]Run{{Text(b.text(key, nil))}, value}
+}
+
+// identList sets each name as an ident run, the names parted by a comma
+// and a space in a text run.
+func identList(names []string) []Run {
+	runs := make([]Run, 0, 2*len(names))
+	for i, name := range names {
+		if i > 0 {
+			runs = append(runs, Text(", "))
+		}
+		runs = append(runs, Ident(name))
+	}
+	return runs
 }
 
 // periodRange formats the analysis period's start and end by their own
@@ -83,13 +96,13 @@ func periodRange(b *builder, s snapshot.Snapshot) string {
 	return b.text(catalog.FrontMetadataPeriodRange, catalog.Params{"Start": start, "End": end})
 }
 
-// excludedContainers joins the excluded container names, or, when there is
-// none, returns the catalog's fallback sentence.
-func excludedContainers(b *builder, s snapshot.Snapshot) string {
+// excludedContainers lists the excluded container names as ident runs,
+// or, when there is none, returns the catalog's fallback sentence.
+func excludedContainers(b *builder, s snapshot.Snapshot) []Run {
 	if len(s.Scope.ExcludedContainers) == 0 {
-		return b.text(catalog.FrontMetadataNoExcludedContainers, nil)
+		return []Run{Text(b.text(catalog.FrontMetadataNoExcludedContainers, nil))}
 	}
-	return strings.Join(s.Scope.ExcludedContainers, ", ")
+	return identList(s.Scope.ExcludedContainers)
 }
 
 // legendTable builds the five-row "status-legend" table, in legendOrder:

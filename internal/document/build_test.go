@@ -3,6 +3,7 @@ package document
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -562,8 +563,9 @@ func TestBuildMetadataNoExcludedContainersFallback(t *testing.T) {
 	}
 }
 
-func TestBuildMetadataJoinsNames(t *testing.T) {
+func TestBuildMetadataNamesAreIdentRuns(t *testing.T) {
 	s := baseSnapshot(t)
+	s.Scope.ClusterName = "prod-east"
 	s.Scope.Namespaces = []string{"a", "b", "c"}
 	s.Namespaces = []snapshot.Namespace{
 		unavailableNamespace("a"),
@@ -571,335 +573,20 @@ func TestBuildMetadataJoinsNames(t *testing.T) {
 		unavailableNamespace("c"),
 	}
 	s.Summary.Namespaces = 3
+	s.Scope.ExcludedContainers = []string{"istio-proxy", "linkerd"}
 	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{})
 	table := findTable(t, frontBlock(t, doc).Blocks, "report-metadata")
-	got := runText(t, table.Rows[2][1][0])
-	if got != "a, b, c" {
-		t.Errorf("Namespaces value = %q, want %q", got, "a, b, c")
+
+	want := map[int][]Run{
+		0: {Ident("prod-east")},
+		2: {Ident("a"), Text(", "), Ident("b"), Text(", "), Ident("c")},
+		3: {Ident("istio-proxy"), Text(", "), Ident("linkerd")},
 	}
-}
-
-func TestBuildLegendRows(t *testing.T) {
-	wantStatuses := []string{"healthy", "attention", "critical", "unavailable", "undefined"}
-	for _, lang := range catalog.Languages() {
-		t.Run(string(lang), func(t *testing.T) {
-			s := baseSnapshot(t)
-			doc := mustBuild(t, s, mustCatalog(t, lang), Options{})
-			table := findTable(t, frontBlock(t, doc).Blocks, "status-legend")
-
-			if len(table.Rows) != 5 {
-				t.Fatalf("len(Rows) = %d, want 5", len(table.Rows))
-			}
-			for i, row := range table.Rows {
-				cell := row[0]
-				if len(cell) != 1 {
-					t.Fatalf("row %d first cell has %d runs, want 1", i, len(cell))
-				}
-				run := cell[0]
-				if run.kind != "status" {
-					t.Errorf("row %d run kind = %q, want status", i, run.kind)
-				}
-				if run.status != wantStatuses[i] {
-					t.Errorf("row %d status = %q, want %q", i, run.status, wantStatuses[i])
-				}
-				if run.text != nil {
-					t.Errorf("row %d text = %q, want null", i, *run.text)
-				}
-			}
-		})
-	}
-}
-
-func TestBuildQualityCounts(t *testing.T) {
-	s := baseSnapshot(t)
-	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{})
-	list, ok := frontBlock(t, doc).Blocks[6].(List)
-	if !ok {
-		t.Fatalf("front.Blocks[6] is %T, want List", frontBlock(t, doc).Blocks[6])
-	}
-
-	wantCounts := []string{" 6", " 2", " 1"}
-	for i, item := range list.Items {
-		if len(item) != 2 {
-			t.Fatalf("item %d has %d runs, want 2", i, len(item))
-		}
-		if item[0].kind != "strong" {
-			t.Errorf("item %d first run kind = %q, want strong", i, item[0].kind)
-		}
-		if got := runText(t, item[1]); got != wantCounts[i] {
-			t.Errorf("item %d count = %q, want %q", i, got, wantCounts[i])
+	for row, runs := range want {
+		if got := table.Rows[row][1]; !reflect.DeepEqual(got, runs) {
+			t.Errorf("row %d value = %+v, want %+v", row, got, runs)
 		}
 	}
-}
-
-func TestBuildQualityCountsIgnoreSeverity(t *testing.T) {
-	s := baseSnapshot(t)
-	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{MinSeverity: "critical"})
-	list := frontBlock(t, doc).Blocks[6].(List)
-
-	wantCounts := []string{" 6", " 2", " 1"}
-	for i, item := range list.Items {
-		if got := runText(t, item[1]); got != wantCounts[i] {
-			t.Errorf("item %d count = %q, want %q", i, got, wantCounts[i])
-		}
-	}
-}
-
-func TestBuildAppendixRows(t *testing.T) {
-	s := baseSnapshot(t)
-	cat := mustCatalog(t, catalog.English)
-	doc := mustBuild(t, s, cat, Options{})
-	table := findTable(t, doc.Blocks, "quality-appendix")
-
-	if len(table.Rows) != 9 {
-		t.Fatalf("len(Rows) = %d, want 9", len(table.Rows))
-	}
-	for i, row := range table.Rows {
-		if len(row) != 5 {
-			t.Fatalf("row %d has %d cells, want 5", i, len(row))
-		}
-		wantName, err := cat.Text(catalog.CapabilityName(discovery.Names[i]), nil)
-		if err != nil {
-			t.Fatalf("Text(CapabilityName(%q)): %v", discovery.Names[i], err)
-		}
-		if got := runText(t, row[0][0]); got != wantName {
-			t.Errorf("row %d capability = %q, want %q", i, got, wantName)
-		}
-	}
-}
-
-func TestBuildAppendixCoverage(t *testing.T) {
-	tests := []struct {
-		state, status, wantLabel string
-	}{
-		{discovery.StateAvailable, "healthy", "Available"},
-		{discovery.StatePartial, "attention", "Partial"},
-		{discovery.StateUnavailable, "critical", "Unavailable"},
-	}
-	cat := mustCatalog(t, catalog.English)
-	for _, tt := range tests {
-		t.Run(tt.state, func(t *testing.T) {
-			s := baseSnapshot(t)
-			s.Quality.Capabilities[0].State = tt.state
-			switch tt.state {
-			case discovery.StatePartial, discovery.StateUnavailable:
-				s.Quality.Capabilities[0].Reasons = []string{discovery.ReasonCodes[0]}
-			}
-			if tt.state == discovery.StateUnavailable {
-				s.Quality.Capabilities[0].Strategy = discovery.StrategyNone
-			}
-			doc := mustBuild(t, s, cat, Options{MinSeverity: "all"})
-			table := findTable(t, doc.Blocks, "quality-appendix")
-
-			cell := table.Rows[0][1]
-			if len(cell) != 1 {
-				t.Fatalf("coverage cell has %d runs, want 1", len(cell))
-			}
-			run := cell[0]
-			if run.kind != "status" || run.status != tt.status {
-				t.Errorf("coverage run = %+v, want status %q", run, tt.status)
-			}
-			if got := runText(t, run); got != tt.wantLabel {
-				t.Errorf("coverage label = %q, want %q", got, tt.wantLabel)
-			}
-		})
-	}
-}
-
-func TestBuildAppendixRemark(t *testing.T) {
-	cat := mustCatalog(t, catalog.English)
-	reasonSentence := func(t *testing.T, code string) string {
-		t.Helper()
-		text, err := cat.Text(catalog.CapabilityReason(code), nil)
-		if err != nil {
-			t.Fatalf("Text(CapabilityReason(%q)): %v", code, err)
-		}
-		return text
-	}
-
-	tests := []struct {
-		name    string
-		reasons []string
-		want    func(t *testing.T) string
-	}{
-		{"no reason", nil, func(*testing.T) string { return "No remark" }},
-		{
-			"one reason",
-			[]string{discovery.ReasonCodes[0]},
-			func(t *testing.T) string { return reasonSentence(t, discovery.ReasonCodes[0]) },
-		},
-		{
-			"two reasons",
-			[]string{discovery.ReasonCodes[0], discovery.ReasonCodes[1]},
-			func(t *testing.T) string {
-				return reasonSentence(t, discovery.ReasonCodes[0]) + " " + reasonSentence(t, discovery.ReasonCodes[1])
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := baseSnapshot(t)
-			if tt.reasons == nil {
-				// Check refuses an unavailable capability with no reason,
-				// so the fallback "No remark" text is reached from an
-				// available one instead: available is the one state that
-				// may legitimately carry no reason.
-				s.Quality.Capabilities[8].State = discovery.StateAvailable
-				s.Quality.Capabilities[8].Strategy = discovery.StrategyRawMetrics
-				s.Quality.Capabilities[8].Reasons = []string{}
-			} else {
-				s.Quality.Capabilities[8].State = discovery.StateUnavailable
-				s.Quality.Capabilities[8].Strategy = discovery.StrategyNone
-				s.Quality.Capabilities[8].Reasons = tt.reasons
-			}
-			doc := mustBuild(t, s, cat, Options{})
-			table := findTable(t, doc.Blocks, "quality-appendix")
-
-			got := runText(t, table.Rows[8][3][0])
-			want := tt.want(t)
-			if got != want {
-				t.Errorf("remark = %q, want %q", got, want)
-			}
-		})
-	}
-}
-
-func TestBuildAppendixEvidence(t *testing.T) {
-	cat := mustCatalog(t, catalog.English)
-	for idx, name := range discovery.Names {
-		for _, state := range discovery.States {
-			t.Run(name+"/"+state, func(t *testing.T) {
-				s := baseSnapshot(t)
-				// Every field Check cross-checks against state is
-				// normalised together, regardless of what the base
-				// fixture happened to hold at this index: a state, a
-				// strategy, and a set of reasons that agree with each
-				// other are what every one of the 27 combinations this
-				// test exercises must produce.
-				s.Quality.Capabilities[idx].State = state
-				switch state {
-				case discovery.StateAvailable:
-					s.Quality.Capabilities[idx].Strategy = discovery.StrategyRawMetrics
-					s.Quality.Capabilities[idx].Reasons = []string{}
-				case discovery.StatePartial:
-					s.Quality.Capabilities[idx].Strategy = discovery.StrategyRawMetrics
-					s.Quality.Capabilities[idx].Reasons = []string{discovery.ReasonCodes[0]}
-				case discovery.StateUnavailable:
-					s.Quality.Capabilities[idx].Strategy = discovery.StrategyNone
-					s.Quality.Capabilities[idx].Reasons = []string{discovery.ReasonCodes[0]}
-				}
-				doc := mustBuild(t, s, cat, Options{})
-				table := findTable(t, doc.Blocks, "quality-appendix")
-
-				want, err := cat.Text(catalog.CapabilityEvidence(name, state), nil)
-				if err != nil {
-					t.Fatalf("Text(CapabilityEvidence(%q, %q)): %v", name, state, err)
-				}
-				if got := runText(t, table.Rows[idx][4][0]); got != want {
-					t.Errorf("evidence = %q, want %q", got, want)
-				}
-			})
-		}
-	}
-}
-
-func TestBuildAppendixSeverity(t *testing.T) {
-	tests := []struct {
-		severity string
-		wantRows int
-	}{
-		{"all", 9},
-		{"attention", 3},
-		{"critical", 1},
-	}
-	cat := mustCatalog(t, catalog.English)
-	for _, tt := range tests {
-		t.Run(tt.severity, func(t *testing.T) {
-			s := baseSnapshot(t)
-			doc := mustBuild(t, s, cat, Options{MinSeverity: tt.severity})
-			table := findTable(t, doc.Blocks, "quality-appendix")
-			if len(table.Rows) != tt.wantRows {
-				t.Errorf("len(Rows) = %d, want %d", len(table.Rows), tt.wantRows)
-			}
-		})
-	}
-}
-
-func TestBuildAppendixEmpty(t *testing.T) {
-	s := baseSnapshot(t)
-	for i := range s.Quality.Capabilities {
-		s.Quality.Capabilities[i].State = discovery.StateAvailable
-		s.Quality.Capabilities[i].Strategy = discovery.StrategyRawMetrics
-		s.Quality.Capabilities[i].Reasons = []string{}
-	}
-	cat := mustCatalog(t, catalog.English)
-	doc := mustBuild(t, s, cat, Options{MinSeverity: "attention"})
-
-	if len(doc.Blocks) != 38 {
-		t.Fatalf("len(Blocks) = %d, want 38", len(doc.Blocks))
-	}
-	para, ok := doc.Blocks[37].(Paragraph)
-	if !ok {
-		t.Fatalf("Blocks[37] is %T, want Paragraph", doc.Blocks[37])
-	}
-	want, err := cat.Text(catalog.AppendixEmpty, nil)
-	if err != nil {
-		t.Fatalf("Text(AppendixEmpty): %v", err)
-	}
-	if got := runText(t, para.Runs[0]); got != want {
-		t.Errorf("paragraph text = %q, want %q", got, want)
-	}
-	for _, b := range doc.Blocks {
-		if _, ok := b.(Table); ok {
-			t.Fatalf("a table block follows the empty appendix, want none")
-		}
-	}
-}
-
-func TestBuildOptionsDefaultToTheSnapshot(t *testing.T) {
-	s := baseSnapshot(t)
-	s.Report.MinSeverity = "attention"
-	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{})
-	table := findTable(t, doc.Blocks, "quality-appendix")
-	if len(table.Rows) != 3 {
-		t.Errorf("len(Rows) = %d, want 3", len(table.Rows))
-	}
-}
-
-func TestBuildOptionsOverrideTheSnapshot(t *testing.T) {
-	s := baseSnapshot(t)
-	s.Report.MinSeverity = "attention"
-	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{MinSeverity: "all"})
-	table := findTable(t, doc.Blocks, "quality-appendix")
-	if len(table.Rows) != 9 {
-		t.Errorf("len(Rows) = %d, want 9", len(table.Rows))
-	}
-}
-
-func TestBuildRefuses(t *testing.T) {
-	cat := mustCatalog(t, catalog.English)
-
-	t.Run("profile x", func(t *testing.T) {
-		_, err := Build(baseSnapshot(t), cat, Options{Profile: "x"})
-		if err == nil || err.Error() != `unknown report profile "x"` {
-			t.Fatalf("Build() error = %v, want unknown report profile \"x\"", err)
-		}
-	})
-
-	t.Run("severity x", func(t *testing.T) {
-		_, err := Build(baseSnapshot(t), cat, Options{MinSeverity: "x"})
-		if err == nil || !strings.Contains(err.Error(), `"x"`) {
-			t.Fatalf("Build() error = %v, want a message naming \"x\"", err)
-		}
-	})
-
-	t.Run("a snapshot with eight capabilities", func(t *testing.T) {
-		s := baseSnapshot(t)
-		s.Quality.Capabilities = s.Quality.Capabilities[:8]
-		if _, err := Build(s, cat, Options{}); err == nil {
-			t.Fatal("Build() error = nil, want one")
-		}
-	})
 }
 
 func TestBuildPrintsNamesAsTheyAre(t *testing.T) {

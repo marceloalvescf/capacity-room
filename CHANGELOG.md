@@ -73,3 +73,5 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   configuration.
 - The host of an IPv6 instance keeps the letter case of its zone when it is
   matched to a node.
+- A name in the report metadata, such as a namespace, breaks only at its
+  own hyphens, in Portuguese too, and never starts a line with a hyphen.
