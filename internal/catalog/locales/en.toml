@@ -168,7 +168,7 @@ header_memory_limit = "% Memory/Limit"
 
 [sections.hpas]
 heading = "HPA history"
-intro = "Behaviour of the Horizontal Pod Autoscalers over the period of {{.Period}}. The situation says whether the configured maximum was observed."
+intro = "Behavior of the Horizontal Pod Autoscalers over the period of {{.Period}}. The situation says whether the configured maximum was observed."
 observed_heading = "Observed HPAs"
 uncovered_heading = "Workloads without HPA"
 header_hpa = "HPA"

@@ -610,7 +610,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Behaviour of the Horizontal Pod Autoscalers over the period of 24 hours. The situation says whether the configured maximum was observed."
+          "text": "Behavior of the Horizontal Pod Autoscalers over the period of 24 hours. The situation says whether the configured maximum was observed."
         }
       ]
     },

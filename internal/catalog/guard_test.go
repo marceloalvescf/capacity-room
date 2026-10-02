@@ -181,7 +181,7 @@ var wordingTable = []struct {
 	{CapabilityReasonNodepoolLabelsNotFound, "Os labels de node pools não foram encontrados.", "The node pool labels were not found."},
 	{CapabilityReasonNodeAutoscalingUndetermined, "O estado do autoscaling de nodes não pôde ser determinado.", "The state of node autoscaling could not be determined."},
 	{SectionsHPAsHeading, "Histórico de HPA", "HPA history"},
-	{SectionsHPAsIntro, "Comportamento dos Horizontal Pod Autoscalers no período de {{.Period}}. A situação indica se o máximo configurado foi observado.", "Behaviour of the Horizontal Pod Autoscalers over the period of {{.Period}}. The situation says whether the configured maximum was observed."},
+	{SectionsHPAsIntro, "Comportamento dos Horizontal Pod Autoscalers no período de {{.Period}}. A situação indica se o máximo configurado foi observado.", "Behavior of the Horizontal Pod Autoscalers over the period of {{.Period}}. The situation says whether the configured maximum was observed."},
 	{SectionsHPAsObservedHeading, "HPAs observados", "Observed HPAs"},
 	{SectionsHPAsUncoveredHeading, "Workloads sem HPA", "Workloads without HPA"},
 	{SectionsHPAsHeaderHPA, "HPA", "HPA"},
