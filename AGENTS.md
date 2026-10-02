@@ -275,9 +275,11 @@ looks.
   before committing. A page that changed without a reason you can name is a
   defect, not a new golden page.
 - The pages of the snapshot `capacity-parity` equal the pages of the
-  original report in every word and number, and differ from them in one
-  decided way: every table cell is centred, where the original set it at
-  the top left (decision of 2026-10-02). A change that alters them in any
+  original report in every word and number, and differ from them in two
+  decided ways: every table cell is centred, where the original set it at
+  the top left, and the page margins are one inch at the top and the sides
+  and half an inch at the bottom, where the original had 2.5 cm all round
+  (decisions of 2026-10-02). A change that alters them in any
   other way has moved away from the original, and needs a decision recorded
   in `ROADMAP.md`.
 - Rendering was measured equal on linux/amd64, linux/arm64, and macOS

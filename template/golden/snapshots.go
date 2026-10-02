@@ -191,8 +191,9 @@ var Snapshots = []Snapshot{
 			"that Go built and no hand wrote: the outline of six " +
 			"numbered sections, the capacity of a namespace, the " +
 			"resources of a workload, the HPA history, and the node " +
-			"pool tables on one page, the executive summary on the " +
-			"next with its seven subsections, four of them tables and " +
+			"pool tables on one page with the heading and the intro of " +
+			"the executive summary at its foot, its seven subsections " +
+			"on the next, four of them tables and " +
 			"three of them fallback sentences, and the appendix on the " +
 			"last, with no empty page between",
 	},
@@ -209,27 +210,26 @@ var Snapshots = []Snapshot{
 		Name:   "command-partial-en",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/partial-data.en.json",
-		Pages:  []int{2, 3, 4, 5},
+		Pages:  []int{2, 3, 4},
 		Omits: "page 1: it differs from page 1 of command-complete-en " +
-			"in the three counts of the data quality list and in the " +
-			"page number of section 6 in the outline (5 instead of 4), " +
-			"all plain text",
+			"in the three counts of the data quality list, all plain " +
+			"text",
 		Protects: "the three states in the coverage column of one table, " +
 			"each with its mark, and a remark that wraps beside an " +
 			"evidence sentence that wraps; and, in English, a namespace " +
 			"whose requests and limits are unavailable and whose four " +
 			"ratios have no base; and the material limitations of " +
-			"section 5 with five rows, two of them unavailable, over a " +
-			"page break",
+			"section 5 with five rows, two of them unavailable",
 	},
 	{
 		Name:   "command-edge-pt",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/edge-values.pt-BR.json",
 		Pages:  []int{2, 3, 4},
-		Omits: "page 1: it equals page 1 of command-complete-pt, the " +
-			"opening page of the same cluster with the same nine " +
-			"capabilities available",
+		Omits: "page 1: it differs from page 1 of command-complete-pt " +
+			"only in the page number of section 5 in the outline (3 " +
+			"instead of 2), plain text; the rest is the opening page of " +
+			"the same cluster with the same nine capabilities available",
 		Protects: "a request of zero printed as a number beside a limit " +
 			"that is unavailable; the mark of no base in a cell of the " +
 			"workload table, where its text wraps to two lines; a " +
@@ -264,8 +264,8 @@ var Snapshots = []Snapshot{
 		Data:   "tests/capacity/fixtures/command/edge-scaling.en.json",
 		Pages:  []int{2, 3, 4},
 		Omits: "page 1: it differs from page 1 of command-complete-en " +
-			"in the page numbers of the outline (sections 4.3, 5.6, 5.7, " +
-			"and 6 on pages 3, 4, 4, and 5 instead of 2, 3, 3, and 4) " +
+			"in the page numbers of the outline (sections 4.3, 5.7, " +
+			"and 6 on pages 3, 4, and 5 instead of 2, 3, and 4) " +
 			"and in two of the three " +
 			"counts of the data quality list, all plain text; page 5: " +
 			"the appendix and the notes equal those of " +

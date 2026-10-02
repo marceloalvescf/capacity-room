@@ -68,6 +68,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   request, limit, workload, node, node pool, label, and autoscaling.
 - Every table cell of the report, the header row included, is centred
   horizontally and vertically.
+- The page margins of the report are one inch at the top and the sides and
+  half an inch at the bottom.
 
 ### Fixed
 

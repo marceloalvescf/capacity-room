@@ -78,6 +78,7 @@ reference. That folder is never tracked by Git.
 | Test harness and tooling in Python | Everything in Go, frontend in TypeScript | One toolchain per side |
 | Portuguese sentences translate every term: solicitação, limite, carga de trabalho, pool de nós | Every technical term is English in both languages; only a common noun is Portuguese | Owner's decision of 2026-09-30: Brazilian readers use the Kubernetes vocabulary in English |
 | Table cells set at the top left | Every table cell, the header row included, is centred horizontally and vertically | Owner's decision of 2026-10-02, after reading the report of a real cluster |
+| Page margins of 2.5 cm on every side | One inch at the top, the left, and the right; half an inch at the bottom | Owner's decision of 2026-10-02, for more rows per page |
 
 Accepted consequences:
 

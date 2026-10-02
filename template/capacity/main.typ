@@ -46,6 +46,9 @@
   theme: (
     lang: data.theme.lang,
     region: data.theme.region,
+    // The owner's margins of 2026-10-02: a narrower bottom than the
+    // shell's default of 2.5cm on every side, for more rows per page.
+    margin: (top: 1in, bottom: 0.5in, left: 1in, right: 1in),
   ),
 )
 
