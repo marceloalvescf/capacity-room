@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	kcr "github.com/marceloalvescf/k8s-capacity-report"
 	"slices"
 	"sort"
 	"strings"
@@ -20,7 +21,7 @@ func TestRunVersionFlag(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0", code)
 	}
-	if want := "k8s-capacity-report 0.0.0\n"; stdout.String() != want {
+	if want := "k8s-capacity-report " + kcr.Version() + "\n"; stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
 	if stderr.Len() != 0 {
