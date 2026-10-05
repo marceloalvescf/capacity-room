@@ -64,19 +64,19 @@ func runCommand(ctx context.Context, env Env, args ...string) (int, string, stri
 
 const closedPortDSN = "postgres://u:hunter2secret@127.0.0.1:1/x?sslmode=disable&connect_timeout=1"
 
-func TestAdminListsItsCommands(t *testing.T) {
+func TestAdminListsFourCommands(t *testing.T) {
 	code, stdout, stderr := runCommand(context.Background(), Env{}, "admin")
 	if code != 0 {
 		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
 	}
-	for _, name := range []string{"bootstrap-admin", "migrate", "probe"} {
+	for _, name := range []string{"bootstrap-admin", "import-profiles", "migrate", "probe"} {
 		if !strings.Contains(stdout, name) {
 			t.Errorf("help does not name %q: %q", name, stdout)
 		}
 	}
 
 	code, stdout, stderr = runCommand(context.Background(), Env{}, "admin", "hunter2")
-	const want = "error: unknown command; the commands are: bootstrap-admin, migrate, probe\n"
+	const want = "error: unknown command; the commands are: bootstrap-admin, import-profiles, migrate, probe\n"
 	if code != 2 || stderr != want || stdout != "" {
 		t.Fatalf("code = %d, stdout = %q, stderr = %q, want 2, empty, %q", code, stdout, stderr, want)
 	}
@@ -255,5 +255,33 @@ func TestProbe(t *testing.T) {
 	code, _, stderr = runCommand(context.Background(), Env{}, "admin", "probe")
 	if code != 2 || stderr != "error: probe takes one argument; found 0\n" {
 		t.Fatalf("no argument: code = %d, stderr = %q", code, stderr)
+	}
+}
+
+func TestAdminImportProfilesRefusals(t *testing.T) {
+	config := writePlatformFiles(t)
+	env := func() Env { return platformEnv(map[string]string{"KCR_DATABASE_DSN": closedPortDSN}, "") }
+	dir := t.TempDir()
+	invalid := filepath.Join(dir, "invalid.toml")
+	if err := os.WriteFile(invalid, []byte("[[profiles]]\nid = \"a\"\ntoken = \"hunter2value\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	missing := filepath.Join(dir, "missing.toml")
+	cases := []struct {
+		name, want string
+		args       []string
+	}{
+		{"no file flag", "error: --file is required\n", nil},
+		{"missing file", "error: " + missing + ": cannot be read: no such file or directory\n", []string{"--file", missing}},
+		{"invalid file", "error: " + invalid + ": unknown key profiles.token\n", []string{"--file", invalid}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			args := append([]string{"admin", "import-profiles", "--config", config}, c.args...)
+			code, stdout, stderr := runCommand(context.Background(), env(), args...)
+			if code != 2 || stdout != "" || stderr != c.want {
+				t.Fatalf("code = %d, stdout = %q, stderr = %q, want 2, empty, %q", code, stdout, stderr, c.want)
+			}
+		})
 	}
 }

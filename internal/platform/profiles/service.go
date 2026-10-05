@@ -139,7 +139,7 @@ func sortedKeys(m map[string]any) []string {
 	return keys
 }
 
-func revisionRow(id string, d Document, parent *uuid.UUID, actor auth.Principal, now time.Time) (store.ProfileRevision, error) {
+func revisionRow(id string, d Document, parent *uuid.UUID, actor *uuid.UUID, now time.Time) (store.ProfileRevision, error) {
 	raw, err := CanonicalJSON(d)
 	if err != nil {
 		return store.ProfileRevision{}, err
@@ -153,7 +153,7 @@ func revisionRow(id string, d Document, parent *uuid.UUID, actor auth.Principal,
 		Document:       raw,
 		CredentialFile: d.CredentialFile,
 		CABundleFile:   d.CABundleFile,
-		CreatedBy:      &actor.ID,
+		CreatedBy:      actor,
 		CreatedAt:      now,
 	}, nil
 }
@@ -196,37 +196,85 @@ func (s *Service) Create(ctx context.Context, actor auth.Principal, id string, d
 		if p.CurrentRevisionID != nil {
 			return ErrIDTaken
 		}
-		var parent *uuid.UUID
-		latest, err := store.LatestProfileRevision(ctx, tx, id)
-		switch {
-		case err == nil:
-			parent = &latest.ID
-		case !errors.Is(err, store.ErrNotFound):
-			return err
-		}
-		row, err := revisionRow(id, d, parent, actor, now)
-		if err != nil {
-			return err
-		}
-		got, err := store.AppendProfileRevision(ctx, tx, row)
-		if err != nil {
-			return err
-		}
-		if err := store.SetCurrentRevision(ctx, tx, id, &got.ID, now); err != nil {
-			return err
-		}
-		if out, err = currentOf(got); err != nil {
-			return err
-		}
-		return audit.Append(ctx, tx, now, audit.Event{
-			ActorID: &actor.ID, Action: ActionProfileCreate, TargetType: targetProfile, TargetID: id,
-			Metadata: audit.Metadata{"revision_id": got.ID.String(), "revision": got.Revision, "fields": sortedKeys(tree)},
-		})
+		out, err = createStep(ctx, tx, &actor.ID, id, d, tree, now)
+		return err
 	})
 	if err != nil {
 		return Current{}, err
 	}
 	return out, nil
+}
+
+// createStep writes d as the first revision of the profile id, which the
+// caller has locked and found without a current revision.
+func createStep(ctx context.Context, tx pgx.Tx, actor *uuid.UUID, id string, d Document, tree map[string]any, now time.Time) (Current, error) {
+	var parent *uuid.UUID
+	latest, err := store.LatestProfileRevision(ctx, tx, id)
+	switch {
+	case err == nil:
+		parent = &latest.ID
+	case !errors.Is(err, store.ErrNotFound):
+		return Current{}, err
+	}
+	row, err := revisionRow(id, d, parent, actor, now)
+	if err != nil {
+		return Current{}, err
+	}
+	got, err := store.AppendProfileRevision(ctx, tx, row)
+	if err != nil {
+		return Current{}, err
+	}
+	if err := store.SetCurrentRevision(ctx, tx, id, &got.ID, now); err != nil {
+		return Current{}, err
+	}
+	out, err := currentOf(got)
+	if err != nil {
+		return Current{}, err
+	}
+	return out, audit.Append(ctx, tx, now, audit.Event{
+		ActorID: actor, Action: ActionProfileCreate, TargetType: targetProfile, TargetID: id,
+		Metadata: audit.Metadata{"revision_id": got.ID.String(), "revision": got.Revision, "fields": sortedKeys(tree)},
+	})
+}
+
+// reviseStep writes merged as the revision that follows cur, whose document
+// tree is oldTree, and audits it.
+func reviseStep(ctx context.Context, tx pgx.Tx, actor *uuid.UUID, id string, cur store.ProfileRevision, merged Document, oldTree, newTree map[string]any, now time.Time) (Current, error) {
+	var changed []string
+	for _, k := range sortedKeys(newTree) {
+		if !reflect.DeepEqual(oldTree[k], newTree[k]) {
+			changed = append(changed, k)
+		}
+	}
+	row, err := revisionRow(id, merged, &cur.ID, actor, now)
+	if err != nil {
+		return Current{}, err
+	}
+	got, err := store.AppendProfileRevision(ctx, tx, row)
+	if err != nil {
+		return Current{}, err
+	}
+	if err := store.SetCurrentRevision(ctx, tx, id, &got.ID, now); err != nil {
+		return Current{}, err
+	}
+	out, err := currentOf(got)
+	if err != nil {
+		return Current{}, err
+	}
+	action := ActionProfileRevise
+	if slices.Contains(changed, "active") {
+		action = ActionProfileDeactivate
+		if merged.Active {
+			action = ActionProfileActivate
+		}
+	}
+	return out, audit.Append(ctx, tx, now, audit.Event{
+		ActorID: actor, Action: action, TargetType: targetProfile, TargetID: id,
+		Metadata: audit.Metadata{
+			"revision_id": got.ID.String(), "revision": got.Revision,
+			"base_revision_id": cur.ID.String(), "fields": changed,
+		},
+	})
 }
 
 var documentFields = func() map[string]int {
@@ -334,40 +382,8 @@ func (s *Service) Revise(ctx context.Context, actor auth.Principal, id string, c
 			out = before
 			return nil
 		}
-		var changed []string
-		for _, k := range sortedKeys(newTree) {
-			if !reflect.DeepEqual(oldTree[k], newTree[k]) {
-				changed = append(changed, k)
-			}
-		}
-		row, err := revisionRow(id, merged, &cur.ID, actor, now)
-		if err != nil {
-			return err
-		}
-		got, err := store.AppendProfileRevision(ctx, tx, row)
-		if err != nil {
-			return err
-		}
-		if err := store.SetCurrentRevision(ctx, tx, id, &got.ID, now); err != nil {
-			return err
-		}
-		if out, err = currentOf(got); err != nil {
-			return err
-		}
-		action := ActionProfileRevise
-		if slices.Contains(changed, "active") {
-			action = ActionProfileDeactivate
-			if merged.Active {
-				action = ActionProfileActivate
-			}
-		}
-		return audit.Append(ctx, tx, now, audit.Event{
-			ActorID: &actor.ID, Action: action, TargetType: targetProfile, TargetID: id,
-			Metadata: audit.Metadata{
-				"revision_id": got.ID.String(), "revision": got.Revision,
-				"base_revision_id": cur.ID.String(), "fields": changed,
-			},
-		})
+		out, err = reviseStep(ctx, tx, &actor.ID, id, cur, merged, oldTree, newTree, now)
+		return err
 	})
 	if err != nil {
 		return Current{}, err

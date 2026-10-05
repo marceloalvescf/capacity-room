@@ -23,17 +23,35 @@ const platformConfigDefault = "platform.toml"
 // commands that need the database do. A settings problem is exit code 2 and
 // a database problem is exit code 1.
 func openPlatform(ctx context.Context, env Env, redactor *redact.Redactor, configPath string) (settings.Settings, *pgxpool.Pool, error) {
-	loaded, err := settings.Load(configPath, env.Getenv)
+	loaded, err := loadPlatformSettings(env, redactor, configPath)
 	if err != nil {
-		return settings.Settings{}, nil, &exitError{2, err}
+		return settings.Settings{}, nil, err
 	}
-	redactor.Add(loaded.DatabaseDSN)
-
-	pool, err := store.Open(ctx, loaded.DatabaseDSN)
+	pool, err := openPool(ctx, loaded)
 	if err != nil {
-		return settings.Settings{}, nil, &exitError{1, fmt.Errorf("cannot connect to the database: %w", err)}
+		return settings.Settings{}, nil, err
 	}
 	return loaded, pool, nil
+}
+
+// loadPlatformSettings reads the settings of configPath and adds the DSN to
+// the redactor. A problem is exit code 2.
+func loadPlatformSettings(env Env, redactor *redact.Redactor, configPath string) (settings.Settings, error) {
+	loaded, err := settings.Load(configPath, env.Getenv)
+	if err != nil {
+		return settings.Settings{}, &exitError{2, err}
+	}
+	redactor.Add(loaded.DatabaseDSN)
+	return loaded, nil
+}
+
+// openPool opens the pool of the loaded settings. A problem is exit code 1.
+func openPool(ctx context.Context, loaded settings.Settings) (*pgxpool.Pool, error) {
+	pool, err := store.Open(ctx, loaded.DatabaseDSN)
+	if err != nil {
+		return nil, &exitError{1, fmt.Errorf("cannot connect to the database: %w", err)}
+	}
+	return pool, nil
 }
 
 // noArgument is the Args check of a command that takes none. Like report's,

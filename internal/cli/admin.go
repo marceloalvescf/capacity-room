@@ -17,6 +17,8 @@ import (
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/audit"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
 )
@@ -48,6 +50,7 @@ func newAdminCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra
 	}
 	cmd.AddCommand(
 		newBootstrapAdminCmd(ctx, env, redactor),
+		newImportProfilesCmd(ctx, env, redactor),
 		newMigrateCmd(ctx, env, redactor),
 		newProbeCmd(ctx),
 	)
@@ -106,6 +109,54 @@ func newBootstrapAdminCmd(ctx context.Context, env Env, redactor *redact.Redacto
 	flags.StringVar(&language, "language", "pt-BR", "Language of the administrator: pt-BR or en.")
 	flags.StringVar(&config, "config", platformConfigDefault, "Path of the TOML settings file.")
 	_ = cmd.MarkFlagRequired("username")
+	return cmd
+}
+
+func newImportProfilesCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.Command {
+	var file, config string
+	cmd := &cobra.Command{
+		Use:           "import-profiles",
+		Short:         "Create or revise profiles from a TOML file.",
+		Args:          noArgument("import-profiles"),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if file == "" {
+				return &exitError{2, errors.New("--file is required")}
+			}
+			loaded, err := loadPlatformSettings(env, redactor, config)
+			if err != nil {
+				return err
+			}
+			policy := netpolicy.Policy{Hostnames: loaded.AllowedEndpointHostnames, Networks: loaded.AllowedEndpointCIDRs}
+			entries, err := profiles.ReadImportFile(file, policy)
+			if err != nil {
+				return &exitError{2, err}
+			}
+			pool, err := openPool(ctx, loaded)
+			if err != nil {
+				return err
+			}
+			defer pool.Close()
+			if _, err := store.Migrate(ctx, pool); err != nil {
+				return &exitError{1, err}
+			}
+			svc := &profiles.Service{Pool: pool, Policy: policy, Settings: loaded, Now: env.Now}
+			outcomes, err := svc.Import(ctx, entries)
+			if err != nil {
+				return &exitError{1, err}
+			}
+			var out strings.Builder
+			for _, o := range outcomes {
+				out.WriteString(o.Action + " " + o.ID + "\n")
+			}
+			_, _ = io.WriteString(cmd.OutOrStdout(), out.String())
+			return nil
+		},
+	}
+	flags := cmd.Flags()
+	flags.StringVar(&file, "file", "", "Path of the TOML file of profiles.")
+	flags.StringVar(&config, "config", platformConfigDefault, "Path of the TOML settings file.")
 	return cmd
 }
 

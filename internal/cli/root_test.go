@@ -178,7 +178,7 @@ func TestNoCommandRepeatsAnArgument(t *testing.T) {
 	root := newRootCmd(context.Background(), Env{}, redact.New())
 
 	got := walkedCommandNames(root)
-	want := []string{"admin", "admin bootstrap-admin", "admin migrate", "admin probe", "help", "report", "serve"}
+	want := []string{"admin", "admin bootstrap-admin", "admin import-profiles", "admin migrate", "admin probe", "help", "report", "serve"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("walkedCommandNames() = %v, want %v", got, want)
 	}
@@ -214,7 +214,7 @@ func TestGuardNoticesAMissingCommand(t *testing.T) {
 	}
 
 	got := walkedCommandNames(root)
-	want := []string{"admin", "admin bootstrap-admin", "admin migrate", "admin probe", "help", "report", "serve"}
+	want := []string{"admin", "admin bootstrap-admin", "admin import-profiles", "admin migrate", "admin probe", "help", "report", "serve"}
 	if slices.Equal(got, want) {
 		t.Fatalf("walkedCommandNames() = %v, want it to differ from %v now that help is missing", got, want)
 	}

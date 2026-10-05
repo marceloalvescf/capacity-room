@@ -3,8 +3,11 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -114,7 +117,7 @@ func TestMigrate(t *testing.T) {
 	config := writePlatformFiles(t)
 	for range 2 {
 		code, stdout, stderr := runCommand(context.Background(), env, "admin", "migrate", "--config", config)
-		if code != 0 || stdout != "migrate: schema at version 1\n" || stderr != "" {
+		if code != 0 || stdout != "migrate: schema at version 2\n" || stderr != "" {
 			t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
 		}
 	}
@@ -135,5 +138,58 @@ func TestBootstrapMigrates(t *testing.T) {
 	users, err := store.ListUsers(context.Background(), pool)
 	if err != nil || len(users) != 1 || users[0].Role != auth.RoleAdministrator {
 		t.Fatalf("users = %+v, err = %v, want the administrator", users, err)
+	}
+}
+
+const importExample = `
+[[profiles]]
+id = "a"
+display_name = "Alpha"
+endpoint_url = "https://metrics.test/api/v1"
+cluster_name = "alpha"
+allowed_namespaces = ["payments"]
+active = true
+
+[[profiles]]
+id = "b"
+display_name = "Beta"
+endpoint_url = "https://metrics.test/api/v1"
+endpoint_type = "prometheus"
+cluster_name = "beta"
+allowed_namespaces = ["checkout"]
+`
+
+func TestAdminImportProfilesCommand(t *testing.T) {
+	pool := storetest.New(t)
+	dir := t.TempDir()
+	secret := filepath.Join(dir, "secret")
+	if err := os.WriteFile(secret, bytes.Repeat([]byte("s"), 32), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	config := filepath.Join(dir, "platform.toml")
+	settingsFile := "server_secret_path = \"" + secret + "\"\nallowed_endpoint_hostnames = [\"metrics.test\"]\n"
+	if err := os.WriteFile(config, []byte(settingsFile), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(dir, "profiles.toml")
+	if err := os.WriteFile(file, []byte(importExample), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	run := func() (int, string, string) {
+		env := platformEnv(map[string]string{"KCR_DATABASE_DSN": pool.Config().ConnString()}, "")
+		return runCommand(context.Background(), env, "admin", "import-profiles", "--config", config, "--file", file)
+	}
+
+	code, stdout, stderr := run()
+	if code != 0 || stdout != "created a\ncreated b\n" || stderr != "" {
+		t.Fatalf("first run: code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+	}
+	code, stdout, stderr = run()
+	if code != 0 || stdout != "unchanged a\nunchanged b\n" || stderr != "" {
+		t.Fatalf("second run: code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+	}
+	cur, err := store.GetCurrentRevision(context.Background(), pool, "b")
+	if err != nil || cur.Revision != 1 || cur.CreatedBy != nil {
+		t.Fatalf("b = %+v, err %v", cur, err)
 	}
 }
