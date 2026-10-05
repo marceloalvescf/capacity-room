@@ -27,6 +27,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Session"
+        default:
+          $ref: "#/components/responses/Unexpected"
   /auth/login:
     post:
       operationId: login
@@ -67,6 +69,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        default:
+          $ref: "#/components/responses/Unexpected"
   /auth/logout:
     post:
       operationId: logout
@@ -80,6 +84,8 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/CSRFRejected"
+        default:
+          $ref: "#/components/responses/Unexpected"
   /account:
     patch:
       operationId: changeAccount
@@ -105,7 +111,7 @@ paths:
         "400":
           $ref: "#/components/responses/RequestInvalid"
         "401":
-          description: UNAUTHENTICATED, or INVALID_CREDENTIALS when the current password is wrong.
+          description: UNAUTHENTICATED, or INVALID_CREDENTIALS when the current password is wrong or missing.
           content:
             application/json:
               schema:
@@ -124,6 +130,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        default:
+          $ref: "#/components/responses/Unexpected"
   /admin/users:
     get:
       operationId: listUsers
@@ -139,6 +147,8 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+        default:
+          $ref: "#/components/responses/Unexpected"
     post:
       operationId: createUser
       summary: Create a user.
@@ -171,6 +181,8 @@ paths:
                 $ref: "#/components/schemas/Error"
         "422":
           $ref: "#/components/responses/UsernameOrPasswordPolicy"
+        default:
+          $ref: "#/components/responses/Unexpected"
   /admin/users/{id}:
     parameters:
       - $ref: "#/components/parameters/UserID"
@@ -190,6 +202,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/UserNotFound"
+        default:
+          $ref: "#/components/responses/Unexpected"
     patch:
       operationId: changeUser
       summary: Change a user's role, active flag, password, or language.
@@ -224,6 +238,8 @@ paths:
                 $ref: "#/components/schemas/Error"
         "422":
           $ref: "#/components/responses/PasswordPolicy"
+        default:
+          $ref: "#/components/responses/Unexpected"
     delete:
       operationId: deactivateUser
       summary: Deactivate a user and revoke every session of theirs.
@@ -244,6 +260,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        default:
+          $ref: "#/components/responses/Unexpected"
 components:
   securitySchemes:
     cookieAuth:
@@ -315,6 +333,12 @@ components:
             $ref: "#/components/schemas/Error"
     UsernameOrPasswordPolicy:
       description: INVALID_USERNAME, PASSWORD_TOO_SHORT, or PASSWORD_TOO_LONG.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unexpected:
+      description: INTERNAL_ERROR, DATABASE_UNAVAILABLE, NOT_FOUND, or METHOD_NOT_ALLOWED.
       content:
         application/json:
           schema:

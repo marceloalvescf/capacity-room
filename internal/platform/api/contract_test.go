@@ -77,15 +77,46 @@ func TestContractNamesEveryCode(t *testing.T) {
 		t.Fatalf("reading the contract: %v", err)
 	}
 	text := string(raw)
-	codes := []Code{
-		CodeRequestInvalid, CodeInvalidCredentials, CodeUnauthenticated, CodeCSRFRejected,
-		CodeForbidden, CodeUserNotFound, CodeUsernameTaken, CodeLastAdmin, CodeSelfDelete,
-		CodeSelfDeactivate, CodeSelfDemote, CodeInvalidUsername, CodePasswordTooShort,
-		CodePasswordTooLong, CodeAuthRateLimited,
-	}
-	for _, c := range codes {
+	for c := range problems {
 		if !strings.Contains(text, string(c)) {
 			t.Errorf("code %s is not named in the contract", c)
 		}
+	}
+}
+
+func TestContractOperationsHaveADefault(t *testing.T) {
+	raw, err := os.ReadFile(contractPath(t))
+	if err != nil {
+		t.Fatalf("reading the contract: %v", err)
+	}
+	var doc struct {
+		Paths map[string]map[string]yaml.Node `yaml:"paths"`
+	}
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parsing the contract: %v", err)
+	}
+	methods := map[string]bool{"get": true, "post": true, "patch": true, "delete": true, "put": true}
+	operations := 0
+	for path, item := range doc.Paths {
+		for method, node := range item {
+			if !methods[method] {
+				continue
+			}
+			operations++
+			var op struct {
+				Responses map[string]struct {
+					Ref string `yaml:"$ref"`
+				} `yaml:"responses"`
+			}
+			if err := node.Decode(&op); err != nil {
+				t.Fatalf("%s %s: %v", method, path, err)
+			}
+			if got := op.Responses["default"].Ref; got != "#/components/responses/Unexpected" {
+				t.Errorf("%s %s: default response %q", method, path, got)
+			}
+		}
+	}
+	if operations != len((&Server{}).Routes()) {
+		t.Errorf("%d operations in the contract, %d routes", operations, len((&Server{}).Routes()))
 	}
 }

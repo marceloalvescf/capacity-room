@@ -169,6 +169,9 @@ type RequestInvalid = Error
 // Unauthenticated defines model for Unauthenticated.
 type Unauthenticated = Error
 
+// Unexpected defines model for Unexpected.
+type Unexpected = Error
+
 // UserNotFound defines model for UserNotFound.
 type UserNotFound = Error
 
