@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
@@ -82,7 +83,8 @@ func readReference(path string, unreadable, tooLarge RefCode) ([]byte, error) {
 }
 
 // ResolveCredential reads the credential named under dir and returns the
-// token: UTF-8, one trailing CRLF or LF removed, at least 8 characters.
+// token: UTF-8, one trailing CRLF or LF removed, at least 8 characters, with
+// no control character, no white space, and no leading byte order mark.
 func ResolveCredential(dir, name string) (string, error) {
 	path, err := locate(dir, name, CodeCredentialInvalid, CodeCredentialUnreadable)
 	if err != nil {
@@ -101,10 +103,21 @@ func ResolveCredential(dir, name string) (string, error) {
 	} else {
 		token = strings.TrimSuffix(token, "\n")
 	}
-	if token == "" || config.CheckToken(token) != nil {
+	if token == "" || !cleanToken(token) || config.CheckToken(token) != nil {
 		return "", &RefError{Code: CodeCredentialInvalid}
 	}
 	return token, nil
+}
+
+// cleanToken reports whether token holds no control character and no white
+// space, and does not start with a byte order mark.
+func cleanToken(token string) bool {
+	if strings.HasPrefix(token, "\uFEFF") {
+		return false
+	}
+	return !strings.ContainsFunc(token, func(r rune) bool {
+		return unicode.IsControl(r) || unicode.IsSpace(r)
+	})
 }
 
 // ResolveCABundle checks the CA bundle named under dir holds at least one

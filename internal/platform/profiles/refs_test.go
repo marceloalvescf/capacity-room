@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -79,7 +80,14 @@ func TestResolveCredentialText(t *testing.T) {
 	}{
 		{[]byte("token-one\r\n"), "token-one", ""},
 		{[]byte("token-one\n"), "token-one", ""},
-		{[]byte("token-one\n\n"), "token-one\n", ""},
+		{[]byte("abcdefghij\n\n"), "", CodeCredentialInvalid},
+		{[]byte("abcdefghij\r"), "", CodeCredentialInvalid},
+		{[]byte("abc\ndefghijk\n"), "", CodeCredentialInvalid},
+		{[]byte("\xef\xbb\xbfabcdefghij\n"), "", CodeCredentialInvalid},
+		{[]byte("abcdefghij \n"), "", CodeCredentialInvalid},
+		{[]byte("abcde fghij\n"), "", CodeCredentialInvalid},
+		{[]byte("abcdefghij\t\n"), "", CodeCredentialInvalid},
+		{[]byte("abcde\u00a0fghij\n"), "", CodeCredentialInvalid},
 		{[]byte("token-\xff\xfe-one\n"), "", CodeCredentialInvalid},
 		{[]byte("short\n"), "", CodeCredentialInvalid},
 		{[]byte("\n"), "", CodeCredentialInvalid},
@@ -87,15 +95,17 @@ func TestResolveCredentialText(t *testing.T) {
 		{bytes.Repeat([]byte("a"), MaxReferenceBytes+1), "", CodeCredentialTooLarge},
 	}
 	for i, c := range cases {
-		write(t, dir, "tok", c.data)
-		got, err := ResolveCredential(dir, "tok")
-		if c.code == "" {
-			if err != nil || got != c.want {
-				t.Errorf("case %d: got %q, %v", i, got, err)
+		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
+			write(t, dir, "tok", c.data)
+			got, err := ResolveCredential(dir, "tok")
+			if c.code == "" {
+				if err != nil || got != c.want {
+					t.Errorf("got %q, %v", got, err)
+				}
+				return
 			}
-			continue
-		}
-		wantRef(t, err, c.code, dir)
+			wantRef(t, err, c.code, dir)
+		})
 	}
 }
 
