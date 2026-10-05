@@ -6,6 +6,31 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The `serve` command, the backend of the web platform, listens on port 8080
+  and applies the database schema under a lock before it answers.
+- Sign-in with local accounts in three roles, administrator, operator, and
+  reader, with a session cookie that expires after twelve hours or one idle
+  hour, and a CSRF token on every state-changing request.
+- Five failed sign-ins in five minutes block the account and address pair
+  for five minutes.
+- A signed-in reader changes their own password and language through the
+  API; a password change signs them out everywhere.
+- An administrator lists, creates, changes, and deactivates users through
+  the API; the last active administrator cannot be removed.
+- Every sign-in, sign-out, bootstrap, and change to a user writes an audit
+  row that an operator reads with SQL.
+- The `admin migrate` command applies the database schema.
+- The `admin bootstrap-admin` command creates the first administrator from a
+  password on standard input, only with `KCR_BOOTSTRAP_MODE=1` and only
+  while no user exists.
+- The `admin probe` command checks a health address, for a container
+  without `curl`.
+- The health routes `/health/live` and `/health/ready`.
+- The deployment file `platform.toml` and the `KCR_DATABASE_DSN` variable.
+- The API contract, `api/openapi.yaml`.
+
 ## [0.1.0] - 2026-10-02
 
 ### Added

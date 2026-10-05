@@ -19,6 +19,12 @@ full design is in
   technical quality appendix, and the interpretation notes of the
   collection. The `executive` profile writes the cover, the opening page,
   the executive summary, and the appendix.
+- The command `serve`, the backend of the web platform: sign-in with local
+  accounts in three roles, sessions, the reader's own account, and the
+  administration of users, over an HTTP API described in
+  [api/openapi.yaml](api/openapi.yaml). The reports through the API, the
+  worker, and the frontend are not there yet.
+- The command `admin`, with `migrate`, `bootstrap-admin`, and `probe`.
 - A container image that carries the binary and Typst 0.15.1.
 - The report template, in two layers under [template/](template/): a generic
   page shell and the layout of the capacity report.
@@ -29,6 +35,7 @@ full design is in
 
 - Go 1.27
 - Docker with Buildx
+- For `serve` and `admin`: PostgreSQL 18
 - To write a PDF outside the container: `typst` 0.15.1 on `PATH`, or its path
   in `KCR_TYPST`. Any other version is refused.
 
@@ -230,6 +237,50 @@ bin/k8s-capacity-report report --config .cache/report.toml --check
 kill %1
 ```
 
+## Running the platform
+
+`serve` needs a deployment file and the database DSN in the environment.
+The file holds no secret: the server secret, which keys the sign-in
+throttle, is a file of at least 32 random bytes that the file names.
+
+```toml
+session_ttl_seconds = 43200
+session_idle_seconds = 3600
+server_secret_path = "/etc/kcr/server-secret"
+trusted_proxies = []
+```
+
+```bash
+head -c 32 /dev/urandom > /etc/kcr/server-secret
+export KCR_DATABASE_DSN='postgres://kcr:...@db:5432/kcr'
+
+# The first administrator, once; the password is one line on standard input.
+printf '%s\n' 'a password of twelve or more' | KCR_BOOTSTRAP_MODE=1 \
+  bin/k8s-capacity-report admin bootstrap-admin --username admin --password-stdin --config platform.toml
+
+# The schema, applied under a database lock. serve does the same before it listens.
+bin/k8s-capacity-report admin migrate --config platform.toml
+
+bin/k8s-capacity-report serve --config platform.toml --listen :8080
+
+# A health check without curl, for a container.
+bin/k8s-capacity-report admin probe http://127.0.0.1:8080/health/ready
+```
+
+Sign-in is a cookie session: `GET /api/v1/auth/session` gives an anonymous
+caller a sign-in CSRF token, `POST /api/v1/auth/login` with that token in
+`X-CSRF-Token` signs in and sets `kcr_session`, and every state-changing
+request after it carries the session's `csrf_token` in the same header. Five
+failed sign-ins in five minutes block the account and address pair for five
+minutes. An administrator manages users under `/api/v1/admin/users`; every
+signed-in reader changes their own password and language at
+`/api/v1/account`. Every failure answers one JSON shape,
+`{"error":{"code","message","fields"}}`.
+
+`serve` and `admin` exit with 0, with 1 for a failure at run time (the
+database, the listener, a refusal of `bootstrap-admin`), and with 2 for the
+arguments or the settings file.
+
 ## Commands
 
 ```bash
@@ -240,6 +291,11 @@ make image            # runtime image and test image
 make test-toolchain   # checks typst and pdftotext inside the test image
 make test-template    # compiles the template and writes reports in the test image
 make test-golden      # compares rendered pages with the golden pages
+make generate         # writes the Go types of api/openapi.yaml
+make generate-check   # fails when the committed generated file is stale
+make postgres-up      # starts PostgreSQL 18 for the platform tests, through Compose
+make postgres-down    # removes it, with its volume
+make test-postgres    # postgres-up, the tests tagged postgres, postgres-down
 make gate             # everything above, from freshly built images
 make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files

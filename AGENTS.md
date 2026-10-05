@@ -28,6 +28,11 @@ make image            # runtime image and test image
 make test-toolchain   # checks typst and pdftotext inside the test image
 make test-template    # compiles the template and writes reports in the test image
 make test-golden      # compares rendered pages with the golden pages
+make generate         # writes the Go types of api/openapi.yaml
+make generate-check   # fails when the committed generated file is stale
+make postgres-up      # starts PostgreSQL 18 for the platform tests, through Compose
+make postgres-down    # removes it, with its volume
+make test-postgres    # postgres-up, the tests tagged postgres, postgres-down
 make gate             # everything above, from freshly built images
 make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files
@@ -102,6 +107,11 @@ No guard checks these. The reviewer of each task does.
   the table of spec 9.3.
 - **Nothing else declares a version** without a test that compares it with
   `VERSION`.
+- **The sentences of the API error envelope are diagnostics.** They are
+  fixed English sentences chosen by code, held in one table in
+  `internal/platform/api/errors.go`, for API clients; a reader in a browser
+  sees the frontend's translation of the code, never this table. They are
+  not catalog entries.
 - **The wording guard reads text, not meaning.** It lets through one word
   alone, words parted by digits or a slash, and a sentence joined from parts.
   The reviewer of a task reads the string literals of `internal/document`,
@@ -127,6 +137,7 @@ Build tags in use:
 | `toolchain` | `typst`, `pdftotext` | `make test-toolchain` |
 | `template` | `typst`, `pdftotext` | `make test-template`, which also runs `internal/cli` |
 | `golden` | `typst`, with `template` | `make test-golden` |
+| `postgres` | PostgreSQL, through `KCR_TEST_DATABASE_DSN` | `make test-postgres`, over `internal/platform/...` and `internal/cli` |
 
 With the native tools installed, a subagent runs the tagged tests itself:
 
@@ -154,10 +165,17 @@ rank, or of its own layer.
 | 80 | `internal/catalog` |
 | 90 | `internal/document` |
 | 95 | `internal/goldentest` |
-| 100 | `internal/cli` |
+| 110 | `internal/platform/settings` |
+| 120 | `internal/platform/store` |
+| 125 | `internal/platform/storetest` |
+| 130 | `internal/platform/audit` |
+| 140 | `internal/platform/auth` |
+| 150 | `internal/platform/api` |
+| 200 | `internal/cli` |
 
 The snapshot is the only handover. Everything after `snapshot.Build` reads
-the snapshot and nothing else.
+the snapshot and nothing else. The platform packages sit above the core and
+below the command; the core never imports `internal/platform/`.
 
 ## The command
 
@@ -201,6 +219,44 @@ the snapshot and nothing else.
   not before its end stops the run with exit code 2.
 - **The clock is read twice in a run that collects:** for the emission time,
   which is also the start of the collection, and for its end.
+
+## The platform
+
+`serve` is the web platform's backend and `admin` its operator commands.
+Both read one TOML deployment file, `--config` (default `platform.toml`),
+and the database DSN from `KCR_DATABASE_DSN` alone. The DSN enters the
+redactor the moment the settings are loaded, before the pool opens.
+
+- **The deployment file refuses what it does not know,** as `report.toml`
+  does. Its keys today: `session_ttl_seconds`, `session_idle_seconds`,
+  `server_secret_path` (a file of at least 32 random bytes, which keys the
+  sign-in throttle), and `trusted_proxies` (CIDRs whose `X-Forwarded-For`
+  is believed; empty by default).
+- **The schema is applied under a lock.** The migrations are SQL files
+  embedded under `internal/platform/store/migrations/`, applied by goose
+  under the PostgreSQL session lock `72427301`, by `serve` before it listens
+  and by `admin migrate`. Every timestamp is passed from Go; no statement
+  calls `now()`. Every foreign key is `ON DELETE RESTRICT`; deletion is
+  deactivation. The audit table refuses an update and a delete by a trigger.
+- **Every mutation of the users table takes the table lock first,** so the
+  last-administrator rule reads a count that cannot race.
+- **A test gets a fresh database.** `storetest.New(t)` creates
+  `kcr_test_<16 hex>` on the server of `KCR_TEST_DATABASE_DSN`, migrates
+  it, and drops it when the test ends; `NewEmpty(t)` skips the migration. A
+  tagged test fails when the variable is unset.
+- **The contract is `api/openapi.yaml`.** `make generate` writes the Go types
+  of its schemas; the handlers are written by hand on `net/http` from one
+  route table, and a test compares the table with the file both ways. A
+  route enters the file with the task that adds it.
+- **The checks of a route run in one order:** session (401), role (403),
+  CSRF (403), body (400). The role is read from the database on every
+  request. A body is at most 64 KiB, with no unknown, repeated, or
+  wrongly typed key.
+- **`serve` and `admin` exit with 0, 1, or 2:** 1 for a failure at run time
+  (the database, the listener, a refusal of `bootstrap-admin`), 2 for the
+  arguments or the settings file.
+- **`admin bootstrap-admin` runs only with `KCR_BOOTSTRAP_MODE=1`,** reads
+  the password from standard input alone, and refuses when any user exists.
 
 ### Golden snapshots and data files
 
@@ -290,10 +346,14 @@ looks.
 
 The main thread plans, judges, and runs the gates. Subagents implement.
 
-- A subagent may run `go`, `make build`, `make test`, and `make lint`.
+- A subagent may run `go`, `make build`, `make test`, `make lint`,
+  `make generate`, and `make generate-check`.
 - A subagent must not run Docker, so `make image`, `make test-toolchain`,
-  `make test-template`, `make test-golden`, `make update-golden`, and
-  `make gate` stay on the main thread.
+  `make test-template`, `make test-golden`, `make update-golden`,
+  `make postgres-up`, `make postgres-down`, `make test-postgres`, and
+  `make gate` stay on the main thread. The main thread starts PostgreSQL
+  with `make postgres-up` and gives the subagent the DSN; the subagent runs
+  the tagged tests with `KCR_TEST_DATABASE_DSN` set.
 - Two agents in one checkout break each other's builds when they share a Go
   package. Give a reviewer a diff file, and let it run tests only on packages
   nobody is editing.
