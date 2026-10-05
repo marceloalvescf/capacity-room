@@ -112,6 +112,24 @@ func TestServeRedactsDSN(t *testing.T) {
 	}
 }
 
+func TestErrorLineIsOneLine(t *testing.T) {
+	// Without sslmode the driver tries TLS and then plain text, and its
+	// message names each attempt on a line of its own.
+	const dsn = "postgres://u:hunter2secret@127.0.0.1:1/x?connect_timeout=1"
+	env := platformEnv(map[string]string{"KCR_DATABASE_DSN": dsn}, "")
+	code, stdout, stderr := runCommand(context.Background(), env, "admin", "migrate", "--config", writePlatformFiles(t))
+	if code != 1 || stdout != "" {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q, want 1 and empty stdout", code, stdout, stderr)
+	}
+	if !strings.HasPrefix(stderr, "error: cannot connect to the database: ") || !strings.HasSuffix(stderr, "\n") ||
+		strings.Count(stderr, "\n") != 1 || strings.ContainsAny(stderr, "\t\r") || strings.Contains(stderr, "  ") {
+		t.Fatalf("stderr = %q, want one line", stderr)
+	}
+	if strings.Contains(stderr, "hunter2secret") {
+		t.Fatalf("stderr = %q holds the password", stderr)
+	}
+}
+
 func TestOpenPlatformArmsTheRedactor(t *testing.T) {
 	env := platformEnv(map[string]string{"KCR_DATABASE_DSN": closedPortDSN}, "")
 	redactor := redact.New()

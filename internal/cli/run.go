@@ -125,7 +125,7 @@ func Run(ctx context.Context, env Env, args []string, stdout, stderr io.Writer) 
 
 	defer func() {
 		if r := recover(); r != nil {
-			_, _ = fmt.Fprintf(wrappedErr, "error: internal failure: %v\n", r)
+			_, _ = fmt.Fprintf(wrappedErr, "error: internal failure: %s\n", oneLine(redactor, fmt.Sprint(r)))
 			code = 1
 		}
 	}()
@@ -157,17 +157,25 @@ func Run(ctx context.Context, env Env, args []string, stdout, stderr io.Writer) 
 		}
 		var failure *exitError
 		if errors.As(err, &failure) {
-			_, _ = fmt.Fprintf(wrappedErr, "error: %s\n", failure)
+			_, _ = fmt.Fprintf(wrappedErr, "error: %s\n", oneLine(redactor, failure.Error()))
 			return failure.code
 		}
 		// Every failure prints exactly one "error: <message>" line, cobra's
 		// own errors included (an unknown flag, or report's own refusal of
 		// a positional argument), each as a single Write through the
 		// redactor already wrapping wrappedErr.
-		_, _ = fmt.Fprintf(wrappedErr, "error: %s\n", err)
+		_, _ = fmt.Fprintf(wrappedErr, "error: %s\n", oneLine(redactor, err.Error()))
 		return 2
 	}
 	return 0
+}
+
+// oneLine redacts message and then replaces every run of white space in it,
+// newlines included, by one space, so that a driver's or the system's
+// message of several lines still prints as one line. Redacting first means
+// that no secret escapes the redactor by having its white space changed.
+func oneLine(redactor *redact.Redactor, message string) string {
+	return strings.Join(strings.Fields(redactor.Text(message)), " ")
 }
 
 func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.Command {
