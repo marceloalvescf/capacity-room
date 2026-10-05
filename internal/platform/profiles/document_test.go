@@ -194,9 +194,9 @@ func TestRunConfig(t *testing.T) {
 	d.TimeoutSeconds = 45
 	d.NodeAutoscaling = "enabled"
 	d.NodepoolLabel = "pool"
-	got := d.RunConfig("/refs/ca/corp-root", "7d", "UTC", "executive", "critical", []string{"payments"})
+	got := d.RunConfig("7d", "UTC", "executive", "critical", []string{"payments"})
 	want := config.Default()
-	want.Metrics = config.Metrics{URL: "https://metrics.internal", EndpointType: "grafana", TLSVerify: true, CABundle: "/refs/ca/corp-root", TimeoutSeconds: 45}
+	want.Metrics = config.Metrics{URL: "https://metrics.internal", EndpointType: "grafana", TLSVerify: true, TimeoutSeconds: 45}
 	want.Cluster = config.Cluster{Name: "prod-east", Namespaces: []string{"payments"}, Label: "cluster", FilterMode: "required", NodepoolLabel: "pool"}
 	want.Analysis = config.Analysis{Period: "7d", Timezone: "UTC", NodeAutoscaling: "enabled", ExcludedContainers: []string{"istio-proxy"}}
 	want.Report.Profile, want.Report.MinSeverity = "executive", "critical"

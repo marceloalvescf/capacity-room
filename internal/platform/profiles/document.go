@@ -220,16 +220,15 @@ func checkDefault(set *string, resolved string, permitted []string, ok func(stri
 	return ""
 }
 
-// RunConfig builds the configuration of a run from the document, the
-// resolved CA bundle path ("" for none), and the selection. The token never
-// enters the configuration.
-func (d Document) RunConfig(caBundlePath string, period, timezone, reportProfile, minSeverity string, namespaces []string) config.Config {
+// RunConfig builds the configuration of a run from the document and the
+// selection. The token never enters the configuration, and neither does the
+// CA bundle: the caller's transport carries it.
+func (d Document) RunConfig(period, timezone, reportProfile, minSeverity string, namespaces []string) config.Config {
 	c := config.Default()
 	c.Metrics = config.Metrics{
 		URL:            d.EndpointURL,
 		EndpointType:   d.EndpointType,
 		TLSVerify:      d.TLSVerify,
-		CABundle:       caBundlePath,
 		TimeoutSeconds: d.TimeoutSeconds,
 	}
 	c.Cluster = config.Cluster{

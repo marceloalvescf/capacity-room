@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"os"
 	"time"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
@@ -83,25 +82,20 @@ func (s *Service) runTest(ctx context.Context, d Document) (TestResult, error) {
 		}
 	}
 	tlsConfig := &tls.Config{InsecureSkipVerify: !d.TLSVerify} //nolint:gosec // the administrator turned verification off for this profile
-	caPath := ""
 	if d.CABundleFile != "" && d.TLSVerify {
-		var err error
-		if caPath, err = ResolveCABundle(s.Settings.CABundleDir, d.CABundleFile); err != nil {
-			return failure(CodeCABundleUnavailable), nil
-		}
-		pem, err := os.ReadFile(caPath)
+		bundle, err := ResolveCABundle(s.Settings.CABundleDir, d.CABundleFile)
 		if err != nil {
 			return failure(CodeCABundleUnavailable), nil
 		}
 		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM(pem) {
+		if !pool.AppendCertsFromPEM(bundle) {
 			return failure(CodeCABundleUnavailable), nil
 		}
 		tlsConfig.RootCAs = pool
 	}
 
 	period, zone, profile, severity := d.ResolvedDefaults()
-	cfg := d.RunConfig(caPath, period, zone, profile, severity, d.AllowedNamespaces)
+	cfg := d.RunConfig(period, zone, profile, severity, d.AllowedNamespaces)
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(3*d.TimeoutSeconds*float64(time.Second)))
 	defer cancel()
 

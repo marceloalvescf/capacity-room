@@ -121,27 +121,28 @@ func cleanToken(token string) bool {
 }
 
 // ResolveCABundle checks the CA bundle named under dir holds at least one
-// PEM certificate and returns its path, for the TLS configuration.
-func ResolveCABundle(dir, name string) (string, error) {
+// PEM certificate and returns the bytes it checked, for the TLS
+// configuration.
+func ResolveCABundle(dir, name string) ([]byte, error) {
 	path, err := locate(dir, name, CodeCABundleInvalid, CodeCABundleUnreadable)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	data, err := readReference(path, CodeCABundleUnreadable, CodeCABundleTooLarge)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	for {
+	for rest := data; ; {
 		var block *pem.Block
-		block, data = pem.Decode(data)
+		block, rest = pem.Decode(rest)
 		if block == nil {
-			return "", &RefError{Code: CodeCABundleInvalid}
+			return nil, &RefError{Code: CodeCABundleInvalid}
 		}
 		if block.Type != "CERTIFICATE" {
 			continue
 		}
 		if _, err := x509.ParseCertificate(block.Bytes); err == nil {
-			return path, nil
+			return data, nil
 		}
 	}
 }

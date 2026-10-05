@@ -129,14 +129,11 @@ func certPEM(t *testing.T) []byte {
 
 func TestResolveCABundle(t *testing.T) {
 	dir := t.TempDir()
-	base, err := filepath.EvalSymlinks(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	write(t, dir, "ca", certPEM(t))
+	bundle := certPEM(t)
+	write(t, dir, "ca", bundle)
 	got, err := ResolveCABundle(dir, "ca")
-	if err != nil || got != filepath.Join(base, "ca") {
-		t.Fatalf("got %q, %v", got, err)
+	if err != nil || !bytes.Equal(got, bundle) {
+		t.Fatalf("got %q, %v, want the bytes of the file", got, err)
 	}
 
 	cases := []struct {
