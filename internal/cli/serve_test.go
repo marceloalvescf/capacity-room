@@ -104,7 +104,7 @@ func TestServeListensAndStops(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("code = %d, log = %q", code, log)
 	}
-	for _, want := range []string{"listening on", address, "stopping"} {
+	for _, want := range []string{"listening on", address, "the outbound allowlists are empty", "stopping"} {
 		if !strings.Contains(log, want) {
 			t.Errorf("log = %q, want it to hold %q", log, want)
 		}
