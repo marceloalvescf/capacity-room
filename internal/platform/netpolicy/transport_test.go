@@ -444,3 +444,39 @@ func TestTransportTLSVerifiedIPLiteral(t *testing.T) {
 		t.Errorf("status = %d, want 200", resp.StatusCode)
 	}
 }
+
+// bodyRecorder is a request body that records its Close.
+type bodyRecorder struct {
+	io.Reader
+	closed atomic.Bool
+}
+
+func (b *bodyRecorder) Close() error {
+	b.closed.Store(true)
+	return nil
+}
+
+func TestTransportClosesTheBodyOnARefusal(t *testing.T) {
+	failing := func(context.Context, string) ([]netip.Addr, error) { return nil, errors.New("no such host") }
+	cases := []struct {
+		name string
+		tr   *Transport
+		url  string
+	}{
+		{"refused address", &Transport{Resolve: countingResolver(new(atomic.Int32))}, "http://127.0.0.1:9090/x"},
+		{"failed resolution", &Transport{Policy: loopbackPolicy, Resolve: failing}, "http://metrics.test:9090/x"},
+	}
+	for _, c := range cases {
+		body := &bodyRecorder{Reader: strings.NewReader("query=up")}
+		req, err := http.NewRequest(http.MethodPost, c.url, body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := c.tr.RoundTrip(req); err == nil {
+			t.Fatalf("%s: RoundTrip succeeded, want a refusal", c.name)
+		}
+		if !body.closed.Load() {
+			t.Errorf("%s: the request body was not closed", c.name)
+		}
+	}
+}

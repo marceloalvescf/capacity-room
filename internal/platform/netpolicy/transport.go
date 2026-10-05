@@ -27,8 +27,16 @@ type Transport struct {
 	Dialer  ContextDialer // nil means a dialer with no timeout; the client's timeout bounds the request
 }
 
-// RoundTrip sends r under the policy.
+// RoundTrip sends r under the policy. The body of r is closed on every
+// return, by the inner transport once it has taken the body, and here on a
+// return before that.
 func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
+	handed := false
+	defer func() {
+		if !handed && r.Body != nil {
+			_ = r.Body.Close()
+		}
+	}()
 	origin, err := t.Policy.ValidateURL(r.URL.String())
 	if err != nil {
 		return nil, err
@@ -88,6 +96,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	out.URL = target
 	out.Host = origin.Authority()
 
+	handed = true
 	resp, err := transport.RoundTrip(out)
 	if err != nil {
 		transport.CloseIdleConnections()
