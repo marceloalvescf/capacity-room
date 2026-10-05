@@ -1,6 +1,8 @@
 package api
 
-import "net/http"
+import (
+	"net/http"
+)
 
 // Route is one line of the table the server registers and the contract
 // test reads.
@@ -13,5 +15,10 @@ type Route struct {
 // Routes returns the table of every route under /api/v1, in a fixed order,
 // without the health routes.
 func (s *Server) Routes() []Route {
-	return []Route{}
+	return []Route{
+		{"GET", "/api/v1/auth/session", s.getSession},
+		{"POST", "/api/v1/auth/login", s.login},
+		{"POST", "/api/v1/auth/logout", s.requireSession(s.requireCSRF(s.logout))},
+		{"PATCH", "/api/v1/account", s.requireSession(s.requireCSRF(s.patchAccount))},
+	}
 }

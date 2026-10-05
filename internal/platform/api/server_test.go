@@ -47,8 +47,8 @@ func TestUnknownOtherPathIsPlain(t *testing.T) {
 }
 
 func TestWrongMethodIsEnvelope(t *testing.T) {
-	s := &Server{extraRoutes: []Route{{Method: "GET", Pattern: "/api/v1/auth/session", Handler: func(http.ResponseWriter, *http.Request) {}}}}
-	w := get(t, s, "DELETE", "/api/v1/auth/session")
+	s := &Server{extraRoutes: []Route{{Method: "GET", Pattern: "/api/v1/probe", Handler: func(http.ResponseWriter, *http.Request) {}}}}
+	w := get(t, s, "DELETE", "/api/v1/probe")
 	checkHeaders(t, w)
 	want := `{"error":{"code":"METHOD_NOT_ALLOWED","message":"This method is not allowed for this resource.","fields":{}}}` + "\n"
 	if w.Code != 405 || w.Body.String() != want {

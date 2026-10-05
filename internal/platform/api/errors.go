@@ -1,9 +1,16 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"net"
 	"net/http"
 	"strconv"
+
+	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
 )
 
 // Code is an error code of the contract. The table below holds its status
@@ -109,4 +116,30 @@ func WriteProblem(w http.ResponseWriter, p *Problem) {
 	}
 	w.WriteHeader(entry.Status)
 	_, _ = w.Write(append(body, '\n'))
+}
+
+// problemOf maps an error of the services to the problem that answers it.
+// An error it does not know is INTERNAL_ERROR.
+func problemOf(err error) *Problem {
+	var throttled *auth.ErrThrottled
+	var netErr *net.OpError
+	switch {
+	case errors.As(err, &throttled):
+		return &Problem{Code: CodeAuthRateLimited, RetryAfter: throttled.RetryAfter}
+	case errors.Is(err, auth.ErrInvalidCredentials):
+		return &Problem{Code: CodeInvalidCredentials}
+	case errors.Is(err, auth.ErrUnauthenticated):
+		return &Problem{Code: CodeUnauthenticated}
+	case errors.Is(err, auth.ErrCSRF):
+		return &Problem{Code: CodeCSRFRejected}
+	case errors.Is(err, auth.ErrPasswordTooShort):
+		return &Problem{Code: CodePasswordTooShort}
+	case errors.Is(err, auth.ErrPasswordTooLong):
+		return &Problem{Code: CodePasswordTooLong}
+	case errors.Is(err, auth.ErrInvalidLanguage):
+		return &Problem{Code: CodeRequestInvalid, Fields: map[string]string{"language": "invalid"}}
+	case errors.Is(err, context.DeadlineExceeded), pgconn.SafeToRetry(err), errors.As(err, &netErr):
+		return &Problem{Code: CodeDatabaseUnavailable}
+	}
+	return &Problem{Code: CodeInternalError}
 }
