@@ -30,6 +30,23 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The health routes `/health/live` and `/health/ready`.
 - The deployment file `platform.toml` and the `KCR_DATABASE_DSN` variable.
 - The API contract, `api/openapi.yaml`.
+- An administrator creates, reads, revises, deactivates, and deletes
+  metric-source profiles through the API; every change is a new immutable
+  revision, and a change made from an outdated reading is refused.
+- Every signed-in reader lists the active profiles with their permitted
+  periods, time zones, report profiles, and minimum severities.
+- An administrator tests a profile against its source through the API and
+  reads the outcome as a code, never an address or the text of a failure.
+- Every request to a metric source passes an outbound policy: only the
+  host names and address ranges the deployment file lists are reachable,
+  the loopback, link-local, multicast, and metadata addresses are refused
+  unless listed one by one, every resolved address is checked before each
+  request, redirects are refused, and proxy variables are ignored.
+- A profile names its credential and its CA bundle by file name, read from
+  two folders the deployment file names, only when a profile is tested or
+  a report runs.
+- The `admin import-profiles` command creates or revises profiles from a
+  TOML file and can be run again without effect.
 
 ## [0.1.0] - 2026-10-02
 

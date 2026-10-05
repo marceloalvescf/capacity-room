@@ -248,7 +248,19 @@ session_ttl_seconds = 43200
 session_idle_seconds = 3600
 server_secret_path = "/etc/kcr/server-secret"
 trusted_proxies = []
+allowed_endpoint_hostnames = ["prometheus.example.invalid"]
+allowed_endpoint_cidrs = ["10.0.0.0/8"]
+credential_dir = "/run/secrets/metrics"
+ca_bundle_dir = "/run/config/ca"
 ```
+
+The two allowlists are the outbound policy: every address a metric source
+resolves to must be allowed by host name or by range, and both lists are
+empty by default, so nothing is reachable until one entry names it. The
+loopback, link-local, multicast, and metadata addresses are refused unless
+an entry names that single address. The two folders hold the credential
+files and the CA bundles a profile names by file name; they are read when a
+profile is tested or a report runs, never when a profile is written.
 
 ```bash
 head -c 32 /dev/urandom > /etc/kcr/server-secret
@@ -276,6 +288,52 @@ minutes. An administrator manages users under `/api/v1/admin/users`; every
 signed-in reader changes their own password and language at
 `/api/v1/account`. Every failure answers one JSON shape,
 `{"error":{"code","message","fields"}}`.
+
+A profile describes one metric source. Every signed-in reader lists the
+active ones at `GET /api/v1/profiles`, as summaries. An administrator
+lists, creates, reads, revises, and deletes them under
+`/api/v1/admin/profiles` and `/api/v1/admin/profiles/{id}`; every change is
+a new immutable revision, a revise names the revision it was read at and
+answers `PROFILE_REVISION_STALE` when another change came first, and a
+delete keeps every revision. `POST /api/v1/admin/profiles/{id}/test` runs
+the preflight of a report against the source through the outbound policy
+and answers `{"ok","code","capabilities"}`, never a URL, a name, an
+address, or the text of a failure.
+
+`admin import-profiles` creates or revises profiles from a TOML file and is
+repeatable: a profile the file names and the database does not is created,
+one whose document differs is revised, one that is equal is left as it is,
+and one the file does not name is left alone. The whole file is validated
+before anything is written, and an unknown key, an inline credential, or a
+repeated id refuses it.
+
+```toml
+[[profiles]]
+id = "prod"
+display_name = "Production"
+endpoint_url = "https://prometheus.example.invalid/api/v1"
+cluster_name = "prod"
+allowed_namespaces = ["payments", "checkout"]
+credential_file = "prometheus-bearer"
+active = true
+
+[[profiles]]
+id = "stage"
+display_name = "Staging"
+endpoint_url = "https://prometheus.example.invalid/api/v1"
+cluster_name = "stage"
+allowed_namespaces = ["payments"]
+timeout_seconds = 30
+permitted_periods = ["24h", "7d"]
+default_period = "7d"
+
+[profiles.thresholds]
+warning_percent = 60
+```
+
+```bash
+bin/k8s-capacity-report admin import-profiles --file profiles.toml --config platform.toml
+```
 
 `serve` and `admin` exit with 0, with 1 for a failure at run time (the
 database, the listener, a refusal of `bootstrap-admin`), and with 2 for the

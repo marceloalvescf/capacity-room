@@ -165,11 +165,13 @@ rank, or of its own layer.
 | 80 | `internal/catalog` |
 | 90 | `internal/document` |
 | 95 | `internal/goldentest` |
+| 105 | `internal/platform/netpolicy` |
 | 110 | `internal/platform/settings` |
 | 120 | `internal/platform/store` |
 | 125 | `internal/platform/storetest` |
 | 130 | `internal/platform/audit` |
 | 140 | `internal/platform/auth` |
+| 145 | `internal/platform/profiles` |
 | 150 | `internal/platform/api` |
 | 200 | `internal/cli` |
 
@@ -230,8 +232,14 @@ redactor the moment the settings are loaded, before the pool opens.
 - **The deployment file refuses what it does not know,** as `report.toml`
   does. Its keys today: `session_ttl_seconds`, `session_idle_seconds`,
   `server_secret_path` (a file of at least 32 random bytes, which keys the
-  sign-in throttle), and `trusted_proxies` (CIDRs whose `X-Forwarded-For`
-  is believed; empty by default).
+  sign-in throttle), `trusted_proxies` (CIDRs whose `X-Forwarded-For`
+  is believed; empty by default), `allowed_endpoint_hostnames` and
+  `allowed_endpoint_cidrs` (the two allowlists of the outbound policy;
+  empty by default, so no metric source is reachable until one is listed;
+  a CIDR that covers a metadata address with more than that one address is
+  refused), and `credential_dir` and `ca_bundle_dir` (the folders the
+  reference files are read from, absolute, defaults `/run/secrets/metrics`
+  and `/run/config/ca`, not read at load).
 - **The schema is applied under a lock.** The migrations are SQL files
   embedded under `internal/platform/store/migrations/`, applied by goose
   under the PostgreSQL session lock `72427301`, by `serve` before it listens
@@ -260,6 +268,47 @@ redactor the moment the settings are loaded, before the pool opens.
   arguments or the settings file.
 - **`admin bootstrap-admin` runs only with `KCR_BOOTSTRAP_MODE=1`,** reads
   the password from standard input alone, and refuses when any user exists.
+- **Every request to a metric source passes the outbound policy** of
+  design 11.5, in `internal/platform/netpolicy`: only `http` and `https`,
+  with no user info, query, fragment, control character, or dot segment; the
+  unspecified, loopback, link-local, multicast, reserved, and IPv4-embedding
+  IPv6 classes and the two metadata addresses are refused, and only an
+  allowlist network of exactly one address lifts a refusal, for that
+  address alone; every resolved address must be allowed by host name or by
+  range, and one bad answer refuses the whole set; the name is resolved
+  again before each request, the connection goes to the literal address,
+  and the peer is compared after connecting; any redirect is refused; proxy
+  variables are ignored. The fake Prometheus of the tests is admitted by
+  the one-address entry `127.0.0.1/32`. The transport keeps no connection
+  between requests, and the built transport of `internal/prom` is never
+  used by the platform. An error of the policy carries a code and never a
+  URL, a host, or an address.
+- **A profile names its credential and its CA bundle by file name.** A name
+  matches `^[a-z0-9](?:[a-z0-9._-]{0,61}[a-z0-9])?$` and holds no `..`; the
+  file is read under its folder after symbolic links are followed, as a
+  regular file of at most 1 MiB; a resolution error carries a code and
+  never a path, a name, or content. A file is resolved only by the profile
+  test and, from part 3.3 on, by the worker at execution; never at create,
+  revise, or import. A credential is UTF-8 with one trailing line break
+  removed and at least 8 characters, as on the command line.
+- **Every revision of a profile is immutable** (a trigger refuses an update,
+  a delete, and a truncate), and `profiles.current_revision_id` pins the
+  current one, with a deferred constraint that it names a revision of the
+  same profile. A revision number is computed inside the insert. A revise
+  names `base_revision_id` and answers `PROFILE_REVISION_STALE` when it is
+  not the current revision; a revise that changes nothing writes nothing;
+  the fingerprint chains the parent revision, so A, B, A is three
+  revisions. A delete clears the pointer and keeps every revision, and the
+  id may be created again, continuing the count. The endpoint is stored in
+  the canonical form of the policy, checked for every candidate root and
+  its `/query` and `/query_range` before anything is written.
+- **`admin import-profiles --file <path>`** reads `[[profiles]]` tables,
+  refuses an unknown key (an inline credential key among them) and a
+  repeated id, validates every document and every endpoint before any
+  write, then creates or revises in one transaction with no actor, and
+  prints `created`, `revised`, or `unchanged` per profile. Profiles the file
+  does not name are left alone. A refused file is exit 2 before the pool
+  opens.
 
 ### Golden snapshots and data files
 
