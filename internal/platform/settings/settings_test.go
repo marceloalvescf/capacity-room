@@ -190,3 +190,87 @@ func TestReadServerSecret(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+func TestLoadFolderDefaults(t *testing.T) {
+	s, err := loadText(t, secretLine, goodDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.CredentialDir != "/run/secrets/metrics" || s.CABundleDir != "/run/config/ca" {
+		t.Fatalf("got %q and %q", s.CredentialDir, s.CABundleDir)
+	}
+}
+
+func TestLoadFolderRules(t *testing.T) {
+	cases := []struct{ line, want string }{
+		{"credential_dir = \"secrets\"\n", "credential_dir must be absolute"},
+		{"credential_dir = \"/run/../x\"\n", "credential_dir must not hold a .. segment"},
+		{"ca_bundle_dir = \"ca\"\n", "ca_bundle_dir must be absolute"},
+		{"ca_bundle_dir = \"/run/../x\"\n", "ca_bundle_dir must not hold a .. segment"},
+	}
+	for _, c := range cases {
+		_, err := loadText(t, secretLine+c.line, goodDSN)
+		wantError(t, err, c.want)
+	}
+	if _, err := loadText(t, secretLine+"credential_dir = \"/run/..x/y\"\n", goodDSN); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestLoadHostnamesNormalised(t *testing.T) {
+	s, err := loadText(t, secretLine+"allowed_endpoint_hostnames = [\"Prometheus.Example.Invalid.\", \" a.b \"]\n", goodDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.AllowedEndpointHostnames) != 2 ||
+		s.AllowedEndpointHostnames[0] != "prometheus.example.invalid" ||
+		s.AllowedEndpointHostnames[1] != "a.b" {
+		t.Fatalf("got %q", s.AllowedEndpointHostnames)
+	}
+}
+
+func TestLoadHostnamesRefused(t *testing.T) {
+	cases := []struct{ list, want string }{
+		{`["*.example"]`, "allowed_endpoint_hostnames entry 1 is not a host name"},
+		{`["metrics_internal"]`, "allowed_endpoint_hostnames entry 1 is not a host name"},
+		{`["a", "A"]`, "allowed_endpoint_hostnames repeats entry 2"},
+	}
+	for _, c := range cases {
+		_, err := loadText(t, secretLine+"allowed_endpoint_hostnames = "+c.list+"\n", goodDSN)
+		wantError(t, err, c.want)
+	}
+}
+
+func TestLoadCIDRsRefused(t *testing.T) {
+	cases := []struct{ list, want string }{
+		{`["10.0.0.1"]`, "allowed_endpoint_cidrs entry 1 is not a CIDR block"},
+		{`["10.0.0.1/8"]`, "allowed_endpoint_cidrs entry 1 is not a CIDR block"},
+		{`["169.254.0.0/16"]`, "allowed_endpoint_cidrs entry 1 covers a metadata address; list that single address instead"},
+		{`["fd00:ec2::/64"]`, "allowed_endpoint_cidrs entry 1 covers a metadata address; list that single address instead"},
+		{`["10.0.0.0/8", "10.0.0.0/8"]`, "allowed_endpoint_cidrs repeats entry 2"},
+	}
+	for _, c := range cases {
+		_, err := loadText(t, secretLine+"allowed_endpoint_cidrs = "+c.list+"\n", goodDSN)
+		wantError(t, err, c.want)
+	}
+}
+
+func TestLoadCIDRsAccepted(t *testing.T) {
+	s, err := loadText(t, secretLine+"allowed_endpoint_cidrs = [\"169.254.169.254/32\", \"10.0.0.0/8\", \"fd00:ec2::254/128\"]\n", goodDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []netip.Prefix{
+		netip.MustParsePrefix("169.254.169.254/32"),
+		netip.MustParsePrefix("10.0.0.0/8"),
+		netip.MustParsePrefix("fd00:ec2::254/128"),
+	}
+	if len(s.AllowedEndpointCIDRs) != 3 {
+		t.Fatalf("got %v", s.AllowedEndpointCIDRs)
+	}
+	for i := range want {
+		if s.AllowedEndpointCIDRs[i] != want[i] {
+			t.Fatalf("got %v", s.AllowedEndpointCIDRs)
+		}
+	}
+}

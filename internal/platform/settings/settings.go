@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,7 +19,19 @@ const (
 	maxSessionSeconds = 2592000
 	minSecretBytes    = 32
 	dsnVariable       = "KCR_DATABASE_DSN"
+
+	defaultCredentialDir = "/run/secrets/metrics"
+	defaultCABundleDir   = "/run/config/ca"
 )
+
+var hostnamePattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$`)
+
+// metadataAddresses are the cloud instance metadata endpoints that no
+// allowlisted block may cover, except as a single address.
+var metadataAddresses = []netip.Addr{
+	netip.MustParseAddr("169.254.169.254"),
+	netip.MustParseAddr("fd00:ec2::254"),
+}
 
 var (
 	errTTLRange       = errors.New("session_ttl_seconds must be between 60 and 2592000")
@@ -40,6 +53,11 @@ type Settings struct {
 	ServerSecretPath string         // server_secret_path
 	TrustedProxies   []netip.Prefix // trusted_proxies
 	DatabaseDSN      string         // KCR_DATABASE_DSN; never written to a message
+
+	CredentialDir            string         // credential_dir
+	CABundleDir              string         // ca_bundle_dir
+	AllowedEndpointHostnames []string       // allowed_endpoint_hostnames, normalised and unique
+	AllowedEndpointCIDRs     []netip.Prefix // allowed_endpoint_cidrs, unique
 }
 
 // tomlSettings mirrors the keys of the deployment file. A key the file does
@@ -49,6 +67,11 @@ type tomlSettings struct {
 	SessionIdleSeconds int64    `toml:"session_idle_seconds"`
 	ServerSecretPath   string   `toml:"server_secret_path"`
 	TrustedProxies     []string `toml:"trusted_proxies"`
+
+	CredentialDir            string   `toml:"credential_dir"`
+	CABundleDir              string   `toml:"ca_bundle_dir"`
+	AllowedEndpointHostnames []string `toml:"allowed_endpoint_hostnames"`
+	AllowedEndpointCIDRs     []string `toml:"allowed_endpoint_cidrs"`
 }
 
 // Load reads the TOML file at path, then the environment through getenv,
@@ -56,7 +79,12 @@ type tomlSettings struct {
 // names the key and not its value. The DSN is read from KCR_DATABASE_DSN
 // and is required.
 func Load(path string, getenv func(string) string) (Settings, error) {
-	file := tomlSettings{SessionTTLSeconds: 43200, SessionIdleSeconds: 3600}
+	file := tomlSettings{
+		SessionTTLSeconds:  43200,
+		SessionIdleSeconds: 3600,
+		CredentialDir:      defaultCredentialDir,
+		CABundleDir:        defaultCABundleDir,
+	}
 	md, err := toml.DecodeFile(path, &file)
 	if err != nil {
 		return Settings{}, decodeError(path, err)
@@ -107,6 +135,20 @@ func build(file tomlSettings, dsn string) (Settings, error) {
 		}
 		proxies = append(proxies, prefix)
 	}
+	if err := checkFolder("credential_dir", file.CredentialDir); err != nil {
+		return Settings{}, err
+	}
+	if err := checkFolder("ca_bundle_dir", file.CABundleDir); err != nil {
+		return Settings{}, err
+	}
+	hostnames, err := parseHostnames(file.AllowedEndpointHostnames)
+	if err != nil {
+		return Settings{}, err
+	}
+	cidrs, err := parseEndpointCIDRs(file.AllowedEndpointCIDRs)
+	if err != nil {
+		return Settings{}, err
+	}
 	if dsn == "" {
 		return Settings{}, errDSNUnset
 	}
@@ -119,7 +161,70 @@ func build(file tomlSettings, dsn string) (Settings, error) {
 		ServerSecretPath: file.ServerSecretPath,
 		TrustedProxies:   proxies,
 		DatabaseDSN:      dsn,
+
+		CredentialDir:            file.CredentialDir,
+		CABundleDir:              file.CABundleDir,
+		AllowedEndpointHostnames: hostnames,
+		AllowedEndpointCIDRs:     cidrs,
 	}, nil
+}
+
+// checkFolder judges the shape of a reference folder: absolute, with no ..
+// segment. The folder is not touched.
+func checkFolder(key, dir string) error {
+	if !filepath.IsAbs(dir) {
+		return fmt.Errorf("%s must be absolute", key)
+	}
+	for _, segment := range strings.Split(dir, "/") {
+		if segment == ".." {
+			return fmt.Errorf("%s must not hold a .. segment", key)
+		}
+	}
+	return nil
+}
+
+// parseHostnames normalises each entry and refuses a malformed or repeated
+// one, naming its 1-based position and never its value.
+func parseHostnames(entries []string) ([]string, error) {
+	var names []string
+	seen := make(map[string]bool)
+	for i, entry := range entries {
+		name := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(entry), "."))
+		if !hostnamePattern.MatchString(name) {
+			return nil, fmt.Errorf("allowed_endpoint_hostnames entry %d is not a host name", i+1)
+		}
+		if seen[name] {
+			return nil, fmt.Errorf("allowed_endpoint_hostnames repeats entry %d", i+1)
+		}
+		seen[name] = true
+		names = append(names, name)
+	}
+	return names, nil
+}
+
+// parseEndpointCIDRs refuses a malformed block, a block with host bits, a
+// block that covers a metadata address along with others, and a repeat,
+// naming its 1-based position and never its value.
+func parseEndpointCIDRs(entries []string) ([]netip.Prefix, error) {
+	var prefixes []netip.Prefix
+	seen := make(map[netip.Prefix]bool)
+	for i, entry := range entries {
+		prefix, err := netip.ParsePrefix(entry)
+		if err != nil || prefix != prefix.Masked() {
+			return nil, fmt.Errorf("allowed_endpoint_cidrs entry %d is not a CIDR block", i+1)
+		}
+		for _, metadata := range metadataAddresses {
+			if prefix.Contains(metadata) && prefix.Bits() < metadata.BitLen() {
+				return nil, fmt.Errorf("allowed_endpoint_cidrs entry %d covers a metadata address; list that single address instead", i+1)
+			}
+		}
+		if seen[prefix] {
+			return nil, fmt.Errorf("allowed_endpoint_cidrs repeats entry %d", i+1)
+		}
+		seen[prefix] = true
+		prefixes = append(prefixes, prefix)
+	}
+	return prefixes, nil
 }
 
 // ReadServerSecret reads the file named by ServerSecretPath whole and
