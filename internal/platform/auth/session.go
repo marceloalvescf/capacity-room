@@ -41,6 +41,10 @@ type Sessions struct {
 	TTL      time.Duration
 	Idle     time.Duration
 	Now      func() time.Time
+
+	// beforeSession runs before the transaction that inserts the session of
+	// a sign-in. Tests set it; it is nil otherwise.
+	beforeSession func()
 }
 
 // The refusals of the sessions service.
@@ -107,14 +111,20 @@ func (s *Sessions) Login(ctx context.Context, username, password, clientAddress,
 			return Issued{}, fmt.Errorf("hash password: %w", err)
 		}
 	}
+	// verified is the hash the password is known to match: the stored one,
+	// or the fresh one once the rehash wrote it. A rehash refused because
+	// the hash moved meanwhile is not an error; the session check refuses.
+	verified := user.PasswordHash
 	err := store.Transact(ctx, s.Pool, func(tx pgx.Tx) error {
 		if matched {
 			if fresh == "" {
 				return nil
 			}
-			user.PasswordHash = fresh
-			user.UpdatedAt = now
-			return store.UpdateUser(ctx, tx, user)
+			written, err := store.UpdatePasswordHash(ctx, tx, user.ID, user.PasswordHash, fresh, now)
+			if written {
+				verified = fresh
+			}
+			return err
 		}
 		event := audit.Event{
 			Action:   audit.ActionLoginFailed,
@@ -151,7 +161,22 @@ func (s *Sessions) Login(ctx context.Context, username, password, clientAddress,
 		ExpiresAt: now.Add(min(s.TTL, s.Idle)),
 		Principal: principalOf(user),
 	}
+	if s.beforeSession != nil {
+		s.beforeSession()
+	}
 	err = store.Transact(ctx, s.Pool, func(tx pgx.Tx) error {
+		// The account may have changed since the hash was verified: a new
+		// password or a deactivation refuses the sign-in.
+		current, err := store.GetUser(ctx, tx, user.ID)
+		if errors.Is(err, store.ErrNotFound) {
+			return ErrInvalidCredentials
+		}
+		if err != nil {
+			return err
+		}
+		if !current.Active || current.PasswordHash != verified {
+			return ErrInvalidCredentials
+		}
 		var parent *uuid.UUID
 		if presented != "" {
 			old, err := store.FindActiveSessionByTokenHash(ctx, tx, Digest(presented), now)
@@ -167,7 +192,7 @@ func (s *Sessions) Login(ctx context.Context, username, password, clientAddress,
 				return err
 			}
 		}
-		err := store.InsertSession(ctx, tx, store.Session{
+		err = store.InsertSession(ctx, tx, store.Session{
 			ID:            issued.SessionID,
 			TokenHash:     Digest(token),
 			CSRFHash:      Digest(csrf),

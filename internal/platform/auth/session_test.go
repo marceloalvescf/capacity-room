@@ -283,6 +283,69 @@ func TestLoginRehashesOutdatedHash(t *testing.T) {
 	}
 }
 
+func TestLoginRehashKeepsTheSession(t *testing.T) {
+	f := newSessionFixture(t)
+	old, err := argon2id.CreateHash(adminPassword, &argon2id.Params{Memory: 65536, Iterations: 1, Parallelism: 4, SaltLength: 16, KeyLength: 32})
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.admin.PasswordHash = old
+	if err := store.UpdateUser(context.Background(), f.pool, f.admin); err != nil {
+		t.Fatal(err)
+	}
+	issued := f.login(t, "admin", adminPassword, "")
+	if s := f.session(t, issued.SessionID); s.RevokedAt != nil {
+		t.Fatalf("session revoked: %+v", s)
+	}
+	if _, err := f.sessions.Authenticate(context.Background(), issued.Token); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(f.audits(t, audit.ActionLoginSucceeded)); n != 1 {
+		t.Fatalf("%d succeeded rows", n)
+	}
+}
+
+func TestLoginRefusesWhenPasswordChangedMidFlight(t *testing.T) {
+	f := newSessionFixture(t)
+	f.sessions.beforeSession = func() {
+		hash, err := HashPassword("a password set meanwhile")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if _, err := f.pool.Exec(context.Background(), `UPDATE users SET password_hash = $2 WHERE id = $1`, f.admin.ID, hash); err != nil {
+			t.Error(err)
+		}
+	}
+	_, err := f.sessions.Login(context.Background(), "admin", adminPassword, testAddress, "")
+	requireInvalid(t, err)
+	var n int
+	if err := f.pool.QueryRow(context.Background(), `SELECT count(*) FROM sessions`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("%d sessions", n)
+	}
+}
+
+func TestLoginRefusesWhenUserDeactivatedMidFlight(t *testing.T) {
+	f := newSessionFixture(t)
+	f.sessions.beforeSession = func() {
+		if _, err := f.pool.Exec(context.Background(), `UPDATE users SET active = false WHERE id = $1`, f.admin.ID); err != nil {
+			t.Error(err)
+		}
+	}
+	_, err := f.sessions.Login(context.Background(), "admin", adminPassword, testAddress, "")
+	requireInvalid(t, err)
+	var n int
+	if err := f.pool.QueryRow(context.Background(), `SELECT count(*) FROM sessions`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("%d sessions", n)
+	}
+}
+
 func TestLoginNormalisesUsername(t *testing.T) {
 	f := newSessionFixture(t)
 	issued := f.login(t, "  ADMIN ", adminPassword, "")

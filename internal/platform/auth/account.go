@@ -57,6 +57,7 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 	if !languageMoved && c.Password == nil {
 		return user, nil
 	}
+	fresh := ""
 	if c.Password != nil {
 		key := a.Sessions.Throttle.Key(p.Username, clientAddress)
 		if err := a.Sessions.Throttle.Take(ctx, a.Pool, key, now); err != nil {
@@ -75,25 +76,35 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 		if err != nil {
 			return store.User{}, fmt.Errorf("hash password: %w", err)
 		}
-		user.PasswordHash = hash
+		fresh = hash
 	}
-	if languageMoved {
-		user.Language = *c.Language
-	}
-	user.UpdatedAt = now
 
+	// Each change writes its column alone. The password is written only
+	// over the hash that was verified: when another change wrote first, the
+	// current password given here is no longer known to be right.
 	err = store.Transact(ctx, a.Pool, func(tx pgx.Tx) error {
-		if err := store.UpdateUser(ctx, tx, user); err != nil {
-			return err
+		if c.Password != nil {
+			written, err := store.UpdatePasswordHash(ctx, tx, p.ID, user.PasswordHash, fresh, now)
+			if err != nil {
+				return err
+			}
+			if !written {
+				return ErrInvalidCredentials
+			}
 		}
-
 		if languageMoved {
+			if err := store.UpdateLanguage(ctx, tx, p.ID, *c.Language, now); err != nil {
+				if errors.Is(err, store.ErrNotFound) {
+					return ErrUserNotFound
+				}
+				return err
+			}
 			err := audit.Append(ctx, tx, now, audit.Event{
 				ActorID:    &p.ID,
 				Action:     audit.ActionAccountLanguageChanged,
 				TargetType: "user",
 				TargetID:   p.ID.String(),
-				Metadata:   audit.Metadata{"language": user.Language},
+				Metadata:   audit.Metadata{"language": *c.Language},
 			})
 			if err != nil {
 				return err
@@ -117,5 +128,12 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 	if err != nil {
 		return store.User{}, err
 	}
+	if c.Password != nil {
+		user.PasswordHash = fresh
+	}
+	if languageMoved {
+		user.Language = *c.Language
+	}
+	user.UpdatedAt = now
 	return user, nil
 }

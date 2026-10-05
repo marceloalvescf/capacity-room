@@ -5,6 +5,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -148,6 +149,83 @@ func TestAccountNoChange(t *testing.T) {
 	got, err := f.account.Change(context.Background(), f.actor(f.eve), testAddress, AccountChange{})
 	if err != nil || got.ID != f.eve.ID || !got.UpdatedAt.Equal(base) {
 		t.Fatalf("row %+v %v", got, err)
+	}
+	f.requireNoAudit(t)
+}
+
+func TestAccountPasswordChangeDoesNotRevertDeactivation(t *testing.T) {
+	f := newAccountFixture(t)
+	s1, s2 := f.addSession(t, f.ops), f.addSession(t, f.ops)
+	ctx := context.Background()
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		<-start
+		_, err := f.account.Change(ctx, f.actor(f.ops), testAddress,
+			AccountChange{CurrentPassword: str(readerPassword), Password: str(newPassword)})
+		if err != nil && !errors.Is(err, ErrInvalidCredentials) {
+			t.Errorf("account change: %v", err)
+		}
+	})
+	wg.Go(func() {
+		<-start
+		_, err := f.users.Update(ctx, f.actor(f.root), f.ops.ID, UserChange{Role: str(RoleReader), Active: flag(false)})
+		if err != nil {
+			t.Errorf("user update: %v", err)
+		}
+	})
+	close(start)
+	wg.Wait()
+
+	row := f.user(t, f.ops.ID)
+	if row.Active || row.Role != RoleReader {
+		t.Fatalf("deactivation reverted: active=%v role=%s", row.Active, row.Role)
+	}
+	newMatch, _ := VerifyPassword(newPassword, row.PasswordHash)
+	if row.PasswordHash != f.ops.PasswordHash && !newMatch {
+		t.Fatal("hash is neither the old one nor the new one")
+	}
+	var live int
+	if err := f.pool.QueryRow(ctx, `SELECT count(*) FROM sessions WHERE user_id = $1 AND revoked_at IS NULL`, f.ops.ID).Scan(&live); err != nil {
+		t.Fatal(err)
+	}
+	if live != 0 || f.session(t, s1).RevokedAt == nil || f.session(t, s2).RevokedAt == nil {
+		t.Fatalf("%d live sessions", live)
+	}
+}
+
+func TestAccountPasswordChangeRefusedWhenHashMoved(t *testing.T) {
+	f := newAccountFixture(t)
+	ctx := context.Background()
+	moved, err := HashPassword("a password set meanwhile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Another change of the password is written and not yet committed while
+	// the account change reads, verifies, and hashes.
+	tx, err := f.pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `UPDATE users SET password_hash = $2 WHERE id = $1`, f.eve.ID, moved); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() {
+		_, err := f.account.Change(ctx, f.actor(f.eve), testAddress,
+			AccountChange{CurrentPassword: str(readerPassword), Password: str(newPassword)})
+		done <- err
+	}()
+	time.Sleep(time.Second)
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-done; !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("err %v", err)
+	}
+	if f.user(t, f.eve.ID).PasswordHash != moved {
+		t.Fatal("the change wrote over the moved hash")
 	}
 	f.requireNoAudit(t)
 }

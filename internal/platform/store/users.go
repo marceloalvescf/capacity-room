@@ -129,6 +129,32 @@ UPDATE users
 	return nil
 }
 
+// UpdatePasswordHash writes newHash and now as password_hash and
+// updated_at of the row with id, only when its password_hash is still
+// oldHash, and reports whether it wrote.
+func UpdatePasswordHash(ctx context.Context, q Querier, id uuid.UUID, oldHash, newHash string, now time.Time) (bool, error) {
+	tag, err := q.Exec(ctx, `
+UPDATE users SET password_hash = $3, updated_at = $4 WHERE id = $1 AND password_hash = $2`,
+		id, oldHash, newHash, now)
+	if err != nil {
+		return false, fmt.Errorf("update password hash: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
+// UpdateLanguage writes language and now as language and updated_at of the
+// row with id.
+func UpdateLanguage(ctx context.Context, q Querier, id uuid.UUID, language string, now time.Time) error {
+	tag, err := q.Exec(ctx, `UPDATE users SET language = $2, updated_at = $3 WHERE id = $1`, id, language, now)
+	if err != nil {
+		return fmt.Errorf("update language: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // CountActiveAdministrators counts users with role administrator and active.
 func CountActiveAdministrators(ctx context.Context, q Querier) (int, error) {
 	var n int

@@ -238,8 +238,10 @@ redactor the moment the settings are loaded, before the pool opens.
   and by `admin migrate`. Every timestamp is passed from Go; no statement
   calls `now()`. Every foreign key is `ON DELETE RESTRICT`; deletion is
   deactivation. The audit table refuses an update and a delete by a trigger.
-- **Every mutation of the users table takes the table lock first,** so the
-  last-administrator rule reads a count that cannot race.
+- **A change of role or active flag takes the table lock first,** so the
+  last-administrator rule reads a count that cannot race; a password or
+  language change writes its column alone, and a password write is a
+  compare-and-set on the hash it verified.
 - **A test gets a fresh database.** `storetest.New(t)` creates
   `kcr_test_<16 hex>` on the server of `KCR_TEST_DATABASE_DSN`, migrates
   it, and drops it when the test ends; `NewEmpty(t)` skips the migration. A

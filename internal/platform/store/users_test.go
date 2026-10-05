@@ -144,6 +144,62 @@ func TestUpdateUserNeverWritesUsername(t *testing.T) {
 	}
 }
 
+func TestUpdatePasswordHashComparesAndSets(t *testing.T) {
+	pool := storetest.New(t)
+	ctx := context.Background()
+	u := newUser("amy", "reader", true)
+	mustInsertUser(t, pool, u)
+
+	changed, err := store.UpdatePasswordHash(ctx, pool, u.ID, "hash-amy", "new-hash", now.Add(time.Hour))
+	if err != nil || !changed {
+		t.Fatalf("got %v, %v", changed, err)
+	}
+	got, err := store.GetUser(ctx, pool, u.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.PasswordHash != "new-hash" || got.Role != "reader" || got.Language != "en" || !got.Active ||
+		!got.UpdatedAt.Equal(time.Date(2026, 10, 5, 13, 0, 0, 0, time.UTC)) {
+		t.Fatalf("got %+v", got)
+	}
+
+	changed, err = store.UpdatePasswordHash(ctx, pool, u.ID, "hash-amy", "stale-hash", now.Add(2*time.Hour))
+	if err != nil || changed {
+		t.Fatalf("stale old hash: got %v, %v", changed, err)
+	}
+	if got, _ := store.GetUser(ctx, pool, u.ID); got.PasswordHash != "new-hash" ||
+		!got.UpdatedAt.Equal(time.Date(2026, 10, 5, 13, 0, 0, 0, time.UTC)) {
+		t.Fatalf("stale old hash wrote: %+v", got)
+	}
+
+	changed, err = store.UpdatePasswordHash(ctx, pool, uuid.New(), "hash-amy", "x", now)
+	if err != nil || changed {
+		t.Fatalf("missing row: got %v, %v", changed, err)
+	}
+}
+
+func TestUpdateLanguageWritesItsColumnAlone(t *testing.T) {
+	pool := storetest.New(t)
+	ctx := context.Background()
+	u := newUser("amy", "operator", true)
+	mustInsertUser(t, pool, u)
+
+	if err := store.UpdateLanguage(ctx, pool, u.ID, "pt-BR", now.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.GetUser(ctx, pool, u.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Language != "pt-BR" || got.Role != "operator" || !got.Active || got.PasswordHash != "hash-amy" ||
+		!got.UpdatedAt.Equal(time.Date(2026, 10, 5, 13, 0, 0, 0, time.UTC)) {
+		t.Fatalf("got %+v", got)
+	}
+	if err := store.UpdateLanguage(ctx, pool, uuid.New(), "en", now); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("missing row: got %v, want ErrNotFound", err)
+	}
+}
+
 func TestCountActiveAdministrators(t *testing.T) {
 	pool := storetest.New(t)
 	mustInsertUser(t, pool, newUser("a1", "administrator", true))
