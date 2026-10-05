@@ -8,9 +8,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 )
 
@@ -41,7 +38,7 @@ type ErrThrottled struct{ RetryAfter int }
 
 func (e *ErrThrottled) Error() string { return "too many sign-in attempts" }
 
-// Decide is the pure part of Check: the seconds to wait and whether the
+// Decide is the pure part of Take: the seconds to wait and whether the
 // key is blocked at now.
 func Decide(row *store.Throttle, now time.Time) (retryAfter int, blocked bool) {
 	if row == nil || row.BlockedUntil == nil {
@@ -54,41 +51,21 @@ func Decide(row *store.Throttle, now time.Time) (retryAfter int, blocked bool) {
 	return max(1, int(math.Ceil(remaining.Seconds()))), true
 }
 
-// Check returns *ErrThrottled when the key is blocked at now.
-func (t Throttle) Check(ctx context.Context, q store.Querier, key []byte, now time.Time) error {
-	row, err := store.GetThrottle(ctx, q, key)
-	if errors.Is(err, store.ErrNotFound) {
-		return nil
-	}
+// Take records one attempt under key at now and reports whether it may
+// proceed. It is one statement, so concurrent attempts serialise on the
+// row: a blocked key answers *ErrThrottled without counting; otherwise the
+// window opens when none is open or the open one ran out, the attempt is
+// counted, and the fifth attempt of a window sets the block. A later
+// RecordSuccess resets the row.
+func (t Throttle) Take(ctx context.Context, q store.Querier, key []byte, now time.Time) error {
+	row, refused, err := store.TakeThrottle(ctx, q, key, now, ThrottleWindow, ThrottleBlock, ThrottleMaxFailures)
 	if err != nil {
 		return err
 	}
-	if retry, blocked := Decide(&row, now); blocked {
+	if retry, blocked := Decide(&row, now); refused && blocked {
 		return &ErrThrottled{RetryAfter: retry}
 	}
 	return nil
-}
-
-// RecordFailure counts one failure in a transaction, starting a window
-// when none is open or the open one ran out, and blocks on the fifth.
-func (t Throttle) RecordFailure(ctx context.Context, pool *pgxpool.Pool, key []byte, now time.Time) error {
-	return store.Transact(ctx, pool, func(tx pgx.Tx) error {
-		row, err := store.GetThrottleForUpdate(ctx, tx, key)
-		next := store.Throttle{KeyHash: key, WindowStartedAt: now, Failures: 1, UpdatedAt: now}
-		switch {
-		case errors.Is(err, store.ErrNotFound):
-		case err != nil:
-			return err
-		case now.Sub(row.WindowStartedAt) < ThrottleWindow:
-			next.WindowStartedAt = row.WindowStartedAt
-			next.Failures = row.Failures + 1
-		}
-		if next.Failures >= ThrottleMaxFailures {
-			until := now.Add(ThrottleBlock)
-			next.BlockedUntil = &until
-		}
-		return store.UpsertThrottle(ctx, tx, next)
-	})
 }
 
 // RecordSuccess resets the row when it exists.

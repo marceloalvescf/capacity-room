@@ -77,7 +77,7 @@ func (s *Sessions) Login(ctx context.Context, username, password, clientAddress,
 	now := s.Now()
 	normalized := NormalizeUsername(username)
 	key := s.Throttle.Key(normalized, clientAddress)
-	if err := s.Throttle.Check(ctx, s.Pool, key, now); err != nil {
+	if err := s.Throttle.Take(ctx, s.Pool, key, now); err != nil {
 		return Issued{}, err
 	}
 
@@ -126,9 +126,6 @@ func (s *Sessions) Login(ctx context.Context, username, password, clientAddress,
 		return Issued{}, err
 	}
 	if !matched {
-		if err := s.Throttle.RecordFailure(ctx, s.Pool, key, now); err != nil {
-			return Issued{}, err
-		}
 		return Issued{}, ErrInvalidCredentials
 	}
 	if err := s.Throttle.RecordSuccess(ctx, s.Pool, key, now); err != nil {

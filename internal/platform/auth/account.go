@@ -42,8 +42,8 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 	}
 
 	now := a.Now()
+	key := a.Sessions.Throttle.Key(p.Username, clientAddress)
 	var out store.User
-	wrongCurrent := false
 	err := store.Transact(ctx, a.Pool, func(tx pgx.Tx) error {
 		user, err := store.GetUser(ctx, tx, p.ID)
 		if errors.Is(err, store.ErrNotFound) {
@@ -59,9 +59,14 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 			return nil
 		}
 		if c.Password != nil {
+			if err := a.Sessions.Throttle.Take(ctx, a.Pool, key, now); err != nil {
+				return err
+			}
 			if match, _ := VerifyPassword(*c.CurrentPassword, user.PasswordHash); !match {
-				wrongCurrent = true
 				return ErrInvalidCredentials
+			}
+			if err := a.Sessions.Throttle.RecordSuccess(ctx, a.Pool, key, now); err != nil {
+				return err
 			}
 			if err := CheckPassword(*c.Password); err != nil {
 				return err
@@ -108,12 +113,6 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 		}
 		return nil
 	})
-	if wrongCurrent {
-		key := a.Sessions.Throttle.Key(p.Username, clientAddress)
-		if err := a.Sessions.Throttle.RecordFailure(ctx, a.Pool, key, now); err != nil {
-			return store.User{}, err
-		}
-	}
 	if err != nil {
 		return store.User{}, err
 	}
