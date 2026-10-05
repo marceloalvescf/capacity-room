@@ -9,6 +9,48 @@ import (
 	"github.com/google/uuid"
 )
 
+// Defines values for EndpointType.
+const (
+	EndpointTypeAuto       EndpointType = "auto"
+	EndpointTypeGrafana    EndpointType = "grafana"
+	EndpointTypePrometheus EndpointType = "prometheus"
+)
+
+// Valid indicates whether the value is a known member of the EndpointType enum.
+func (e EndpointType) Valid() bool {
+	switch e {
+	case EndpointTypeAuto:
+		return true
+	case EndpointTypeGrafana:
+		return true
+	case EndpointTypePrometheus:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FilterMode.
+const (
+	FilterModeAuto     FilterMode = "auto"
+	FilterModeNone     FilterMode = "none"
+	FilterModeRequired FilterMode = "required"
+)
+
+// Valid indicates whether the value is a known member of the FilterMode enum.
+func (e FilterMode) Valid() bool {
+	switch e {
+	case FilterModeAuto:
+		return true
+	case FilterModeNone:
+		return true
+	case FilterModeRequired:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Language.
 const (
 	En   Language = "en"
@@ -21,6 +63,66 @@ func (e Language) Valid() bool {
 	case En:
 		return true
 	case PtBR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MinSeverity.
+const (
+	All       MinSeverity = "all"
+	Attention MinSeverity = "attention"
+	Critical  MinSeverity = "critical"
+)
+
+// Valid indicates whether the value is a known member of the MinSeverity enum.
+func (e MinSeverity) Valid() bool {
+	switch e {
+	case All:
+		return true
+	case Attention:
+		return true
+	case Critical:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NodeAutoscaling.
+const (
+	NodeAutoscalingAuto     NodeAutoscaling = "auto"
+	NodeAutoscalingDisabled NodeAutoscaling = "disabled"
+	NodeAutoscalingEnabled  NodeAutoscaling = "enabled"
+)
+
+// Valid indicates whether the value is a known member of the NodeAutoscaling enum.
+func (e NodeAutoscaling) Valid() bool {
+	switch e {
+	case NodeAutoscalingAuto:
+		return true
+	case NodeAutoscalingDisabled:
+		return true
+	case NodeAutoscalingEnabled:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportProfile.
+const (
+	Detailed  ReportProfile = "detailed"
+	Executive ReportProfile = "executive"
+)
+
+// Valid indicates whether the value is a known member of the ReportProfile enum.
+func (e ReportProfile) Valid() bool {
+	switch e {
+	case Detailed:
+		return true
+	case Executive:
 		return true
 	default:
 		return false
@@ -65,6 +167,9 @@ type AnonymousSession struct {
 	LoginCsrf string `json:"login_csrf"`
 }
 
+// EndpointType defines model for EndpointType.
+type EndpointType string
+
 // Error defines model for Error.
 type Error struct {
 	Error ErrorBody `json:"error"`
@@ -82,6 +187,9 @@ type ErrorBody struct {
 	Message string `json:"message"`
 }
 
+// FilterMode defines model for FilterMode.
+type FilterMode string
+
 // Language defines model for Language.
 type Language string
 
@@ -91,6 +199,9 @@ type LoginRequest struct {
 	Username string `json:"username"`
 }
 
+// MinSeverity defines model for MinSeverity.
+type MinSeverity string
+
 // NewUser defines model for NewUser.
 type NewUser struct {
 	Language Language `json:"language"`
@@ -99,6 +210,9 @@ type NewUser struct {
 	Username string   `json:"username"`
 }
 
+// NodeAutoscaling defines model for NodeAutoscaling.
+type NodeAutoscaling string
+
 // Principal defines model for Principal.
 type Principal struct {
 	Id       uuid.UUID `json:"id"`
@@ -106,6 +220,287 @@ type Principal struct {
 	Role     Role      `json:"role"`
 	Username string    `json:"username"`
 }
+
+// Profile A profile with its current revision, as the administration reads it.
+type Profile struct {
+	// Active Defaults to false.
+	Active            bool     `json:"active"`
+	AllowedNamespaces []string `json:"allowed_namespaces"`
+
+	// CaBundleFile A file name under the CA bundle folder; empty means none; refused while tls_verify is false.
+	CaBundleFile string `json:"ca_bundle_file"`
+
+	// ClusterLabel A Prometheus label name; defaults to cluster.
+	ClusterLabel string `json:"cluster_label"`
+	ClusterName  string `json:"cluster_name"`
+
+	// CreatedAt When the current revision was written.
+	CreatedAt time.Time `json:"created_at"`
+
+	// CredentialFile A file name under the credential folder; empty means no credential.
+	CredentialFile string `json:"credential_file"`
+
+	// DefaultMinSeverity all, attention, or critical; null means all.
+	DefaultMinSeverity *string `json:"default_min_severity"`
+
+	// DefaultPeriod Null means 24h; must be within permitted_periods when that list is not empty.
+	DefaultPeriod *string `json:"default_period"`
+
+	// DefaultReportProfile detailed or executive; null means detailed.
+	DefaultReportProfile *string `json:"default_report_profile"`
+
+	// DefaultTimezone Null means America/Sao_Paulo.
+	DefaultTimezone *string      `json:"default_timezone"`
+	DisplayName     string       `json:"display_name"`
+	EndpointType    EndpointType `json:"endpoint_type"`
+
+	// EndpointUrl Stored in canonical form after the outbound policy accepts it.
+	EndpointUrl        string          `json:"endpoint_url"`
+	ExcludedContainers []string        `json:"excluded_containers"`
+	FilterMode         FilterMode      `json:"filter_mode"`
+	Id                 string          `json:"id"`
+	NodeAutoscaling    NodeAutoscaling `json:"node_autoscaling"`
+
+	// NodepoolLabel A Prometheus label name, or empty.
+	NodepoolLabel          string        `json:"nodepool_label"`
+	PermittedMinSeverities []MinSeverity `json:"permitted_min_severities"`
+
+	// PermittedPeriods Empty means unrestricted.
+	PermittedPeriods        []string        `json:"permitted_periods"`
+	PermittedReportProfiles []ReportProfile `json:"permitted_report_profiles"`
+	PermittedTimezones      []string        `json:"permitted_timezones"`
+
+	// Revision Counted from 1 for the profile, across deletions.
+	Revision   int       `json:"revision"`
+	RevisionId uuid.UUID `json:"revision_id"`
+
+	// Thresholds The seven thresholds of a report; a key left out keeps its value.
+	Thresholds ProfileThresholds `json:"thresholds"`
+
+	// TimeoutSeconds Over 0 and at most 600; defaults to 90.
+	TimeoutSeconds float64 `json:"timeout_seconds"`
+
+	// TlsVerify Defaults to true.
+	TlsVerify bool `json:"tls_verify"`
+}
+
+// ProfileChange The body of PATCH /admin/profiles/{id}: the revision it was read at and the fields that change. A field left out keeps its value; a nullable default set to null is cleared.
+type ProfileChange struct {
+	// Active Defaults to false.
+	Active            *bool     `json:"active,omitempty"`
+	AllowedNamespaces *[]string `json:"allowed_namespaces,omitempty"`
+	BaseRevisionId    uuid.UUID `json:"base_revision_id"`
+
+	// CaBundleFile A file name under the CA bundle folder; empty means none; refused while tls_verify is false.
+	CaBundleFile *string `json:"ca_bundle_file,omitempty"`
+
+	// ClusterLabel A Prometheus label name; defaults to cluster.
+	ClusterLabel *string `json:"cluster_label,omitempty"`
+	ClusterName  *string `json:"cluster_name,omitempty"`
+
+	// CredentialFile A file name under the credential folder; empty means no credential.
+	CredentialFile *string `json:"credential_file,omitempty"`
+
+	// DefaultMinSeverity all, attention, or critical; null means all.
+	DefaultMinSeverity *string `json:"default_min_severity,omitempty"`
+
+	// DefaultPeriod Null means 24h; must be within permitted_periods when that list is not empty.
+	DefaultPeriod *string `json:"default_period,omitempty"`
+
+	// DefaultReportProfile detailed or executive; null means detailed.
+	DefaultReportProfile *string `json:"default_report_profile,omitempty"`
+
+	// DefaultTimezone Null means America/Sao_Paulo.
+	DefaultTimezone *string       `json:"default_timezone,omitempty"`
+	DisplayName     *string       `json:"display_name,omitempty"`
+	EndpointType    *EndpointType `json:"endpoint_type,omitempty"`
+
+	// EndpointUrl Stored in canonical form after the outbound policy accepts it.
+	EndpointUrl        *string          `json:"endpoint_url,omitempty"`
+	ExcludedContainers *[]string        `json:"excluded_containers,omitempty"`
+	FilterMode         *FilterMode      `json:"filter_mode,omitempty"`
+	NodeAutoscaling    *NodeAutoscaling `json:"node_autoscaling,omitempty"`
+
+	// NodepoolLabel A Prometheus label name, or empty.
+	NodepoolLabel          *string        `json:"nodepool_label,omitempty"`
+	PermittedMinSeverities *[]MinSeverity `json:"permitted_min_severities,omitempty"`
+
+	// PermittedPeriods Empty means unrestricted.
+	PermittedPeriods        *[]string        `json:"permitted_periods,omitempty"`
+	PermittedReportProfiles *[]ReportProfile `json:"permitted_report_profiles,omitempty"`
+	PermittedTimezones      *[]string        `json:"permitted_timezones,omitempty"`
+
+	// Thresholds The seven thresholds of a report; a key left out keeps its value.
+	Thresholds *ProfileThresholds `json:"thresholds,omitempty"`
+
+	// TimeoutSeconds Over 0 and at most 600; defaults to 90.
+	TimeoutSeconds *float64 `json:"timeout_seconds,omitempty"`
+
+	// TlsVerify Defaults to true.
+	TlsVerify *bool `json:"tls_verify,omitempty"`
+}
+
+// ProfileCreate The body of POST /admin/profiles; a field left out takes its default.
+type ProfileCreate struct {
+	// Active Defaults to false.
+	Active            *bool    `json:"active,omitempty"`
+	AllowedNamespaces []string `json:"allowed_namespaces"`
+
+	// CaBundleFile A file name under the CA bundle folder; empty means none; refused while tls_verify is false.
+	CaBundleFile *string `json:"ca_bundle_file,omitempty"`
+
+	// ClusterLabel A Prometheus label name; defaults to cluster.
+	ClusterLabel *string `json:"cluster_label,omitempty"`
+	ClusterName  string  `json:"cluster_name"`
+
+	// CredentialFile A file name under the credential folder; empty means no credential.
+	CredentialFile *string `json:"credential_file,omitempty"`
+
+	// DefaultMinSeverity all, attention, or critical; null means all.
+	DefaultMinSeverity *string `json:"default_min_severity,omitempty"`
+
+	// DefaultPeriod Null means 24h; must be within permitted_periods when that list is not empty.
+	DefaultPeriod *string `json:"default_period,omitempty"`
+
+	// DefaultReportProfile detailed or executive; null means detailed.
+	DefaultReportProfile *string `json:"default_report_profile,omitempty"`
+
+	// DefaultTimezone Null means America/Sao_Paulo.
+	DefaultTimezone *string       `json:"default_timezone,omitempty"`
+	DisplayName     string        `json:"display_name"`
+	EndpointType    *EndpointType `json:"endpoint_type,omitempty"`
+
+	// EndpointUrl Stored in canonical form after the outbound policy accepts it.
+	EndpointUrl        string      `json:"endpoint_url"`
+	ExcludedContainers *[]string   `json:"excluded_containers,omitempty"`
+	FilterMode         *FilterMode `json:"filter_mode,omitempty"`
+
+	// Id A reference name of 1 to 63 characters, never changed.
+	Id              string           `json:"id"`
+	NodeAutoscaling *NodeAutoscaling `json:"node_autoscaling,omitempty"`
+
+	// NodepoolLabel A Prometheus label name, or empty.
+	NodepoolLabel          *string        `json:"nodepool_label,omitempty"`
+	PermittedMinSeverities *[]MinSeverity `json:"permitted_min_severities,omitempty"`
+
+	// PermittedPeriods Empty means unrestricted.
+	PermittedPeriods        *[]string        `json:"permitted_periods,omitempty"`
+	PermittedReportProfiles *[]ReportProfile `json:"permitted_report_profiles,omitempty"`
+	PermittedTimezones      *[]string        `json:"permitted_timezones,omitempty"`
+
+	// Thresholds The seven thresholds of a report; a key left out keeps its value.
+	Thresholds *ProfileThresholds `json:"thresholds,omitempty"`
+
+	// TimeoutSeconds Over 0 and at most 600; defaults to 90.
+	TimeoutSeconds *float64 `json:"timeout_seconds,omitempty"`
+
+	// TlsVerify Defaults to true.
+	TlsVerify *bool `json:"tls_verify,omitempty"`
+}
+
+// ProfileDocument A profile as an administrator writes it and as a revision stores it. A credential and a CA bundle are named by file name, resolved under the folders of the deployment when a report runs, never here.
+type ProfileDocument struct {
+	// Active Defaults to false.
+	Active            *bool     `json:"active,omitempty"`
+	AllowedNamespaces *[]string `json:"allowed_namespaces,omitempty"`
+
+	// CaBundleFile A file name under the CA bundle folder; empty means none; refused while tls_verify is false.
+	CaBundleFile *string `json:"ca_bundle_file,omitempty"`
+
+	// ClusterLabel A Prometheus label name; defaults to cluster.
+	ClusterLabel *string `json:"cluster_label,omitempty"`
+	ClusterName  *string `json:"cluster_name,omitempty"`
+
+	// CredentialFile A file name under the credential folder; empty means no credential.
+	CredentialFile *string `json:"credential_file,omitempty"`
+
+	// DefaultMinSeverity all, attention, or critical; null means all.
+	DefaultMinSeverity *string `json:"default_min_severity,omitempty"`
+
+	// DefaultPeriod Null means 24h; must be within permitted_periods when that list is not empty.
+	DefaultPeriod *string `json:"default_period,omitempty"`
+
+	// DefaultReportProfile detailed or executive; null means detailed.
+	DefaultReportProfile *string `json:"default_report_profile,omitempty"`
+
+	// DefaultTimezone Null means America/Sao_Paulo.
+	DefaultTimezone *string       `json:"default_timezone,omitempty"`
+	DisplayName     *string       `json:"display_name,omitempty"`
+	EndpointType    *EndpointType `json:"endpoint_type,omitempty"`
+
+	// EndpointUrl Stored in canonical form after the outbound policy accepts it.
+	EndpointUrl        *string          `json:"endpoint_url,omitempty"`
+	ExcludedContainers *[]string        `json:"excluded_containers,omitempty"`
+	FilterMode         *FilterMode      `json:"filter_mode,omitempty"`
+	NodeAutoscaling    *NodeAutoscaling `json:"node_autoscaling,omitempty"`
+
+	// NodepoolLabel A Prometheus label name, or empty.
+	NodepoolLabel          *string        `json:"nodepool_label,omitempty"`
+	PermittedMinSeverities *[]MinSeverity `json:"permitted_min_severities,omitempty"`
+
+	// PermittedPeriods Empty means unrestricted.
+	PermittedPeriods        *[]string        `json:"permitted_periods,omitempty"`
+	PermittedReportProfiles *[]ReportProfile `json:"permitted_report_profiles,omitempty"`
+	PermittedTimezones      *[]string        `json:"permitted_timezones,omitempty"`
+
+	// Thresholds The seven thresholds of a report; a key left out keeps its value.
+	Thresholds *ProfileThresholds `json:"thresholds,omitempty"`
+
+	// TimeoutSeconds Over 0 and at most 600; defaults to 90.
+	TimeoutSeconds *float64 `json:"timeout_seconds,omitempty"`
+
+	// TlsVerify Defaults to true.
+	TlsVerify *bool `json:"tls_verify,omitempty"`
+}
+
+// ProfileList defines model for ProfileList.
+type ProfileList struct {
+	Profiles []Profile `json:"profiles"`
+}
+
+// ProfileSummary An active profile as every signed-in reader sees it; the defaults are resolved.
+type ProfileSummary struct {
+	AllowedNamespaces       []string `json:"allowed_namespaces"`
+	DefaultMinSeverity      string   `json:"default_min_severity"`
+	DefaultPeriod           string   `json:"default_period"`
+	DefaultReportProfile    string   `json:"default_report_profile"`
+	DefaultTimezone         string   `json:"default_timezone"`
+	DisplayName             string   `json:"display_name"`
+	Id                      string   `json:"id"`
+	PermittedMinSeverities  []string `json:"permitted_min_severities"`
+	PermittedPeriods        []string `json:"permitted_periods"`
+	PermittedReportProfiles []string `json:"permitted_report_profiles"`
+	PermittedTimezones      []string `json:"permitted_timezones"`
+}
+
+// ProfileSummaryList defines model for ProfileSummaryList.
+type ProfileSummaryList struct {
+	Profiles []ProfileSummary `json:"profiles"`
+}
+
+// ProfileTestResult defines model for ProfileTestResult.
+type ProfileTestResult struct {
+	// Capabilities The names of the capabilities the source offers, in their order; empty when not ok.
+	Capabilities []string `json:"capabilities"`
+
+	// Code PROFILE_OK; or ENDPOINT_URL_REJECTED, ENDPOINT_ADDRESS_REJECTED, ENDPOINT_RESOLUTION_FAILED, ENDPOINT_CONNECTION_REJECTED, ENDPOINT_REDIRECT_REJECTED, PROFILE_CREDENTIAL_UNAVAILABLE, PROFILE_CA_BUNDLE_UNAVAILABLE, ENDPOINT_TLS_FAILED, ENDPOINT_AUTH_REJECTED, ENDPOINT_API_NOT_FOUND, ENDPOINT_UNREACHABLE, CLUSTER_SCOPE_NOT_FOUND, CAPABILITIES_INSUFFICIENT.
+	Code string `json:"code"`
+	Ok   bool   `json:"ok"`
+}
+
+// ProfileThresholds The seven thresholds of a report; a key left out keeps its value.
+type ProfileThresholds struct {
+	AutoscalerNearMaxPercent *float64 `json:"autoscaler_near_max_percent,omitempty"`
+	BurstyGapPercent         *float64 `json:"bursty_gap_percent,omitempty"`
+	CriticalPercent          *float64 `json:"critical_percent,omitempty"`
+	HpaReplicaDivergence     *float64 `json:"hpa_replica_divergence,omitempty"`
+	LowUtilizationPercent    *float64 `json:"low_utilization_percent,omitempty"`
+	NodepoolSpreadPoints     *float64 `json:"nodepool_spread_points,omitempty"`
+	WarningPercent           *float64 `json:"warning_percent,omitempty"`
+}
+
+// ReportProfile defines model for ReportProfile.
+type ReportProfile string
 
 // Role defines model for Role.
 type Role string
@@ -148,6 +543,9 @@ type UserList struct {
 // CSRFHeader defines model for CSRFHeader.
 type CSRFHeader = string
 
+// ProfileID defines model for ProfileID.
+type ProfileID = string
+
 // UserID defines model for UserID.
 type UserID = uuid.UUID
 
@@ -162,6 +560,18 @@ type ForbiddenOrCSRF = Error
 
 // PasswordPolicy defines model for PasswordPolicy.
 type PasswordPolicy = Error
+
+// ProfileIDTaken defines model for ProfileIDTaken.
+type ProfileIDTaken = Error
+
+// ProfileNotFound defines model for ProfileNotFound.
+type ProfileNotFound = Error
+
+// ProfileRefused defines model for ProfileRefused.
+type ProfileRefused = Error
+
+// ProfileRevisionStale defines model for ProfileRevisionStale.
+type ProfileRevisionStale = Error
 
 // RequestInvalid defines model for RequestInvalid.
 type RequestInvalid = Error
@@ -180,6 +590,30 @@ type UsernameOrPasswordPolicy = Error
 
 // ChangeAccountParams defines parameters for ChangeAccount.
 type ChangeAccountParams struct {
+	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
+}
+
+// CreateProfileParams defines parameters for CreateProfile.
+type CreateProfileParams struct {
+	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
+}
+
+// DeleteProfileParams defines parameters for DeleteProfile.
+type DeleteProfileParams struct {
+	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
+}
+
+// ReviseProfileParams defines parameters for ReviseProfile.
+type ReviseProfileParams struct {
+	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
+}
+
+// TestProfileParams defines parameters for TestProfile.
+type TestProfileParams struct {
 	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
@@ -216,6 +650,12 @@ type LogoutParams struct {
 
 // ChangeAccountJSONRequestBody defines body for ChangeAccount for application/json ContentType.
 type ChangeAccountJSONRequestBody = AccountChange
+
+// CreateProfileJSONRequestBody defines body for CreateProfile for application/json ContentType.
+type CreateProfileJSONRequestBody = ProfileCreate
+
+// ReviseProfileJSONRequestBody defines body for ReviseProfile for application/json ContentType.
+type ReviseProfileJSONRequestBody = ProfileChange
 
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
 type CreateUserJSONRequestBody = NewUser

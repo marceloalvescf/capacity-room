@@ -262,6 +262,167 @@ paths:
                 $ref: "#/components/schemas/Error"
         default:
           $ref: "#/components/responses/Unexpected"
+  /profiles:
+    get:
+      operationId: listActiveProfiles
+      summary: The active profiles as summaries, in id order, for any signed-in reader.
+      responses:
+        "200":
+          description: The summaries, with the four defaults resolved to the fallback.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileSummaryList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        default:
+          $ref: "#/components/responses/Unexpected"
+  /admin/profiles:
+    get:
+      operationId: listProfiles
+      summary: Every profile with a current revision, active or not, in id order.
+      responses:
+        "200":
+          description: The profiles.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        default:
+          $ref: "#/components/responses/Unexpected"
+    post:
+      operationId: createProfile
+      summary: Create a profile, as its first revision.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileCreate"
+      responses:
+        "201":
+          description: The profile created, with its endpoint in canonical form.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          $ref: "#/components/responses/RequestInvalid"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrCSRF"
+        "409":
+          $ref: "#/components/responses/ProfileIDTaken"
+        "422":
+          $ref: "#/components/responses/ProfileRefused"
+        default:
+          $ref: "#/components/responses/Unexpected"
+  /admin/profiles/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ProfileID"
+    get:
+      operationId: getProfile
+      summary: One profile, its current revision.
+      responses:
+        "200":
+          description: The profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/ProfileNotFound"
+        default:
+          $ref: "#/components/responses/Unexpected"
+    patch:
+      operationId: reviseProfile
+      summary: Revise a profile from the revision it was read at, as a new revision.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileChange"
+      responses:
+        "200":
+          description: >-
+            The profile after the change. A change that moves nothing returns
+            the current revision and writes none.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          $ref: "#/components/responses/RequestInvalid"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrCSRF"
+        "404":
+          $ref: "#/components/responses/ProfileNotFound"
+        "409":
+          $ref: "#/components/responses/ProfileRevisionStale"
+        "422":
+          $ref: "#/components/responses/ProfileRefused"
+        default:
+          $ref: "#/components/responses/Unexpected"
+    delete:
+      operationId: deleteProfile
+      summary: Delete a profile by clearing its pointer; every revision is kept.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: Deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrCSRF"
+        "404":
+          $ref: "#/components/responses/ProfileNotFound"
+        default:
+          $ref: "#/components/responses/Unexpected"
+  /admin/profiles/{id}/test:
+    parameters:
+      - $ref: "#/components/parameters/ProfileID"
+    post:
+      operationId: testProfile
+      summary: >-
+        Run the preflight of a report against the source of the profile,
+        through the outbound policy, and answer the outcome as a code.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "200":
+          description: >-
+            The outcome, whatever it is: ok with PROFILE_OK, or not ok with
+            one of the codes of ProfileTestResult. Never a URL, a name, an
+            address, or the text of a failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileTestResult"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrCSRF"
+        "404":
+          $ref: "#/components/responses/ProfileNotFound"
+        default:
+          $ref: "#/components/responses/Unexpected"
 components:
   securitySchemes:
     cookieAuth:
@@ -288,6 +449,14 @@ components:
         x-go-type: uuid.UUID
         x-go-type-import:
           path: github.com/google/uuid
+    ProfileID:
+      name: id
+      in: path
+      required: true
+      description: The identifier of a profile, a reference name of 1 to 63 characters.
+      schema:
+        type: string
+        maxLength: 63
   responses:
     RequestInvalid:
       description: REQUEST_INVALID, with one field per problem (missing, invalid, unknown, too_long).
@@ -339,6 +508,34 @@ components:
             $ref: "#/components/schemas/Error"
     Unexpected:
       description: INTERNAL_ERROR, DATABASE_UNAVAILABLE, NOT_FOUND, or METHOD_NOT_ALLOWED.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ProfileNotFound:
+      description: PROFILE_NOT_FOUND, for an unknown, malformed, or deleted id.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ProfileIDTaken:
+      description: PROFILE_ID_TAKEN.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ProfileRevisionStale:
+      description: PROFILE_REVISION_STALE, when base_revision_id is not the current revision.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ProfileRefused:
+      description: >-
+        PROFILE_DOCUMENT_INVALID, with one field per problem (missing, invalid,
+        repeated, empty, not_permitted, incoherent); or ENDPOINT_URL_REJECTED or
+        ENDPOINT_ADDRESS_REJECTED, with the field endpoint_url marked invalid.
+        A value is never repeated.
       content:
         application/json:
           schema:
@@ -497,3 +694,295 @@ components:
           maxLength: 1024
         language:
           $ref: "#/components/schemas/Language"
+    EndpointType:
+      type: string
+      enum: [auto, prometheus, grafana]
+    FilterMode:
+      type: string
+      enum: [required, auto, none]
+    NodeAutoscaling:
+      type: string
+      enum: [auto, enabled, disabled]
+    ReportProfile:
+      type: string
+      enum: [detailed, executive]
+    MinSeverity:
+      type: string
+      enum: [all, attention, critical]
+    ProfileThresholds:
+      type: object
+      description: The seven thresholds of a report; a key left out keeps its value.
+      properties:
+        warning_percent:
+          type: number
+          format: double
+        critical_percent:
+          type: number
+          format: double
+        low_utilization_percent:
+          type: number
+          format: double
+        autoscaler_near_max_percent:
+          type: number
+          format: double
+        nodepool_spread_points:
+          type: number
+          format: double
+        bursty_gap_percent:
+          type: number
+          format: double
+        hpa_replica_divergence:
+          type: number
+          format: double
+    ProfileDocument:
+      type: object
+      description: >-
+        A profile as an administrator writes it and as a revision stores it.
+        A credential and a CA bundle are named by file name, resolved under the
+        folders of the deployment when a report runs, never here.
+      properties:
+        display_name:
+          type: string
+          maxLength: 128
+        active:
+          type: boolean
+          description: Defaults to false.
+        endpoint_url:
+          type: string
+          maxLength: 2048
+          description: Stored in canonical form after the outbound policy accepts it.
+        endpoint_type:
+          $ref: "#/components/schemas/EndpointType"
+        timeout_seconds:
+          type: number
+          format: double
+          description: Over 0 and at most 600; defaults to 90.
+        tls_verify:
+          type: boolean
+          description: Defaults to true.
+        credential_file:
+          type: string
+          maxLength: 63
+          description: A file name under the credential folder; empty means no credential.
+        ca_bundle_file:
+          type: string
+          maxLength: 63
+          description: A file name under the CA bundle folder; empty means none; refused while tls_verify is false.
+        cluster_name:
+          type: string
+          maxLength: 253
+        cluster_label:
+          type: string
+          description: A Prometheus label name; defaults to cluster.
+        filter_mode:
+          $ref: "#/components/schemas/FilterMode"
+        nodepool_label:
+          type: string
+          description: A Prometheus label name, or empty.
+        node_autoscaling:
+          $ref: "#/components/schemas/NodeAutoscaling"
+        allowed_namespaces:
+          type: array
+          items:
+            type: string
+        excluded_containers:
+          type: array
+          items:
+            type: string
+        permitted_periods:
+          type: array
+          description: Empty means unrestricted.
+          items:
+            type: string
+        default_period:
+          type: string
+          nullable: true
+          description: Null means 24h; must be within permitted_periods when that list is not empty.
+        permitted_timezones:
+          type: array
+          items:
+            type: string
+        default_timezone:
+          type: string
+          nullable: true
+          description: Null means America/Sao_Paulo.
+        permitted_report_profiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportProfile"
+        default_report_profile:
+          type: string
+          nullable: true
+          description: detailed or executive; null means detailed.
+        permitted_min_severities:
+          type: array
+          items:
+            $ref: "#/components/schemas/MinSeverity"
+        default_min_severity:
+          type: string
+          nullable: true
+          description: all, attention, or critical; null means all.
+        thresholds:
+          $ref: "#/components/schemas/ProfileThresholds"
+    ProfileCreate:
+      description: The body of POST /admin/profiles; a field left out takes its default.
+      allOf:
+        - $ref: "#/components/schemas/ProfileDocument"
+        - type: object
+          required: [id, display_name, endpoint_url, cluster_name, allowed_namespaces]
+          properties:
+            id:
+              type: string
+              maxLength: 63
+              description: A reference name of 1 to 63 characters, never changed.
+    ProfileChange:
+      description: >-
+        The body of PATCH /admin/profiles/{id}: the revision it was read at and
+        the fields that change. A field left out keeps its value; a nullable
+        default set to null is cleared.
+      allOf:
+        - $ref: "#/components/schemas/ProfileDocument"
+        - type: object
+          required: [base_revision_id]
+          properties:
+            base_revision_id:
+              type: string
+              format: uuid
+              x-go-type: uuid.UUID
+              x-go-type-import:
+                path: github.com/google/uuid
+    Profile:
+      description: A profile with its current revision, as the administration reads it.
+      allOf:
+        - $ref: "#/components/schemas/ProfileDocument"
+        - type: object
+          required:
+            - id
+            - revision_id
+            - revision
+            - created_at
+            - display_name
+            - active
+            - endpoint_url
+            - endpoint_type
+            - timeout_seconds
+            - tls_verify
+            - credential_file
+            - ca_bundle_file
+            - cluster_name
+            - cluster_label
+            - filter_mode
+            - nodepool_label
+            - node_autoscaling
+            - allowed_namespaces
+            - excluded_containers
+            - permitted_periods
+            - default_period
+            - permitted_timezones
+            - default_timezone
+            - permitted_report_profiles
+            - default_report_profile
+            - permitted_min_severities
+            - default_min_severity
+            - thresholds
+          properties:
+            id:
+              type: string
+            revision_id:
+              type: string
+              format: uuid
+              x-go-type: uuid.UUID
+              x-go-type-import:
+                path: github.com/google/uuid
+            revision:
+              type: integer
+              description: Counted from 1 for the profile, across deletions.
+            created_at:
+              type: string
+              format: date-time
+              description: When the current revision was written.
+    ProfileList:
+      type: object
+      required: [profiles]
+      properties:
+        profiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Profile"
+    ProfileSummary:
+      type: object
+      description: An active profile as every signed-in reader sees it; the defaults are resolved.
+      required:
+        - id
+        - display_name
+        - allowed_namespaces
+        - permitted_periods
+        - default_period
+        - permitted_timezones
+        - default_timezone
+        - permitted_report_profiles
+        - default_report_profile
+        - permitted_min_severities
+        - default_min_severity
+      properties:
+        id:
+          type: string
+        display_name:
+          type: string
+        allowed_namespaces:
+          type: array
+          items:
+            type: string
+        permitted_periods:
+          type: array
+          items:
+            type: string
+        default_period:
+          type: string
+        permitted_timezones:
+          type: array
+          items:
+            type: string
+        default_timezone:
+          type: string
+        permitted_report_profiles:
+          type: array
+          items:
+            type: string
+        default_report_profile:
+          type: string
+        permitted_min_severities:
+          type: array
+          items:
+            type: string
+        default_min_severity:
+          type: string
+    ProfileSummaryList:
+      type: object
+      required: [profiles]
+      properties:
+        profiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfileSummary"
+    ProfileTestResult:
+      type: object
+      required: [ok, code, capabilities]
+      properties:
+        ok:
+          type: boolean
+        code:
+          type: string
+          description: >-
+            PROFILE_OK; or ENDPOINT_URL_REJECTED, ENDPOINT_ADDRESS_REJECTED,
+            ENDPOINT_RESOLUTION_FAILED, ENDPOINT_CONNECTION_REJECTED,
+            ENDPOINT_REDIRECT_REJECTED, PROFILE_CREDENTIAL_UNAVAILABLE,
+            PROFILE_CA_BUNDLE_UNAVAILABLE, ENDPOINT_TLS_FAILED,
+            ENDPOINT_AUTH_REJECTED, ENDPOINT_API_NOT_FOUND,
+            ENDPOINT_UNREACHABLE, CLUSTER_SCOPE_NOT_FOUND,
+            CAPABILITIES_INSUFFICIENT.
+        capabilities:
+          type: array
+          description: The names of the capabilities the source offers, in their order; empty when not ok.
+          items:
+            type: string
