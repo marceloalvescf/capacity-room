@@ -130,6 +130,15 @@ func TestErrorLineIsOneLine(t *testing.T) {
 	}
 }
 
+func TestServerTimeouts(t *testing.T) {
+	server := newHTTPServer(http.NotFoundHandler())
+	if server.ReadHeaderTimeout != 10*time.Second || server.ReadTimeout != 30*time.Second ||
+		server.IdleTimeout != 2*time.Minute || server.WriteTimeout != 0 {
+		t.Fatalf("timeouts: header %v, read %v, idle %v, write %v",
+			server.ReadHeaderTimeout, server.ReadTimeout, server.IdleTimeout, server.WriteTimeout)
+	}
+}
+
 func TestOpenPlatformArmsTheRedactor(t *testing.T) {
 	env := platformEnv(map[string]string{"KCR_DATABASE_DSN": closedPortDSN}, "")
 	redactor := redact.New()

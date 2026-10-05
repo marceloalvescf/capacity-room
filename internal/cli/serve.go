@@ -17,10 +17,7 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
 )
 
-const (
-	readHeaderTimeout = 10 * time.Second
-	shutdownTimeout   = 30 * time.Second
-)
+const shutdownTimeout = 30 * time.Second
 
 // newServeCmd builds the `serve` subcommand: migrate the database and serve
 // the HTTP API until the context ends.
@@ -83,7 +80,7 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 	}
 	logger.Info("serve: listening on " + listener.Addr().String())
 
-	server := &http.Server{Handler: handler, ReadHeaderTimeout: readHeaderTimeout}
+	server := newHTTPServer(handler)
 	served := make(chan error, 1)
 	go func() { served <- server.Serve(listener) }()
 
@@ -103,4 +100,16 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 		return &exitError{1, err}
 	}
 	return nil
+}
+
+// newHTTPServer is the server of serve. A client has a bounded time to send
+// its headers and its body and to keep an idle connection open; no write
+// timeout is set, so that a long response is not cut.
+func newHTTPServer(handler http.Handler) *http.Server {
+	return &http.Server{
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       2 * time.Minute,
+	}
 }
