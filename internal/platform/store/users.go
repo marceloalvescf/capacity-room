@@ -139,11 +139,20 @@ func CountActiveAdministrators(ctx context.Context, q Querier) (int, error) {
 	return n, nil
 }
 
-// LockUsersAndCheckEmpty locks the table IN SHARE ROW EXCLUSIVE MODE for
-// the transaction and reports whether it holds no row at all.
-func LockUsersAndCheckEmpty(ctx context.Context, tx pgx.Tx) (bool, error) {
+// LockUsers locks the table IN SHARE ROW EXCLUSIVE MODE for the
+// transaction, so that no other transaction changes a user meanwhile.
+func LockUsers(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE`); err != nil {
-		return false, fmt.Errorf("lock users: %w", err)
+		return fmt.Errorf("lock users: %w", err)
+	}
+	return nil
+}
+
+// LockUsersAndCheckEmpty locks the table as LockUsers does and reports
+// whether it holds no row at all.
+func LockUsersAndCheckEmpty(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if err := LockUsers(ctx, tx); err != nil {
+		return false, err
 	}
 	var exists bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users)`).Scan(&exists); err != nil {

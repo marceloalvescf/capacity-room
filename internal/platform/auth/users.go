@@ -149,6 +149,9 @@ func (u *Users) Update(ctx context.Context, actor Principal, id uuid.UUID, c Use
 	now := u.Now()
 	var out store.User
 	err := store.Transact(ctx, u.Pool, func(tx pgx.Tx) error {
+		if err := store.LockUsers(ctx, tx); err != nil {
+			return err
+		}
 		user, err := store.GetUser(ctx, tx, id)
 		if errors.Is(err, store.ErrNotFound) {
 			return ErrUserNotFound
@@ -265,6 +268,9 @@ func (u *Users) Delete(ctx context.Context, actor Principal, id uuid.UUID) error
 	}
 	now := u.Now()
 	return store.Transact(ctx, u.Pool, func(tx pgx.Tx) error {
+		if err := store.LockUsers(ctx, tx); err != nil {
+			return err
+		}
 		user, err := store.GetUser(ctx, tx, id)
 		if errors.Is(err, store.ErrNotFound) {
 			return ErrUserNotFound

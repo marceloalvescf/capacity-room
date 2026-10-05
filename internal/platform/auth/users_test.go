@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -442,5 +443,44 @@ func TestListAndGet(t *testing.T) {
 	}
 	if _, err := f.users.Get(ctx, f.actor(f.root), uuid.New()); !errors.Is(err, ErrUserNotFound) {
 		t.Fatalf("err %v", err)
+	}
+}
+
+func TestUpdateMutualDemotionKeepsOneAdministrator(t *testing.T) {
+	f := newUserFixture(t)
+	ctx := context.Background()
+	two := newUser(t, f.pool, "two", adminPassword, RoleAdministrator, "en")
+	actors := []store.User{f.root, two}
+	targets := []store.User{two, f.root}
+	errs := make([]error, 2)
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := range actors {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			_, errs[i] = f.users.Update(ctx, f.actor(actors[i]), targets[i].ID, UserChange{Role: str(RoleReader)})
+		}()
+	}
+	close(start)
+	wg.Wait()
+	succeeded, refused := 0, 0
+	for _, err := range errs {
+		switch {
+		case err == nil:
+			succeeded++
+		case errors.Is(err, ErrLastAdmin):
+			refused++
+		default:
+			t.Fatalf("err %v", err)
+		}
+	}
+	if succeeded != 1 || refused != 1 {
+		t.Fatalf("results %v", errs)
+	}
+	n, err := store.CountActiveAdministrators(ctx, f.pool)
+	if err != nil || n != 1 {
+		t.Fatalf("administrators %d %v", n, err)
 	}
 }

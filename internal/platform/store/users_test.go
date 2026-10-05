@@ -218,3 +218,26 @@ func TestLockUsersAndCheckEmpty(t *testing.T) {
 		t.Fatalf("one user: got %v, %v, want false", empty, err)
 	}
 }
+
+func TestLockUsersBlocksASecondLocker(t *testing.T) {
+	pool := storetest.New(t)
+	ctx := context.Background()
+
+	tx1, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx1.Rollback(ctx) }()
+	if err := store.LockUsers(ctx, tx1); err != nil {
+		t.Fatal(err)
+	}
+
+	tx2, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx2.Rollback(ctx) }()
+	expectBlocksUntilCommit(t, tx1, func() error {
+		return store.LockUsers(ctx, tx2)
+	})
+}
