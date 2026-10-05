@@ -36,7 +36,13 @@ var Layers = []Layer{
 	{Path: "internal/catalog", Rank: 80},
 	{Path: "internal/document", Rank: 90},
 	{Path: "internal/goldentest", Rank: 95},
-	{Path: "internal/cli", Rank: 100},
+	{Path: "internal/platform/settings", Rank: 110},
+	{Path: "internal/platform/store", Rank: 120},
+	{Path: "internal/platform/storetest", Rank: 125},
+	{Path: "internal/platform/audit", Rank: 130},
+	{Path: "internal/platform/auth", Rank: 140},
+	{Path: "internal/platform/api", Rank: 150},
+	{Path: "internal/cli", Rank: 200},
 }
 
 // isModulePackage reports whether pkg is module itself or a package below

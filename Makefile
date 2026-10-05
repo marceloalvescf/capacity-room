@@ -11,7 +11,7 @@ TYPST_VERSION := 0.15.1
 
 # Every build tag of the repository, as declared in guard.BuildTags. The linter
 # runs once without tags and once with all of them, so that no file escapes it.
-BUILD_TAGS := golden,template,toolchain
+BUILD_TAGS := golden,postgres,template,toolchain
 GATE_LOGS := .cache/gate
 
 # Extra flags for `docker build`; the gate sets them to build from scratch.
@@ -66,6 +66,7 @@ lint:
 		echo "gofmt: these files need formatting:"; echo "$$unformatted"; exit 1; \
 	fi
 	go vet ./...
+	go vet -tags=postgres ./...
 	go vet -tags=toolchain ./...
 	go vet -tags=template ./...
 	go vet -tags='template golden' ./...

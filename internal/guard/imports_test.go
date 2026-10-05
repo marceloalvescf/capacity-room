@@ -35,7 +35,7 @@ func TestImportViolationsHigherRankRefused(t *testing.T) {
 
 	got := ImportViolations(testModule, Layers, imports)
 	want := []string{
-		testModule + "/internal/typst (rank 0) imports " + testModule + "/internal/cli (rank 100)",
+		testModule + "/internal/typst (rank 0) imports " + testModule + "/internal/cli (rank 200)",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("ImportViolations = %v, want %v", got, want)
@@ -300,30 +300,47 @@ func checkLayerRanks(t *testing.T, want map[string]int) map[string]int {
 
 func TestLayersHoldEveryPackageOfThisPart(t *testing.T) {
 	want := map[string]int{
-		"internal/guard":      0,
-		"internal/arith":      0,
-		"internal/typst":      0,
-		"internal/redact":     0,
-		"internal/promtest":   0,
-		"template":            0,
-		"template/golden":     10,
-		"internal/config":     20,
-		"internal/prom":       30,
-		"internal/discovery":  40,
-		"internal/resolve":    50,
-		"internal/collect":    55,
-		"internal/analysis":   60,
-		"internal/snapshot":   70,
-		"internal/catalog":    80,
-		"internal/document":   90,
-		"internal/goldentest": 95,
-		"internal/cli":        100,
+		"internal/guard":              0,
+		"internal/arith":              0,
+		"internal/typst":              0,
+		"internal/redact":             0,
+		"internal/promtest":           0,
+		"template":                    0,
+		"template/golden":             10,
+		"internal/config":             20,
+		"internal/prom":               30,
+		"internal/discovery":          40,
+		"internal/resolve":            50,
+		"internal/collect":            55,
+		"internal/analysis":           60,
+		"internal/snapshot":           70,
+		"internal/catalog":            80,
+		"internal/document":           90,
+		"internal/goldentest":         95,
+		"internal/platform/settings":  110,
+		"internal/platform/store":     120,
+		"internal/platform/storetest": 125,
+		"internal/platform/audit":     130,
+		"internal/platform/auth":      140,
+		"internal/platform/api":       150,
+		"internal/cli":                200,
 	}
 
 	got := checkLayerRanks(t, want)
 	if len(got) != len(want) {
 		t.Fatalf("Layers has %d entries, want %d", len(got), len(want))
 	}
+}
+
+func TestLayersHoldThePlatformPackages(t *testing.T) {
+	checkLayerRanks(t, map[string]int{
+		"internal/platform/settings":  110,
+		"internal/platform/store":     120,
+		"internal/platform/storetest": 125,
+		"internal/platform/audit":     130,
+		"internal/platform/auth":      140,
+		"internal/platform/api":       150,
+	})
 }
 
 func TestLayersHoldThePackagesOfThisPart(t *testing.T) {

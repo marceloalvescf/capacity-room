@@ -40,6 +40,7 @@ func TestProductionBinaryHoldsNoTestSupport(t *testing.T) {
 	forbidden := []string{
 		module + "/internal/promtest",
 		module + "/internal/goldentest",
+		module + "/internal/platform/storetest",
 		module + "/cmd/fake-prometheus",
 		module + "/cmd/update-testdata",
 	}
