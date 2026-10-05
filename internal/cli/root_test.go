@@ -48,7 +48,7 @@ func TestRunUnknownCommand(t *testing.T) {
 	if code != 2 {
 		t.Fatalf("Run() code = %d, want 2", code)
 	}
-	if want := "error: unknown command; the commands are: report\n"; stderr.String() != want {
+	if want := "error: unknown command; the commands are: admin, report, serve\n"; stderr.String() != want {
 		t.Fatalf("stderr = %q, want %q", stderr.String(), want)
 	}
 	if strings.Contains(stdout.String(), "nope") || strings.Contains(stderr.String(), "nope") {
@@ -66,7 +66,7 @@ func TestRunUnknownCommand(t *testing.T) {
 // with a different message, before the root's own check ever saw the
 // argument.
 func TestRootRepeatsNoArgument(t *testing.T) {
-	const want = "error: unknown command; the commands are: report\n"
+	const want = "error: unknown command; the commands are: admin, report, serve\n"
 
 	tests := []struct {
 		name string
@@ -101,7 +101,7 @@ func TestRootListsItsCommands(t *testing.T) {
 	cmd.AddCommand(&cobra.Command{Use: "second", Args: func(*cobra.Command, []string) error { return nil }})
 
 	_, listed := commandNames(cmd)
-	want := []string{"report", "second"}
+	want := []string{"admin", "report", "second", "serve"}
 	if !slices.Equal(listed, want) {
 		t.Fatalf("commandNames() listed = %v, want %v", listed, want)
 	}
@@ -113,7 +113,7 @@ func TestRootListsItsCommands(t *testing.T) {
 // the exact same message as a plain, unrecognised command would, since
 // "completion" is no longer special.
 func TestCompletionCommandIsGone(t *testing.T) {
-	const want = "error: unknown command; the commands are: report\n"
+	const want = "error: unknown command; the commands are: admin, report, serve\n"
 
 	tests := []struct {
 		name string
@@ -166,8 +166,8 @@ func walkedCommandNames(root *cobra.Command) []string {
 
 // TestNoCommandRepeatsAnArgument walks every command of the root,
 // recursively, checks that the set of commands found is exactly the
-// expected one, and then runs each command, by its own path, with one
-// extra argument no command of this program accepts: no stream may hold
+// expected one, and then runs each command, by its own path, with two
+// extra arguments no command of this program accepts: no stream may hold
 // that argument, whatever the command's own Args produces. Comparing
 // function values is not possible in Go, so this is the behaviour itself,
 // tested directly. A command added to the tree later changes the set this
@@ -178,14 +178,16 @@ func TestNoCommandRepeatsAnArgument(t *testing.T) {
 	root := newRootCmd(context.Background(), Env{}, redact.New())
 
 	got := walkedCommandNames(root)
-	want := []string{"help", "report"}
+	want := []string{"admin", "admin bootstrap-admin", "admin migrate", "admin probe", "help", "report", "serve"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("walkedCommandNames() = %v, want %v", got, want)
 	}
 
 	for _, path := range commandPaths(root, nil) {
 		t.Run(strings.Join(path, " "), func(t *testing.T) {
-			args := append(append([]string{}, path...), marker)
+			// Two arguments, so that probe, which takes one URL and repeats
+			// it on purpose, refuses by count instead.
+			args := append(append([]string{}, path...), marker, marker)
 			var stdout, stderr bytes.Buffer
 			_ = Run(context.Background(), Env{}, args, &stdout, &stderr)
 			if strings.Contains(stdout.String(), marker) || strings.Contains(stderr.String(), marker) {
@@ -212,7 +214,7 @@ func TestGuardNoticesAMissingCommand(t *testing.T) {
 	}
 
 	got := walkedCommandNames(root)
-	want := []string{"help", "report"}
+	want := []string{"admin", "admin bootstrap-admin", "admin migrate", "admin probe", "help", "report", "serve"}
 	if slices.Equal(got, want) {
 		t.Fatalf("walkedCommandNames() = %v, want it to differ from %v now that help is missing", got, want)
 	}
@@ -224,7 +226,7 @@ func TestGuardNoticesAMissingCommand(t *testing.T) {
 // pre-check (unknownRootCommand) runs first and rejects them exactly as it
 // would any other name it does not yet recognise.
 func TestHiddenCompletionIsRefused(t *testing.T) {
-	const want = "error: unknown command; the commands are: report\n"
+	const want = "error: unknown command; the commands are: admin, report, serve\n"
 
 	tests := []struct {
 		name string

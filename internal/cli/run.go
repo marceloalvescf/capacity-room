@@ -42,8 +42,9 @@ type Env struct {
 	LookPath func(string) (string, error)
 	Now      func() time.Time
 	NewID    func() (string, error)
-	TempDir  string // parent of the work folder; empty means os.TempDir()
-	Version  string // written to the snapshot as the generator version
+	Stdin    io.Reader // read by the commands that take a secret from it
+	TempDir  string    // parent of the work folder; empty means os.TempDir()
+	Version  string    // written to the snapshot as the generator version
 }
 
 // RealEnv returns the environment of the running process.
@@ -52,6 +53,7 @@ func RealEnv() Env {
 		Getenv:   os.Getenv,
 		LookPath: exec.LookPath,
 		Now:      time.Now,
+		Stdin:    os.Stdin,
 		NewID: func() (string, error) {
 			id, err := uuid.NewRandom()
 			if err != nil {
@@ -153,6 +155,11 @@ func Run(ctx context.Context, env Env, args []string, stdout, stderr io.Writer) 
 		if errors.As(err, &status) {
 			return status.code
 		}
+		var failure *exitError
+		if errors.As(err, &failure) {
+			_, _ = fmt.Fprintf(wrappedErr, "error: %s\n", failure)
+			return failure.code
+		}
 		// Every failure prints exactly one "error: <message>" line, cobra's
 		// own errors included (an unknown flag, or report's own refusal of
 		// a positional argument), each as a single Write through the
@@ -185,8 +192,8 @@ func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.
 		// would otherwise write on its own; turned off, on principle, along
 		// with everything else this package already writes itself.
 		DisableSuggestions: true,
-		// This program has the commands its design names (report, and for
-		// later phases serve, worker, and admin) and no other. Cobra's
+		// This program has the commands its design names (admin,
+		// report, and serve) and no other. Cobra's
 		// default completion command is not one of them, and it carries
 		// its own unmodified cobra.NoArgs, which repeats a stray argument
 		// verbatim — the same leak the root's own Args function above
@@ -205,7 +212,9 @@ func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.
 		},
 	}
 	cmd.SetVersionTemplate("{{.Name}} {{.Version}}\n")
+	cmd.AddCommand(newAdminCmd(ctx, env, redactor))
 	cmd.AddCommand(newReportCmd(ctx, env, redactor))
+	cmd.AddCommand(newServeCmd(ctx, env, redactor))
 	// Cobra only adds its default "help" command lazily, inside Execute();
 	// registering it here instead means commandNames' one walk of
 	// cmd.Commands() already sees it before Run's own pre-check
