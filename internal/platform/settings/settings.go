@@ -202,9 +202,10 @@ func parseHostnames(entries []string) ([]string, error) {
 	return names, nil
 }
 
-// parseEndpointCIDRs refuses a malformed block, a block with host bits, a
-// block that covers a metadata address along with others, and a repeat,
-// naming its 1-based position and never its value.
+// parseEndpointCIDRs refuses a malformed block, a block with host bits, an
+// IPv4-mapped block, which never matches an address that is compared in its
+// IPv4 form, a block that covers a metadata address along with others, and
+// a repeat, naming its 1-based position and never its value.
 func parseEndpointCIDRs(entries []string) ([]netip.Prefix, error) {
 	var prefixes []netip.Prefix
 	seen := make(map[netip.Prefix]bool)
@@ -212,6 +213,9 @@ func parseEndpointCIDRs(entries []string) ([]netip.Prefix, error) {
 		prefix, err := netip.ParsePrefix(entry)
 		if err != nil || prefix != prefix.Masked() {
 			return nil, fmt.Errorf("allowed_endpoint_cidrs entry %d is not a CIDR block", i+1)
+		}
+		if prefix.Addr().Is4In6() {
+			return nil, fmt.Errorf("allowed_endpoint_cidrs entry %d is an IPv4-mapped prefix; write the IPv4 form", i+1)
 		}
 		for _, metadata := range metadataAddresses {
 			if prefix.Contains(metadata) && prefix.Bits() < metadata.BitLen() {

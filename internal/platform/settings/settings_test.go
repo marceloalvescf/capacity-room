@@ -248,6 +248,8 @@ func TestLoadCIDRsRefused(t *testing.T) {
 		{`["169.254.0.0/16"]`, "allowed_endpoint_cidrs entry 1 covers a metadata address; list that single address instead"},
 		{`["fd00:ec2::/64"]`, "allowed_endpoint_cidrs entry 1 covers a metadata address; list that single address instead"},
 		{`["10.0.0.0/8", "10.0.0.0/8"]`, "allowed_endpoint_cidrs repeats entry 2"},
+		{`["::ffff:10.0.0.0/104"]`, "allowed_endpoint_cidrs entry 1 is an IPv4-mapped prefix; write the IPv4 form"},
+		{`["10.0.0.0/8", "::ffff:0.0.0.0/96"]`, "allowed_endpoint_cidrs entry 2 is an IPv4-mapped prefix; write the IPv4 form"},
 	}
 	for _, c := range cases {
 		_, err := loadText(t, secretLine+"allowed_endpoint_cidrs = "+c.list+"\n", goodDSN)
