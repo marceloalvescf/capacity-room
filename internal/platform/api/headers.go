@@ -39,7 +39,11 @@ func securityHeaders(next http.Handler, logger *slog.Logger) http.Handler {
 				if route == "" {
 					route = r.URL.Path
 				}
-				logger.Error("request failed", "method", r.Method, "route", route, "status", sw.status, "code", string(sw.code))
+				attrs := []any{"method", r.Method, "route", route, "status", sw.status, "code", string(sw.code)}
+				if sw.err != nil {
+					attrs = append(attrs, "err", sw.err.Error())
+				}
+				logger.Error("request failed", attrs...)
 			}
 		}()
 		next.ServeHTTP(sw, r)
@@ -53,9 +57,12 @@ type statusWriter struct {
 	status int
 	wrote  bool
 	code   Code
+	err    error
 }
 
 func (s *statusWriter) noteCode(c Code) { s.code = c }
+
+func (s *statusWriter) noteError(err error) { s.err = err }
 
 func (s *statusWriter) WriteHeader(status int) {
 	if s.wrote {

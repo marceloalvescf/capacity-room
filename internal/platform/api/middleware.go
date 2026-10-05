@@ -11,14 +11,13 @@ import (
 // SessionHandler is a handler of a route that needs a signed-in reader.
 type SessionHandler func(w http.ResponseWriter, r *http.Request, a auth.Authenticated)
 
-// fail answers with the problem of err and logs an unexpected one once, with
-// the route and the text of the error.
-func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
-	p := problemOf(err)
-	if p.Code == CodeInternalError && s.Logger != nil {
-		s.Logger.Error("request failed", "route", r.Method+" "+r.URL.Path, "error", err.Error())
+// fail answers with the problem of err and hands err to the writer of
+// SecurityHeaders, which logs a 5xx once.
+func (s *Server) fail(w http.ResponseWriter, _ *http.Request, err error) {
+	if n, ok := w.(errorNoter); ok {
+		n.noteError(err)
 	}
-	WriteProblem(w, p)
+	WriteProblem(w, problemOf(err))
 }
 
 // unauthenticated answers 401 and clears the session cookie.

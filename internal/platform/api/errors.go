@@ -90,6 +90,10 @@ type envelopeError struct {
 // logs the code of a failure.
 type codeNoter interface{ noteCode(Code) }
 
+// errorNoter is implemented by the same writer, which keeps the error behind
+// a failure for the log line.
+type errorNoter interface{ noteError(error) }
+
 // WriteProblem writes the envelope with the status and sentence of the
 // table, and the Retry-After header when the problem carries one.
 func WriteProblem(w http.ResponseWriter, p *Problem) {
