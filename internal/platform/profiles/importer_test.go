@@ -7,6 +7,7 @@ import (
 	"math"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -166,4 +167,34 @@ func mustUUID(t *testing.T, v any) uuid.UUID {
 		t.Fatal(err)
 	}
 	return id
+}
+
+func TestImportConcurrentOppositeOrders(t *testing.T) {
+	f := newFixture(t)
+	if _, err := f.importFile(t, importExample); err != nil {
+		t.Fatal(err)
+	}
+	forward, err := ReadImportFile(writeImport(t, importExample), staticPolicy())
+	if err != nil {
+		t.Fatal(err)
+	}
+	backward := []ImportEntry{forward[1], forward[0]}
+
+	for round := range 10 {
+		var wg sync.WaitGroup
+		errs := make([]error, 2)
+		outs := make([][]Outcome, 2)
+		for i, entries := range [][]ImportEntry{forward, backward} {
+			wg.Go(func() { outs[i], errs[i] = f.svc.Import(context.Background(), entries) })
+		}
+		wg.Wait()
+		for i, err := range errs {
+			if err != nil {
+				t.Fatalf("round %d, import %d: %v", round, i, err)
+			}
+		}
+		if want := []Outcome{{"stage", "unchanged"}, {"prod", "unchanged"}}; !reflect.DeepEqual(outs[1], want) {
+			t.Fatalf("round %d: backward = %+v, want %+v", round, outs[1], want)
+		}
+	}
 }

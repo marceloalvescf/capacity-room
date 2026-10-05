@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -179,18 +181,24 @@ type Outcome struct {
 
 // Import creates or revises the profiles in one transaction, with no actor.
 // A profile whose document equals its current one is left alone, and a
-// profile the entries do not name is never touched.
+// profile the entries do not name is never touched. The profiles are
+// written in id order, so that two imports lock their rows in one order;
+// the outcomes follow the order of entries.
 func (s *Service) Import(ctx context.Context, entries []ImportEntry) ([]Outcome, error) {
 	now := s.now()
-	out := make([]Outcome, 0, len(entries))
+	order := make([]int, len(entries))
+	for i := range order {
+		order[i] = i
+	}
+	slices.SortFunc(order, func(a, b int) int { return strings.Compare(entries[a].ID, entries[b].ID) })
+	out := make([]Outcome, len(entries))
 	err := store.Transact(ctx, s.Pool, func(tx pgx.Tx) error {
-		out = out[:0]
-		for _, e := range entries {
-			action, err := s.importOne(ctx, tx, e, now)
+		for _, i := range order {
+			action, err := s.importOne(ctx, tx, entries[i], now)
 			if err != nil {
 				return err
 			}
-			out = append(out, Outcome{ID: e.ID, Action: action})
+			out[i] = Outcome{ID: entries[i].ID, Action: action}
 		}
 		return nil
 	})
