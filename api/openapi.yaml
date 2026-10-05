@@ -26,9 +26,7 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: "#/components/schemas/AnonymousSession"
-                  - $ref: "#/components/schemas/SignedInSession"
+                $ref: "#/components/schemas/Session"
   /auth/login:
     post:
       operationId: login
@@ -259,6 +257,9 @@ components:
       schema:
         type: string
         format: uuid
+        x-go-type: uuid.UUID
+        x-go-type-import:
+          path: github.com/google/uuid
   responses:
     RequestInvalid:
       description: REQUEST_INVALID, with one field per problem (missing, invalid, unknown, too_long).
@@ -343,19 +344,27 @@ components:
         id:
           type: string
           format: uuid
+          x-go-type: uuid.UUID
+          x-go-type-import:
+            path: github.com/google/uuid
         username:
           type: string
         role:
           $ref: "#/components/schemas/Role"
         language:
           $ref: "#/components/schemas/Language"
+    Session:
+      description: The answer of GET /auth/session, one of the two shapes.
+      oneOf:
+        - $ref: "#/components/schemas/AnonymousSession"
+        - $ref: "#/components/schemas/SignedInSession"
     AnonymousSession:
       type: object
       required: [authenticated, login_csrf]
       properties:
         authenticated:
           type: boolean
-          enum: [false]
+          description: Always false in this shape.
         login_csrf:
           type: string
           description: The sign-in CSRF token, also set as the cookie kcr_login_csrf.
@@ -365,7 +374,7 @@ components:
       properties:
         authenticated:
           type: boolean
-          enum: [true]
+          description: Always true in this shape.
         principal:
           $ref: "#/components/schemas/Principal"
         csrf_token:
@@ -403,6 +412,9 @@ components:
         id:
           type: string
           format: uuid
+          x-go-type: uuid.UUID
+          x-go-type-import:
+            path: github.com/google/uuid
         username:
           type: string
         role:

@@ -4,27 +4,10 @@
 package api
 
 import (
-	"encoding/json"
 	"time"
 
-	"github.com/oapi-codegen/runtime"
-	openapi_types "github.com/oapi-codegen/runtime/types"
+	"github.com/google/uuid"
 )
-
-// Defines values for AnonymousSessionAuthenticated.
-const (
-	False AnonymousSessionAuthenticated = false
-)
-
-// Valid indicates whether the value is a known member of the AnonymousSessionAuthenticated enum.
-func (e AnonymousSessionAuthenticated) Valid() bool {
-	switch e {
-	case False:
-		return true
-	default:
-		return false
-	}
-}
 
 // Defines values for Language.
 const (
@@ -65,21 +48,6 @@ func (e Role) Valid() bool {
 	}
 }
 
-// Defines values for SignedInSessionAuthenticated.
-const (
-	True SignedInSessionAuthenticated = true
-)
-
-// Valid indicates whether the value is a known member of the SignedInSessionAuthenticated enum.
-func (e SignedInSessionAuthenticated) Valid() bool {
-	switch e {
-	case True:
-		return true
-	default:
-		return false
-	}
-}
-
 // AccountChange defines model for AccountChange.
 type AccountChange struct {
 	// CurrentPassword Required with password.
@@ -90,14 +58,12 @@ type AccountChange struct {
 
 // AnonymousSession defines model for AnonymousSession.
 type AnonymousSession struct {
-	Authenticated AnonymousSessionAuthenticated `json:"authenticated"`
+	// Authenticated Always false in this shape.
+	Authenticated bool `json:"authenticated"`
 
 	// LoginCsrf The sign-in CSRF token, also set as the cookie kcr_login_csrf.
 	LoginCsrf string `json:"login_csrf"`
 }
-
-// AnonymousSessionAuthenticated defines model for AnonymousSession.Authenticated.
-type AnonymousSessionAuthenticated bool
 
 // Error defines model for Error.
 type Error struct {
@@ -135,10 +101,10 @@ type NewUser struct {
 
 // Principal defines model for Principal.
 type Principal struct {
-	Id       openapi_types.UUID `json:"id"`
-	Language Language           `json:"language"`
-	Role     Role               `json:"role"`
-	Username string             `json:"username"`
+	Id       uuid.UUID `json:"id"`
+	Language Language  `json:"language"`
+	Role     Role      `json:"role"`
+	Username string    `json:"username"`
 }
 
 // Role defines model for Role.
@@ -146,7 +112,8 @@ type Role string
 
 // SignedInSession defines model for SignedInSession.
 type SignedInSession struct {
-	Authenticated SignedInSessionAuthenticated `json:"authenticated"`
+	// Authenticated Always true in this shape.
+	Authenticated bool `json:"authenticated"`
 
 	// CsrfToken The token to send as X-CSRF-Token on every state-changing request.
 	CsrfToken string    `json:"csrf_token"`
@@ -154,18 +121,15 @@ type SignedInSession struct {
 	Principal Principal `json:"principal"`
 }
 
-// SignedInSessionAuthenticated defines model for SignedInSession.Authenticated.
-type SignedInSessionAuthenticated bool
-
 // User defines model for User.
 type User struct {
-	Active    bool               `json:"active"`
-	CreatedAt time.Time          `json:"created_at"`
-	Id        openapi_types.UUID `json:"id"`
-	Language  Language           `json:"language"`
-	Role      Role               `json:"role"`
-	UpdatedAt time.Time          `json:"updated_at"`
-	Username  string             `json:"username"`
+	Active    bool      `json:"active"`
+	CreatedAt time.Time `json:"created_at"`
+	Id        uuid.UUID `json:"id"`
+	Language  Language  `json:"language"`
+	Role      Role      `json:"role"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Username  string    `json:"username"`
 }
 
 // UserChange defines model for UserChange.
@@ -185,7 +149,7 @@ type UserList struct {
 type CSRFHeader = string
 
 // UserID defines model for UserID.
-type UserID = openapi_types.UUID
+type UserID = uuid.UUID
 
 // CSRFRejected defines model for CSRFRejected.
 type CSRFRejected = Error
@@ -247,11 +211,6 @@ type LogoutParams struct {
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
-// GetSession200JSONResponseBody defines parameters for GetSession.
-type GetSession200JSONResponseBody struct {
-	union json.RawMessage
-}
-
 // ChangeAccountJSONRequestBody defines body for ChangeAccount for application/json ContentType.
 type ChangeAccountJSONRequestBody = AccountChange
 
@@ -263,65 +222,3 @@ type ChangeUserJSONRequestBody = UserChange
 
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
-
-// AsAnonymousSession returns the union data inside the GetSession200JSONResponseBody as a AnonymousSession
-func (t GetSession200JSONResponseBody) AsAnonymousSession() (AnonymousSession, error) {
-	var body AnonymousSession
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromAnonymousSession overwrites any union data inside the GetSession200JSONResponseBody as the provided AnonymousSession
-func (t *GetSession200JSONResponseBody) FromAnonymousSession(v AnonymousSession) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeAnonymousSession performs a merge with any union data inside the GetSession200JSONResponseBody, using the provided AnonymousSession
-func (t *GetSession200JSONResponseBody) MergeAnonymousSession(v AnonymousSession) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsSignedInSession returns the union data inside the GetSession200JSONResponseBody as a SignedInSession
-func (t GetSession200JSONResponseBody) AsSignedInSession() (SignedInSession, error) {
-	var body SignedInSession
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromSignedInSession overwrites any union data inside the GetSession200JSONResponseBody as the provided SignedInSession
-func (t *GetSession200JSONResponseBody) FromSignedInSession(v SignedInSession) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeSignedInSession performs a merge with any union data inside the GetSession200JSONResponseBody, using the provided SignedInSession
-func (t *GetSession200JSONResponseBody) MergeSignedInSession(v SignedInSession) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-func (t GetSession200JSONResponseBody) MarshalJSON() ([]byte, error) {
-	b, err := t.union.MarshalJSON()
-	return b, err
-}
-
-func (t *GetSession200JSONResponseBody) UnmarshalJSON(b []byte) error {
-	err := t.union.UnmarshalJSON(b)
-	return err
-}
