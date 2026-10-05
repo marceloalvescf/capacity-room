@@ -52,6 +52,22 @@ func TestAccountWrongCurrent(t *testing.T) {
 	wantProblem(t, w, 401, CodeInvalidCredentials, nil)
 }
 
+func TestAccountThrottled(t *testing.T) {
+	ts := newTestServer(t)
+	session, csrf := ts.signIn(t, "eve")
+	wrong := `{"current_password":"not-the-password","password":"a-brand-new-password"}`
+	for range 5 {
+		w := ts.call(t, "PATCH", "/api/v1/account", wrong, map[string]string{CSRFHeaderName: csrf}, session)
+		wantProblem(t, w, 401, CodeInvalidCredentials, nil)
+	}
+	right := `{"current_password":"` + evePassword + `","password":"a-brand-new-password"}`
+	w := ts.call(t, "PATCH", "/api/v1/account", right, map[string]string{CSRFHeaderName: csrf}, session)
+	wantProblem(t, w, 429, CodeAuthRateLimited, nil)
+	if got := w.Header().Get("Retry-After"); got != "300" {
+		t.Fatalf("Retry-After %q", got)
+	}
+}
+
 func TestAccountShortPassword(t *testing.T) {
 	ts := newTestServer(t)
 	session, csrf := ts.signIn(t, "eve")

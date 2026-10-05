@@ -114,6 +114,16 @@ paths:
           $ref: "#/components/responses/CSRFRejected"
         "422":
           $ref: "#/components/responses/PasswordPolicy"
+        "429":
+          description: AUTH_RATE_LIMITED, with Retry-After in seconds.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /admin/users:
     get:
       operationId: listUsers

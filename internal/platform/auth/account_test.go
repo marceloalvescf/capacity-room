@@ -119,6 +119,28 @@ func TestAccountWrongCurrentPassword(t *testing.T) {
 	f.requireNoAudit(t)
 }
 
+func TestAccountChangeThrottled(t *testing.T) {
+	f := newAccountFixture(t)
+	ctx := context.Background()
+	for i := range 5 {
+		_, err := f.account.Change(ctx, f.actor(f.eve), testAddress,
+			AccountChange{CurrentPassword: str("not the password"), Password: str(newPassword)})
+		if !errors.Is(err, ErrInvalidCredentials) {
+			t.Fatalf("attempt %d: %v", i+1, err)
+		}
+	}
+	_, err := f.account.Change(ctx, f.actor(f.eve), testAddress,
+		AccountChange{CurrentPassword: str(readerPassword), Password: str(newPassword)})
+	var te *ErrThrottled
+	if !errors.As(err, &te) || te.RetryAfter != 300 {
+		t.Fatalf("err %v", err)
+	}
+	if f.user(t, f.eve.ID).PasswordHash != f.eve.PasswordHash {
+		t.Fatal("hash changed")
+	}
+	f.requireNoAudit(t)
+}
+
 func TestAccountPasswordWithoutCurrent(t *testing.T) {
 	f := newAccountFixture(t)
 	_, err := f.account.Change(context.Background(), f.actor(f.eve), testAddress, AccountChange{Password: str(newPassword)})
