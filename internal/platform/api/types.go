@@ -37,3 +37,35 @@ type SignedInSession struct {
 	CSRFToken     string    `json:"csrf_token"`
 	ExpiresAt     time.Time `json:"expires_at"`
 }
+
+// User is an account as the user routes answer it. It never holds the hash.
+type User struct {
+	ID        string    `json:"id"`
+	Username  string    `json:"username"`
+	Role      string    `json:"role"`
+	Language  string    `json:"language"`
+	Active    bool      `json:"active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// UserList is the answer of GET /admin/users.
+type UserList struct {
+	Users []User `json:"users"`
+}
+
+// NewUser is the body of POST /admin/users.
+type NewUser struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Role     string `json:"role"`
+	Language string `json:"language"`
+}
+
+// UserChange is the body of PATCH /admin/users/{id}.
+type UserChange struct {
+	Role     *string `json:"role"`
+	Active   *bool   `json:"active"`
+	Password *string `json:"password"`
+	Language *string `json:"language"`
+}

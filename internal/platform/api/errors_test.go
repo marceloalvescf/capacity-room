@@ -1,10 +1,13 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
 )
 
 var allCodes = []Code{
@@ -64,5 +67,38 @@ func TestWriteProblemFieldsAndRetryAfter(t *testing.T) {
 	}
 	if w.Code != 429 {
 		t.Fatalf("status %d", w.Code)
+	}
+}
+
+func TestUsersErrorMapping(t *testing.T) {
+	cases := []struct {
+		err    error
+		code   Code
+		fields map[string]string
+	}{
+		{auth.ErrUsernameTaken, CodeUsernameTaken, nil},
+		{auth.ErrLastAdmin, CodeLastAdmin, nil},
+		{auth.ErrSelfDelete, CodeSelfDelete, nil},
+		{auth.ErrSelfDeactivate, CodeSelfDeactivate, nil},
+		{auth.ErrSelfDemote, CodeSelfDemote, nil},
+		{auth.ErrInvalidUsername, CodeInvalidUsername, nil},
+		{auth.ErrPasswordTooShort, CodePasswordTooShort, nil},
+		{auth.ErrPasswordTooLong, CodePasswordTooLong, nil},
+		{auth.ErrInvalidRole, CodeRequestInvalid, map[string]string{"role": "invalid"}},
+		{auth.ErrInvalidLanguage, CodeRequestInvalid, map[string]string{"language": "invalid"}},
+		{auth.ErrUserNotFound, CodeUserNotFound, nil},
+		{auth.ErrForbidden, CodeForbidden, nil},
+		{errors.New("unknown"), CodeInternalError, nil},
+	}
+	for _, c := range cases {
+		p := problemOf(c.err)
+		if p.Code != c.code || len(p.Fields) != len(c.fields) {
+			t.Errorf("%v: got %s %v, want %s %v", c.err, p.Code, p.Fields, c.code, c.fields)
+		}
+		for k, v := range c.fields {
+			if p.Fields[k] != v {
+				t.Errorf("%v: fields %v, want %v", c.err, p.Fields, c.fields)
+			}
+		}
 	}
 }

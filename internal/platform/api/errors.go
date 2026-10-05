@@ -136,6 +136,24 @@ func problemOf(err error) *Problem {
 		return &Problem{Code: CodeUnauthenticated}
 	case errors.Is(err, auth.ErrCSRF):
 		return &Problem{Code: CodeCSRFRejected}
+	case errors.Is(err, auth.ErrForbidden):
+		return &Problem{Code: CodeForbidden}
+	case errors.Is(err, auth.ErrUserNotFound):
+		return &Problem{Code: CodeUserNotFound}
+	case errors.Is(err, auth.ErrUsernameTaken):
+		return &Problem{Code: CodeUsernameTaken}
+	case errors.Is(err, auth.ErrLastAdmin):
+		return &Problem{Code: CodeLastAdmin}
+	case errors.Is(err, auth.ErrSelfDelete):
+		return &Problem{Code: CodeSelfDelete}
+	case errors.Is(err, auth.ErrSelfDeactivate):
+		return &Problem{Code: CodeSelfDeactivate}
+	case errors.Is(err, auth.ErrSelfDemote):
+		return &Problem{Code: CodeSelfDemote}
+	case errors.Is(err, auth.ErrInvalidUsername):
+		return &Problem{Code: CodeInvalidUsername}
+	case errors.Is(err, auth.ErrInvalidRole):
+		return &Problem{Code: CodeRequestInvalid, Fields: map[string]string{"role": "invalid"}}
 	case errors.Is(err, auth.ErrPasswordTooShort):
 		return &Problem{Code: CodePasswordTooShort}
 	case errors.Is(err, auth.ErrPasswordTooLong):
