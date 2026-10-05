@@ -165,6 +165,9 @@ func bootstrapAdmin(ctx context.Context, env Env, redactor *redact.Redactor, in 
 		return "", err
 	}
 	defer pool.Close()
+	if _, err := store.Migrate(ctx, pool); err != nil {
+		return "", &exitError{1, err}
+	}
 
 	now := env.Now()
 	err = store.Transact(ctx, pool, func(tx pgx.Tx) error {

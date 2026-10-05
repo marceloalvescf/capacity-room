@@ -31,9 +31,7 @@ func openPlatform(ctx context.Context, env Env, redactor *redact.Redactor, confi
 
 	pool, err := store.Open(ctx, loaded.DatabaseDSN)
 	if err != nil {
-		// The DSN is named so that the reader sees which setting failed; the
-		// redactor, which already holds it, writes the mark in its place.
-		return settings.Settings{}, nil, &exitError{1, fmt.Errorf("cannot connect to %s: %w", loaded.DatabaseDSN, err)}
+		return settings.Settings{}, nil, &exitError{1, fmt.Errorf("cannot connect to the database: %w", err)}
 	}
 	return loaded, pool, nil
 }

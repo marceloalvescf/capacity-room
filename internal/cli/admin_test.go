@@ -125,3 +125,15 @@ func jsonEqual(stored []byte, want string) bool {
 	var a, b any
 	return json.Unmarshal(stored, &a) == nil && json.Unmarshal([]byte(want), &b) == nil && reflect.DeepEqual(a, b)
 }
+
+func TestBootstrapMigrates(t *testing.T) {
+	pool := storetest.NewEmpty(t)
+	code, stdout, stderr := bootstrap(t, pool, writePlatformFiles(t), bootstrapPassword+"\n")
+	if code != 0 || stdout != "created administrator root\n" || stderr != "" {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+	}
+	users, err := store.ListUsers(context.Background(), pool)
+	if err != nil || len(users) != 1 || users[0].Role != auth.RoleAdministrator {
+		t.Fatalf("users = %+v, err = %v, want the administrator", users, err)
+	}
+}

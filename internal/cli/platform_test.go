@@ -104,11 +104,23 @@ func TestServeRedactsDSN(t *testing.T) {
 	if code != 1 || stdout != "" {
 		t.Fatalf("code = %d, stdout = %q, stderr = %q, want 1 and empty stdout", code, stdout, stderr)
 	}
-	if !strings.Contains(stderr, redact.Mark) || strings.Contains(stderr, "hunter2secret") {
-		t.Fatalf("stderr = %q, want the mark and no password", stderr)
+	if !strings.HasPrefix(stderr, "error: cannot connect to the database: ") || strings.Contains(stderr, "hunter2secret") {
+		t.Fatalf("stderr = %q, want the connection message without the password", stderr)
 	}
 	if strings.Count(stderr, "\n") != 1 {
 		t.Fatalf("stderr = %q, want one line", stderr)
+	}
+}
+
+func TestOpenPlatformArmsTheRedactor(t *testing.T) {
+	env := platformEnv(map[string]string{"KCR_DATABASE_DSN": closedPortDSN}, "")
+	redactor := redact.New()
+	if _, _, err := openPlatform(context.Background(), env, redactor, writePlatformFiles(t)); err == nil {
+		t.Fatal("openPlatform succeeded against a closed port")
+	}
+	got := redactor.Text(closedPortDSN)
+	if !strings.Contains(got, redact.Mark) || strings.Contains(got, "hunter2secret") {
+		t.Fatalf("redactor.Text(dsn) = %q, want the mark and no password", got)
 	}
 }
 
