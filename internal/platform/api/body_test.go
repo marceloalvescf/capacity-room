@@ -28,6 +28,8 @@ func TestDecodeBodyRefusals(t *testing.T) {
 	}{
 		{"unknown key", `{"username":"a","password":"b","extra":1}`, nil, map[string]string{"extra": "unknown"}},
 		{"repeated key", `{"username":"a","username":"b","password":"c"}`, nil, map[string]string{"username": "invalid"}},
+		{"repeated key by case", `{"username":"a","Username":"b","password":"c"}`, nil, map[string]string{"username": "invalid"}},
+		{"string too long by case", `{"Username":"abcd","password":"b"}`, map[string]int{"username": 3}, map[string]string{"username": "too_long"}},
 		{"wrong type", `{"username":1,"password":"b"}`, nil, map[string]string{"username": "invalid"}},
 		{"missing", `{"username":"a"}`, nil, map[string]string{"password": "missing"}},
 		{"two documents", `{} {}`, nil, map[string]string{"": "invalid"}},

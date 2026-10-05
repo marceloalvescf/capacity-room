@@ -20,7 +20,7 @@ func ClientAddress(r *http.Request, trusted []netip.Prefix) string {
 	}
 	for _, prefix := range trusted {
 		if prefix.Contains(addr.Unmap()) {
-			parts := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+			parts := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
 			if last := strings.TrimSpace(parts[len(parts)-1]); last != "" {
 				return last
 			}

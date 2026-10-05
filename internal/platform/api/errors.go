@@ -86,7 +86,11 @@ type codeNoter interface{ noteCode(Code) }
 // WriteProblem writes the envelope with the status and sentence of the
 // table, and the Retry-After header when the problem carries one.
 func WriteProblem(w http.ResponseWriter, p *Problem) {
-	entry := problems[p.Code]
+	entry, known := problems[p.Code]
+	if !known {
+		p = &Problem{Code: CodeInternalError, Fields: p.Fields, RetryAfter: p.RetryAfter}
+		entry = problems[CodeInternalError]
+	}
 	fields := p.Fields
 	if fields == nil {
 		fields = map[string]string{}

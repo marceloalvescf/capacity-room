@@ -30,7 +30,7 @@ func TestHealthReady(t *testing.T) {
 
 func TestHealthReadyWithoutMigrations(t *testing.T) {
 	w := ready(t, storetest.NewEmpty(t))
-	want := `{"status":"unavailable","checks":{"database":true,"migrations":false}}` + "\n"
+	want := `{"status":"not_ready","checks":{"database":true,"migrations":false}}` + "\n"
 	if w.Code != 503 || w.Body.String() != want {
 		t.Fatalf("%d %q", w.Code, w.Body.String())
 	}
@@ -43,7 +43,7 @@ func TestHealthReadyDatabaseDown(t *testing.T) {
 	}
 	t.Cleanup(pool.Close)
 	w := ready(t, pool)
-	want := `{"status":"unavailable","checks":{"database":false,"migrations":false}}` + "\n"
+	want := `{"status":"not_ready","checks":{"database":false,"migrations":false}}` + "\n"
 	if w.Code != 503 || w.Body.String() != want {
 		t.Fatalf("%d %q", w.Code, w.Body.String())
 	}

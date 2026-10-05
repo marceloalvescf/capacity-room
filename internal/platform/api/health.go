@@ -33,6 +33,7 @@ type readyBody struct {
 }
 
 // ready answers 200 when the database answers and no migration is pending.
+// Without a pool it answers 503 with the database check false.
 func (s *Server) ready(w http.ResponseWriter, r *http.Request) {
 	var checks readyChecks
 	if s.Pool != nil {
@@ -49,5 +50,5 @@ func (s *Server) ready(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, readyBody{"ready", checks})
 		return
 	}
-	writeJSON(w, http.StatusServiceUnavailable, readyBody{"unavailable", checks})
+	writeJSON(w, http.StatusServiceUnavailable, readyBody{"not_ready", checks})
 }

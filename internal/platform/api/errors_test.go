@@ -30,6 +30,14 @@ func TestProblemTableIsComplete(t *testing.T) {
 	}
 }
 
+func TestWriteProblemUnknownCodeIsInternalError(t *testing.T) {
+	w := httptest.NewRecorder()
+	WriteProblem(w, &Problem{Code: "NOPE"})
+	if w.Code != 500 || !strings.Contains(w.Body.String(), `"code":"INTERNAL_ERROR"`) {
+		t.Fatalf("%d %q", w.Code, w.Body.String())
+	}
+}
+
 func TestWriteProblemShape(t *testing.T) {
 	w := httptest.NewRecorder()
 	WriteProblem(w, &Problem{Code: CodeForbidden})

@@ -45,7 +45,7 @@ func DecodeBody(r *http.Request, v any, required []string, maxLen map[string]int
 		return fail(map[string]string{"": "invalid"})
 	}
 	for _, key := range required {
-		if !slices.Contains(keys, key) {
+		if !slices.ContainsFunc(keys, func(k string) bool { return strings.EqualFold(k, key) }) {
 			fields[key] = "missing"
 		}
 	}
@@ -70,7 +70,8 @@ func DecodeBody(r *http.Request, v any, required []string, maxLen map[string]int
 
 // walkObject reads the top level of data token by token. It returns the keys
 // present and false when data is not exactly one object. A repeated key is
-// recorded as invalid and a string over its limit as too_long.
+// recorded as invalid and a string over its limit as too_long. Keys are
+// compared without regard to case, as encoding/json binds them.
 func walkObject(data []byte, maxLen map[string]int, fields map[string]string) ([]string, bool) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
@@ -87,15 +88,21 @@ func walkObject(data []byte, maxLen map[string]int, fields map[string]string) ([
 		if err := dec.Decode(&raw); err != nil {
 			return nil, false
 		}
-		if slices.Contains(keys, key) {
-			fields[key] = "invalid"
+		if slices.ContainsFunc(keys, func(k string) bool { return strings.EqualFold(k, key) }) {
+			fields[strings.ToLower(key)] = "invalid"
 			continue
 		}
 		keys = append(keys, key)
-		if limit, ok := maxLen[key]; ok && strings.HasPrefix(string(raw), `"`) {
-			var s string
-			if json.Unmarshal(raw, &s) == nil && utf8.RuneCountInString(s) > limit {
-				fields[key] = "too_long"
+		if !strings.HasPrefix(string(raw), `"`) {
+			continue
+		}
+		var s string
+		if json.Unmarshal(raw, &s) != nil {
+			continue
+		}
+		for name, limit := range maxLen {
+			if strings.EqualFold(name, key) && utf8.RuneCountInString(s) > limit {
+				fields[name] = "too_long"
 			}
 		}
 	}

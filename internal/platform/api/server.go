@@ -68,7 +68,6 @@ type unmatchedWriter struct {
 func (m *unmatchedWriter) WriteHeader(status int) {
 	m.replaced = true
 	m.Header().Del("Content-Type")
-	m.Header().Del("X-Content-Type-Options")
 	switch {
 	case status == http.StatusMethodNotAllowed:
 		WriteProblem(m.ResponseWriter, &Problem{Code: CodeMethodNotAllowed})
