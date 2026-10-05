@@ -59,10 +59,22 @@ func TestEncodeRefusesDeepNesting(t *testing.T) {
 
 func TestEncodeRefusesOtherTypes(t *testing.T) {
 	type pair struct{ A int }
-	for name, v := range map[string]any{"slice": []string{"a"}, "struct": pair{1}, "time": time.Unix(0, 0)} {
+	for name, v := range map[string]any{"slice": []any{"a"}, "ints": []int{1}, "struct": pair{1}, "time": time.Unix(0, 0)} {
 		_, err := audit.Encode(audit.Metadata{name: v})
 		if !errors.Is(err, audit.ErrMetadata) || !strings.Contains(err.Error(), name) {
 			t.Errorf("%s: got %v", name, err)
+		}
+	}
+}
+
+func TestEncodeAcceptsAListOfStrings(t *testing.T) {
+	for want, m := range map[string]audit.Metadata{
+		`{"fields":["a","b"]}`: {"fields": []string{"a", "b"}},
+		`{"fields":[]}`:        {"fields": []string{}},
+	} {
+		got, err := audit.Encode(m)
+		if err != nil || string(got) != want {
+			t.Errorf("got %s, %v, want %s", got, err, want)
 		}
 	}
 }

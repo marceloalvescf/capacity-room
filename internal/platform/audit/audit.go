@@ -36,7 +36,7 @@ const (
 )
 
 // Metadata is the document of an event: a map whose values are strings,
-// numbers, booleans, nil, or one more map of those.
+// lists of strings, numbers, booleans, nil, or one more map of those.
 type Metadata map[string]any
 
 // ErrMetadata is wrapped by every refusal of Encode.
@@ -67,7 +67,7 @@ func check(m map[string]any, nested bool) error {
 			return fmt.Errorf("%w: key %q is forbidden", ErrMetadata, k)
 		}
 		switch x := v.(type) {
-		case nil, string, bool, int, int64, float64:
+		case nil, string, bool, int, int64, float64, []string:
 		case Metadata:
 			if err := checkMap(k, x, nested); err != nil {
 				return err
