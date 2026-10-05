@@ -401,6 +401,21 @@ func TestReviseThresholdsOverlay(t *testing.T) {
 	}
 }
 
+func TestReviseRefusesANullThreshold(t *testing.T) {
+	f := newFixture(t)
+	first := f.create(t, "prod", baseDocument())
+	_, err := f.revise(t, "prod", first.RevisionID, "thresholds", map[string]any{"warning_percent": nil})
+	if got := problemsOf(t, err); !reflect.DeepEqual(got, []Problem{{Field: "thresholds", Word: "invalid"}}) {
+		t.Fatalf("problems %+v", got)
+	}
+	if n := len(f.revisions(t, "prod")); n != 1 {
+		t.Fatalf("%d revisions", n)
+	}
+	if a := f.audits(t, "profile.revise"); len(a) != 0 {
+		t.Fatalf("audit %+v", a)
+	}
+}
+
 func TestReviseNoOpWritesNothing(t *testing.T) {
 	f := newFixture(t)
 	first := f.create(t, "prod", baseDocument())

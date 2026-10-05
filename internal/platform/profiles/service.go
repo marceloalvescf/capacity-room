@@ -310,12 +310,30 @@ func apply(d *Document, fields map[string]json.RawMessage) []Problem {
 		}
 		if field.Kind() != reflect.Struct {
 			field.SetZero()
+		} else if holdsNull(raw) {
+			problems = append(problems, Problem{Field: key, Word: "invalid"})
+			continue
 		}
 		if err := json.Unmarshal(raw, field.Addr().Interface()); err != nil {
 			problems = append(problems, Problem{Field: key, Word: "invalid"})
 		}
 	}
 	return problems
+}
+
+// holdsNull reports whether raw is an object with a null value: a key of
+// an overlaid object is set or left out, never cleared.
+func holdsNull(raw json.RawMessage) bool {
+	var members map[string]json.RawMessage
+	if json.Unmarshal(raw, &members) != nil {
+		return false
+	}
+	for _, value := range members {
+		if bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
+			return true
+		}
+	}
+	return false
 }
 
 func sortedRawKeys(m map[string]json.RawMessage) []string {
