@@ -3,6 +3,7 @@ package profiles
 import (
 	"errors"
 	"net/netip"
+	"strings"
 	"testing"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
@@ -11,20 +12,31 @@ import (
 func TestCanonicalEndpointValidatesEveryCandidate(t *testing.T) {
 	open := netpolicy.Policy{}
 	loop := netpolicy.Policy{Networks: []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}}
+	// 2035 characters: the root, its /query_range, and /api/v1/query fit in
+	// 2048; /api/v1/query_range does not.
+	long := "https://metrics.internal/" + strings.Repeat("a", 2010)
+	if len(long) != 2035 {
+		t.Fatalf("the long root has %d characters", len(long))
+	}
+	if _, err := open.ValidateURL(long); err != nil {
+		t.Fatalf("the long root alone is refused: %v", err)
+	}
 	cases := []struct {
 		policy netpolicy.Policy
 		url    string
+		kind   string
 		want   string
 		code   netpolicy.Code
 	}{
-		{open, "https://metrics.internal", "https://metrics.internal", ""},
-		{open, "https://metrics.internal/api/v1", "https://metrics.internal/api/v1", ""},
-		{open, "https://metrics.internal/api/v1/../x", "", netpolicy.CodeURLRejected},
-		{open, "https://127.0.0.1:9090", "", netpolicy.CodeAddressRejected},
-		{loop, "https://127.0.0.1:9090", "https://127.0.0.1:9090", ""},
+		{open, "https://metrics.internal", "auto", "https://metrics.internal", ""},
+		{open, "https://metrics.internal/api/v1", "auto", "https://metrics.internal/api/v1", ""},
+		{open, "https://metrics.internal/api/v1/../x", "auto", "", netpolicy.CodeURLRejected},
+		{open, "https://127.0.0.1:9090", "auto", "", netpolicy.CodeAddressRejected},
+		{loop, "https://127.0.0.1:9090", "auto", "https://127.0.0.1:9090", ""},
+		{open, long, "prometheus", "", netpolicy.CodeURLRejected},
 	}
 	for _, c := range cases {
-		got, err := CanonicalEndpoint(c.policy, c.url, "auto")
+		got, err := CanonicalEndpoint(c.policy, c.url, c.kind)
 		if c.code == "" {
 			if err != nil || got != c.want {
 				t.Errorf("%s: got %q, %v", c.url, got, err)

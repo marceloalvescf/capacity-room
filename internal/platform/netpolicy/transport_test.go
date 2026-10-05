@@ -328,19 +328,29 @@ func TestTransportNoProxy(t *testing.T) {
 
 func TestTransportNoKeepAlive(t *testing.T) {
 	var mu sync.Mutex
-	news := 0
-	server := httptest.NewUnstartedServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	opened, closed := 0, 0
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, "body")
+	}))
 	server.Config.ConnState = func(_ net.Conn, state http.ConnState) {
-		if state == http.StateNew {
-			mu.Lock()
-			news++
-			mu.Unlock()
+		mu.Lock()
+		defer mu.Unlock()
+		switch state {
+		case http.StateNew:
+			opened++
+		case http.StateClosed:
+			closed++
 		}
 	}
 	server.Start()
 	defer server.Close()
+	counts := func() (int, int) {
+		mu.Lock()
+		defer mu.Unlock()
+		return opened, closed
+	}
 	tr := &Transport{Policy: loopbackPolicy, Resolve: countingResolver(new(atomic.Int32))}
-	for i := 0; i < 2; i++ {
+	for i := 1; i <= 2; i++ {
 		req, _ := http.NewRequest(http.MethodGet, "http://metrics.test:"+serverPort(t, server)+"/x", nil)
 		resp, err := tr.RoundTrip(req)
 		if err != nil {
@@ -348,11 +358,19 @@ func TestTransportNoKeepAlive(t *testing.T) {
 		}
 		_, _ = io.Copy(io.Discard, resp.Body)
 		_ = resp.Body.Close()
-	}
-	mu.Lock()
-	defer mu.Unlock()
-	if news != 2 {
-		t.Errorf("connections = %d, want 2", news)
+
+		// The server sees the close a moment after the client makes it.
+		deadline := time.Now().Add(2 * time.Second)
+		for {
+			o, c := counts()
+			if o == i && c == i {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("after request %d: opened %d, closed %d; want %d and %d", i, o, c, i, i)
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
 	}
 }
 
