@@ -113,19 +113,13 @@ func TestListUsersOrdersByUsername(t *testing.T) {
 	}
 }
 
-func TestUpdateUserNeverWritesUsername(t *testing.T) {
+func TestUpdateUserFieldsNeverWritesTheHash(t *testing.T) {
 	pool := storetest.New(t)
 	ctx := context.Background()
 	u := newUser("amy", "reader", true)
 	mustInsertUser(t, pool, u)
 
-	u.Username = "other"
-	u.Role = "administrator"
-	u.Language = "pt-BR"
-	u.Active = false
-	u.PasswordHash = "new-hash"
-	u.UpdatedAt = now.Add(time.Hour)
-	if err := store.UpdateUser(ctx, pool, u); err != nil {
+	if err := store.UpdateUserFields(ctx, pool, u.ID, "administrator", "pt-BR", false, now.Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	got, err := store.GetUser(ctx, pool, u.ID)
@@ -133,15 +127,40 @@ func TestUpdateUserNeverWritesUsername(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.Username != "amy" || got.Role != "administrator" || got.Language != "pt-BR" ||
-		got.Active || got.PasswordHash != "new-hash" ||
+		got.Active || got.PasswordHash != "hash-amy" ||
 		!got.UpdatedAt.Equal(time.Date(2026, 10, 5, 13, 0, 0, 0, time.UTC)) {
 		t.Fatalf("got %+v", got)
 	}
 
-	missing := newUser("ghost", "reader", true)
-	if err := store.UpdateUser(ctx, pool, missing); !errors.Is(err, store.ErrNotFound) {
+	err = store.UpdateUserFields(ctx, pool, uuid.New(), "reader", "en", true, now)
+	if !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("missing row: got %v, want ErrNotFound", err)
 	}
+}
+
+func TestGetUserForShareBlocksAnUpdate(t *testing.T) {
+	pool := storetest.New(t)
+	ctx := context.Background()
+	u := newUser("amy", "reader", true)
+	mustInsertUser(t, pool, u)
+
+	tx1, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx1.Rollback(ctx) }()
+	got, err := store.GetUserForShare(ctx, tx1, u.ID)
+	if err != nil || got.Username != "amy" {
+		t.Fatalf("got %+v, %v", got, err)
+	}
+	if _, err := store.GetUserForShare(ctx, tx1, uuid.New()); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("missing row: got %v, want ErrNotFound", err)
+	}
+
+	expectBlocksUntilCommit(t, tx1, func() error {
+		_, err := store.UpdatePasswordHash(ctx, pool, u.ID, "hash-amy", "new-hash", now.Add(time.Hour))
+		return err
+	})
 }
 
 func TestUpdatePasswordHashComparesAndSets(t *testing.T) {

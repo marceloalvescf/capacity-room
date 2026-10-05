@@ -199,7 +199,7 @@ func TestLoginUnknownUser(t *testing.T) {
 func TestLoginInactiveUserLooksUnknown(t *testing.T) {
 	f := newSessionFixture(t)
 	f.reader.Active = false
-	if err := store.UpdateUser(context.Background(), f.pool, f.reader); err != nil {
+	if err := store.UpdateUserFields(context.Background(), f.pool, f.reader.ID, f.reader.Role, f.reader.Language, f.reader.Active, base); err != nil {
 		t.Fatal(err)
 	}
 	_, err := f.sessions.Login(context.Background(), "reader", readerPassword, testAddress, "")
@@ -266,8 +266,7 @@ func TestLoginRehashesOutdatedHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.admin.PasswordHash = old
-	if err := store.UpdateUser(context.Background(), f.pool, f.admin); err != nil {
+	if _, err := f.pool.Exec(context.Background(), `UPDATE users SET password_hash = $2 WHERE id = $1`, f.admin.ID, old); err != nil {
 		t.Fatal(err)
 	}
 	f.login(t, "admin", adminPassword, "")
@@ -289,8 +288,7 @@ func TestLoginRehashKeepsTheSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.admin.PasswordHash = old
-	if err := store.UpdateUser(context.Background(), f.pool, f.admin); err != nil {
+	if _, err := f.pool.Exec(context.Background(), `UPDATE users SET password_hash = $2 WHERE id = $1`, f.admin.ID, old); err != nil {
 		t.Fatal(err)
 	}
 	issued := f.login(t, "admin", adminPassword, "")
@@ -380,7 +378,7 @@ func TestAuthenticateRevokesSessionOfInactiveUser(t *testing.T) {
 	f := newSessionFixture(t)
 	issued := f.login(t, "admin", adminPassword, "")
 	f.admin.Active = false
-	if err := store.UpdateUser(context.Background(), f.pool, f.admin); err != nil {
+	if err := store.UpdateUserFields(context.Background(), f.pool, f.admin.ID, f.admin.Role, f.admin.Language, f.admin.Active, base); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := f.sessions.Authenticate(context.Background(), issued.Token); !errors.Is(err, ErrUnauthenticated) {
@@ -393,7 +391,7 @@ func TestAuthenticateReadsRoleFromDatabase(t *testing.T) {
 	f := newSessionFixture(t)
 	issued := f.login(t, "admin", adminPassword, "")
 	f.admin.Role = RoleReader
-	if err := store.UpdateUser(context.Background(), f.pool, f.admin); err != nil {
+	if err := store.UpdateUserFields(context.Background(), f.pool, f.admin.ID, f.admin.Role, f.admin.Language, f.admin.Active, base); err != nil {
 		t.Fatal(err)
 	}
 	got, err := f.sessions.Authenticate(context.Background(), issued.Token)
@@ -529,4 +527,44 @@ func TestLoginHoldsNoConnectionDuringTheHash(t *testing.T) {
 	}
 	release()
 	requireInvalid(t, <-done)
+}
+
+func TestLoginSessionWaitsForAPasswordChange(t *testing.T) {
+	f := newSessionFixture(t)
+	account := &Account{Pool: f.pool, Sessions: f.sessions, Now: f.sessions.Now}
+	changed := make(chan error, 1)
+	f.sessions.afterUserRead = func() {
+		go func() {
+			_, err := account.Change(context.Background(), principalOf(f.admin), testAddress, AccountChange{
+				CurrentPassword: str(adminPassword),
+				Password:        str(newPassword),
+			})
+			changed <- err
+		}()
+		// Gives the change time to reach its write while the session
+		// transaction is still open.
+		time.Sleep(300 * time.Millisecond)
+	}
+	issued, loginErr := f.sessions.Login(context.Background(), "admin", adminPassword, testAddress, "")
+	if err := <-changed; err != nil {
+		t.Fatal(err)
+	}
+	if loginErr != nil {
+		requireInvalid(t, loginErr)
+	}
+	if loginErr == nil {
+		_, err := store.FindActiveSessionByTokenHash(context.Background(), f.pool, Digest(issued.Token), f.now)
+		if !errors.Is(err, store.ErrNotFound) {
+			t.Fatalf("a session of the old password is live: %v", err)
+		}
+	}
+	var live int
+	err := f.pool.QueryRow(context.Background(),
+		`SELECT count(*) FROM sessions WHERE user_id = $1 AND revoked_at IS NULL`, f.admin.ID).Scan(&live)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if live != 0 {
+		t.Fatalf("%d live sessions after the password change", live)
+	}
 }

@@ -317,9 +317,7 @@ func TestUpdateRefusesLastAdministratorTransitions(t *testing.T) {
 	f := newUserFixture(t)
 	ctx := context.Background()
 	two := newUser(t, f.pool, "two", adminPassword, RoleAdministrator, "en")
-	if err := store.UpdateUser(ctx, f.pool, store.User{
-		ID: two.ID, Role: two.Role, Language: two.Language, Active: false, PasswordHash: two.PasswordHash, UpdatedAt: base,
-	}); err != nil {
+	if err := store.UpdateUserFields(ctx, f.pool, two.ID, two.Role, two.Language, false, base); err != nil {
 		t.Fatal(err)
 	}
 	// An inactive administrator acts here, so root is the last active one.
@@ -333,9 +331,7 @@ func TestUpdateRefusesLastAdministratorTransitions(t *testing.T) {
 	if !f.user(t, f.root.ID).Active {
 		t.Fatal("root changed")
 	}
-	if err := store.UpdateUser(ctx, f.pool, store.User{
-		ID: two.ID, Role: two.Role, Language: two.Language, Active: true, PasswordHash: two.PasswordHash, UpdatedAt: base,
-	}); err != nil {
+	if err := store.UpdateUserFields(ctx, f.pool, two.ID, two.Role, two.Language, true, base); err != nil {
 		t.Fatal(err)
 	}
 	got, err := f.users.Update(ctx, f.actor(two), f.root.ID, UserChange{Role: str(RoleReader)})
@@ -405,9 +401,7 @@ func TestDeleteLastAdministrator(t *testing.T) {
 	two := newUser(t, f.pool, "two", adminPassword, RoleAdministrator, "en")
 	deactivate := func(active bool) {
 		t.Helper()
-		if err := store.UpdateUser(ctx, f.pool, store.User{
-			ID: two.ID, Role: two.Role, Language: two.Language, Active: active, PasswordHash: two.PasswordHash, UpdatedAt: base,
-		}); err != nil {
+		if err := store.UpdateUserFields(ctx, f.pool, two.ID, two.Role, two.Language, active, base); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -482,5 +476,35 @@ func TestUpdateMutualDemotionKeepsOneAdministrator(t *testing.T) {
 	n, err := store.CountActiveAdministrators(ctx, f.pool)
 	if err != nil || n != 1 {
 		t.Fatalf("administrators %d %v", n, err)
+	}
+}
+
+func TestUpdateKeepsAConcurrentPasswordChange(t *testing.T) {
+	f := newAccountFixture(t)
+	changed := make(chan error, 1)
+	f.users.beforeWrite = func() {
+		go func() {
+			_, err := f.account.Change(context.Background(), f.actor(f.eve), testAddress, AccountChange{
+				CurrentPassword: str(readerPassword),
+				Password:        str(newPassword),
+			})
+			changed <- err
+		}()
+		// Gives the change time to reach its write while the update
+		// transaction is still open.
+		time.Sleep(300 * time.Millisecond)
+	}
+	if _, err := f.users.Update(context.Background(), f.actor(f.root), f.eve.ID, UserChange{Role: str(RoleOperator)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-changed; err != nil {
+		t.Fatal(err)
+	}
+	row := f.user(t, f.eve.ID)
+	if row.Role != RoleOperator {
+		t.Fatalf("role %q", row.Role)
+	}
+	if match, _ := VerifyPassword(newPassword, row.PasswordHash); !match {
+		t.Fatal("the password change was reverted")
 	}
 }

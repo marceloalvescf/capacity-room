@@ -69,7 +69,17 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 
 // GetUser returns the user with the given id.
 func GetUser(ctx context.Context, q Querier, id uuid.UUID) (User, error) {
-	u, err := scanUser(q.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE id = $1`, id))
+	return getUser(ctx, q, ``, id)
+}
+
+// GetUserForShare reads the user and holds a share lock on the row for the
+// transaction, so a concurrent change of the row waits until it commits.
+func GetUserForShare(ctx context.Context, tx pgx.Tx, id uuid.UUID) (User, error) {
+	return getUser(ctx, tx, ` FOR SHARE`, id)
+}
+
+func getUser(ctx context.Context, q Querier, lock string, id uuid.UUID) (User, error) {
+	u, err := scanUser(q.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE id = $1`+lock, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrNotFound
 	}
@@ -112,16 +122,14 @@ func ListUsers(ctx context.Context, q Querier) ([]User, error) {
 	return users, nil
 }
 
-// UpdateUser writes role, language, active, password_hash, and updated_at
-// of the row with u.ID. The username is never written.
-func UpdateUser(ctx context.Context, q Querier, u User) error {
+// UpdateUserFields writes role, language, active, and updated_at of the
+// row with id, and never the hash or the username.
+func UpdateUserFields(ctx context.Context, q Querier, id uuid.UUID, role, language string, active bool, now time.Time) error {
 	tag, err := q.Exec(ctx, `
-UPDATE users
-   SET role = $2, language = $3, active = $4, password_hash = $5, updated_at = $6
- WHERE id = $1`,
-		u.ID, u.Role, u.Language, u.Active, u.PasswordHash, u.UpdatedAt)
+UPDATE users SET role = $2, language = $3, active = $4, updated_at = $5 WHERE id = $1`,
+		id, role, language, active, now)
 	if err != nil {
-		return fmt.Errorf("update user: %w", err)
+		return fmt.Errorf("update user fields: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound

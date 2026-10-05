@@ -45,6 +45,10 @@ type Sessions struct {
 	// beforeSession runs before the transaction that inserts the session of
 	// a sign-in. Tests set it; it is nil otherwise.
 	beforeSession func()
+
+	// afterUserRead runs inside that transaction once the user is re-read.
+	// Tests set it; it is nil otherwise.
+	afterUserRead func()
 }
 
 // The refusals of the sessions service.
@@ -166,8 +170,10 @@ func (s *Sessions) Login(ctx context.Context, username, password, clientAddress,
 	}
 	err = store.Transact(ctx, s.Pool, func(tx pgx.Tx) error {
 		// The account may have changed since the hash was verified: a new
-		// password or a deactivation refuses the sign-in.
-		current, err := store.GetUser(ctx, tx, user.ID)
+		// password or a deactivation refuses the sign-in. The share lock
+		// holds the row until the session exists, so a password change
+		// that follows waits and then revokes it.
+		current, err := store.GetUserForShare(ctx, tx, user.ID)
 		if errors.Is(err, store.ErrNotFound) {
 			return ErrInvalidCredentials
 		}
@@ -176,6 +182,9 @@ func (s *Sessions) Login(ctx context.Context, username, password, clientAddress,
 		}
 		if !current.Active || current.PasswordHash != verified {
 			return ErrInvalidCredentials
+		}
+		if s.afterUserRead != nil {
+			s.afterUserRead()
 		}
 		var parent *uuid.UUID
 		if presented != "" {

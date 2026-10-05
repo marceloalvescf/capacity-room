@@ -18,6 +18,10 @@ import (
 type Users struct {
 	Pool *pgxpool.Pool
 	Now  func() time.Time
+
+	// beforeWrite runs inside the transaction of Update, after the user is
+	// read and before it is written. Tests set it; it is nil otherwise.
+	beforeWrite func()
 }
 
 // The refusals of the users and account services.
@@ -196,8 +200,8 @@ func (u *Users) Update(ctx context.Context, actor Principal, id uuid.UUID, c Use
 			return err
 		}
 
-		if c.Password != nil {
-			user.PasswordHash = hash
+		if u.beforeWrite != nil {
+			u.beforeWrite()
 		}
 		if c.Role != nil {
 			user.Role = *c.Role
@@ -209,8 +213,20 @@ func (u *Users) Update(ctx context.Context, actor Principal, id uuid.UUID, c Use
 			user.Language = *c.Language
 		}
 		user.UpdatedAt = now
-		if err := store.UpdateUser(ctx, tx, user); err != nil {
+		if err := store.UpdateUserFields(ctx, tx, id, user.Role, user.Language, user.Active, now); err != nil {
 			return err
+		}
+		if c.Password != nil {
+			// Written over the hash that was read. The table lock keeps
+			// every other writer out, so a miss is a broken invariant.
+			written, err := store.UpdatePasswordHash(ctx, tx, id, user.PasswordHash, hash, now)
+			if err != nil {
+				return err
+			}
+			if !written {
+				return errors.New("password hash moved under the table lock")
+			}
+			user.PasswordHash = hash
 		}
 		out = user
 
@@ -323,9 +339,7 @@ func (u *Users) Delete(ctx context.Context, actor Principal, id uuid.UUID) error
 				return ErrLastAdmin
 			}
 		}
-		user.Active = false
-		user.UpdatedAt = now
-		if err := store.UpdateUser(ctx, tx, user); err != nil {
+		if err := store.UpdateUserFields(ctx, tx, id, user.Role, user.Language, false, now); err != nil {
 			return err
 		}
 		revoked, err := store.RevokeSessionsOfUser(ctx, tx, id, revokedUserDeleted, now)
