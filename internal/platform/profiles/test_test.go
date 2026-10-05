@@ -5,11 +5,13 @@ package profiles
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -240,4 +242,46 @@ func TestTestResultCarriesNoSecret(t *testing.T) {
 			}
 		}
 	}
+}
+
+// stalledProfile creates a profile whose endpoint answers nothing until the
+// request ends, and calls hold on the first request it sees. The body is
+// read first: the server notices a closed connection only after that.
+func stalledProfile(t *testing.T, f *fixture, hold func()) {
+	t.Helper()
+	var once sync.Once
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		once.Do(hold)
+		<-r.Context().Done()
+	}))
+	t.Cleanup(ts.Close)
+	d := baseDocument()
+	d.EndpointURL = endpointOf(t, ts)
+	d.TimeoutSeconds = 30
+	f.create(t, "prod", d)
+}
+
+func TestTestCancelledIsAudited(t *testing.T) {
+	f := newFixture(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	stalledProfile(t, f, cancel)
+	got, err := f.svc.Test(ctx, f.root, "prod")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.assertFailed(t, got, "ENDPOINT_UNREACHABLE")
+}
+
+func TestTestDeadlineIsAudited(t *testing.T) {
+	f := newFixture(t)
+	stalledProfile(t, f, func() {})
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+	got, err := f.svc.Test(ctx, f.root, "prod")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.assertFailed(t, got, "ENDPOINT_UNREACHABLE")
 }

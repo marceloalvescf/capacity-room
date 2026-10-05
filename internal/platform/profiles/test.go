@@ -60,7 +60,9 @@ func (s *Service) Test(ctx context.Context, actor auth.Principal, id string) (Te
 	if !result.OK {
 		outcome = audit.OutcomeFailed
 	}
-	err = audit.Append(ctx, s.Pool, s.now(), audit.Event{
+	// The requests have left the host whatever the caller does now, so the
+	// row is written even when the request context has ended.
+	err = audit.Append(context.WithoutCancel(ctx), s.Pool, s.now(), audit.Event{
 		ActorID: &actor.ID, Action: ActionProfileTest, TargetType: targetProfile, TargetID: id, Outcome: outcome,
 		Metadata: audit.Metadata{"code": result.Code, "revision_id": rev.ID.String()},
 	})
@@ -118,7 +120,8 @@ func (s *Service) runTest(ctx context.Context, d Document) (TestResult, error) {
 	return TestResult{OK: true, Code: CodeOK, Capabilities: names}, nil
 }
 
-// classify maps an error of the preflight to a code.
+// classify maps an error of the preflight to a code. A context that was
+// cancelled or whose deadline passed is ENDPOINT_UNREACHABLE.
 func classify(ctx context.Context, err error) (TestResult, error) {
 	var policyErr *netpolicy.Error
 	if errors.As(err, &policyErr) {
@@ -144,7 +147,7 @@ func classify(ctx context.Context, err error) (TestResult, error) {
 	if errors.Is(err, discovery.ErrInsufficient) {
 		return failure(CodeCapabilities), nil
 	}
-	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+	if ctx.Err() != nil {
 		return failure(CodeUnreachable), nil
 	}
 	return TestResult{}, err
