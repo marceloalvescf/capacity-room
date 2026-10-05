@@ -81,32 +81,36 @@ func (s *Sessions) Login(ctx context.Context, username, password, clientAddress,
 		return Issued{}, err
 	}
 
+	// The user is read through the pool and the hash runs outside any
+	// transaction, so no connection is held while it runs.
 	var user store.User
-	var matched bool
+	found := false
+	if UsernameMatchesPattern(normalized) {
+		u, err := store.FindActiveUserByUsername(ctx, s.Pool, normalized)
+		switch {
+		case err == nil:
+			user, found = u, true
+		case !errors.Is(err, store.ErrNotFound):
+			return Issued{}, err
+		}
+	}
+	stored := DummyHash()
+	if found {
+		stored = user.PasswordHash
+	}
+	match, rehash := VerifyPassword(password, stored)
+	matched := found && match
+	var fresh string
+	if matched && rehash {
+		var err error
+		if fresh, err = HashPassword(password); err != nil {
+			return Issued{}, fmt.Errorf("hash password: %w", err)
+		}
+	}
 	err := store.Transact(ctx, s.Pool, func(tx pgx.Tx) error {
-		found := false
-		if UsernameMatchesPattern(normalized) {
-			u, err := store.FindActiveUserByUsername(ctx, tx, normalized)
-			switch {
-			case err == nil:
-				user, found = u, true
-			case !errors.Is(err, store.ErrNotFound):
-				return err
-			}
-		}
-		stored := DummyHash()
-		if found {
-			stored = user.PasswordHash
-		}
-		match, rehash := VerifyPassword(password, stored)
-		matched = found && match
 		if matched {
-			if !rehash {
+			if fresh == "" {
 				return nil
-			}
-			fresh, err := HashPassword(password)
-			if err != nil {
-				return fmt.Errorf("hash password: %w", err)
 			}
 			user.PasswordHash = fresh
 			user.UpdatedAt = now

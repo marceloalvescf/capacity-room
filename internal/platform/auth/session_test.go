@@ -5,6 +5,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -413,4 +414,56 @@ func TestLogoutUnknownToken(t *testing.T) {
 	if n := len(f.audits(t, audit.ActionLogout)); n != 0 {
 		t.Fatalf("%d logout rows", n)
 	}
+}
+
+func TestLoginHoldsNoConnectionDuringTheHash(t *testing.T) {
+	f := newSessionFixture(t)
+	ctx := context.Background()
+	cfg, err := pgxpool.ParseConfig(os.Getenv("KCR_TEST_DATABASE_DSN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.ConnConfig.Database = f.pool.Config().ConnConfig.Database
+	cfg.MaxConns = 1
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	sessions := *f.sessions
+	sessions.Pool = pool
+
+	// Every hash slot is held, so the sign-in waits at its hash.
+	for range cap(hashSlots) {
+		hashSlots <- struct{}{}
+	}
+	released := false
+	release := func() {
+		if !released {
+			released = true
+			for range cap(hashSlots) {
+				<-hashSlots
+			}
+		}
+	}
+	defer release()
+	done := make(chan error, 1)
+	go func() {
+		_, err := sessions.Login(ctx, "admin", "wrong password here", testAddress, "")
+		done <- err
+	}()
+	// The throttle and the read of the user come before the hash.
+	for pool.Stat().AcquireCount() < 2 {
+		time.Sleep(5 * time.Millisecond)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	probe, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	var one int
+	if err := pool.QueryRow(probe, "SELECT 1").Scan(&one); err != nil {
+		t.Fatalf("the pool is held during the hash: %v", err)
+	}
+	release()
+	requireInvalid(t, <-done)
 }

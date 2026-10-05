@@ -30,9 +30,11 @@ type AccountChange struct {
 
 // Change applies a language change and, when Password is set, verifies
 // CurrentPassword, checks the policy, writes the hash, revokes every
-// session of the reader as password_changed, and audits both actions. A
-// wrong current password returns ErrInvalidCredentials and counts a
-// failure of the throttle under the reader's name and clientAddress.
+// session of the reader as password_changed, and audits both actions.
+// Before CurrentPassword is verified, an attempt is taken from the sign-in
+// throttle under the reader's name and clientAddress: a blocked key returns
+// *ErrThrottled, a wrong current password returns ErrInvalidCredentials
+// and stays counted, and a right one resets the throttle.
 func (a *Account) Change(ctx context.Context, p Principal, clientAddress string, c AccountChange) (store.User, error) {
 	if c.Language != nil && !validLanguage(*c.Language) {
 		return store.User{}, ErrInvalidLanguage
@@ -42,49 +44,48 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 	}
 
 	now := a.Now()
-	key := a.Sessions.Throttle.Key(p.Username, clientAddress)
-	var out store.User
-	err := store.Transact(ctx, a.Pool, func(tx pgx.Tx) error {
-		user, err := store.GetUser(ctx, tx, p.ID)
-		if errors.Is(err, store.ErrNotFound) {
-			return ErrUserNotFound
+	// The user is read through the pool and the hashes run outside any
+	// transaction, so no connection is held while they run.
+	user, err := store.GetUser(ctx, a.Pool, p.ID)
+	if errors.Is(err, store.ErrNotFound) {
+		return store.User{}, ErrUserNotFound
+	}
+	if err != nil {
+		return store.User{}, err
+	}
+	languageMoved := c.Language != nil && *c.Language != user.Language
+	if !languageMoved && c.Password == nil {
+		return user, nil
+	}
+	if c.Password != nil {
+		key := a.Sessions.Throttle.Key(p.Username, clientAddress)
+		if err := a.Sessions.Throttle.Take(ctx, a.Pool, key, now); err != nil {
+			return store.User{}, err
 		}
+		if match, _ := VerifyPassword(*c.CurrentPassword, user.PasswordHash); !match {
+			return store.User{}, ErrInvalidCredentials
+		}
+		if err := a.Sessions.Throttle.RecordSuccess(ctx, a.Pool, key, now); err != nil {
+			return store.User{}, err
+		}
+		if err := CheckPassword(*c.Password); err != nil {
+			return store.User{}, err
+		}
+		hash, err := HashPassword(*c.Password)
 		if err != nil {
-			return err
+			return store.User{}, fmt.Errorf("hash password: %w", err)
 		}
-		out = user
+		user.PasswordHash = hash
+	}
+	if languageMoved {
+		user.Language = *c.Language
+	}
+	user.UpdatedAt = now
 
-		languageMoved := c.Language != nil && *c.Language != user.Language
-		if !languageMoved && c.Password == nil {
-			return nil
-		}
-		if c.Password != nil {
-			if err := a.Sessions.Throttle.Take(ctx, a.Pool, key, now); err != nil {
-				return err
-			}
-			if match, _ := VerifyPassword(*c.CurrentPassword, user.PasswordHash); !match {
-				return ErrInvalidCredentials
-			}
-			if err := a.Sessions.Throttle.RecordSuccess(ctx, a.Pool, key, now); err != nil {
-				return err
-			}
-			if err := CheckPassword(*c.Password); err != nil {
-				return err
-			}
-			hash, err := HashPassword(*c.Password)
-			if err != nil {
-				return fmt.Errorf("hash password: %w", err)
-			}
-			user.PasswordHash = hash
-		}
-		if languageMoved {
-			user.Language = *c.Language
-		}
-		user.UpdatedAt = now
+	err = store.Transact(ctx, a.Pool, func(tx pgx.Tx) error {
 		if err := store.UpdateUser(ctx, tx, user); err != nil {
 			return err
 		}
-		out = user
 
 		if languageMoved {
 			err := audit.Append(ctx, tx, now, audit.Event{
@@ -116,5 +117,5 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 	if err != nil {
 		return store.User{}, err
 	}
-	return out, nil
+	return user, nil
 }

@@ -146,9 +146,37 @@ func (u *Users) Update(ctx context.Context, actor Principal, id uuid.UUID, c Use
 		return store.User{}, ErrInvalidLanguage
 	}
 
+	// The checks that need the row read it through the pool and the hash
+	// runs before the transaction, so no connection is held while it runs.
+	// The transaction reads the row again under the table lock and applies
+	// the same checks to it.
 	now := u.Now()
-	var out store.User
-	err := store.Transact(ctx, u.Pool, func(tx pgx.Tx) error {
+	user, err := store.GetUser(ctx, u.Pool, id)
+	if errors.Is(err, store.ErrNotFound) {
+		return store.User{}, ErrUserNotFound
+	}
+	if err != nil {
+		return store.User{}, err
+	}
+	changed, privilege := movedFields(user, c)
+	if len(changed) == 0 && c.Password == nil {
+		return user, nil
+	}
+	if err := checkLastAdministrator(ctx, u.Pool, user, c, changed, privilege); err != nil {
+		return store.User{}, err
+	}
+	hash := ""
+	if c.Password != nil {
+		if err := CheckPassword(*c.Password); err != nil {
+			return store.User{}, err
+		}
+		if hash, err = HashPassword(*c.Password); err != nil {
+			return store.User{}, fmt.Errorf("hash password: %w", err)
+		}
+	}
+
+	out := user
+	err = store.Transact(ctx, u.Pool, func(tx pgx.Tx) error {
 		if err := store.LockUsers(ctx, tx); err != nil {
 			return err
 		}
@@ -160,46 +188,15 @@ func (u *Users) Update(ctx context.Context, actor Principal, id uuid.UUID, c Use
 			return err
 		}
 		out = user
-
-		changed := audit.Metadata{}
-		privilege := false
-		if c.Role != nil && *c.Role != user.Role {
-			changed["role"] = *c.Role
-			privilege = true
-		}
-		if c.Active != nil && *c.Active != user.Active {
-			changed["active"] = *c.Active
-			privilege = true
-		}
-		if c.Language != nil && *c.Language != user.Language {
-			changed["language"] = *c.Language
-		}
+		changed, privilege = movedFields(user, c)
 		if len(changed) == 0 && c.Password == nil {
 			return nil
 		}
-
-		if privilege && user.Role == RoleAdministrator && user.Active {
-			_, demoted := changed["role"]
-			_, deactivated := changed["active"]
-			if demoted || (deactivated && !*c.Active) {
-				n, err := store.CountActiveAdministrators(ctx, tx)
-				if err != nil {
-					return err
-				}
-				if n <= 1 {
-					return ErrLastAdmin
-				}
-			}
+		if err := checkLastAdministrator(ctx, tx, user, c, changed, privilege); err != nil {
+			return err
 		}
 
 		if c.Password != nil {
-			if err := CheckPassword(*c.Password); err != nil {
-				return err
-			}
-			hash, err := HashPassword(*c.Password)
-			if err != nil {
-				return fmt.Errorf("hash password: %w", err)
-			}
 			user.PasswordHash = hash
 		}
 		if c.Role != nil {
@@ -255,6 +252,45 @@ func (u *Users) Update(ctx context.Context, actor Principal, id uuid.UUID, c Use
 		return store.User{}, err
 	}
 	return out, nil
+}
+
+// movedFields returns the fields of c that differ from user, with their new
+// values, and whether role or active is among them.
+func movedFields(user store.User, c UserChange) (changed audit.Metadata, privilege bool) {
+	changed = audit.Metadata{}
+	if c.Role != nil && *c.Role != user.Role {
+		changed["role"] = *c.Role
+		privilege = true
+	}
+	if c.Active != nil && *c.Active != user.Active {
+		changed["active"] = *c.Active
+		privilege = true
+	}
+	if c.Language != nil && *c.Language != user.Language {
+		changed["language"] = *c.Language
+	}
+	return changed, privilege
+}
+
+// checkLastAdministrator returns ErrLastAdmin when the change demotes or
+// deactivates the only active administrator.
+func checkLastAdministrator(ctx context.Context, q store.Querier, user store.User, c UserChange, changed audit.Metadata, privilege bool) error {
+	if !privilege || user.Role != RoleAdministrator || !user.Active {
+		return nil
+	}
+	_, demoted := changed["role"]
+	_, deactivated := changed["active"]
+	if !demoted && (!deactivated || *c.Active) {
+		return nil
+	}
+	n, err := store.CountActiveAdministrators(ctx, q)
+	if err != nil {
+		return err
+	}
+	if n <= 1 {
+		return ErrLastAdmin
+	}
+	return nil
 }
 
 // Delete deactivates the user and revokes every session as user_deleted,

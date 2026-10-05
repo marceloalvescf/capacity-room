@@ -3,6 +3,7 @@ package auth
 import (
 	"crypto/rand"
 	"errors"
+	"runtime"
 	"sync"
 	"unicode/utf8"
 
@@ -34,9 +35,22 @@ func CheckPassword(password string) error {
 	return nil
 }
 
+// hashSlots bounds the hashes in flight. Argon2id under HashParams takes
+// 64 MiB and four threads per call, so the number running at once is
+// bounded by the processors, never by the number of requests.
+var hashSlots = make(chan struct{}, runtime.GOMAXPROCS(0))
+
+// withHashSlot runs fn while holding one of hashSlots.
+func withHashSlot(fn func()) {
+	hashSlots <- struct{}{}
+	defer func() { <-hashSlots }()
+	fn()
+}
+
 // HashPassword returns the PHC string of password under HashParams.
-func HashPassword(password string) (string, error) {
-	return argon2id.CreateHash(password, HashParams)
+func HashPassword(password string) (hash string, err error) {
+	withHashSlot(func() { hash, err = argon2id.CreateHash(password, HashParams) })
+	return hash, err
 }
 
 // VerifyPassword reports whether password matches hash and whether the
@@ -44,7 +58,10 @@ func HashPassword(password string) (string, error) {
 // written again. A hash that cannot be parsed matches nothing and needs
 // a rehash.
 func VerifyPassword(password, hash string) (match, needsRehash bool) {
-	ok, params, err := argon2id.CheckHash(password, hash)
+	var ok bool
+	var params *argon2id.Params
+	var err error
+	withHashSlot(func() { ok, params, err = argon2id.CheckHash(password, hash) })
 	if err != nil {
 		return false, true
 	}
