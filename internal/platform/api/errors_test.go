@@ -15,7 +15,8 @@ var allCodes = []Code{
 	CodeForbidden, CodeUserNotFound, CodeNotFound, CodeMethodNotAllowed, CodeUsernameTaken,
 	CodeLastAdmin, CodeSelfDelete, CodeSelfDeactivate, CodeSelfDemote, CodeInvalidUsername,
 	CodePasswordTooShort, CodePasswordTooLong, CodeAuthRateLimited, CodeDatabaseUnavailable,
-	CodeInternalError,
+	CodeInternalError, CodeProfileNotFound, CodeProfileIDTaken, CodeProfileRevisionStale,
+	CodeProfileDocumentInvalid, CodeEndpointURLRejected, CodeEndpointAddressRejected,
 }
 
 func TestProblemTableIsComplete(t *testing.T) {

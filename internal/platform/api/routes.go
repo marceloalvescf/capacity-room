@@ -25,5 +25,12 @@ func (s *Server) Routes() []Route {
 		{"GET", "/api/v1/admin/users/{id}", s.adminOnly(s.getUser)},
 		{"PATCH", "/api/v1/admin/users/{id}", s.adminOnly(s.requireCSRF(s.patchUser))},
 		{"DELETE", "/api/v1/admin/users/{id}", s.adminOnly(s.requireCSRF(s.deleteUser))},
+		{"GET", "/api/v1/profiles", s.requireSession(s.listProfileSummaries)},
+		{"GET", "/api/v1/admin/profiles", s.adminOnly(s.listProfiles)},
+		{"POST", "/api/v1/admin/profiles", s.adminOnly(s.requireCSRF(s.createProfile))},
+		{"GET", "/api/v1/admin/profiles/{id}", s.adminOnly(s.getProfile)},
+		{"PATCH", "/api/v1/admin/profiles/{id}", s.adminOnly(s.requireCSRF(s.patchProfile))},
+		{"DELETE", "/api/v1/admin/profiles/{id}", s.adminOnly(s.requireCSRF(s.deleteProfile))},
+		{"POST", "/api/v1/admin/profiles/{id}/test", s.adminOnly(s.requireCSRF(s.testProfile))},
 	}
 }

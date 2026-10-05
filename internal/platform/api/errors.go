@@ -37,7 +37,14 @@ const (
 	CodePasswordTooLong     Code = "PASSWORD_TOO_LONG"
 	CodeAuthRateLimited     Code = "AUTH_RATE_LIMITED"
 	CodeDatabaseUnavailable Code = "DATABASE_UNAVAILABLE"
-	CodeInternalError       Code = "INTERNAL_ERROR"
+
+	CodeProfileNotFound         Code = "PROFILE_NOT_FOUND"
+	CodeProfileIDTaken          Code = "PROFILE_ID_TAKEN"
+	CodeProfileRevisionStale    Code = "PROFILE_REVISION_STALE"
+	CodeProfileDocumentInvalid  Code = "PROFILE_DOCUMENT_INVALID"
+	CodeEndpointURLRejected     Code = "ENDPOINT_URL_REJECTED"
+	CodeEndpointAddressRejected Code = "ENDPOINT_ADDRESS_REJECTED"
+	CodeInternalError           Code = "INTERNAL_ERROR"
 )
 
 // Problem is one failure to answer.
@@ -55,25 +62,31 @@ var problems = map[Code]struct {
 	Status   int
 	Sentence string
 }{
-	CodeRequestInvalid:      {400, "The request could not be parsed."},
-	CodeInvalidCredentials:  {401, "The username or password is incorrect."},
-	CodeUnauthenticated:     {401, "Authentication is required."},
-	CodeCSRFRejected:        {403, "The request could not be verified."},
-	CodeForbidden:           {403, "You are not allowed to perform this action."},
-	CodeUserNotFound:        {404, "No such user was found."},
-	CodeNotFound:            {404, "The requested resource was not found."},
-	CodeMethodNotAllowed:    {405, "This method is not allowed for this resource."},
-	CodeUsernameTaken:       {409, "This username is already in use."},
-	CodeLastAdmin:           {409, "The last active administrator cannot be changed this way."},
-	CodeSelfDelete:          {409, "You cannot remove your own account."},
-	CodeSelfDeactivate:      {409, "You cannot deactivate your own account."},
-	CodeSelfDemote:          {409, "You cannot demote your own account."},
-	CodeInvalidUsername:     {422, "This username is not valid."},
-	CodePasswordTooShort:    {422, "This password is too short."},
-	CodePasswordTooLong:     {422, "This password is too long."},
-	CodeAuthRateLimited:     {429, "Too many login attempts. Try again later."},
-	CodeDatabaseUnavailable: {503, "The database is temporarily unavailable."},
-	CodeInternalError:       {500, "An unexpected error occurred."},
+	CodeRequestInvalid:          {400, "The request could not be parsed."},
+	CodeInvalidCredentials:      {401, "The username or password is incorrect."},
+	CodeUnauthenticated:         {401, "Authentication is required."},
+	CodeCSRFRejected:            {403, "The request could not be verified."},
+	CodeForbidden:               {403, "You are not allowed to perform this action."},
+	CodeUserNotFound:            {404, "No such user was found."},
+	CodeProfileNotFound:         {404, "No such profile was found."},
+	CodeProfileIDTaken:          {409, "This profile id is already in use."},
+	CodeProfileRevisionStale:    {409, "This profile changed since it was last read."},
+	CodeProfileDocumentInvalid:  {422, "This profile request is not valid."},
+	CodeEndpointURLRejected:     {422, "This endpoint URL is not allowed."},
+	CodeEndpointAddressRejected: {422, "This endpoint address is not allowed."},
+	CodeNotFound:                {404, "The requested resource was not found."},
+	CodeMethodNotAllowed:        {405, "This method is not allowed for this resource."},
+	CodeUsernameTaken:           {409, "This username is already in use."},
+	CodeLastAdmin:               {409, "The last active administrator cannot be changed this way."},
+	CodeSelfDelete:              {409, "You cannot remove your own account."},
+	CodeSelfDeactivate:          {409, "You cannot deactivate your own account."},
+	CodeSelfDemote:              {409, "You cannot demote your own account."},
+	CodeInvalidUsername:         {422, "This username is not valid."},
+	CodePasswordTooShort:        {422, "This password is too short."},
+	CodePasswordTooLong:         {422, "This password is too long."},
+	CodeAuthRateLimited:         {429, "Too many login attempts. Try again later."},
+	CodeDatabaseUnavailable:     {503, "The database is temporarily unavailable."},
+	CodeInternalError:           {500, "An unexpected error occurred."},
 }
 
 type envelope struct {

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
 )
 
@@ -20,6 +21,7 @@ type Server struct {
 	Sessions *auth.Sessions
 	Users    *auth.Users
 	Account  *auth.Account
+	Profiles *profiles.Service
 	Now      func() time.Time
 	Logger   *slog.Logger // nil logs nowhere
 

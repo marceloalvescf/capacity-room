@@ -5,8 +5,10 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +17,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
@@ -52,7 +56,20 @@ func newTestServer(t *testing.T) *testServer {
 		Sessions: sessions,
 		Users:    &auth.Users{Pool: pool, Now: now},
 		Account:  &auth.Account{Pool: pool, Sessions: sessions, Now: now},
-		Now:      now,
+		Profiles: &profiles.Service{
+			Pool:     pool,
+			Policy:   netpolicy.Policy{Networks: []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}},
+			Settings: settings.Settings{CredentialDir: t.TempDir(), CABundleDir: t.TempDir()},
+			Now:      now,
+			Resolve: func(_ context.Context, host string) ([]netip.Addr, error) {
+				if host != "metrics.test" {
+					t.Errorf("resolver asked for %q", host)
+					return nil, errors.New("unexpected host")
+				}
+				return []netip.Addr{netip.MustParseAddr("127.0.0.1")}, nil
+			},
+		},
+		Now: now,
 	}
 	seed(t, pool, ts.now, "root", rootPassword, auth.RoleAdministrator)
 	ts.eve = seed(t, pool, ts.now, "eve", evePassword, auth.RoleReader)
