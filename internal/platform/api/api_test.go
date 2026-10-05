@@ -125,7 +125,7 @@ func signInBody(username, password string) string {
 func (ts *testServer) login(t *testing.T, username, password string) *httptest.ResponseRecorder {
 	t.Helper()
 	c := ts.loginCSRF(t)
-	return ts.call(t, "POST", "/api/v1/auth/login", signInBody(username, password), map[string]string{CSRFHeader: c.Value}, c)
+	return ts.call(t, "POST", "/api/v1/auth/login", signInBody(username, password), map[string]string{CSRFHeaderName: c.Value}, c)
 }
 
 // signIn returns the session cookie and the CSRF token of a new session.
@@ -143,7 +143,7 @@ func (ts *testServer) signIn(t *testing.T, username string) (*http.Cookie, strin
 	if err := json.Unmarshal(w.Body.Bytes(), &s); err != nil {
 		t.Fatal(err)
 	}
-	return cookieNamed(w, SessionCookie), s.CSRFToken
+	return cookieNamed(w, SessionCookie), s.CsrfToken
 }
 
 func (ts *testServer) count(t *testing.T, query string, args ...any) int {

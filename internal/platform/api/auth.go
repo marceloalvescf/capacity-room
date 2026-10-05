@@ -15,14 +15,14 @@ const (
 )
 
 func principalOf(p auth.Principal) Principal {
-	return Principal{ID: p.ID.String(), Username: p.Username, Role: p.Role, Language: p.Language}
+	return Principal{Id: p.ID, Username: p.Username, Role: Role(p.Role), Language: Language(p.Language)}
 }
 
 func signedIn(p auth.Principal, csrf string, expiresAt time.Time) SignedInSession {
 	return SignedInSession{
 		Authenticated: true,
 		Principal:     principalOf(p),
-		CSRFToken:     csrf,
+		CsrfToken:     csrf,
 		ExpiresAt:     expiresAt.UTC(),
 	}
 }
@@ -39,7 +39,7 @@ func (s *Server) anonymous(w http.ResponseWriter, r *http.Request, clearSession 
 		http.SetCookie(w, sessionCookie(SessionCookie, "", -1))
 	}
 	http.SetCookie(w, sessionCookie(LoginCSRFCookie, token, 0))
-	writeJSON(w, http.StatusOK, AnonymousSession{LoginCSRF: token})
+	writeJSON(w, http.StatusOK, AnonymousSession{Authenticated: false, LoginCsrf: token})
 }
 
 // getSession answers who the caller is. It is the one route that handles
@@ -71,7 +71,7 @@ func (s *Server) getSession(w http.ResponseWriter, r *http.Request) {
 // throttle never answers a caller who is not the page.
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(LoginCSRFCookie)
-	header := r.Header.Get(CSRFHeader)
+	header := r.Header.Get(CSRFHeaderName)
 	if err != nil || cookie.Value == "" || header == "" ||
 		subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(header)) != 1 {
 		WriteProblem(w, &Problem{Code: CodeCSRFRejected})

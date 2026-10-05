@@ -6,7 +6,7 @@ import "net/http"
 const (
 	SessionCookie   = "kcr_session"
 	LoginCSRFCookie = "kcr_login_csrf"
-	CSRFHeader      = "X-CSRF-Token"
+	CSRFHeaderName  = "X-CSRF-Token"
 	CookiePath      = "/api"
 )
 

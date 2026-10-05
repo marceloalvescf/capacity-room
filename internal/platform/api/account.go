@@ -18,7 +18,7 @@ func (s *Server) patchAccount(w http.ResponseWriter, r *http.Request, a auth.Aut
 	user, err := s.Account.Change(r.Context(), a.Principal, ClientAddress(r, s.Settings.TrustedProxies), auth.AccountChange{
 		CurrentPassword: body.CurrentPassword,
 		Password:        body.Password,
-		Language:        body.Language,
+		Language:        (*string)(body.Language),
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -27,5 +27,5 @@ func (s *Server) patchAccount(w http.ResponseWriter, r *http.Request, a auth.Aut
 	if body.Password != nil {
 		http.SetCookie(w, sessionCookie(SessionCookie, "", -1))
 	}
-	writeJSON(w, http.StatusOK, Principal{ID: user.ID.String(), Username: user.Username, Role: user.Role, Language: user.Language})
+	writeJSON(w, http.StatusOK, Principal{Id: user.ID, Username: user.Username, Role: Role(user.Role), Language: Language(user.Language)})
 }

@@ -45,7 +45,7 @@ CHECK_RUNTIME_OUT := .cache/check-runtime
 
 .PHONY: build test lint image test-toolchain test-template test-golden \
 	update-golden update-testdata check-runtime gate postgres-up postgres-down \
-	test-postgres
+	test-postgres generate generate-check
 
 build:
 	go build -o bin/k8s-capacity-report ./cmd/k8s-capacity-report
@@ -65,6 +65,16 @@ test-postgres:
 	@set -o pipefail; $(MAKE) postgres-up; \
 	KCR_TEST_DATABASE_DSN="$(TEST_DSN)" go test $(TEST_FLAGS) -tags=postgres ./internal/platform/... ./internal/cli/...; \
 	status=$$?; $(MAKE) postgres-down; exit $$status
+
+OAPI_CODEGEN := github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
+
+generate:
+	go run $(OAPI_CODEGEN) -config api/oapi-codegen.yaml api/openapi.yaml
+	gofmt -w internal/platform/api/openapi.gen.go
+
+# Fails when a fresh generation differs from the committed file.
+generate-check: generate
+	git diff --exit-code -- internal/platform/api/openapi.gen.go
 
 # gofmt reads the Go files git knows about, tracked or new, so that scratch
 # files under ignored folders cannot fail the check. pipefail is turned on
@@ -149,6 +159,7 @@ gate:
 		echo "gate: pipefail has no effect in $(SHELL); refusing to run"; exit 1; \
 	fi
 	@mkdir -p $(GATE_LOGS)
+	@set -o pipefail; $(MAKE) generate-check 2>&1 | tee $(GATE_LOGS)/generate-check.log
 	@set -o pipefail; $(MAKE) lint 2>&1 | tee $(GATE_LOGS)/lint.log
 	@set -o pipefail; $(MAKE) test TEST_FLAGS="-count=1" 2>&1 | tee $(GATE_LOGS)/test.log
 	@set -o pipefail; $(MAKE) test-postgres TEST_FLAGS="-count=1" 2>&1 | tee $(GATE_LOGS)/test-postgres.log

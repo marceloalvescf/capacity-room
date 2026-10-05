@@ -64,7 +64,7 @@ func (s *Server) requireRole(roles []auth.Role, next SessionHandler) http.Handle
 // session before calling next; 403 otherwise.
 func (s *Server) requireCSRF(next SessionHandler) SessionHandler {
 	return func(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
-		if err := s.Sessions.VerifyCSRF(r.Context(), a.SessionID, r.Header.Get(CSRFHeader)); err != nil {
+		if err := s.Sessions.VerifyCSRF(r.Context(), a.SessionID, r.Header.Get(CSRFHeaderName)); err != nil {
 			s.fail(w, r, err)
 			return
 		}

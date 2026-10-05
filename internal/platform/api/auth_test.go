@@ -21,11 +21,11 @@ func TestSessionAnonymous(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &s); err != nil {
 		t.Fatal(err)
 	}
-	if w.Code != 200 || s.Authenticated || len(s.LoginCSRF) != 43 {
+	if w.Code != 200 || s.Authenticated || len(s.LoginCsrf) != 43 {
 		t.Fatalf("%d %s", w.Code, w.Body.String())
 	}
 	got := w.Header().Values("Set-Cookie")
-	want := LoginCSRFCookie + "=" + s.LoginCSRF + "; Path=/api; HttpOnly; Secure; SameSite=Lax"
+	want := LoginCSRFCookie + "=" + s.LoginCsrf + "; Path=/api; HttpOnly; Secure; SameSite=Lax"
 	if len(got) != 1 || got[0] != want {
 		t.Fatalf("Set-Cookie %q, want %q", got, want)
 	}
@@ -39,9 +39,9 @@ func TestLoginRequiresLoginCSRF(t *testing.T) {
 		header  map[string]string
 		cookies []*http.Cookie
 	}{
-		"no cookie":        {map[string]string{CSRFHeader: c.Value}, nil},
+		"no cookie":        {map[string]string{CSRFHeaderName: c.Value}, nil},
 		"cookie, no token": {nil, []*http.Cookie{c}},
-		"different token":  {map[string]string{CSRFHeader: c.Value + "x"}, []*http.Cookie{c}},
+		"different token":  {map[string]string{CSRFHeaderName: c.Value + "x"}, []*http.Cookie{c}},
 		"nothing":          {nil, nil},
 	}
 	for name, tc := range cases {
@@ -66,7 +66,7 @@ func TestLoginSucceeds(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !s.Authenticated || s.Principal.Role != "administrator" || s.Principal.Username != "root" ||
-		s.Principal.Language != "pt-BR" || s.Principal.ID == "" || s.CSRFToken == "" {
+		s.Principal.Language != "pt-BR" || s.Principal.Id == uuid.Nil || s.CsrfToken == "" {
 		t.Fatalf("shape %+v", s)
 	}
 	if !strings.Contains(w.Body.String(), `"expires_at":"2026-10-05T13:00:00Z"`) {
@@ -119,7 +119,7 @@ func TestLoginBodyRefusals(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			w := ts.call(t, "POST", "/api/v1/auth/login", tc.body, map[string]string{CSRFHeader: c.Value}, c)
+			w := ts.call(t, "POST", "/api/v1/auth/login", tc.body, map[string]string{CSRFHeaderName: c.Value}, c)
 			wantProblem(t, w, 400, CodeRequestInvalid, tc.fields)
 		})
 	}
@@ -149,7 +149,7 @@ func TestLoginCSRFBeforeThrottle(t *testing.T) {
 		ts.login(t, "root", "wrong-password")
 	}
 	c := ts.loginCSRF(t)
-	w := ts.call(t, "POST", "/api/v1/auth/login", signInBody("root", rootPassword), map[string]string{CSRFHeader: "bad"}, c)
+	w := ts.call(t, "POST", "/api/v1/auth/login", signInBody("root", rootPassword), map[string]string{CSRFHeaderName: "bad"}, c)
 	wantProblem(t, w, 403, CodeCSRFRejected, nil)
 }
 
@@ -161,10 +161,10 @@ func TestSessionSignedIn(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &s); err != nil {
 		t.Fatal(err)
 	}
-	if w.Code != 200 || !s.Authenticated || s.Principal.Username != "root" || s.CSRFToken == "" || s.CSRFToken == csrf {
+	if w.Code != 200 || !s.Authenticated || s.Principal.Username != "root" || s.CsrfToken == "" || s.CsrfToken == csrf {
 		t.Fatalf("%d %s", w.Code, w.Body.String())
 	}
-	if err := ts.Sessions.VerifyCSRF(t.Context(), mustSessionID(t, ts, session), s.CSRFToken); err != nil {
+	if err := ts.Sessions.VerifyCSRF(t.Context(), mustSessionID(t, ts, session), s.CsrfToken); err != nil {
 		t.Fatalf("new token does not verify: %v", err)
 	}
 	if err := ts.Sessions.VerifyCSRF(t.Context(), mustSessionID(t, ts, session), csrf); err == nil {
@@ -184,7 +184,7 @@ func mustSessionID(t *testing.T, ts *testServer, session *http.Cookie) (id uuid.
 func TestLogout(t *testing.T) {
 	ts := newTestServer(t)
 	session, csrf := ts.signIn(t, "root")
-	w := ts.call(t, "POST", "/api/v1/auth/logout", "", map[string]string{CSRFHeader: csrf}, session)
+	w := ts.call(t, "POST", "/api/v1/auth/logout", "", map[string]string{CSRFHeaderName: csrf}, session)
 	if w.Code != 204 || w.Body.Len() != 0 {
 		t.Fatalf("%d %q", w.Code, w.Body.String())
 	}
@@ -210,7 +210,7 @@ func TestLogoutRequiresCSRF(t *testing.T) {
 
 func TestLogoutWithoutSession(t *testing.T) {
 	ts := newTestServer(t)
-	wantProblem(t, ts.call(t, "POST", "/api/v1/auth/logout", "", map[string]string{CSRFHeader: "x"}), 401, CodeUnauthenticated, nil)
+	wantProblem(t, ts.call(t, "POST", "/api/v1/auth/logout", "", map[string]string{CSRFHeaderName: "x"}), 401, CodeUnauthenticated, nil)
 }
 
 func TestDeactivatedUserIsSignedOutOnNextRequest(t *testing.T) {
@@ -221,7 +221,7 @@ func TestDeactivatedUserIsSignedOutOnNextRequest(t *testing.T) {
 	}
 	w := ts.call(t, "GET", "/api/v1/auth/session", "", nil, session)
 	var s AnonymousSession
-	if err := json.Unmarshal(w.Body.Bytes(), &s); err != nil || w.Code != 200 || s.Authenticated || s.LoginCSRF == "" {
+	if err := json.Unmarshal(w.Body.Bytes(), &s); err != nil || w.Code != 200 || s.Authenticated || s.LoginCsrf == "" {
 		t.Fatalf("%d %s", w.Code, w.Body.String())
 	}
 	if n := ts.count(t, "SELECT count(*) FROM sessions WHERE revoked_reason = 'user_inactive'"); n != 1 {

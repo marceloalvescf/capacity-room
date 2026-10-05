@@ -13,7 +13,7 @@ var userLimits = map[string]int{"username": maxUsername, "password": maxPassword
 
 func userOf(u store.User) User {
 	return User{
-		ID: u.ID.String(), Username: u.Username, Role: u.Role, Language: u.Language, Active: u.Active,
+		Id: u.ID, Username: u.Username, Role: Role(u.Role), Language: Language(u.Language), Active: u.Active,
 		CreatedAt: u.CreatedAt.UTC(), UpdatedAt: u.UpdatedAt.UTC(),
 	}
 }
@@ -54,7 +54,7 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request, a auth.Authe
 		return
 	}
 	user, err := s.Users.Create(r.Context(), a.Principal, auth.NewUser{
-		Username: body.Username, Password: body.Password, Role: body.Role, Language: body.Language,
+		Username: body.Username, Password: body.Password, Role: string(body.Role), Language: string(body.Language),
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -87,7 +87,7 @@ func (s *Server) patchUser(w http.ResponseWriter, r *http.Request, a auth.Authen
 		return
 	}
 	user, err := s.Users.Update(r.Context(), a.Principal, id, auth.UserChange{
-		Role: body.Role, Active: body.Active, Password: body.Password, Language: body.Language,
+		Role: (*string)(body.Role), Active: body.Active, Password: body.Password, Language: (*string)(body.Language),
 	})
 	if err != nil {
 		s.fail(w, r, err)

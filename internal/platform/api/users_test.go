@@ -20,7 +20,7 @@ const usersPath = "/api/v1/admin/users"
 // send sends a mutating request with the session and the CSRF token.
 func (ts *testServer) send(t *testing.T, method, path, body string, cookie *http.Cookie, csrf string) *httptest.ResponseRecorder {
 	t.Helper()
-	return ts.call(t, method, path, body, map[string]string{CSRFHeader: csrf}, cookie)
+	return ts.call(t, method, path, body, map[string]string{CSRFHeaderName: csrf}, cookie)
 }
 
 func decodeUser(t *testing.T, w *httptest.ResponseRecorder) User {
@@ -73,13 +73,13 @@ func TestUsersCreate(t *testing.T) {
 		t.Fatalf("%d %s", w.Code, w.Body.String())
 	}
 	created := decodeUser(t, w)
-	if created.Username != "kim" || created.Role != "operator" || created.Language != "en" || !created.Active || created.ID == "" {
+	if created.Username != "kim" || created.Role != "operator" || created.Language != "en" || !created.Active || created.Id == uuid.Nil {
 		t.Fatalf("created %+v", created)
 	}
 	if strings.Contains(w.Body.String(), "password") {
 		t.Fatalf("body holds a password key: %s", w.Body.String())
 	}
-	got := ts.call(t, "GET", usersPath+"/"+created.ID, "", nil, cookie)
+	got := ts.call(t, "GET", usersPath+"/"+created.Id.String(), "", nil, cookie)
 	if got.Code != 200 || decodeUser(t, got) != created {
 		t.Fatalf("get: %d %s", got.Code, got.Body.String())
 	}
