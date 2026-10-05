@@ -8,6 +8,7 @@ IMAGE := k8s-capacity-report:$(VERSION)
 TEST_IMAGE := k8s-capacity-report-test:$(VERSION)
 GOLANGCI := github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 TYPST_VERSION := 0.15.1
+TEST_DSN := postgres://kcr_test:kcr_test_only@127.0.0.1:55432/kcr_test?sslmode=disable
 
 # Every build tag of the repository, as declared in guard.BuildTags. The linter
 # runs once without tags and once with all of them, so that no file escapes it.
@@ -43,13 +44,27 @@ CHECK_SNAPSHOT := testdata/snapshot/direct-complete.json
 CHECK_RUNTIME_OUT := .cache/check-runtime
 
 .PHONY: build test lint image test-toolchain test-template test-golden \
-	update-golden update-testdata check-runtime gate
+	update-golden update-testdata check-runtime gate postgres-up postgres-down \
+	test-postgres
 
 build:
 	go build -o bin/k8s-capacity-report ./cmd/k8s-capacity-report
 
 test:
 	go test $(TEST_FLAGS) ./...
+
+postgres-up:
+	docker compose --file deploy/compose.test.yaml up --detach --wait
+
+postgres-down:
+	docker compose --file deploy/compose.test.yaml down --volumes
+
+# Starts PostgreSQL, runs the tagged tests, and removes the server even when
+# a test fails; the exit status is the tests'.
+test-postgres:
+	@set -o pipefail; $(MAKE) postgres-up; \
+	KCR_TEST_DATABASE_DSN="$(TEST_DSN)" go test $(TEST_FLAGS) -tags=postgres ./internal/platform/... ./internal/cli/...; \
+	status=$$?; $(MAKE) postgres-down; exit $$status
 
 # gofmt reads the Go files git knows about, tracked or new, so that scratch
 # files under ignored folders cannot fail the check. pipefail is turned on
@@ -136,6 +151,7 @@ gate:
 	@mkdir -p $(GATE_LOGS)
 	@set -o pipefail; $(MAKE) lint 2>&1 | tee $(GATE_LOGS)/lint.log
 	@set -o pipefail; $(MAKE) test TEST_FLAGS="-count=1" 2>&1 | tee $(GATE_LOGS)/test.log
+	@set -o pipefail; $(MAKE) test-postgres TEST_FLAGS="-count=1" 2>&1 | tee $(GATE_LOGS)/test-postgres.log
 	@set -o pipefail; $(MAKE) image BUILD_FLAGS="--no-cache --pull" 2>&1 | tee $(GATE_LOGS)/image.log
 	@set -o pipefail; $(MAKE) test-toolchain IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-toolchain.log
 	@set -o pipefail; $(MAKE) test-template IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-template.log
