@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -10,7 +11,8 @@ const contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 
 
 // SecurityHeaders wraps next: every response carries the five security
 // headers (Cache-Control only when the handler set none) and a recovered
-// panic answers 500 INTERNAL_ERROR with the same headers.
+// panic answers 500 INTERNAL_ERROR with the same headers, or, when the
+// response was already written, is logged.
 func SecurityHeaders(next http.Handler) http.Handler {
 	return securityHeaders(next, slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
@@ -26,19 +28,24 @@ func securityHeaders(next http.Handler, logger *slog.Logger) http.Handler {
 		h.Set("X-Frame-Options", "DENY")
 		sw := &statusWriter{ResponseWriter: w}
 		defer func() {
+			route := r.Pattern
+			if route == "" {
+				route = r.URL.Path
+			}
 			if rec := recover(); rec != nil {
 				if rec == http.ErrAbortHandler {
 					panic(rec)
 				}
-				if !sw.wrote {
-					WriteProblem(sw, &Problem{Code: CodeInternalError})
+				if sw.wrote {
+					// No envelope can be written any more; the log keeps
+					// the failure.
+					logger.Error("panic after the response was written",
+						"method", r.Method, "route", route, "panic", fmt.Sprint(rec))
+					return
 				}
+				WriteProblem(sw, &Problem{Code: CodeInternalError})
 			}
 			if sw.status >= 500 {
-				route := r.Pattern
-				if route == "" {
-					route = r.URL.Path
-				}
 				attrs := []any{"method", r.Method, "route", route, "status", sw.status, "code", string(sw.code)}
 				if sw.err != nil {
 					attrs = append(attrs, "err", sw.err.Error())

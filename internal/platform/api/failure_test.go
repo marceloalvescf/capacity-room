@@ -36,22 +36,46 @@ func TestFailureIsLoggedOnce(t *testing.T) {
 	}
 }
 
+func TestPanicAfterTheResponseIsLogged(t *testing.T) {
+	var buf bytes.Buffer
+	s := &Server{Logger: slog.New(slog.NewTextHandler(&buf, nil))}
+	s.extraRoutes = []Route{{Method: "GET", Pattern: "/api/v1/probe", Handler: func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		panic("late boom")
+	}}}
+	w := httptest.NewRecorder()
+	s.Handler().ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/probe", nil))
+	if w.Code != 200 {
+		t.Fatalf("%d", w.Code)
+	}
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("%d log lines: %s", len(lines), buf.String())
+	}
+	for _, want := range []string{"level=ERROR", "method=GET", `route="GET /api/v1/probe"`, `panic="late boom"`} {
+		if !strings.Contains(lines[0], want) {
+			t.Errorf("log line lacks %s: %s", want, lines[0])
+		}
+	}
+}
+
 func TestProblemOf(t *testing.T) {
 	cases := []struct {
-		name string
-		err  error
-		want Code
+		name   string
+		err    error
+		want   Code
+		status int
 	}{
-		{"throttled", &auth.ErrThrottled{RetryAfter: 42}, CodeAuthRateLimited},
-		{"credentials", auth.ErrInvalidCredentials, CodeInvalidCredentials},
-		{"unauthenticated", auth.ErrUnauthenticated, CodeUnauthenticated},
-		{"csrf", auth.ErrCSRF, CodeCSRFRejected},
-		{"short", auth.ErrPasswordTooShort, CodePasswordTooShort},
-		{"long", auth.ErrPasswordTooLong, CodePasswordTooLong},
-		{"language", auth.ErrInvalidLanguage, CodeRequestInvalid},
-		{"deadline", context.DeadlineExceeded, CodeDatabaseUnavailable},
-		{"net", &net.OpError{Op: "dial", Err: errors.New("refused")}, CodeDatabaseUnavailable},
-		{"unknown", errors.New("other"), CodeInternalError},
+		{"throttled", &auth.ErrThrottled{RetryAfter: 42}, CodeAuthRateLimited, 429},
+		{"credentials", auth.ErrInvalidCredentials, CodeInvalidCredentials, 401},
+		{"unauthenticated", auth.ErrUnauthenticated, CodeUnauthenticated, 401},
+		{"csrf", auth.ErrCSRF, CodeCSRFRejected, 403},
+		{"short", auth.ErrPasswordTooShort, CodePasswordTooShort, 422},
+		{"long", auth.ErrPasswordTooLong, CodePasswordTooLong, 422},
+		{"language", auth.ErrInvalidLanguage, CodeRequestInvalid, 400},
+		{"deadline", context.DeadlineExceeded, CodeDatabaseUnavailable, 503},
+		{"net", &net.OpError{Op: "dial", Err: errors.New("refused")}, CodeDatabaseUnavailable, 503},
+		{"unknown", errors.New("other"), CodeInternalError, 500},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -59,14 +83,16 @@ func TestProblemOf(t *testing.T) {
 			if p.Code != c.want {
 				t.Fatalf("got %s, want %s", p.Code, c.want)
 			}
-			if c.name == "throttled" && p.RetryAfter != 42 {
-				t.Fatalf("RetryAfter %d", p.RetryAfter)
+			w := httptest.NewRecorder()
+			WriteProblem(w, p)
+			if w.Code != c.status {
+				t.Fatalf("status %d, want %d", w.Code, c.status)
+			}
+			if c.name == "throttled" && (p.RetryAfter != 42 || w.Header().Get("Retry-After") != "42") {
+				t.Fatalf("RetryAfter %d, header %q", p.RetryAfter, w.Header().Get("Retry-After"))
 			}
 			if c.name == "language" && p.Fields["language"] != "invalid" {
 				t.Fatalf("fields %v", p.Fields)
-			}
-			if status := problems[p.Code].Status; c.name == "short" && status != 422 {
-				t.Fatalf("status %d", status)
 			}
 		})
 	}

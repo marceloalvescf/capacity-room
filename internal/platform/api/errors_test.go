@@ -74,21 +74,22 @@ func TestUsersErrorMapping(t *testing.T) {
 	cases := []struct {
 		err    error
 		code   Code
+		status int
 		fields map[string]string
 	}{
-		{auth.ErrUsernameTaken, CodeUsernameTaken, nil},
-		{auth.ErrLastAdmin, CodeLastAdmin, nil},
-		{auth.ErrSelfDelete, CodeSelfDelete, nil},
-		{auth.ErrSelfDeactivate, CodeSelfDeactivate, nil},
-		{auth.ErrSelfDemote, CodeSelfDemote, nil},
-		{auth.ErrInvalidUsername, CodeInvalidUsername, nil},
-		{auth.ErrPasswordTooShort, CodePasswordTooShort, nil},
-		{auth.ErrPasswordTooLong, CodePasswordTooLong, nil},
-		{auth.ErrInvalidRole, CodeRequestInvalid, map[string]string{"role": "invalid"}},
-		{auth.ErrInvalidLanguage, CodeRequestInvalid, map[string]string{"language": "invalid"}},
-		{auth.ErrUserNotFound, CodeUserNotFound, nil},
-		{auth.ErrForbidden, CodeForbidden, nil},
-		{errors.New("unknown"), CodeInternalError, nil},
+		{auth.ErrUsernameTaken, CodeUsernameTaken, 409, nil},
+		{auth.ErrLastAdmin, CodeLastAdmin, 409, nil},
+		{auth.ErrSelfDelete, CodeSelfDelete, 409, nil},
+		{auth.ErrSelfDeactivate, CodeSelfDeactivate, 409, nil},
+		{auth.ErrSelfDemote, CodeSelfDemote, 409, nil},
+		{auth.ErrInvalidUsername, CodeInvalidUsername, 422, nil},
+		{auth.ErrPasswordTooShort, CodePasswordTooShort, 422, nil},
+		{auth.ErrPasswordTooLong, CodePasswordTooLong, 422, nil},
+		{auth.ErrInvalidRole, CodeRequestInvalid, 400, map[string]string{"role": "invalid"}},
+		{auth.ErrInvalidLanguage, CodeRequestInvalid, 400, map[string]string{"language": "invalid"}},
+		{auth.ErrUserNotFound, CodeUserNotFound, 404, nil},
+		{auth.ErrForbidden, CodeForbidden, 403, nil},
+		{errors.New("unknown"), CodeInternalError, 500, nil},
 	}
 	for _, c := range cases {
 		p := problemOf(c.err)
@@ -99,6 +100,11 @@ func TestUsersErrorMapping(t *testing.T) {
 			if p.Fields[k] != v {
 				t.Errorf("%v: fields %v, want %v", c.err, p.Fields, c.fields)
 			}
+		}
+		w := httptest.NewRecorder()
+		WriteProblem(w, p)
+		if w.Code != c.status {
+			t.Errorf("%v: status %d, want %d", c.err, w.Code, c.status)
 		}
 	}
 }
