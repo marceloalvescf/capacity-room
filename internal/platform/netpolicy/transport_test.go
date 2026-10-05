@@ -187,10 +187,25 @@ func TestTransportRefusesEveryRedirect(t *testing.T) {
 				http.Redirect(w, r, "/elsewhere", status)
 			}))
 			defer server.Close()
-			tr := &Transport{Policy: loopbackPolicy, Resolve: countingResolver(new(atomic.Int32))}
+			var recorder *closeRecorder
+			tr := &Transport{
+				Policy:  loopbackPolicy,
+				Resolve: countingResolver(new(atomic.Int32)),
+				Dialer: dialerFunc(func(ctx context.Context, network, address string) (net.Conn, error) {
+					conn, err := (&net.Dialer{}).DialContext(ctx, network, address)
+					if err != nil {
+						return nil, err
+					}
+					recorder = &closeRecorder{Conn: conn}
+					return recorder, nil
+				}),
+			}
 			req, _ := http.NewRequest(http.MethodGet, "http://metrics.test:"+serverPort(t, server)+"/x", nil)
 			resp, err := tr.RoundTrip(req)
 			wantCode(t, err, CodeRedirectRejected)
+			if recorder == nil || !recorder.closed.Load() {
+				t.Error("the connection was not closed")
+			}
 			if resp != nil {
 				t.Error("a response came back with the refusal")
 			}
@@ -389,4 +404,25 @@ func TestTransportThroughThePromClient(t *testing.T) {
 		Transport: refusing,
 	})
 	wantCode(t, err, CodeAddressRejected)
+}
+
+func TestTransportTLSVerifiedIPLiteral(t *testing.T) {
+	server, pool := tlsServer(t)
+	tr := &Transport{
+		Policy: loopbackPolicy,
+		Resolve: func(context.Context, string) ([]netip.Addr, error) {
+			t.Error("resolved a literal")
+			return nil, errors.New("no")
+		},
+		TLS: &tls.Config{RootCAs: pool},
+	}
+	req, _ := http.NewRequest(http.MethodGet, "https://127.0.0.1:"+serverPort(t, server)+"/x", nil)
+	resp, err := tr.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("RoundTrip: %v", err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Errorf("status = %d, want 200", resp.StatusCode)
+	}
 }

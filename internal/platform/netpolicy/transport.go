@@ -65,9 +65,9 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		if t.TLS != nil {
 			cfg = t.TLS.Clone()
 		}
-		if !origin.Literal {
-			cfg.ServerName = origin.Host
-		}
+		// An IP literal as ServerName sends no SNI and is checked against the
+		// IP addresses of the certificate.
+		cfg.ServerName = origin.Host
 		secured := tls.Client(conn, cfg)
 		if err := secured.HandshakeContext(r.Context()); err != nil {
 			_ = conn.Close()
