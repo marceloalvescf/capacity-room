@@ -5,6 +5,7 @@ package store_test
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
@@ -349,6 +352,45 @@ func TestProfileIDCheck(t *testing.T) {
 	for _, id := range []string{"a", "a.b-c_d", strings.Repeat("a", 63)} {
 		if _, err := pool.Exec(ctx, insertProfile, id, nil); err != nil {
 			t.Fatalf("id %q refused: %v", id, err)
+		}
+	}
+}
+
+// TestMigrateDownAndUp runs the newest Down section through goose, over the
+// migration files of the folder, and applies the migrations again.
+func TestMigrateDownAndUp(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	db := stdlib.OpenDBFromPool(pool)
+	defer func() { _ = db.Close() }()
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, os.DirFS("migrations"), goose.WithDisableGlobalRegistry(true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = provider.Close() }()
+
+	if _, err := provider.Down(ctx); err != nil {
+		t.Fatalf("down: %v", err)
+	}
+	version, err := provider.GetDBVersion(ctx)
+	if err != nil || version != 1 {
+		t.Fatalf("version after down = %d, %v; want 1", version, err)
+	}
+	for _, table := range []string{"profiles", "profile_revisions"} {
+		var exists bool
+		if err := pool.QueryRow(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil || exists {
+			t.Fatalf("table %s exists = %v, %v after down", table, exists, err)
+		}
+	}
+
+	version, err = store.Migrate(ctx, pool)
+	if err != nil || version != 2 {
+		t.Fatalf("version after up = %d, %v; want 2", version, err)
+	}
+	for _, table := range []string{"profiles", "profile_revisions"} {
+		var exists bool
+		if err := pool.QueryRow(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil || !exists {
+			t.Fatalf("table %s exists = %v, %v after up", table, exists, err)
 		}
 	}
 }

@@ -67,6 +67,6 @@ CREATE CONSTRAINT TRIGGER profile_pointer_matches_its_revision
 -- +goose Down
 ALTER TABLE profiles DROP CONSTRAINT fk_profiles_current_revision;
 DROP TABLE profile_revisions;
+DROP TABLE profiles;
 DROP FUNCTION reject_profile_revision_mutation();
 DROP FUNCTION check_profile_pointer();
-DROP TABLE profiles;
