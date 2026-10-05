@@ -237,7 +237,8 @@ redactor the moment the settings are loaded, before the pool opens.
   under the PostgreSQL session lock `72427301`, by `serve` before it listens
   and by `admin migrate`. Every timestamp is passed from Go; no statement
   calls `now()`. Every foreign key is `ON DELETE RESTRICT`; deletion is
-  deactivation. The audit table refuses an update and a delete by a trigger.
+  deactivation. The audit table refuses an update, a delete, and a truncate
+  by triggers.
 - **A change of role or active flag takes the table lock first,** so the
   last-administrator rule reads a count that cannot race; a password or
   language change writes its column alone, and a password write is a

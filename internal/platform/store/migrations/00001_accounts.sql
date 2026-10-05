@@ -65,8 +65,12 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER audit_events_are_append_only
     BEFORE UPDATE OR DELETE ON audit_events
     FOR EACH ROW EXECUTE FUNCTION reject_audit_event_mutation();
+CREATE TRIGGER audit_events_are_not_truncated
+    BEFORE TRUNCATE ON audit_events
+    FOR EACH STATEMENT EXECUTE FUNCTION reject_audit_event_mutation();
 
 -- +goose Down
+DROP TRIGGER audit_events_are_not_truncated ON audit_events;
 DROP TABLE audit_events;
 DROP FUNCTION reject_audit_event_mutation();
 DROP TABLE login_rate_limits;

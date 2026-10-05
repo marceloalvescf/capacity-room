@@ -127,6 +127,27 @@ VALUES (now(), 'login', 'succeeded', '{}')`); err != nil {
 	}
 }
 
+func TestAuditEventsRefuseTruncate(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	if _, err := pool.Exec(ctx, `INSERT INTO audit_events (occurred_at, action, outcome, metadata)
+VALUES (now(), 'login', 'succeeded', '{}')`); err != nil {
+		t.Fatal(err)
+	}
+	_, err := pool.Exec(ctx, "TRUNCATE audit_events")
+	if err == nil {
+		t.Fatal("TRUNCATE succeeded, want a failure")
+	}
+	code, message := sqlState(t, err)
+	if code != "23000" || !strings.Contains(message, "append-only") {
+		t.Fatalf("SQLSTATE %s, message %q", code, message)
+	}
+	var n int
+	if err := pool.QueryRow(ctx, "SELECT count(*) FROM audit_events").Scan(&n); err != nil || n != 1 {
+		t.Fatalf("%d rows, %v", n, err)
+	}
+}
+
 func TestSessionRevocationIsPaired(t *testing.T) {
 	ctx := context.Background()
 	pool := storetest.New(t)
