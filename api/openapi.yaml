@@ -1,0 +1,453 @@
+openapi: 3.0.3
+info:
+  title: k8s-capacity-report API
+  version: "1"
+  description: >-
+    The HTTP contract of the serve command. Every route is under /api/v1.
+    Errors have one shape, Error, whose message is a fixed English sentence
+    chosen by the code; a client shows its own translation of the code.
+    The health routes /health/live and /health/ready are outside this
+    contract and need no session.
+servers:
+  - url: /api/v1
+security:
+  - cookieAuth: []
+paths:
+  /auth/session:
+    get:
+      operationId: getSession
+      summary: The session state and, for an anonymous caller, the sign-in CSRF token.
+      security: []
+      responses:
+        "200":
+          description: >-
+            Anonymous (AnonymousSession, with the cookie kcr_login_csrf set) or
+            signed in (SignedInSession, with a fresh csrf_token).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/AnonymousSession"
+                  - $ref: "#/components/schemas/SignedInSession"
+  /auth/login:
+    post:
+      operationId: login
+      summary: Sign in with a local account.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Signed in. Sets the cookie kcr_session and clears kcr_login_csrf.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignedInSession"
+        "400":
+          $ref: "#/components/responses/RequestInvalid"
+        "401":
+          description: INVALID_CREDENTIALS.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/CSRFRejected"
+        "429":
+          description: AUTH_RATE_LIMITED, with Retry-After in seconds.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Sign out.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: Signed out. Clears the cookie kcr_session.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/CSRFRejected"
+  /account:
+    patch:
+      operationId: changeAccount
+      summary: Change the reader's own password or language.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountChange"
+      responses:
+        "200":
+          description: >-
+            The account after the change. When the password changed, every
+            session of the reader is revoked and the cookie kcr_session is
+            cleared in this response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Principal"
+        "400":
+          $ref: "#/components/responses/RequestInvalid"
+        "401":
+          description: UNAUTHENTICATED, or INVALID_CREDENTIALS when the current password is wrong.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          $ref: "#/components/responses/CSRFRejected"
+        "422":
+          $ref: "#/components/responses/PasswordPolicy"
+  /admin/users:
+    get:
+      operationId: listUsers
+      summary: Every user, in name order.
+      responses:
+        "200":
+          description: The users.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createUser
+      summary: Create a user.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewUser"
+      responses:
+        "201":
+          description: The user created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/RequestInvalid"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrCSRF"
+        "409":
+          description: USERNAME_TAKEN.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/UsernameOrPasswordPolicy"
+  /admin/users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    get:
+      operationId: getUser
+      summary: One user.
+      responses:
+        "200":
+          description: The user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/UserNotFound"
+    patch:
+      operationId: changeUser
+      summary: Change a user's role, active flag, password, or language.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserChange"
+      responses:
+        "200":
+          description: The user after the change. A change that moves nothing returns the user unchanged.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/RequestInvalid"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrCSRF"
+        "404":
+          $ref: "#/components/responses/UserNotFound"
+        "409":
+          description: SELF_DEACTIVATE, SELF_DEMOTE, or LAST_ADMIN.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          $ref: "#/components/responses/PasswordPolicy"
+    delete:
+      operationId: deactivateUser
+      summary: Deactivate a user and revoke every session of theirs.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: Deactivated.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrCSRF"
+        "404":
+          $ref: "#/components/responses/UserNotFound"
+        "409":
+          description: SELF_DELETE or LAST_ADMIN.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: kcr_session
+  parameters:
+    CSRFHeader:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      description: >-
+        On POST /auth/login, the value of the cookie kcr_login_csrf; on every
+        other state-changing route, the csrf_token of the session.
+      schema:
+        type: string
+    UserID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    RequestInvalid:
+      description: REQUEST_INVALID, with one field per problem (missing, invalid, unknown, too_long).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthenticated:
+      description: UNAUTHENTICATED.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    CSRFRejected:
+      description: CSRF_REJECTED.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: FORBIDDEN.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ForbiddenOrCSRF:
+      description: FORBIDDEN or CSRF_REJECTED.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    UserNotFound:
+      description: USER_NOT_FOUND.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    PasswordPolicy:
+      description: PASSWORD_TOO_SHORT or PASSWORD_TOO_LONG.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    UsernameOrPasswordPolicy:
+      description: INVALID_USERNAME, PASSWORD_TOO_SHORT, or PASSWORD_TOO_LONG.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorBody"
+    ErrorBody:
+      type: object
+      required: [code, message, fields]
+      properties:
+        code:
+          type: string
+          description: A code of the contract, such as REQUEST_INVALID.
+        message:
+          type: string
+          description: A fixed English sentence chosen by the code, never text from an exception.
+        fields:
+          type: object
+          description: The field problems of a REQUEST_INVALID answer; empty otherwise.
+          additionalProperties:
+            type: string
+    Role:
+      type: string
+      enum: [administrator, operator, reader]
+    Language:
+      type: string
+      enum: [pt-BR, en]
+    Principal:
+      type: object
+      required: [id, username, role, language]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        role:
+          $ref: "#/components/schemas/Role"
+        language:
+          $ref: "#/components/schemas/Language"
+    AnonymousSession:
+      type: object
+      required: [authenticated, login_csrf]
+      properties:
+        authenticated:
+          type: boolean
+          enum: [false]
+        login_csrf:
+          type: string
+          description: The sign-in CSRF token, also set as the cookie kcr_login_csrf.
+    SignedInSession:
+      type: object
+      required: [authenticated, principal, csrf_token, expires_at]
+      properties:
+        authenticated:
+          type: boolean
+          enum: [true]
+        principal:
+          $ref: "#/components/schemas/Principal"
+        csrf_token:
+          type: string
+          description: The token to send as X-CSRF-Token on every state-changing request.
+        expires_at:
+          type: string
+          format: date-time
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          maxLength: 256
+        password:
+          type: string
+          maxLength: 1024
+    AccountChange:
+      type: object
+      properties:
+        current_password:
+          type: string
+          maxLength: 1024
+          description: Required with password.
+        password:
+          type: string
+          maxLength: 1024
+        language:
+          $ref: "#/components/schemas/Language"
+    User:
+      type: object
+      required: [id, username, role, language, active, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        role:
+          $ref: "#/components/schemas/Role"
+        language:
+          $ref: "#/components/schemas/Language"
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    UserList:
+      type: object
+      required: [users]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+    NewUser:
+      type: object
+      required: [username, password, role, language]
+      properties:
+        username:
+          type: string
+          maxLength: 256
+        password:
+          type: string
+          maxLength: 1024
+        role:
+          $ref: "#/components/schemas/Role"
+        language:
+          $ref: "#/components/schemas/Language"
+    UserChange:
+      type: object
+      properties:
+        role:
+          $ref: "#/components/schemas/Role"
+        active:
+          type: boolean
+        password:
+          type: string
+          maxLength: 1024
+        language:
+          $ref: "#/components/schemas/Language"
