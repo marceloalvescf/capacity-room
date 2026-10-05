@@ -77,13 +77,13 @@ type Analysis struct {
 
 // Thresholds holds the numeric limits that decide a finding's severity.
 type Thresholds struct {
-	WarningPercent           float64
-	CriticalPercent          float64
-	LowUtilizationPercent    float64
-	AutoscalerNearMaxPercent float64
-	NodepoolSpreadPoints     float64
-	BurstyGapPercent         float64
-	HPAReplicaDivergence     float64
+	WarningPercent           float64 `json:"warning_percent"`
+	CriticalPercent          float64 `json:"critical_percent"`
+	LowUtilizationPercent    float64 `json:"low_utilization_percent"`
+	AutoscalerNearMaxPercent float64 `json:"autoscaler_near_max_percent"`
+	NodepoolSpreadPoints     float64 `json:"nodepool_spread_points"`
+	BurstyGapPercent         float64 `json:"bursty_gap_percent"`
+	HPAReplicaDivergence     float64 `json:"hpa_replica_divergence"`
 }
 
 // Report configures how the report is written.
