@@ -53,8 +53,8 @@ func TestMigrateIsIdempotent(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if version != 1 {
-			t.Fatalf("version = %d, want 1", version)
+		if version != 2 {
+			t.Fatalf("version = %d, want 2", version)
 		}
 		pending, err := store.HasPending(ctx, pool)
 		if err != nil {
@@ -213,5 +213,142 @@ func TestTransactRollsBackOnPanic(t *testing.T) {
 	}()
 	if n := countUsers(t, pool); n != 0 {
 		t.Fatalf("users = %d, want 0", n)
+	}
+}
+
+const insertProfile = `INSERT INTO profiles (id, current_revision_id, created_at, updated_at) VALUES ($1, $2, now(), now())`
+
+const insertRevision = `INSERT INTO profile_revisions (id, profile_id, revision, fingerprint, display_name, active, document, credential_file, ca_bundle_file, created_by, created_at)
+VALUES ($1, $2, $3, $4, 'name', true, '{}', '', '', NULL, now())`
+
+func TestMigrateToVersionTwo(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.NewEmpty(t)
+	version, err := store.Migrate(ctx, pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != 2 {
+		t.Fatalf("version = %d, want 2", version)
+	}
+	for _, table := range []string{"profiles", "profile_revisions"} {
+		var exists bool
+		if err := pool.QueryRow(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil {
+			t.Fatal(err)
+		}
+		if !exists {
+			t.Fatalf("table %s does not exist", table)
+		}
+	}
+}
+
+func TestProfileRevisionsAreImmutable(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	revisionID := uuid.New()
+	if _, err := pool.Exec(ctx, insertProfile, "a", nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, insertRevision, revisionID, "a", 1, "fp"); err != nil {
+		t.Fatal(err)
+	}
+	for _, statement := range []string{
+		"UPDATE profile_revisions SET display_name = 'other'",
+		"DELETE FROM profile_revisions",
+		"TRUNCATE profile_revisions CASCADE",
+	} {
+		_, err := pool.Exec(ctx, statement)
+		if err == nil {
+			t.Fatalf("%s succeeded, want a failure", statement)
+		}
+		code, message := sqlState(t, err)
+		if code != "23000" || !strings.Contains(message, "immutable") {
+			t.Fatalf("%s: SQLSTATE %s, message %q", statement, code, message)
+		}
+	}
+	// A plain TRUNCATE never reaches the trigger: the foreign key of the
+	// pointer refuses it first.
+	_, err := pool.Exec(ctx, "TRUNCATE profile_revisions")
+	if err == nil {
+		t.Fatal("plain TRUNCATE succeeded, want a failure")
+	}
+	if code, _ := sqlState(t, err); code != "0A000" {
+		t.Fatalf("plain TRUNCATE: SQLSTATE = %s, want 0A000", code)
+	}
+	var n int
+	if err := pool.QueryRow(ctx, "SELECT count(*) FROM profile_revisions").Scan(&n); err != nil || n != 1 {
+		t.Fatalf("%d rows, %v", n, err)
+	}
+}
+
+func TestProfilePointerMustNameOwnRevision(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	revisionB := uuid.New()
+	for _, id := range []string{"a", "b"} {
+		if _, err := pool.Exec(ctx, insertProfile, id, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := pool.Exec(ctx, insertRevision, revisionB, "b", 1, "fp"); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, `UPDATE profiles SET current_revision_id = $1 WHERE id = 'a'`, revisionB); err != nil {
+		t.Fatalf("the update itself must succeed before the commit: %v", err)
+	}
+	err = tx.Commit(ctx)
+	if err == nil {
+		t.Fatal("commit succeeded, want a failure")
+	}
+	if code, _ := sqlState(t, err); code != "23000" {
+		t.Fatalf("SQLSTATE = %s, want 23000", code)
+	}
+}
+
+func TestProfilePointerDeferred(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	revisionID := uuid.New()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, insertProfile, "a", revisionID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, insertRevision, revisionID, "a", 1, "fp"); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+	var got uuid.UUID
+	if err := pool.QueryRow(ctx, `SELECT current_revision_id FROM profiles WHERE id = 'a'`).Scan(&got); err != nil || got != revisionID {
+		t.Fatalf("pointer = %v, %v", got, err)
+	}
+}
+
+func TestProfileIDCheck(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	for _, id := range []string{"A", "..a", "a..b", strings.Repeat("a", 64)} {
+		_, err := pool.Exec(ctx, insertProfile, id, nil)
+		if err == nil {
+			t.Fatalf("id %q accepted, want a failure", id)
+		}
+		if code, _ := sqlState(t, err); code != "23514" {
+			t.Fatalf("id %q: SQLSTATE = %s, want 23514", id, code)
+		}
+	}
+	for _, id := range []string{"a", "a.b-c_d", strings.Repeat("a", 63)} {
+		if _, err := pool.Exec(ctx, insertProfile, id, nil); err != nil {
+			t.Fatalf("id %q refused: %v", id, err)
+		}
 	}
 }
