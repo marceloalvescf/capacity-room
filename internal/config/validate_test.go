@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -324,5 +325,73 @@ func TestValidateRefusesANonFiniteTimeout(t *testing.T) {
 func TestValidateAcceptsTheBoundaries(t *testing.T) {
 	if err := loadWith(t, "thresholds", "warning_percent = 0\ncritical_percent = 100"); err != nil {
 		t.Fatalf("Load() error = %v, want nil", err)
+	}
+}
+
+func TestValidateThresholdsWrapsTheRule(t *testing.T) {
+	warning := Default().Thresholds
+	warning.WarningPercent, warning.CriticalPercent = 90, 85
+	nan := Default().Thresholds
+	nan.WarningPercent = math.NaN()
+
+	tests := []struct {
+		name    string
+		th      Thresholds
+		message string
+	}{
+		{"defaults", Default().Thresholds, ""},
+		{"warning above critical", warning, "thresholds.warning_percent must be lower than critical_percent"},
+		{"not finite", nan, "threshold values must be finite numbers"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checkMessage(t, ValidateThresholds(tt.th), tt.message)
+		})
+	}
+}
+
+func TestValidatePeriod(t *testing.T) {
+	tests := []struct {
+		period  string
+		message string
+	}{
+		{"24h", ""},
+		{"x", "analysis.period must look like 30m, 4h, 24h, or 7d"},
+		{"99999999999999999999h", "analysis.period is too long"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.period, func(t *testing.T) {
+			checkMessage(t, ValidatePeriod(tt.period), tt.message)
+		})
+	}
+}
+
+func TestValidateTimezone(t *testing.T) {
+	tests := []struct {
+		zone    string
+		message string
+	}{
+		{"UTC", ""},
+		{"Mars/Olympus", "analysis.timezone is unknown"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.zone, func(t *testing.T) {
+			checkMessage(t, ValidateTimezone(tt.zone), tt.message)
+		})
+	}
+}
+
+// checkMessage fails unless err carries message, or is nil when message is
+// empty.
+func checkMessage(t *testing.T, err error, message string) {
+	t.Helper()
+	if message == "" {
+		if err != nil {
+			t.Fatalf("error = %v, want nil", err)
+		}
+		return
+	}
+	if err == nil || err.Error() != message {
+		t.Fatalf("error = %v, want %q", err, message)
 	}
 }

@@ -317,11 +317,13 @@ func TestLayersHoldEveryPackageOfThisPart(t *testing.T) {
 		"internal/catalog":            80,
 		"internal/document":           90,
 		"internal/goldentest":         95,
+		"internal/platform/netpolicy": 105,
 		"internal/platform/settings":  110,
 		"internal/platform/store":     120,
 		"internal/platform/storetest": 125,
 		"internal/platform/audit":     130,
 		"internal/platform/auth":      140,
+		"internal/platform/profiles":  145,
 		"internal/platform/api":       150,
 		"internal/cli":                200,
 	}
@@ -334,11 +336,13 @@ func TestLayersHoldEveryPackageOfThisPart(t *testing.T) {
 
 func TestLayersHoldThePlatformPackages(t *testing.T) {
 	checkLayerRanks(t, map[string]int{
+		"internal/platform/netpolicy": 105,
 		"internal/platform/settings":  110,
 		"internal/platform/store":     120,
 		"internal/platform/storetest": 125,
 		"internal/platform/audit":     130,
 		"internal/platform/auth":      140,
+		"internal/platform/profiles":  145,
 		"internal/platform/api":       150,
 	})
 }

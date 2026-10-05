@@ -140,14 +140,11 @@ func validateCluster(cl Cluster) error {
 }
 
 func validateAnalysis(a Analysis) error {
-	if !periodRe.MatchString(a.Period) {
-		return errPeriodShape
+	if err := ValidatePeriod(a.Period); err != nil {
+		return err
 	}
-	if _, err := a.Duration(); err != nil {
-		return errPeriodTooLong
-	}
-	if _, err := a.Location(); err != nil {
-		return errTimezoneUnknown
+	if err := ValidateTimezone(a.Timezone); err != nil {
+		return err
 	}
 	switch a.NodeAutoscaling {
 	case "auto", "enabled", "disabled":
@@ -155,6 +152,30 @@ func validateAnalysis(a Analysis) error {
 		return errNodeAutoscaling
 	}
 	return nil
+}
+
+// ValidatePeriod judges an analysis period the way Validate does.
+func ValidatePeriod(period string) error {
+	if !periodRe.MatchString(period) {
+		return errPeriodShape
+	}
+	if _, err := (Analysis{Period: period}).Duration(); err != nil {
+		return errPeriodTooLong
+	}
+	return nil
+}
+
+// ValidateTimezone judges an analysis timezone the way Validate does.
+func ValidateTimezone(zone string) error {
+	if _, err := (Analysis{Timezone: zone}).Location(); err != nil {
+		return errTimezoneUnknown
+	}
+	return nil
+}
+
+// ValidateThresholds judges the thresholds the way Validate does.
+func ValidateThresholds(th Thresholds) error {
+	return validateThresholds(th)
 }
 
 func validateThresholds(th Thresholds) error {

@@ -460,39 +460,6 @@ func classify(ctx context.Context, err error) (int, string) {
 	return 1, "internal failure: " + err.Error()
 }
 
-// collected is the result of connecting, resolving the scope, and detecting
-// the capabilities: everything runCheck, runSnapshot, and runPDF share.
-type collected struct {
-	client       *prom.Client
-	scope        discovery.Scope
-	capabilities []discovery.Capability
-}
-
-// preflight connects, resolves the scope, detects the capabilities, and
-// checks they are sufficient, with at as the time of every instant query
-// this stage sends. It reads the clock nowhere itself: a check reads it once,
-// before the preflight, and a run that collects reads it again when the
-// collectors return.
-func preflight(ctx context.Context, cfg config.Config, token string, at time.Time) (collected, error) {
-	client, err := prom.Connect(ctx, prom.Options{Metrics: cfg.Metrics, Token: token})
-	if err != nil {
-		return collected{}, err
-	}
-	scope, err := discovery.ResolveScope(ctx, client, cfg.Cluster, at)
-	if err != nil {
-		return collected{}, err
-	}
-	capabilities, err := discovery.Detect(ctx, client, scope, cfg.Analysis, at)
-	if err != nil {
-		return collected{}, err
-	}
-	if err := discovery.CheckSufficient(capabilities); err != nil {
-		return collected{}, err
-	}
-
-	return collected{client: client, scope: scope, capabilities: capabilities}, nil
-}
-
 // runCheck runs the preflight and reports it; it builds no snapshot. It
 // computes the window before the preflight, exactly like every mode that
 // collects, so that an empty period stops a check the same way it stops a
@@ -510,14 +477,14 @@ func runCheck(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 		return nil, &exitError{2, err}
 	}
 
-	c, err := preflight(ctx, loaded.Config, loaded.Token, window.End)
+	c, err := discovery.RunPreflight(ctx, prom.Options{Metrics: loaded.Config.Metrics, Token: loaded.Token}, loaded.Config.Cluster, loaded.Config.Analysis, window.End)
 	if err != nil {
 		return nil, err
 	}
 
-	lines := preflightLines(c.capabilities)
+	lines := preflightLines(c.Capabilities)
 	if f.verbose {
-		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.capabilities)...)
+		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.Capabilities)...)
 	}
 	return lines, nil
 }
@@ -542,16 +509,16 @@ func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *c
 		return nil, &exitError{2, err}
 	}
 
-	c, err := preflight(ctx, loaded.Config, loaded.Token, window.End)
+	c, err := discovery.RunPreflight(ctx, prom.Options{Metrics: loaded.Config.Metrics, Token: loaded.Token}, loaded.Config.Cluster, loaded.Config.Analysis, window.End)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := collectpkg.All(ctx, c.client, collectpkg.Input{
-		Scope:        c.scope,
+	result, err := collectpkg.All(ctx, c.Client, collectpkg.Input{
+		Scope:        c.Scope,
 		Cluster:      loaded.Config.Cluster,
 		Analysis:     loaded.Config.Analysis,
-		Capabilities: c.capabilities,
+		Capabilities: c.Capabilities,
 		Window:       window,
 	})
 	if err != nil {
@@ -575,9 +542,9 @@ func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *c
 		GeneratorVersion:    env.Version,
 		EmittedAt:           emittedAt,
 		Config:              loaded.Config,
-		EndpointKind:        c.client.Kind(),
-		Scope:               c.scope,
-		Capabilities:        c.capabilities,
+		EndpointKind:        c.Client.Kind(),
+		Scope:               c.Scope,
+		Capabilities:        c.Capabilities,
 		CollectionStarted:   emittedAt,
 		CollectionCompleted: collectionCompletedAt,
 		Window:              window,
@@ -596,11 +563,11 @@ func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *c
 		return nil, &exitError{6, err}
 	}
 
-	lines := preflightLines(c.capabilities)
+	lines := preflightLines(c.Capabilities)
 	lines = append(lines, collectionLines(result)...)
 	lines = append(lines, "snapshot: "+outputPath)
 	if f.verbose {
-		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.capabilities)...)
+		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.Capabilities)...)
 	}
 	return lines, nil
 }
@@ -646,16 +613,16 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 		return nil, &exitError{6, err}
 	}
 
-	c, err := preflight(ctx, loaded.Config, loaded.Token, window.End)
+	c, err := discovery.RunPreflight(ctx, prom.Options{Metrics: loaded.Config.Metrics, Token: loaded.Token}, loaded.Config.Cluster, loaded.Config.Analysis, window.End)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := collectpkg.All(ctx, c.client, collectpkg.Input{
-		Scope:        c.scope,
+	result, err := collectpkg.All(ctx, c.Client, collectpkg.Input{
+		Scope:        c.Scope,
 		Cluster:      loaded.Config.Cluster,
 		Analysis:     loaded.Config.Analysis,
-		Capabilities: c.capabilities,
+		Capabilities: c.Capabilities,
 		Window:       window,
 	})
 	if err != nil {
@@ -679,9 +646,9 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 		GeneratorVersion:    env.Version,
 		EmittedAt:           emittedAt,
 		Config:              loaded.Config,
-		EndpointKind:        c.client.Kind(),
-		Scope:               c.scope,
-		Capabilities:        c.capabilities,
+		EndpointKind:        c.Client.Kind(),
+		Scope:               c.Scope,
+		Capabilities:        c.Capabilities,
 		CollectionStarted:   emittedAt,
 		CollectionCompleted: collectionCompletedAt,
 		Window:              window,
@@ -713,11 +680,11 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 		return nil, &exitError{6, err}
 	}
 
-	lines := preflightLines(c.capabilities)
+	lines := preflightLines(c.Capabilities)
 	lines = append(lines, collectionLines(result)...)
 	lines = append(lines, "report: "+outputPath)
 	if f.verbose {
-		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.capabilities)...)
+		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.Capabilities)...)
 	}
 	return lines, nil
 }

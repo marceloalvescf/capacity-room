@@ -36,11 +36,13 @@ var Layers = []Layer{
 	{Path: "internal/catalog", Rank: 80},
 	{Path: "internal/document", Rank: 90},
 	{Path: "internal/goldentest", Rank: 95},
+	{Path: "internal/platform/netpolicy", Rank: 105},
 	{Path: "internal/platform/settings", Rank: 110},
 	{Path: "internal/platform/store", Rank: 120},
 	{Path: "internal/platform/storetest", Rank: 125},
 	{Path: "internal/platform/audit", Rank: 130},
 	{Path: "internal/platform/auth", Rank: 140},
+	{Path: "internal/platform/profiles", Rank: 145},
 	{Path: "internal/platform/api", Rank: 150},
 	{Path: "internal/cli", Rank: 200},
 }
