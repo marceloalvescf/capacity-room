@@ -111,6 +111,174 @@ func (e NodeAutoscaling) Valid() bool {
 	}
 }
 
+// Defines values for PDFFailureCode.
+const (
+	PDFFailureCodeINTERNALFAILURE      PDFFailureCode = "INTERNAL_FAILURE"
+	PDFFailureCodePDFATTEMPTSEXHAUSTED PDFFailureCode = "PDF_ATTEMPTS_EXHAUSTED"
+	PDFFailureCodePDFCOMPILEFAILED     PDFFailureCode = "PDF_COMPILE_FAILED"
+	PDFFailureCodePDFTOOLARGE          PDFFailureCode = "PDF_TOO_LARGE"
+)
+
+// Valid indicates whether the value is a known member of the PDFFailureCode enum.
+func (e PDFFailureCode) Valid() bool {
+	switch e {
+	case PDFFailureCodeINTERNALFAILURE:
+		return true
+	case PDFFailureCodePDFATTEMPTSEXHAUSTED:
+		return true
+	case PDFFailureCodePDFCOMPILEFAILED:
+		return true
+	case PDFFailureCodePDFTOOLARGE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PDFStatus.
+const (
+	PDFStatusFailed  PDFStatus = "failed"
+	PDFStatusPending PDFStatus = "pending"
+	PDFStatusReady   PDFStatus = "ready"
+)
+
+// Valid indicates whether the value is a known member of the PDFStatus enum.
+func (e PDFStatus) Valid() bool {
+	switch e {
+	case PDFStatusFailed:
+		return true
+	case PDFStatusPending:
+		return true
+	case PDFStatusReady:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportDeleteOutcome.
+const (
+	ReportDeleteOutcomeDeleted   ReportDeleteOutcome = "deleted"
+	ReportDeleteOutcomeExpired   ReportDeleteOutcome = "expired"
+	ReportDeleteOutcomeForbidden ReportDeleteOutcome = "forbidden"
+	ReportDeleteOutcomeNotFound  ReportDeleteOutcome = "not_found"
+)
+
+// Valid indicates whether the value is a known member of the ReportDeleteOutcome enum.
+func (e ReportDeleteOutcome) Valid() bool {
+	switch e {
+	case ReportDeleteOutcomeDeleted:
+		return true
+	case ReportDeleteOutcomeExpired:
+		return true
+	case ReportDeleteOutcomeForbidden:
+		return true
+	case ReportDeleteOutcomeNotFound:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportFailureCode.
+const (
+	ReportFailureCodeCAPABILITIESINSUFFICIENT     ReportFailureCode = "CAPABILITIES_INSUFFICIENT"
+	ReportFailureCodeCLUSTERSCOPENOTFOUND         ReportFailureCode = "CLUSTER_SCOPE_NOT_FOUND"
+	ReportFailureCodeCOLLECTIONTIMEOUT            ReportFailureCode = "COLLECTION_TIMEOUT"
+	ReportFailureCodeENDPOINTADDRESSREJECTED      ReportFailureCode = "ENDPOINT_ADDRESS_REJECTED"
+	ReportFailureCodeENDPOINTAPINOTFOUND          ReportFailureCode = "ENDPOINT_API_NOT_FOUND"
+	ReportFailureCodeENDPOINTAUTHREJECTED         ReportFailureCode = "ENDPOINT_AUTH_REJECTED"
+	ReportFailureCodeENDPOINTCONNECTIONREJECTED   ReportFailureCode = "ENDPOINT_CONNECTION_REJECTED"
+	ReportFailureCodeENDPOINTREDIRECTREJECTED     ReportFailureCode = "ENDPOINT_REDIRECT_REJECTED"
+	ReportFailureCodeENDPOINTRESOLUTIONFAILED     ReportFailureCode = "ENDPOINT_RESOLUTION_FAILED"
+	ReportFailureCodeENDPOINTTLSFAILED            ReportFailureCode = "ENDPOINT_TLS_FAILED"
+	ReportFailureCodeENDPOINTUNREACHABLE          ReportFailureCode = "ENDPOINT_UNREACHABLE"
+	ReportFailureCodeENDPOINTURLREJECTED          ReportFailureCode = "ENDPOINT_URL_REJECTED"
+	ReportFailureCodeINTERNALFAILURE              ReportFailureCode = "INTERNAL_FAILURE"
+	ReportFailureCodeJOBATTEMPTSEXHAUSTED         ReportFailureCode = "JOB_ATTEMPTS_EXHAUSTED"
+	ReportFailureCodeNOTHINGTOREPORT              ReportFailureCode = "NOTHING_TO_REPORT"
+	ReportFailureCodePROFILECABUNDLEUNAVAILABLE   ReportFailureCode = "PROFILE_CA_BUNDLE_UNAVAILABLE"
+	ReportFailureCodePROFILECREDENTIALUNAVAILABLE ReportFailureCode = "PROFILE_CREDENTIAL_UNAVAILABLE"
+	ReportFailureCodeSNAPSHOTTOOLARGE             ReportFailureCode = "SNAPSHOT_TOO_LARGE"
+)
+
+// Valid indicates whether the value is a known member of the ReportFailureCode enum.
+func (e ReportFailureCode) Valid() bool {
+	switch e {
+	case ReportFailureCodeCAPABILITIESINSUFFICIENT:
+		return true
+	case ReportFailureCodeCLUSTERSCOPENOTFOUND:
+		return true
+	case ReportFailureCodeCOLLECTIONTIMEOUT:
+		return true
+	case ReportFailureCodeENDPOINTADDRESSREJECTED:
+		return true
+	case ReportFailureCodeENDPOINTAPINOTFOUND:
+		return true
+	case ReportFailureCodeENDPOINTAUTHREJECTED:
+		return true
+	case ReportFailureCodeENDPOINTCONNECTIONREJECTED:
+		return true
+	case ReportFailureCodeENDPOINTREDIRECTREJECTED:
+		return true
+	case ReportFailureCodeENDPOINTRESOLUTIONFAILED:
+		return true
+	case ReportFailureCodeENDPOINTTLSFAILED:
+		return true
+	case ReportFailureCodeENDPOINTUNREACHABLE:
+		return true
+	case ReportFailureCodeENDPOINTURLREJECTED:
+		return true
+	case ReportFailureCodeINTERNALFAILURE:
+		return true
+	case ReportFailureCodeJOBATTEMPTSEXHAUSTED:
+		return true
+	case ReportFailureCodeNOTHINGTOREPORT:
+		return true
+	case ReportFailureCodePROFILECABUNDLEUNAVAILABLE:
+		return true
+	case ReportFailureCodePROFILECREDENTIALUNAVAILABLE:
+		return true
+	case ReportFailureCodeSNAPSHOTTOOLARGE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportPhase.
+const (
+	Analyzing    ReportPhase = "analyzing"
+	Collecting   ReportPhase = "collecting"
+	Complete     ReportPhase = "complete"
+	Preflight    ReportPhase = "preflight"
+	Rendering    ReportPhase = "rendering"
+	Snapshotting ReportPhase = "snapshotting"
+	Waiting      ReportPhase = "waiting"
+)
+
+// Valid indicates whether the value is a known member of the ReportPhase enum.
+func (e ReportPhase) Valid() bool {
+	switch e {
+	case Analyzing:
+		return true
+	case Collecting:
+		return true
+	case Complete:
+		return true
+	case Preflight:
+		return true
+	case Rendering:
+		return true
+	case Snapshotting:
+		return true
+	case Waiting:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportProfile.
 const (
 	Detailed  ReportProfile = "detailed"
@@ -123,6 +291,30 @@ func (e ReportProfile) Valid() bool {
 	case Detailed:
 		return true
 	case Executive:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportStatus.
+const (
+	ReportStatusCollected ReportStatus = "collected"
+	ReportStatusFailed    ReportStatus = "failed"
+	ReportStatusQueued    ReportStatus = "queued"
+	ReportStatusRunning   ReportStatus = "running"
+)
+
+// Valid indicates whether the value is a known member of the ReportStatus enum.
+func (e ReportStatus) Valid() bool {
+	switch e {
+	case ReportStatusCollected:
+		return true
+	case ReportStatusFailed:
+		return true
+	case ReportStatusQueued:
+		return true
+	case ReportStatusRunning:
 		return true
 	default:
 		return false
@@ -212,6 +404,23 @@ type NewUser struct {
 
 // NodeAutoscaling defines model for NodeAutoscaling.
 type NodeAutoscaling string
+
+// PDFFailureCode Why a PDF failed; a client words the code.
+type PDFFailureCode string
+
+// PDFRetryAccepted defines model for PDFRetryAccepted.
+type PDFRetryAccepted struct {
+	Language Language  `json:"language"`
+	Status   PDFStatus `json:"status"`
+}
+
+// PDFRetryRequest defines model for PDFRetryRequest.
+type PDFRetryRequest struct {
+	Language Language `json:"language"`
+}
+
+// PDFStatus defines model for PDFStatus.
+type PDFStatus string
 
 // Principal defines model for Principal.
 type Principal struct {
@@ -499,8 +708,146 @@ type ProfileThresholds struct {
 	WarningPercent           *float64 `json:"warning_percent,omitempty"`
 }
 
+// Report A report with its request and its progress.
+type Report struct {
+	// Attempt The collection attempt that runs or ran it; 0 before the first.
+	Attempt     int        `json:"attempt"`
+	CollectedAt *time.Time `json:"collected_at"`
+	CompletedAt *time.Time `json:"completed_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+
+	// Expired expires_at is at or before now: the report answers REPORT_EXPIRED until it is purged.
+	Expired   bool      `json:"expired"`
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// FailureCode Set when status is failed.
+	FailureCode   *ReportFailureCode `json:"failure_code"`
+	Id            uuid.UUID          `json:"id"`
+	OwnerId       uuid.UUID          `json:"owner_id"`
+	OwnerUsername string             `json:"owner_username"`
+
+	// Pdfs One per language, in language order; empty until the collection ends.
+	Pdfs []ReportPDFState `json:"pdfs"`
+
+	// Phase waiting while queued; preflight, collecting, analyzing, or snapshotting while running; rendering or complete once collected; complete once failed.
+	Phase             ReportPhase `json:"phase"`
+	ProfileId         string      `json:"profile_id"`
+	ProfileRevisionId uuid.UUID   `json:"profile_revision_id"`
+
+	// Selection The selection the report runs, with every default resolved.
+	Selection ReportSelection `json:"selection"`
+	StartedAt *time.Time      `json:"started_at"`
+	Status    ReportStatus    `json:"status"`
+}
+
+// ReportAccepted defines model for ReportAccepted.
+type ReportAccepted struct {
+	ExpiresAt time.Time `json:"expires_at"`
+	Id        uuid.UUID `json:"id"`
+
+	// Phase waiting while queued; preflight, collecting, analyzing, or snapshotting while running; rendering or complete once collected; complete once failed.
+	Phase ReportPhase `json:"phase"`
+
+	// Replayed True when the key named a report already created.
+	Replayed bool         `json:"replayed"`
+	Status   ReportStatus `json:"status"`
+}
+
+// ReportDeleteOutcome deleted; not_found for an unknown or already deleted id; expired; forbidden for an operator's request of a report another requested.
+type ReportDeleteOutcome string
+
+// ReportDeleteRequest defines model for ReportDeleteRequest.
+type ReportDeleteRequest struct {
+	Ids []uuid.UUID `json:"ids"`
+}
+
+// ReportDeleteResult defines model for ReportDeleteResult.
+type ReportDeleteResult struct {
+	Id uuid.UUID `json:"id"`
+
+	// Outcome deleted; not_found for an unknown or already deleted id; expired; forbidden for an operator's request of a report another requested.
+	Outcome ReportDeleteOutcome `json:"outcome"`
+}
+
+// ReportDeleteResults defines model for ReportDeleteResults.
+type ReportDeleteResults struct {
+	// Results One per id sent, in the order sent.
+	Results []ReportDeleteResult `json:"results"`
+}
+
+// ReportFailureCode Why a report failed; a client words the code.
+type ReportFailureCode string
+
+// ReportPDFState defines model for ReportPDFState.
+type ReportPDFState struct {
+	// FailureCode Set when status is failed.
+	FailureCode *PDFFailureCode `json:"failure_code"`
+	Language    Language        `json:"language"`
+	Status      PDFStatus       `json:"status"`
+}
+
+// ReportPage defines model for ReportPage.
+type ReportPage struct {
+	Items []ReportSummary `json:"items"`
+
+	// NextCursor The cursor of the next page; null on the last page.
+	NextCursor *string `json:"next_cursor"`
+}
+
+// ReportPhase waiting while queued; preflight, collecting, analyzing, or snapshotting while running; rendering or complete once collected; complete once failed.
+type ReportPhase string
+
 // ReportProfile defines model for ReportProfile.
 type ReportProfile string
+
+// ReportRequest A selection; a field left out or null takes the profile's default.
+type ReportRequest struct {
+	// MinSeverity all, attention, or critical.
+	MinSeverity *string   `json:"min_severity,omitempty"`
+	Namespaces  *[]string `json:"namespaces,omitempty"`
+	Period      *string   `json:"period,omitempty"`
+	ProfileId   string    `json:"profile_id"`
+
+	// ReportProfile detailed or executive.
+	ReportProfile *string `json:"report_profile,omitempty"`
+	Timezone      *string `json:"timezone,omitempty"`
+}
+
+// ReportSelection The selection the report runs, with every default resolved.
+type ReportSelection struct {
+	MinSeverity   MinSeverity   `json:"min_severity"`
+	Namespaces    []string      `json:"namespaces"`
+	Period        string        `json:"period"`
+	ReportProfile ReportProfile `json:"report_profile"`
+	Timezone      string        `json:"timezone"`
+}
+
+// ReportStatus defines model for ReportStatus.
+type ReportStatus string
+
+// ReportSummary A report as the list shows it.
+type ReportSummary struct {
+	CompletedAt *time.Time `json:"completed_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+
+	// Expired expires_at is at or before now: the report answers REPORT_EXPIRED until it is purged.
+	Expired   bool      `json:"expired"`
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// FailureCode Set when status is failed.
+	FailureCode   *ReportFailureCode `json:"failure_code"`
+	Id            uuid.UUID          `json:"id"`
+	OwnerId       uuid.UUID          `json:"owner_id"`
+	OwnerUsername string             `json:"owner_username"`
+
+	// Pdfs One per language, in language order; empty until the collection ends.
+	Pdfs []ReportPDFState `json:"pdfs"`
+
+	// Phase waiting while queued; preflight, collecting, analyzing, or snapshotting while running; rendering or complete once collected; complete once failed.
+	Phase     ReportPhase  `json:"phase"`
+	ProfileId string       `json:"profile_id"`
+	Status    ReportStatus `json:"status"`
+}
 
 // Role defines model for Role.
 type Role string
@@ -543,8 +890,26 @@ type UserList struct {
 // CSRFHeader defines model for CSRFHeader.
 type CSRFHeader = string
 
+// Cursor defines model for Cursor.
+type Cursor = string
+
+// IdempotencyKey defines model for IdempotencyKey.
+type IdempotencyKey = string
+
+// IfNoneMatch defines model for IfNoneMatch.
+type IfNoneMatch = string
+
+// Lang defines model for Lang.
+type Lang = Language
+
+// Limit defines model for Limit.
+type Limit = int
+
 // ProfileID defines model for ProfileID.
 type ProfileID = string
+
+// ReportID defines model for ReportID.
+type ReportID = uuid.UUID
 
 // UserID defines model for UserID.
 type UserID = uuid.UUID
@@ -557,6 +922,9 @@ type Forbidden = Error
 
 // ForbiddenOrCSRF defines model for ForbiddenOrCSRF.
 type ForbiddenOrCSRF = Error
+
+// LangInvalid defines model for LangInvalid.
+type LangInvalid = Error
 
 // PasswordPolicy defines model for PasswordPolicy.
 type PasswordPolicy = Error
@@ -573,8 +941,17 @@ type ProfileRefused = Error
 // ProfileRevisionStale defines model for ProfileRevisionStale.
 type ProfileRevisionStale = Error
 
+// ReportExpired defines model for ReportExpired.
+type ReportExpired = Error
+
+// ReportNotFound defines model for ReportNotFound.
+type ReportNotFound = Error
+
 // RequestInvalid defines model for RequestInvalid.
 type RequestInvalid = Error
+
+// SnapshotNotReady defines model for SnapshotNotReady.
+type SnapshotNotReady = Error
 
 // Unauthenticated defines model for Unauthenticated.
 type Unauthenticated = Error
@@ -648,6 +1025,64 @@ type LogoutParams struct {
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
+// ListReportsParams defines parameters for ListReports.
+type ListReportsParams struct {
+	// Cursor The next_cursor of the previous page; left out for the first page.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *Limit  `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// RequestReportParams defines parameters for RequestReport.
+type RequestReportParams struct {
+	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
+
+	// IdempotencyKey Chosen by the client for one request, and scoped to the requester; 1 to 128 letters, digits, dots, underscores, colons, or hyphens.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
+// DeleteReportsParams defines parameters for DeleteReports.
+type DeleteReportsParams struct {
+	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
+}
+
+// DeleteReportParams defines parameters for DeleteReport.
+type DeleteReportParams struct {
+	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
+}
+
+// GetReportPDFParams defines parameters for GetReportPDF.
+type GetReportPDFParams struct {
+	// Lang The language of the view or of the PDF.
+	Lang Lang `form:"lang" json:"lang"`
+
+	// IfNoneMatch One entity tag, a list of them, or *, matched by the weak comparison of RFC 9110. It is read only after the reader is known to be allowed to read a report that is ready; it never turns a 404, 409, or 410 into a 304.
+	IfNoneMatch *IfNoneMatch `json:"If-None-Match,omitempty"`
+}
+
+// RetryReportPDFParams defines parameters for RetryReportPDF.
+type RetryReportPDFParams struct {
+	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
+}
+
+// GetReportSnapshotParams defines parameters for GetReportSnapshot.
+type GetReportSnapshotParams struct {
+	// IfNoneMatch One entity tag, a list of them, or *, matched by the weak comparison of RFC 9110. It is read only after the reader is known to be allowed to read a report that is ready; it never turns a 404, 409, or 410 into a 304.
+	IfNoneMatch *IfNoneMatch `json:"If-None-Match,omitempty"`
+}
+
+// ViewReportParams defines parameters for ViewReport.
+type ViewReportParams struct {
+	// Lang The language of the view or of the PDF.
+	Lang Lang `form:"lang" json:"lang"`
+
+	// IfNoneMatch One entity tag, a list of them, or *, matched by the weak comparison of RFC 9110. It is read only after the reader is known to be allowed to read a report that is ready; it never turns a 404, 409, or 410 into a 304.
+	IfNoneMatch *IfNoneMatch `json:"If-None-Match,omitempty"`
+}
+
 // ChangeAccountJSONRequestBody defines body for ChangeAccount for application/json ContentType.
 type ChangeAccountJSONRequestBody = AccountChange
 
@@ -665,3 +1100,12 @@ type ChangeUserJSONRequestBody = UserChange
 
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
+
+// RequestReportJSONRequestBody defines body for RequestReport for application/json ContentType.
+type RequestReportJSONRequestBody = ReportRequest
+
+// DeleteReportsJSONRequestBody defines body for DeleteReports for application/json ContentType.
+type DeleteReportsJSONRequestBody = ReportDeleteRequest
+
+// RetryReportPDFJSONRequestBody defines body for RetryReportPDF for application/json ContentType.
+type RetryReportPDFJSONRequestBody = PDFRetryRequest

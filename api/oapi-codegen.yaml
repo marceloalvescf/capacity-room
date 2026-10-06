@@ -5,5 +5,24 @@ generate:
 output-options:
   skip-prune: true
   # The union of GET /auth/session is read by the TypeScript side alone;
-  # the handlers write the two shapes directly.
-  exclude-schemas: [Session]
+  # the handlers write the two shapes directly. The report view is the Go
+  # type document.View, which a test walks against these schemas.
+  exclude-schemas:
+    - Session
+    - ReportView
+    - ViewValue
+    - ViewStatistic
+    - ViewReport
+    - ViewSummary
+    - ViewAutoscaling
+    - ViewFinding
+    - ViewEvidence
+    - ViewRecommendation
+    - ViewNamespace
+    - ViewWorkload
+    - ViewHPA
+    - ViewNode
+    - ViewNodepool
+    - ViewQuality
+    - ViewCapability
+    - ViewMessage

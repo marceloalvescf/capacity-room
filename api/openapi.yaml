@@ -423,6 +423,353 @@ paths:
           $ref: "#/components/responses/ProfileNotFound"
         default:
           $ref: "#/components/responses/Unexpected"
+  /reports:
+    get:
+      operationId: listReports
+      summary: >-
+        The reports that are not deleted, newest first, one page at a time,
+        for any signed-in reader.
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: >-
+            One page. An expired report that is not yet purged is listed with
+            expired true; next_cursor is null on the last page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportPage"
+        "400":
+          description: CURSOR_INVALID, or REQUEST_INVALID with the field limit invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        default:
+          $ref: "#/components/responses/Unexpected"
+    post:
+      operationId: requestReport
+      summary: >-
+        Request a report of a profile; an operator or an administrator. The
+        same Idempotency-Key with the same body answers the report it
+        created, as it is now.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportRequest"
+      responses:
+        "202":
+          description: Accepted, or replayed with replayed true.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportAccepted"
+        "400":
+          description: >-
+            IDEMPOTENCY_KEY_INVALID when the header is missing or malformed;
+            REQUEST_INVALID with one field per problem of the body (missing,
+            invalid, repeated, empty, unknown).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrCSRF"
+        "404":
+          description: >-
+            PROFILE_NOT_FOUND; or REPORT_NOT_FOUND when the key names a report
+            that was deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: IDEMPOTENCY_KEY_REUSED with another body, or PROFILE_INACTIVE.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "410":
+          description: REPORT_EXPIRED when the key names a report that expired.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: >-
+            REPORT_SELECTION_NOT_PERMITTED, with one field per value the
+            profile does not permit (not_permitted).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: >-
+            ADMISSION_GLOBAL_LIMIT or ADMISSION_PROFILE_LIMIT, with Retry-After
+            in whole seconds, at least 1.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          $ref: "#/components/responses/Unexpected"
+  /reports/delete:
+    post:
+      operationId: deleteReports
+      summary: >-
+        Delete up to 200 reports in one transaction: an administrator any, an
+        operator its own requests. One outcome per id, in the order sent.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportDeleteRequest"
+      responses:
+        "200":
+          description: The outcomes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportDeleteResults"
+        "400":
+          description: >-
+            REQUEST_INVALID with the field ids: empty, too_many (over 200),
+            repeated, or invalid (a value that is not a UUID). Nothing is
+            deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrCSRF"
+        default:
+          $ref: "#/components/responses/Unexpected"
+  /reports/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ReportID"
+    get:
+      operationId: getReport
+      summary: One report, its request and its progress, for any signed-in reader.
+      responses:
+        "200":
+          description: The report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/ReportNotFound"
+        "410":
+          $ref: "#/components/responses/ReportExpired"
+        default:
+          $ref: "#/components/responses/Unexpected"
+    delete:
+      operationId: deleteReport
+      summary: >-
+        Delete a report: an administrator any, an operator its own request.
+        From then on the report answers REPORT_NOT_FOUND everywhere.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      responses:
+        "204":
+          description: Deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrCSRF"
+        "404":
+          $ref: "#/components/responses/ReportNotFound"
+        "410":
+          $ref: "#/components/responses/ReportExpired"
+        default:
+          $ref: "#/components/responses/Unexpected"
+  /reports/{id}/view:
+    parameters:
+      - $ref: "#/components/parameters/ReportID"
+    get:
+      operationId: viewReport
+      summary: >-
+        The report worded in one language for the web, narrowed as its PDF
+        is, for any signed-in reader.
+      parameters:
+        - $ref: "#/components/parameters/Lang"
+        - $ref: "#/components/parameters/IfNoneMatch"
+      responses:
+        "200":
+          description: The view.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportView"
+        "304":
+          $ref: "#/components/responses/NotModified"
+        "400":
+          $ref: "#/components/responses/LangInvalid"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/ReportNotFound"
+        "409":
+          $ref: "#/components/responses/SnapshotNotReady"
+        "410":
+          $ref: "#/components/responses/ReportExpired"
+        default:
+          $ref: "#/components/responses/Unexpected"
+  /reports/{id}/snapshot:
+    parameters:
+      - $ref: "#/components/parameters/ReportID"
+    get:
+      operationId: getReportSnapshot
+      summary: >-
+        The stored snapshot of a report, byte for byte as it was written, for
+        any signed-in reader.
+      parameters:
+        - $ref: "#/components/parameters/IfNoneMatch"
+      responses:
+        "200":
+          description: The snapshot, as an attachment named report-<id>.json.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            Content-Disposition:
+              $ref: "#/components/headers/ContentDisposition"
+          content:
+            application/json:
+              schema:
+                type: object
+                description: >-
+                  The snapshot contract of the program, the input of
+                  --from-snapshot. Not narrowed.
+        "304":
+          $ref: "#/components/responses/NotModified"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/ReportNotFound"
+        "409":
+          $ref: "#/components/responses/SnapshotNotReady"
+        "410":
+          $ref: "#/components/responses/ReportExpired"
+        default:
+          $ref: "#/components/responses/Unexpected"
+  /reports/{id}/pdf:
+    parameters:
+      - $ref: "#/components/parameters/ReportID"
+    get:
+      operationId: getReportPDF
+      summary: The PDF of one language of a report, for any signed-in reader.
+      parameters:
+        - $ref: "#/components/parameters/Lang"
+        - $ref: "#/components/parameters/IfNoneMatch"
+      responses:
+        "200":
+          description: The PDF, as an attachment named report-<id>-<lang>.pdf.
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            Content-Disposition:
+              $ref: "#/components/headers/ContentDisposition"
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "304":
+          $ref: "#/components/responses/NotModified"
+        "400":
+          $ref: "#/components/responses/LangInvalid"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/ReportNotFound"
+        "409":
+          description: >-
+            SNAPSHOT_NOT_READY when the report is not collected; PDF_NOT_READY
+            when the PDF of the language is not ready, with the field status
+            (pending or failed) and, for a failed PDF, failure_code.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "410":
+          $ref: "#/components/responses/ReportExpired"
+        default:
+          $ref: "#/components/responses/Unexpected"
+  /reports/{id}/pdf-retries:
+    parameters:
+      - $ref: "#/components/parameters/ReportID"
+    post:
+      operationId: retryReportPDF
+      summary: >-
+        Render the PDF of one language again after it failed; an operator or
+        an administrator. A PDF that is pending is accepted and changes
+        nothing.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PDFRetryRequest"
+      responses:
+        "202":
+          description: The PDF is pending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PDFRetryAccepted"
+        "400":
+          $ref: "#/components/responses/RequestInvalid"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrCSRF"
+        "404":
+          $ref: "#/components/responses/ReportNotFound"
+        "409":
+          description: >-
+            SNAPSHOT_NOT_READY when the report is not collected;
+            PDF_RETRY_NOT_ALLOWED when the PDF is ready or has no row.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "410":
+          $ref: "#/components/responses/ReportExpired"
+        default:
+          $ref: "#/components/responses/Unexpected"
 components:
   securitySchemes:
     cookieAuth:
@@ -430,6 +777,61 @@ components:
       in: cookie
       name: kcr_session
   parameters:
+    ReportID:
+      name: id
+      in: path
+      required: true
+      description: The identifier of a report; a malformed one answers REPORT_NOT_FOUND.
+      schema:
+        type: string
+        format: uuid
+        x-go-type: uuid.UUID
+        x-go-type-import:
+          path: github.com/google/uuid
+    Lang:
+      name: lang
+      in: query
+      required: true
+      description: The language of the view or of the PDF.
+      schema:
+        $ref: "#/components/schemas/Language"
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: The next_cursor of the previous page; left out for the first page.
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >-
+        Chosen by the client for one request, and scoped to the requester; 1
+        to 128 letters, digits, dots, underscores, colons, or hyphens.
+      schema:
+        type: string
+        pattern: "^[A-Za-z0-9._:-]{1,128}$"
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      required: false
+      description: >-
+        One entity tag, a list of them, or *, matched by the weak comparison
+        of RFC 9110. It is read only after the reader is known to be allowed
+        to read a report that is ready; it never turns a 404, 409, or 410
+        into a 304.
+      schema:
+        type: string
     CSRFHeader:
       name: X-CSRF-Token
       in: header
@@ -457,7 +859,53 @@ components:
       schema:
         type: string
         maxLength: 63
+  headers:
+    ETag:
+      description: >-
+        A strong entity tag: the SHA-256, in lower-case hex and in quotes, of
+        the bytes of the body.
+      schema:
+        type: string
+    CacheControl:
+      description: private, no-cache.
+      schema:
+        type: string
+    ContentDisposition:
+      description: attachment, with the file name of the download.
+      schema:
+        type: string
   responses:
+    ReportNotFound:
+      description: REPORT_NOT_FOUND, for an unknown, malformed, deleted, or purged id.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ReportExpired:
+      description: REPORT_EXPIRED, from expires_at until the report is purged.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    SnapshotNotReady:
+      description: SNAPSHOT_NOT_READY, while the report is not collected.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    LangInvalid:
+      description: REQUEST_INVALID with the field lang, missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotModified:
+      description: The tag matches; no body.
+      headers:
+        ETag:
+          $ref: "#/components/headers/ETag"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
     RequestInvalid:
       description: REQUEST_INVALID, with one field per problem (missing, invalid, unknown, too_long).
       content:
@@ -541,6 +989,278 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
   schemas:
+    ReportStatus:
+      type: string
+      enum: [queued, running, collected, failed]
+    ReportPhase:
+      type: string
+      description: >-
+        waiting while queued; preflight, collecting, analyzing, or
+        snapshotting while running; rendering or complete once collected;
+        complete once failed.
+      enum: [waiting, preflight, collecting, analyzing, snapshotting, rendering, complete]
+    ReportFailureCode:
+      type: string
+      description: Why a report failed; a client words the code.
+      enum:
+        - ENDPOINT_URL_REJECTED
+        - ENDPOINT_ADDRESS_REJECTED
+        - ENDPOINT_RESOLUTION_FAILED
+        - ENDPOINT_CONNECTION_REJECTED
+        - ENDPOINT_REDIRECT_REJECTED
+        - PROFILE_CREDENTIAL_UNAVAILABLE
+        - PROFILE_CA_BUNDLE_UNAVAILABLE
+        - ENDPOINT_TLS_FAILED
+        - ENDPOINT_AUTH_REJECTED
+        - ENDPOINT_API_NOT_FOUND
+        - ENDPOINT_UNREACHABLE
+        - CLUSTER_SCOPE_NOT_FOUND
+        - CAPABILITIES_INSUFFICIENT
+        - NOTHING_TO_REPORT
+        - SNAPSHOT_TOO_LARGE
+        - COLLECTION_TIMEOUT
+        - JOB_ATTEMPTS_EXHAUSTED
+        - INTERNAL_FAILURE
+    PDFStatus:
+      type: string
+      enum: [pending, ready, failed]
+    PDFFailureCode:
+      type: string
+      description: Why a PDF failed; a client words the code.
+      enum: [PDF_COMPILE_FAILED, PDF_TOO_LARGE, PDF_ATTEMPTS_EXHAUSTED, INTERNAL_FAILURE]
+    ReportPDFState:
+      type: object
+      required: [language, status, failure_code]
+      properties:
+        language:
+          $ref: "#/components/schemas/Language"
+        status:
+          $ref: "#/components/schemas/PDFStatus"
+        failure_code:
+          allOf:
+            - $ref: "#/components/schemas/PDFFailureCode"
+          nullable: true
+          description: Set when status is failed.
+    ReportSelection:
+      type: object
+      description: The selection the report runs, with every default resolved.
+      required: [namespaces, period, timezone, report_profile, min_severity]
+      properties:
+        namespaces:
+          type: array
+          items:
+            type: string
+        period:
+          type: string
+        timezone:
+          type: string
+        report_profile:
+          $ref: "#/components/schemas/ReportProfile"
+        min_severity:
+          $ref: "#/components/schemas/MinSeverity"
+    ReportRequest:
+      type: object
+      description: A selection; a field left out or null takes the profile's default.
+      required: [profile_id]
+      properties:
+        profile_id:
+          type: string
+          maxLength: 63
+        namespaces:
+          type: array
+          nullable: true
+          items:
+            type: string
+        period:
+          type: string
+          nullable: true
+        timezone:
+          type: string
+          nullable: true
+        report_profile:
+          type: string
+          nullable: true
+          description: detailed or executive.
+        min_severity:
+          type: string
+          nullable: true
+          description: all, attention, or critical.
+    ReportAccepted:
+      type: object
+      required: [id, status, phase, expires_at, replayed]
+      properties:
+        id:
+          type: string
+          format: uuid
+          x-go-type: uuid.UUID
+          x-go-type-import:
+            path: github.com/google/uuid
+        status:
+          $ref: "#/components/schemas/ReportStatus"
+        phase:
+          $ref: "#/components/schemas/ReportPhase"
+        expires_at:
+          type: string
+          format: date-time
+        replayed:
+          type: boolean
+          description: True when the key named a report already created.
+    ReportSummary:
+      type: object
+      description: A report as the list shows it.
+      required:
+        - id
+        - owner_id
+        - owner_username
+        - profile_id
+        - status
+        - phase
+        - failure_code
+        - pdfs
+        - created_at
+        - completed_at
+        - expires_at
+        - expired
+      properties:
+        id:
+          type: string
+          format: uuid
+          x-go-type: uuid.UUID
+          x-go-type-import:
+            path: github.com/google/uuid
+        owner_id:
+          type: string
+          format: uuid
+          x-go-type: uuid.UUID
+          x-go-type-import:
+            path: github.com/google/uuid
+        owner_username:
+          type: string
+        profile_id:
+          type: string
+        status:
+          $ref: "#/components/schemas/ReportStatus"
+        phase:
+          $ref: "#/components/schemas/ReportPhase"
+        failure_code:
+          allOf:
+            - $ref: "#/components/schemas/ReportFailureCode"
+          nullable: true
+          description: Set when status is failed.
+        pdfs:
+          type: array
+          description: One per language, in language order; empty until the collection ends.
+          items:
+            $ref: "#/components/schemas/ReportPDFState"
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+        expired:
+          type: boolean
+          description: >-
+            expires_at is at or before now: the report answers REPORT_EXPIRED
+            until it is purged.
+    Report:
+      description: A report with its request and its progress.
+      allOf:
+        - $ref: "#/components/schemas/ReportSummary"
+        - type: object
+          required: [profile_revision_id, attempt, started_at, collected_at, selection]
+          properties:
+            profile_revision_id:
+              type: string
+              format: uuid
+              x-go-type: uuid.UUID
+              x-go-type-import:
+                path: github.com/google/uuid
+            attempt:
+              type: integer
+              description: The collection attempt that runs or ran it; 0 before the first.
+            started_at:
+              type: string
+              format: date-time
+              nullable: true
+            collected_at:
+              type: string
+              format: date-time
+              nullable: true
+            selection:
+              $ref: "#/components/schemas/ReportSelection"
+    ReportPage:
+      type: object
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportSummary"
+        next_cursor:
+          type: string
+          nullable: true
+          description: The cursor of the next page; null on the last page.
+    PDFRetryRequest:
+      type: object
+      required: [language]
+      properties:
+        language:
+          $ref: "#/components/schemas/Language"
+    PDFRetryAccepted:
+      type: object
+      required: [language, status]
+      properties:
+        language:
+          $ref: "#/components/schemas/Language"
+        status:
+          $ref: "#/components/schemas/PDFStatus"
+    ReportDeleteRequest:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          maxItems: 200
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+            x-go-type: uuid.UUID
+            x-go-type-import:
+              path: github.com/google/uuid
+    ReportDeleteOutcome:
+      type: string
+      description: >-
+        deleted; not_found for an unknown or already deleted id; expired;
+        forbidden for an operator's request of a report another requested.
+      enum: [deleted, not_found, expired, forbidden]
+    ReportDeleteResult:
+      type: object
+      required: [id, outcome]
+      properties:
+        id:
+          type: string
+          format: uuid
+          x-go-type: uuid.UUID
+          x-go-type-import:
+            path: github.com/google/uuid
+        outcome:
+          $ref: "#/components/schemas/ReportDeleteOutcome"
+    ReportDeleteResults:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          description: One per id sent, in the order sent.
+          items:
+            $ref: "#/components/schemas/ReportDeleteResult"
     Error:
       type: object
       required: [error]
@@ -986,3 +1706,513 @@ components:
           description: The names of the capabilities the source offers, in their order; empty when not ok.
           items:
             type: string
+    ReportView:
+      type: object
+      description: >-
+        A report worded in one language for the web, narrowed as its PDF is:
+        the findings, recommendations, and the namespace, workload, and node
+        rows below the effective minimum are left out; the HPAs, node pools,
+        summary counts, and quality are whole. Every text is the text the PDF
+        prints for the same quantity. A closed set travels as its code, which
+        a client words.
+      required:
+        - language
+        - min_severity
+        - report
+        - summary
+        - findings
+        - recommendations
+        - namespaces
+        - workloads
+        - hpas
+        - nodes
+        - nodepools
+        - quality
+      properties:
+        language:
+          $ref: "#/components/schemas/Language"
+        min_severity:
+          type: string
+          description: The effective minimum, raised to attention for the executive profile.
+        report:
+          $ref: "#/components/schemas/ViewReport"
+        summary:
+          $ref: "#/components/schemas/ViewSummary"
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewFinding"
+        recommendations:
+          type: array
+          description: The rows of the PDF's action plan, in its order.
+          items:
+            $ref: "#/components/schemas/ViewRecommendation"
+        namespaces:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewNamespace"
+        workloads:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewWorkload"
+        hpas:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewHPA"
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewNode"
+        nodepools:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewNodepool"
+        quality:
+          $ref: "#/components/schemas/ViewQuality"
+    ViewValue:
+      type: object
+      description: A number with the text the PDF prints for it.
+      required: [raw, text]
+      properties:
+        raw:
+          type: number
+          format: double
+          nullable: true
+          description: Null when the number is missing.
+        text:
+          type: string
+          description: The text the PDF prints, its placeholder when the number is missing.
+    ViewStatistic:
+      type: object
+      required: [state, average, minimum, peak, current]
+      properties:
+        state:
+          type: string
+          description: The state of the statistic, a code.
+        average:
+          $ref: "#/components/schemas/ViewValue"
+        minimum:
+          $ref: "#/components/schemas/ViewValue"
+        peak:
+          $ref: "#/components/schemas/ViewValue"
+        current:
+          $ref: "#/components/schemas/ViewValue"
+    ViewReport:
+      type: object
+      required:
+        - id
+        - cluster_name
+        - profile
+        - timezone
+        - generator_version
+        - namespaces
+        - emitted_at
+        - emitted_at_text
+        - period_start
+        - period_end
+        - period_text
+      properties:
+        id:
+          type: string
+        cluster_name:
+          type: string
+        profile:
+          type: string
+          description: detailed or executive.
+        timezone:
+          type: string
+        generator_version:
+          type: string
+        namespaces:
+          type: array
+          items:
+            type: string
+        emitted_at:
+          type: string
+          description: The emission time as the snapshot stores it.
+        emitted_at_text:
+          type: string
+        period_start:
+          type: string
+        period_end:
+          type: string
+        period_text:
+          type: string
+    ViewSummary:
+      type: object
+      required:
+        - namespaces
+        - workloads
+        - hpas
+        - nodes
+        - nodepools
+        - findings
+        - recommendations
+        - healthy
+        - attention
+        - critical
+        - workloads_without_hpa
+        - autoscaling
+      properties:
+        namespaces:
+          $ref: "#/components/schemas/ViewValue"
+        workloads:
+          $ref: "#/components/schemas/ViewValue"
+        hpas:
+          $ref: "#/components/schemas/ViewValue"
+        nodes:
+          $ref: "#/components/schemas/ViewValue"
+        nodepools:
+          $ref: "#/components/schemas/ViewValue"
+        findings:
+          $ref: "#/components/schemas/ViewValue"
+        recommendations:
+          $ref: "#/components/schemas/ViewValue"
+        healthy:
+          $ref: "#/components/schemas/ViewValue"
+        attention:
+          $ref: "#/components/schemas/ViewValue"
+        critical:
+          $ref: "#/components/schemas/ViewValue"
+        workloads_without_hpa:
+          $ref: "#/components/schemas/ViewValue"
+        autoscaling:
+          $ref: "#/components/schemas/ViewAutoscaling"
+    ViewAutoscaling:
+      type: object
+      required:
+        - status
+        - source
+        - confidence
+        - managed_node_groups
+        - current_nodes
+        - min_nodes
+        - max_nodes
+        - scale_events
+        - unschedulable_pods
+      properties:
+        status:
+          type: string
+          description: A code.
+        source:
+          type: string
+          description: A code.
+        confidence:
+          type: string
+          description: A code.
+        managed_node_groups:
+          $ref: "#/components/schemas/ViewValue"
+        current_nodes:
+          $ref: "#/components/schemas/ViewValue"
+        min_nodes:
+          $ref: "#/components/schemas/ViewValue"
+        max_nodes:
+          $ref: "#/components/schemas/ViewValue"
+        scale_events:
+          $ref: "#/components/schemas/ViewValue"
+        unschedulable_pods:
+          $ref: "#/components/schemas/ViewValue"
+    ViewFinding:
+      type: object
+      required: [code, severity, scope_type, scope_kind, scope_name, confidence, sentence, action, evidence]
+      properties:
+        code:
+          type: string
+        severity:
+          type: string
+        scope_type:
+          type: string
+        scope_kind:
+          type: string
+          description: The kind of a workload scope; empty for another scope.
+        scope_name:
+          type: string
+        confidence:
+          type: string
+        sentence:
+          type: string
+          description: What the finding observed, in the language of the view.
+        action:
+          type: string
+          description: What to do about it, in the language of the view.
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewEvidence"
+    ViewEvidence:
+      type: object
+      required: [name, raw, text]
+      properties:
+        name:
+          type: string
+        raw:
+          description: The value as the snapshot stores it, a number, a boolean, or a text.
+        text:
+          type: string
+    ViewRecommendation:
+      type: object
+      required: [code, severity, scope_type, confidence, action, scopes, scope_text]
+      properties:
+        code:
+          type: string
+        severity:
+          type: string
+        scope_type:
+          type: string
+        confidence:
+          type: string
+        action:
+          type: string
+          description: The action, without the qualifier the PDF adds when two rows share it.
+        scopes:
+          type: array
+          items:
+            type: string
+        scope_text:
+          type: string
+          description: The text of the Scope cell of the PDF's action plan.
+    ViewNamespace:
+      type: object
+      required:
+        - name
+        - status
+        - pods
+        - approximate
+        - cpu_usage
+        - memory_usage
+        - cpu_requests
+        - memory_requests
+        - cpu_limits
+        - memory_limits
+        - cpu_request_percent
+        - memory_request_percent
+        - cpu_limit_percent
+        - memory_limit_percent
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          description: The severity the PDF gives the namespace, healthy when it has no finding.
+        pods:
+          $ref: "#/components/schemas/ViewValue"
+        approximate:
+          type: boolean
+        cpu_usage:
+          $ref: "#/components/schemas/ViewStatistic"
+        memory_usage:
+          $ref: "#/components/schemas/ViewStatistic"
+        cpu_requests:
+          $ref: "#/components/schemas/ViewStatistic"
+        memory_requests:
+          $ref: "#/components/schemas/ViewStatistic"
+        cpu_limits:
+          $ref: "#/components/schemas/ViewStatistic"
+        memory_limits:
+          $ref: "#/components/schemas/ViewStatistic"
+        cpu_request_percent:
+          $ref: "#/components/schemas/ViewStatistic"
+        memory_request_percent:
+          $ref: "#/components/schemas/ViewStatistic"
+        cpu_limit_percent:
+          $ref: "#/components/schemas/ViewStatistic"
+        memory_limit_percent:
+          $ref: "#/components/schemas/ViewStatistic"
+    ViewWorkload:
+      type: object
+      required:
+        - namespace
+        - kind
+        - name
+        - status
+        - observed_usage
+        - hpa_coverage
+        - pods
+        - approximate
+        - cpu_usage
+        - memory_usage
+        - cpu_requests
+        - memory_requests
+        - cpu_limits
+        - memory_limits
+        - cpu_request_percent
+        - memory_request_percent
+        - cpu_limit_percent
+        - memory_limit_percent
+        - reason
+      properties:
+        namespace:
+          type: string
+        kind:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          description: The severity the PDF gives the workload, healthy when it has no finding.
+        observed_usage:
+          type: boolean
+          description: False for a workload with no usage observed, which the PDF's table leaves out.
+        hpa_coverage:
+          type: string
+          description: A code.
+        pods:
+          $ref: "#/components/schemas/ViewValue"
+        approximate:
+          type: boolean
+        cpu_usage:
+          $ref: "#/components/schemas/ViewStatistic"
+        memory_usage:
+          $ref: "#/components/schemas/ViewStatistic"
+        cpu_requests:
+          $ref: "#/components/schemas/ViewStatistic"
+        memory_requests:
+          $ref: "#/components/schemas/ViewStatistic"
+        cpu_limits:
+          $ref: "#/components/schemas/ViewStatistic"
+        memory_limits:
+          $ref: "#/components/schemas/ViewStatistic"
+        cpu_request_percent:
+          $ref: "#/components/schemas/ViewStatistic"
+        memory_request_percent:
+          $ref: "#/components/schemas/ViewStatistic"
+        cpu_limit_percent:
+          $ref: "#/components/schemas/ViewStatistic"
+        memory_limit_percent:
+          $ref: "#/components/schemas/ViewStatistic"
+        reason:
+          type: string
+          description: The reason the PDF prints in its priority tables; empty when it prints none.
+    ViewHPA:
+      type: object
+      required: [namespace, name, target_kind, target_name, spec_min, spec_max, current, desired, situation]
+      properties:
+        namespace:
+          type: string
+        name:
+          type: string
+        target_kind:
+          type: string
+        target_name:
+          type: string
+        spec_min:
+          $ref: "#/components/schemas/ViewValue"
+        spec_max:
+          $ref: "#/components/schemas/ViewValue"
+        current:
+          $ref: "#/components/schemas/ViewStatistic"
+        desired:
+          $ref: "#/components/schemas/ViewStatistic"
+        situation:
+          type: string
+          description: The situation cell of the PDF.
+    ViewNode:
+      type: object
+      required:
+        - name
+        - pool
+        - pool_confidence
+        - status
+        - cpu_capacity
+        - memory_capacity
+        - cpu_allocatable
+        - memory_allocatable
+        - cpu_request_percent
+        - memory_request_percent
+        - cpu_usage_percent
+        - memory_usage_percent
+        - ready
+        - schedulable
+        - reason
+      properties:
+        name:
+          type: string
+        pool:
+          type: string
+        pool_confidence:
+          type: string
+        status:
+          type: string
+          description: The severity the PDF gives the node, healthy when it has no finding.
+        cpu_capacity:
+          $ref: "#/components/schemas/ViewValue"
+        memory_capacity:
+          $ref: "#/components/schemas/ViewValue"
+        cpu_allocatable:
+          $ref: "#/components/schemas/ViewValue"
+        memory_allocatable:
+          $ref: "#/components/schemas/ViewValue"
+        cpu_request_percent:
+          $ref: "#/components/schemas/ViewValue"
+        memory_request_percent:
+          $ref: "#/components/schemas/ViewValue"
+        cpu_usage_percent:
+          $ref: "#/components/schemas/ViewStatistic"
+        memory_usage_percent:
+          $ref: "#/components/schemas/ViewStatistic"
+        ready:
+          type: boolean
+          nullable: true
+        schedulable:
+          type: boolean
+          nullable: true
+        reason:
+          type: string
+          description: The reason cell of the PDF.
+    ViewNodepool:
+      type: object
+      required: [name, confidence, nodes]
+      properties:
+        name:
+          type: string
+        confidence:
+          type: string
+        nodes:
+          type: array
+          items:
+            type: string
+    ViewQuality:
+      type: object
+      required: [capabilities, warnings, notices, collection_started_at, collection_completed_at]
+      properties:
+        capabilities:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewCapability"
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewMessage"
+        notices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ViewMessage"
+        collection_started_at:
+          type: string
+        collection_completed_at:
+          type: string
+    ViewCapability:
+      type: object
+      required: [name, state, strategy, evidence, remark]
+      properties:
+        name:
+          type: string
+        state:
+          type: string
+        strategy:
+          type: string
+        evidence:
+          type: array
+          items:
+            type: string
+        remark:
+          type: string
+          description: The remark of the PDF's appendix.
+    ViewMessage:
+      type: object
+      required: [code, text]
+      properties:
+        code:
+          type: string
+        text:
+          type: string
