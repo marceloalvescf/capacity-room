@@ -445,8 +445,9 @@ func TestMarkReportDeletedOnce(t *testing.T) {
 	if !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("second mark: %v", err)
 	}
-	if got := getReportT(t, pool, r.ID); got.DeletedAt == nil || !got.DeletedAt.Equal(now.Add(time.Hour)) {
-		t.Fatalf("deleted_at %v", got.DeletedAt)
+	if got := getReportT(t, pool, r.ID); got.DeletedAt == nil || !got.DeletedAt.Equal(now.Add(time.Hour)) ||
+		!got.UpdatedAt.Equal(now.Add(time.Hour)) {
+		t.Fatalf("deleted_at %v, updated_at %v, want both %v", got.DeletedAt, got.UpdatedAt, now.Add(time.Hour))
 	}
 	err = store.Transact(context.Background(), pool, func(tx pgx.Tx) error {
 		_, err := store.MarkReportDeleted(context.Background(), tx, uuid.New(), now)

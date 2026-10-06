@@ -551,7 +551,7 @@ WHERE r.id = $1 AND r.deleted_at IS NULL`, id, language, now).
 // status it had; ErrNotFound when absent or already deleted.
 func MarkReportDeleted(ctx context.Context, tx pgx.Tx, id uuid.UUID, now time.Time) (status string, err error) {
 	err = tx.QueryRow(ctx, `
-UPDATE reports SET deleted_at = $2 WHERE id = $1 AND deleted_at IS NULL RETURNING status`, id, now).Scan(&status)
+UPDATE reports SET deleted_at = $2, updated_at = $2 WHERE id = $1 AND deleted_at IS NULL RETURNING status`, id, now).Scan(&status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNotFound
 	}
