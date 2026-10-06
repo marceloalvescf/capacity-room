@@ -200,7 +200,7 @@ func (s *Service) Create(ctx context.Context, actor auth.Principal, id string, d
 		if p.CurrentRevisionID != nil {
 			return ErrIDTaken
 		}
-		out, err = createStep(ctx, tx, &actor.ID, id, d, tree, now, false)
+		out, _, err = createStep(ctx, tx, &actor.ID, id, d, tree, now)
 		return err
 	})
 	if err != nil {
@@ -210,37 +210,39 @@ func (s *Service) Create(ctx context.Context, actor auth.Principal, id string, d
 }
 
 // createStep writes d as the next revision of the profile id, which the
-// caller has locked and found without a current revision. recreate audits
-// the step as the return of a deleted profile.
-func createStep(ctx context.Context, tx pgx.Tx, actor *uuid.UUID, id string, d Document, tree map[string]any, now time.Time, recreate bool) (Current, error) {
+// caller has locked and found without a current revision. A profile that
+// already has revisions was deleted: the step returns it, audits it as
+// profile.recreate, and reports recreated true.
+func createStep(ctx context.Context, tx pgx.Tx, actor *uuid.UUID, id string, d Document, tree map[string]any, now time.Time) (out Current, recreated bool, err error) {
 	var parent *uuid.UUID
 	latest, err := store.LatestProfileRevision(ctx, tx, id)
 	switch {
 	case err == nil:
 		parent = &latest.ID
 	case !errors.Is(err, store.ErrNotFound):
-		return Current{}, err
+		return Current{}, false, err
 	}
 	row, err := revisionRow(id, d, parent, actor, now)
 	if err != nil {
-		return Current{}, err
+		return Current{}, false, err
 	}
 	got, err := store.AppendProfileRevision(ctx, tx, row)
 	if err != nil {
-		return Current{}, err
+		return Current{}, false, err
 	}
 	if err := store.SetCurrentRevision(ctx, tx, id, &got.ID, now); err != nil {
-		return Current{}, err
+		return Current{}, false, err
 	}
-	out, err := currentOf(got)
+	out, err = currentOf(got)
 	if err != nil {
-		return Current{}, err
+		return Current{}, false, err
 	}
+	recreated = parent != nil
 	action := ActionProfileCreate
-	if recreate {
+	if recreated {
 		action = ActionProfileRecreate
 	}
-	return out, audit.Append(ctx, tx, now, audit.Event{
+	return out, recreated, audit.Append(ctx, tx, now, audit.Event{
 		ActorID: actor, Action: action, TargetType: targetProfile, TargetID: id,
 		Metadata: audit.Metadata{"revision_id": got.ID.String(), "revision": got.Revision, "fields": sortedKeys(tree)},
 	})

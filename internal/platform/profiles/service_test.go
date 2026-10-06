@@ -288,6 +288,15 @@ func TestCreateAfterDeleteContinuesTheCount(t *testing.T) {
 	if n := len(f.revisions(t, "prod")); n != 2 {
 		t.Fatalf("%d revisions", n)
 	}
+	// The return of a deleted profile is audited as the import audits it.
+	if got := f.audits(t, ActionProfileCreate); len(got) != 1 {
+		t.Fatalf("%d profile.create rows, want only the first: %+v", len(got), got)
+	}
+	got := f.audits(t, ActionProfileRecreate)
+	if len(got) != 1 || got[0].TargetID != "prod" || got[0].Meta["revision_id"] != c.RevisionID.String() ||
+		got[0].Meta["revision"] != float64(2) {
+		t.Fatalf("profile.recreate rows %+v", got)
+	}
 }
 
 func TestReviseAppendsAndKeepsHistory(t *testing.T) {

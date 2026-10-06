@@ -221,17 +221,14 @@ func (s *Service) importOne(ctx context.Context, tx pgx.Tx, e ImportEntry, now t
 	if p.CurrentRevisionID == nil {
 		// A profile whose pointer was cleared keeps its revisions, and
 		// the import returns it.
-		_, err := store.LatestProfileRevision(ctx, tx, e.ID)
-		switch {
-		case err == nil:
-			_, err = createStep(ctx, tx, nil, e.ID, e.Document, newTree, now, true)
-			return OutcomeRecreated, err
-		case errors.Is(err, store.ErrNotFound):
-			_, err = createStep(ctx, tx, nil, e.ID, e.Document, newTree, now, false)
-			return OutcomeCreated, err
-		default:
+		_, recreated, err := createStep(ctx, tx, nil, e.ID, e.Document, newTree, now)
+		if err != nil {
 			return "", err
 		}
+		if recreated {
+			return OutcomeRecreated, nil
+		}
+		return OutcomeCreated, nil
 	}
 	cur, err := store.GetProfileRevision(ctx, tx, *p.CurrentRevisionID)
 	if err != nil {
