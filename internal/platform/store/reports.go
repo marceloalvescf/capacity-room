@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -54,6 +55,15 @@ const ReportRequestLockID = 72427302
 
 const reportColumns = `id, owner_id, profile_id, profile_revision_id, request, status, phase, attempt, failure_code,
 collect_job_id, created_at, started_at, collected_at, completed_at, expires_at, expired_at, deleted_at, updated_at`
+
+// prefixColumns qualifies each column of a comma-separated list with alias.
+func prefixColumns(alias, list string) string {
+	columns := strings.Split(list, ",")
+	for i, c := range columns {
+		columns[i] = alias + "." + strings.TrimSpace(c)
+	}
+	return strings.Join(columns, ", ")
+}
 
 func utcPtr(t *time.Time) *time.Time {
 	if t == nil {
@@ -322,9 +332,7 @@ func CountPendingPDFs(ctx context.Context, q Querier, reportID uuid.UUID) (int, 
 // under the owner's key and the report it names, deleted or not; ErrNotFound
 // when the key has no row.
 func GetIdempotentReport(ctx context.Context, q Querier, ownerID uuid.UUID, key string) (requestSHA256 string, report Report, err error) {
-	report, err = scanReportAfter(q.QueryRow(ctx, `SELECT k.request_sha256, r.id, r.owner_id, r.profile_id, r.profile_revision_id,
-r.request, r.status, r.phase, r.attempt, r.failure_code, r.collect_job_id, r.created_at, r.started_at, r.collected_at,
-r.completed_at, r.expires_at, r.expired_at, r.deleted_at, r.updated_at
+	report, err = scanReportAfter(q.QueryRow(ctx, `SELECT k.request_sha256, `+prefixColumns("r", reportColumns)+`
 FROM report_idempotency_keys k JOIN reports r ON r.id = k.report_id
 WHERE k.owner_id = $1 AND k.key = $2`, ownerID, key), &requestSHA256)
 	if errors.Is(err, pgx.ErrNoRows) {
