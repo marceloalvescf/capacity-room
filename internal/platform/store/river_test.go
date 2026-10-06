@@ -14,37 +14,62 @@ func stripTemplate(sql string) string {
 	return strings.ReplaceAll(sql, "/* TEMPLATE: schema */", "")
 }
 
-// gooseBlocks returns the text between each StatementBegin and its
-// StatementEnd, in file order.
-func gooseBlocks(t *testing.T, text string) []string {
+// gooseFile is a goose migration read as River's blocks: the text between
+// each StatementBegin and its StatementEnd, in file order, and the number of
+// blocks that come before the Up and the Down annotations.
+type gooseFile struct {
+	blocks           []string
+	upAt, downAt     int
+	upSeen, downSeen int
+}
+
+// readGoose splits text into its blocks. Outside a block it accepts only the
+// Up and Down annotations, once each, blank lines, and comments, so no
+// statement runs that the comparison with the library does not see.
+func readGoose(t *testing.T, text string) gooseFile {
 	t.Helper()
-	var blocks []string
+	var f gooseFile
 	var current []string
 	inside := false
-	for _, line := range strings.Split(text, "\n") {
-		switch strings.TrimSpace(line) {
+	for n, line := range strings.Split(text, "\n") {
+		trimmed := strings.TrimSpace(line)
+		switch trimmed {
 		case "-- +goose StatementBegin":
 			if inside {
-				t.Fatal("StatementBegin inside a block")
+				t.Fatalf("line %d: StatementBegin inside a block", n+1)
 			}
 			inside = true
 			current = nil
+			continue
 		case "-- +goose StatementEnd":
 			if !inside {
-				t.Fatal("StatementEnd outside a block")
+				t.Fatalf("line %d: StatementEnd outside a block", n+1)
 			}
 			inside = false
-			blocks = append(blocks, strings.Join(current, "\n"))
+			f.blocks = append(f.blocks, strings.Join(current, "\n"))
+			continue
+		}
+		if inside {
+			current = append(current, line)
+			continue
+		}
+		switch {
+		case trimmed == "-- +goose Up":
+			f.upAt, f.upSeen = len(f.blocks), f.upSeen+1
+		case trimmed == "-- +goose Down":
+			f.downAt, f.downSeen = len(f.blocks), f.downSeen+1
+		case trimmed == "":
+		case strings.HasPrefix(trimmed, "-- +goose"):
+			t.Fatalf("line %d: annotation %q outside a block", n+1, trimmed)
+		case strings.HasPrefix(trimmed, "--"):
 		default:
-			if inside {
-				current = append(current, line)
-			}
+			t.Fatalf("line %d: %q outside a block", n+1, trimmed)
 		}
 	}
 	if inside {
 		t.Fatal("a block is not closed")
 	}
-	return blocks
+	return f
 }
 
 func TestRiverMigrationMatchesTheLibrary(t *testing.T) {
@@ -70,9 +95,16 @@ func TestRiverMigrationMatchesTheLibrary(t *testing.T) {
 		t.Fatalf("library versions = %v, want 2 to 8", versions)
 	}
 
-	blocks := gooseBlocks(t, string(data))
+	file := readGoose(t, string(data))
+	blocks := file.blocks
 	if len(blocks) != 2*len(versions) {
 		t.Fatalf("blocks = %d, want %d", len(blocks), 2*len(versions))
+	}
+	if file.upSeen != 1 || file.upAt != 0 {
+		t.Fatalf("Up annotation %d times, after %d blocks; want once, before the first", file.upSeen, file.upAt)
+	}
+	if file.downSeen != 1 || file.downAt != len(versions) {
+		t.Fatalf("Down annotation %d times, after %d blocks; want once, after %d", file.downSeen, file.downAt, len(versions))
 	}
 	for i, version := range versions {
 		if got := strings.TrimSpace(blocks[i]); got != up[i] {
