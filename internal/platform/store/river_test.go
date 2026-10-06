@@ -138,8 +138,9 @@ func TestReadGooseRefusesAStatementOutsideABlock(t *testing.T) {
 func TestReadGooseRefusesAMisplacedDown(t *testing.T) {
 	block := "-- +goose StatementBegin\nSELECT 1;\n-- +goose StatementEnd\n"
 	for name, text := range map[string]string{
-		"before Up": "-- +goose Down\n" + block + "-- +goose Up\n" + block,
-		"twice":     "-- +goose Up\n" + block + "-- +goose Down\n" + block + "-- +goose Down\n" + block,
+		"before Up":  "-- +goose Down\n" + block + "-- +goose Up\n" + block,
+		"without Up": "-- +goose Down\n" + block,
+		"twice":      "-- +goose Up\n" + block + "-- +goose Down\n" + block + "-- +goose Down\n" + block,
 	} {
 		if _, err := readGoose(text); err == nil {
 			t.Errorf("%s: accepted", name)
