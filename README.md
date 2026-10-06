@@ -347,7 +347,10 @@ under the same lock as `serve`, so the two start in any order, answers
 `:8091`), and runs the report jobs through River, the job queue that lives
 in the same database. On a stop signal it takes no new job, waits
 `worker_drain_seconds` for the running ones, then cancels them; a cancelled
-job returns to the queue and runs again from the start.
+job returns to the queue and runs again from the start. A stop takes at most
+twice `worker_drain_seconds` plus ten seconds, so the supervisor's grace
+period must be longer: a worker killed before it stops leaves its jobs to
+River's rescue, which waits for the longer job timeout plus one minute.
 
 ```bash
 bin/k8s-capacity-report worker --config platform.toml --health-listen :8091
@@ -366,7 +369,7 @@ default and its bounds.
 | `report_retention_days` | 7 | 1 to 365 | Days a report keeps its snapshot and PDFs |
 | `expired_report_days` | 30 | 1 to 365 | Days an expired report is kept as a record before it is removed |
 | `admission_limit` | 20 | 1 to 1000 | Reports queued or running at once |
-| `admission_profile_limit` | 5 | 1 to `admission_limit` | Reports queued or running at once for one profile |
+| `admission_profile_limit` | 5, or `admission_limit` when smaller | 1 to `admission_limit` | Reports queued or running at once for one profile |
 | `admission_retry_seconds` | 5 | 1 to 300 | The wait a refused request is told to keep |
 
 A report is collected once, stored as a snapshot, and compiled into one

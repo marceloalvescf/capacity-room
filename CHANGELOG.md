@@ -62,8 +62,6 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A snapshot file read with `--from-snapshot` is refused when it repeats a
   key, holds text that is not UTF-8, or holds a combination of values that
   the program never writes.
-- The PDF that `report` writes takes its permissions from the umask, as the
-  snapshot file does.
 
 ## [0.1.0] - 2026-10-02
 

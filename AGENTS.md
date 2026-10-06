@@ -194,6 +194,11 @@ below the command; the core never imports `internal/platform/`.
   No function passes a list of secrets.
 - **One message, one write.** The redactor reads each write as one text, so a
   line is built whole and written once.
+- **A log value is redacted before it is formatted.** Every logger of
+  `serve` and `worker`, River's included, comes from one constructor whose
+  handler passes the message and every string, error, and stringer value
+  through the run's redactor, since the text handler escapes a quote or a
+  backslash and the stream redactor matches literal text.
 - **No message repeats an argument that was not understood.** It may be a
   secret typed at the wrong place. A path that the user gave is repeated on
   purpose, and so is a value read from a file that the user named.
@@ -249,7 +254,8 @@ redactor the moment the settings are loaded, before the pool opens.
   and the reports: `worker_slots`, `worker_drain_seconds`,
   `collect_timeout_seconds`, `render_timeout_seconds`, `job_max_attempts`,
   `report_retention_days`, `expired_report_days`, `admission_limit`,
-  `admission_profile_limit` (not above `admission_limit`), and
+  `admission_profile_limit` (not above `admission_limit`; when omitted, 5
+  or `admission_limit` if smaller), and
   `admission_retry_seconds`, with no environment override.
 - **The schema is applied under a lock.** The migrations are SQL files
   embedded under `internal/platform/store/migrations/`, applied by goose
@@ -358,8 +364,8 @@ redactor the moment the settings are loaded, before the pool opens.
   five steps of their own: reconcile (a report or PDF row whose River job is
   gone or final fails `JOB_ATTEMPTS_EXHAUSTED` or `PDF_ATTEMPTS_EXHAUSTED`),
   expire (after `report_retention_days` the snapshot and PDF rows go and the
-  report is kept as expired), purge (after `expired_report_days` more the
-  report goes), the sign-in throttle rows whose block is over, and the
+  report is kept as expired), purge (`expired_report_days` after it was
+  marked expired the report goes), the sign-in throttle rows whose block is over, and the
   sessions ended longer than a session lifetime ago.
 - **The `worker` stop is bounded:** it takes no new job, waits
   `worker_drain_seconds`, cancels the rest (River returns them with the
