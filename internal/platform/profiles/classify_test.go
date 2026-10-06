@@ -31,6 +31,12 @@ func TestClassify(t *testing.T) {
 		{"deadline", fmt.Errorf("w: %w", context.DeadlineExceeded), "ENDPOINT_UNREACHABLE", true},
 		{"cancelled", context.Canceled, "ENDPOINT_UNREACHABLE", true},
 		{"unknown", errors.New("boom"), "", false},
+		{"policy over source", errors.Join(&SourceError{Code: CodeCredentialUnavailable}, &netpolicy.Error{Code: netpolicy.CodeURLRejected}), "ENDPOINT_URL_REJECTED", true},
+		{"source over prom", errors.Join(&prom.Error{Kind: prom.KindTLS}, &SourceError{Code: CodeCABundleUnavailable}), "PROFILE_CA_BUNDLE_UNAVAILABLE", true},
+		{"prom over scope", errors.Join(&discovery.ScopeError{Message: "x"}, &prom.Error{Kind: prom.KindTLS}), "ENDPOINT_TLS_FAILED", true},
+		{"scope over insufficient", errors.Join(discovery.ErrInsufficient, &discovery.ScopeError{Message: "x"}), "CLUSTER_SCOPE_NOT_FOUND", true},
+		{"insufficient over context", errors.Join(context.Canceled, discovery.ErrInsufficient), "CAPABILITIES_INSUFFICIENT", true},
+		{"policy over context", errors.Join(context.DeadlineExceeded, &netpolicy.Error{Code: netpolicy.CodeResolutionFailed}), "ENDPOINT_RESOLUTION_FAILED", true},
 	}
 	for _, c := range cases {
 		code, ok := Classify(c.err)
