@@ -22,7 +22,7 @@ func TestLoggerRedactsBeforeFormatting(t *testing.T) {
 	tokens := []string{
 		`s3cr3t"t0ken-quote`,
 		`s3cr3t\t0ken-backslash`,
-		"s3cr3t​t0ken-format",
+		"s3cr3t\u200bt0ken-format",
 	}
 	for _, token := range tokens {
 		t.Run(token, func(t *testing.T) {
