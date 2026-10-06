@@ -56,8 +56,8 @@ func TestMigrateIsIdempotent(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if version != 2 {
-			t.Fatalf("version = %d, want 2", version)
+		if version != 4 {
+			t.Fatalf("version = %d, want 4", version)
 		}
 		pending, err := store.HasPending(ctx, pool)
 		if err != nil {
@@ -224,17 +224,17 @@ const insertProfile = `INSERT INTO profiles (id, current_revision_id, created_at
 const insertRevision = `INSERT INTO profile_revisions (id, profile_id, revision, fingerprint, display_name, active, document, credential_file, ca_bundle_file, created_by, created_at)
 VALUES ($1, $2, $3, $4, 'name', true, '{}', '', '', NULL, now())`
 
-func TestMigrateToVersionTwo(t *testing.T) {
+func TestMigrateToVersionFour(t *testing.T) {
 	ctx := context.Background()
 	pool := storetest.NewEmpty(t)
 	version, err := store.Migrate(ctx, pool)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != 2 {
-		t.Fatalf("version = %d, want 2", version)
+	if version != 4 {
+		t.Fatalf("version = %d, want 4", version)
 	}
-	for _, table := range []string{"profiles", "profile_revisions"} {
+	for _, table := range []string{"profiles", "profile_revisions", "river_job", "reports", "report_snapshots", "report_pdfs", "report_idempotency_keys"} {
 		var exists bool
 		if err := pool.QueryRow(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil {
 			t.Fatal(err)
@@ -356,7 +356,7 @@ func TestProfileIDCheck(t *testing.T) {
 	}
 }
 
-// TestMigrateDownAndUp runs the newest Down section through goose, over the
+// TestMigrateDownAndUp runs the two newest Down sections through goose, over the
 // migration files of the folder, and applies the migrations again.
 func TestMigrateDownAndUp(t *testing.T) {
 	ctx := context.Background()
@@ -369,28 +369,40 @@ func TestMigrateDownAndUp(t *testing.T) {
 	}
 	defer func() { _ = provider.Close() }()
 
-	if _, err := provider.Down(ctx); err != nil {
-		t.Fatalf("down: %v", err)
+	exists := func(table string) bool {
+		var found bool
+		if err := pool.QueryRow(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&found); err != nil {
+			t.Fatal(err)
+		}
+		return found
 	}
-	version, err := provider.GetDBVersion(ctx)
-	if err != nil || version != 1 {
-		t.Fatalf("version after down = %d, %v; want 1", version, err)
-	}
-	for _, table := range []string{"profiles", "profile_revisions"} {
-		var exists bool
-		if err := pool.QueryRow(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil || exists {
-			t.Fatalf("table %s exists = %v, %v after down", table, exists, err)
+	for _, step := range []struct {
+		version int64
+		absent  string
+		present string
+	}{
+		{3, "reports", "river_job"},
+		{2, "river_job", "profiles"},
+	} {
+		if _, err := provider.Down(ctx); err != nil {
+			t.Fatalf("down to %d: %v", step.version, err)
+		}
+		version, err := provider.GetDBVersion(ctx)
+		if err != nil || version != step.version {
+			t.Fatalf("version after down = %d, %v; want %d", version, err, step.version)
+		}
+		if exists(step.absent) || !exists(step.present) {
+			t.Fatalf("at version %d: %s exists = %v, %s exists = %v", step.version, step.absent, exists(step.absent), step.present, exists(step.present))
 		}
 	}
 
-	version, err = store.Migrate(ctx, pool)
-	if err != nil || version != 2 {
-		t.Fatalf("version after up = %d, %v; want 2", version, err)
+	version, err := store.Migrate(ctx, pool)
+	if err != nil || version != 4 {
+		t.Fatalf("version after up = %d, %v; want 4", version, err)
 	}
-	for _, table := range []string{"profiles", "profile_revisions"} {
-		var exists bool
-		if err := pool.QueryRow(ctx, `SELECT to_regclass($1) IS NOT NULL`, table).Scan(&exists); err != nil || !exists {
-			t.Fatalf("table %s exists = %v, %v after up", table, exists, err)
+	for _, table := range []string{"profiles", "profile_revisions", "river_job", "reports", "report_snapshots", "report_pdfs", "report_idempotency_keys"} {
+		if !exists(table) {
+			t.Fatalf("table %s does not exist after up", table)
 		}
 	}
 }
