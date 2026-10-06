@@ -16,9 +16,12 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
 
-// valueStat returns a Statistics of state value, holding average and peak.
+// valueStat returns a Statistics of state value, holding the four numbers a
+// snapshot writes: the average and the peak given, the minimum equal to the
+// average, and the current equal to the peak.
 func valueStat(average, peak float64) snapshot.Statistics {
-	return snapshot.Statistics{State: stateValue, Average: &average, Peak: &peak}
+	minimum, current := average, peak
+	return snapshot.Statistics{State: stateValue, Average: &average, Minimum: &minimum, Peak: &peak, Current: &current}
 }
 
 // floatPtr returns a pointer to value, for a pod count.
@@ -783,13 +786,15 @@ func paritySnapshot(t *testing.T) (fixtureOrder, sorted snapshot.Snapshot) {
 	// collectors produce, and which Check refuses.
 	s.Workloads = []snapshot.Workload{worker, api}
 
-	// The minimum is absent, as in the original's fixture: its cell reads
-	// as unavailable beside a known average and peak.
-	average, peak, current := 7.0, 10.0, 10.0
+	// The statistic holds all four numbers, as a snapshot always does. The
+	// original's hand-written fixture leaves the minimum out, a shape the
+	// collector never writes and Check refuses; the one cell that differs
+	// from the fixture because of it is named in parityCorrections.
+	average, minimum, peak, current := 7.0, 2.0, 10.0, 10.0
 	s.HPAs = []snapshot.HPA{{
 		Namespace: "payments", Name: "api", TargetKind: "Deployment", TargetName: "api",
 		SpecMin: floatPtr(2), SpecMax: floatPtr(10),
-		Current: snapshot.Statistics{State: stateValue, Average: &average, Peak: &peak, Current: &current},
+		Current: snapshot.Statistics{State: stateValue, Average: &average, Minimum: &minimum, Peak: &peak, Current: &current},
 		Desired: noBase,
 	}}
 
@@ -886,10 +891,60 @@ func TestDocumentEqualsParityForItsSections(t *testing.T) {
 		t.Fatalf("unmarshal want: %v", err)
 	}
 	wantNorm = withCatalogTexts(t, b.cat, wantNorm)
+	applyParityCorrections(t, b.cat, wantNorm)
 	if !reflect.DeepEqual(gotNorm, wantNorm) {
 		gotPretty, _ := json.MarshalIndent(gotNorm, "", "  ")
 		wantPretty, _ := json.MarshalIndent(wantNorm, "", "  ")
 		t.Fatalf("blocks differ:\ngot:\n%s\nwant:\n%s", gotPretty, wantPretty)
+	}
+}
+
+// parityCorrection names one cell of the original's fixture that the
+// document writes differently because the snapshot holds a number the
+// fixture leaves out.
+type parityCorrection struct {
+	table string // the id of the table
+	row   int
+	cell  int
+	from  catalog.Key // the placeholder the fixture holds
+	to    string      // the text the document writes
+}
+
+// parityCorrections holds the one correction of the parity comparison: the
+// original's hand-written fixture leaves out the minimum of the HPA, a
+// shape the collector never writes and Check refuses, so the fixture reads
+// "Mín Atingido" as unavailable and the document, given the minimum of 2,
+// writes it.
+var parityCorrections = []parityCorrection{
+	{table: "hpa-observed", row: 0, cell: 4, from: catalog.PlaceholderUnavailable, to: "2"},
+}
+
+// applyParityCorrections rewrites, in place, the cells of want that
+// parityCorrections names, and fails when a cell does not hold the text the
+// correction expects, so that no other difference is hidden.
+func applyParityCorrections(t *testing.T, cat *catalog.Catalog, want any) {
+	t.Helper()
+	for _, c := range parityCorrections {
+		from, err := cat.Text(c.from, nil)
+		if err != nil {
+			t.Fatalf("Text(%q): %v", c.from, err)
+		}
+		done := false
+		for _, block := range want.([]any) {
+			table, ok := block.(map[string]any)
+			if !ok || table["id"] != c.table {
+				continue
+			}
+			run := table["rows"].([]any)[c.row].([]any)[c.cell].([]any)[0].(map[string]any)
+			if run["text"] != from {
+				t.Fatalf("cell %d of row %d of %s holds %q, want %q", c.cell, c.row, c.table, run["text"], from)
+			}
+			run["text"] = c.to
+			done = true
+		}
+		if !done {
+			t.Fatalf("the fixture holds no table %s", c.table)
+		}
 	}
 }
 

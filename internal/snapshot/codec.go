@@ -901,7 +901,7 @@ func workloadStatisticsFields(wl Workload) []statisticsField {
 }
 
 // checkStatistics refuses a state outside validStatisticsStates, a state
-// value that lacks its average or its peak, any other state with a number,
+// value that lacks any of its four numbers, any other state with a number,
 // and a number that is NaN or infinite.
 func checkStatistics(path string, s Statistics) error {
 	if !slices.Contains(validStatisticsStates, s.State) {
@@ -919,8 +919,10 @@ func checkStatistics(path string, s Statistics) error {
 	}
 
 	if s.State == collect.StateValue {
-		if s.Average == nil || s.Peak == nil {
-			return fmt.Errorf("%s has the state %s and lacks a number", path, collect.StateValue)
+		for _, n := range numbers {
+			if n.value == nil {
+				return fmt.Errorf("%s has the state %s and lacks a number", path, collect.StateValue)
+			}
 		}
 	} else {
 		for _, n := range numbers {

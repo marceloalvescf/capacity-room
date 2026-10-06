@@ -2357,9 +2357,24 @@ func TestCheckRefusesAContraryAutoscalingFinding(t *testing.T) {
 }
 
 func TestCheckRefusesAValueMissingANumber(t *testing.T) {
-	checkRefuses(t, func(s *Snapshot) {
-		s.Namespaces[0].CPUUsage = Statistics{State: collect.StateValue, Average: ptr(1), Minimum: ptr(1), Current: ptr(1)}
-	}, "namespaces[0].cpu_usage has the state value and lacks a number")
+	for _, missing := range []string{"average", "minimum", "peak", "current"} {
+		t.Run(missing, func(t *testing.T) {
+			checkRefuses(t, func(s *Snapshot) {
+				stat := Statistics{State: collect.StateValue, Average: ptr(1), Minimum: ptr(1), Peak: ptr(1), Current: ptr(1)}
+				switch missing {
+				case "average":
+					stat.Average = nil
+				case "minimum":
+					stat.Minimum = nil
+				case "peak":
+					stat.Peak = nil
+				case "current":
+					stat.Current = nil
+				}
+				s.Namespaces[0].CPUUsage = stat
+			}, "namespaces[0].cpu_usage has the state value and lacks a number")
+		})
+	}
 }
 
 func TestCheckRefusesSpecMinAboveSpecMax(t *testing.T) {
