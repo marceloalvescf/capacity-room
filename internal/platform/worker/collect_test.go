@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -130,6 +131,7 @@ type env struct {
 	root     auth.Principal
 	credDir  string
 	logs     *syncBuffer
+	raw      *syncBuffer // what the logger wrote before the redactor, when redacted was called
 	errs     *errorLog
 	client   *river.Client[pgx.Tx]
 	stopped  bool
@@ -826,10 +828,16 @@ func TestCollectRunsAnInactiveRevision(t *testing.T) {
 
 // redacted makes the run's redactor as the worker command does: the profile
 // service adds each credential to it and the logger writes through it.
-func (e *env) redacted() {
+// The logger also writes to e.raw before the redactor, so a test can see what
+// the redactor was given. With reveal false the redactor never learns the
+// credential.
+func (e *env) redacted(reveal bool) {
 	redactor := redact.New()
-	e.profiles.Reveal = func(secret string) { redactor.Add(secret) }
-	e.deps.Logger = slog.New(slog.NewTextHandler(redactor.Writer(e.logs), nil))
+	if reveal {
+		e.profiles.Reveal = func(secret string) { redactor.Add(secret) }
+	}
+	e.raw = &syncBuffer{}
+	e.deps.Logger = slog.New(slog.NewTextHandler(io.MultiWriter(e.raw, redactor.Writer(e.logs)), nil))
 }
 
 func (e *env) assertNoToken(report store.Report) {
@@ -860,18 +868,35 @@ func TestCollectNeverStoresTheToken(t *testing.T) {
 		e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
 		e.assertNoToken(report)
 	})
-	t.Run("a body that holds the token, through the redactor", func(t *testing.T) {
+	// A 400 with a Prometheus error body is the one answer whose text reaches
+	// the error of a run. It is a refused query, which the profile
+	// classification maps to ENDPOINT_UNREACHABLE, retried while attempts remain.
+	refusal := func(t *testing.T, reveal bool) (*env, store.Report) {
 		e := newEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 2 })
-		e.redacted()
+		e.redacted(reveal)
 		e.writeCredential("token", secretToken+"\n")
 		e.addProfile(serve(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = w.Write([]byte("upstream failed for " + secretToken))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"status":"error","errorType":"bad_data","error":"bad query near ` + secretToken + `"}`))
 		})), "token")
 		e.start(collectHooks{})
 		report := e.request()
 		e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+		return e, report
+	}
+	t.Run("a refusal that holds the token, through the redactor", func(t *testing.T) {
+		e, report := refusal(t, true)
+		if !strings.Contains(e.raw.String(), secretToken) {
+			t.Fatalf("the cause never carried the token, so nothing is proved:\n%s", e.raw.String())
+		}
 		e.assertNoToken(report)
+	})
+	t.Run("the redactor that never learns the token leaks it", func(t *testing.T) {
+		e, _ := refusal(t, false)
+		if !strings.Contains(e.logs.String(), secretToken) {
+			t.Fatal("the log line does not carry the token without Reveal, so the case above proves nothing")
+		}
 	})
 }
 
