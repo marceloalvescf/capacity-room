@@ -3,9 +3,7 @@
 package redact
 
 import (
-	"fmt"
 	"io"
-	"log/slog"
 	"regexp"
 	"slices"
 	"sort"
@@ -26,10 +24,26 @@ var (
 	quotedAuthDoubleRe = regexp.MustCompile(`(?i)(['"]authorization['"]\s*:\s*)"[^"\n]*"`)
 	quotedAuthSingleRe = regexp.MustCompile(`(?i)(['"]authorization['"]\s*:\s*)'[^'\n]*'`)
 	bareAuthRe         = regexp.MustCompile(`(?im)(\bauthorization\b\s*[:=]\s*)[^\r\n]+`)
-	assignmentRe       = regexp.MustCompile(`(?i)\b(token|access_token|api_key)\s*[:=]\s*[^\s,;]+`)
+	assignmentRe       = regexp.MustCompile(`(?i)\b(token|access_token|api_key)\s*[:=]\s*(\[redacted\]|"[^"]*"?|'[^']*'?|[^\s,;"'}\])]+)`)
 	queryStringRe      = regexp.MustCompile(`(https?://[^\s?]+)\?[^\s]+`)
 	userinfoRe         = regexp.MustCompile(`(?i)([a-z][a-z0-9+.-]*://)[^/@\s]+@`)
 )
+
+// redactAssignment replaces the value of one match of assignmentRe with
+// Mark. A value that opens with a quote is redacted to its closing quote,
+// which is kept; an already redacted value is left as it is, so redacting
+// a text twice changes nothing.
+func redactAssignment(match string) string {
+	m := assignmentRe.FindStringSubmatch(match)
+	name, value := m[1], m[2]
+	if q := value[:1]; q == `"` || q == "'" {
+		if len(value) > 1 && strings.HasSuffix(value, q) {
+			return name + "=" + q + Mark + q
+		}
+		return name + "=" + q + Mark
+	}
+	return name + "=" + Mark
+}
 
 // Redactor removes a fixed set of literal secrets and every pattern of
 // spec 5.4 from text. A Redactor is safe for use by several goroutines: a
@@ -83,31 +97,10 @@ func (r *Redactor) Text(s string) string {
 	s = quotedAuthDoubleRe.ReplaceAllString(s, `${1}"`+Mark+`"`)
 	s = quotedAuthSingleRe.ReplaceAllString(s, `${1}'`+Mark+`'`)
 	s = bareAuthRe.ReplaceAllString(s, "${1}"+Mark)
-	s = assignmentRe.ReplaceAllString(s, "${1}="+Mark)
+	s = assignmentRe.ReplaceAllStringFunc(s, redactAssignment)
 	s = queryStringRe.ReplaceAllString(s, "${1}?"+Mark)
 	s = userinfoRe.ReplaceAllString(s, "${1}"+Mark+"@")
 	return s
-}
-
-// ReplaceAttr is a slog.HandlerOptions.ReplaceAttr that removes every
-// secret from the message, from a string value, and from the text of an
-// error or a fmt.Stringer value, inside a group too, before the handler
-// formats it. A handler quotes and escapes a value, so a secret holding a
-// quote, a backslash, or a character it escapes would no longer be the
-// bytes a writer of Writer searches for.
-func (r *Redactor) ReplaceAttr(_ []string, a slog.Attr) slog.Attr {
-	switch a.Value.Kind() {
-	case slog.KindString:
-		return slog.String(a.Key, r.Text(a.Value.String()))
-	case slog.KindAny:
-		switch v := a.Value.Any().(type) {
-		case error:
-			return slog.String(a.Key, r.Text(v.Error()))
-		case fmt.Stringer:
-			return slog.String(a.Key, r.Text(v.String()))
-		}
-	}
-	return a
 }
 
 // Writer returns a writer that redacts each Write call as one text and

@@ -860,7 +860,7 @@ func (e *env) redacted(reveal bool) {
 	}
 	e.raw = &syncBuffer{}
 	e.deps.Logger = slog.New(slog.NewMultiHandler(
-		slog.NewTextHandler(redactor.Writer(e.logs), &slog.HandlerOptions{ReplaceAttr: redactor.ReplaceAttr}),
+		redact.NewHandler(redactor, slog.NewTextHandler(redactor.Writer(e.logs), nil)),
 		slog.NewTextHandler(e.raw, nil),
 	))
 }

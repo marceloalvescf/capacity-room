@@ -271,3 +271,44 @@ func TestWriterSeesSecretsAddedLater(t *testing.T) {
 		t.Fatalf("inner received %q, want %q", inner.String(), want)
 	}
 }
+
+func TestAssignmentKeepsTheStructure(t *testing.T) {
+	var r redact.Redactor
+	got := r.Text(`v="{Token=abc123}"`)
+	want := `v="{Token=[redacted]}"`
+	if got != want {
+		t.Fatalf("Text() = %q, want %q", got, want)
+	}
+}
+
+func TestAssignmentQuotedValue(t *testing.T) {
+	var r redact.Redactor
+	got := r.Text(`token="a b c" next=1`)
+	want := `token="[redacted]" next=1`
+	if got != want {
+		t.Fatalf("Text() = %q, want %q", got, want)
+	}
+}
+
+func TestAssignmentStopsAtDelimiters(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"api_key=abc]", "api_key=[redacted]]"},
+		{"access_token=abc)", "access_token=[redacted])"},
+		{"token: abc,", "token=[redacted],"},
+	}
+	var r redact.Redactor
+	for _, tt := range tests {
+		if got := r.Text(tt.in); got != tt.want {
+			t.Fatalf("Text(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestAssignmentLeavesOtherNames(t *testing.T) {
+	var r redact.Redactor
+	for _, in := range []string{"x_token=abc", "tokens=abc"} {
+		if got := r.Text(in); got != in {
+			t.Fatalf("Text(%q) = %q, want unchanged", in, got)
+		}
+	}
+}

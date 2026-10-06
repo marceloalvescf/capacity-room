@@ -10,7 +10,7 @@ import (
 // newLogger returns the logger of serve and worker, which River's logger
 // also writes through: text lines on w, the run's redacted stream, with the
 // message and every value passed through redactor before the handler quotes
-// it.
+// it. It is the only place that builds a handler of a command's logger.
 func newLogger(w io.Writer, redactor *redact.Redactor) *slog.Logger {
-	return slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{ReplaceAttr: redactor.ReplaceAttr}))
+	return slog.New(redact.NewHandler(redactor, slog.NewTextHandler(w, nil)))
 }
