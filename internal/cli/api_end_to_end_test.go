@@ -65,7 +65,7 @@ func (r *reader) fetch(method, path, csrf string, extra map[string]string) downl
 	for name, value := range r.cookies {
 		req.AddCookie(&http.Cookie{Name: name, Value: value})
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := apiClient.Do(req)
 	if err != nil {
 		r.t.Fatal(err)
 	}
@@ -175,12 +175,14 @@ func TestReportThroughTheAPI(t *testing.T) {
 	admin.mustStatus(201, "POST", "/api/v1/admin/users", adminCSRF, map[string]string{
 		"username": "olivia", "password": "olivia password one", "role": "operator", "language": "en",
 	})
-	operator := &reader{t: t, base: front.URL, cookies: map[string]string{}, header: map[string]string{"Idempotency-Key": uuid.NewString()}}
+	operator := &reader{t: t, base: front.URL, cookies: map[string]string{}}
 	csrf := operator.signIn("olivia", "olivia password one")
 
 	// The report is requested and polled until its PDFs are done.
+	operator.header = map[string]string{"Idempotency-Key": uuid.NewString()}
 	accepted := operator.mustStatus(202, "POST", "/api/v1/reports", csrf,
 		map[string]any{"profile_id": "prod", "namespaces": []string{"payments"}})
+	operator.header = nil
 	idText, _ := accepted["id"].(string)
 	id, err := uuid.Parse(idText)
 	if err != nil || accepted["replayed"] != false {

@@ -137,6 +137,9 @@ type reader struct {
 	header  map[string]string // sent with every request
 }
 
+// apiClient is the client of the proofs of the API: no request waits for ever.
+var apiClient = &http.Client{Timeout: 30 * time.Second}
+
 func (r *reader) do(method, path, csrf string, body any) (int, map[string]any) {
 	r.t.Helper()
 	var payload io.Reader
@@ -163,7 +166,7 @@ func (r *reader) do(method, path, csrf string, body any) (int, map[string]any) {
 	for name, value := range r.cookies {
 		req.AddCookie(&http.Cookie{Name: name, Value: value})
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := apiClient.Do(req)
 	if err != nil {
 		r.t.Fatal(err)
 	}
