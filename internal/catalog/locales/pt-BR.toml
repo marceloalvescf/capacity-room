@@ -251,6 +251,10 @@ no_base = "Não definido"
 undetermined = "Indeterminado"
 empty_cell = "—"
 
+[value]
+yes = "sim"
+no = "não"
+
 [notes]
 heading = "Avisos de interpretação"
 header_remark = "Observação"

@@ -66,6 +66,32 @@ func (b *builder) period(start, end time.Time) string {
 	return text
 }
 
+// resolve checks the snapshot and returns the profile and the minimum
+// severity a document of it is built with: the options, or what the
+// snapshot stores where an option is empty.
+func resolve(s snapshot.Snapshot, opts Options) (profile, severity string, err error) {
+	if err := s.Check(); err != nil {
+		return "", "", err
+	}
+
+	profile = opts.Profile
+	if profile == "" {
+		profile = s.Report.Profile
+	}
+	if profile != "detailed" && profile != "executive" {
+		return "", "", fmt.Errorf("unknown report profile %q", profile)
+	}
+
+	severity = opts.MinSeverity
+	if severity == "" {
+		severity = s.Report.MinSeverity
+	}
+	if !slices.Contains(severities, severity) {
+		return "", "", fmt.Errorf("unknown minimum severity %q", severity)
+	}
+	return profile, severity, nil
+}
+
 // Build assembles the document of a snapshot: a cover, an opening page,
 // the five sections, and a quality appendix with its notes. The executive
 // profile keeps the cover, the opening page, the executive section, and the
@@ -73,24 +99,9 @@ func (b *builder) period(start, end time.Time) string {
 // attention for the whole document; the detailed profile raises it for the
 // executive section alone.
 func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, error) {
-	if err := s.Check(); err != nil {
+	profile, severity, err := resolve(s, opts)
+	if err != nil {
 		return Document{}, err
-	}
-
-	profile := opts.Profile
-	if profile == "" {
-		profile = s.Report.Profile
-	}
-	if profile != "detailed" && profile != "executive" {
-		return Document{}, fmt.Errorf("unknown report profile %q", profile)
-	}
-
-	severity := opts.MinSeverity
-	if severity == "" {
-		severity = s.Report.MinSeverity
-	}
-	if !slices.Contains(severities, severity) {
-		return Document{}, fmt.Errorf("unknown minimum severity %q", severity)
 	}
 
 	b := &builder{cat: c}

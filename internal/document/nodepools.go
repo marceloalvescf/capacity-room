@@ -99,6 +99,17 @@ func percentRun(b *builder, value *float64, thresholds config.Thresholds) Run {
 	return StatusText(analysis.Classify(*value, thresholds), b.cat.Percent(*value))
 }
 
+// usageText writes a usage percentage of a node as its statistic carries
+// it: the percentage when the statistic has a value, else the unavailable
+// placeholder.
+func usageText(b *builder, stat snapshot.Statistics, value *float64) string {
+	v, ok := known(stat, value)
+	if !ok {
+		return b.text(catalog.PlaceholderUnavailable, nil)
+	}
+	return b.cat.Percent(v)
+}
+
 // poolSummary builds the summary heading and its table, or its paragraph
 // when no pool is left.
 func poolSummary(b *builder, pools []snapshot.NodePool, nodes map[string]snapshot.Node, thresholds config.Thresholds) []Block {
@@ -316,6 +327,16 @@ func stateWord(b *builder, flag *bool, yes, no catalog.Key) string {
 // catalog's text; otherwise the fragments of the findings of the highest
 // severity, each once, joined by a semicolon, marked with that severity.
 func nodeReason(b *builder, name string, findings []snapshot.Finding) Run {
+	severity, text := nodeReasonText(b, name, findings)
+	if severity == "" {
+		return Text(text)
+	}
+	return StatusText(severity, text)
+}
+
+// nodeReasonText is the text of nodeReason and the severity that marks it,
+// empty when the node has no finding.
+func nodeReasonText(b *builder, name string, findings []snapshot.Finding) (string, string) {
 	var own []snapshot.Finding
 	severity := analysis.SeverityHealthy
 	for _, f := range findings {
@@ -328,7 +349,7 @@ func nodeReason(b *builder, name string, findings []snapshot.Finding) Run {
 		}
 	}
 	if len(own) == 0 {
-		return Text(b.text(catalog.SectionsNodepoolsNoFinding, nil))
+		return "", b.text(catalog.SectionsNodepoolsNoFinding, nil)
 	}
 
 	var fragments []string
@@ -340,5 +361,5 @@ func nodeReason(b *builder, name string, findings []snapshot.Finding) Run {
 			fragments = append(fragments, fragment)
 		}
 	}
-	return StatusText(severity, strings.Join(fragments, "; "))
+	return severity, strings.Join(fragments, "; ")
 }

@@ -73,37 +73,53 @@ func namespaceHeading(b *builder, name string) Heading {
 	}}
 }
 
-// quantityRun writes value with format, or the unavailable placeholder when
-// stat does not carry a value, or value itself is nil.
-func quantityRun(b *builder, stat snapshot.Statistics, value *float64, format func(float64) string) Run {
+// quantityText writes value with format, or the unavailable placeholder
+// when stat does not carry a value, or value itself is nil.
+func quantityText(b *builder, stat snapshot.Statistics, value *float64, format func(float64) string) string {
 	if stat.State == stateValue && value != nil {
-		return Text(format(*value))
+		return format(*value)
 	}
-	return Text(b.text(catalog.PlaceholderUnavailable, nil))
+	return b.text(catalog.PlaceholderUnavailable, nil)
 }
 
-// podsRun writes a pod count by Count, or the unavailable placeholder when
+// quantityRun is quantityText as a plain run.
+func quantityRun(b *builder, stat snapshot.Statistics, value *float64, format func(float64) string) Run {
+	return Text(quantityText(b, stat, value, format))
+}
+
+// podsText writes a pod count by Count, or the unavailable placeholder when
 // it is unknown.
-func podsRun(b *builder, pods *float64) Run {
+func podsText(b *builder, pods *float64) string {
 	if pods == nil {
-		return Text(b.text(catalog.PlaceholderUnavailable, nil))
+		return b.text(catalog.PlaceholderUnavailable, nil)
 	}
-	return Text(b.cat.Count(*pods))
+	return b.cat.Count(*pods)
 }
 
-// ratioRun judges a ratio's peak and returns its one status run: a
-// classified percentage when the ratio has a value, the "no base" text
-// when it has none to measure against, and the unavailable placeholder
-// when the ratio itself was never measured.
-func ratioRun(b *builder, stat snapshot.Statistics, thresholds config.Thresholds) Run {
+// podsRun is podsText as a plain run.
+func podsRun(b *builder, pods *float64) Run {
+	return Text(podsText(b, pods))
+}
+
+// ratioText judges value, the figure a ratio statistic stands for, and
+// returns its status and text: a classified percentage when the ratio has
+// a value, the "no base" text when it has none to measure against, and the
+// unavailable placeholder when the ratio itself was never measured.
+func ratioText(b *builder, stat snapshot.Statistics, value *float64, thresholds config.Thresholds) (status, text string) {
 	switch {
-	case stat.State == stateValue && stat.Peak != nil:
-		return StatusText(analysis.Classify(*stat.Peak, thresholds), b.cat.Percent(*stat.Peak))
+	case stat.State == stateValue && value != nil:
+		return analysis.Classify(*value, thresholds), b.cat.Percent(*value)
 	case stat.State == stateNoBase:
-		return StatusText("undefined", b.text(catalog.PlaceholderNoBase, nil))
+		return "undefined", b.text(catalog.PlaceholderNoBase, nil)
 	default:
-		return StatusText("unavailable", b.text(catalog.PlaceholderUnavailable, nil))
+		return "unavailable", b.text(catalog.PlaceholderUnavailable, nil)
 	}
+}
+
+// ratioRun judges a ratio's peak and returns its one status run.
+func ratioRun(b *builder, stat snapshot.Statistics, thresholds config.Thresholds) Run {
+	status, text := ratioText(b, stat, stat.Peak, thresholds)
+	return StatusText(status, text)
 }
 
 // buildNamespacesSection assembles section 1: a numbered heading, then one

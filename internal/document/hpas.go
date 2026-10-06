@@ -160,10 +160,7 @@ func hpaTable(b *builder, hpas []snapshot.HPA) Table {
 // specRun writes a configured replica bound by Count, or the unavailable
 // placeholder when it is unknown.
 func specRun(b *builder, spec *float64) Run {
-	if spec == nil {
-		return Text(b.text(catalog.PlaceholderUnavailable, nil))
-	}
-	return Text(b.cat.Count(*spec))
+	return Text(podsText(b, spec))
 }
 
 // hpaAtMax reports whether an HPA reached its maximum: the maximum and the
@@ -182,19 +179,25 @@ func hpaAtMax(h snapshot.HPA) bool {
 // pinned; pinned when both bounds are known and equal; below the maximum
 // when the maximum and the peak are known; unavailable otherwise.
 func hpaSituation(b *builder, h snapshot.HPA) Run {
+	status, text := hpaSituationText(b, h)
+	return StatusText(status, text)
+}
+
+// hpaSituationText is the status and the text of hpaSituation.
+func hpaSituationText(b *builder, h snapshot.HPA) (status, text string) {
 	maxKnown := h.SpecMax != nil
 	peakKnown := h.Current.State == stateValue && h.Current.Peak != nil
 	pinned := h.SpecMin != nil && maxKnown && *h.SpecMin == *h.SpecMax
 
 	switch {
 	case hpaAtMax(h):
-		return StatusText("critical", b.text(catalog.SectionsHPAsSituationMaxReached, nil))
+		return "critical", b.text(catalog.SectionsHPAsSituationMaxReached, nil)
 	case pinned:
-		return StatusText("healthy", b.text(catalog.SectionsHPAsSituationPinned, nil))
+		return "healthy", b.text(catalog.SectionsHPAsSituationPinned, nil)
 	case maxKnown && peakKnown:
-		return StatusText("healthy", b.text(catalog.SectionsHPAsSituationBelowMax, nil))
+		return "healthy", b.text(catalog.SectionsHPAsSituationBelowMax, nil)
 	default:
-		return StatusText("unavailable", b.text(catalog.PlaceholderUnavailable, nil))
+		return "unavailable", b.text(catalog.PlaceholderUnavailable, nil)
 	}
 }
 

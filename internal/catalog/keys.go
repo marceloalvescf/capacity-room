@@ -191,6 +191,9 @@ const (
 	PlaceholderUndetermined Key = "placeholder.undetermined"
 	PlaceholderEmptyCell    Key = "placeholder.empty_cell"
 
+	ValueYes Key = "value.yes"
+	ValueNo  Key = "value.no"
+
 	SectionsExecutiveHeading                Key = "sections.executive.heading"
 	SectionsExecutiveIntro                  Key = "sections.executive.intro"
 	SectionsExecutiveCriticalHeading        Key = "sections.executive.critical_heading"
@@ -313,6 +316,7 @@ var wordingKeys = []Key{
 	SectionsNodepoolsEmptyProfile, SectionsNodepoolsEmptyDetail, SectionsNodepoolsNoFinding,
 	NodeStateReady, NodeStateNotReady, NodeStateSchedulable, NodeStateUnschedulable,
 	PlaceholderUndetermined, PlaceholderEmptyCell,
+	ValueYes, ValueNo,
 	NotesHeading, NotesHeaderRemark,
 	SectionsExecutiveHeading, SectionsExecutiveIntro, SectionsExecutiveCriticalHeading,
 	SectionsExecutiveCriticalEmpty, SectionsExecutiveAttentionHeading,

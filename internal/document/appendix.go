@@ -135,6 +135,17 @@ func warningText(b *builder, code string) string {
 	return b.text(catalog.Warning(code), nil)
 }
 
+// noticeText writes a notice: the entry of its code for its count, the
+// count filled in when it is not one.
+func noticeText(b *builder, n snapshot.Message) string {
+	count := n.Params["count"]
+	var params catalog.Params
+	if count != 1 {
+		params = catalog.Params{"Count": b.cat.Count(count)}
+	}
+	return b.text(catalog.Notice(n.Code, count), params)
+}
+
 // buildNotes assembles the interpretation notes that follow the appendix:
 // one row for every warning, then every notice, of the snapshot, each text
 // written once; or no block at all when there is neither. The minimum
@@ -154,12 +165,7 @@ func buildNotes(b *builder, s snapshot.Snapshot) []Block {
 		add(warningText(b, w.Code))
 	}
 	for _, n := range s.Quality.Notices {
-		count := n.Params["count"]
-		var params catalog.Params
-		if count != 1 {
-			params = catalog.Params{"Count": b.cat.Count(count)}
-		}
-		add(b.text(catalog.Notice(n.Code, count), params))
+		add(noticeText(b, n))
 	}
 
 	if len(rows) == 0 {
