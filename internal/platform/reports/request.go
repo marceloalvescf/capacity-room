@@ -160,7 +160,15 @@ func (s *Service) Request(ctx context.Context, actor auth.Principal, key string,
 			if storedDigest != digest {
 				return &Error{Code: "IDEMPOTENCY_KEY_REUSED"}
 			}
+			if s.afterKeyRead != nil {
+				s.afterKeyRead(ctx)
+			}
+			// A purge that committed after the key was read leaves no
+			// report; it is answered as an expired one.
 			stored, err := store.GetReport(ctx, tx, storedID)
+			if errors.Is(err, store.ErrNotFound) {
+				return &Error{Code: "REPORT_EXPIRED"}
+			}
 			if err != nil {
 				return err
 			}

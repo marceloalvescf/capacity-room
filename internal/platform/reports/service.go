@@ -45,6 +45,10 @@ type Service struct {
 	Settings settings.Settings
 	Now      func() time.Time
 	NewID    func() uuid.UUID
+
+	// afterKeyRead, when set, runs in Request between the read of an
+	// idempotency row and the read of the report it names.
+	afterKeyRead func(context.Context)
 }
 
 // Selection is a request as the operator sends it; a nil field takes the profile's default.

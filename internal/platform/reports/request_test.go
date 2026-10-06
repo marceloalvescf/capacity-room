@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"reflect"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
@@ -103,6 +105,58 @@ func TestRequestReplays(t *testing.T) {
 	if f.count(t, `SELECT count(*) FROM reports`) != 1 || len(f.jobs(t, "collect")) != 1 ||
 		f.count(t, `SELECT count(*) FROM report_idempotency_keys`) != 1 || len(f.auditActions(t, ActionReportSubmit)) != 1 {
 		t.Fatal("a replay wrote a row")
+	}
+}
+
+// A purge that commits between the read of the idempotency row and the read
+// of its report leaves a replay with no report: it answers as an expired
+// report would.
+func TestRequestReplayOfAPurgedReport(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	ctx := context.Background()
+	first, err := f.svc.Request(ctx, f.op, "k1", f.selection())
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = store.Transact(ctx, f.pool, func(tx pgx.Tx) error {
+		if err := store.ClaimReport(ctx, tx, first.ID, 1, fixedNow); err != nil {
+			return err
+		}
+		return store.FailReport(ctx, tx, first.ID, 1, "INTERNAL_FAILURE", fixedNow)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expired := fixedNow.Add(8 * 24 * time.Hour)
+	err = store.Transact(ctx, f.pool, func(tx pgx.Tx) error {
+		_, err := store.ExpireDueReports(ctx, tx, expired, 100)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	purge := expired.Add(31 * 24 * time.Hour)
+	f.svc.Now = func() time.Time { return purge }
+	f.svc.afterKeyRead = func(ctx context.Context) {
+		err := store.Transact(ctx, f.pool, func(tx pgx.Tx) error {
+			ids, err := store.PurgeExpiredReports(ctx, tx, purge, 30*24*time.Hour, 100)
+			if err == nil && (len(ids) != 1 || ids[0] != first.ID) {
+				err = fmt.Errorf("purged %v", ids)
+			}
+			return err
+		})
+		if err != nil {
+			t.Error(err)
+		}
+	}
+	_, err = f.svc.Request(ctx, f.op, "k1", f.selection())
+	if asError(t, err).Code != "REPORT_EXPIRED" {
+		t.Fatalf("err = %v", err)
+	}
+	if n := f.count(t, `SELECT count(*) FROM reports`); n != 0 {
+		t.Fatalf("%d reports", n)
 	}
 }
 
