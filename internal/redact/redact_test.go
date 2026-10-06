@@ -304,6 +304,49 @@ func TestAssignmentStopsAtDelimiters(t *testing.T) {
 	}
 }
 
+func TestAssignmentValueClass(t *testing.T) {
+	tests := []struct{ name, in, want string }{
+		{"escaped quotes bare", `token=\"abc123\"`, `token=[redacted]`},
+		{"escaped quotes inside a quoted line", `err="token=\"abc123\""`, `err="token=[redacted]"`},
+		{"escaped quote in quoted value", `token="a\"b c" next=1`, `token="[redacted]" next=1`},
+		{"line feed ends a quoted value", "\"token=\\\"abc\nline two \\\"x\\\" y\"", "\"token=[redacted]\nline two \\\"x\\\" y\""},
+		{"line feed ends an open quote", "token=\"abc\nsecond \"x\" y", "token=\"[redacted]\nsecond \"x\" y"},
+	}
+	var r redact.Redactor
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := r.Text(tt.in); got != tt.want {
+				t.Fatalf("Text(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAssignmentAfterAKnownPrefix(t *testing.T) {
+	r := redact.New("knownpart")
+	got := r.Text("token=knownpartUNKNOWNTAIL")
+	want := "token=[redacted]"
+	if got != want {
+		t.Fatalf("Text() = %q, want %q", got, want)
+	}
+}
+
+func TestAssignmentIsIdempotent(t *testing.T) {
+	inputs := []string{
+		`v="{Token=abc123}"`, `token="a b c" next=1`, "api_key=abc]", "access_token=abc)",
+		"token: abc,", "x_token=abc", "tokens=abc", `token=\"abc123\"`,
+		`err="token=\"abc123\""`, `token="a\"b c" next=1`, "token=knownpartUNKNOWNTAIL",
+		"\"token=\\\"abc\nline two \\\"x\\\" y\"", "token=\"abc\nsecond \"x\" y",
+	}
+	r := redact.New("knownpart")
+	for _, in := range inputs {
+		once := r.Text(in)
+		if twice := r.Text(once); twice != once {
+			t.Fatalf("Text(Text(%q)) = %q, want %q", in, twice, once)
+		}
+	}
+}
+
 func TestAssignmentLeavesOtherNames(t *testing.T) {
 	var r redact.Redactor
 	for _, in := range []string{"x_token=abc", "tokens=abc"} {

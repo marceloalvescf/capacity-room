@@ -46,7 +46,9 @@ func (h *Handler) Handle(ctx context.Context, rec slog.Record) error {
 	}
 	out := slog.NewRecord(rec.Time, rec.Level, h.redactor.Text(rec.Message), rec.PC)
 	rec.Attrs(func(a slog.Attr) bool {
-		out.AddAttrs(h.redactAttr(a))
+		if !a.Equal(slog.Attr{}) {
+			out.AddAttrs(h.redactAttr(a))
+		}
 		return true
 	})
 	return inner.Handle(ctx, out)
@@ -75,9 +77,11 @@ func (h *Handler) with(b binding) *Handler {
 }
 
 func (h *Handler) redactAttrs(attrs []slog.Attr) []slog.Attr {
-	out := make([]slog.Attr, len(attrs))
-	for i, a := range attrs {
-		out[i] = h.redactAttr(a)
+	out := make([]slog.Attr, 0, len(attrs))
+	for _, a := range attrs {
+		if !a.Equal(slog.Attr{}) {
+			out = append(out, h.redactAttr(a))
+		}
 	}
 	return out
 }

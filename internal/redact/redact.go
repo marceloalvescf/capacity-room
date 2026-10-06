@@ -24,23 +24,26 @@ var (
 	quotedAuthDoubleRe = regexp.MustCompile(`(?i)(['"]authorization['"]\s*:\s*)"[^"\n]*"`)
 	quotedAuthSingleRe = regexp.MustCompile(`(?i)(['"]authorization['"]\s*:\s*)'[^'\n]*'`)
 	bareAuthRe         = regexp.MustCompile(`(?im)(\bauthorization\b\s*[:=]\s*)[^\r\n]+`)
-	assignmentRe       = regexp.MustCompile(`(?i)\b(token|access_token|api_key)\s*[:=]\s*(\[redacted\]|"[^"]*"?|'[^']*'?|[^\s,;"'}\])]+)`)
+	assignmentRe       = regexp.MustCompile(`(?i)\b(token|access_token|api_key)\s*[:=]\s*(?:("(?:\\.|[^"\\\n])*)("?)|('(?:\\.|[^'\\\n])*)('?)|(\[redacted\](?:\\["']|\\|[^\s,;"'}\])\\])*|(?:\\["']|\\|[^\s,;"'}\])\\])+))`)
 	queryStringRe      = regexp.MustCompile(`(https?://[^\s?]+)\?[^\s]+`)
 	userinfoRe         = regexp.MustCompile(`(?i)([a-z][a-z0-9+.-]*://)[^/@\s]+@`)
 )
 
 // redactAssignment replaces the value of one match of assignmentRe with
-// Mark. A value that opens with a quote is redacted to its closing quote,
-// which is kept; an already redacted value is left as it is, so redacting
-// a text twice changes nothing.
+// Mark. A value that opens with a quote runs to the same quote, a
+// backslash and the character after it counting as one and a line feed
+// ending it; the closing quote, when present, is kept. A bare value is a
+// run that stops at white space, a separator, a closing bracket, or a
+// quote that is not escaped. An already redacted value with a tail is
+// redacted whole, so redacting a text twice changes nothing.
 func redactAssignment(match string) string {
 	m := assignmentRe.FindStringSubmatch(match)
-	name, value := m[1], m[2]
-	if q := value[:1]; q == `"` || q == "'" {
-		if len(value) > 1 && strings.HasSuffix(value, q) {
-			return name + "=" + q + Mark + q
-		}
-		return name + "=" + q + Mark
+	name := m[1]
+	switch {
+	case m[2] != "":
+		return name + "=" + `"` + Mark + m[3]
+	case m[4] != "":
+		return name + "=" + `'` + Mark + m[5]
 	}
 	return name + "=" + Mark
 }

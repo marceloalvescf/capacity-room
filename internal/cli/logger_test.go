@@ -162,7 +162,19 @@ func TestNoLoggerOutsideTheConstructor(t *testing.T) {
 
 func TestLoggerScanReportsAnOwnHandler(t *testing.T) {
 	found := loggerCalls(t, filepath.Join("testdata", "loggerscan"), "logger.go")
-	if len(found) != 1 || !strings.HasSuffix(found[0], "own_logger.go:9:18: slog.NewTextHandler") {
-		t.Fatalf("scan found %q, want the one call of slog.NewTextHandler", found)
+	want := []string{
+		"other_calls.go:11:6: slog.Default",
+		"other_calls.go:12:2: slog.SetDefault",
+		"other_calls.go:13:6: slog.NewJSONHandler",
+		"other_calls.go:14:2: log.Printf",
+		"own_logger.go:9:18: slog.NewTextHandler",
+	}
+	if len(found) != len(want) {
+		t.Fatalf("scan found %q, want %d calls ending %q", found, len(want), want)
+	}
+	for i, w := range want {
+		if !strings.HasSuffix(found[i], w) {
+			t.Fatalf("call %d is %q, want it to end %q", i, found[i], w)
+		}
 	}
 }

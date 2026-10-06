@@ -2,11 +2,13 @@ package redact_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 	"testing"
+	"testing/slogtest"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
 )
@@ -80,6 +82,37 @@ func TestHandlerRedactsBoundBeforeTheSecret(t *testing.T) {
 	r.Add(handlerSecret)
 	logger.Info("m")
 	assertRedacted(t, out.String())
+}
+
+func TestHandlerRedactsBoundInsideAGroup(t *testing.T) {
+	var out bytes.Buffer
+	r := redact.New()
+	logger := newHandlerLogger(&out, r).WithGroup("g").With("k", handlerSecret)
+	r.Add(handlerSecret)
+	logger.Info("m")
+	assertRedacted(t, out.String())
+}
+
+func TestHandlerPassesSlogtest(t *testing.T) {
+	var out bytes.Buffer
+	h := redact.NewHandler(redact.New(), slog.NewJSONHandler(&out, nil))
+	results := func(t *testing.T) []map[string]any {
+		var ms []map[string]any
+		for _, line := range bytes.Split(out.Bytes(), []byte{'\n'}) {
+			if len(line) == 0 {
+				continue
+			}
+			var m map[string]any
+			if err := json.Unmarshal(line, &m); err != nil {
+				t.Fatal(err)
+			}
+			ms = append(ms, m)
+		}
+		return ms
+	}
+	if err := slogtest.TestHandler(h, func() []map[string]any { return results(t) }); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestHandlerReplaysGroupsInOrder(t *testing.T) {
