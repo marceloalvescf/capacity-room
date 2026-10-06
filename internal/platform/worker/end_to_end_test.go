@@ -219,12 +219,15 @@ func TestReportEndToEnd(t *testing.T) {
 	var actions, languages []string
 	for _, ev := range e.reportAudits(id) {
 		actions = append(actions, ev.Action)
-		if ev.Action != reports.ActionReportRender {
-			continue
-		}
 		var m map[string]any
 		if err := json.Unmarshal(ev.Metadata, &m); err != nil {
 			t.Fatal(err)
+		}
+		if ev.Action == reports.ActionReportPurge && (len(m) != 1 || m["cause"] != "expired") {
+			t.Fatalf("purge audit metadata %v", m)
+		}
+		if ev.Action != reports.ActionReportRender {
+			continue
 		}
 		if ev.Outcome != "succeeded" || ev.ActorID != nil {
 			t.Fatalf("render audit %+v", ev)

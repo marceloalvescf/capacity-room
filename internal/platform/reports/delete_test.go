@@ -6,13 +6,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"maps"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
@@ -197,21 +200,39 @@ func TestDeleteManyConcurrent(t *testing.T) {
 		ids[i] = f.seedReport(t, "queued", "waiting", fixedNow.Add(time.Hour), "")
 	}
 
-	// Both calls judge every id before either marks one.
-	var arrived sync.WaitGroup
-	arrived.Add(2)
+	// Both calls judge every id before either marks one. The second call
+	// sends the ids reversed, so only a fixed marking order avoids a deadlock.
+	reversed := slices.Clone(ids)
+	slices.Reverse(reversed)
+	var arrivals atomic.Int32
+	bothArrived := make(chan struct{})
 	f.svc.beforeMark = func(context.Context) {
-		arrived.Done()
-		arrived.Wait()
+		if arrivals.Add(1) == 2 {
+			close(bothArrived)
+		}
+		select {
+		case <-bothArrived:
+		case <-time.After(10 * time.Second):
+			t.Error("the other call never reached the mark")
+		}
 	}
-	answers := make([][]DeleteResult, 2)
+	sent := [][]uuid.UUID{ids, reversed}
+	answers := make([]map[uuid.UUID]DeleteOutcome, 2)
 	errs := make([]error, 2)
 	var done sync.WaitGroup
 	for i, actor := range []auth.Principal{adminA, adminB} {
 		done.Add(1)
 		go func() {
 			defer done.Done()
-			answers[i], errs[i] = f.svc.DeleteMany(ctx, actor, ids)
+			results, err := f.svc.DeleteMany(ctx, actor, sent[i])
+			errs[i] = err
+			answers[i] = map[uuid.UUID]DeleteOutcome{}
+			for j, r := range results {
+				if r.ID != sent[i][j] {
+					t.Errorf("call %d: answer %d is out of order", i, j)
+				}
+				answers[i][r.ID] = r.Outcome
+			}
 		}()
 	}
 	done.Wait()
@@ -221,11 +242,7 @@ func TestDeleteManyConcurrent(t *testing.T) {
 		}
 	}
 	for i, id := range ids {
-		a, b := answers[0][i], answers[1][i]
-		if a.ID != id || b.ID != id {
-			t.Fatalf("id %d is out of order", i)
-		}
-		pair := []DeleteOutcome{a.Outcome, b.Outcome}
+		pair := []DeleteOutcome{answers[0][id], answers[1][id]}
 		slices.Sort(pair)
 		if !slices.Equal(pair, []DeleteOutcome{OutcomeDeleted, OutcomeNotFound}) {
 			t.Fatalf("id %d answered %v", i, pair)
@@ -295,5 +312,39 @@ func TestRetryOfAMarkedExpiredReport(t *testing.T) {
 	err := f.svc.RetryPDF(context.Background(), f.op, id, "en")
 	if e := asError(t, err); e.Code != CodeReportExpired {
 		t.Fatalf("%+v", e)
+	}
+}
+
+// A sweep that commits while a replay runs never turns a deleted report into
+// an expired one.
+func TestReplayRacingTheSweepIsNotFound(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	f.addProfile(t, "prod", baseDocument())
+	acc, err := f.svc.Request(ctx, f.op, "k1", f.selection())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.Delete(ctx, f.op, acc.ID); err != nil {
+		t.Fatal(err)
+	}
+	f.svc.afterKeyRead = func(ctx context.Context) {
+		err := store.Transact(ctx, f.pool, func(tx pgx.Tx) error {
+			ids, err := store.SweepDeletedReports(ctx, tx, 100)
+			if err == nil && !slices.Equal(ids, []uuid.UUID{acc.ID}) {
+				err = fmt.Errorf("swept %v", ids)
+			}
+			return err
+		})
+		if err != nil {
+			t.Error(err)
+		}
+	}
+	_, err = f.svc.Request(ctx, f.op, "k1", f.selection())
+	if e := asError(t, err); e.Code != CodeReportNotFound {
+		t.Fatalf("replay: %+v", e)
+	}
+	if n := f.count(t, `SELECT count(*) FROM reports`); n != 0 {
+		t.Fatalf("%d reports", n)
 	}
 }

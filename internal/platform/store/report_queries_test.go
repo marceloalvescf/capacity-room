@@ -570,7 +570,7 @@ func TestIdempotencyKeyPerOwner(t *testing.T) {
 		mustInsertReport(t, pool, r)
 	}
 
-	if _, _, err := store.GetIdempotencyKey(ctx, pool, f.owner, "k"); !errors.Is(err, store.ErrNotFound) {
+	if _, _, err := store.GetIdempotentReport(ctx, pool, f.owner, "k"); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("absent: %v", err)
 	}
 	if err := store.InsertIdempotencyKey(ctx, pool, f.owner, "k", "sha-a", a.ID, now); err != nil {
@@ -579,13 +579,13 @@ func TestIdempotencyKeyPerOwner(t *testing.T) {
 	if err := store.InsertIdempotencyKey(ctx, pool, other, "k", "sha-b", b.ID, now); err != nil {
 		t.Fatal(err)
 	}
-	sum, id, err := store.GetIdempotencyKey(ctx, pool, f.owner, "k")
-	if err != nil || sum != "sha-a" || id != a.ID {
-		t.Fatalf("owner: %q, %v, %v", sum, id, err)
+	sum, got, err := store.GetIdempotentReport(ctx, pool, f.owner, "k")
+	if err != nil || sum != "sha-a" || got.ID != a.ID {
+		t.Fatalf("owner: %q, %v, %v", sum, got.ID, err)
 	}
-	sum, id, err = store.GetIdempotencyKey(ctx, pool, other, "k")
-	if err != nil || sum != "sha-b" || id != b.ID {
-		t.Fatalf("other: %q, %v, %v", sum, id, err)
+	sum, got, err = store.GetIdempotentReport(ctx, pool, other, "k")
+	if err != nil || sum != "sha-b" || got.ID != b.ID {
+		t.Fatalf("other: %q, %v, %v", sum, got.ID, err)
 	}
 	err = store.InsertIdempotencyKey(ctx, pool, f.owner, "k", "sha-c", c.ID, now)
 	wantSQLState(t, "second insert for one owner", err, "23505")

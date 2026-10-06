@@ -108,9 +108,8 @@ func TestRequestReplays(t *testing.T) {
 	}
 }
 
-// A purge that commits between the read of the idempotency row and the read
-// of its report leaves a replay with no report: it answers as an expired
-// report would.
+// A purge that commits after a replay read its idempotency row and report
+// changes nothing: the replay answers for the expired report it read.
 func TestRequestReplayOfAPurgedReport(t *testing.T) {
 	f := newFixture(t)
 	f.addProfile(t, "prod", baseDocument())

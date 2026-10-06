@@ -63,11 +63,15 @@ func utcPtr(t *time.Time) *time.Time {
 	return &u
 }
 
-func scanReport(row pgx.Row) (Report, error) {
+func scanReport(row pgx.Row) (Report, error) { return scanReportAfter(row) }
+
+// scanReportAfter scans a row whose columns are the destinations of lead,
+// then those of reportColumns.
+func scanReportAfter(row pgx.Row, lead ...any) (Report, error) {
 	var r Report
-	err := row.Scan(&r.ID, &r.OwnerID, &r.ProfileID, &r.ProfileRevisionID, &r.Request, &r.Status, &r.Phase, &r.Attempt,
+	err := row.Scan(append(lead, &r.ID, &r.OwnerID, &r.ProfileID, &r.ProfileRevisionID, &r.Request, &r.Status, &r.Phase, &r.Attempt,
 		&r.FailureCode, &r.CollectJobID, &r.CreatedAt, &r.StartedAt, &r.CollectedAt, &r.CompletedAt, &r.ExpiresAt,
-		&r.ExpiredAt, &r.DeletedAt, &r.UpdatedAt)
+		&r.ExpiredAt, &r.DeletedAt, &r.UpdatedAt)...)
 	if err != nil {
 		return Report{}, err
 	}
@@ -314,18 +318,22 @@ func CountPendingPDFs(ctx context.Context, q Querier, reportID uuid.UUID) (int, 
 	return n, nil
 }
 
-// GetIdempotencyKey returns the request digest and the report stored under
-// the owner's key.
-func GetIdempotencyKey(ctx context.Context, q Querier, ownerID uuid.UUID, key string) (requestSHA256 string, reportID uuid.UUID, err error) {
-	err = q.QueryRow(ctx, `SELECT request_sha256, report_id FROM report_idempotency_keys WHERE owner_id = $1 AND key = $2`,
-		ownerID, key).Scan(&requestSHA256, &reportID)
+// GetIdempotentReport returns, in one statement, the request digest stored
+// under the owner's key and the report it names, deleted or not; ErrNotFound
+// when the key has no row.
+func GetIdempotentReport(ctx context.Context, q Querier, ownerID uuid.UUID, key string) (requestSHA256 string, report Report, err error) {
+	report, err = scanReportAfter(q.QueryRow(ctx, `SELECT k.request_sha256, r.id, r.owner_id, r.profile_id, r.profile_revision_id,
+r.request, r.status, r.phase, r.attempt, r.failure_code, r.collect_job_id, r.created_at, r.started_at, r.collected_at,
+r.completed_at, r.expires_at, r.expired_at, r.deleted_at, r.updated_at
+FROM report_idempotency_keys k JOIN reports r ON r.id = k.report_id
+WHERE k.owner_id = $1 AND k.key = $2`, ownerID, key), &requestSHA256)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", uuid.Nil, ErrNotFound
+		return "", Report{}, ErrNotFound
 	}
 	if err != nil {
-		return "", uuid.Nil, fmt.Errorf("get idempotency key: %w", err)
+		return "", Report{}, fmt.Errorf("get idempotent report: %w", err)
 	}
-	return requestSHA256, reportID, nil
+	return requestSHA256, report, nil
 }
 
 // InsertIdempotencyKey stores the owner's key.

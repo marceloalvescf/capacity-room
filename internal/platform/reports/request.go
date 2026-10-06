@@ -154,7 +154,7 @@ func (s *Service) Request(ctx context.Context, actor auth.Principal, key string,
 		if err := store.LockReportRequests(ctx, tx); err != nil {
 			return err
 		}
-		storedDigest, storedID, err := store.GetIdempotencyKey(ctx, tx, actor.ID, key)
+		storedDigest, stored, err := store.GetIdempotentReport(ctx, tx, actor.ID, key)
 		switch {
 		case err == nil:
 			if storedDigest != digest {
@@ -163,16 +163,8 @@ func (s *Service) Request(ctx context.Context, actor auth.Principal, key string,
 			if s.afterKeyRead != nil {
 				s.afterKeyRead(ctx)
 			}
-			// A purge that committed after the key was read leaves no
-			// report; it is answered as an expired one. A deleted report is
-			// answered as an absent one.
-			stored, err := store.GetReport(ctx, tx, storedID)
-			if errors.Is(err, store.ErrNotFound) {
-				return &Error{Code: CodeReportExpired}
-			}
-			if err != nil {
-				return err
-			}
+			// The key and its report were read together, so a sweep or a
+			// purge that commits now changes neither.
 			switch {
 			case stored.DeletedAt != nil:
 				return &Error{Code: CodeReportNotFound}
