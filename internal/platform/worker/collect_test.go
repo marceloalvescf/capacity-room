@@ -672,6 +672,27 @@ func TestCollectTimeout(t *testing.T) {
 	e.assertFailedWith(e.request(), "COLLECTION_TIMEOUT")
 }
 
+// A deadline that passes inside the transaction that stores the snapshot
+// does not turn the finished collection into a failure.
+func TestCollectSuccessOutlivesTheDeadline(t *testing.T) {
+	e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.CollectTimeout = 5 * time.Second })
+	e.start(collectHooks{insideCollected: func(ctx context.Context, _ int) {
+		<-ctx.Done()
+	}})
+	report := e.request()
+	e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+	if got := e.report(report.ID); got.Status != "collected" || got.FailureCode != nil {
+		code := ""
+		if got.FailureCode != nil {
+			code = *got.FailureCode
+		}
+		t.Fatalf("report %s with code %q, want collected", got.Status, code)
+	}
+	if n := e.count(`SELECT count(*) FROM report_snapshots WHERE report_id = $1`, report.ID); n != 1 {
+		t.Fatalf("%d snapshots", n)
+	}
+}
+
 // hold blocks an attempt at a hook until released; it signals when attempt
 // arrives. Other attempts pass.
 type hold struct {

@@ -54,6 +54,7 @@ type RenderWorker struct {
 // nothing.
 type renderHooks struct {
 	beforeStore func(ctx context.Context, language string) // after the compile, before the outcome's transaction
+	insideStore func(language string)                      // inside the transaction that stores a PDF
 }
 
 // Timeout is the longest a render may run.
@@ -76,7 +77,9 @@ func (w *RenderWorker) Work(ctx context.Context, job *river.Job[reports.RenderAr
 			if h := w.hooks.beforeStore; h != nil {
 				h(ctx, job.Args.Language)
 			}
-			err = w.store(ctx, job, pdf, "")
+			wctx, cancel := outcomeContext(ctx)
+			err = w.store(wctx, job, pdf, "")
+			cancel()
 			if err == nil {
 				return nil
 			}
@@ -189,6 +192,9 @@ func (w *RenderWorker) store(ctx context.Context, job *river.Job[reports.RenderA
 			Metadata: audit.Metadata{"language": lang},
 		}
 		if code == "" {
+			if h := w.hooks.insideStore; h != nil {
+				h(lang)
+			}
 			err = store.FinishPDF(ctx, tx, id, lang, pdf, now)
 		} else {
 			err = store.FailPDF(ctx, tx, id, lang, code, now)
@@ -262,9 +268,7 @@ func (w *RenderWorker) handle(ctx context.Context, job *river.Job[reports.Render
 		w.log(job, code, cause, "render attempt failed")
 		return failure
 	}
-	// The transaction of the outcome does not stop with the attempt's own
-	// deadline; the values of the context stay, which the completion needs.
-	wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), outcomeTimeout)
+	wctx, cancel := outcomeContext(ctx)
 	defer cancel()
 	err := w.store(wctx, job, nil, code)
 	switch {

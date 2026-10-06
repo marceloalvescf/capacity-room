@@ -273,6 +273,24 @@ func TestRenderCompletesTheReport(t *testing.T) {
 	}
 }
 
+// A deadline that passes inside the transaction that stores a PDF does not
+// turn the finished render into a failure.
+func TestRenderSuccessOutlivesTheDeadline(t *testing.T) {
+	const timeout = 2 * time.Second
+	e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.RenderTimeout = timeout })
+	e.startRender(both(pdfToolchain(t)), 2, renderHooks{insideStore: func(string) {
+		time.Sleep(timeout + time.Second)
+	}})
+	report := e.collected()
+	e.waitPDF(report.ID, langPT, "ready")
+	e.waitPDF(report.ID, langEN, "ready")
+	e.waitJob(e.pdfJob(report.ID, langPT), rivertype.JobStateCompleted)
+	e.waitJob(e.pdfJob(report.ID, langEN), rivertype.JobStateCompleted)
+	if got := e.report(report.ID); got.Phase != "complete" || got.CompletedAt == nil {
+		t.Fatalf("report %+v", got)
+	}
+}
+
 // barrier holds the first arrivals until n have come.
 type barrier struct {
 	n       int32

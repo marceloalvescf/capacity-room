@@ -34,9 +34,18 @@ const (
 	codeInternalFailure   = "INTERNAL_FAILURE"
 )
 
-// outcomeTimeout bounds the transaction that stores the outcome of a failed
+// outcomeTimeout bounds the transaction that stores the outcome of an
 // attempt, which runs after the attempt's own context may be done.
 const outcomeTimeout = 10 * time.Second
+
+// outcomeContext is the context of the transaction that stores the outcome
+// of an attempt, success or failure: it does not stop with the attempt's own
+// deadline or cancel, so finished work is not lost to a deadline that passes
+// while it is written, and it keeps the values of ctx, which the completion
+// of the job needs.
+func outcomeContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), outcomeTimeout)
+}
 
 // staleAttemptError is what a stale attempt returns to River: its text is the
 // one River may record, and it matches ErrStaleAttempt.
@@ -75,6 +84,7 @@ type collectHooks struct {
 	beforeClaim     func(ctx context.Context, attempt int) // before the claim's transaction
 	afterClaim      func(ctx context.Context, attempt int) // after the claim committed
 	beforeCollected func(ctx context.Context, attempt int) // after the snapshot is encoded, before its transaction
+	insideCollected func(ctx context.Context, attempt int) // inside the transaction that stores the snapshot
 }
 
 // Timeout is the longest a collection may run.
@@ -190,30 +200,35 @@ func (w *CollectWorker) collect(ctx context.Context, job *river.Job[reports.Coll
 		h(ctx, attempt)
 	}
 
-	return store.Transact(ctx, d.Pool, func(tx pgx.Tx) error {
+	wctx, cancel := outcomeContext(ctx)
+	defer cancel()
+	return store.Transact(wctx, d.Pool, func(tx pgx.Tx) error {
 		now := d.Now().UTC()
-		if err := store.CollectReport(ctx, tx, id, attempt, now); err != nil {
+		if err := store.CollectReport(wctx, tx, id, attempt, now); err != nil {
 			return err
 		}
-		if err := store.InsertSnapshot(ctx, tx, id, snapshot.SchemaVersion, body, now); err != nil {
+		if h := w.hooks.insideCollected; h != nil {
+			h(ctx, attempt)
+		}
+		if err := store.InsertSnapshot(wctx, tx, id, snapshot.SchemaVersion, body, now); err != nil {
 			return err
 		}
-		queue := river.ClientFromContext[pgx.Tx](ctx)
+		queue := river.ClientFromContext[pgx.Tx](wctx)
 		for _, lang := range catalog.Languages() {
-			inserted, err := queue.InsertTx(ctx, tx, reports.RenderArgs{ReportID: id, Language: string(lang)}, reports.RenderInsertOpts(d.Settings))
+			inserted, err := queue.InsertTx(wctx, tx, reports.RenderArgs{ReportID: id, Language: string(lang)}, reports.RenderInsertOpts(d.Settings))
 			if err != nil {
 				return fmt.Errorf("queue render: %w", err)
 			}
-			if err := store.InsertPendingPDF(ctx, tx, id, string(lang), inserted.Job.ID, now); err != nil {
+			if err := store.InsertPendingPDF(wctx, tx, id, string(lang), inserted.Job.ID, now); err != nil {
 				return err
 			}
 		}
-		if err := audit.Append(ctx, tx, now, audit.Event{
+		if err := audit.Append(wctx, tx, now, audit.Event{
 			Action: reports.ActionReportCollect, TargetType: "report", TargetID: id.String(), Metadata: audit.Metadata{},
 		}); err != nil {
 			return err
 		}
-		_, err := river.JobCompleteTx[*riverpgxv5.Driver](ctx, tx, job)
+		_, err := river.JobCompleteTx[*riverpgxv5.Driver](wctx, tx, job)
 		return err
 	})
 }
@@ -266,9 +281,7 @@ func (w *CollectWorker) handle(ctx context.Context, job *river.Job[reports.Colle
 	if stop != nil {
 		return stop
 	}
-	// The transaction of the outcome does not stop with the attempt's own
-	// deadline; the values of the context stay, which the completion needs.
-	wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), outcomeTimeout)
+	wctx, cancel := outcomeContext(ctx)
 	defer cancel()
 	failure := fmt.Errorf("collect: %s", code)
 
