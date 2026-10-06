@@ -174,6 +174,12 @@ func (w *CollectWorker) claim(ctx context.Context, job *river.Job[reports.Collec
 		if err != nil {
 			return err
 		}
+		if report.DeletedAt != nil {
+			w.note(report.ID, job.Attempt, "collect job skipped a deleted report")
+			done = true
+			_, err := river.JobCompleteTx[*riverpgxv5.Driver](ctx, tx, job)
+			return err
+		}
 		if report.Status == "collected" || report.Status == "failed" || report.ExpiredAt != nil {
 			w.note(report.ID, job.Attempt, "collect job skipped a report that needs nothing")
 			done = true

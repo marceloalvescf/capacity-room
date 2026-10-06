@@ -43,7 +43,7 @@ func ReconcileReports(ctx context.Context, tx pgx.Tx, now time.Time, limit int) 
 	rows, err := tx.Query(ctx, `
 WITH due AS (
     SELECT r.id FROM reports r
-    WHERE r.status IN ('queued', 'running') AND `+jobGone("r.collect_job_id")+`
+    WHERE r.status IN ('queued', 'running') AND r.deleted_at IS NULL AND `+jobGone("r.collect_job_id")+`
     ORDER BY r.created_at, r.id
     LIMIT $2
     FOR UPDATE OF r SKIP LOCKED)
@@ -72,7 +72,7 @@ func ReconcilePDFs(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]
 WITH due AS (
     SELECT p.report_id, p.language FROM report_pdfs p
     JOIN reports r ON r.id = p.report_id
-    WHERE p.status = 'pending' AND r.status = 'collected' AND r.expires_at > $1 AND `+jobGone("p.job_id")+`
+    WHERE p.status = 'pending' AND r.status = 'collected' AND r.deleted_at IS NULL AND r.expires_at > $1 AND `+jobGone("p.job_id")+`
     ORDER BY p.updated_at, p.report_id, p.language
     LIMIT $2
     FOR UPDATE OF r SKIP LOCKED)
@@ -126,7 +126,7 @@ WHERE id = ANY($1) AND status = 'collected' AND phase = 'rendering'
 func ExpireDueReports(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]uuid.UUID, error) {
 	rows, err := tx.Query(ctx, `
 SELECT id FROM reports
-WHERE status IN ('collected', 'failed') AND expires_at <= $1 AND expired_at IS NULL
+WHERE status IN ('collected', 'failed') AND expires_at <= $1 AND expired_at IS NULL AND deleted_at IS NULL
 ORDER BY expires_at, id
 LIMIT $2
 FOR UPDATE SKIP LOCKED`, now, limit)
@@ -186,22 +186,29 @@ FOR UPDATE SKIP LOCKED`, now.Add(-kept), limit)
 	if len(due) == 0 {
 		return nil, nil
 	}
+	return deleteReports(ctx, tx, due, "purge reports")
+}
+
+// deleteReports deletes the PDF, snapshot, and idempotency rows of the
+// reports, then the reports, and returns their ids. what names the caller in
+// an error.
+func deleteReports(ctx context.Context, tx pgx.Tx, due []uuid.UUID, what string) ([]uuid.UUID, error) {
 	for _, sql := range []string{
 		`DELETE FROM report_pdfs WHERE report_id = ANY($1)`,
 		`DELETE FROM report_snapshots WHERE report_id = ANY($1)`,
 		`DELETE FROM report_idempotency_keys WHERE report_id = ANY($1)`,
 	} {
 		if _, err := tx.Exec(ctx, sql, due); err != nil {
-			return nil, fmt.Errorf("purge reports: %w", err)
+			return nil, fmt.Errorf("%s: %w", what, err)
 		}
 	}
-	rows, err = tx.Query(ctx, `DELETE FROM reports WHERE id = ANY($1) RETURNING id`, due)
+	rows, err := tx.Query(ctx, `DELETE FROM reports WHERE id = ANY($1) RETURNING id`, due)
 	if err != nil {
-		return nil, fmt.Errorf("purge reports: %w", err)
+		return nil, fmt.Errorf("%s: %w", what, err)
 	}
 	ids, err := scanIDs(rows)
 	if err != nil {
-		return nil, fmt.Errorf("purge reports: %w", err)
+		return nil, fmt.Errorf("%s: %w", what, err)
 	}
 	return ids, nil
 }
@@ -251,4 +258,27 @@ FOR UPDATE SKIP LOCKED`, cutoff, limit)
 		return 0, fmt.Errorf("purge sessions: %w", err)
 	}
 	return tag.RowsAffected(), nil
+}
+
+// SweepDeletedReports removes at most limit deleted reports whose status is
+// not running, oldest mark first, skipping locked rows, with their PDF rows,
+// snapshot, and idempotency row; it returns the ids removed.
+func SweepDeletedReports(ctx context.Context, tx pgx.Tx, limit int) ([]uuid.UUID, error) {
+	rows, err := tx.Query(ctx, `
+SELECT id FROM reports
+WHERE deleted_at IS NOT NULL AND status <> 'running'
+ORDER BY deleted_at, id
+LIMIT $1
+FOR UPDATE SKIP LOCKED`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("sweep reports: %w", err)
+	}
+	due, err := scanIDs(rows)
+	if err != nil {
+		return nil, fmt.Errorf("sweep reports: %w", err)
+	}
+	if len(due) == 0 {
+		return nil, nil
+	}
+	return deleteReports(ctx, tx, due, "sweep reports")
 }

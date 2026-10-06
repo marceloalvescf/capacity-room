@@ -1071,6 +1071,10 @@ func TestCollectSkipsATerminalReport(t *testing.T) {
 			}
 			return store.CollectReport(ctx, tx, id, 1, fixedNow)
 		},
+		"deleted": func(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+			_, err := store.MarkReportDeleted(ctx, tx, id, fixedNow)
+			return err
+		},
 		"expired": func(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 			if err := store.ClaimReport(ctx, tx, id, 1, fixedNow); err != nil {
 				return err
@@ -1097,7 +1101,7 @@ func TestCollectSkipsATerminalReport(t *testing.T) {
 				t.Fatalf("attempt %d", job.Attempt)
 			}
 			after := e.report(report.ID)
-			if !after.UpdatedAt.Equal(before.UpdatedAt) || after.Status != before.Status || after.Phase != before.Phase || after.Attempt != 1 {
+			if !after.UpdatedAt.Equal(before.UpdatedAt) || after.Status != before.Status || after.Phase != before.Phase || after.Attempt != before.Attempt {
 				t.Fatalf("report changed: %+v, was %+v", after, before)
 			}
 			for _, q := range []string{`SELECT count(*) FROM report_snapshots`, `SELECT count(*) FROM report_pdfs`,

@@ -27,6 +27,7 @@ type Report struct {
 	StartedAt, CollectedAt, CompletedAt *time.Time
 	ExpiresAt                           time.Time
 	ExpiredAt                           *time.Time
+	DeletedAt                           *time.Time
 	UpdatedAt                           time.Time
 }
 
@@ -52,7 +53,7 @@ var ErrStaleAttempt = errors.New("report attempt is stale")
 const ReportRequestLockID = 72427302
 
 const reportColumns = `id, owner_id, profile_id, profile_revision_id, request, status, phase, attempt, failure_code,
-collect_job_id, created_at, started_at, collected_at, completed_at, expires_at, expired_at, updated_at`
+collect_job_id, created_at, started_at, collected_at, completed_at, expires_at, expired_at, deleted_at, updated_at`
 
 func utcPtr(t *time.Time) *time.Time {
 	if t == nil {
@@ -66,7 +67,7 @@ func scanReport(row pgx.Row) (Report, error) {
 	var r Report
 	err := row.Scan(&r.ID, &r.OwnerID, &r.ProfileID, &r.ProfileRevisionID, &r.Request, &r.Status, &r.Phase, &r.Attempt,
 		&r.FailureCode, &r.CollectJobID, &r.CreatedAt, &r.StartedAt, &r.CollectedAt, &r.CompletedAt, &r.ExpiresAt,
-		&r.ExpiredAt, &r.UpdatedAt)
+		&r.ExpiredAt, &r.DeletedAt, &r.UpdatedAt)
 	if err != nil {
 		return Report{}, err
 	}
@@ -77,6 +78,7 @@ func scanReport(row pgx.Row) (Report, error) {
 	r.CollectedAt = utcPtr(r.CollectedAt)
 	r.CompletedAt = utcPtr(r.CompletedAt)
 	r.ExpiredAt = utcPtr(r.ExpiredAt)
+	r.DeletedAt = utcPtr(r.DeletedAt)
 	return r, nil
 }
 
@@ -99,9 +101,9 @@ func LockReportRequests(ctx context.Context, tx pgx.Tx) error {
 func InsertReport(ctx context.Context, q Querier, r Report) error {
 	_, err := q.Exec(ctx, `
 INSERT INTO reports (`+reportColumns+`)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
 		r.ID, r.OwnerID, r.ProfileID, r.ProfileRevisionID, r.Request, r.Status, r.Phase, r.Attempt, r.FailureCode,
-		r.CollectJobID, r.CreatedAt, r.StartedAt, r.CollectedAt, r.CompletedAt, r.ExpiresAt, r.ExpiredAt, r.UpdatedAt)
+		r.CollectJobID, r.CreatedAt, r.StartedAt, r.CollectedAt, r.CompletedAt, r.ExpiresAt, r.ExpiredAt, r.DeletedAt, r.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("insert report: %w", err)
 	}
@@ -156,13 +158,28 @@ func execGuarded(ctx context.Context, q Querier, sql string, args ...any) error 
 }
 
 // ClaimReport marks the report running in phase preflight under attempt. It
-// takes a queued or running report whose stored attempt is not above attempt,
-// so the attempt never goes down, and returns ErrStaleAttempt otherwise.
+// takes a queued or running report that is not deleted and whose stored
+// attempt is not above attempt, so the attempt never goes down. It returns
+// ErrNotFound for a deleted report and ErrStaleAttempt otherwise.
 func ClaimReport(ctx context.Context, tx pgx.Tx, id uuid.UUID, attempt int, now time.Time) error {
-	return execGuarded(ctx, tx, `
+	err := execGuarded(ctx, tx, `
 UPDATE reports
 SET status = 'running', phase = 'preflight', attempt = $2, started_at = COALESCE(started_at, $3), updated_at = $3
-WHERE id = $1 AND status IN ('queued', 'running') AND attempt <= $2`, id, attempt, now)
+WHERE id = $1 AND status IN ('queued', 'running') AND attempt <= $2 AND deleted_at IS NULL`, id, attempt, now)
+	if !errors.Is(err, ErrStaleAttempt) {
+		return err
+	}
+	var deleted bool
+	if err := tx.QueryRow(ctx, `SELECT deleted_at IS NOT NULL FROM reports WHERE id = $1`, id).Scan(&deleted); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		return fmt.Errorf("claim report: %w", err)
+	}
+	if deleted {
+		return ErrNotFound
+	}
+	return ErrStaleAttempt
 }
 
 // AdvanceReport moves a running report to phase.
@@ -320,4 +337,226 @@ VALUES ($1, $2, $3, $4, $5)`, ownerID, key, requestSHA256, reportID, now)
 		return fmt.Errorf("insert idempotency key: %w", err)
 	}
 	return nil
+}
+
+// ReportListItem is one row of the list: the report, its owner's user name,
+// and its PDF rows without bodies, in language order.
+type ReportListItem struct {
+	Report
+	OwnerUsername string
+	PDFs          []ReportPDF
+}
+
+// ReportCursor is the position after which a page starts.
+type ReportCursor struct {
+	CreatedAt time.Time
+	ID        uuid.UUID
+}
+
+const listColumns = `r.id, r.owner_id, r.profile_id, r.profile_revision_id, r.request, r.status, r.phase, r.attempt,
+r.failure_code, r.collect_job_id, r.created_at, r.started_at, r.collected_at, r.completed_at, r.expires_at,
+r.expired_at, r.deleted_at, r.updated_at, u.username`
+
+func scanItem(row pgx.Row) (ReportListItem, error) {
+	var (
+		it ReportListItem
+		r  = &it.Report
+	)
+	err := row.Scan(&r.ID, &r.OwnerID, &r.ProfileID, &r.ProfileRevisionID, &r.Request, &r.Status, &r.Phase, &r.Attempt,
+		&r.FailureCode, &r.CollectJobID, &r.CreatedAt, &r.StartedAt, &r.CollectedAt, &r.CompletedAt, &r.ExpiresAt,
+		&r.ExpiredAt, &r.DeletedAt, &r.UpdatedAt, &it.OwnerUsername)
+	if err != nil {
+		return ReportListItem{}, err
+	}
+	r.CreatedAt = r.CreatedAt.UTC()
+	r.ExpiresAt = r.ExpiresAt.UTC()
+	r.UpdatedAt = r.UpdatedAt.UTC()
+	r.StartedAt = utcPtr(r.StartedAt)
+	r.CollectedAt = utcPtr(r.CollectedAt)
+	r.CompletedAt = utcPtr(r.CompletedAt)
+	r.ExpiredAt = utcPtr(r.ExpiredAt)
+	r.DeletedAt = utcPtr(r.DeletedAt)
+	return it, nil
+}
+
+// attachPDFs fills the PDF rows of items, in language order, with one read.
+func attachPDFs(ctx context.Context, q Querier, items []ReportListItem) error {
+	if len(items) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, len(items))
+	at := make(map[uuid.UUID]int, len(items))
+	for i, it := range items {
+		ids[i] = it.ID
+		at[it.ID] = i
+	}
+	rows, err := q.Query(ctx, `
+SELECT report_id, language, status, failure_code, job_id, sha256, size_bytes, updated_at
+FROM report_pdfs WHERE report_id = ANY($1) ORDER BY report_id, language`, ids)
+	if err != nil {
+		return fmt.Errorf("read report pdfs: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var p ReportPDF
+		if err := rows.Scan(&p.ReportID, &p.Language, &p.Status, &p.FailureCode, &p.JobID, &p.SHA256, &p.SizeBytes, &p.UpdatedAt); err != nil {
+			return fmt.Errorf("read report pdfs: %w", err)
+		}
+		p.UpdatedAt = p.UpdatedAt.UTC()
+		items[at[p.ReportID]].PDFs = append(items[at[p.ReportID]].PDFs, p)
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read report pdfs: %w", err)
+	}
+	return nil
+}
+
+// ListReports returns at most limit rows not deleted, newest first, after
+// the cursor when one is given.
+func ListReports(ctx context.Context, q Querier, after *ReportCursor, limit int) ([]ReportListItem, error) {
+	var (
+		rows pgx.Rows
+		err  error
+	)
+	const head = `SELECT ` + listColumns + `
+FROM reports r JOIN users u ON u.id = r.owner_id
+WHERE r.deleted_at IS NULL`
+	const tail = `
+ORDER BY r.created_at DESC, r.id DESC
+LIMIT `
+	if after == nil {
+		rows, err = q.Query(ctx, head+tail+`$1`, limit)
+	} else {
+		rows, err = q.Query(ctx, head+` AND (r.created_at, r.id) < ($1, $2)`+tail+`$3`, after.CreatedAt, after.ID, limit)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("list reports: %w", err)
+	}
+	defer rows.Close()
+	var items []ReportListItem
+	for rows.Next() {
+		it, err := scanItem(rows)
+		if err != nil {
+			return nil, fmt.Errorf("list reports: %w", err)
+		}
+		items = append(items, it)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list reports: %w", err)
+	}
+	rows.Close()
+	if err := attachPDFs(ctx, q, items); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+// GetReportItem returns one report not deleted, with its owner's user name
+// and PDF rows; ErrNotFound when absent or deleted.
+func GetReportItem(ctx context.Context, q Querier, id uuid.UUID) (ReportListItem, error) {
+	it, err := scanItem(q.QueryRow(ctx, `SELECT `+listColumns+`
+FROM reports r JOIN users u ON u.id = r.owner_id
+WHERE r.id = $1 AND r.deleted_at IS NULL`, id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ReportListItem{}, ErrNotFound
+	}
+	if err != nil {
+		return ReportListItem{}, fmt.Errorf("get report item: %w", err)
+	}
+	items := []ReportListItem{it}
+	if err := attachPDFs(ctx, q, items); err != nil {
+		return ReportListItem{}, err
+	}
+	return items[0], nil
+}
+
+// SnapshotRead is what ReadSnapshot returns.
+type SnapshotRead struct {
+	Status    string
+	ExpiresAt time.Time
+	Body      []byte // nil unless collected and not expired
+	SHA256    string // empty when Body is nil
+}
+
+// ReadSnapshot returns, in one statement, the snapshot of a report that is
+// collected, not deleted, and not expired at now, with the report's status
+// and expiry: ErrNotFound when the report is absent or deleted.
+func ReadSnapshot(ctx context.Context, q Querier, id uuid.UUID, now time.Time) (SnapshotRead, error) {
+	var (
+		out SnapshotRead
+		sum *string
+	)
+	err := q.QueryRow(ctx, `
+SELECT r.status, r.expires_at,
+       CASE WHEN r.status = 'collected' AND r.expires_at > $2 THEN s.body END,
+       CASE WHEN r.status = 'collected' AND r.expires_at > $2 THEN s.sha256 END
+FROM reports r LEFT JOIN report_snapshots s ON s.report_id = r.id
+WHERE r.id = $1 AND r.deleted_at IS NULL`, id, now).Scan(&out.Status, &out.ExpiresAt, &out.Body, &sum)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return SnapshotRead{}, ErrNotFound
+	}
+	if err != nil {
+		return SnapshotRead{}, fmt.Errorf("read snapshot: %w", err)
+	}
+	out.ExpiresAt = out.ExpiresAt.UTC()
+	if sum != nil {
+		out.SHA256 = *sum
+	}
+	return out, nil
+}
+
+// PDFRead is what ReadPDF returns.
+type PDFRead struct {
+	Status    string // of the report
+	ExpiresAt time.Time
+	PDF       *ReportPDF // nil when the row is absent
+	Body      []byte     // nil unless ready and not expired
+}
+
+// ReadPDF returns, in one statement, the PDF row of one language with its
+// body when the row is ready and the report is not expired at now, and the
+// report's status and expiry; ErrNotFound when the report is absent or
+// deleted.
+func ReadPDF(ctx context.Context, q Querier, id uuid.UUID, language string, now time.Time) (PDFRead, error) {
+	var (
+		out          PDFRead
+		lang, status *string
+		failure, sum *string
+		jobID, size  *int64
+		updated      *time.Time
+	)
+	err := q.QueryRow(ctx, `
+SELECT r.status, r.expires_at, p.language, p.status, p.failure_code, p.job_id, p.sha256, p.size_bytes, p.updated_at,
+       CASE WHEN p.status = 'ready' AND r.expires_at > $3 THEN p.body END
+FROM reports r LEFT JOIN report_pdfs p ON p.report_id = r.id AND p.language = $2
+WHERE r.id = $1 AND r.deleted_at IS NULL`, id, language, now).
+		Scan(&out.Status, &out.ExpiresAt, &lang, &status, &failure, &jobID, &sum, &size, &updated, &out.Body)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PDFRead{}, ErrNotFound
+	}
+	if err != nil {
+		return PDFRead{}, fmt.Errorf("read pdf: %w", err)
+	}
+	out.ExpiresAt = out.ExpiresAt.UTC()
+	if lang != nil {
+		out.PDF = &ReportPDF{
+			ReportID: id, Language: *lang, Status: *status, FailureCode: failure, JobID: *jobID,
+			SHA256: sum, SizeBytes: size, UpdatedAt: updated.UTC(),
+		}
+	}
+	return out, nil
+}
+
+// MarkReportDeleted sets deleted_at on a report not deleted and returns the
+// status it had; ErrNotFound when absent or already deleted.
+func MarkReportDeleted(ctx context.Context, tx pgx.Tx, id uuid.UUID, now time.Time) (status string, err error) {
+	err = tx.QueryRow(ctx, `
+UPDATE reports SET deleted_at = $2 WHERE id = $1 AND deleted_at IS NULL RETURNING status`, id, now).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("mark report deleted: %w", err)
+	}
+	return status, nil
 }

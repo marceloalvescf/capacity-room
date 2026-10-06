@@ -103,6 +103,7 @@ func (w *RenderWorker) Work(ctx context.Context, job *river.Job[reports.RenderAr
 const (
 	skipNotCollected = "render skipped: report not collected"
 	skipExpired      = "render skipped: report expired"
+	skipDeleted      = "render skipped: report deleted"
 	skipNoPDFRow     = "render skipped: no PDF row"
 	skipPDFSettled   = "render skipped: PDF row is not pending"
 )
@@ -111,6 +112,8 @@ const (
 // still does.
 func reportSkip(report store.Report, now time.Time) string {
 	switch {
+	case report.DeletedAt != nil:
+		return skipDeleted
 	case report.Status != "collected":
 		return skipNotCollected
 	case report.ExpiredAt != nil || !report.ExpiresAt.After(now):

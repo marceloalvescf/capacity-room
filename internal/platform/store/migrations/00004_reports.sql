@@ -16,6 +16,7 @@ CREATE TABLE reports (
     completed_at timestamptz,
     expires_at timestamptz NOT NULL,
     expired_at timestamptz,
+    deleted_at timestamptz,
     updated_at timestamptz NOT NULL,
     CONSTRAINT pk_reports PRIMARY KEY (id),
     CONSTRAINT fk_reports_owner FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE RESTRICT,
@@ -33,6 +34,8 @@ CREATE TABLE reports (
 CREATE INDEX ix_reports_active_by_profile ON reports (profile_id) WHERE status IN ('queued', 'running');
 CREATE INDEX ix_reports_due_for_expiry ON reports (expires_at, id) WHERE expired_at IS NULL;
 CREATE INDEX ix_reports_due_for_purge ON reports (expired_at, id) WHERE expired_at IS NOT NULL;
+CREATE INDEX ix_reports_listing ON reports (created_at DESC, id DESC) WHERE deleted_at IS NULL;
+CREATE INDEX ix_reports_deleted ON reports (deleted_at, id) WHERE deleted_at IS NOT NULL;
 
 CREATE TABLE report_snapshots (
     report_id uuid NOT NULL,

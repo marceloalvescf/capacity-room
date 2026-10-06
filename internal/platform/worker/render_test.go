@@ -441,6 +441,34 @@ func TestRenderSkipsAnExpiredReport(t *testing.T) {
 	}
 }
 
+func TestNeedsRenderSkipsADeletedReport(t *testing.T) {
+	e, _, _ := scenarioEnv(t, nil)
+	route := e.startRender(both(pdfToolchain(t)), 2, renderHooks{}, langPT, langEN)
+	report := e.collected()
+	if err := store.Transact(context.Background(), e.pool, func(tx pgx.Tx) error {
+		_, err := store.MarkReportDeleted(context.Background(), tx, report.ID, fixedNow)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	route.release(langPT, langEN)
+	for _, lang := range []string{langPT, langEN} {
+		job := e.waitJob(e.pdfJob(report.ID, lang), rivertype.JobStateCompleted)
+		if job.Attempt != 1 {
+			t.Fatalf("%s attempt %d", lang, job.Attempt)
+		}
+		if row := e.pdf(report.ID, lang); row.Status != "pending" {
+			t.Fatalf("%s row %+v", lang, row)
+		}
+	}
+	if n := len(e.audits(reports.ActionReportRender)); n != 0 {
+		t.Fatalf("%d render audit rows", n)
+	}
+	if got := e.report(report.ID); got.Phase != "rendering" {
+		t.Fatalf("report %+v", got)
+	}
+}
+
 func TestRenderSkipsAMissingReport(t *testing.T) {
 	e, _, _ := scenarioEnv(t, nil)
 	e.startRender(both(pdfToolchain(t)), 2, renderHooks{})
@@ -702,6 +730,7 @@ func TestNeedsRenderNamesEachSkip(t *testing.T) {
 	const (
 		notCollected = "render skipped: report not collected"
 		expired      = "render skipped: report expired"
+		deleted      = "render skipped: report deleted"
 		noRow        = "render skipped: no PDF row"
 		settled      = "render skipped: PDF row is not pending"
 	)
@@ -710,6 +739,7 @@ func TestNeedsRenderNamesEachSkip(t *testing.T) {
 	}{
 		{"not collected", `UPDATE reports SET status = 'failed', phase = 'complete', failure_code = 'INTERNAL_FAILURE'`, notCollected},
 		{"expired", `UPDATE reports SET expired_at = expires_at`, expired},
+		{"deleted", `UPDATE reports SET deleted_at = expires_at`, deleted},
 		{"no row", `DELETE FROM report_pdfs`, noRow},
 		{"row settled", `UPDATE report_pdfs SET status = 'failed', failure_code = 'PDF_COMPILE_FAILED'`, settled},
 	}
@@ -725,7 +755,7 @@ func TestNeedsRenderNamesEachSkip(t *testing.T) {
 			route.release(langPT, langEN)
 			e.waitJob(job, rivertype.JobStateCompleted)
 			logs := e.logs.String()
-			for _, line := range []string{notCollected, expired, noRow, settled} {
+			for _, line := range []string{notCollected, expired, deleted, noRow, settled} {
 				if has := strings.Contains(logs, line); has != (line == c.want) {
 					t.Fatalf("line %q present: %v\n%s", line, has, logs)
 				}
