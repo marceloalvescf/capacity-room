@@ -7,7 +7,9 @@ info:
     Errors have one shape, Error, whose message is a fixed English sentence
     chosen by the code; a client shows its own translation of the code.
     The health routes /health/live and /health/ready are outside this
-    contract and need no session.
+    contract and need no session. Every GET route also answers HEAD, after
+    the same checks, without a body. The 412 and 416 of the three downloads
+    are answered by the HTTP layer, outside the Error shape.
 servers:
   - url: /api/v1
 security:
@@ -628,8 +630,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReportView"
+        "206":
+          $ref: "#/components/responses/PartialContent"
         "304":
           $ref: "#/components/responses/NotModified"
+        "412":
+          $ref: "#/components/responses/PreconditionFailed"
+        "416":
+          $ref: "#/components/responses/RangeNotSatisfiable"
         "400":
           $ref: "#/components/responses/LangInvalid"
         "401":
@@ -669,8 +677,14 @@ paths:
                 description: >-
                   The snapshot contract of the program, the input of
                   --from-snapshot. Not narrowed.
+        "206":
+          $ref: "#/components/responses/PartialContent"
         "304":
           $ref: "#/components/responses/NotModified"
+        "412":
+          $ref: "#/components/responses/PreconditionFailed"
+        "416":
+          $ref: "#/components/responses/RangeNotSatisfiable"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -705,8 +719,14 @@ paths:
               schema:
                 type: string
                 format: binary
+        "206":
+          $ref: "#/components/responses/PartialContent"
         "304":
           $ref: "#/components/responses/NotModified"
+        "412":
+          $ref: "#/components/responses/PreconditionFailed"
+        "416":
+          $ref: "#/components/responses/RangeNotSatisfiable"
         "400":
           $ref: "#/components/responses/LangInvalid"
         "401":
@@ -899,6 +919,24 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    PartialContent:
+      description: >-
+        The byte range a Range header asked for, with Content-Range, answered
+        after the reader is known to be allowed to read the report.
+      headers:
+        ETag:
+          $ref: "#/components/headers/ETag"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+    PreconditionFailed:
+      description: >-
+        An If-Match that names another tag; no body. Answered after the reader
+        is known to be allowed to read the report.
+    RangeNotSatisfiable:
+      description: >-
+        A Range outside the body, with Content-Range, in plain text as RFC 9110
+        answers it, not in the Error shape. Answered after the reader is known
+        to be allowed to read the report.
     NotModified:
       description: The tag matches; no body.
       headers:
