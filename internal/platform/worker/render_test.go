@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -664,12 +665,45 @@ func TestRenderInternalFailureWithAttemptsLeft(t *testing.T) {
 	}
 }
 
+// Any error of the success write is an internal failure, never the compile
+// failure a done job context would suggest.
+func TestRenderSuccessWriteErrorIsInternal(t *testing.T) {
+	const timeout = 3 * time.Second
+	cases := []struct {
+		name  string
+		err   error
+		sleep bool
+	}{
+		{"plain error", errors.New("injected"), false},
+		{"wrapped deadline", fmt.Errorf("connect: %w", context.DeadlineExceeded), false},
+		{"job deadline passed during the write", errors.New("injected"), true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.RenderTimeout = timeout; s.JobMaxAttempts = 1 })
+			hooks := renderHooks{successError: c.err}
+			if c.sleep {
+				hooks.insideStore = func(lang string) {
+					if lang == langPT {
+						time.Sleep(timeout + 500*time.Millisecond)
+					}
+				}
+			}
+			e.startRender(both(pdfToolchain(t)), 1, hooks)
+			report := e.collected()
+			e.assertFailedPDF(report.ID, langPT, "INTERNAL_FAILURE")
+			e.assertFailedPDF(report.ID, langEN, "INTERNAL_FAILURE")
+		})
+	}
+}
+
 // Each reason a render is skipped has a line of its own.
 func TestNeedsRenderNamesEachSkip(t *testing.T) {
 	const (
 		notCollected = "render skipped: report not collected"
 		expired      = "render skipped: report expired"
 		noRow        = "render skipped: no PDF row"
+		settled      = "render skipped: PDF row is not pending"
 	)
 	cases := []struct {
 		name, statement, want string
@@ -677,6 +711,7 @@ func TestNeedsRenderNamesEachSkip(t *testing.T) {
 		{"not collected", `UPDATE reports SET status = 'failed', phase = 'complete', failure_code = 'INTERNAL_FAILURE'`, notCollected},
 		{"expired", `UPDATE reports SET expired_at = expires_at`, expired},
 		{"no row", `DELETE FROM report_pdfs`, noRow},
+		{"row settled", `UPDATE report_pdfs SET status = 'failed', failure_code = 'PDF_COMPILE_FAILED'`, settled},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -690,7 +725,7 @@ func TestNeedsRenderNamesEachSkip(t *testing.T) {
 			route.release(langPT, langEN)
 			e.waitJob(job, rivertype.JobStateCompleted)
 			logs := e.logs.String()
-			for _, line := range []string{notCollected, expired, noRow} {
+			for _, line := range []string{notCollected, expired, noRow, settled} {
 				if has := strings.Contains(logs, line); has != (line == c.want) {
 					t.Fatalf("line %q present: %v\n%s", line, has, logs)
 				}

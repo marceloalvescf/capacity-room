@@ -34,13 +34,15 @@ const (
 	codeInternalFailure   = "INTERNAL_FAILURE"
 )
 
-// outcomeTimeout bounds the transaction that stores the outcome of an
-// attempt, which runs after the attempt's own context may be done.
+// outcomeTimeout bounds the transaction that stores a failure, and is the
+// least time the transaction that stores a success may take.
 const outcomeTimeout = 10 * time.Second
 
-// errOutcomeExpired marks the error of a success write whose own context ran
-// out: a fault of the platform, whatever the cause says.
-var errOutcomeExpired = errors.New("outcome write ran out of time")
+// errSuccessWrite marks the error of the transaction that stores a success:
+// a fault of the platform, whatever its cause says. The failures decided
+// before that transaction, such as a snapshot or a PDF that is too large,
+// never pass through it.
+var errSuccessWrite = errors.New("success write failed")
 
 // successContext is the context of the transaction that stores a success:
 // free of the job's cancel, with its deadline at the later of the job's
@@ -56,11 +58,11 @@ func successContext(ctx context.Context, outcome time.Duration) (context.Context
 	return context.WithDeadline(context.WithoutCancel(ctx), deadline)
 }
 
-// successFailure marks the error of a success write as an internal failure
-// when the write's own context is done, and returns any other error as it is.
-func successFailure(wctx context.Context, err error) error {
-	if err != nil && !errors.Is(err, ErrStaleAttempt) && wctx.Err() != nil {
-		return fmt.Errorf("%w: %w", errOutcomeExpired, err)
+// successFailure marks the error of a success write as an internal failure,
+// and returns a stale attempt as it is.
+func successFailure(err error) error {
+	if err != nil && !errors.Is(err, ErrStaleAttempt) {
+		return fmt.Errorf("%w: %w", errSuccessWrite, err)
 	}
 	return err
 }
@@ -104,13 +106,16 @@ type CollectWorker struct {
 	hooks collectHooks
 }
 
-// collectHooks let a test hold an attempt at a point of the run. Each is
-// called with the context of the job and its attempt; nil does nothing.
+// collectHooks let a test hold an attempt at a point of the run, fail the
+// transaction that stores the snapshot, or shorten the outcome timeout. Each
+// function is called with the context of the job and its attempt; the zero
+// value of a field does nothing.
 type collectHooks struct {
 	beforeClaim     func(ctx context.Context, attempt int) // before the claim's transaction
 	afterClaim      func(ctx context.Context, attempt int) // after the claim committed
 	beforeCollected func(ctx context.Context, attempt int) // after the snapshot is encoded, before its transaction
 	insideCollected func(ctx context.Context, attempt int) // inside the transaction that stores the snapshot
+	successError    error                                  // returned from inside that transaction, after insideCollected
 	outcomeTimeout  time.Duration                          // the outcome timeout; zero means outcomeTimeout
 }
 
@@ -245,6 +250,9 @@ func (w *CollectWorker) collect(ctx context.Context, job *river.Job[reports.Coll
 		if h := w.hooks.insideCollected; h != nil {
 			h(ctx, attempt)
 		}
+		if err := w.hooks.successError; err != nil {
+			return err
+		}
 		if err := store.InsertSnapshot(wctx, tx, id, snapshot.SchemaVersion, body, now); err != nil {
 			return err
 		}
@@ -266,7 +274,7 @@ func (w *CollectWorker) collect(ctx context.Context, job *river.Job[reports.Coll
 		_, err := river.JobCompleteTx[*riverpgxv5.Driver](wctx, tx, job)
 		return err
 	})
-	return successFailure(wctx, err)
+	return successFailure(err)
 }
 
 // classify maps the failure of an attempt to a code. A stop of the worker is
@@ -314,7 +322,7 @@ func (w *CollectWorker) handle(ctx context.Context, job *river.Job[reports.Colle
 		return staleAttemptError{}
 	}
 	code, stop := codeInternalFailure, error(nil)
-	if !errors.Is(cause, errOutcomeExpired) {
+	if !errors.Is(cause, errSuccessWrite) {
 		code, stop = classify(ctx, cause)
 	}
 	if stop != nil {

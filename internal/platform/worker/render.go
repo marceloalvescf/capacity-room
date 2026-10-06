@@ -50,11 +50,13 @@ type RenderWorker struct {
 	hooks renderHooks
 }
 
-// renderHooks let a test hold an attempt at a point of the run; nil does
-// nothing.
+// renderHooks let a test hold an attempt at a point of the run, fail the
+// transaction that stores a PDF, or shorten the outcome timeout; the zero
+// value of a field does nothing.
 type renderHooks struct {
 	beforeStore    func(ctx context.Context, language string) // after the compile, before the outcome's transaction
 	insideStore    func(language string)                      // inside the transaction that stores a PDF
+	successError   error                                      // returned from inside that transaction, after insideStore
 	outcomeTimeout time.Duration                              // the outcome timeout; zero means outcomeTimeout
 }
 
@@ -87,7 +89,7 @@ func (w *RenderWorker) Work(ctx context.Context, job *river.Job[reports.RenderAr
 				h(ctx, job.Args.Language)
 			}
 			wctx, cancel := successContext(ctx, w.outcome())
-			err = successFailure(wctx, w.store(wctx, job, pdf, ""))
+			err = successFailure(w.store(wctx, job, pdf, ""))
 			cancel()
 			if err == nil {
 				return nil
@@ -228,6 +230,9 @@ func (w *RenderWorker) store(ctx context.Context, job *river.Job[reports.RenderA
 			if h := w.hooks.insideStore; h != nil {
 				h(lang)
 			}
+			if w.hooks.successError != nil {
+				return w.hooks.successError
+			}
 			err = store.FinishPDF(ctx, tx, id, lang, pdf, now)
 		} else {
 			err = store.FailPDF(ctx, tx, id, lang, code, now)
@@ -293,7 +298,7 @@ func (w *RenderWorker) handle(ctx context.Context, job *river.Job[reports.Render
 		return renderStaleError{}
 	}
 	code, stop := codeInternalFailure, error(nil)
-	if !errors.Is(cause, errOutcomeExpired) {
+	if !errors.Is(cause, errSuccessWrite) {
 		code, stop = renderClassify(ctx, cause)
 	}
 	if stop != nil {

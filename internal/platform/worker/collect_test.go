@@ -740,6 +740,37 @@ func TestCollectSuccessWritePastItsDeadlineIsInternal(t *testing.T) {
 	e.assertFailedWith(report, "INTERNAL_FAILURE")
 }
 
+// Any error of the success write is an internal failure, even one that wraps
+// a deadline, which the metric source's classifier would call unreachable.
+func TestCollectSuccessWriteErrorIsInternal(t *testing.T) {
+	cases := []struct {
+		name  string
+		err   error
+		sleep bool
+	}{
+		{"plain error", errors.New("injected"), false},
+		{"wrapped deadline", fmt.Errorf("connect: %w", context.DeadlineExceeded), false},
+		{"job deadline passed during the write", errors.New("injected"), true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e, _, _ := scenarioEnv(t, func(s *settings.Settings) {
+				s.CollectTimeout = 3 * time.Second
+				s.JobMaxAttempts = 1
+			})
+			hooks := collectHooks{successError: c.err}
+			if c.sleep {
+				hooks.insideCollected = func(ctx context.Context, _ int) {
+					deadline, _ := ctx.Deadline()
+					time.Sleep(time.Until(deadline.Add(500 * time.Millisecond)))
+				}
+			}
+			e.start(hooks)
+			e.assertFailedWith(e.request(), "INTERNAL_FAILURE")
+		})
+	}
+}
+
 // hold blocks an attempt at a hook until released; it signals when attempt
 // arrives. Other attempts pass.
 type hold struct {
