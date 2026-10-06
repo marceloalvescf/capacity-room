@@ -13,8 +13,10 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -268,6 +270,7 @@ func TestReportRoutesCheckInOrder(t *testing.T) {
 			if r.badBody != "" {
 				badBody = r.badBody
 			}
+			wantProblem(t, ts.as(t, nil, r.method, badPath, badBody, r.header), 401, CodeUnauthenticated, nil)
 			if r.write {
 				wantProblem(t, ts.as(t, &c.eve, r.method, r.path, r.body, r.header), 403, CodeForbidden, nil)
 				wantProblem(t, ts.as(t, &c.eve, r.method, badPath, badBody, r.header), 403, CodeForbidden, nil)
@@ -583,6 +586,7 @@ func TestRetryRoute(t *testing.T) {
 	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/"+ready.String()+"/pdf-retries", `{"language":"fr"}`, nil), 400, CodeRequestInvalid, nil)
 	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/"+uuid.NewString()+"/pdf-retries", `{"language":"en"}`, nil), 404, "REPORT_NOT_FOUND", nil)
 	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/nope/pdf-retries", `{"language":"en"}`, nil), 404, "REPORT_NOT_FOUND", nil)
+	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/nope/pdf-retries", `{"language":"fr"}`, nil), 400, CodeRequestInvalid, map[string]string{"language": "invalid"})
 }
 
 func TestDeleteRoute(t *testing.T) {
@@ -631,6 +635,9 @@ func TestBulkDeleteRoute(t *testing.T) {
 	wantProblem(t, post(bulk(many...)), 400, CodeRequestInvalid, map[string]string{"ids": "too_many"})
 	wantProblem(t, post(bulk(own.String(), own.String())), 400, CodeRequestInvalid, map[string]string{"ids": "repeated"})
 	wantProblem(t, post(bulk(own.String(), "not-a-uuid")), 400, CodeRequestInvalid, map[string]string{"ids": "invalid"})
+	for _, raw := range []string{`{"ids":[1]}`, `{"ids":[null]}`, `{"ids":[true]}`, `{"ids":[["x"]]}`} {
+		wantProblem(t, post(raw), 400, CodeRequestInvalid, map[string]string{"ids": "invalid"})
+	}
 	wantProblem(t, post(bulk()), 400, CodeRequestInvalid, map[string]string{"ids": "empty"})
 	wantProblem(t, post(`{}`), 400, CodeRequestInvalid, map[string]string{"ids": "missing"})
 	if w := ts.as(t, &c.eve, "GET", "/api/v1/reports/"+own.String(), "", nil); w.Code != 200 {
@@ -651,67 +658,135 @@ func TestBulkDeleteRoute(t *testing.T) {
 	}
 }
 
+// raceReaders runs readers that fetch the PDF of id in a loop while action
+// runs once, after the first whole 200. Every answer must be a whole 200
+// with the stored bytes, a 404, or a 410. It returns how many of each were
+// seen.
+func (ts *testServer) raceReaders(t *testing.T, a *actor, id uuid.UUID, body []byte, action func()) (ok, notFound, expired int64) {
+	t.Helper()
+	path := "/api/v1/reports/" + id.String() + "/pdf?lang=en"
+	var okN, nfN, exN atomic.Int64
+	done := make(chan struct{})
+	var readers sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		readers.Add(1)
+		go func() {
+			defer readers.Done()
+			deadline := time.Now().Add(30 * time.Second)
+			finished := 0
+			for finished < 5 {
+				if time.Now().After(deadline) {
+					t.Errorf("no end after 30 s")
+					return
+				}
+				w := ts.as(t, a, "GET", path, "", nil)
+				switch w.Code {
+				case 200:
+					if !bytes.Equal(w.Body.Bytes(), body) {
+						t.Errorf("a 200 with %d bytes, stored %d", w.Body.Len(), len(body))
+						return
+					}
+					okN.Add(1)
+				case 404:
+					nfN.Add(1)
+				case 410:
+					exN.Add(1)
+				default:
+					t.Errorf("status %d: %s", w.Code, w.Body.String())
+					return
+				}
+				select {
+				case <-done:
+					finished++
+				default:
+				}
+			}
+		}()
+	}
+	for okN.Load() == 0 {
+		time.Sleep(time.Millisecond)
+	}
+	action()
+	close(done)
+	readers.Wait()
+	return okN.Load(), nfN.Load(), exN.Load()
+}
+
 func TestDownloadRacesTheSweep(t *testing.T) {
 	ts := newTestServer(t)
 	c := ts.cast(t)
+	ctx := context.Background()
 	body := bytes.Repeat([]byte("%PDF-race-0123456789abcdef\n"), 20000)
-	id := ts.seedReport(t, stored{owner: c.ops.user.ID, pdfBody: body})
-	path := "/api/v1/reports/" + id.String() + "/pdf?lang=en"
 
-	first := make(chan struct{})
-	done := make(chan struct{})
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		defer close(done)
-		<-first
-		ctx := context.Background()
-		if err := ts.Reports.Delete(ctx, auth.Principal{ID: c.ops.user.ID, Role: auth.RoleOperator}, id); err != nil {
-			t.Errorf("delete: %v", err)
-			return
+	t.Run("delete and sweep", func(t *testing.T) {
+		id := ts.seedReport(t, stored{owner: c.ops.user.ID, pdfBody: body})
+		ok, notFound, expired := ts.raceReaders(t, &c.eve, id, body, func() {
+			if err := ts.Reports.Delete(ctx, auth.Principal{ID: c.ops.user.ID, Role: auth.RoleOperator}, id); err != nil {
+				t.Errorf("delete: %v", err)
+				return
+			}
+			err := store.Transact(ctx, ts.pool, func(tx pgx.Tx) error {
+				_, err := store.SweepDeletedReports(ctx, tx, 100)
+				return err
+			})
+			if err != nil {
+				t.Errorf("sweep: %v", err)
+			}
+		})
+		if ok == 0 || notFound == 0 || expired != 0 {
+			t.Fatalf("saw %d answers of 200, %d of 404, %d of 410", ok, notFound, expired)
 		}
+	})
+
+	t.Run("expire", func(t *testing.T) {
+		id := ts.seedReport(t, stored{owner: c.ops.user.ID, pdfBody: body, expires: ts.now.Add(time.Hour)})
+		ok, notFound, expired := ts.raceReaders(t, &c.eve, id, body, func() {
+			err := store.Transact(ctx, ts.pool, func(tx pgx.Tx) error {
+				ids, err := store.ExpireDueReports(ctx, tx, ts.now.Add(2*time.Hour), 100)
+				if err == nil && !slices.Contains(ids, id) {
+					t.Errorf("the report was not expired: %v", ids)
+				}
+				return err
+			})
+			if err != nil {
+				t.Errorf("expire: %v", err)
+			}
+		})
+		if ok == 0 || expired == 0 || notFound != 0 {
+			t.Fatalf("saw %d answers of 200, %d of 404, %d of 410", ok, notFound, expired)
+		}
+	})
+
+	t.Run("states", func(t *testing.T) {
+		path := func(id uuid.UUID) string { return "/api/v1/reports/" + id.String() + "/pdf?lang=en" }
+		marked := ts.seedReport(t, stored{owner: c.ops.user.ID})
+		ts.markDeleted(t, marked)
+		wantProblem(t, ts.as(t, &c.eve, "GET", path(marked), "", nil), 404, "REPORT_NOT_FOUND", nil)
+
+		swept := ts.seedReport(t, stored{owner: c.ops.user.ID})
+		ts.markDeleted(t, swept)
 		err := store.Transact(ctx, ts.pool, func(tx pgx.Tx) error {
 			_, err := store.SweepDeletedReports(ctx, tx, 100)
 			return err
 		})
 		if err != nil {
-			t.Errorf("sweep: %v", err)
+			t.Fatal(err)
 		}
-	}()
+		wantProblem(t, ts.as(t, &c.eve, "GET", path(swept), "", nil), 404, "REPORT_NOT_FOUND", nil)
 
-	var ok, notFound int
-	after := 0
-	deadline := time.Now().Add(30 * time.Second)
-	for after < 5 {
-		if time.Now().After(deadline) {
-			t.Fatalf("no end after 30 s: %d answers of 200, %d of 404", ok, notFound)
+		gone := ts.seedReport(t, stored{owner: c.ops.user.ID, expires: ts.now.Add(time.Hour)})
+		err = store.Transact(ctx, ts.pool, func(tx pgx.Tx) error {
+			_, err := store.ExpireDueReports(ctx, tx, ts.now.Add(2*time.Hour), 100)
+			return err
+		})
+		if err != nil {
+			t.Fatal(err)
 		}
-		w := ts.as(t, &c.eve, "GET", path, "", nil)
-		switch w.Code {
-		case 200:
-			if !bytes.Equal(w.Body.Bytes(), body) {
-				t.Fatalf("a 200 with %d bytes, stored %d", w.Body.Len(), len(body))
-			}
-			if ok == 0 {
-				close(first)
-			}
-			ok++
-		case 404:
-			notFound++
-		default:
-			t.Fatalf("status %d: %s", w.Code, w.Body.String())
+		if n := ts.count(t, `SELECT count(*) FROM report_pdfs WHERE report_id = $1`, gone); n != 0 {
+			t.Fatalf("%d pdf rows remain", n)
 		}
-		select {
-		case <-done:
-			after++
-		default:
-		}
-	}
-	wg.Wait()
-	if ok == 0 || notFound == 0 {
-		t.Fatalf("saw %d answers of 200 and %d of 404", ok, notFound)
-	}
+		wantProblem(t, ts.as(t, &c.eve, "GET", path(gone), "", nil), 410, "REPORT_EXPIRED", nil)
+	})
 }
 
 func TestReportRoutesWithoutAServiceAnswer500(t *testing.T) {

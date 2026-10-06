@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -273,6 +274,10 @@ func (s *Server) retryReportPDF(w http.ResponseWriter, r *http.Request, a auth.A
 		WriteProblem(w, p)
 		return
 	}
+	if body.Language != "pt-BR" && body.Language != "en" {
+		WriteProblem(w, &Problem{Code: CodeRequestInvalid, Fields: map[string]string{"language": "invalid"}})
+		return
+	}
 	id, ok := reportID(w, r)
 	if !ok {
 		return
@@ -296,19 +301,24 @@ func (s *Server) deleteReport(w http.ResponseWriter, r *http.Request, a auth.Aut
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// deleteReports reads the ids as text, so that one that is not a UUID is a
-// problem of the field and not of the body.
+// deleteReports reads each id as raw JSON, so that an element that is not a
+// UUID string, a number included, is a problem of the field ids and not of
+// the element path.
 func (s *Server) deleteReports(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
 	var body struct {
-		IDs []string `json:"ids"`
+		IDs []json.RawMessage `json:"ids"`
 	}
 	if p := DecodeBody(r, &body, []string{"ids"}, nil); p != nil {
 		WriteProblem(w, p)
 		return
 	}
 	ids := make([]uuid.UUID, len(body.IDs))
-	for i, text := range body.IDs {
-		id, err := uuid.Parse(text)
+	for i, raw := range body.IDs {
+		var text string
+		id, err := uuid.Nil, json.Unmarshal(raw, &text)
+		if err == nil {
+			id, err = uuid.Parse(text)
+		}
 		if err != nil {
 			WriteProblem(w, &Problem{Code: CodeRequestInvalid, Fields: map[string]string{"ids": "invalid"}})
 			return

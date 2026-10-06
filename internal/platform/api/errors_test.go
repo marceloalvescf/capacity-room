@@ -10,8 +10,10 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
 )
 
 var allCodes = []Code{
@@ -154,6 +156,20 @@ func TestErrorTableNamesEveryCode(t *testing.T) {
 	for _, code := range codes {
 		if _, ok := problems[Code(code)]; !ok {
 			t.Errorf("the reports service returns %s, which the table does not hold", code)
+		}
+	}
+}
+
+func TestReportProblemRoundsRetryAfterUp(t *testing.T) {
+	for _, c := range []struct {
+		after time.Duration
+		want  int
+	}{
+		{200 * time.Millisecond, 1}, {time.Second, 1}, {1200 * time.Millisecond, 2}, {5 * time.Second, 5},
+	} {
+		p := reportProblem(&reports.Error{Code: reports.CodeAdmissionGlobalLimit, RetryAfter: c.after})
+		if p.RetryAfter != c.want {
+			t.Errorf("%v: Retry-After %d, want %d", c.after, p.RetryAfter, c.want)
 		}
 	}
 }
