@@ -64,7 +64,12 @@ postgres-down:
 test-postgres:
 	@set -o pipefail; $(MAKE) postgres-up; \
 	KCR_TEST_DATABASE_DSN="$(TEST_DSN)" go test $(TEST_FLAGS) -tags=postgres ./internal/platform/... ./internal/cli/...; \
-	status=$$?; $(MAKE) postgres-down; exit $$status
+	status=$$?; \
+	if [ $$status -eq 0 ]; then \
+		KCR_TEST_DATABASE_DSN="$(TEST_DSN)" go test $(TEST_FLAGS) -tags='postgres template' ./internal/platform/worker/...; \
+		status=$$?; \
+	fi; \
+	$(MAKE) postgres-down; exit $$status
 
 OAPI_CODEGEN := github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
 
