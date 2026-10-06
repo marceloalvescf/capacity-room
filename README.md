@@ -20,10 +20,10 @@ full design is in
   collection. The `executive` profile writes the cover, the opening page,
   the executive summary, and the appendix.
 - The command `serve`, the backend of the web platform: sign-in with local
-  accounts in three roles, sessions, the reader's own account, and the
-  administration of users and of metric-source profiles, over an HTTP API
-  described in [api/openapi.yaml](api/openapi.yaml). The report routes and
-  the frontend are not there yet.
+  accounts in three roles, sessions, the reader's own account, the
+  administration of users and of metric-source profiles, and the reports,
+  over an HTTP API described in [api/openapi.yaml](api/openapi.yaml). The
+  frontend is not there yet.
 - The command `worker`, which runs the report jobs of the platform: it
   collects a requested report through the outbound policy, stores its
   snapshot, writes one PDF per language, and expires and removes reports
@@ -377,8 +377,34 @@ PDF for each language. A collection whose source cannot be reached is tried
 again, up to `job_max_attempts`; any other failure is final and stored as a
 code. After `report_retention_days` the snapshot and the PDFs are deleted
 and the report is kept as expired; after `expired_report_days` more it is
-removed. Once a minute the worker also removes sign-in records whose block
-is over and sessions that ended longer than a session lifetime ago.
+removed. Once a minute the worker also removes the rows of deleted reports,
+sign-in records whose block is over, and sessions that ended longer than a
+session lifetime ago.
+
+A report is requested, read, and removed under `/api/v1/reports`:
+
+| Route | Who | Answer |
+|---|---|---|
+| `POST /reports` | operator, administrator | 202 with the report's id, status, and phase |
+| `GET /reports?limit=&cursor=` | every signed-in reader | a page of reports, newest first, with `next_cursor` |
+| `GET /reports/{id}` | every signed-in reader | the report, its request, its progress, its PDFs |
+| `GET /reports/{id}/view?lang=` | every signed-in reader | the report worded in `pt-BR` or `en` for the web |
+| `GET /reports/{id}/snapshot` | every signed-in reader | the stored snapshot, the input of `--from-snapshot` |
+| `GET /reports/{id}/pdf?lang=` | every signed-in reader | the PDF of one language |
+| `POST /reports/{id}/pdf-retries` | operator, administrator | 202; compiles a failed PDF again |
+| `DELETE /reports/{id}` | administrator; an operator for its own | 204 |
+| `POST /reports/delete` | administrator; an operator for its own | one outcome per id, up to 200 |
+
+A request carries an `Idempotency-Key` header of the client's choosing: the
+same key with the same body answers the report it created, and the same key
+with another body is refused. A request over `admission_limit`, or over
+`admission_profile_limit` for its profile, answers 429 with `Retry-After` in
+seconds. The view, the snapshot, and the PDFs carry an `ETag`; a request
+with `If-None-Match` answers 304 when nothing changed, and only once the
+reader is known to be allowed to read the report. From the end of
+`report_retention_days` a report answers 410 `REPORT_EXPIRED` until it is
+removed `expired_report_days` later, and 404 after; a deleted report answers
+404 at once.
 
 `serve`, `worker`, and `admin` exit with 0, with 1 for a failure at run time
 (the database, the listener, Typst for `worker`, jobs that did not stop

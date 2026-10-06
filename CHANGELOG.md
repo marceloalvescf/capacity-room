@@ -51,6 +51,28 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   by default, and answers its health checks on port 8091.
 - Sign-in records whose block is over, and sessions that ended longer than
   a session lifetime ago, are removed once a minute.
+- An operator requests a report of a profile through the API with an
+  idempotency key; the same key with the same request answers the same
+  report, and a request over the platform's or the profile's admission
+  limit is refused with the number of seconds to wait.
+- Each requested report is collected through the outbound policy, stored as
+  a snapshot, and compiled into one PDF in Portuguese (Brazil) and one in
+  English by the worker.
+- Every signed-in reader lists the reports page by page, newest first, and
+  reads one with its request, its progress, and the state of each PDF.
+- Every signed-in reader opens a report worded in Portuguese (Brazil) or
+  English for the web, with the same texts and the same narrowing by
+  severity as its PDF.
+- Every signed-in reader downloads the snapshot of a report and its PDF in
+  either language, and a download repeated with the tag of the copy already
+  held answers that nothing changed.
+- An operator asks again for the PDF of one language whose compilation
+  failed.
+- An operator deletes the reports it requested and an administrator any
+  report, one at a time or up to 200 at once; a deleted report disappears
+  at once and its data is removed within a minute.
+- A report answers that it expired from the end of its retention until it
+  is removed, and its snapshot and PDFs are deleted when it expires.
 
 ### Changed
 
@@ -62,6 +84,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A snapshot file read with `--from-snapshot` is refused when it repeats a
   key, holds text that is not UTF-8, or holds a combination of values that
   the program never writes.
+- A `token=`, `api_key=`, or `access_token=` value is removed from a message
+  up to the quote, brace, bracket, or parenthesis that closes it, which is
+  kept, and a value written with escaped quotes is removed whole.
+
+### Fixed
+
+- A slow database write at the end of a collection or a compilation no
+  longer fails the report as if its metric source were unreachable.
 
 ## [0.1.0] - 2026-10-02
 

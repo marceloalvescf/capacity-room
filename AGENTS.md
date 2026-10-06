@@ -35,7 +35,7 @@ make generate         # writes the Go types of api/openapi.yaml
 make generate-check   # fails when the committed generated file is stale
 make postgres-up      # starts PostgreSQL 18 for the platform tests, through Compose
 make postgres-down    # removes it, with its volume
-make test-postgres    # postgres-up, the tests tagged postgres (and the worker's with typst), postgres-down
+make test-postgres    # postgres-up, the tests tagged postgres (worker and cli with typst), postgres-down
 make gate             # everything above, from freshly built images
 make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files
@@ -140,8 +140,8 @@ Build tags in use:
 | `toolchain` | `typst`, `pdftotext` | `make test-toolchain` |
 | `template` | `typst`, `pdftotext` | `make test-template`, which also runs `internal/cli` |
 | `golden` | `typst`, with `template` | `make test-golden` |
-| `postgres` | PostgreSQL, through `KCR_TEST_DATABASE_DSN` | `make test-postgres`, over `internal/platform/...` and `internal/cli` |
-| `postgres` with `template` | PostgreSQL and `typst` | `make test-postgres`, over `internal/platform/worker` |
+| `postgres` | PostgreSQL, through `KCR_TEST_DATABASE_DSN` | `make test-postgres`, over `internal/platform/...` but the worker |
+| `postgres` with `template` | PostgreSQL and `typst` | `make test-postgres`, over `internal/platform/worker` and `internal/cli`, so each of their postgres tests runs once |
 
 With the native tools installed, a subagent runs the tagged tests itself:
 
@@ -169,8 +169,8 @@ rank, or of its own layer.
 | 75 | `internal/pipeline` |
 | 80 | `internal/catalog` |
 | 90 | `internal/document` |
-| 100 | `internal/render` |
 | 95 | `internal/goldentest` |
+| 100 | `internal/render` |
 | 105 | `internal/platform/netpolicy` |
 | 110 | `internal/platform/settings` |
 | 120 | `internal/platform/store` |
@@ -198,10 +198,21 @@ below the command; the core never imports `internal/platform/`.
 - **One message, one write.** The redactor reads each write as one text, so a
   line is built whole and written once.
 - **A log value is redacted before it is formatted.** Every logger of
-  `serve` and `worker`, River's included, comes from one constructor whose
-  handler passes the message and every string, error, and stringer value
-  through the run's redactor, since the text handler escapes a quote or a
-  backslash and the stream redactor matches literal text.
+  `serve` and `worker`, River's included, comes from `newLogger`, whose
+  handler is `redact.Handler` over the text handler: at each record it
+  redacts the message and every attribute, those bound by `With` and inside
+  groups included, with the secrets known when the line is written, since
+  the text handler escapes a quote or a backslash and the stream redactor
+  matches literal text. A test reads the Go files of `internal/cli` and
+  `internal/platform` and fails on any other handler, default logger, or
+  `log` call, the two `io.Discard` handlers of the API excepted.
+- **The assignment pattern keeps the structure around a secret.** A `token`,
+  `api_key`, or `access_token` value in quotes is replaced inside its quotes,
+  which are kept; a bare value runs to white space, `,`, `;`, a quote, `}`,
+  `]`, or `)`, and an escaped quote belongs to it; `[redacted]` followed by
+  value characters is redacted whole. A secret holding a stop character is
+  cut there by the pattern; only a literal secret of the redactor removes
+  the rest.
 - **No message repeats an argument that was not understood.** It may be a
   secret typed at the wrong place. A path that the user gave is repeated on
   purpose, and so is a value read from a file that the user named.
@@ -282,9 +293,39 @@ redactor the moment the settings are loaded, before the pool opens.
   route table, and a test compares the table with the file both ways. A
   route enters the file with the task that adds it.
 - **The checks of a route run in one order:** session (401), role (403),
-  CSRF (403), body (400). The role is read from the database on every
-  request. A body is at most 64 KiB, with no unknown, repeated, or
-  wrongly typed key.
+  CSRF (403), body or query (400), then the service, which judges the id.
+  The role is read from the database on every request. A body is at most
+  64 KiB, with no unknown, repeated, or wrongly typed key.
+- **The report routes are those of spec 11.10:** `POST /reports`,
+  `GET /reports` (a keyset page on creation time and id), `GET /reports/{id}`,
+  its `/view?lang=`, `/snapshot`, and `/pdf?lang=`, `POST
+  /reports/{id}/pdf-retries`, `DELETE /reports/{id}`, and `POST
+  /reports/delete` (up to 200 ids, one outcome each, in the order sent).
+  Every signed-in user reads every report that is not deleted; an operator
+  or an administrator requests and retries; an administrator deletes any
+  report, an operator its own.
+- **A report answers 404 once deleted or purged, and 410 from its expiry
+  until its purge.** Expired means `expires_at` at or before now or
+  `expired_at` set, judged with one reading of the clock per request; the
+  maintenance job's clock may run ahead of the API's.
+- **Authorization runs before any conditional answer.** The view, the
+  snapshot, and the PDF are read whole in one statement after the service
+  allowed the reader, carry a strong `ETag` (the stored SHA-256, or that of
+  the view's bytes) and `Cache-Control: private, no-cache`, and are answered
+  through `http.ServeContent`, whose 304, 206, 412, and 416 the contract
+  names. No 304, 409, or 410 reaches a caller who could not read the report.
+- **The view is a second product of `internal/document`.** `BuildView`
+  words a snapshot for the web from the helpers the PDF uses, so every text
+  is the PDF's and the rows kept are the PDF's (the action plan's
+  recommendations through one helper); a closed set travels as its code.
+  The contract describes it as `ReportView`, excluded from the Go
+  generation, and `TestViewMatchesTheContract` walks the view of every
+  golden snapshot against that schema both ways.
+- **A delete marks.** `deleted_at` is set where it is null, with
+  `report.delete` in the same transaction; from the mark the report answers
+  404 everywhere and a replay of its key answers `REPORT_NOT_FOUND`. A bulk
+  delete marks in id order, so two bulk deletes cannot deadlock. A replay
+  reads its key and its report in one statement.
 - **`serve`, `worker`, and `admin` exit with 0, 1, or 2:** 1 for a failure
   at run time (the database, the listener, Typst for `worker`, jobs that did
   not stop after the drain, a refusal of `bootstrap-admin`), 2 for the
@@ -360,16 +401,27 @@ redactor the moment the settings are loaded, before the pool opens.
   the redactor before it is used.
 - **Only an unreachable source and an internal failure are retried,** up to
   `job_max_attempts`; a deadline and every other code are stored at once.
+- **A success write keeps its budget.** The transaction that stores a
+  collection or a PDF runs free of the job's cancel, until the later of the
+  job's deadline and now plus ten seconds; any error of it that is not a
+  stale attempt is `INTERNAL_FAILURE`, never a code of the source or a
+  deadline. A failure write keeps its ten seconds.
+- **A deleted report is never claimed and never rendered.** A queued one
+  completes its job writing nothing; a running one finishes its attempt;
+  reconcile and expiry leave deleted reports alone.
 - **A snapshot is stored as the bytes `snapshot.Encode` wrote,** in `bytea`,
   at most 32 MiB, with its SHA-256 and size, never as `jsonb`; a PDF at most
   64 MiB. A render recomputes the snapshot's SHA-256 before decoding it.
 - **The maintenance job runs every minute** on the elected River leader, in
-  five steps of their own: reconcile (a report or PDF row whose River job is
+  six steps of their own: reconcile (a report or PDF row whose River job is
   gone or final fails `JOB_ATTEMPTS_EXHAUSTED` or `PDF_ATTEMPTS_EXHAUSTED`),
-  expire (after `report_retention_days` the snapshot and PDF rows go and the
-  report is kept as expired), purge (`expired_report_days` after it was
-  marked expired the report goes), the sign-in throttle rows whose block is over, and the
-  sessions ended longer than a session lifetime ago.
+  sweep (a deleted report that is not running, or is running with its
+  collect job gone or final, goes with its rows, `report.purge
+  {"cause":"deleted"}`), expire (after `report_retention_days` the snapshot
+  and PDF rows go and the report is kept as expired), purge
+  (`expired_report_days` after it was marked expired the report goes,
+  `report.purge {"cause":"expired"}`), the sign-in throttle rows whose
+  block is over, and the sessions ended longer than a session lifetime ago.
 - **The `worker` stop is bounded:** it takes no new job, waits
   `worker_drain_seconds`, cancels the rest (River returns them with the
   attempt restored), waits once more, and then exits 1 with `jobs did not
