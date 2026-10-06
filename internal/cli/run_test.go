@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -695,7 +694,7 @@ func TestOutputPathIsCheckedBeforeAnyRequest(t *testing.T) {
 // TestPDFModeAcceptsARelativeOutputPath is a regression test: typst.Args
 // requires Job.Output to be absolute, so a relative --output (or a relative
 // --snapshot's output directory building a relative default PDF name) must
-// be resolved to an absolute path before compileToPath ever builds the job.
+// be resolved to an absolute path before the render ever builds the job.
 func TestPDFModeAcceptsARelativeOutputPath(t *testing.T) {
 	server, _, scenario := startScenario(t, "direct-complete")
 	defer server.Close()
@@ -1082,7 +1081,7 @@ func TestWorkFolderIsRemoved(t *testing.T) {
 		// os.MkdirTemp panics via an unexpected type is avoided — instead we
 		// simulate the panic directly by making NewID panic, which fires
 		// after typst has already been probed and located, while the run is
-		// past the point compileToPath's own defers would be registered had
+		// past the point the render's own defers would be registered had
 		// collection succeeded first.
 		env := withTypst(t, testEnv(t))
 		env.TempDir = tempDir
@@ -1096,52 +1095,8 @@ func TestWorkFolderIsRemoved(t *testing.T) {
 	})
 }
 
-// TestWorkFolderIsRemovedOnSuccess, TestWorkFolderIsRemovedOnError, and
-// TestWorkFolderIsRemovedOnPanic test withWorkFolder directly, by itself,
-// rather than through a whole collecting run: the life of the work folder
-// is withWorkFolder's own responsibility (make it, defer its removal, run
-// the given work), so it is provable on its own terms, including the one
-// case (a panic while the folder is open) that no combination of the
-// frozen Env seams can reach from a real run.
-func TestWorkFolderIsRemovedOnSuccess(t *testing.T) {
-	parent := t.TempDir()
-	err := withWorkFolder(parent, func(string) error { return nil })
-	if err != nil {
-		t.Fatalf("withWorkFolder() error = %v, want nil", err)
-	}
-	assertTempDirEmpty(t, parent)
-}
-
-func TestWorkFolderIsRemovedOnError(t *testing.T) {
-	parent := t.TempDir()
-	boom := errors.New("boom")
-	err := withWorkFolder(parent, func(string) error { return boom })
-	if !errors.Is(err, boom) {
-		t.Fatalf("withWorkFolder() error = %v, want %v", err, boom)
-	}
-	assertTempDirEmpty(t, parent)
-}
-
-func TestWorkFolderIsRemovedOnPanic(t *testing.T) {
-	parent := t.TempDir()
-	recovered := func() (r any) {
-		defer func() { r = recover() }()
-		_ = withWorkFolder(parent, func(dir string) error {
-			if err := os.WriteFile(filepath.Join(dir, "x"), []byte("y"), 0o644); err != nil {
-				t.Fatalf("writing inside the work folder: %v", err)
-			}
-			panic("boom")
-		})
-		return nil
-	}()
-	if recovered != "boom" {
-		t.Fatalf("recovered = %v, want the panic to reach the caller", recovered)
-	}
-	assertTempDirEmpty(t, parent)
-}
-
 // assertTempDirEmpty fails the test if dir holds any entry: every work
-// folder compileToPath makes under it must have been removed.
+// folder the render makes under it must have been removed.
 func assertTempDirEmpty(t *testing.T, dir string) {
 	t.Helper()
 	entries, err := os.ReadDir(dir)

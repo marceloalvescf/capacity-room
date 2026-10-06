@@ -755,33 +755,6 @@ func strategiesLine(capabilities []discovery.Capability) string {
 	return strings.Join(out, ", ")
 }
 
-// withWorkFolder makes a fresh, empty folder under parent (or under
-// os.TempDir() when parent is empty), runs work with its path, and removes
-// the folder in every case: success, an error work returns, or a panic
-// that unwinds through it.
-func withWorkFolder(parent string, work func(dir string) error) error {
-	if parent == "" {
-		parent = os.TempDir()
-	}
-	dir, err := os.MkdirTemp(parent, "k8s-capacity-report-*")
-	if err != nil {
-		return err
-	}
-	defer func() { _ = os.RemoveAll(dir) }()
-	return work(dir)
-}
-
-// settlePDFMode gives path the mode the compiler already left it with, less
-// any bit outside 0o644. It never makes the file more permissive than the
-// compiler left it, and never touches the umask.
-func settlePDFMode(path string) error {
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	return os.Chmod(path, info.Mode().Perm()&0o644)
-}
-
 // compilePDF compiles data and writes the PDF beside outputPath, renamed into
 // place; every failure is exit code 6.
 func compilePDF(ctx context.Context, env Env, tc typst.Toolchain, data []byte, outputPath string) error {

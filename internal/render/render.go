@@ -41,42 +41,55 @@ func Document(s snapshot.Snapshot, lang catalog.Language, opts document.Options)
 // Compile unpacks the template into a fresh folder under tempDir, compiles
 // data, and returns the PDF bytes; the folder is removed before it returns.
 // An empty tempDir means os.TempDir().
-func Compile(ctx context.Context, tc typst.Toolchain, tempDir string, data []byte) ([]byte, error) {
-	if tempDir == "" {
-		tempDir = os.TempDir()
-	}
-	dir, err := os.MkdirTemp(tempDir, "k8s-capacity-report-*")
+func Compile(ctx context.Context, tc typst.Toolchain, tempDir string, data []byte) (pdf []byte, err error) {
+	err = inWorkFolder(tempDir, func(dir string) error {
+		if err := template.Unpack(dir); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dir, "report.json"), data, 0o644); err != nil {
+			return err
+		}
+
+		output := filepath.Join(dir, "report.pdf")
+		job := typst.Job{
+			Root:     dir,
+			FontPath: template.FontPath(dir),
+			Source:   template.Entry(dir),
+			Output:   output,
+			Format:   typst.PDF,
+			Inputs:   map[string]string{"data": "/report.json"},
+		}
+		if _, err := tc.Compile(ctx, job); err != nil {
+			return err
+		}
+
+		out, err := os.ReadFile(output)
+		if err != nil {
+			return err
+		}
+		if !bytes.HasPrefix(out, pdfMagic) {
+			return ErrNotPDF
+		}
+		pdf = out
+		return nil
+	})
 	if err != nil {
 		return nil, err
-	}
-	defer func() { _ = os.RemoveAll(dir) }()
-
-	if err := template.Unpack(dir); err != nil {
-		return nil, err
-	}
-	if err := os.WriteFile(filepath.Join(dir, "report.json"), data, 0o644); err != nil {
-		return nil, err
-	}
-
-	output := filepath.Join(dir, "report.pdf")
-	job := typst.Job{
-		Root:     dir,
-		FontPath: template.FontPath(dir),
-		Source:   template.Entry(dir),
-		Output:   output,
-		Format:   typst.PDF,
-		Inputs:   map[string]string{"data": "/report.json"},
-	}
-	if _, err := tc.Compile(ctx, job); err != nil {
-		return nil, err
-	}
-
-	pdf, err := os.ReadFile(output)
-	if err != nil {
-		return nil, err
-	}
-	if !bytes.HasPrefix(pdf, pdfMagic) {
-		return nil, ErrNotPDF
 	}
 	return pdf, nil
+}
+
+// inWorkFolder makes a fresh, empty folder under parent (os.TempDir() when
+// parent is empty), runs work with its path, and removes the folder in every
+// case: success, an error from work, or a panic that unwinds through it.
+func inWorkFolder(parent string, work func(dir string) error) error {
+	if parent == "" {
+		parent = os.TempDir()
+	}
+	dir, err := os.MkdirTemp(parent, "k8s-capacity-report-*")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.RemoveAll(dir) }()
+	return work(dir)
 }
