@@ -102,6 +102,41 @@ func TestImportCreatesRevisesAndLeavesUnchanged(t *testing.T) {
 	}
 }
 
+func TestImportRecreatesADeletedProfile(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	f.create(t, "prod", baseDocument())
+	if err := f.svc.Delete(ctx, f.root, "prod"); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := f.importFile(t, importExample)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []Outcome{{"prod", "recreated"}, {"stage", "created"}}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("outcomes = %+v, want %+v", got, want)
+	}
+	cur, err := store.GetCurrentRevision(ctx, f.pool, "prod")
+	if err != nil || cur.Revision != 2 || cur.CreatedBy != nil {
+		t.Fatalf("prod = %+v, err %v; want revision 2 with no creator", cur, err)
+	}
+	var rows, anonymous int
+	if err := f.pool.QueryRow(ctx, `SELECT count(*), count(*) FILTER (WHERE actor_id IS NULL) FROM audit_events WHERE action = 'profile.recreate' AND target_id = 'prod'`).Scan(&rows, &anonymous); err != nil {
+		t.Fatal(err)
+	}
+	if rows != 1 || anonymous != 1 {
+		t.Fatalf("profile.recreate rows = %d, with no actor = %d, want 1 and 1", rows, anonymous)
+	}
+	var creates int
+	if err := f.pool.QueryRow(ctx, `SELECT count(*) FROM audit_events WHERE action = 'profile.create' AND target_id = 'prod'`).Scan(&creates); err != nil {
+		t.Fatal(err)
+	}
+	if creates != 1 {
+		t.Fatalf("profile.create rows = %d, want only the first", creates)
+	}
+}
+
 func TestImportLeavesOtherProfilesAlone(t *testing.T) {
 	f := newFixture(t)
 	other := f.create(t, "other", baseDocument())

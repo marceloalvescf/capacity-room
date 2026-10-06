@@ -171,6 +171,39 @@ func TestValidateURLRootPath(t *testing.T) {
 	}
 }
 
+func TestValidHostname(t *testing.T) {
+	label := func(n int) string { return strings.Repeat("a", n) }
+	cases := []struct {
+		host string
+		want bool
+	}{
+		{strings.Join([]string{label(63), label(63), label(63), label(61)}, "."), true},
+		{strings.Join([]string{label(63), label(63), label(63), label(62)}, "."), false},
+		{label(64) + ".b", false},
+		{label(63), true},
+		{"a..b", false},
+		{"A.b", false},
+		{"metrics.internal", true},
+		{"a-b.c1", true},
+		{"-a.b", false},
+		{"a_b", false},
+		{"", false},
+	}
+	for _, c := range cases {
+		if got := ValidHostname(c.host); got != c.want {
+			t.Errorf("ValidHostname of %d characters = %v, want %v", len(c.host), got, c.want)
+		}
+	}
+}
+
+func TestValidateURLRefusesALongHostName(t *testing.T) {
+	label := strings.Repeat("a", 63)
+	host := strings.Join([]string{label, label, label, strings.Repeat("a", 62)}, ".")
+	if _, err := (Policy{}).ValidateURL("https://" + host + "/"); err == nil || codeOf(t, err) != CodeURLRejected {
+		t.Fatalf("got %v", err)
+	}
+}
+
 func TestValidateURLDropsTheZone(t *testing.T) {
 	o, err := Policy{}.ValidateURL("https://[2001:db8::1%25eth0]/")
 	if err != nil {

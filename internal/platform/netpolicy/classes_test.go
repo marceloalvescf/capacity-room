@@ -10,6 +10,7 @@ func TestBlockedClasses(t *testing.T) {
 		"127.0.0.1", "::1", "169.254.169.254", "fe80::1", "224.0.0.1", "0.0.0.0",
 		"::ffff:127.0.0.1", "fd00:ec2::254", "64:ff9b::7f00:1", "2002:7f00:1::",
 		"2001:0:1::1", "255.255.255.255", "::",
+		"::10.0.0.1", "::ffff:0:10.0.0.1", "64:ff9b:1::a00:1",
 	} {
 		if !Blocked(netip.MustParseAddr(text)) {
 			t.Errorf("%s not blocked", text)

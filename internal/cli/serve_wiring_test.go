@@ -3,20 +3,29 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/http/httptest"
+	"net/netip"
+	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
 )
 
 func TestServeWiresTheProfiles(t *testing.T) {
@@ -38,7 +47,7 @@ func TestServeWiresTheProfiles(t *testing.T) {
 		CredentialDir: t.TempDir(), CABundleDir: t.TempDir(),
 	}
 	server := buildServer(pool, loaded, []byte("0123456789abcdef0123456789abcdef"),
-		func() time.Time { return now }, slog.New(slog.NewTextHandler(io.Discard, nil)))
+		func() time.Time { return now }, slog.New(slog.NewTextHandler(io.Discard, nil)), redact.New())
 	front := httptest.NewServer(server.Handler())
 	defer front.Close()
 
@@ -49,5 +58,72 @@ func TestServeWiresTheProfiles(t *testing.T) {
 	listed := client.mustStatus(200, "GET", "/api/v1/profiles", "", nil)
 	if want := map[string]any{"profiles": []any{}}; !reflect.DeepEqual(listed, want) {
 		t.Fatalf("GET /api/v1/profiles = %v, want %v", listed, want)
+	}
+}
+
+func TestServeRevealsACredential(t *testing.T) {
+	const token = "kcr-credential-for-the-test"
+	pool := storetest.New(t)
+	ctx := context.Background()
+	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
+	hash, err := auth.HashPassword("admin password one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	admin := store.User{
+		ID: uuid.New(), Username: "ada", PasswordHash: hash, Role: auth.RoleAdministrator,
+		Language: "en", Active: true, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := store.InsertUser(ctx, pool, admin); err != nil {
+		t.Fatal(err)
+	}
+
+	source := httptest.NewServer(http.NotFoundHandler())
+	defer source.Close()
+	credentials := t.TempDir()
+	if err := os.WriteFile(filepath.Join(credentials, "token"), []byte(token+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	loaded := settings.Settings{
+		SessionTTL: 12 * time.Hour, SessionIdle: time.Hour,
+		CredentialDir: credentials, CABundleDir: t.TempDir(),
+		AllowedEndpointCIDRs: []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")},
+	}
+	policy := netpolicy.Policy{Networks: loaded.AllowedEndpointCIDRs}
+	doc := profiles.Defaults()
+	doc.DisplayName = "Production"
+	doc.Active = true
+	doc.EndpointURL = "http://" + source.Listener.Addr().String() + "/"
+	doc.EndpointType = "prometheus"
+	doc.ClusterName = "prod"
+	doc.AllowedNamespaces = []string{"payments"}
+	doc.CredentialFile = "token"
+	seed := &profiles.Service{Pool: pool, Policy: policy, Settings: loaded, Now: func() time.Time { return now }}
+	if _, err := seed.Create(ctx, auth.Principal{ID: admin.ID, Role: auth.RoleAdministrator}, "prod", doc); err != nil {
+		t.Fatal(err)
+	}
+
+	redactor := redact.New()
+	if redactor.Text(token) != token {
+		t.Fatal("the redactor knew the credential before the test")
+	}
+	server := buildServer(pool, loaded, []byte("0123456789abcdef0123456789abcdef"),
+		func() time.Time { return now }, slog.New(slog.NewTextHandler(io.Discard, nil)), redactor)
+	front := httptest.NewServer(server.Handler())
+	defer front.Close()
+
+	client := &reader{t: t, base: front.URL, cookies: map[string]string{}}
+	csrf := client.signIn("ada", "admin password one")
+	client.mustStatus(200, "POST", "/api/v1/admin/profiles/prod/test", csrf, nil)
+
+	var out bytes.Buffer
+	if _, err := io.WriteString(redactor.Writer(&out), "diagnostic "+token+" end\n"); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out.String(), token) {
+		t.Fatalf("the credential came out of the redacted stream: %q", out.String())
+	}
+	if !strings.Contains(out.String(), "diagnostic ") {
+		t.Fatalf("the stream lost its text: %q", out.String())
 	}
 }

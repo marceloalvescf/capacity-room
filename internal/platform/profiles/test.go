@@ -2,17 +2,12 @@ package profiles
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"errors"
 	"time"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/audit"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
 )
 
 // The codes of a profile test.
@@ -74,42 +69,23 @@ func (s *Service) Test(ctx context.Context, actor auth.Principal, id string) (Te
 
 func failure(code string) TestResult { return TestResult{Code: code} }
 
+// testCeiling bounds a profile test whatever the profile's timeout.
+const testCeiling = 120 * time.Second
+
 // runTest holds no database connection: it reads files and sends requests.
 func (s *Service) runTest(ctx context.Context, d Document) (TestResult, error) {
-	token := ""
-	if d.CredentialFile != "" {
-		var err error
-		if token, err = ResolveCredential(s.Settings.CredentialDir, d.CredentialFile); err != nil {
-			return failure(CodeCredentialUnavailable), nil
-		}
-	}
-	tlsConfig := &tls.Config{InsecureSkipVerify: !d.TLSVerify} //nolint:gosec // the administrator turned verification off for this profile
-	if d.CABundleFile != "" && d.TLSVerify {
-		bundle, err := ResolveCABundle(s.Settings.CABundleDir, d.CABundleFile)
-		if err != nil {
-			return failure(CodeCABundleUnavailable), nil
-		}
-		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM(bundle) {
-			return failure(CodeCABundleUnavailable), nil
-		}
-		tlsConfig.RootCAs = pool
-	}
-
 	period, zone, profile, severity := d.ResolvedDefaults()
 	cfg := d.RunConfig(period, zone, profile, severity, d.AllowedNamespaces)
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(3*d.TimeoutSeconds*float64(time.Second)))
+	opts, err := s.Source(d, cfg.Metrics)
+	if err != nil {
+		return resultOf(ctx, err)
+	}
+	ctx, cancel := context.WithTimeout(ctx, min(time.Duration(3*d.TimeoutSeconds*float64(time.Second)), testCeiling))
 	defer cancel()
 
-	pf, err := discovery.RunPreflight(ctx, prom.Options{
-		Metrics: cfg.Metrics,
-		Token:   token,
-		Transport: &netpolicy.Transport{
-			Policy: s.Policy, Resolve: s.Resolve, TLS: tlsConfig,
-		},
-	}, cfg.Cluster, cfg.Analysis, s.now())
+	pf, err := discovery.RunPreflight(ctx, opts, cfg.Cluster, cfg.Analysis, s.now())
 	if err != nil {
-		return classify(ctx, err)
+		return resultOf(ctx, err)
 	}
 	names := []string{}
 	for _, c := range pf.Capabilities {
@@ -120,32 +96,12 @@ func (s *Service) runTest(ctx context.Context, d Document) (TestResult, error) {
 	return TestResult{OK: true, Code: CodeOK, Capabilities: names}, nil
 }
 
-// classify maps an error of the preflight to a code. A context that was
-// cancelled or whose deadline passed is ENDPOINT_UNREACHABLE.
-func classify(ctx context.Context, err error) (TestResult, error) {
-	var policyErr *netpolicy.Error
-	if errors.As(err, &policyErr) {
-		return failure(string(policyErr.Code)), nil
-	}
-	var promErr *prom.Error
-	if errors.As(err, &promErr) {
-		switch promErr.Kind {
-		case prom.KindTLS:
-			return failure(CodeTLSFailed), nil
-		case prom.KindAuthentication, prom.KindAuthorization:
-			return failure(CodeAuthRejected), nil
-		case prom.KindEndpointNotFound:
-			return failure(CodeAPINotFound), nil
-		default:
-			return failure(CodeUnreachable), nil
-		}
-	}
-	var scopeErr *discovery.ScopeError
-	if errors.As(err, &scopeErr) {
-		return failure(CodeScopeNotFound), nil
-	}
-	if errors.Is(err, discovery.ErrInsufficient) {
-		return failure(CodeCapabilities), nil
+// resultOf maps an error of the run to a failed result. An error Classify
+// does not know, raised once ctx is done, is ENDPOINT_UNREACHABLE; any other
+// is returned.
+func resultOf(ctx context.Context, err error) (TestResult, error) {
+	if code, ok := Classify(err); ok {
+		return failure(code), nil
 	}
 	if ctx.Err() != nil {
 		return failure(CodeUnreachable), nil

@@ -7,11 +7,12 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
 )
 
 const (
@@ -23,8 +24,6 @@ const (
 	defaultCredentialDir = "/run/secrets/metrics"
 	defaultCABundleDir   = "/run/config/ca"
 )
-
-var hostnamePattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$`)
 
 // metadataAddresses are the cloud instance metadata endpoints that no
 // allowlisted block may cover, except as a single address.
@@ -190,7 +189,7 @@ func parseHostnames(entries []string) ([]string, error) {
 	seen := make(map[string]bool)
 	for i, entry := range entries {
 		name := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(entry), "."))
-		if !hostnamePattern.MatchString(name) {
+		if !netpolicy.ValidHostname(name) {
 			return nil, fmt.Errorf("allowed_endpoint_hostnames entry %d is not a host name", i+1)
 		}
 		if seen[name] {

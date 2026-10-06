@@ -29,6 +29,7 @@ const (
 	ActionProfileActivate   = "profile.activate"
 	ActionProfileDeactivate = "profile.deactivate"
 	ActionProfileDelete     = "profile.delete"
+	ActionProfileRecreate   = "profile.recreate"
 	ActionProfileTest       = "profile.test"
 )
 
@@ -55,6 +56,9 @@ type Service struct {
 	Settings settings.Settings // the two folders
 	Now      func() time.Time
 	Resolve  netpolicy.Resolver // nil means the system resolver
+	// Reveal is called with every credential read, before it is used. Nil
+	// does nothing.
+	Reveal func(secret string)
 }
 
 // Current is a profile as the administration sees it.
@@ -196,7 +200,7 @@ func (s *Service) Create(ctx context.Context, actor auth.Principal, id string, d
 		if p.CurrentRevisionID != nil {
 			return ErrIDTaken
 		}
-		out, err = createStep(ctx, tx, &actor.ID, id, d, tree, now)
+		out, err = createStep(ctx, tx, &actor.ID, id, d, tree, now, false)
 		return err
 	})
 	if err != nil {
@@ -205,9 +209,10 @@ func (s *Service) Create(ctx context.Context, actor auth.Principal, id string, d
 	return out, nil
 }
 
-// createStep writes d as the first revision of the profile id, which the
-// caller has locked and found without a current revision.
-func createStep(ctx context.Context, tx pgx.Tx, actor *uuid.UUID, id string, d Document, tree map[string]any, now time.Time) (Current, error) {
+// createStep writes d as the next revision of the profile id, which the
+// caller has locked and found without a current revision. recreate audits
+// the step as the return of a deleted profile.
+func createStep(ctx context.Context, tx pgx.Tx, actor *uuid.UUID, id string, d Document, tree map[string]any, now time.Time, recreate bool) (Current, error) {
 	var parent *uuid.UUID
 	latest, err := store.LatestProfileRevision(ctx, tx, id)
 	switch {
@@ -231,8 +236,12 @@ func createStep(ctx context.Context, tx pgx.Tx, actor *uuid.UUID, id string, d D
 	if err != nil {
 		return Current{}, err
 	}
+	action := ActionProfileCreate
+	if recreate {
+		action = ActionProfileRecreate
+	}
 	return out, audit.Append(ctx, tx, now, audit.Event{
-		ActorID: actor, Action: ActionProfileCreate, TargetType: targetProfile, TargetID: id,
+		ActorID: actor, Action: action, TargetType: targetProfile, TargetID: id,
 		Metadata: audit.Metadata{"revision_id": got.ID.String(), "revision": got.Revision, "fields": sortedKeys(tree)},
 	})
 }

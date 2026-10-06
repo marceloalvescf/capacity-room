@@ -141,7 +141,10 @@ func newImportProfilesCmd(ctx context.Context, env Env, redactor *redact.Redacto
 			if _, err := store.Migrate(ctx, pool); err != nil {
 				return &exitError{1, err}
 			}
-			svc := &profiles.Service{Pool: pool, Policy: policy, Settings: loaded, Now: env.Now}
+			svc := &profiles.Service{
+				Pool: pool, Policy: policy, Settings: loaded, Now: env.Now,
+				Reveal: func(secret string) { redactor.Add(secret) },
+			}
 			outcomes, err := svc.Import(ctx, entries)
 			if err != nil {
 				return &exitError{1, err}

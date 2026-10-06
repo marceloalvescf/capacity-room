@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -190,6 +191,18 @@ func TestAdminImportProfilesCommand(t *testing.T) {
 	}
 	cur, err := store.GetCurrentRevision(context.Background(), pool, "b")
 	if err != nil || cur.Revision != 1 || cur.CreatedBy != nil {
+		t.Fatalf("b = %+v, err %v", cur, err)
+	}
+
+	if err := store.SetCurrentRevision(context.Background(), pool, "b", nil, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr = run()
+	if code != 0 || stdout != "unchanged a\nrecreated b\n" || stderr != "" {
+		t.Fatalf("third run: code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+	}
+	cur, err = store.GetCurrentRevision(context.Background(), pool, "b")
+	if err != nil || cur.Revision != 2 {
 		t.Fatalf("b = %+v, err %v", cur, err)
 	}
 }

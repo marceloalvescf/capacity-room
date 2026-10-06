@@ -234,6 +234,8 @@ func TestLoadHostnamesRefused(t *testing.T) {
 		{`["*.example"]`, "allowed_endpoint_hostnames entry 1 is not a host name"},
 		{`["metrics_internal"]`, "allowed_endpoint_hostnames entry 1 is not a host name"},
 		{`["a", "A"]`, "allowed_endpoint_hostnames repeats entry 2"},
+		{`["` + strings.Join([]string{strings.Repeat("a", 63), strings.Repeat("a", 63), strings.Repeat("a", 63), strings.Repeat("a", 62)}, ".") + `"]`,
+			"allowed_endpoint_hostnames entry 1 is not a host name"},
 	}
 	for _, c := range cases {
 		_, err := loadText(t, secretLine+"allowed_endpoint_hostnames = "+c.list+"\n", goodDSN)

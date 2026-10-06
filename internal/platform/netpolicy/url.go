@@ -11,7 +11,16 @@ import (
 // MaxURLLength bounds a URL.
 const MaxURLLength = 2048
 
+// maxHostnameLength is the longest host name, without a trailing dot.
+const maxHostnameLength = 253
+
 var hostPattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$`)
+
+// ValidHostname reports whether host is a lower-case ASCII host name of at
+// most 253 characters, each label 1 to 63 characters.
+func ValidHostname(host string) bool {
+	return len(host) <= maxHostnameLength && hostPattern.MatchString(host)
+}
 
 // Origin is a validated endpoint.
 type Origin struct {
@@ -83,7 +92,7 @@ func (p Policy) ValidateURL(raw string) (Origin, error) {
 	if addr, err := netip.ParseAddr(host); err == nil {
 		literal = addr.WithZone("")
 		host = literal.String()
-	} else if !hostPattern.MatchString(host) {
+	} else if !ValidHostname(host) {
 		return Origin{}, reject
 	}
 

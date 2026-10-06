@@ -22,6 +22,7 @@ const (
 	OutcomeCreated   = "created"
 	OutcomeRevised   = "revised"
 	OutcomeUnchanged = "unchanged"
+	OutcomeRecreated = "recreated"
 )
 
 // ImportFile is the file of admin import-profiles.
@@ -176,7 +177,7 @@ func decodeImportError(path string, err error) error {
 // Outcome says what the import did with one profile.
 type Outcome struct {
 	ID     string
-	Action string // created, revised, unchanged
+	Action string // created, recreated, revised, unchanged
 }
 
 // Import creates or revises the profiles in one transaction, with no actor.
@@ -218,8 +219,19 @@ func (s *Service) importOne(ctx context.Context, tx pgx.Tx, e ImportEntry, now t
 		return "", err
 	}
 	if p.CurrentRevisionID == nil {
-		_, err := createStep(ctx, tx, nil, e.ID, e.Document, newTree, now)
-		return OutcomeCreated, err
+		// A profile whose pointer was cleared keeps its revisions, and
+		// the import returns it.
+		_, err := store.LatestProfileRevision(ctx, tx, e.ID)
+		switch {
+		case err == nil:
+			_, err = createStep(ctx, tx, nil, e.ID, e.Document, newTree, now, true)
+			return OutcomeRecreated, err
+		case errors.Is(err, store.ErrNotFound):
+			_, err = createStep(ctx, tx, nil, e.ID, e.Document, newTree, now, false)
+			return OutcomeCreated, err
+		default:
+			return "", err
+		}
 	}
 	cur, err := store.GetProfileRevision(ctx, tx, *p.CurrentRevisionID)
 	if err != nil {

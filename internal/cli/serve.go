@@ -61,7 +61,7 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 	}
 
 	logger := slog.New(slog.NewTextHandler(cmd.ErrOrStderr(), nil))
-	handler := buildServer(pool, loaded, secret, env.Now, logger).Handler()
+	handler := buildServer(pool, loaded, secret, env.Now, logger, redactor).Handler()
 
 	listener, err := net.Listen("tcp", listen)
 	if err != nil {
@@ -95,8 +95,9 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 }
 
 // buildServer assembles the API server of serve from the pool, the loaded
-// settings, the server secret, the clock, and the logger.
-func buildServer(pool *pgxpool.Pool, loaded settings.Settings, secret []byte, now func() time.Time, logger *slog.Logger) *api.Server {
+// settings, the server secret, the clock, the logger, and the redactor that
+// learns every credential the profiles read.
+func buildServer(pool *pgxpool.Pool, loaded settings.Settings, secret []byte, now func() time.Time, logger *slog.Logger, redactor *redact.Redactor) *api.Server {
 	sessions := &auth.Sessions{
 		Pool:     pool,
 		Throttle: auth.Throttle{Secret: secret},
@@ -118,6 +119,7 @@ func buildServer(pool *pgxpool.Pool, loaded settings.Settings, secret []byte, no
 			},
 			Settings: loaded,
 			Now:      now,
+			Reveal:   func(secret string) { redactor.Add(secret) },
 		},
 		Now:    now,
 		Logger: logger,
