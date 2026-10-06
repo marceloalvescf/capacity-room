@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/health"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
 )
@@ -40,9 +42,17 @@ func (s *Server) Handler() http.Handler {
 	for _, r := range append(s.Routes(), s.extraRoutes...) {
 		mux.HandleFunc(r.Method+" "+r.Pattern, r.Handler)
 	}
-	mux.HandleFunc("GET /health/live", s.live)
-	mux.HandleFunc("GET /health/ready", s.ready)
+	checks := health.Handler([]health.Check{health.Database(s.Pool), health.Migrations(s.Pool)})
+	mux.Handle("GET /health/live", checks)
+	mux.Handle("GET /health/ready", checks)
 	return securityHeaders(unmatched{mux}, logger)
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	body, _ := json.Marshal(v)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write(append(body, '\n'))
 }
 
 // unmatched sends a request that matches no pattern through unmatchedWriter,
