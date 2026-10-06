@@ -1,7 +1,10 @@
 package redact_test
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"sync"
 	"testing"
 
@@ -352,6 +355,23 @@ func TestAssignmentLeavesOtherNames(t *testing.T) {
 	for _, in := range []string{"x_token=abc", "tokens=abc"} {
 		if got := r.Text(in); got != in {
 			t.Fatalf("Text(%q) = %q, want unchanged", in, got)
+		}
+	}
+}
+
+func TestAddMatchesTheEscapedFormsOfASecret(t *testing.T) {
+	const secret = `s3cr3t"t0ken\value-123`
+	r := redact.New()
+	r.Add(secret)
+	quoted := fmt.Sprintf("%q", secret)
+	encoded, err := json.Marshal(secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, text := range map[string]string{"%q": quoted, "json": string(encoded)} {
+		got := r.Text("value " + text + " end")
+		if strings.Contains(got, "t0ken") || strings.Contains(got, "value-123") {
+			t.Errorf("%s: Text() = %q holds a form of the secret", name, got)
 		}
 	}
 }

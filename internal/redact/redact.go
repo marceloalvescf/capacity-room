@@ -3,10 +3,12 @@
 package redact
 
 import (
+	"encoding/json"
 	"io"
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -68,22 +70,47 @@ func New(secrets ...string) *Redactor {
 }
 
 // Add keeps the secrets that are not empty and not already held, adding
-// them to the ones r already holds, and keeps the whole set sorted longest
-// first. A secret added again changes nothing, so a process that adds the
+// them, with their quoted and JSON-escaped forms, to the ones r already
+// holds, and keeps the whole set sorted longest first. A secret added again changes nothing, so a process that adds the
 // same credential on every use holds it once.
 func (r *Redactor) Add(secrets ...string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	added := false
 	for _, secret := range secrets {
-		if secret != "" && !slices.Contains(r.secrets, secret) {
-			r.secrets = append(r.secrets, secret)
-			added = true
+		if secret == "" {
+			continue
+		}
+		for _, form := range forms(secret) {
+			if !slices.Contains(r.secrets, form) {
+				r.secrets = append(r.secrets, form)
+				added = true
+			}
 		}
 	}
 	if added {
 		sort.SliceStable(r.secrets, func(i, j int) bool { return len(r.secrets[i]) > len(r.secrets[j]) })
 	}
+}
+
+// forms is the secret and, when they differ from it, the inner text of its
+// quoted form (strconv.Quote) and of its JSON string form, which is how a
+// formatter that quotes a value writes it.
+func forms(secret string) []string {
+	out := []string{secret}
+	if quoted := strconv.Quote(secret); quoted[1:len(quoted)-1] != secret {
+		out = append(out, quoted[1:len(quoted)-1])
+	}
+	var buf strings.Builder
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(secret); err == nil {
+		encoded := strings.TrimSuffix(buf.String(), "\n")
+		if inner := encoded[1 : len(encoded)-1]; inner != secret && !slices.Contains(out, inner) {
+			out = append(out, inner)
+		}
+	}
+	return out
 }
 
 // Text returns s with every secret removed. It reads the current set of
