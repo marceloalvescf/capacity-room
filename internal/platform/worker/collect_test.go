@@ -41,6 +41,7 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
 
@@ -95,11 +96,15 @@ func (l *errorLog) all() []error {
 
 // swapHandler serves the handler that is current, so a test can replace a
 // scenario server without changing the address.
-type swapHandler struct{ current atomic.Pointer[http.Handler] }
+type swapHandler struct {
+	current atomic.Pointer[http.Handler]
+	served  atomic.Int64 // requests received
+}
 
 func (s *swapHandler) set(h http.Handler) { s.current.Store(&h) }
 
 func (s *swapHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.served.Add(1)
 	(*s.current.Load()).ServeHTTP(w, r)
 }
 
@@ -603,7 +608,8 @@ func TestCollectTerminalCodes(t *testing.T) {
 func TestCollectRetriesAnUnreachableSource(t *testing.T) {
 	e := newEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 2 })
 	e.addProfile(closedEndpoint(t), "")
-	e.start(collectHooks{})
+	second := newHold(2)
+	e.start(collectHooks{beforeClaim: second.hook})
 	report := e.request()
 
 	// River keeps a job whose retry is due within its scheduler interval
@@ -632,6 +638,10 @@ func TestCollectRetriesAnUnreachableSource(t *testing.T) {
 		t.Fatalf("%d collect audit rows after a retried attempt", n)
 	}
 
+	// Attempt 2 waits before its claim, so the reads above saw the report
+	// as attempt 1 left it.
+	second.waitReached(t)
+	close(second.release)
 	last := e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
 	if last.Attempt != 2 {
 		t.Fatalf("attempt %d", last.Attempt)
@@ -708,13 +718,16 @@ func (e *env) assertStale(job *rivertype.JobRow) {
 		e.t.Fatalf("job state %s, want discarded (never completed by the stale attempt)", job.State)
 	}
 	errs := e.errs.all()
-	if len(errs) != 1 || !errors.Is(errs[0], ErrStaleAttempt) {
-		e.t.Fatalf("returned errors %v, want ErrStaleAttempt", errs)
+	if len(errs) != 1 || !errors.Is(errs[0], ErrStaleAttempt) || errs[0].Error() != "collect: STALE_ATTEMPT" {
+		e.t.Fatalf("returned errors %v, want collect: STALE_ATTEMPT matching ErrStaleAttempt", errs)
+	}
+	if len(job.Errors) != 1 || job.Errors[0].Error != "collect: STALE_ATTEMPT" {
+		e.t.Fatalf("river recorded %+v", job.Errors)
 	}
 }
 
 func TestCollectLateClaimLoses(t *testing.T) {
-	e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 1 })
+	e, sw, _ := scenarioEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 1 })
 	h := newHold(1)
 	e.start(collectHooks{beforeClaim: h.hook})
 	report := e.request()
@@ -727,6 +740,9 @@ func TestCollectLateClaimLoses(t *testing.T) {
 	got := e.report(report.ID)
 	if got.Status != "running" || got.Attempt != 2 || got.Phase != "preflight" {
 		t.Fatalf("report %+v", got)
+	}
+	if n := sw.served.Load(); n != 0 {
+		t.Fatalf("the stale attempt sent %d requests to the source", n)
 	}
 	if n := e.count(`SELECT count(*) FROM report_snapshots`); n != 0 {
 		t.Fatalf("%d snapshots", n)
@@ -808,28 +824,55 @@ func TestCollectRunsAnInactiveRevision(t *testing.T) {
 	}
 }
 
-func TestCollectNeverStoresTheToken(t *testing.T) {
-	e := newEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 2 })
-	e.writeCredential("token", secretToken+"\n")
-	e.addProfile(closedEndpoint(t), "token")
-	e.start(collectHooks{})
-	report := e.request()
-	e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+// redacted makes the run's redactor as the worker command does: the profile
+// service adds each credential to it and the logger writes through it.
+func (e *env) redacted() {
+	redactor := redact.New()
+	e.profiles.Reveal = func(secret string) { redactor.Add(secret) }
+	e.deps.Logger = slog.New(slog.NewTextHandler(redactor.Writer(e.logs), nil))
+}
 
+func (e *env) assertNoToken(report store.Report) {
+	e.t.Helper()
 	for _, table := range []string{"reports", "report_snapshots", "report_pdfs", "audit_events", "river_job"} {
 		var all string
 		err := e.pool.QueryRow(context.Background(),
 			fmt.Sprintf(`SELECT coalesce(string_agg(to_jsonb(t)::text, ' '), '') FROM %s t`, table)).Scan(&all)
 		if err != nil {
-			t.Fatal(err)
+			e.t.Fatal(err)
 		}
 		if strings.Contains(all, secretToken) {
-			t.Fatalf("the token is in %s", table)
+			e.t.Fatalf("the token is in %s", table)
 		}
 	}
 	if logs := e.logs.String(); strings.Contains(logs, secretToken) || !strings.Contains(logs, report.ID.String()) {
-		t.Fatalf("logs do not name the report or hold the token:\n%s", logs)
+		e.t.Fatalf("logs do not name the report or hold the token:\n%s", logs)
 	}
+}
+
+func TestCollectNeverStoresTheToken(t *testing.T) {
+	t.Run("unreachable", func(t *testing.T) {
+		e := newEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 2 })
+		e.writeCredential("token", secretToken+"\n")
+		e.addProfile(closedEndpoint(t), "token")
+		e.start(collectHooks{})
+		report := e.request()
+		e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+		e.assertNoToken(report)
+	})
+	t.Run("a body that holds the token, through the redactor", func(t *testing.T) {
+		e := newEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 2 })
+		e.redacted()
+		e.writeCredential("token", secretToken+"\n")
+		e.addProfile(serve(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("upstream failed for " + secretToken))
+		})), "token")
+		e.start(collectHooks{})
+		report := e.request()
+		e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+		e.assertNoToken(report)
+	})
 }
 
 func TestCollectCanceledReturnsTheAttempt(t *testing.T) {
@@ -866,31 +909,143 @@ func TestCollectCanceledReturnsTheAttempt(t *testing.T) {
 }
 
 func TestCollectSkipsATerminalReport(t *testing.T) {
-	e, _, _ := scenarioEnv(t, nil)
-	report := e.request()
-	// Fail the report before any worker exists.
-	err := store.Transact(context.Background(), e.pool, func(tx pgx.Tx) error {
-		if err := store.ClaimReport(context.Background(), tx, report.ID, 1, fixedNow); err != nil {
+	cases := map[string]func(ctx context.Context, tx pgx.Tx, id uuid.UUID) error{
+		"failed": func(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+			if err := store.ClaimReport(ctx, tx, id, 1, fixedNow); err != nil {
+				return err
+			}
+			return store.FailReport(ctx, tx, id, 1, "ENDPOINT_UNREACHABLE", fixedNow)
+		},
+		"collected": func(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+			if err := store.ClaimReport(ctx, tx, id, 1, fixedNow); err != nil {
+				return err
+			}
+			return store.CollectReport(ctx, tx, id, 1, fixedNow)
+		},
+		"expired": func(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+			if err := store.ClaimReport(ctx, tx, id, 1, fixedNow); err != nil {
+				return err
+			}
+			if err := store.FailReport(ctx, tx, id, 1, "ENDPOINT_UNREACHABLE", fixedNow); err != nil {
+				return err
+			}
+			_, err := tx.Exec(ctx, `UPDATE reports SET expired_at = $2 WHERE id = $1`, id, fixedNow)
 			return err
-		}
-		return store.FailReport(context.Background(), tx, report.ID, 1, "ENDPOINT_UNREACHABLE", fixedNow)
-	})
+		},
+	}
+	for name, settle := range cases {
+		t.Run(name, func(t *testing.T) {
+			e, sw, _ := scenarioEnv(t, nil)
+			report := e.request()
+			ctx := context.Background()
+			if err := store.Transact(ctx, e.pool, func(tx pgx.Tx) error { return settle(ctx, tx, report.ID) }); err != nil {
+				t.Fatal(err)
+			}
+			before := e.report(report.ID)
+			e.start(collectHooks{})
+			job := e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+			if job.Attempt != 1 {
+				t.Fatalf("attempt %d", job.Attempt)
+			}
+			after := e.report(report.ID)
+			if !after.UpdatedAt.Equal(before.UpdatedAt) || after.Status != before.Status || after.Phase != before.Phase || after.Attempt != 1 {
+				t.Fatalf("report changed: %+v, was %+v", after, before)
+			}
+			for _, q := range []string{`SELECT count(*) FROM report_snapshots`, `SELECT count(*) FROM report_pdfs`,
+				`SELECT count(*) FROM audit_events WHERE action = 'report.collect'`, `SELECT count(*) FROM river_job WHERE kind = 'render'`} {
+				if n := e.count(q); n != 0 {
+					t.Fatalf("%s = %d", q, n)
+				}
+			}
+			if n := sw.served.Load(); n != 0 {
+				t.Fatalf("%d requests to the source", n)
+			}
+			if !strings.Contains(e.logs.String(), report.ID.String()) {
+				t.Fatalf("no log line names the report:\n%s", e.logs.String())
+			}
+		})
+	}
+}
+
+func TestCollectSkipsAMissingReport(t *testing.T) {
+	e, sw, _ := scenarioEnv(t, nil)
+	e.start(collectHooks{})
+	id := uuid.New()
+	inserted, err := e.reports.Queue.Insert(context.Background(), reports.CollectArgs{ReportID: id}, reports.CollectInsertOpts(e.settings))
 	if err != nil {
 		t.Fatal(err)
 	}
-	before := e.report(report.ID)
-	e.start(collectHooks{})
-	job := e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+	job := e.waitJob(inserted.Job.ID, rivertype.JobStateCompleted)
 	if job.Attempt != 1 {
 		t.Fatalf("attempt %d", job.Attempt)
 	}
-	if after := e.report(report.ID); !after.UpdatedAt.Equal(before.UpdatedAt) || after.Status != "failed" || after.Attempt != 1 {
-		t.Fatalf("report changed: %+v", after)
+	for _, table := range []string{"reports", "report_snapshots", "report_pdfs"} {
+		if n := e.count(`SELECT count(*) FROM ` + table); n != 0 {
+			t.Fatalf("%d rows in %s", n, table)
+		}
 	}
-	for _, q := range []string{`SELECT count(*) FROM report_snapshots`, `SELECT count(*) FROM report_pdfs`,
-		`SELECT count(*) FROM audit_events WHERE action = 'report.collect'`, `SELECT count(*) FROM river_job WHERE kind = 'render'`} {
-		if n := e.count(q); n != 0 {
-			t.Fatalf("%s = %d", q, n)
+	if n := e.count(`SELECT count(*) FROM audit_events WHERE action LIKE 'report.%'`); n != 0 {
+		t.Fatalf("%d report audit rows", n)
+	}
+	if n := e.count(`SELECT count(*) FROM river_job WHERE kind = 'render'`); n != 0 {
+		t.Fatalf("%d render jobs", n)
+	}
+	if n := sw.served.Load(); n != 0 {
+		t.Fatalf("%d requests to the source", n)
+	}
+	if !strings.Contains(e.logs.String(), id.String()) {
+		t.Fatalf("no log line names the report:\n%s", e.logs.String())
+	}
+}
+
+// TestCollectReadsTheClockForTheRun gives the clock a distinct value on each
+// read: ten seconds times the number of reads so far.
+func TestCollectReadsTheClockForTheRun(t *testing.T) {
+	e, _, _ := scenarioEnv(t, nil)
+	var reads atomic.Int64
+	e.deps.Now = func() time.Time { return fixedNow.Add(time.Duration(reads.Add(1)) * 10 * time.Second) }
+	e.start(collectHooks{})
+	report := e.request()
+	e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+
+	_, body, _, err := store.GetSnapshot(context.Background(), e.pool, report.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := map[string]string{}
+	var walk func(v any)
+	walk = func(v any) {
+		switch x := v.(type) {
+		case map[string]any:
+			for k, c := range x {
+				if str, ok := c.(string); ok && (k == "emitted_at" || k == "collection_started_at" || k == "collection_completed_at") {
+					found[k] = str
+				}
+				walk(c)
+			}
+		case []any:
+			for _, c := range x {
+				walk(c)
+			}
+		}
+	}
+	var tree any
+	if err := json.Unmarshal(body, &tree); err != nil {
+		t.Fatal(err)
+	}
+	walk(tree)
+
+	// The reads, in order: the claim, the emission time, the "collecting"
+	// step, the end of the collection, then the later steps and stores.
+	want := map[string]time.Time{
+		"emitted_at":              fixedNow.Add(20 * time.Second),
+		"collection_started_at":   fixedNow.Add(20 * time.Second),
+		"collection_completed_at": fixedNow.Add(40 * time.Second),
+	}
+	for k, w := range want {
+		got, err := time.Parse(time.RFC3339, found[k])
+		if err != nil || !got.Equal(w) {
+			t.Fatalf("%s = %q, want %s", k, found[k], w.Format(time.RFC3339))
 		}
 	}
 }

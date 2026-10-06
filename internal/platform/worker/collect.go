@@ -34,6 +34,18 @@ const (
 	codeInternalFailure   = "INTERNAL_FAILURE"
 )
 
+// outcomeTimeout bounds the transaction that stores the outcome of a failed
+// attempt, which runs after the attempt's own context may be done.
+const outcomeTimeout = 10 * time.Second
+
+// staleAttemptError is what a stale attempt returns to River: its text is the
+// one River may record, and it matches ErrStaleAttempt.
+type staleAttemptError struct{}
+
+func (staleAttemptError) Error() string { return "collect: STALE_ATTEMPT" }
+
+func (staleAttemptError) Is(target error) bool { return target == ErrStaleAttempt }
+
 var errSnapshotTooLarge = errors.New("snapshot is too large")
 
 // checkSnapshotSize refuses a snapshot above the limit.
@@ -103,10 +115,17 @@ func (w *CollectWorker) claim(ctx context.Context, job *river.Job[reports.Collec
 	d := w.Deps
 	err = store.Transact(ctx, d.Pool, func(tx pgx.Tx) error {
 		report, err := store.GetReportForUpdate(ctx, tx, job.Args.ReportID)
+		if errors.Is(err, store.ErrNotFound) {
+			w.note(job.Args.ReportID, job.Attempt, "collect job has no report")
+			done = true
+			_, err := river.JobCompleteTx[*riverpgxv5.Driver](ctx, tx, job)
+			return err
+		}
 		if err != nil {
 			return err
 		}
 		if report.Status == "collected" || report.Status == "failed" || report.ExpiredAt != nil {
+			w.note(report.ID, job.Attempt, "collect job skipped a report that needs nothing")
 			done = true
 			_, err := river.JobCompleteTx[*riverpgxv5.Driver](ctx, tx, job)
 			return err
@@ -220,6 +239,11 @@ func classify(ctx context.Context, err error) (code string, stop error) {
 	return codeInternalFailure, nil
 }
 
+func (w *CollectWorker) note(id uuid.UUID, attempt int, msg string) {
+	w.Deps.Logger.LogAttrs(context.Background(), slog.LevelInfo, msg,
+		slog.String("report_id", id.String()), slog.Int("attempt", attempt))
+}
+
 func (w *CollectWorker) log(id uuid.UUID, attempt int, code string, cause error, msg string) {
 	w.Deps.Logger.LogAttrs(context.Background(), slog.LevelWarn, msg,
 		slog.String("report_id", id.String()), slog.Int("attempt", attempt), slog.String("code", code),
@@ -236,7 +260,7 @@ func (w *CollectWorker) handle(ctx context.Context, job *river.Job[reports.Colle
 
 	if errors.Is(cause, ErrStaleAttempt) {
 		w.log(id, attempt, "STALE_ATTEMPT", cause, "collect attempt is stale")
-		return ErrStaleAttempt
+		return staleAttemptError{}
 	}
 	code, stop := classify(ctx, cause)
 	if stop != nil {
@@ -244,7 +268,8 @@ func (w *CollectWorker) handle(ctx context.Context, job *river.Job[reports.Colle
 	}
 	// The transaction of the outcome does not stop with the attempt's own
 	// deadline; the values of the context stay, which the completion needs.
-	wctx := context.WithoutCancel(ctx)
+	wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), outcomeTimeout)
+	defer cancel()
 	failure := fmt.Errorf("collect: %s", code)
 
 	if retried(code) && attempt < job.MaxAttempts {
@@ -277,7 +302,7 @@ func (w *CollectWorker) settled(id uuid.UUID, attempt int, code string, cause, t
 	switch {
 	case errors.Is(txErr, ErrStaleAttempt):
 		w.log(id, attempt, code, cause, "collect attempt is stale")
-		return ErrStaleAttempt
+		return staleAttemptError{}
 	case txErr != nil:
 		w.log(id, attempt, code, errors.Join(cause, txErr), "collect failure was not stored")
 		return fmt.Errorf("collect: %s", codeInternalFailure)
