@@ -31,6 +31,12 @@ func raiseToAttention(severity string) string {
 	return severity
 }
 
+// executiveMinimum is the rank the executive body and the action plan
+// clear: the minimum severity, raised to at least attention.
+func executiveMinimum(severity string) int {
+	return minimumRank(raiseToAttention(severity))
+}
+
 // buildExecutiveSection assembles the executive body: the numbered
 // heading, the intro, and the seven level-2 numbered subsections, each a
 // heading and a table or a fallback paragraph, in the order of the
@@ -41,7 +47,7 @@ func raiseToAttention(severity string) string {
 // rows; in both profiles it follows the fallback sentence when it has
 // none.
 func buildExecutiveSection(b *builder, s snapshot.Snapshot, thresholds config.Thresholds, severity string, executiveProfile bool) []Block {
-	minRank := minimumRank(raiseToAttention(severity))
+	minRank := executiveMinimum(severity)
 	period := b.period(b.time(s.Report.PeriodStart), b.time(s.Report.PeriodEnd))
 
 	summaries, err := workloadSummaries(s, minRank)

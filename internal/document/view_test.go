@@ -529,9 +529,24 @@ func TestViewIsDeterministic(t *testing.T) {
 	}
 }
 
+// TestViewListsAreNeverNull builds the view past Check, from rows whose
+// lists are nil, and requires every list to encode as [].
 func TestViewListsAreNeverNull(t *testing.T) {
 	s := baseSnapshot(t)
-	data, err := EncodeView(mustView(t, s, catalog.English))
+	s.Scope.Namespaces = nil
+	s.Nodes = []snapshot.Node{{Name: "n1", Pool: "p", PoolConfidence: "exact", CPUUsagePercent: snapshot.Statistics{State: stateUnavailable}, MemoryUsagePercent: snapshot.Statistics{State: stateUnavailable}}}
+	s.Nodepools = []snapshot.NodePool{{Name: "p", Confidence: "exact"}}
+	s.Findings = []snapshot.Finding{{Code: "NAMESPACE_CPU_LIMIT_CRITICAL", Severity: "critical", ScopeType: "namespace", ScopeName: "payments", Confidence: "exact"}}
+	s.Recommendations = []snapshot.Recommendation{{Code: "NAMESPACE_CPU_LIMIT_CRITICAL", Severity: "critical", ScopeType: "namespace", Confidence: "exact"}}
+	for i := range s.Quality.Capabilities {
+		s.Quality.Capabilities[i].Evidence = nil
+	}
+	s.Quality.Warnings, s.Quality.Notices = nil, nil
+	view, err := buildView(s, mustCatalog(t, catalog.English), "all")
+	if err != nil {
+		t.Fatalf("buildView() error = %v", err)
+	}
+	data, err := EncodeView(view)
 	if err != nil {
 		t.Fatalf("EncodeView() error = %v", err)
 	}
@@ -539,15 +554,50 @@ func TestViewListsAreNeverNull(t *testing.T) {
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{"findings", "recommendations", "workloads", "hpas", "nodes", "nodepools"} {
-		if list, ok := decoded[key].([]any); !ok || len(list) != 0 {
-			t.Errorf("%s = %v, want an empty list", key, decoded[key])
+	first := func(key string) map[string]any { return decoded[key].([]any)[0].(map[string]any) }
+	quality := decoded["quality"].(map[string]any)
+	for what, v := range map[string]any{
+		"report.namespaces":        decoded["report"].(map[string]any)["namespaces"],
+		"workloads":                decoded["workloads"],
+		"hpas":                     decoded["hpas"],
+		"nodepools[].nodes":        first("nodepools")["nodes"],
+		"recommendations[].scopes": first("recommendations")["scopes"],
+		"findings[].evidence":      first("findings")["evidence"],
+		"capabilities[].evidence":  quality["capabilities"].([]any)[0].(map[string]any)["evidence"],
+		"quality.warnings":         quality["warnings"],
+		"quality.notices":          quality["notices"],
+	} {
+		if list, ok := v.([]any); !ok || len(list) != 0 {
+			t.Errorf("%s = %v, want an empty list", what, v)
 		}
 	}
-	quality := decoded["quality"].(map[string]any)
-	for _, key := range []string{"warnings", "notices"} {
-		if list, ok := quality[key].([]any); !ok || len(list) != 0 {
-			t.Errorf("quality.%s = %v, want an empty list", key, quality[key])
+}
+
+// A recommendation is never healthy in a snapshot that passes Check, so the
+// view is built past Check: the plan of the PDF raises the minimum to
+// attention in both profiles, and the view must list what it lists.
+func TestViewRaisesThePlanMinimum(t *testing.T) {
+	for _, lang := range catalog.Languages() {
+		cat := mustCatalog(t, lang)
+		s := baseSnapshot(t)
+		s.Recommendations = []snapshot.Recommendation{{
+			Code: "NAMESPACE_CPU_LIMIT_HEALTHY", Severity: "healthy", ScopeType: "namespace",
+			Scopes: []string{"payments"}, Confidence: "exact",
+		}}
+		view, err := buildView(s, cat, "all")
+		if err != nil {
+			t.Fatalf("buildView() error = %v", err)
+		}
+		b := &builder{cat: cat}
+		blocks := actionPlan(b, s, executiveMinimum("all"))
+		plan := 0
+		for _, blk := range blocks {
+			if table, ok := blk.(Table); ok {
+				plan = len(table.Rows)
+			}
+		}
+		if plan != 0 || len(view.Recommendations) != plan {
+			t.Errorf("%s: the plan has %d rows, the view %d recommendations", lang, plan, len(view.Recommendations))
 		}
 	}
 }

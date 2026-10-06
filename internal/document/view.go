@@ -247,7 +247,11 @@ func BuildView(s snapshot.Snapshot, c *catalog.Catalog) (View, error) {
 	if profile == "executive" {
 		severity = raiseToAttention(severity)
 	}
+	return buildView(s, c, severity)
+}
 
+// buildView words a snapshot that passed Check, narrowed by severity.
+func buildView(s snapshot.Snapshot, c *catalog.Catalog, severity string) (View, error) {
 	b := &builder{cat: c}
 	vb := &viewBuilder{b: b, thresholds: thresholdsFromSnapshot(s.Report.Thresholds)}
 	minRank := minimumRank(severity)
@@ -258,7 +262,7 @@ func BuildView(s snapshot.Snapshot, c *catalog.Catalog) (View, error) {
 		Report:          vb.report(s),
 		Summary:         vb.summary(s.Summary),
 		Findings:        vb.findings(s.Findings, minRank),
-		Recommendations: vb.recommendations(planRecommendations(s, minRank)),
+		Recommendations: vb.recommendations(planRecommendations(s, executiveMinimum(severity))),
 		Namespaces:      vb.namespaces(s, minRank),
 		Workloads:       vb.workloads(s, minRank),
 		HPAs:            vb.hpas(s.HPAs),
