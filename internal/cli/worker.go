@@ -105,7 +105,7 @@ func runWorker(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cob
 	lifecycle := &worker.Lifecycle{Client: client}
 	healthServer := newHTTPServer(health.Handler([]health.Check{
 		health.Database(pool), health.Migrations(pool), lifecycle.Check(),
-	}))
+	}), logger)
 	defer func() { _ = listener.Close() }()
 
 	// Start gets a context that outlives ctx: the stop sequence is

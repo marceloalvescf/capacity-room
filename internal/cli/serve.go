@@ -78,7 +78,7 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 		logger.Warn(notice)
 	}
 
-	httpServer := newHTTPServer(handler)
+	httpServer := newHTTPServer(handler, logger)
 	served := make(chan error, 1)
 	go func() { served <- httpServer.Serve(listener) }()
 
@@ -153,12 +153,15 @@ func outboundNotice(loaded settings.Settings) string {
 	return ""
 }
 
-// newHTTPServer is the server of serve. A client has a bounded time to send
-// its headers and its body and to keep an idle connection open; no write
-// timeout is set, so that a long response is not cut.
-func newHTTPServer(handler http.Handler) *http.Server {
+// newHTTPServer is the server of serve and of the worker's health endpoint.
+// A client has a bounded time to send its headers and its body and to keep
+// an idle connection open; no server-wide write timeout is set, because the
+// download handlers bound their own writes. The server's own error lines go
+// through the run's logger.
+func newHTTPServer(handler http.Handler, logger *slog.Logger) *http.Server {
 	return &http.Server{
 		Handler:           handler,
+		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		IdleTimeout:       2 * time.Minute,

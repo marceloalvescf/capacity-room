@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -131,7 +132,7 @@ func TestErrorLineIsOneLine(t *testing.T) {
 }
 
 func TestServerTimeouts(t *testing.T) {
-	server := newHTTPServer(http.NotFoundHandler())
+	server := newHTTPServer(http.NotFoundHandler(), newLogger(io.Discard, redact.New()))
 	if server.ReadHeaderTimeout != 10*time.Second || server.ReadTimeout != 30*time.Second ||
 		server.IdleTimeout != 2*time.Minute || server.WriteTimeout != 0 {
 		t.Fatalf("timeouts: header %v, read %v, idle %v, write %v",
@@ -283,5 +284,20 @@ func TestAdminImportProfilesRefusals(t *testing.T) {
 				t.Fatalf("code = %d, stdout = %q, stderr = %q, want 2, empty, %q", code, stdout, stderr, c.want)
 			}
 		})
+	}
+}
+
+func TestServerErrorLogGoesThroughTheRedactor(t *testing.T) {
+	const secret = "s3cr3t-t0ken-value"
+	var out bytes.Buffer
+	redactor := redact.New()
+	redactor.Add(secret)
+	server := newHTTPServer(http.NotFoundHandler(), newLogger(redactor.Writer(&out), redactor))
+	if server.ErrorLog == nil {
+		t.Fatal("the server has no ErrorLog")
+	}
+	server.ErrorLog.Printf("http: TLS handshake error: %s", secret)
+	if got := out.String(); got == "" || strings.Contains(got, secret) || !strings.Contains(got, "level=ERROR") {
+		t.Fatalf("ErrorLog wrote %q, want an error line without the secret", got)
 	}
 }
