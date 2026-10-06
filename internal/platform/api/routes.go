@@ -32,5 +32,14 @@ func (s *Server) Routes() []Route {
 		{"PATCH", "/api/v1/admin/profiles/{id}", s.adminOnly(s.requireCSRF(s.patchProfile))},
 		{"DELETE", "/api/v1/admin/profiles/{id}", s.adminOnly(s.requireCSRF(s.deleteProfile))},
 		{"POST", "/api/v1/admin/profiles/{id}/test", s.adminOnly(s.requireCSRF(s.testProfile))},
+		{"GET", "/api/v1/reports", s.readerRoute(s.listReports)},
+		{"POST", "/api/v1/reports", s.writerRoute(s.requestReport)},
+		{"POST", "/api/v1/reports/delete", s.writerRoute(s.deleteReports)},
+		{"GET", "/api/v1/reports/{id}", s.readerRoute(s.getReport)},
+		{"DELETE", "/api/v1/reports/{id}", s.writerRoute(s.deleteReport)},
+		{"GET", "/api/v1/reports/{id}/view", s.readerRoute(s.viewReport)},
+		{"GET", "/api/v1/reports/{id}/snapshot", s.readerRoute(s.getReportSnapshot)},
+		{"GET", "/api/v1/reports/{id}/pdf", s.readerRoute(s.getReportPDF)},
+		{"POST", "/api/v1/reports/{id}/pdf-retries", s.writerRoute(s.retryReportPDF)},
 	}
 }

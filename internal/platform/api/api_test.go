@@ -6,6 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -19,6 +21,7 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
@@ -36,6 +39,7 @@ type testServer struct {
 	pool *pgxpool.Pool
 	now  time.Time
 	eve  store.User
+	rev  uuid.UUID // the current revision of the profile "prod", once seeded
 }
 
 func newTestServer(t *testing.T) *testServer {
@@ -70,6 +74,17 @@ func newTestServer(t *testing.T) *testServer {
 			},
 		},
 		Now: now,
+	}
+	queue, err := reports.NewQueue(pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts.Reports = &reports.Service{
+		Pool: pool, Queue: queue, Now: now,
+		Settings: settings.Settings{
+			JobMaxAttempts: 3, ReportRetention: 7 * 24 * time.Hour,
+			AdmissionLimit: 20, AdmissionProfileLimit: 5, AdmissionRetry: 5 * time.Second,
+		},
 	}
 	seed(t, pool, ts.now, "root", rootPassword, auth.RoleAdministrator)
 	ts.eve = seed(t, pool, ts.now, "eve", evePassword, auth.RoleReader)

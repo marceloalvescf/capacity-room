@@ -46,8 +46,11 @@ func TestServeWiresTheProfiles(t *testing.T) {
 		SessionTTL: 12 * time.Hour, SessionIdle: time.Hour,
 		CredentialDir: t.TempDir(), CABundleDir: t.TempDir(),
 	}
-	server := buildServer(pool, loaded, []byte("0123456789abcdef0123456789abcdef"),
+	server, err := buildServer(pool, loaded, []byte("0123456789abcdef0123456789abcdef"),
 		func() time.Time { return now }, slog.New(slog.NewTextHandler(io.Discard, nil)), redact.New())
+	if err != nil {
+		t.Fatal(err)
+	}
 	front := httptest.NewServer(server.Handler())
 	defer front.Close()
 
@@ -107,8 +110,11 @@ func TestServeRevealsACredential(t *testing.T) {
 	if redactor.Text(token) != token {
 		t.Fatal("the redactor knew the credential before the test")
 	}
-	server := buildServer(pool, loaded, []byte("0123456789abcdef0123456789abcdef"),
+	server, err := buildServer(pool, loaded, []byte("0123456789abcdef0123456789abcdef"),
 		func() time.Time { return now }, slog.New(slog.NewTextHandler(io.Discard, nil)), redactor)
+	if err != nil {
+		t.Fatal(err)
+	}
 	front := httptest.NewServer(server.Handler())
 	defer front.Close()
 
@@ -125,5 +131,68 @@ func TestServeRevealsACredential(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "diagnostic ") {
 		t.Fatalf("the stream lost its text: %q", out.String())
+	}
+}
+
+func TestServeBuildsTheReportRoutes(t *testing.T) {
+	pool := storetest.New(t)
+	ctx := context.Background()
+	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
+	hash, err := auth.HashPassword("operator password one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	operator := store.User{
+		ID: uuid.New(), Username: "olga", PasswordHash: hash, Role: auth.RoleOperator,
+		Language: "en", Active: true, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := store.InsertUser(ctx, pool, operator); err != nil {
+		t.Fatal(err)
+	}
+
+	source := httptest.NewServer(http.NotFoundHandler())
+	defer source.Close()
+	loaded := settings.Settings{
+		SessionTTL: 12 * time.Hour, SessionIdle: time.Hour,
+		CredentialDir: t.TempDir(), CABundleDir: t.TempDir(),
+		AllowedEndpointCIDRs: []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")},
+		JobMaxAttempts:       3, ReportRetention: 7 * 24 * time.Hour,
+		AdmissionLimit: 20, AdmissionProfileLimit: 5, AdmissionRetry: 5 * time.Second,
+	}
+	doc := profiles.Defaults()
+	doc.DisplayName = "Production"
+	doc.Active = true
+	doc.EndpointURL = "http://" + source.Listener.Addr().String() + "/"
+	doc.EndpointType = "prometheus"
+	doc.ClusterName = "prod"
+	doc.AllowedNamespaces = []string{"payments"}
+	seed := &profiles.Service{
+		Pool: pool, Policy: netpolicy.Policy{Networks: loaded.AllowedEndpointCIDRs},
+		Settings: loaded, Now: func() time.Time { return now },
+	}
+	if _, err := seed.Create(ctx, auth.Principal{ID: operator.ID, Role: auth.RoleAdministrator}, "prod", doc); err != nil {
+		t.Fatal(err)
+	}
+
+	server, err := buildServer(pool, loaded, []byte("0123456789abcdef0123456789abcdef"),
+		func() time.Time { return now }, slog.New(slog.NewTextHandler(io.Discard, nil)), redact.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	front := httptest.NewServer(server.Handler())
+	defer front.Close()
+
+	client := &reader{t: t, base: front.URL, cookies: map[string]string{}, header: map[string]string{"Idempotency-Key": "wiring-1"}}
+	csrf := client.signIn("olga", "operator password one")
+	accepted := client.mustStatus(202, "POST", "/api/v1/reports", csrf,
+		map[string]any{"profile_id": "prod", "namespaces": []string{"payments"}})
+	id, _ := accepted["id"].(string)
+	if id == "" || accepted["replayed"] != false {
+		t.Fatalf("answer %v", accepted)
+	}
+	var jobs int
+	err = pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind = 'collect' AND args->>'report_id' = $1`, id).Scan(&jobs)
+	if err != nil || jobs != 1 {
+		t.Fatalf("%d collect jobs for the report, %v", jobs, err)
 	}
 }

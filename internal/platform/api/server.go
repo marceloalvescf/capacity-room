@@ -13,6 +13,7 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/health"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
 )
 
@@ -24,6 +25,7 @@ type Server struct {
 	Users    *auth.Users
 	Account  *auth.Account
 	Profiles *profiles.Service
+	Reports  *reports.Service
 	Now      func() time.Time
 	Logger   *slog.Logger // nil logs nowhere
 

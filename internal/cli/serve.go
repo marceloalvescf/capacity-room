@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/cobra"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
@@ -61,7 +63,11 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 	}
 
 	logger := newLogger(cmd.ErrOrStderr(), redactor)
-	handler := buildServer(pool, loaded, secret, env.Now, logger, redactor).Handler()
+	server, err := buildServer(pool, loaded, secret, env.Now, logger, redactor)
+	if err != nil {
+		return &exitError{1, err}
+	}
+	handler := server.Handler()
 
 	listener, err := net.Listen("tcp", listen)
 	if err != nil {
@@ -72,9 +78,9 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 		logger.Warn(notice)
 	}
 
-	server := newHTTPServer(handler)
+	httpServer := newHTTPServer(handler)
 	served := make(chan error, 1)
-	go func() { served <- server.Serve(listener) }()
+	go func() { served <- httpServer.Serve(listener) }()
 
 	select {
 	case err := <-served:
@@ -85,7 +91,7 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 
 	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
 	defer cancel()
-	if err := server.Shutdown(stopCtx); err != nil {
+	if err := httpServer.Shutdown(stopCtx); err != nil {
 		return &exitError{1, fmt.Errorf("cannot stop the server: %w", err)}
 	}
 	if err := <-served; !errors.Is(err, http.ErrServerClosed) {
@@ -96,8 +102,13 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 
 // buildServer assembles the API server of serve from the pool, the loaded
 // settings, the server secret, the clock, the logger, and the redactor that
-// learns every credential the profiles read.
-func buildServer(pool *pgxpool.Pool, loaded settings.Settings, secret []byte, now func() time.Time, logger *slog.Logger, redactor *redact.Redactor) *api.Server {
+// learns every credential the profiles read. It fails when the report queue
+// cannot be built.
+func buildServer(pool *pgxpool.Pool, loaded settings.Settings, secret []byte, now func() time.Time, logger *slog.Logger, redactor *redact.Redactor) (*api.Server, error) {
+	queue, err := reports.NewQueue(pool, logger)
+	if err != nil {
+		return nil, fmt.Errorf("cannot build the report queue: %w", err)
+	}
 	sessions := &auth.Sessions{
 		Pool:     pool,
 		Throttle: auth.Throttle{Secret: secret},
@@ -121,9 +132,16 @@ func buildServer(pool *pgxpool.Pool, loaded settings.Settings, secret []byte, no
 			Now:      now,
 			Reveal:   func(secret string) { redactor.Add(secret) },
 		},
+		Reports: &reports.Service{
+			Pool:     pool,
+			Queue:    queue,
+			Settings: loaded,
+			Now:      now,
+			NewID:    uuid.New,
+		},
 		Now:    now,
 		Logger: logger,
-	}
+	}, nil
 }
 
 // outboundNotice is the line serve logs at start when both outbound

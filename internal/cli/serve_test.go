@@ -134,6 +134,7 @@ type reader struct {
 	t       *testing.T
 	base    string
 	cookies map[string]string
+	header  map[string]string // sent with every request
 }
 
 func (r *reader) do(method, path, csrf string, body any) (int, map[string]any) {
@@ -155,6 +156,9 @@ func (r *reader) do(method, path, csrf string, body any) (int, map[string]any) {
 	}
 	if csrf != "" {
 		req.Header.Set("X-CSRF-Token", csrf)
+	}
+	for name, value := range r.header {
+		req.Header.Set(name, value)
 	}
 	for name, value := range r.cookies {
 		req.AddCookie(&http.Cookie{Name: name, Value: value})

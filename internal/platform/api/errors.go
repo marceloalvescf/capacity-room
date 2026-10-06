@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"net"
 	"net/http"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
 )
 
 // Code is an error code of the contract. The table below holds its status
@@ -45,6 +47,19 @@ const (
 	CodeEndpointURLRejected     Code = "ENDPOINT_URL_REJECTED"
 	CodeEndpointAddressRejected Code = "ENDPOINT_ADDRESS_REJECTED"
 	CodeInternalError           Code = "INTERNAL_ERROR"
+
+	CodeIdempotencyKeyInvalid Code = "IDEMPOTENCY_KEY_INVALID"
+	CodeCursorInvalid         Code = "CURSOR_INVALID"
+	CodeReportNotFound        Code = "REPORT_NOT_FOUND"
+	CodeIdempotencyKeyReused  Code = "IDEMPOTENCY_KEY_REUSED"
+	CodeProfileInactive       Code = "PROFILE_INACTIVE"
+	CodeSnapshotNotReady      Code = "SNAPSHOT_NOT_READY"
+	CodePDFNotReady           Code = "PDF_NOT_READY"
+	CodePDFRetryNotAllowed    Code = "PDF_RETRY_NOT_ALLOWED"
+	CodeReportExpired         Code = "REPORT_EXPIRED"
+	CodeSelectionNotPermitted Code = "REPORT_SELECTION_NOT_PERMITTED"
+	CodeAdmissionGlobalLimit  Code = "ADMISSION_GLOBAL_LIMIT"
+	CodeAdmissionProfileLimit Code = "ADMISSION_PROFILE_LIMIT"
 )
 
 // Problem is one failure to answer.
@@ -87,6 +102,19 @@ var problems = map[Code]struct {
 	CodeAuthRateLimited:         {429, "Too many login attempts. Try again later."},
 	CodeDatabaseUnavailable:     {503, "The database is temporarily unavailable."},
 	CodeInternalError:           {500, "An unexpected error occurred."},
+
+	CodeIdempotencyKeyInvalid: {400, "The Idempotency-Key header is not valid."},
+	CodeCursorInvalid:         {400, "The cursor is not valid."},
+	CodeReportNotFound:        {404, "No such report was found."},
+	CodeIdempotencyKeyReused:  {409, "This idempotency key was already used for a different request."},
+	CodeProfileInactive:       {409, "This profile is not active."},
+	CodeSnapshotNotReady:      {409, "This report's data is not ready yet."},
+	CodePDFNotReady:           {409, "This report's PDF is not ready yet."},
+	CodePDFRetryNotAllowed:    {409, "This report's PDF cannot be retried right now."},
+	CodeReportExpired:         {410, "This report has expired."},
+	CodeSelectionNotPermitted: {422, "This selection is not permitted by the profile."},
+	CodeAdmissionGlobalLimit:  {429, "The platform is at its global report admission limit."},
+	CodeAdmissionProfileLimit: {429, "This profile is at its report admission limit."},
 }
 
 type envelope struct {
@@ -140,7 +168,10 @@ func WriteProblem(w http.ResponseWriter, p *Problem) {
 func problemOf(err error) *Problem {
 	var throttled *auth.ErrThrottled
 	var netErr *net.OpError
+	var refused *reports.Error
 	switch {
+	case errors.As(err, &refused):
+		return reportProblem(refused)
 	case errors.As(err, &throttled):
 		return &Problem{Code: CodeAuthRateLimited, RetryAfter: throttled.RetryAfter}
 	case errors.Is(err, auth.ErrInvalidCredentials):
@@ -177,4 +208,15 @@ func problemOf(err error) *Problem {
 		return &Problem{Code: CodeDatabaseUnavailable}
 	}
 	return &Problem{Code: CodeInternalError}
+}
+
+// reportProblem maps a refusal of the reports service to its problem. The
+// two admission codes carry Retry-After in whole seconds, rounded up, at
+// least 1.
+func reportProblem(e *reports.Error) *Problem {
+	p := &Problem{Code: Code(e.Code), Fields: e.Fields}
+	if p.Code == CodeAdmissionGlobalLimit || p.Code == CodeAdmissionProfileLimit {
+		p.RetryAfter = max(1, int(math.Ceil(e.RetryAfter.Seconds())))
+	}
+	return p
 }

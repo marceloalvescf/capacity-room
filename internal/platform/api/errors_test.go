@@ -2,8 +2,12 @@ package api
 
 import (
 	"errors"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -17,6 +21,9 @@ var allCodes = []Code{
 	CodePasswordTooShort, CodePasswordTooLong, CodeAuthRateLimited, CodeDatabaseUnavailable,
 	CodeInternalError, CodeProfileNotFound, CodeProfileIDTaken, CodeProfileRevisionStale,
 	CodeProfileDocumentInvalid, CodeEndpointURLRejected, CodeEndpointAddressRejected,
+	CodeIdempotencyKeyInvalid, CodeCursorInvalid, CodeReportNotFound, CodeIdempotencyKeyReused,
+	CodeProfileInactive, CodeSnapshotNotReady, CodePDFNotReady, CodePDFRetryNotAllowed,
+	CodeReportExpired, CodeSelectionNotPermitted, CodeAdmissionGlobalLimit, CodeAdmissionProfileLimit,
 }
 
 func TestProblemTableIsComplete(t *testing.T) {
@@ -106,6 +113,47 @@ func TestUsersErrorMapping(t *testing.T) {
 		WriteProblem(w, p)
 		if w.Code != c.status {
 			t.Errorf("%v: status %d, want %d", c.err, w.Code, c.status)
+		}
+	}
+}
+
+// TestErrorTableNamesEveryCode reads the code constants of the reports
+// service from its source and finds each one in the table.
+func TestErrorTableNamesEveryCode(t *testing.T) {
+	file, err := parser.ParseFile(token.NewFileSet(), "../reports/service.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var codes []string
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			v := spec.(*ast.ValueSpec)
+			for i, name := range v.Names {
+				if !strings.HasPrefix(name.Name, "Code") {
+					continue
+				}
+				lit, ok := v.Values[i].(*ast.BasicLit)
+				if !ok {
+					t.Fatalf("%s is not a literal", name.Name)
+				}
+				value, err := strconv.Unquote(lit.Value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				codes = append(codes, value)
+			}
+		}
+	}
+	if len(codes) < 14 {
+		t.Fatalf("read %d codes: %v", len(codes), codes)
+	}
+	for _, code := range codes {
+		if _, ok := problems[Code(code)]; !ok {
+			t.Errorf("the reports service returns %s, which the table does not hold", code)
 		}
 	}
 }
