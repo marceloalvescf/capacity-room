@@ -127,6 +127,9 @@ func Encode(s Snapshot) ([]byte, error) {
 // that order at each key); the typed Snapshot, filled from the same map
 // once it has passed that walk; and finally Check.
 func Decode(data []byte) (Snapshot, error) {
+	if err := checkVersionFirst(data); err != nil {
+		return Snapshot{}, err
+	}
 	dec := jsontext.NewDecoder(bytes.NewReader(data))
 	var loose any
 	if err := jsonv2.UnmarshalDecode(dec, &loose); err != nil {
@@ -165,6 +168,30 @@ func Decode(data []byte) (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	return snap, nil
+}
+
+// checkVersionFirst names a schema_version other than this one before the
+// strict reading can refuse the file for a repeated key or for text that is
+// not UTF-8, which a file of another version may hold. It reads the file
+// leniently and judges nothing but a top-level schema_version that is a
+// text; anything else is left to the strict reading, which keeps its order.
+func checkVersionFirst(data []byte) error {
+	dec := jsontext.NewDecoder(bytes.NewReader(data), jsontext.AllowDuplicateNames(true), jsontext.AllowInvalidUTF8(true))
+	var loose any
+	if err := jsonv2.UnmarshalDecode(dec, &loose); err != nil {
+		return nil
+	}
+	if _, err := dec.ReadToken(); !errors.Is(err, io.EOF) {
+		return nil
+	}
+	obj, ok := loose.(map[string]any)
+	if !ok {
+		return nil
+	}
+	if version, ok := obj["schema_version"].(string); ok && version != SchemaVersion {
+		return fmt.Errorf("snapshot has schema_version %q; this version reads %q", version, SchemaVersion)
+	}
+	return nil
 }
 
 // repeatedKeyPath reports whether err is the refusal of a repeated key, and

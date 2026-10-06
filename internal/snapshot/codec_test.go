@@ -2271,6 +2271,23 @@ func TestDecodeRefusesARepeatedKey(t *testing.T) {
 	}
 }
 
+func TestDecodeNamesAWrongVersionBeforeARepeatedKey(t *testing.T) {
+	good := string(goldenBytes(t, "direct-complete"))
+	findings := strings.Index(good, `"findings": [`)
+	firstCode := findings + strings.Index(good[findings:], `"code": `)
+	codeLine := good[firstCode : firstCode+strings.Index(good[firstCode:], "\n")]
+	repeated := good[:firstCode] + codeLine + " " + codeLine + good[firstCode+len(codeLine):]
+	data := strings.Replace(repeated, `"schema_version": "1.0"`, `"schema_version": "0.9"`, 1)
+	if data == repeated {
+		t.Fatal("the mutation changed nothing")
+	}
+	_, err := Decode([]byte(data))
+	const want = `snapshot has schema_version "0.9"; this version reads "1.0"`
+	if err == nil || err.Error() != want {
+		t.Fatalf("Decode() error = %v, want %q", err, want)
+	}
+}
+
 func TestDecodeRefusesTextThatIsNotUTF8(t *testing.T) {
 	good := string(goldenBytes(t, "direct-complete"))
 	data := strings.Replace(good, `"organization": "ACME"`, "\"organization\": \"AC\xffME\"", 1)
@@ -2335,12 +2352,9 @@ func TestCheckAcceptsTheAutoscalingShapesAnalysisWrites(t *testing.T) {
 		{Status: "enabled", Source: "configured", Confidence: "exact"},
 		{Status: "disabled", Source: "configured", Confidence: "exact"},
 		{Status: "unknown", Source: "none", Confidence: "unknown"},
+		{Status: "enabled", Source: "raw_metrics", Confidence: "inferred", ManagedNodeGroups: ptr(2), CurrentNodes: ptr(5), MinNodes: ptr(2), MaxNodes: ptr(10), ScaleEvents: ptr(1), UnschedulablePods: ptr(0)},
 	} {
-		snap := clusterSnapshot(t)
-		snap.Summary.Autoscaling = a
-		snap.Findings = slices.DeleteFunc(snap.Findings, func(f Finding) bool { return strings.HasPrefix(f.Code, "NODE_AUTOSCALING_") })
-		snap.Summary.Findings = float64(len(snap.Findings))
-		if err := checkAutoscaling(snap.Summary.Autoscaling); err != nil {
+		if err := checkAutoscaling(a); err != nil {
 			t.Errorf("checkAutoscaling(%+v) = %v, want nil", a, err)
 		}
 	}
@@ -2472,16 +2486,54 @@ func TestCheckBindsAFindingConfidenceToItsSource(t *testing.T) {
 	})
 }
 
-// TestSchemaShapeIsFrozen pins the key paths of the contract: a change of
-// shape fails until the schema version is raised and the new shape is
-// recorded here.
+// shapePaths lists the key path and the type of every field of t, through
+// structs, pointers, slices (an element is written "[]"), and maps (an
+// element is written "{}"). A struct, a slice, or a map is listed with its
+// own type, and a Value, which has a JSON form of its own, is one leaf named
+// by its type.
+func shapePaths(t reflect.Type, prefix string) []string {
+	var paths []string
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		name, _ := supportedKey(field)
+		path := name
+		if prefix != "" {
+			path = prefix + "." + name
+		}
+		paths = append(paths, path+" "+field.Type.String())
+		paths = append(paths, elementPaths(field.Type, path)...)
+	}
+	return paths
+}
+
+// elementPaths follows typ into the fields of the struct it holds, if any.
+func elementPaths(typ reflect.Type, path string) []string {
+	switch typ.Kind() {
+	case reflect.Pointer:
+		return elementPaths(typ.Elem(), path)
+	case reflect.Slice, reflect.Array:
+		return elementPaths(typ.Elem(), path+"[]")
+	case reflect.Map:
+		return elementPaths(typ.Elem(), path+"{}")
+	case reflect.Struct:
+		if typ == reflect.TypeOf(Value{}) {
+			return nil
+		}
+		return shapePaths(typ, path)
+	}
+	return nil
+}
+
+// TestSchemaShapeIsFrozen pins every key of the contract and the type of
+// each: a change of shape fails until the schema version is raised and the
+// new shape is recorded here.
 func TestSchemaShapeIsFrozen(t *testing.T) {
-	paths := contractKeyPaths(0)
+	paths := shapePaths(reflect.TypeOf(Snapshot{}), "")
 	sort.Strings(paths)
 	sum := sha256.Sum256([]byte(strings.Join(paths, "\n")))
-	const frozen = "215eeea27e8f7c08d4aa3d466d31f669bf8325cf27f71ae0bf10c85dff385482"
+	const frozen = "f65e7a232d3af47bb8ee94e2257407eac4d9eb7768db2d4b34e11085056a173f"
 	if got := hex.EncodeToString(sum[:]); got != frozen {
-		t.Logf("hash of the key paths: %s", got)
+		t.Logf("%d paths, hash of the key paths: %s", len(paths), got)
 		t.Fatalf("the shape of schema %s changed; raise snapshot.SchemaVersion and record the new shape", SchemaVersion)
 	}
 }
