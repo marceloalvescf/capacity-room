@@ -3,10 +3,14 @@ package store
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// rollbackTimeout bounds the rollback of a transaction that did not commit.
+const rollbackTimeout = 5 * time.Second
 
 // Open connects a pool to dsn and pings it once. MaxConns is raised to
 // maxConnsFloor when the DSN sets fewer; zero keeps the DSN's value.
@@ -42,8 +46,11 @@ func Transact(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) (e
 			return
 		}
 		// The context may be the reason fn failed, so the rollback does not
-		// depend on it.
-		_ = tx.Rollback(context.WithoutCancel(ctx))
+		// depend on it; it has its own bound, so a database that stopped
+		// answering does not hold the caller forever.
+		rollback, cancel := context.WithTimeout(context.WithoutCancel(ctx), rollbackTimeout)
+		defer cancel()
+		_ = tx.Rollback(rollback)
 	}()
 	if err := fn(tx); err != nil {
 		return err
