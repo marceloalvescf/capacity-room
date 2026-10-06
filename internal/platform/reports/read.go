@@ -2,7 +2,9 @@ package reports
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -183,6 +185,10 @@ func (s *Service) Snapshot(ctx context.Context, _ auth.Principal, id uuid.UUID) 
 	}
 	if read.Body == nil {
 		return Download{}, errors.New("collected report has no snapshot")
+	}
+	sum := sha256.Sum256(read.Body)
+	if hex.EncodeToString(sum[:]) != read.SHA256 {
+		return Download{}, errors.New("stored snapshot does not match its SHA-256")
 	}
 	return Download{Body: read.Body, SHA256: read.SHA256}, nil
 }

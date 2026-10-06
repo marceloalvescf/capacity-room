@@ -797,3 +797,22 @@ func TestReportRoutesWithoutAServiceAnswer500(t *testing.T) {
 	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/delete", `{"ids":[]}`, nil), 500, CodeInternalError, nil)
 	wantProblem(t, ts.as(t, nil, "GET", "/api/v1/reports", "", nil), 401, CodeUnauthenticated, nil)
 }
+
+func TestStoredSnapshotChangedUnderItsDigestAnswers500(t *testing.T) {
+	ts := newTestServer(t)
+	c := ts.cast(t)
+	golden := repoFile(t, "testdata", "snapshot", "direct-complete.json")
+	id := ts.seedReport(t, stored{owner: c.ops.user.ID, snapshot: golden})
+	ctx := context.Background()
+	if _, err := ts.pool.Exec(ctx, `ALTER TABLE report_snapshots DISABLE TRIGGER report_snapshots_are_immutable`); err != nil {
+		t.Fatal(err)
+	}
+	changed := bytes.Replace(golden, []byte("{"), []byte(" "), 1)
+	if _, err := ts.pool.Exec(ctx, `UPDATE report_snapshots SET body = $2 WHERE report_id = $1`, id, changed); err != nil {
+		t.Fatal(err)
+	}
+	base := "/api/v1/reports/" + id.String()
+	for _, path := range []string{base + "/snapshot", base + "/view?lang=en"} {
+		wantProblem(t, ts.as(t, &c.eve, "GET", path, "", nil), 500, CodeInternalError, nil)
+	}
+}
