@@ -277,6 +277,45 @@ func TestReplayOfADeletedReport(t *testing.T) {
 	}
 }
 
+// After the sweep a deleted report's key is free: the same key and body make
+// a new report.
+func TestKeyIsFreeAfterTheSweep(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	f.addProfile(t, "prod", baseDocument())
+	first, err := f.svc.Request(ctx, f.op, "k1", f.selection())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.Delete(ctx, f.op, first.ID); err != nil {
+		t.Fatal(err)
+	}
+	sweep := func() {
+		err := store.Transact(ctx, f.pool, func(tx pgx.Tx) error {
+			ids, err := store.SweepDeletedReports(ctx, tx, 100)
+			if err == nil && !slices.Equal(ids, []uuid.UUID{first.ID}) {
+				err = fmt.Errorf("swept %v", ids)
+			}
+			return err
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, err = f.svc.Request(ctx, f.op, "k1", f.selection())
+	if e := asError(t, err); e.Code != CodeReportNotFound {
+		t.Fatalf("replay before the sweep: %+v", e)
+	}
+	sweep()
+	second, err := f.svc.Request(ctx, f.op, "k1", f.selection())
+	if err != nil {
+		t.Fatalf("replay after the sweep: %v", err)
+	}
+	if second.ID == first.ID || second.Replayed {
+		t.Fatalf("after the sweep: id %v (first %v), replayed %v", second.ID, first.ID, second.Replayed)
+	}
+}
+
 func TestReplayOfAnExpiredReport(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
