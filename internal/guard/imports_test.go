@@ -314,17 +314,22 @@ func TestLayersHoldEveryPackageOfThisPart(t *testing.T) {
 		"internal/collect":            55,
 		"internal/analysis":           60,
 		"internal/snapshot":           70,
+		"internal/pipeline":           75,
 		"internal/catalog":            80,
 		"internal/document":           90,
+		"internal/render":             100,
 		"internal/goldentest":         95,
 		"internal/platform/netpolicy": 105,
 		"internal/platform/settings":  110,
 		"internal/platform/store":     120,
 		"internal/platform/storetest": 125,
+		"internal/platform/health":    128,
 		"internal/platform/audit":     130,
 		"internal/platform/auth":      140,
 		"internal/platform/profiles":  145,
+		"internal/platform/reports":   146,
 		"internal/platform/api":       150,
+		"internal/platform/worker":    160,
 		"internal/cli":                200,
 	}
 
@@ -342,8 +347,11 @@ func TestLayersHoldThePlatformPackages(t *testing.T) {
 		"internal/platform/storetest": 125,
 		"internal/platform/audit":     130,
 		"internal/platform/auth":      140,
+		"internal/platform/health":    128,
 		"internal/platform/profiles":  145,
+		"internal/platform/reports":   146,
 		"internal/platform/api":       150,
+		"internal/platform/worker":    160,
 	})
 }
 

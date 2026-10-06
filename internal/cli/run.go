@@ -3,7 +3,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -21,17 +20,17 @@ import (
 	"github.com/spf13/cobra"
 
 	kcr "github.com/marceloalvescf/k8s-capacity-report"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	collectpkg "github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/pipeline"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/render"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
-	"github.com/marceloalvescf/k8s-capacity-report/template"
 )
 
 // Env is everything the command takes from outside itself. Every field is
@@ -509,53 +508,20 @@ func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *c
 		return nil, &exitError{2, err}
 	}
 
-	c, err := discovery.RunPreflight(ctx, prom.Options{Metrics: loaded.Config.Metrics, Token: loaded.Token}, loaded.Config.Cluster, loaded.Config.Analysis, window.End)
-	if err != nil {
-		return nil, err
-	}
-
-	result, err := collectpkg.All(ctx, c.Client, collectpkg.Input{
-		Scope:        c.Scope,
-		Cluster:      loaded.Config.Cluster,
-		Analysis:     loaded.Config.Analysis,
-		Capabilities: c.Capabilities,
-		Window:       window,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err := collectpkg.CheckUseful(result); err != nil {
-		return nil, err
-	}
-
-	collectionCompletedAt := env.Now()
-
-	reportID, err := env.NewID()
-	if err != nil {
-		return nil, err
-	}
-
-	findings := analysis.All(result, loaded.Config.Thresholds)
-
-	snap, err := snapshot.Build(snapshot.Input{
-		ID:                  reportID,
-		GeneratorVersion:    env.Version,
-		EmittedAt:           emittedAt,
-		Config:              loaded.Config,
-		EndpointKind:        c.Client.Kind(),
-		Scope:               c.Scope,
-		Capabilities:        c.Capabilities,
-		CollectionStarted:   emittedAt,
-		CollectionCompleted: collectionCompletedAt,
-		Window:              window,
-		Collected:           result,
-		Findings:            findings,
+	res, err := pipeline.Collect(ctx, pipeline.Run{
+		Options:   prom.Options{Metrics: loaded.Config.Metrics, Token: loaded.Token},
+		Config:    loaded.Config,
+		Window:    window,
+		EmittedAt: emittedAt,
+		Now:       env.Now,
+		NewID:     env.NewID,
+		Version:   env.Version,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := snapshot.Encode(snap)
+	data, err := snapshot.Encode(res.Snapshot)
 	if err != nil {
 		return nil, err
 	}
@@ -563,11 +529,11 @@ func runSnapshot(ctx context.Context, env Env, redactor *redact.Redactor, cmd *c
 		return nil, &exitError{6, err}
 	}
 
-	lines := preflightLines(c.Capabilities)
-	lines = append(lines, collectionLines(result)...)
+	lines := preflightLines(res.Capabilities)
+	lines = append(lines, collectionLines(res.Collected)...)
 	lines = append(lines, "snapshot: "+outputPath)
 	if f.verbose {
-		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.Capabilities)...)
+		lines = append(lines, verboseCollectingLines(f, loaded.Config, res.Capabilities)...)
 	}
 	return lines, nil
 }
@@ -613,47 +579,14 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 		return nil, &exitError{6, err}
 	}
 
-	c, err := discovery.RunPreflight(ctx, prom.Options{Metrics: loaded.Config.Metrics, Token: loaded.Token}, loaded.Config.Cluster, loaded.Config.Analysis, window.End)
-	if err != nil {
-		return nil, err
-	}
-
-	result, err := collectpkg.All(ctx, c.Client, collectpkg.Input{
-		Scope:        c.Scope,
-		Cluster:      loaded.Config.Cluster,
-		Analysis:     loaded.Config.Analysis,
-		Capabilities: c.Capabilities,
-		Window:       window,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err := collectpkg.CheckUseful(result); err != nil {
-		return nil, err
-	}
-
-	collectionCompletedAt := env.Now()
-
-	reportID, err := env.NewID()
-	if err != nil {
-		return nil, err
-	}
-
-	findings := analysis.All(result, loaded.Config.Thresholds)
-
-	snap, err := snapshot.Build(snapshot.Input{
-		ID:                  reportID,
-		GeneratorVersion:    env.Version,
-		EmittedAt:           emittedAt,
-		Config:              loaded.Config,
-		EndpointKind:        c.Client.Kind(),
-		Scope:               c.Scope,
-		Capabilities:        c.Capabilities,
-		CollectionStarted:   emittedAt,
-		CollectionCompleted: collectionCompletedAt,
-		Window:              window,
-		Collected:           result,
-		Findings:            findings,
+	res, err := pipeline.Collect(ctx, pipeline.Run{
+		Options:   prom.Options{Metrics: loaded.Config.Metrics, Token: loaded.Token},
+		Config:    loaded.Config,
+		Window:    window,
+		EmittedAt: emittedAt,
+		Now:       env.Now,
+		NewID:     env.NewID,
+		Version:   env.Version,
 	})
 	if err != nil {
 		return nil, err
@@ -663,28 +596,20 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 	if err != nil {
 		return nil, err
 	}
-	cat, err := catalog.Load(lang)
-	if err != nil {
-		return nil, err
-	}
-	doc, err := document.Build(snap, cat, document.Options{})
-	if err != nil {
-		return nil, err
-	}
-	data, err := document.Encode(doc)
+	data, err := render.Document(res.Snapshot, lang, document.Options{})
 	if err != nil {
 		return nil, err
 	}
 
-	if err := compileToPath(ctx, env, tc, data, outputPath); err != nil {
-		return nil, &exitError{6, err}
+	if err := compilePDF(ctx, env, tc, data, outputPath); err != nil {
+		return nil, err
 	}
 
-	lines := preflightLines(c.Capabilities)
-	lines = append(lines, collectionLines(result)...)
+	lines := preflightLines(res.Capabilities)
+	lines = append(lines, collectionLines(res.Collected)...)
 	lines = append(lines, "report: "+outputPath)
 	if f.verbose {
-		lines = append(lines, verboseCollectingLines(f, loaded.Config, c.Capabilities)...)
+		lines = append(lines, verboseCollectingLines(f, loaded.Config, res.Capabilities)...)
 	}
 	return lines, nil
 }
@@ -754,21 +679,13 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 	if err != nil {
 		return nil, err
 	}
-	cat, err := catalog.Load(lang)
-	if err != nil {
-		return nil, err
-	}
-	doc, err := document.Build(snap, cat, document.Options{Profile: opts.Profile, MinSeverity: opts.MinSeverity})
-	if err != nil {
-		return nil, err
-	}
-	data, err := document.Encode(doc)
+	data, err := render.Document(snap, lang, document.Options{Profile: opts.Profile, MinSeverity: opts.MinSeverity})
 	if err != nil {
 		return nil, err
 	}
 
-	if err := compileToPath(ctx, env, tc, data, outputPath); err != nil {
-		return nil, &exitError{6, err}
+	if err := compilePDF(ctx, env, tc, data, outputPath); err != nil {
+		return nil, err
 	}
 
 	lines := []string{"snapshot: loaded", "report: " + outputPath}
@@ -840,11 +757,8 @@ func strategiesLine(capabilities []discovery.Capability) string {
 
 // withWorkFolder makes a fresh, empty folder under parent (or under
 // os.TempDir() when parent is empty), runs work with its path, and removes
-// the folder in every case — success, an error work returns, or a panic
-// that unwinds through it — since the deferred removal is registered right
-// after the folder is made and Go runs every such defer while a panic
-// unwinds through its frame, whether or not anything above ever recovers
-// it.
+// the folder in every case: success, an error work returns, or a panic
+// that unwinds through it.
 func withWorkFolder(parent string, work func(dir string) error) error {
 	if parent == "" {
 		parent = os.TempDir()
@@ -858,12 +772,8 @@ func withWorkFolder(parent string, work func(dir string) error) error {
 }
 
 // settlePDFMode gives path the mode the compiler already left it with, less
-// any bit outside 0o644: typst was measured (see the command's report) to
-// leave its output at a mode derived from 0o666, not the 0o644 every other
-// output file of this command is created with, so under a permissive umask
-// the PDF would otherwise end up more open than 0o644 allows. This never
-// makes the file more permissive than the compiler already left it, and
-// never touches the umask itself, only the file already on disk.
+// any bit outside 0o644. It never makes the file more permissive than the
+// compiler left it, and never touches the umask.
 func settlePDFMode(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -872,81 +782,15 @@ func settlePDFMode(path string) error {
 	return os.Chmod(path, info.Mode().Perm()&0o644)
 }
 
-// pdfMagic is the first bytes of every real PDF file.
-var pdfMagic = []byte("%PDF-")
-
-// checkPDFMagic refuses path when its first bytes are not pdfMagic: a
-// compiler that exits 0 without warning, yet writes something that is not
-// a PDF at the path it was told to write to, must not be reported as a
-// successful run. A file shorter than pdfMagic, including an empty one, is
-// refused the same way as one whose bytes simply differ.
-func checkPDFMagic(path string) error {
-	f, err := os.Open(path)
+// compilePDF compiles data and writes the PDF beside outputPath, renamed into
+// place; every failure is exit code 6.
+func compilePDF(ctx context.Context, env Env, tc typst.Toolchain, data []byte, outputPath string) error {
+	pdf, err := render.Compile(ctx, tc, env.TempDir, data)
 	if err != nil {
-		return err
+		return &exitError{6, err}
 	}
-	defer func() { _ = f.Close() }()
-
-	head := make([]byte, len(pdfMagic))
-	n, err := io.ReadFull(f, head)
-	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
-		return err
-	}
-	if !bytes.Equal(head[:n], pdfMagic) {
-		return errors.New("the compiler wrote a file that is not a PDF")
+	if err := writeAtomicFile(outputPath, pdf); err != nil {
+		return &exitError{6, err}
 	}
 	return nil
-}
-
-// compileToPath unpacks the template into a fresh work folder, writes
-// report.json, compiles to a temporary file beside outputPath, and renames
-// it into place. The compiler is given a name that does not yet exist and
-// creates the file itself.
-func compileToPath(ctx context.Context, env Env, tc typst.Toolchain, data []byte, outputPath string) error {
-	return withWorkFolder(env.TempDir, func(dir string) error {
-		if err := template.Unpack(dir); err != nil {
-			return err
-		}
-		if err := os.WriteFile(filepath.Join(dir, "report.json"), data, 0o644); err != nil {
-			return err
-		}
-
-		tmpPath, err := tempSiblingName(outputPath)
-		if err != nil {
-			return err
-		}
-		succeeded := false
-		defer func() {
-			if !succeeded {
-				_ = os.Remove(tmpPath)
-			}
-		}()
-
-		job := typst.Job{
-			Root:     dir,
-			FontPath: template.FontPath(dir),
-			Source:   template.Entry(dir),
-			Output:   tmpPath,
-			Format:   typst.PDF,
-			Inputs:   map[string]string{"data": "/report.json"},
-		}
-		if _, err := tc.Compile(ctx, job); err != nil {
-			return err
-		}
-
-		if err := checkPDFMagic(tmpPath); err != nil {
-			return err
-		}
-		if err := settlePDFMode(tmpPath); err != nil {
-			return err
-		}
-		if err := syncFile(tmpPath); err != nil {
-			return err
-		}
-		if err := os.Rename(tmpPath, outputPath); err != nil {
-			return err
-		}
-		succeeded = true
-		return nil
-	})
 }

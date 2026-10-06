@@ -182,17 +182,3 @@ func writeAtomicFile(path string, data []byte) (err error) {
 	}
 	return os.Rename(tmpPath, path)
 }
-
-// syncFile flushes path's content to disk.
-func syncFile(path string) (err error) {
-	f, err := os.OpenFile(path, os.O_RDWR, 0)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if closeErr := f.Close(); err == nil {
-			err = closeErr
-		}
-	}()
-	return f.Sync()
-}
