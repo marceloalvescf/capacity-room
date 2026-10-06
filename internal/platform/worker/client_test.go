@@ -137,9 +137,17 @@ func TestWorkerStopAbandonsAHungJob(t *testing.T) {
 	go func() { done <- lc.Run(ctx, time.Second) }()
 	start := time.Now()
 	cancel()
-	time.Sleep(200 * time.Millisecond)
-	if check.Run(context.Background()) {
-		t.Fatal("still ready while the stop drains")
+	// Readiness turns false when the stop begins, and the stop holds for the
+	// whole drain, so the flag is polled until it falls or the limit ends.
+	notReady := time.Now().Add(waitLimit)
+	for check.Run(context.Background()) {
+		if time.Now().After(notReady) {
+			t.Fatal("still ready while the stop drains")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if time.Since(start) >= time.Second {
+		t.Fatal("readiness fell only after the first drain")
 	}
 	select {
 	case err := <-done:

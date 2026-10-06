@@ -121,8 +121,8 @@ WHERE id = ANY($1) AND status = 'collected' AND phase = 'rendering'
 // ExpireDueReports expires up to limit collected or failed reports whose
 // expires_at is not after now, oldest first: their snapshot and PDF rows are
 // deleted and expired_at is set. A report still rendering becomes complete,
-// completed_at now, since its PDF rows are gone. Rows another transaction holds are left
-// alone. It returns the expired ids.
+// completed_at now, since its PDF rows are gone. Rows another transaction
+// holds are left alone. It returns the expired ids.
 func ExpireDueReports(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]uuid.UUID, error) {
 	rows, err := tx.Query(ctx, `
 SELECT id FROM reports

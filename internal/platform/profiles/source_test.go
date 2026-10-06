@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"net/netip"
+	"reflect"
 	"testing"
 	"time"
 
@@ -54,7 +55,7 @@ func TestSourceReadsTheReferences(t *testing.T) {
 	if transport.TLS.RootCAs == nil || !transport.TLS.RootCAs.Equal(want) || transport.TLS.InsecureSkipVerify {
 		t.Fatalf("TLS = %+v", transport.TLS)
 	}
-	if transport.Policy.Hostnames != nil || len(transport.Policy.Networks) != len(f.svc.Policy.Networks) {
+	if !reflect.DeepEqual(transport.Policy, f.svc.Policy) {
 		t.Fatalf("policy = %+v", transport.Policy)
 	}
 }
@@ -126,8 +127,9 @@ func TestTestCeiling(t *testing.T) {
 		deadline, seen = ctx.Deadline()
 		return nil, errors.New("resolver stops here")
 	}
-	start := time.Now()
+	before := time.Now()
 	got, err := f.svc.Test(context.Background(), f.root, "prod")
+	after := time.Now()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +139,10 @@ func TestTestCeiling(t *testing.T) {
 	if !seen {
 		t.Fatal("the resolver saw no deadline")
 	}
-	if left := deadline.Sub(start); left < 119*time.Second || left > 121*time.Second {
-		t.Fatalf("the deadline is %s after the start", left)
+	// The ceiling is written out so that a change of the constant is seen.
+	// The deadline is set from the clock between the two readings, so it is
+	// exactly the ceiling after one of them, and never a second off.
+	if deadline.Before(before.Add(2*time.Minute)) || deadline.After(after.Add(2*time.Minute)) {
+		t.Fatalf("the deadline is %s, want between %s and %s", deadline, before.Add(2*time.Minute), after.Add(2*time.Minute))
 	}
 }

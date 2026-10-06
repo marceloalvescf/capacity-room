@@ -196,21 +196,45 @@ func checkVersionFirst(data []byte) error {
 
 // repeatedKeyPath reports whether err is the refusal of a repeated key, and
 // where the key is, written as the messages of Check write a path:
-// findings[0].code. The JSON pointer of the error names the repeated key.
+// findings[0].code. The JSON pointer of the error names the repeated key;
+// the types of the contract tell an index of a list, written [1], from a key
+// of an object, written .1, since a token of digits is either.
 func repeatedKeyPath(err error) (string, bool) {
 	var syntactic *jsontext.SyntacticError
 	if !errors.As(err, &syntactic) || !errors.Is(err, jsontext.ErrDuplicateName) {
 		return "", false
 	}
 	path := ""
+	current := reflect.TypeOf(Snapshot{})
 	for token := range syntactic.JSONPointer.Tokens() {
-		if _, err := strconv.ParseUint(token, 10, 64); err == nil && path != "" {
+		if current != nil && current.Kind() == reflect.Slice {
 			path += "[" + token + "]"
+			current = current.Elem()
 			continue
 		}
 		path = joinPath(path, token)
+		current = memberType(current, token)
 	}
 	return path, true
+}
+
+// memberType is the type of the member of t that key names, or nil when t
+// is not an object of the contract or holds no such member.
+func memberType(t reflect.Type, key string) reflect.Type {
+	if t == nil {
+		return nil
+	}
+	switch t.Kind() {
+	case reflect.Map:
+		return t.Elem()
+	case reflect.Struct:
+		for i := 0; i < t.NumField(); i++ {
+			if name, ok := supportedKey(t.Field(i)); ok && name == key {
+				return t.Field(i).Type
+			}
+		}
+	}
+	return nil
 }
 
 // decodeFromMap fills a Snapshot from obj, the same map checkKeys has

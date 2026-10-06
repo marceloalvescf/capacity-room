@@ -1016,6 +1016,9 @@ func TestCollectNeverStoresTheToken(t *testing.T) {
 			e.assertNoToken(report, token)
 		})
 	}
+	// A negative control: with Reveal off the redactor never learns the
+	// token, so the log carries it. This shows that the cases above pass
+	// because of Reveal, and not because the cause never held the token.
 	t.Run("the redactor that never learns the token leaks it", func(t *testing.T) {
 		e, _ := refusal(t, secretToken, false)
 		if !strings.Contains(e.logs.String(), secretToken) {

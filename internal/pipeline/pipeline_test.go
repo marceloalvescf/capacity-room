@@ -114,9 +114,35 @@ func serveScenario(t *testing.T, name string) fixture {
 	return newRun(t, scenario, server.URL)
 }
 
-// preflightRequests is the number of requests of the preflight of
-// direct-complete.
-const preflightRequests = 29
+// preflightRequests returns the number of requests of the preflight of
+// direct-complete. They are the requests that the golden list of queries of
+// the scenario (testdata/queries/direct-complete.txt) holds before its first
+// range query, because the collectors begin with a range query.
+func preflightRequests(t *testing.T) int {
+	t.Helper()
+	path, err := goldentest.QueriesPath("direct-complete")
+	if err != nil {
+		t.Fatalf("QueriesPath: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	count := 0
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		if strings.HasPrefix(line, "/api/v1/query_range\t") {
+			break
+		}
+		count++
+	}
+	return count
+}
+
+func TestPreflightRequestsComeFromTheRecordedQueries(t *testing.T) {
+	if got := preflightRequests(t); got != 29 {
+		t.Fatalf("preflightRequests = %d, want 29", got)
+	}
+}
 
 // emptyCollectors answers the preflight of direct-complete as recorded,
 // except the probe of the cluster autoscaler metrics, and every later
@@ -133,13 +159,14 @@ func emptyCollectors(t *testing.T) fixture {
 		t.Fatalf("promtest.Load: %v", err)
 	}
 	fake := promtest.NewServer(recorded)
+	preflight := preflightRequests(t)
 	var mu sync.Mutex
 	received := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		mu.Lock()
 		received++
-		inPreflight := received <= preflightRequests
+		inPreflight := received <= preflight
 		mu.Unlock()
 		if inPreflight && !strings.Contains(r.PostFormValue("query"), "cluster_autoscaler_") {
 			fake.ServeHTTP(w, r)

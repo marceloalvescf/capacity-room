@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
@@ -2271,6 +2272,22 @@ func TestDecodeRefusesARepeatedKey(t *testing.T) {
 	}
 }
 
+// A key of an object that is made of digits is a key, and an index of a list
+// is an index: the path tells them apart.
+func TestDecodeNamesARepeatedNumericKeyAsAKey(t *testing.T) {
+	good := string(goldenBytes(t, "edge-values"))
+	const params = "\"params\": {\n          \"count\": 1\n        }"
+	data := strings.Replace(good, params, `"params": {"1": 1, "1": 2}`, 1)
+	if data == good {
+		t.Fatal("the mutation changed nothing")
+	}
+	_, err := Decode([]byte(data))
+	const want = "snapshot repeats the key quality.notices[0].params.1"
+	if err == nil || err.Error() != want {
+		t.Fatalf("Decode() error = %v, want %q", err, want)
+	}
+}
+
 func TestDecodeNamesAWrongVersionBeforeARepeatedKey(t *testing.T) {
 	good := string(goldenBytes(t, "direct-complete"))
 	findings := strings.Index(good, `"findings": [`)
@@ -2294,8 +2311,21 @@ func TestDecodeRefusesTextThatIsNotUTF8(t *testing.T) {
 	if data == good {
 		t.Fatal("the mutation changed nothing")
 	}
+	// The offset the message names is where the first invalid byte of the
+	// file is, wherever the golden file puts it.
+	offset := 0
+	for offset < len(data) {
+		r, size := utf8.DecodeRuneInString(data[offset:])
+		if r == utf8.RuneError && size == 1 {
+			break
+		}
+		offset += size
+	}
+	if offset == len(data) {
+		t.Fatal("the file holds no invalid byte")
+	}
 	_, err := Decode([]byte(data))
-	const want = `snapshot is not valid JSON: jsontext: invalid UTF-8 within "/report/organization" after offset 412`
+	want := fmt.Sprintf(`snapshot is not valid JSON: jsontext: invalid UTF-8 within "/report/organization" after offset %d`, offset)
 	if err == nil || err.Error() != want {
 		t.Fatalf("Decode() error = %v, want %q", err, want)
 	}
@@ -2495,7 +2525,13 @@ func shapePaths(t reflect.Type, prefix string) []string {
 	var paths []string
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
-		name, _ := supportedKey(field)
+		name, ok := supportedKey(field)
+		if !ok {
+			// A field the key walk does not support has no name in the
+			// contract, so it is listed by its Go name and the frozen shape
+			// no longer matches.
+			name = "(unsupported " + field.Name + ")"
+		}
 		path := name
 		if prefix != "" {
 			path = prefix + "." + name
