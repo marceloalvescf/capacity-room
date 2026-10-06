@@ -3,7 +3,9 @@
 package redact
 
 import (
+	"fmt"
 	"io"
+	"log/slog"
 	"regexp"
 	"slices"
 	"sort"
@@ -85,6 +87,27 @@ func (r *Redactor) Text(s string) string {
 	s = queryStringRe.ReplaceAllString(s, "${1}?"+Mark)
 	s = userinfoRe.ReplaceAllString(s, "${1}"+Mark+"@")
 	return s
+}
+
+// ReplaceAttr is a slog.HandlerOptions.ReplaceAttr that removes every
+// secret from the message, from a string value, and from the text of an
+// error or a fmt.Stringer value, inside a group too, before the handler
+// formats it. A handler quotes and escapes a value, so a secret holding a
+// quote, a backslash, or a character it escapes would no longer be the
+// bytes a writer of Writer searches for.
+func (r *Redactor) ReplaceAttr(_ []string, a slog.Attr) slog.Attr {
+	switch a.Value.Kind() {
+	case slog.KindString:
+		return slog.String(a.Key, r.Text(a.Value.String()))
+	case slog.KindAny:
+		switch v := a.Value.Any().(type) {
+		case error:
+			return slog.String(a.Key, r.Text(v.Error()))
+		case fmt.Stringer:
+			return slog.String(a.Key, r.Text(v.String()))
+		}
+	}
+	return a
 }
 
 // Writer returns a writer that redacts each Write call as one text and

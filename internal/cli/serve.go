@@ -60,7 +60,7 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 		return &exitError{1, err}
 	}
 
-	logger := slog.New(slog.NewTextHandler(cmd.ErrOrStderr(), nil))
+	logger := newLogger(cmd.ErrOrStderr(), redactor)
 	handler := buildServer(pool, loaded, secret, env.Now, logger, redactor).Handler()
 
 	listener, err := net.Listen("tcp", listen)

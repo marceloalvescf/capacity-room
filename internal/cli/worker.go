@@ -89,7 +89,7 @@ func runWorker(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cob
 		return &exitError{1, err}
 	}
 
-	logger := slog.New(slog.NewTextHandler(cmd.ErrOrStderr(), nil))
+	logger := newLogger(cmd.ErrOrStderr(), redactor)
 	client, err := buildWorker(pool, loaded, tc, env, logger, redactor)
 	if err != nil {
 		return &exitError{1, err}

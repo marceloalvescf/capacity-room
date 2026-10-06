@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -19,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -826,22 +826,29 @@ func TestCollectRunsAnInactiveRevision(t *testing.T) {
 	}
 }
 
-// redacted makes the run's redactor as the worker command does: the profile
-// service adds each credential to it and the logger writes through it.
-// The logger also writes to e.raw before the redactor, so a test can see what
-// the redactor was given. With reveal false the redactor never learns the
-// credential.
+// redacted makes the run's redactor and the logger as the worker command
+// does: the profile service adds each credential to the redactor, and the
+// logger passes every value through it before formatting and writes through
+// it. A second handler writes to e.raw with no redaction, so a test can see
+// what the redactor was given. With reveal false the redactor never learns
+// the credential.
 func (e *env) redacted(reveal bool) {
 	redactor := redact.New()
 	if reveal {
 		e.profiles.Reveal = func(secret string) { redactor.Add(secret) }
 	}
 	e.raw = &syncBuffer{}
-	e.deps.Logger = slog.New(slog.NewTextHandler(io.MultiWriter(e.raw, redactor.Writer(e.logs)), nil))
+	e.deps.Logger = slog.New(slog.NewMultiHandler(
+		slog.NewTextHandler(redactor.Writer(e.logs), &slog.HandlerOptions{ReplaceAttr: redactor.ReplaceAttr}),
+		slog.NewTextHandler(e.raw, nil),
+	))
 }
 
-func (e *env) assertNoToken(report store.Report) {
+// assertNoToken checks that token appears in no table and no log line,
+// neither as written nor in the escaped form of a quoted text.
+func (e *env) assertNoToken(report store.Report, token string) {
 	e.t.Helper()
+	forms := []string{token, escaped(token)}
 	for _, table := range []string{"reports", "report_snapshots", "report_pdfs", "audit_events", "river_job"} {
 		var all string
 		err := e.pool.QueryRow(context.Background(),
@@ -849,13 +856,27 @@ func (e *env) assertNoToken(report store.Report) {
 		if err != nil {
 			e.t.Fatal(err)
 		}
-		if strings.Contains(all, secretToken) {
-			e.t.Fatalf("the token is in %s", table)
+		for _, form := range forms {
+			if strings.Contains(all, form) {
+				e.t.Fatalf("the token is in %s", table)
+			}
 		}
 	}
-	if logs := e.logs.String(); strings.Contains(logs, secretToken) || !strings.Contains(logs, report.ID.String()) {
-		e.t.Fatalf("logs do not name the report or hold the token:\n%s", logs)
+	logs := e.logs.String()
+	for _, form := range forms {
+		if strings.Contains(logs, form) {
+			e.t.Fatalf("the logs hold the token:\n%s", logs)
+		}
 	}
+	if !strings.Contains(logs, report.ID.String()) {
+		e.t.Fatalf("the logs do not name the report:\n%s", logs)
+	}
+}
+
+// escaped is token as a quoted text writes it, without the outer quotes.
+func escaped(token string) string {
+	q := strconv.Quote(token)
+	return q[1 : len(q)-1]
 }
 
 func TestCollectNeverStoresTheToken(t *testing.T) {
@@ -866,34 +887,38 @@ func TestCollectNeverStoresTheToken(t *testing.T) {
 		e.start(collectHooks{})
 		report := e.request()
 		e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
-		e.assertNoToken(report)
+		e.assertNoToken(report, secretToken)
 	})
 	// A 400 with a Prometheus error body is the one answer whose text reaches
 	// the error of a run. It is a refused query, which the profile
 	// classification maps to ENDPOINT_UNREACHABLE, retried while attempts remain.
-	refusal := func(t *testing.T, reveal bool) (*env, store.Report) {
+	refusal := func(t *testing.T, token string, reveal bool) (*env, store.Report) {
 		e := newEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 2 })
 		e.redacted(reveal)
-		e.writeCredential("token", secretToken+"\n")
+		e.writeCredential("token", token+"\n")
 		e.addProfile(serve(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte(`{"status":"error","errorType":"bad_data","error":"bad query near ` + secretToken + `"}`))
+			_, _ = w.Write([]byte(`{"status":"error","errorType":"bad_data","error":"bad query near ` + escaped(token) + `"}`))
 		})), "token")
 		e.start(collectHooks{})
 		report := e.request()
 		e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
 		return e, report
 	}
-	t.Run("a refusal that holds the token, through the redactor", func(t *testing.T) {
-		e, report := refusal(t, true)
-		if !strings.Contains(e.raw.String(), secretToken) {
-			t.Fatalf("the cause never carried the token, so nothing is proved:\n%s", e.raw.String())
-		}
-		e.assertNoToken(report)
-	})
+	// The second token holds a quote and a backslash, which the log handler
+	// escapes when it formats the cause.
+	for _, token := range []string{secretToken, `s3cr3t"t0ken\value-123`} {
+		t.Run("a refusal that holds the token, through the redactor: "+token, func(t *testing.T) {
+			e, report := refusal(t, token, true)
+			if !strings.Contains(e.raw.String(), escaped(token)) {
+				t.Fatalf("the cause never carried the token, so nothing is proved:\n%s", e.raw.String())
+			}
+			e.assertNoToken(report, token)
+		})
+	}
 	t.Run("the redactor that never learns the token leaks it", func(t *testing.T) {
-		e, _ := refusal(t, false)
+		e, _ := refusal(t, secretToken, false)
 		if !strings.Contains(e.logs.String(), secretToken) {
 			t.Fatal("the log line does not carry the token without Reveal, so the case above proves nothing")
 		}
