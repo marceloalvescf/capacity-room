@@ -97,3 +97,28 @@ func TestProblemOf(t *testing.T) {
 		})
 	}
 }
+
+func TestCanceledRequestIsNotAnErrorLine(t *testing.T) {
+	var buf bytes.Buffer
+	s := &Server{Logger: slog.New(slog.NewTextHandler(&buf, nil))}
+	s.extraRoutes = []Route{{Method: "GET", Pattern: "/api/v1/probe", Handler: func(w http.ResponseWriter, r *http.Request) {
+		s.fail(w, r, context.Canceled)
+	}}}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	w := httptest.NewRecorder()
+	s.Handler().ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/probe", nil).WithContext(ctx))
+	if strings.Contains(buf.String(), "level=ERROR") {
+		t.Fatalf("an error line for a client that left: %s", buf.String())
+	}
+	if w.Body.Len() != 0 {
+		t.Fatalf("an envelope for a client that left: %s", w.Body.String())
+	}
+
+	buf.Reset()
+	w = httptest.NewRecorder()
+	s.Handler().ServeHTTP(w, httptest.NewRequest("GET", "/api/v1/probe", nil))
+	if w.Code != 500 || !strings.Contains(buf.String(), "level=ERROR") {
+		t.Fatalf("a cancellation of the service alone: %d %s", w.Code, buf.String())
+	}
+}

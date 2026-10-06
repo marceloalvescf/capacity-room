@@ -33,13 +33,18 @@ type Server struct {
 	extraRoutes []Route
 }
 
+// logger is the logger of the server, or one that writes nowhere.
+func (s *Server) logger() *slog.Logger {
+	if s.Logger == nil {
+		return slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
+	return s.Logger
+}
+
 // Handler registers the routes, the health routes, the 404 and 405
 // answers in the envelope, and wraps everything in SecurityHeaders.
 func (s *Server) Handler() http.Handler {
-	logger := s.Logger
-	if logger == nil {
-		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
-	}
+	logger := s.logger()
 	mux := http.NewServeMux()
 	for _, r := range append(s.Routes(), s.extraRoutes...) {
 		mux.HandleFunc(r.Method+" "+r.Pattern, r.Handler)

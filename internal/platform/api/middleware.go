@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"slices"
@@ -12,8 +13,14 @@ import (
 type SessionHandler func(w http.ResponseWriter, r *http.Request, a auth.Authenticated)
 
 // fail answers with the problem of err and hands err to the writer of
-// SecurityHeaders, which logs a 5xx once.
-func (s *Server) fail(w http.ResponseWriter, _ *http.Request, err error) {
+// SecurityHeaders, which logs a 5xx once. A request its client cancelled gets
+// no answer and a debug line.
+func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
+	if r.Context().Err() != nil && errors.Is(err, context.Canceled) {
+		// The client left; nobody reads an envelope.
+		s.logger().Debug("request canceled by the client", "method", r.Method, "path", r.URL.Path)
+		return
+	}
 	if n, ok := w.(errorNoter); ok {
 		n.noteError(err)
 	}
