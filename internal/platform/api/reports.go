@@ -292,7 +292,7 @@ func (s *Server) retryReportPDF(w http.ResponseWriter, r *http.Request, a auth.A
 		WriteProblem(w, p)
 		return
 	}
-	if body.Language != "pt-BR" && body.Language != "en" {
+	if !body.Language.Valid() {
 		WriteProblem(w, &Problem{Code: CodeRequestInvalid, Fields: map[string]string{"language": "invalid"}})
 		return
 	}

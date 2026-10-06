@@ -665,6 +665,9 @@ func TestBulkDeleteRoute(t *testing.T) {
 	}
 }
 
+// raceWait is how long raceReaders waits for the first whole 200.
+var raceWait = 30 * time.Second
+
 // raceReaders runs readers that fetch the PDF of id in a loop while action
 // runs once, after the first whole 200. Every answer must be a whole 200
 // with the stored bytes, a 404, or a 410. It returns how many of each were
@@ -710,7 +713,13 @@ func (ts *testServer) raceReaders(t *testing.T, a *actor, id uuid.UUID, body []b
 			}
 		}()
 	}
+	first := time.Now().Add(raceWait)
 	for okN.Load() == 0 {
+		if time.Now().After(first) {
+			close(done)
+			readers.Wait()
+			t.Fatalf("no whole 200 after %v", raceWait)
+		}
 		time.Sleep(time.Millisecond)
 	}
 	action()
