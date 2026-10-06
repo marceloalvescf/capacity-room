@@ -63,10 +63,10 @@ postgres-down:
 # a test fails; the exit status is the tests'.
 test-postgres:
 	@set -o pipefail; $(MAKE) postgres-up; \
-	KCR_TEST_DATABASE_DSN="$(TEST_DSN)" go test $(TEST_FLAGS) -tags=postgres $$(go list ./internal/platform/... ./internal/cli/... | grep -v /internal/platform/worker$$); \
+	KCR_TEST_DATABASE_DSN="$(TEST_DSN)" go test $(TEST_FLAGS) -tags=postgres $$(go list ./internal/platform/... ./internal/cli/... | grep -v -e /internal/platform/worker$$ -e /internal/cli$$); \
 	status=$$?; \
 	if [ $$status -eq 0 ]; then \
-		KCR_TEST_DATABASE_DSN="$(TEST_DSN)" go test $(TEST_FLAGS) -tags='postgres template' ./internal/platform/worker; \
+		KCR_TEST_DATABASE_DSN="$(TEST_DSN)" go test $(TEST_FLAGS) -tags='postgres template' ./internal/platform/worker ./internal/cli; \
 		status=$$?; \
 	fi; \
 	$(MAKE) postgres-down; exit $$status
