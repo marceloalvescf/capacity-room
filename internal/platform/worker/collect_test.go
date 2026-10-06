@@ -1120,6 +1120,43 @@ func TestCollectSkipsATerminalReport(t *testing.T) {
 	}
 }
 
+func TestCollectSettlesADeletedRunningReport(t *testing.T) {
+	e, sw, _ := scenarioEnv(t, nil)
+	report := e.request()
+	ctx := context.Background()
+	if err := store.Transact(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := store.ClaimReport(ctx, tx, report.ID, 1, fixedNow); err != nil {
+			return err
+		}
+		_, err := store.MarkReportDeleted(ctx, tx, report.ID, fixedNow)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	before := e.report(report.ID)
+	e.start(collectHooks{})
+	e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+	if after := e.report(report.ID); after.Status != "running" || after.Attempt != 1 || !after.UpdatedAt.Equal(before.UpdatedAt) {
+		t.Fatalf("report changed: %+v, was %+v", after, before)
+	}
+	if n := sw.served.Load(); n != 0 {
+		t.Fatalf("%d requests to the source", n)
+	}
+	var swept []uuid.UUID
+	if err := store.Transact(ctx, e.pool, func(tx pgx.Tx) (err error) {
+		swept, err = store.SweepDeletedReports(ctx, tx, 100)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(swept) != 1 || swept[0] != report.ID {
+		t.Fatalf("swept %v, want %v", swept, report.ID)
+	}
+	if n := e.count(`SELECT count(*) FROM reports`); n != 0 {
+		t.Fatalf("%d reports left", n)
+	}
+}
+
 func TestCollectSkipsAMissingReport(t *testing.T) {
 	e, sw, _ := scenarioEnv(t, nil)
 	e.start(collectHooks{})

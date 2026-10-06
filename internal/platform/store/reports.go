@@ -433,7 +433,7 @@ LIMIT `
 		return nil, fmt.Errorf("list reports: %w", err)
 	}
 	defer rows.Close()
-	var items []ReportListItem
+	items := []ReportListItem{}
 	for rows.Next() {
 		it, err := scanItem(rows)
 		if err != nil {
@@ -474,8 +474,9 @@ WHERE r.id = $1 AND r.deleted_at IS NULL`, id))
 type SnapshotRead struct {
 	Status    string
 	ExpiresAt time.Time
-	Body      []byte // nil unless collected and not expired
-	SHA256    string // empty when Body is nil
+	ExpiredAt *time.Time // set once maintenance has expired the report
+	Body      []byte     // nil unless collected and not expired
+	SHA256    string     // empty when Body is nil
 }
 
 // ReadSnapshot returns, in one statement, the snapshot of a report that is
@@ -487,11 +488,11 @@ func ReadSnapshot(ctx context.Context, q Querier, id uuid.UUID, now time.Time) (
 		sum *string
 	)
 	err := q.QueryRow(ctx, `
-SELECT r.status, r.expires_at,
-       CASE WHEN r.status = 'collected' AND r.expires_at > $2 THEN s.body END,
-       CASE WHEN r.status = 'collected' AND r.expires_at > $2 THEN s.sha256 END
+SELECT r.status, r.expires_at, r.expired_at,
+       CASE WHEN r.status = 'collected' AND r.expires_at > $2 AND r.expired_at IS NULL THEN s.body END,
+       CASE WHEN r.status = 'collected' AND r.expires_at > $2 AND r.expired_at IS NULL THEN s.sha256 END
 FROM reports r LEFT JOIN report_snapshots s ON s.report_id = r.id
-WHERE r.id = $1 AND r.deleted_at IS NULL`, id, now).Scan(&out.Status, &out.ExpiresAt, &out.Body, &sum)
+WHERE r.id = $1 AND r.deleted_at IS NULL`, id, now).Scan(&out.Status, &out.ExpiresAt, &out.ExpiredAt, &out.Body, &sum)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return SnapshotRead{}, ErrNotFound
 	}
@@ -499,6 +500,7 @@ WHERE r.id = $1 AND r.deleted_at IS NULL`, id, now).Scan(&out.Status, &out.Expir
 		return SnapshotRead{}, fmt.Errorf("read snapshot: %w", err)
 	}
 	out.ExpiresAt = out.ExpiresAt.UTC()
+	out.ExpiredAt = utcPtr(out.ExpiredAt)
 	if sum != nil {
 		out.SHA256 = *sum
 	}
@@ -509,6 +511,7 @@ WHERE r.id = $1 AND r.deleted_at IS NULL`, id, now).Scan(&out.Status, &out.Expir
 type PDFRead struct {
 	Status    string // of the report
 	ExpiresAt time.Time
+	ExpiredAt *time.Time // set once maintenance has expired the report
 	PDF       *ReportPDF // nil when the row is absent
 	Body      []byte     // nil unless ready and not expired
 }
@@ -526,11 +529,11 @@ func ReadPDF(ctx context.Context, q Querier, id uuid.UUID, language string, now 
 		updated      *time.Time
 	)
 	err := q.QueryRow(ctx, `
-SELECT r.status, r.expires_at, p.language, p.status, p.failure_code, p.job_id, p.sha256, p.size_bytes, p.updated_at,
-       CASE WHEN p.status = 'ready' AND r.expires_at > $3 THEN p.body END
+SELECT r.status, r.expires_at, r.expired_at, p.language, p.status, p.failure_code, p.job_id, p.sha256, p.size_bytes, p.updated_at,
+       CASE WHEN p.status = 'ready' AND r.expires_at > $3 AND r.expired_at IS NULL THEN p.body END
 FROM reports r LEFT JOIN report_pdfs p ON p.report_id = r.id AND p.language = $2
 WHERE r.id = $1 AND r.deleted_at IS NULL`, id, language, now).
-		Scan(&out.Status, &out.ExpiresAt, &lang, &status, &failure, &jobID, &sum, &size, &updated, &out.Body)
+		Scan(&out.Status, &out.ExpiresAt, &out.ExpiredAt, &lang, &status, &failure, &jobID, &sum, &size, &updated, &out.Body)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return PDFRead{}, ErrNotFound
 	}
@@ -538,6 +541,7 @@ WHERE r.id = $1 AND r.deleted_at IS NULL`, id, language, now).
 		return PDFRead{}, fmt.Errorf("read pdf: %w", err)
 	}
 	out.ExpiresAt = out.ExpiresAt.UTC()
+	out.ExpiredAt = utcPtr(out.ExpiredAt)
 	if lang != nil {
 		out.PDF = &ReportPDF{
 			ReportID: id, Language: *lang, Status: *status, FailureCode: failure, JobID: *jobID,

@@ -261,15 +261,16 @@ FOR UPDATE SKIP LOCKED`, cutoff, limit)
 }
 
 // SweepDeletedReports removes at most limit deleted reports whose status is
-// not running, oldest mark first, skipping locked rows, with their PDF rows,
+// not running, or is running with a collect job that is absent from river_job
+// or final, oldest mark first, skipping locked rows, with their PDF rows,
 // snapshot, and idempotency row; it returns the ids removed.
 func SweepDeletedReports(ctx context.Context, tx pgx.Tx, limit int) ([]uuid.UUID, error) {
 	rows, err := tx.Query(ctx, `
-SELECT id FROM reports
-WHERE deleted_at IS NOT NULL AND status <> 'running'
-ORDER BY deleted_at, id
+SELECT r.id FROM reports r
+WHERE r.deleted_at IS NOT NULL AND (r.status <> 'running' OR `+jobGone("r.collect_job_id")+`)
+ORDER BY r.deleted_at, r.id
 LIMIT $1
-FOR UPDATE SKIP LOCKED`, limit)
+FOR UPDATE OF r SKIP LOCKED`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("sweep reports: %w", err)
 	}

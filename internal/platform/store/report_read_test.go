@@ -96,6 +96,9 @@ func TestListReportsNewestFirst(t *testing.T) {
 	if len(items[1].PDFs) != 0 {
 		t.Fatalf("pdf rows of a queued report: %+v", items[1].PDFs)
 	}
+	if empty, err := store.ListReports(ctx, pool, &store.ReportCursor{CreatedAt: now.Add(-time.Hour), ID: uuid.Nil}, 5); err != nil || empty == nil || len(empty) != 0 {
+		t.Fatalf("empty page: %#v, %v", empty, err)
+	}
 	if limited, err := store.ListReports(ctx, pool, nil, 2); err != nil || !slices.Equal(itemIDs(limited), want[:2]) {
 		t.Fatalf("limit 2: %v, %v", itemIDs(limited), err)
 	}
@@ -312,6 +315,8 @@ func TestReadBodiesAreOneStatement(t *testing.T) {
 					absent.Add(1)
 				case err != nil:
 					fail(fmt.Sprintf("snapshot read: %v", err))
+				case snap.Body == nil && snap.Status == "collected" && snap.ExpiredAt == nil && snap.ExpiresAt.After(now):
+					fail("a collected, unexpired report read without a body")
 				case snap.Body != nil:
 					bodies.Add(1)
 					if got := sha(string(snap.Body)); got != snap.SHA256 || got != snapSum {
@@ -326,6 +331,8 @@ func TestReadBodiesAreOneStatement(t *testing.T) {
 					absent.Add(1)
 				case err != nil:
 					fail(fmt.Sprintf("pdf read: %v", err))
+				case pdf.Body == nil && pdf.Status == "collected" && pdf.ExpiredAt == nil && pdf.ExpiresAt.After(now):
+					fail("a collected, unexpired report read without a pdf body")
 				case pdf.Body != nil:
 					if pdf.PDF == nil || pdf.PDF.SHA256 == nil || sha(string(pdf.Body)) != *pdf.PDF.SHA256 || *pdf.PDF.SHA256 != pdfSum {
 						fail(fmt.Sprintf("pdf body %q does not match its row %+v", pdf.Body, pdf.PDF))
@@ -369,7 +376,7 @@ func TestReadSnapshotStates(t *testing.T) {
 
 	collected := collectedReport(t, pool, f, now.Add(time.Hour), nil, nil)
 	got, err = store.ReadSnapshot(ctx, pool, collected.ID, now)
-	if err != nil || got.Status != "collected" || string(got.Body) != "{}" || got.SHA256 != sha("{}") {
+	if err != nil || got.Status != "collected" || string(got.Body) != "{}" || got.SHA256 != sha("{}") || got.ExpiredAt != nil {
 		t.Fatalf("collected: %+v, %v", got, err)
 	}
 	if got.ExpiresAt.Location() != time.UTC {
@@ -380,6 +387,23 @@ func TestReadSnapshotStates(t *testing.T) {
 	got, err = store.ReadSnapshot(ctx, pool, expired.ID, now)
 	if err != nil || got.Status != "collected" || got.Body != nil || got.SHA256 != "" || !got.ExpiresAt.Equal(now) {
 		t.Fatalf("expired at now: %+v, %v", got, err)
+	}
+
+	maintained := collectedReport(t, pool, f, now.Add(time.Hour), nil, nil)
+	if ids := expireDue(t, pool, now.Add(2*time.Hour), 100); !slices.Contains(ids, maintained.ID) {
+		t.Fatalf("expired %v", ids)
+	}
+	flagged := collectedReport(t, pool, f, now.Add(time.Hour), nil, nil)
+	if _, err := pool.Exec(ctx, `UPDATE reports SET expired_at = $2 WHERE id = $1`, flagged.ID, now.Add(2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	got, err = store.ReadSnapshot(ctx, pool, flagged.ID, now)
+	if err != nil || got.Body != nil || got.SHA256 != "" || got.ExpiredAt == nil {
+		t.Fatalf("expired_at set while the rows remain: %+v, %v", got, err)
+	}
+	got, err = store.ReadSnapshot(ctx, pool, maintained.ID, now)
+	if err != nil || got.Status != "collected" || got.Body != nil || got.SHA256 != "" || got.ExpiredAt == nil || !got.ExpiredAt.Equal(now.Add(2*time.Hour)) {
+		t.Fatalf("expired by maintenance after the reader's clock: %+v, %v", got, err)
 	}
 
 	markDeleted(t, pool, collected.ID, now)
@@ -422,6 +446,23 @@ func TestReadPDFStates(t *testing.T) {
 	got, err = store.ReadPDF(ctx, pool, ready.ID, "en", now.Add(time.Hour))
 	if err != nil || got.PDF == nil || got.Body != nil || !got.ExpiresAt.Equal(now.Add(time.Hour)) {
 		t.Fatalf("ready at its expiry: %+v, %v", got, err)
+	}
+
+	maintained := collectedReport(t, pool, f, now.Add(time.Hour), map[string]string{"en": "ready"}, nil)
+	if ids := expireDue(t, pool, now.Add(2*time.Hour), 100); !slices.Contains(ids, maintained.ID) {
+		t.Fatalf("expired %v", ids)
+	}
+	flagged := collectedReport(t, pool, f, now.Add(time.Hour), map[string]string{"en": "ready"}, nil)
+	if _, err := pool.Exec(ctx, `UPDATE reports SET expired_at = $2 WHERE id = $1`, flagged.ID, now.Add(2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	got, err = store.ReadPDF(ctx, pool, flagged.ID, "en", now)
+	if err != nil || got.Body != nil || got.PDF == nil || got.ExpiredAt == nil {
+		t.Fatalf("expired_at set while the rows remain: %+v, %v", got, err)
+	}
+	got, err = store.ReadPDF(ctx, pool, maintained.ID, "en", now)
+	if err != nil || got.Status != "collected" || got.Body != nil || got.ExpiredAt == nil || !got.ExpiredAt.Equal(now.Add(2*time.Hour)) {
+		t.Fatalf("expired by maintenance after the reader's clock: %+v, %v", got, err)
 	}
 
 	markDeleted(t, pool, ready.ID, now)
@@ -530,7 +571,7 @@ func TestSweepSkipsRunning(t *testing.T) {
 	pool := storetest.New(t)
 	f := newReportFixture(t, pool)
 	queued := activeReport(t, pool, f, "queued", 1, now)
-	running := activeReport(t, pool, f, "running", 1, now)
+	running := activeReport(t, pool, f, "running", insertJob(t, pool, "running"), now)
 	collected := collectedReport(t, pool, f, now.Add(time.Hour), map[string]string{"en": "ready", "pt-BR": "pending"}, map[string]int64{"pt-BR": 4})
 	failed := claimedReport(t, pool, f, 1)
 	if err := store.FailReport(ctx, pool, failed.ID, 1, "INTERNAL_FAILURE", now); err != nil {
@@ -619,7 +660,8 @@ func TestReconcileAndExpireLeaveDeletedAlone(t *testing.T) {
 	queued := activeReport(t, pool, f, "queued", deletedJob(t, pool), now)
 	pending := collectedReport(t, pool, f, now.Add(2*time.Hour), map[string]string{"en": "pending"}, map[string]int64{"en": deletedJob(t, pool)})
 	due := collectedReport(t, pool, f, now.Add(time.Minute), map[string]string{"en": "ready"}, nil)
-	for _, id := range []uuid.UUID{queued.ID, pending.ID, due.ID} {
+	running := activeReport(t, pool, f, "running", deletedJob(t, pool), now)
+	for _, id := range []uuid.UUID{queued.ID, pending.ID, due.ID, running.ID} {
 		markDeleted(t, pool, id, now)
 	}
 
@@ -633,6 +675,7 @@ func TestReconcileAndExpireLeaveDeletedAlone(t *testing.T) {
 		t.Fatalf("expired %v", ids)
 	}
 	wantUntouched(t, "queued", getReportT(t, pool, queued.ID), "queued")
+	wantUntouched(t, "running", getReportT(t, pool, running.ID), "running")
 	if p, err := store.GetPDF(context.Background(), pool, pending.ID, "en"); err != nil || p.Status != "pending" {
 		t.Fatalf("pending row %+v, %v", p, err)
 	}
@@ -641,5 +684,28 @@ func TestReconcileAndExpireLeaveDeletedAlone(t *testing.T) {
 	}
 	if n := countRows(t, pool, `SELECT count(*) FROM report_snapshots`); n != 2 {
 		t.Fatalf("%d snapshots", n)
+	}
+}
+
+func TestSweepTakesADeletedRunningReportWhoseJobEnded(t *testing.T) {
+	pool := storetest.New(t)
+	f := newReportFixture(t, pool)
+	gone := activeReport(t, pool, f, "running", deletedJob(t, pool), now)
+	final := activeReport(t, pool, f, "running", insertJob(t, pool, "completed"), now)
+	discarded := activeReport(t, pool, f, "running", insertJob(t, pool, "discarded"), now)
+	cancelled := activeReport(t, pool, f, "running", insertJob(t, pool, "cancelled"), now)
+	live := activeReport(t, pool, f, "running", insertJob(t, pool, "running"), now)
+	available := activeReport(t, pool, f, "running", insertJob(t, pool, "available"), now)
+	for i, r := range []store.Report{gone, final, discarded, cancelled, live, available} {
+		markDeleted(t, pool, r.ID, now.Add(time.Duration(i)*time.Minute))
+	}
+
+	ids := sweep(t, pool, 100)
+	want := []uuid.UUID{gone.ID, final.ID, discarded.ID, cancelled.ID}
+	if !slices.Equal(ids, want) {
+		t.Fatalf("swept %v, want %v", ids, want)
+	}
+	if n := countRows(t, pool, `SELECT count(*) FROM reports WHERE id = ANY($1)`, []uuid.UUID{live.ID, available.ID}); n != 2 {
+		t.Fatalf("%d of the two reports with a live job are left", n)
 	}
 }
