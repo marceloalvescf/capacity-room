@@ -142,9 +142,9 @@ FROM reports WHERE status IN ('queued', 'running')`, profileID).Scan(&global, &p
 	return global, profile, nil
 }
 
-// execRunning runs a write of a running report that names its attempt, and
+// execGuarded runs a write whose WHERE clause names the state it needs, and
 // returns ErrStaleAttempt when no row matched.
-func execRunning(ctx context.Context, q Querier, sql string, args ...any) error {
+func execGuarded(ctx context.Context, q Querier, sql string, args ...any) error {
 	tag, err := q.Exec(ctx, sql, args...)
 	if err != nil {
 		return fmt.Errorf("write report: %w", err)
@@ -156,53 +156,57 @@ func execRunning(ctx context.Context, q Querier, sql string, args ...any) error 
 }
 
 // ClaimReport marks the report running in phase preflight under attempt. It
-// takes a queued report, or a running one whose stored attempt is not above
-// attempt, and returns ErrStaleAttempt otherwise.
+// takes a queued or running report whose stored attempt is not above attempt,
+// so the attempt never goes down, and returns ErrStaleAttempt otherwise.
 func ClaimReport(ctx context.Context, tx pgx.Tx, id uuid.UUID, attempt int, now time.Time) error {
-	return execRunning(ctx, tx, `
+	return execGuarded(ctx, tx, `
 UPDATE reports
 SET status = 'running', phase = 'preflight', attempt = $2, started_at = COALESCE(started_at, $3), updated_at = $3
-WHERE id = $1 AND (status = 'queued' OR (status = 'running' AND attempt <= $2))`, id, attempt, now)
+WHERE id = $1 AND status IN ('queued', 'running') AND attempt <= $2`, id, attempt, now)
 }
 
 // AdvanceReport moves a running report to phase.
 func AdvanceReport(ctx context.Context, q Querier, id uuid.UUID, attempt int, phase string, now time.Time) error {
-	return execRunning(ctx, q, `
+	return execGuarded(ctx, q, `
 UPDATE reports SET phase = $3, updated_at = $4
 WHERE id = $1 AND attempt = $2 AND status = 'running'`, id, attempt, phase, now)
 }
 
 // RequeueReport returns a running report to the queue.
 func RequeueReport(ctx context.Context, q Querier, id uuid.UUID, attempt int, now time.Time) error {
-	return execRunning(ctx, q, `
+	return execGuarded(ctx, q, `
 UPDATE reports SET status = 'queued', phase = 'waiting', updated_at = $3
 WHERE id = $1 AND attempt = $2 AND status = 'running'`, id, attempt, now)
 }
 
 // FailReport marks a running report failed with code.
 func FailReport(ctx context.Context, q Querier, id uuid.UUID, attempt int, code string, now time.Time) error {
-	return execRunning(ctx, q, `
+	return execGuarded(ctx, q, `
 UPDATE reports SET status = 'failed', phase = 'complete', failure_code = $3, completed_at = $4, updated_at = $4
 WHERE id = $1 AND attempt = $2 AND status = 'running'`, id, attempt, code, now)
 }
 
 // CollectReport marks a running report collected and waiting for its PDFs.
 func CollectReport(ctx context.Context, q Querier, id uuid.UUID, attempt int, now time.Time) error {
-	return execRunning(ctx, q, `
+	return execGuarded(ctx, q, `
 UPDATE reports SET status = 'collected', phase = 'rendering', collected_at = $3, updated_at = $3
 WHERE id = $1 AND attempt = $2 AND status = 'running'`, id, attempt, now)
 }
 
-// SetReportPhase sets the phase and the completion time of a collected
-// report, and returns ErrStaleAttempt for a report in another status.
+// SetReportPhase sets the phase of a collected report, which is rendering or
+// complete: completedAt is set exactly for complete and nil for rendering. It
+// returns ErrStaleAttempt for a report in another status.
 func SetReportPhase(ctx context.Context, q Querier, id uuid.UUID, phase string, completedAt *time.Time, now time.Time) error {
-	return execRunning(ctx, q, `
+	return execGuarded(ctx, q, `
 UPDATE reports SET phase = $2, completed_at = $3, updated_at = $4
 WHERE id = $1 AND status = 'collected'`, id, phase, completedAt, now)
 }
 
 // InsertSnapshot stores the snapshot bytes with their SHA-256 and size.
 func InsertSnapshot(ctx context.Context, q Querier, reportID uuid.UUID, schemaVersion string, body []byte, now time.Time) error {
+	if body == nil {
+		return errors.New("insert snapshot: nil body")
+	}
 	_, err := q.Exec(ctx, `
 INSERT INTO report_snapshots (report_id, schema_version, body, sha256, size_bytes, created_at)
 VALUES ($1, $2, $3, $4, $5, $6)`, reportID, schemaVersion, body, digest(body), int64(len(body)), now)
@@ -226,7 +230,8 @@ func GetSnapshot(ctx context.Context, q Querier, reportID uuid.UUID) (schemaVers
 	return schemaVersion, body, sha256, nil
 }
 
-// InsertPendingPDF adds a pending row for one language, run by the job.
+// InsertPendingPDF adds a pending row for one language; jobID is the id of
+// the River job that renders the row.
 func InsertPendingPDF(ctx context.Context, q Querier, reportID uuid.UUID, language string, jobID int64, now time.Time) error {
 	_, err := q.Exec(ctx, `
 INSERT INTO report_pdfs (report_id, language, status, job_id, updated_at)
@@ -257,7 +262,10 @@ FROM report_pdfs WHERE report_id = $1 AND language = $2`, reportID, language).
 // FinishPDF stores the PDF bytes with their SHA-256 and size and marks the row
 // ready. It returns ErrStaleAttempt when the row is not pending.
 func FinishPDF(ctx context.Context, q Querier, reportID uuid.UUID, language string, body []byte, now time.Time) error {
-	return execRunning(ctx, q, `
+	if body == nil {
+		return errors.New("finish pdf: nil body")
+	}
+	return execGuarded(ctx, q, `
 UPDATE report_pdfs SET status = 'ready', body = $3, sha256 = $4, size_bytes = $5, updated_at = $6
 WHERE report_id = $1 AND language = $2 AND status = 'pending'`,
 		reportID, language, body, digest(body), int64(len(body)), now)
@@ -266,7 +274,7 @@ WHERE report_id = $1 AND language = $2 AND status = 'pending'`,
 // FailPDF marks a pending row failed with code. It returns ErrStaleAttempt
 // when the row is not pending.
 func FailPDF(ctx context.Context, q Querier, reportID uuid.UUID, language string, code string, now time.Time) error {
-	return execRunning(ctx, q, `
+	return execGuarded(ctx, q, `
 UPDATE report_pdfs SET status = 'failed', failure_code = $3, updated_at = $4
 WHERE report_id = $1 AND language = $2 AND status = 'pending'`, reportID, language, code, now)
 }
@@ -274,7 +282,7 @@ WHERE report_id = $1 AND language = $2 AND status = 'pending'`, reportID, langua
 // RetryPDF returns a failed row to pending under a new job. It returns
 // ErrStaleAttempt when the row is not failed.
 func RetryPDF(ctx context.Context, q Querier, reportID uuid.UUID, language string, jobID int64, now time.Time) error {
-	return execRunning(ctx, q, `
+	return execGuarded(ctx, q, `
 UPDATE report_pdfs SET status = 'pending', failure_code = NULL, job_id = $3, updated_at = $4
 WHERE report_id = $1 AND language = $2 AND status = 'failed'`, reportID, language, jobID, now)
 }

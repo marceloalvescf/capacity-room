@@ -5,6 +5,7 @@ package store_test
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -268,6 +269,114 @@ func TestClaimRefusesAnOlderAttempt(t *testing.T) {
 	}
 	if err := claim(ctx, pool, r.ID, 2, now.Add(2*time.Minute)); err != nil {
 		t.Fatalf("same attempt again: %v", err)
+	}
+}
+
+func TestClaimNeverLowersTheAttemptOfAQueuedReport(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	f := newReportFixture(t, pool)
+	r := claimedReport(t, pool, f, 2)
+	if err := store.RequeueReport(ctx, pool, r.ID, 2, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := store.GetReport(ctx, pool, r.ID)
+	if before.Status != "queued" || before.Attempt != 2 {
+		t.Fatalf("setup: %+v", before)
+	}
+
+	if err := claim(ctx, pool, r.ID, 1, now.Add(2*time.Minute)); !errors.Is(err, store.ErrStaleAttempt) {
+		t.Fatalf("claim with 1: %v", err)
+	}
+	if after, _ := store.GetReport(ctx, pool, r.ID); !reflect.DeepEqual(before, after) {
+		t.Fatalf("row changed: %+v -> %+v", before, after)
+	}
+	if err := claim(ctx, pool, r.ID, 2, now.Add(3*time.Minute)); err != nil {
+		t.Fatalf("claim with 2: %v", err)
+	}
+	if err := store.RequeueReport(ctx, pool, r.ID, 2, now.Add(4*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := claim(ctx, pool, r.ID, 3, now.Add(5*time.Minute)); err != nil {
+		t.Fatalf("claim with 3: %v", err)
+	}
+	if got, _ := store.GetReport(ctx, pool, r.ID); got.Attempt != 3 || got.Status != "running" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestGuardedWritesRefuseWhatIsNotRunningAtTheirAttempt(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	f := newReportFixture(t, pool)
+	at := now.Add(time.Hour)
+
+	collected := claimedReport(t, pool, f, 2)
+	if err := store.CollectReport(ctx, pool, collected.ID, 2, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	failed := claimedReport(t, pool, f, 2)
+	if err := store.FailReport(ctx, pool, failed.ID, 2, "INTERNAL_FAILURE", now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	queued := claimedReport(t, pool, f, 2)
+	if err := store.RequeueReport(ctx, pool, queued.ID, 2, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	running := claimedReport(t, pool, f, 2)
+
+	writes := map[string]func(id uuid.UUID, attempt int) error{
+		"advance": func(id uuid.UUID, a int) error { return store.AdvanceReport(ctx, pool, id, a, "collecting", at) },
+		"requeue": func(id uuid.UUID, a int) error { return store.RequeueReport(ctx, pool, id, a, at) },
+		"fail":    func(id uuid.UUID, a int) error { return store.FailReport(ctx, pool, id, a, "INTERNAL_FAILURE", at) },
+		"collect": func(id uuid.UUID, a int) error { return store.CollectReport(ctx, pool, id, a, at) },
+	}
+	cases := []struct {
+		name    string
+		id      uuid.UUID
+		attempt int
+	}{
+		{"collected, matching attempt", collected.ID, 2},
+		{"failed, matching attempt", failed.ID, 2},
+		{"queued, matching attempt", queued.ID, 2},
+		{"running, higher attempt", running.ID, 3},
+	}
+	for write, call := range writes {
+		for _, c := range cases {
+			before, err := store.GetReport(ctx, pool, c.id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := call(c.id, c.attempt); !errors.Is(err, store.ErrStaleAttempt) {
+				t.Errorf("%s, %s: got %v, want ErrStaleAttempt", write, c.name, err)
+			}
+			if after, _ := store.GetReport(ctx, pool, c.id); !reflect.DeepEqual(before, after) {
+				t.Errorf("%s, %s: row changed: %+v -> %+v", write, c.name, before, after)
+			}
+		}
+		if err := call(uuid.New(), 2); !errors.Is(err, store.ErrStaleAttempt) {
+			t.Errorf("%s, absent id: got %v, want ErrStaleAttempt", write, err)
+		}
+	}
+}
+
+func TestFinishPDFAndInsertSnapshotRefuseANilBody(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	f := newReportFixture(t, pool)
+	r := queuedReport(f, f.profile, f.revision)
+	mustInsertReport(t, pool, r)
+	if err := store.InsertPendingPDF(ctx, pool, r.ID, "en", 1, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.FinishPDF(ctx, pool, r.ID, "en", nil, now); err == nil || errors.Is(err, store.ErrStaleAttempt) {
+		t.Fatalf("FinishPDF nil: %v", err)
+	}
+	if err := store.InsertSnapshot(ctx, pool, r.ID, "1.0", nil, now); err == nil {
+		t.Fatal("InsertSnapshot nil: accepted")
+	}
+	if got, _ := store.GetPDF(ctx, pool, r.ID, "en"); got.Status != "pending" {
+		t.Fatalf("row changed: %+v", got)
 	}
 }
 

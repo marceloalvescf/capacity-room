@@ -364,3 +364,26 @@ func TestLatestProfileRevision(t *testing.T) {
 		t.Fatalf("got %+v, %v", got, err)
 	}
 }
+
+func TestGetProfileForShareBlocksAnUpdate(t *testing.T) {
+	pool := storetest.New(t)
+	ctx := context.Background()
+	appendRevision(t, pool, "amy", "fp1")
+
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	got, err := store.GetProfileForShare(ctx, tx, "amy")
+	if err != nil || got.ID != "amy" {
+		t.Fatalf("got %+v, %v", got, err)
+	}
+	if _, err := store.GetProfileForShare(ctx, tx, "absent"); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("absent: %v", err)
+	}
+	expectBlocksUntilCommit(t, tx, func() error {
+		_, err := pool.Exec(ctx, `UPDATE profiles SET updated_at = $2 WHERE id = $1`, "amy", now.Add(time.Hour))
+		return err
+	})
+}

@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"slices"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
@@ -122,15 +121,14 @@ func requestDigest(sel Selection) (string, error) {
 // currentRevision locks the profile row against a change and reads its
 // current revision.
 func currentRevision(ctx context.Context, tx pgx.Tx, id string) (store.ProfileRevision, error) {
-	var current *uuid.UUID
-	err := tx.QueryRow(ctx, `SELECT current_revision_id FROM profiles WHERE id = $1 FOR SHARE`, id).Scan(&current)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && current == nil) {
+	profile, err := store.GetProfileForShare(ctx, tx, id)
+	if errors.Is(err, store.ErrNotFound) || (err == nil && profile.CurrentRevisionID == nil) {
 		return store.ProfileRevision{}, &Error{Code: "PROFILE_NOT_FOUND"}
 	}
 	if err != nil {
 		return store.ProfileRevision{}, fmt.Errorf("read profile: %w", err)
 	}
-	return store.GetProfileRevision(ctx, tx, *current)
+	return store.GetProfileRevision(ctx, tx, *profile.CurrentRevisionID)
 }
 
 // Request admits a report for the operator and queues its collection. The

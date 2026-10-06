@@ -186,3 +186,16 @@ func LatestProfileRevision(ctx context.Context, q Querier, profileID string) (Pr
 	return getRevision(ctx, q, "get latest profile revision",
 		`SELECT `+revisionColumns+` FROM profile_revisions WHERE profile_id = $1 ORDER BY revision DESC LIMIT 1`, profileID)
 }
+
+// GetProfileForShare reads the identity and holds a share lock on the row for
+// the transaction, so a concurrent change of the row waits until it commits.
+func GetProfileForShare(ctx context.Context, tx pgx.Tx, id string) (Profile, error) {
+	p, err := scanProfile(tx.QueryRow(ctx, `SELECT `+profileColumns+` FROM profiles WHERE id = $1 FOR SHARE`, id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Profile{}, ErrNotFound
+	}
+	if err != nil {
+		return Profile{}, fmt.Errorf("get profile: %w", err)
+	}
+	return p, nil
+}
