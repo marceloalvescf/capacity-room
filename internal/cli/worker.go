@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -32,6 +33,11 @@ const healthShutdownTimeout = 5 * time.Second
 // of River, its leader and maintenance work, and the handlers' own
 // transactions.
 const poolHeadroom = 8
+
+// workerPoolConns is the floor of MaxConns of the worker's pool.
+func workerPoolConns(loaded settings.Settings) int32 {
+	return int32(loaded.WorkerSlots + poolHeadroom)
+}
 
 // newWorkerCmd builds the `worker` subcommand: run the collect, render, and
 // maintenance jobs until the context ends.
@@ -67,11 +73,18 @@ func runWorker(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cob
 	if err != nil {
 		return &exitError{1, err}
 	}
-	pool, err := openPool(ctx, loaded, int32(loaded.WorkerSlots+poolHeadroom))
+	pool, err := openPool(ctx, loaded, workerPoolConns(loaded))
 	if err != nil {
 		return err
 	}
-	defer pool.Close()
+	// Closing the pool waits for every connection a handler holds, so a
+	// pool left to a job that did not stop is not closed: the process exits.
+	abandoned := false
+	defer func() {
+		if !abandoned {
+			pool.Close()
+		}
+	}()
 	if _, err := store.Migrate(ctx, pool); err != nil {
 		return &exitError{1, err}
 	}
@@ -89,13 +102,14 @@ func runWorker(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cob
 	if err != nil {
 		return &exitError{1, fmt.Errorf("cannot listen on %s: %w", listen, osError(err))}
 	}
+	lifecycle := &worker.Lifecycle{Client: client}
 	healthServer := newHTTPServer(health.Handler([]health.Check{
-		health.Database(pool), health.Migrations(pool), worker.Running(client),
+		health.Database(pool), health.Migrations(pool), lifecycle.Check(),
 	}))
 	defer func() { _ = listener.Close() }()
 
 	// Start gets a context that outlives ctx: the stop sequence is
-	// worker.Run's, not River's.
+	// the lifecycle's, not River's.
 	if err := client.Start(context.WithoutCancel(ctx)); err != nil {
 		return &exitError{1, fmt.Errorf("cannot start the worker: %w", err)}
 	}
@@ -115,7 +129,8 @@ func runWorker(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cob
 	}
 	logger.Info("worker: stopping")
 
-	stopErr := worker.Run(ctx, client, loaded.WorkerDrain)
+	stopErr := lifecycle.Run(ctx, loaded.WorkerDrain)
+	abandoned = errors.Is(stopErr, worker.ErrJobsDidNotStop)
 
 	shutdown, cancel := context.WithTimeout(context.WithoutCancel(ctx), healthShutdownTimeout)
 	defer cancel()

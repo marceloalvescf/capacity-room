@@ -8,15 +8,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Open connects a pool to dsn and pings it once. The pool holds at least
-// minConns connections at most: a DSN that sets fewer is raised to minConns,
-// and zero leaves the DSN's value.
-func Open(ctx context.Context, dsn string, minConns int32) (*pgxpool.Pool, error) {
+// Open connects a pool to dsn and pings it once. MaxConns is raised to
+// maxConnsFloor when the DSN sets fewer; zero keeps the DSN's value.
+func Open(ctx context.Context, dsn string, maxConnsFloor int32) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open pool: %w", err)
 	}
-	cfg.MaxConns = max(cfg.MaxConns, minConns)
+	cfg.MaxConns = max(cfg.MaxConns, maxConnsFloor)
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("open pool: %w", err)

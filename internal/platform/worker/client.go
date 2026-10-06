@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -12,14 +13,20 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/health"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
 )
 
-// The queues of the worker: reports runs collections and renders, and
-// maintenance runs the periodic job alone.
-const (
-	queueReports     = "reports"
-	queueMaintenance = "maintenance"
-)
+// queueMaintenance runs the periodic job alone.
+const queueMaintenance = "maintenance"
+
+// Queues are the queues of the worker: reports runs collections and renders
+// with slots workers, and maintenance runs one job at a time.
+func Queues(slots int) map[string]river.QueueConfig {
+	return map[string]river.QueueConfig{
+		reports.QueueReports: {MaxWorkers: slots},
+		queueMaintenance:     {MaxWorkers: 1},
+	}
+}
 
 // maintenanceEvery is the period of the maintenance job.
 const maintenanceEvery = time.Minute
@@ -52,12 +59,9 @@ func NewClient(c Config) (*river.Client[pgx.Tx], error) {
 
 	longest := max(d.Settings.CollectTimeout, d.Settings.RenderTimeout)
 	client, err := river.NewClient(riverpgxv5.New(d.Pool), &river.Config{
-		TestOnly: c.Test,
-		Logger:   slog.New(atLeast{d.Logger.Handler(), slog.LevelWarn}),
-		Queues: map[string]river.QueueConfig{
-			queueReports:     {MaxWorkers: c.Slots},
-			queueMaintenance: {MaxWorkers: 1},
-		},
+		TestOnly:             c.Test,
+		Logger:               slog.New(atLeast{d.Logger.Handler(), slog.LevelWarn}),
+		Queues:               Queues(c.Slots),
 		Workers:              workers,
 		MaxAttempts:          d.Settings.JobMaxAttempts,
 		JobTimeout:           longest,
@@ -79,12 +83,22 @@ func NewClient(c Config) (*river.Client[pgx.Tx], error) {
 	return client, nil
 }
 
-// Running is a health check named worker: the client started and has not
-// stopped. Start must have returned before the check can run concurrently
-// with it.
-func Running(client *river.Client[pgx.Tx]) health.Check {
+// Lifecycle holds a started client and tells whether it is still taking
+// jobs.
+type Lifecycle struct {
+	Client   *river.Client[pgx.Tx]
+	stopping atomic.Bool
+}
+
+// Check is the health check named worker: the client started, has not
+// stopped, and Run has not begun to stop it. Start must have returned before
+// the check can run concurrently with it.
+func (l *Lifecycle) Check() health.Check {
 	return health.Check{Name: "worker", Run: func(context.Context) bool {
-		stopped := client.Stopped()
+		if l.stopping.Load() {
+			return false
+		}
+		stopped := l.Client.Stopped()
 		if stopped == nil {
 			return false
 		}
@@ -97,18 +111,21 @@ func Running(client *river.Client[pgx.Tx]) health.Check {
 	}}
 }
 
-// Run holds a started client until ctx is done or the client stops. After
-// ctx is done it stops taking jobs and waits drain for the running ones,
-// then cancels what remains, which River returns to the queue with its
-// attempt restored, and waits drain again. A handler that still has not
-// returned is abandoned and Run returns ErrJobsDidNotStop; River's rescuer
-// recovers its job later. A client that stopped on its own is an error.
-func Run(ctx context.Context, client *river.Client[pgx.Tx], drain time.Duration) error {
+// Run holds the started client until ctx is done or the client stops. The
+// moment ctx is done the check turns false; Run then stops taking jobs and
+// waits drain for the running ones, then cancels what remains, which River
+// returns to the queue with its attempt restored, and waits drain again. A
+// handler that still has not returned is abandoned and Run returns
+// ErrJobsDidNotStop; River's rescuer recovers its job later. A client that
+// stopped on its own is an error.
+func (l *Lifecycle) Run(ctx context.Context, drain time.Duration) error {
+	client := l.Client
 	select {
 	case <-client.Stopped():
 		return errors.New("the client stopped on its own")
 	case <-ctx.Done():
 	}
+	l.stopping.Store(true)
 
 	soft, cancelSoft := context.WithTimeout(context.Background(), drain)
 	defer cancelSoft()

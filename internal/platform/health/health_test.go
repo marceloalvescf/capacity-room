@@ -88,3 +88,17 @@ func TestHealthReadyBoundIgnoresContext(t *testing.T) {
 		t.Fatalf("%d %q", w.Code, w.Body.String())
 	}
 }
+
+func TestHealthHead(t *testing.T) {
+	h := Handler([]Check{{"database", answer(true)}})
+	for path, want := range map[string]int{"/health/live": 200, "/health/ready": 200} {
+		w := serve(h, "HEAD", path)
+		if w.Code != want || w.Body.Len() != 0 {
+			t.Errorf("HEAD %s: %d %q", path, w.Code, w.Body.String())
+		}
+	}
+	w := serve(Handler([]Check{{"database", answer(false)}}), "HEAD", "/health/ready")
+	if w.Code != 503 || w.Body.Len() != 0 {
+		t.Errorf("HEAD ready down: %d %q", w.Code, w.Body.String())
+	}
+}

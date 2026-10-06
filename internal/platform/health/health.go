@@ -25,6 +25,11 @@ type readyBody struct {
 	Checks map[string]bool `json:"checks"`
 }
 
+// readOnly reports whether r is a GET or a HEAD, the two methods the routes take.
+func readOnly(r *http.Request) bool {
+	return r.Method == http.MethodGet || r.Method == http.MethodHead
+}
+
 // Handler answers GET /health/live with 200 {"status":"live"} and GET
 // /health/ready with 200 or 503 and the result of every check, run together
 // within two seconds; a check that has not answered by then counts as
@@ -32,12 +37,12 @@ type readyBody struct {
 func Handler(checks []Check) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/health/live":
-			writeJSON(w, http.StatusOK, map[string]string{"status": "live"})
-		case r.Method == http.MethodGet && r.URL.Path == "/health/ready":
+		case readOnly(r) && r.URL.Path == "/health/live":
+			writeJSON(w, r, http.StatusOK, map[string]string{"status": "live"})
+		case readOnly(r) && r.URL.Path == "/health/ready":
 			ready(w, r, checks)
 		default:
-			writeJSON(w, http.StatusNotFound, map[string]string{"status": "not_found"})
+			writeJSON(w, r, http.StatusNotFound, map[string]string{"status": "not_found"})
 		}
 	})
 }
@@ -75,7 +80,7 @@ func ready(w http.ResponseWriter, r *http.Request, checks []Check) {
 			break
 		}
 	}
-	writeJSON(w, status, body)
+	writeJSON(w, r, status, body)
 }
 
 // Database passes when the database answers SELECT 1.
@@ -100,9 +105,12 @@ func Migrations(pool *pgxpool.Pool) Check {
 	}}
 }
 
-func writeJSON(w http.ResponseWriter, status int, v any) {
+func writeJSON(w http.ResponseWriter, r *http.Request, status int, v any) {
 	body, _ := json.Marshal(v)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
+	if r.Method == http.MethodHead {
+		return
+	}
 	_, _ = w.Write(append(body, '\n'))
 }

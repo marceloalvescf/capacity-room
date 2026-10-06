@@ -10,7 +10,7 @@ import (
 // The queue and the priorities of the report jobs. A render runs before the
 // next collection, so a collected report's PDFs are not held back.
 const (
-	queueReports    = "reports"
+	QueueReports    = "reports"
 	priorityRender  = 1
 	priorityCollect = 2
 )
@@ -35,10 +35,10 @@ func (RenderArgs) Kind() string { return "render" }
 
 // CollectInsertOpts are the insert options of a collect job.
 func CollectInsertOpts(s settings.Settings) *river.InsertOpts {
-	return &river.InsertOpts{Queue: queueReports, Priority: priorityCollect, MaxAttempts: s.JobMaxAttempts}
+	return &river.InsertOpts{Queue: QueueReports, Priority: priorityCollect, MaxAttempts: s.JobMaxAttempts}
 }
 
 // RenderInsertOpts are the insert options of a render job.
 func RenderInsertOpts(s settings.Settings) *river.InsertOpts {
-	return &river.InsertOpts{Queue: queueReports, Priority: priorityRender, MaxAttempts: s.JobMaxAttempts}
+	return &river.InsertOpts{Queue: QueueReports, Priority: priorityRender, MaxAttempts: s.JobMaxAttempts}
 }

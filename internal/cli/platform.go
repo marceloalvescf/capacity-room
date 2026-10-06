@@ -45,10 +45,11 @@ func loadPlatformSettings(env Env, redactor *redact.Redactor, configPath string)
 	return loaded, nil
 }
 
-// openPool opens the pool of the loaded settings, with at least minConns
-// connections allowed. A problem is exit code 1.
-func openPool(ctx context.Context, loaded settings.Settings, minConns int32) (*pgxpool.Pool, error) {
-	pool, err := store.Open(ctx, loaded.DatabaseDSN, minConns)
+// openPool opens the pool of the loaded settings, with MaxConns raised to
+// maxConnsFloor when the DSN sets fewer (zero keeps the DSN's value). A
+// problem is exit code 1.
+func openPool(ctx context.Context, loaded settings.Settings, maxConnsFloor int32) (*pgxpool.Pool, error) {
+	pool, err := store.Open(ctx, loaded.DatabaseDSN, maxConnsFloor)
 	if err != nil {
 		return nil, &exitError{1, fmt.Errorf("cannot connect to the database: %w", err)}
 	}

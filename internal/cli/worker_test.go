@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
 )
 
 func TestWorkerHelpListsItsTwoFlags(t *testing.T) {
@@ -65,5 +67,13 @@ func TestWorkerCommandErrors(t *testing.T) {
 				t.Fatalf("the password came out: %q", stderr)
 			}
 		})
+	}
+}
+
+func TestWorkerPoolConns(t *testing.T) {
+	for slots, want := range map[int]int32{1: 9, 2: 10, 16: 24} {
+		if got := workerPoolConns(settings.Settings{WorkerSlots: slots}); got != want {
+			t.Errorf("slots %d: %d, want %d", slots, got, want)
+		}
 	}
 }

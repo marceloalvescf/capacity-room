@@ -35,7 +35,8 @@ func clientSettings(s *settings.Settings) {
 func TestRunning(t *testing.T) {
 	e := newEnv(t, clientSettings)
 	client := e.newClient(collectHooks{})
-	check := Running(client)
+	lc := &Lifecycle{Client: client}
+	check := lc.Check()
 	if check.Name != "worker" {
 		t.Fatalf("name %q", check.Name)
 	}
@@ -67,7 +68,7 @@ func TestRunStopsAnIdleClient(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- Run(ctx, client, time.Second) }()
+	go func() { done <- (&Lifecycle{Client: client}).Run(ctx, time.Second) }()
 	cancel()
 	select {
 	case err := <-done:
@@ -86,7 +87,7 @@ func TestRunReturnsWhenTheClientStops(t *testing.T) {
 		t.Fatal(err)
 	}
 	done := make(chan error, 1)
-	go func() { done <- Run(context.Background(), client, time.Second) }()
+	go func() { done <- (&Lifecycle{Client: client}).Run(context.Background(), time.Second) }()
 	stopCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := client.Stop(stopCtx); err != nil {
@@ -128,9 +129,18 @@ func TestWorkerStopAbandonsAHungJob(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- Run(ctx, client, time.Second) }()
+	lc := &Lifecycle{Client: client}
+	check := lc.Check()
+	if !check.Run(ctx) {
+		t.Fatal("not ready before the stop")
+	}
+	go func() { done <- lc.Run(ctx, time.Second) }()
 	start := time.Now()
 	cancel()
+	time.Sleep(200 * time.Millisecond)
+	if check.Run(context.Background()) {
+		t.Fatal("still ready while the stop drains")
+	}
 	select {
 	case err := <-done:
 		if !errors.Is(err, ErrJobsDidNotStop) || err.Error() != "jobs did not stop" {
@@ -139,7 +149,17 @@ func TestWorkerStopAbandonsAHungJob(t *testing.T) {
 		if took := time.Since(start); took < 2*time.Second {
 			t.Fatalf("gave up after %v, before both waits of the drain", took)
 		}
+		if check.Run(context.Background()) {
+			t.Fatal("ready after the stop was abandoned")
+		}
 	case <-time.After(4 * time.Second):
 		t.Fatal("Run did not give up within twice the drain and a margin")
+	}
+}
+
+func TestQueues(t *testing.T) {
+	q := Queues(3)
+	if len(q) != 2 || q["reports"].MaxWorkers != 3 || q["maintenance"].MaxWorkers != 1 {
+		t.Fatalf("queues %+v", q)
 	}
 }
