@@ -40,14 +40,36 @@ func (w *schemaWalk) resolve(schema map[string]any) map[string]any {
 	return w.schemas[name]
 }
 
-// walk follows the references, honours nullable, and checks each JSON type;
-// a schema without a type accepts anything.
+// matches reports whether value satisfies schema.
+func (w *schemaWalk) matches(schema map[string]any, value any) bool {
+	sub := &schemaWalk{schemas: w.schemas}
+	sub.walk("alternative", schema, value)
+	return len(sub.errs) == 0
+}
+
+// walk follows the references, honours nullable, enum, and oneOf, and checks
+// each JSON type; a schema without a type or alternatives accepts anything.
 func (w *schemaWalk) walk(path string, schema map[string]any, value any) {
 	schema = w.resolve(schema)
+	if alternatives, ok := schema["oneOf"].([]any); ok {
+		n := 0
+		for _, alternative := range alternatives {
+			if w.matches(alternative.(map[string]any), value) {
+				n++
+			}
+		}
+		if n != 1 {
+			w.fail(path, "%v matches %d of the %d alternatives, want exactly one", value, n, len(alternatives))
+		}
+		return
+	}
 	kind, _ := schema["type"].(string)
 	if value == nil {
 		if kind != "" && schema["nullable"] != true {
 			w.fail(path, "null where the schema is %s and not nullable", kind)
+		}
+		if allowed, ok := schema["enum"].([]any); ok && !slices.Contains(allowed, nil) {
+			w.fail(path, "null is not one of %v", allowed)
 		}
 		return
 	}
@@ -159,14 +181,7 @@ func TestViewMatchesTheContract(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s: %v", name, err)
 			}
-			body, err := document.EncodeView(view)
-			if err != nil {
-				t.Fatal(err)
-			}
-			var decoded any
-			if err := json.Unmarshal(body, &decoded); err != nil {
-				t.Fatal(err)
-			}
+			decoded := decodeView(t, view)
 			walk.errs = nil
 			walk.walk("view", map[string]any{"$ref": "#/components/schemas/ReportView"}, decoded)
 			if len(walk.errs) > 0 {
@@ -174,4 +189,110 @@ func TestViewMatchesTheContract(t *testing.T) {
 			}
 		}
 	}
+}
+
+func decodeView(t *testing.T, view document.View) any {
+	t.Helper()
+	body, err := document.EncodeView(view)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded any
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	return decoded
+}
+
+// check walks value against the schema and returns the differences.
+func (w *schemaWalk) check(schema map[string]any, value any) []string {
+	w.errs = nil
+	w.walk("v", schema, value)
+	return w.errs
+}
+
+func TestWalkerKnowsOneOfAndNullInAnEnum(t *testing.T) {
+	w := &schemaWalk{schemas: map[string]map[string]any{}}
+	raw := map[string]any{"oneOf": []any{
+		map[string]any{"type": "number"}, map[string]any{"type": "boolean"}, map[string]any{"type": "string"},
+	}}
+	for name, v := range map[string]any{"number": 1.5, "boolean": true, "string": "x"} {
+		if errs := w.check(raw, v); len(errs) != 0 {
+			t.Errorf("oneOf refuses a %s: %v", name, errs)
+		}
+	}
+	for name, v := range map[string]any{"object": map[string]any{"a": 1.0}, "array": []any{1.0}, "null": nil} {
+		if errs := w.check(raw, v); len(errs) == 0 {
+			t.Errorf("oneOf accepts a %s", name)
+		}
+	}
+	both := map[string]any{"oneOf": []any{map[string]any{"type": "number"}, map[string]any{"type": "integer"}}}
+	if errs := w.check(both, 2.0); len(errs) == 0 {
+		t.Error("oneOf accepts a value that two alternatives match")
+	}
+
+	mark := map[string]any{"type": "string", "nullable": true, "enum": []any{"healthy", nil}}
+	for name, v := range map[string]any{"a member": "healthy", "null": nil} {
+		if errs := w.check(mark, v); len(errs) != 0 {
+			t.Errorf("the enum refuses %s: %v", name, errs)
+		}
+	}
+	if errs := w.check(mark, "bogus"); len(errs) == 0 {
+		t.Error("the enum accepts a text outside it")
+	}
+	closed := map[string]any{"type": "string", "nullable": true, "enum": []any{"healthy"}}
+	if errs := w.check(closed, nil); len(errs) == 0 {
+		t.Error("an enum without null accepts null")
+	}
+}
+
+func TestViewContractRefusesAMutatedView(t *testing.T) {
+	walk := &schemaWalk{schemas: loadSchemas(t)}
+	root := map[string]any{"$ref": "#/components/schemas/ReportView"}
+	snap := goldenView(t, "direct-complete.json")
+	if errs := walk.check(root, decodeView(t, snap)); len(errs) != 0 {
+		t.Fatalf("the unmutated view differs: %v", errs)
+	}
+	mutations := map[string]func(view map[string]any){
+		"an evidence raw that is an object": func(view map[string]any) {
+			view["findings"].([]any)[0].(map[string]any)["evidence"].([]any)[0].(map[string]any)["raw"] = map[string]any{"n": 1.0}
+		},
+		"a status outside the enum": func(view map[string]any) {
+			view["namespaces"].([]any)[0].(map[string]any)["cpu_request_percent"].(map[string]any)["peak"].(map[string]any)["status"] = "bogus"
+		},
+		"a situation status outside the enum": func(view map[string]any) {
+			view["hpas"].([]any)[0].(map[string]any)["situation_status"] = "bogus"
+		},
+		"a reason status outside the enum": func(view map[string]any) {
+			view["nodes"].([]any)[0].(map[string]any)["reason_status"] = "bogus"
+		},
+	}
+	for name, mutate := range mutations {
+		decoded := decodeView(t, snap)
+		mutate(decoded.(map[string]any))
+		if errs := walk.check(root, decoded); len(errs) == 0 {
+			t.Errorf("%s: the walk accepts it", name)
+		}
+	}
+}
+
+func goldenView(t *testing.T, file string) document.View {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(filepath.Dir(filepath.Dir(contractPath(t))), "testdata", "snapshot", file))
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap, err := snapshot.Decode(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cat, err := catalog.Load(catalog.English)
+	if err != nil {
+		t.Fatal(err)
+	}
+	view, err := document.BuildView(snap, cat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return view
 }

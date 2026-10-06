@@ -35,10 +35,12 @@ type View struct {
 }
 
 // Value is a number with its text: Raw is nil when the number is absent,
-// and Text is then the placeholder the PDF prints for it.
+// and Text is then the placeholder the PDF prints for it. Status is the
+// mark the PDF prints beside the text, and nil when it prints none.
 type Value struct {
-	Raw  *float64 `json:"raw"`
-	Text string   `json:"text"`
+	Raw    *float64 `json:"raw"`
+	Text   string   `json:"text"`
+	Status *string  `json:"status"`
 }
 
 // Statistic is a series reduced to four numbers, with the state of its
@@ -180,6 +182,8 @@ type ViewHPA struct {
 	Current    Statistic `json:"current"`
 	Desired    Statistic `json:"desired"`
 	Situation  string    `json:"situation"`
+	// SituationStatus is the mark of the situation cell.
+	SituationStatus *string `json:"situation_status"`
 }
 
 // ViewNode is the row of one node.
@@ -199,6 +203,9 @@ type ViewNode struct {
 	Ready                *bool     `json:"ready"`
 	Schedulable          *bool     `json:"schedulable"`
 	Reason               string    `json:"reason"`
+	// ReasonStatus is the mark of the reason cell, nil when the node has no
+	// finding and the cell has none.
+	ReasonStatus *string `json:"reason_status"`
 }
 
 // ViewNodepool is one node pool and the names of its nodes.
@@ -296,40 +303,54 @@ type viewBuilder struct {
 	thresholds config.Thresholds
 }
 
-// textOf writes how a statistic's number is worded: the statistic and the
-// number it carries.
-type textOf func(stat snapshot.Statistics, value *float64) string
+// textOf writes how a statistic's number is worded: the mark the PDF prints
+// beside it, empty when it prints none, and its text.
+type textOf func(stat snapshot.Statistics, value *float64) (status, text string)
 
-// quantity words a number by format, as a table cell of a quantity does.
+// quantity words a number by format, as a table cell of a quantity does;
+// the PDF marks none.
 func (vb *viewBuilder) quantity(format func(float64) string) textOf {
-	return func(stat snapshot.Statistics, value *float64) string {
-		return quantityText(vb.b, stat, value, format)
+	return func(stat snapshot.Statistics, value *float64) (string, string) {
+		return "", quantityText(vb.b, stat, value, format)
 	}
 }
 
 // ratio words a ratio as the tables of namespaces and workloads do.
 func (vb *viewBuilder) ratio() textOf {
-	return func(stat snapshot.Statistics, value *float64) string {
-		_, text := ratioText(vb.b, stat, value, vb.thresholds)
-		return text
+	return func(stat snapshot.Statistics, value *float64) (string, string) {
+		return ratioText(vb.b, stat, value, vb.thresholds)
 	}
 }
 
 // usage words a usage percentage as the table of nodes does.
 func (vb *viewBuilder) usage() textOf {
-	return func(stat snapshot.Statistics, value *float64) string {
-		return usageText(vb.b, stat, value)
+	return func(stat snapshot.Statistics, value *float64) (string, string) {
+		return usageText(vb.b, stat, value, vb.thresholds)
 	}
+}
+
+// mark is a status as the view carries it: nil for none.
+func mark(status string) *string {
+	if status == "" {
+		return nil
+	}
+	return &status
+}
+
+// wordedValue words one number of stat by words.
+func wordedValue(stat snapshot.Statistics, number *float64, words textOf) Value {
+	status, text := words(stat, number)
+	return Value{Raw: number, Text: text, Status: mark(status)}
 }
 
 // statistic words the four numbers of stat, each by words.
 func (vb *viewBuilder) statistic(stat snapshot.Statistics, words textOf) Statistic {
 	return Statistic{
 		State:   stat.State,
-		Average: Value{Raw: stat.Average, Text: words(stat, stat.Average)},
-		Minimum: Value{Raw: stat.Minimum, Text: words(stat, stat.Minimum)},
-		Peak:    Value{Raw: stat.Peak, Text: words(stat, stat.Peak)},
-		Current: Value{Raw: stat.Current, Text: words(stat, stat.Current)},
+		Average: wordedValue(stat, stat.Average, words),
+		Minimum: wordedValue(stat, stat.Minimum, words),
+		Peak:    wordedValue(stat, stat.Peak, words),
+		Current: wordedValue(stat, stat.Current, words),
 	}
 }
 
@@ -340,10 +361,10 @@ func (vb *viewBuilder) replicas(stat snapshot.Statistics) Statistic {
 	count := vb.quantity(vb.b.cat.Count)
 	return Statistic{
 		State:   stat.State,
-		Average: Value{Raw: stat.Average, Text: average(stat, stat.Average)},
-		Minimum: Value{Raw: stat.Minimum, Text: count(stat, stat.Minimum)},
-		Peak:    Value{Raw: stat.Peak, Text: count(stat, stat.Peak)},
-		Current: Value{Raw: stat.Current, Text: count(stat, stat.Current)},
+		Average: wordedValue(stat, stat.Average, average),
+		Minimum: wordedValue(stat, stat.Minimum, count),
+		Peak:    wordedValue(stat, stat.Peak, count),
+		Current: wordedValue(stat, stat.Current, count),
 	}
 }
 
@@ -583,17 +604,18 @@ func (vb *viewBuilder) workloads(s snapshot.Snapshot, minRank int) []ViewWorkloa
 func (vb *viewBuilder) hpas(hpas []snapshot.HPA) []ViewHPA {
 	out := make([]ViewHPA, 0, len(hpas))
 	for _, h := range hpas {
-		_, situation := hpaSituationText(vb.b, h)
+		situationStatus, situation := hpaSituationText(vb.b, h)
 		out = append(out, ViewHPA{
-			Namespace:  h.Namespace,
-			Name:       h.Name,
-			TargetKind: h.TargetKind,
-			TargetName: h.TargetName,
-			SpecMin:    vb.pods(h.SpecMin),
-			SpecMax:    vb.pods(h.SpecMax),
-			Current:    vb.replicas(h.Current),
-			Desired:    vb.replicas(h.Desired),
-			Situation:  situation,
+			Namespace:       h.Namespace,
+			Name:            h.Name,
+			TargetKind:      h.TargetKind,
+			TargetName:      h.TargetName,
+			SpecMin:         vb.pods(h.SpecMin),
+			SpecMax:         vb.pods(h.SpecMax),
+			Current:         vb.replicas(h.Current),
+			Desired:         vb.replicas(h.Desired),
+			Situation:       situation,
+			SituationStatus: mark(situationStatus),
 		})
 	}
 	return out
@@ -607,7 +629,7 @@ func (vb *viewBuilder) nodes(s snapshot.Snapshot, minRank int) []ViewNode {
 		if analysis.Rank(status) < minRank {
 			continue
 		}
-		_, reason := nodeReasonText(vb.b, n.Name, s.Findings)
+		reasonStatus, reason := nodeReasonText(vb.b, n.Name, s.Findings)
 		out = append(out, ViewNode{
 			Name:                 n.Name,
 			Pool:                 n.Pool,
@@ -624,6 +646,7 @@ func (vb *viewBuilder) nodes(s snapshot.Snapshot, minRank int) []ViewNode {
 			Ready:                n.Ready,
 			Schedulable:          n.Schedulable,
 			Reason:               reason,
+			ReasonStatus:         mark(reasonStatus),
 		})
 	}
 	return out

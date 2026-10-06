@@ -67,6 +67,39 @@ func requireText(t *testing.T, what, got, want string) {
 	}
 }
 
+// cellStatus is the status of the status run of a cell, or nil when the cell
+// has none.
+func cellStatus(cell []Run) *string {
+	for _, r := range cell {
+		if r.kind == "status" {
+			status := r.status
+			return &status
+		}
+	}
+	return nil
+}
+
+func statusText(status *string) string {
+	if status == nil {
+		return "null"
+	}
+	return *status
+}
+
+func requireStatus(t *testing.T, what string, got *string, cell []Run) {
+	t.Helper()
+	if want := cellStatus(cell); statusText(got) != statusText(want) {
+		t.Errorf("%s status = %s, the PDF prints %s", what, statusText(got), statusText(want))
+	}
+}
+
+// requireValue compares the text and the mark of a value with a cell.
+func requireValue(t *testing.T, what string, got Value, cell []Run) {
+	t.Helper()
+	requireText(t, what, got.Text, cellText(cell))
+	requireStatus(t, what, got.Status, cell)
+}
+
 func TestViewSaysWhatThePDFSays(t *testing.T) {
 	var namespaces, workloads, hpas, nodes, reasons, recs int
 	for _, name := range goldenNames {
@@ -109,18 +142,18 @@ func TestViewSaysWhatThePDFSays(t *testing.T) {
 					seenNamespaces[namespace] = true
 					namespaces++
 					cpu, mem := table.Rows[0], table.Rows[1]
-					requireText(t, where+" cpu usage average", n.CPUUsage.Average.Text, cellText(cpu[1]))
-					requireText(t, where+" cpu usage peak", n.CPUUsage.Peak.Text, cellText(cpu[2]))
-					requireText(t, where+" cpu requests average", n.CPURequests.Average.Text, cellText(cpu[3]))
-					requireText(t, where+" cpu limits average", n.CPULimits.Average.Text, cellText(cpu[4]))
-					requireText(t, where+" cpu request percent peak", n.CPURequestPercent.Peak.Text, cellText(cpu[5]))
-					requireText(t, where+" cpu limit percent peak", n.CPULimitPercent.Peak.Text, cellText(cpu[6]))
-					requireText(t, where+" memory usage average", n.MemoryUsage.Average.Text, cellText(mem[1]))
-					requireText(t, where+" memory usage peak", n.MemoryUsage.Peak.Text, cellText(mem[2]))
-					requireText(t, where+" memory requests average", n.MemoryRequests.Average.Text, cellText(mem[3]))
-					requireText(t, where+" memory limits average", n.MemoryLimits.Average.Text, cellText(mem[4]))
-					requireText(t, where+" memory request percent peak", n.MemoryRequestPercent.Peak.Text, cellText(mem[5]))
-					requireText(t, where+" memory limit percent peak", n.MemoryLimitPercent.Peak.Text, cellText(mem[6]))
+					requireValue(t, where+" cpu usage average", n.CPUUsage.Average, cpu[1])
+					requireValue(t, where+" cpu usage peak", n.CPUUsage.Peak, cpu[2])
+					requireValue(t, where+" cpu requests average", n.CPURequests.Average, cpu[3])
+					requireValue(t, where+" cpu limits average", n.CPULimits.Average, cpu[4])
+					requireValue(t, where+" cpu request percent peak", n.CPURequestPercent.Peak, cpu[5])
+					requireValue(t, where+" cpu limit percent peak", n.CPULimitPercent.Peak, cpu[6])
+					requireValue(t, where+" memory usage average", n.MemoryUsage.Average, mem[1])
+					requireValue(t, where+" memory usage peak", n.MemoryUsage.Peak, mem[2])
+					requireValue(t, where+" memory requests average", n.MemoryRequests.Average, mem[3])
+					requireValue(t, where+" memory limits average", n.MemoryLimits.Average, mem[4])
+					requireValue(t, where+" memory request percent peak", n.MemoryRequestPercent.Peak, mem[5])
+					requireValue(t, where+" memory limit percent peak", n.MemoryLimitPercent.Peak, mem[6])
 				case "workload-resources":
 					for _, row := range table.Rows {
 						key := [2]string{namespace, cellText(row[0])}
@@ -131,15 +164,15 @@ func TestViewSaysWhatThePDFSays(t *testing.T) {
 						}
 						seenWorkloads[key] = true
 						workloads++
-						requireText(t, where+" workload pods", w.Pods.Text, cellText(row[1]))
-						requireText(t, where+" workload cpu usage average", w.CPUUsage.Average.Text, cellText(row[2]))
-						requireText(t, where+" workload cpu usage peak", w.CPUUsage.Peak.Text, cellText(row[3]))
-						requireText(t, where+" workload cpu request percent", w.CPURequestPercent.Peak.Text, cellText(row[4]))
-						requireText(t, where+" workload cpu limit percent", w.CPULimitPercent.Peak.Text, cellText(row[5]))
-						requireText(t, where+" workload memory usage average", w.MemoryUsage.Average.Text, cellText(row[6]))
-						requireText(t, where+" workload memory usage peak", w.MemoryUsage.Peak.Text, cellText(row[7]))
-						requireText(t, where+" workload memory request percent", w.MemoryRequestPercent.Peak.Text, cellText(row[8]))
-						requireText(t, where+" workload memory limit percent", w.MemoryLimitPercent.Peak.Text, cellText(row[9]))
+						requireValue(t, where+" workload pods", w.Pods, row[1])
+						requireValue(t, where+" workload cpu usage average", w.CPUUsage.Average, row[2])
+						requireValue(t, where+" workload cpu usage peak", w.CPUUsage.Peak, row[3])
+						requireValue(t, where+" workload cpu request percent", w.CPURequestPercent.Peak, row[4])
+						requireValue(t, where+" workload cpu limit percent", w.CPULimitPercent.Peak, row[5])
+						requireValue(t, where+" workload memory usage average", w.MemoryUsage.Average, row[6])
+						requireValue(t, where+" workload memory usage peak", w.MemoryUsage.Peak, row[7])
+						requireValue(t, where+" workload memory request percent", w.MemoryRequestPercent.Peak, row[8])
+						requireValue(t, where+" workload memory limit percent", w.MemoryLimitPercent.Peak, row[9])
 					}
 				case "hpa-observed":
 					for _, row := range table.Rows {
@@ -149,12 +182,13 @@ func TestViewSaysWhatThePDFSays(t *testing.T) {
 							continue
 						}
 						hpas++
-						requireText(t, where+" hpa spec min", h.SpecMin.Text, cellText(row[1]))
-						requireText(t, where+" hpa spec max", h.SpecMax.Text, cellText(row[2]))
-						requireText(t, where+" hpa current average", h.Current.Average.Text, cellText(row[3]))
-						requireText(t, where+" hpa minimum reached", h.Current.Minimum.Text, cellText(row[4]))
-						requireText(t, where+" hpa maximum reached", h.Current.Peak.Text, cellText(row[5]))
+						requireValue(t, where+" hpa spec min", h.SpecMin, row[1])
+						requireValue(t, where+" hpa spec max", h.SpecMax, row[2])
+						requireValue(t, where+" hpa current average", h.Current.Average, row[3])
+						requireValue(t, where+" hpa minimum reached", h.Current.Minimum, row[4])
+						requireValue(t, where+" hpa maximum reached", h.Current.Peak, row[5])
 						requireText(t, where+" hpa situation", h.Situation, cellText(row[6]))
+						requireStatus(t, where+" hpa situation", h.SituationStatus, row[6])
 					}
 				case "node-detail":
 					for _, row := range table.Rows {
@@ -165,11 +199,12 @@ func TestViewSaysWhatThePDFSays(t *testing.T) {
 						}
 						seenNodes[n.Name] = true
 						nodes++
-						requireText(t, where+" node cpu average", n.CPUUsagePercent.Average.Text, cellText(row[1][:1]))
-						requireText(t, where+" node cpu peak", n.CPUUsagePercent.Peak.Text, cellText(row[1][2:]))
-						requireText(t, where+" node memory average", n.MemoryUsagePercent.Average.Text, cellText(row[2][:1]))
-						requireText(t, where+" node memory peak", n.MemoryUsagePercent.Peak.Text, cellText(row[2][2:]))
+						requireValue(t, where+" node cpu average", n.CPUUsagePercent.Average, row[1][:1])
+						requireValue(t, where+" node cpu peak", n.CPUUsagePercent.Peak, row[1][2:])
+						requireValue(t, where+" node memory average", n.MemoryUsagePercent.Average, row[2][:1])
+						requireValue(t, where+" node memory peak", n.MemoryUsagePercent.Peak, row[2][2:])
 						requireText(t, where+" node reason", n.Reason, cellText(row[3]))
+						requireStatus(t, where+" node reason", n.ReasonStatus, row[3])
 					}
 				case "action-plan":
 					plan := 0
@@ -618,5 +653,60 @@ func TestViewRefusesWhatCheckRefuses(t *testing.T) {
 	s.Report.MinSeverity = "healthy"
 	if _, err := BuildView(s, mustCatalog(t, catalog.English)); err == nil {
 		t.Error("BuildView() accepted an unknown minimum severity")
+	}
+}
+
+// marks lists the status of the four numbers of a statistic, "null" for none.
+func marks(s Statistic) [4]string {
+	return [4]string{statusText(s.Average.Status), statusText(s.Minimum.Status), statusText(s.Peak.Status), statusText(s.Current.Status)}
+}
+
+func TestViewMarksEveryNumberAsThePDFDoes(t *testing.T) {
+	direct := mustView(t, goldenSnapshot(t, "direct-complete"), catalog.English)
+	ns := direct.Namespaces[0]
+	for name, c := range map[string]struct {
+		got  [4]string
+		want [4]string
+	}{
+		"cpu request percent":    {marks(ns.CPURequestPercent), [4]string{"healthy", "healthy", "attention", "attention"}},
+		"memory request percent": {marks(ns.MemoryRequestPercent), [4]string{"critical", "critical", "critical", "critical"}},
+		"cpu limit percent":      {marks(ns.CPULimitPercent), [4]string{"healthy", "healthy", "healthy", "healthy"}},
+		"cpu usage":              {marks(ns.CPUUsage), [4]string{"null", "null", "null", "null"}},
+		"memory requests":        {marks(ns.MemoryRequests), [4]string{"null", "null", "null", "null"}},
+		"node cpu usage":         {marks(direct.Nodes[0].CPUUsagePercent), [4]string{"healthy", "healthy", "healthy", "healthy"}},
+		"hpa current":            {marks(direct.HPAs[0].Current), [4]string{"null", "null", "null", "null"}},
+	} {
+		if c.got != c.want {
+			t.Errorf("%s: marks %v, want %v", name, c.got, c.want)
+		}
+	}
+	unmeasured := direct.Workloads[1]
+	if got, want := marks(unmeasured.CPURequestPercent), [4]string{"unavailable", "unavailable", "unavailable", "unavailable"}; got != want {
+		t.Errorf("unmeasured ratio: marks %v, want %v", got, want)
+	}
+	if got, want := marks(unmeasured.CPUUsage), [4]string{"null", "null", "null", "null"}; got != want {
+		t.Errorf("unmeasured usage: marks %v, want %v", got, want)
+	}
+
+	nodes := direct.Nodes[0]
+	for name, status := range map[string]*string{
+		"pods": ns.Pods.Status, "cpu capacity": nodes.CPUCapacity.Status, "cpu request percent": nodes.CPURequestPercent.Status,
+		"summary findings": direct.Summary.Findings.Status, "spec max": direct.HPAs[0].SpecMax.Status,
+		"managed node groups": direct.Summary.Autoscaling.ManagedNodeGroups.Status,
+	} {
+		if status != nil {
+			t.Errorf("%s carries the mark %q, the PDF prints none", name, *status)
+		}
+	}
+	if got := statusText(direct.HPAs[0].SituationStatus); got != "healthy" {
+		t.Errorf("hpa situation mark %s, want healthy", got)
+	}
+	if got := statusText(nodes.ReasonStatus); got != "healthy" {
+		t.Errorf("node reason mark %s, want healthy", got)
+	}
+
+	edge := mustView(t, goldenSnapshot(t, "edge-values"), catalog.English)
+	if got, want := marks(edge.Namespaces[0].CPURequestPercent), [4]string{"undefined", "undefined", "undefined", "undefined"}; got != want {
+		t.Errorf("a ratio without a base: marks %v, want %v", got, want)
 	}
 }

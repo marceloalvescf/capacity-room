@@ -93,21 +93,27 @@ func maximum(values []float64) *float64 {
 
 // percentRun judges a percentage, or marks it unavailable when it is nil.
 func percentRun(b *builder, value *float64, thresholds config.Thresholds) Run {
-	if value == nil {
-		return StatusText("unavailable", b.text(catalog.PlaceholderUnavailable, nil))
-	}
-	return StatusText(analysis.Classify(*value, thresholds), b.cat.Percent(*value))
+	status, text := percentText(b, value, thresholds)
+	return StatusText(status, text)
 }
 
-// usageText writes a usage percentage of a node as its statistic carries
+// percentText is the status and the text of percentRun.
+func percentText(b *builder, value *float64, thresholds config.Thresholds) (status, text string) {
+	if value == nil {
+		return "unavailable", b.text(catalog.PlaceholderUnavailable, nil)
+	}
+	return analysis.Classify(*value, thresholds), b.cat.Percent(*value)
+}
+
+// usageText judges a usage percentage of a node as its statistic carries
 // it: the percentage when the statistic has a value, else the unavailable
-// placeholder.
-func usageText(b *builder, stat snapshot.Statistics, value *float64) string {
+// placeholder, with the status the table of nodes marks it with.
+func usageText(b *builder, stat snapshot.Statistics, value *float64, thresholds config.Thresholds) (status, text string) {
 	v, ok := known(stat, value)
 	if !ok {
-		return b.text(catalog.PlaceholderUnavailable, nil)
+		return percentText(b, nil, thresholds)
 	}
-	return b.cat.Percent(v)
+	return percentText(b, &v, thresholds)
 }
 
 // poolSummary builds the summary heading and its table, or its paragraph
