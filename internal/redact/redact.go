@@ -5,6 +5,7 @@ package redact
 import (
 	"io"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -47,17 +48,23 @@ func New(secrets ...string) *Redactor {
 	return r
 }
 
-// Add keeps the secrets that are not empty, adding them to the ones r
-// already holds, and keeps the whole set sorted longest first.
+// Add keeps the secrets that are not empty and not already held, adding
+// them to the ones r already holds, and keeps the whole set sorted longest
+// first. A secret added again changes nothing, so a process that adds the
+// same credential on every use holds it once.
 func (r *Redactor) Add(secrets ...string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	added := false
 	for _, secret := range secrets {
-		if secret != "" {
+		if secret != "" && !slices.Contains(r.secrets, secret) {
 			r.secrets = append(r.secrets, secret)
+			added = true
 		}
 	}
-	sort.SliceStable(r.secrets, func(i, j int) bool { return len(r.secrets[i]) > len(r.secrets[j]) })
+	if added {
+		sort.SliceStable(r.secrets, func(i, j int) bool { return len(r.secrets[i]) > len(r.secrets[j]) })
+	}
 }
 
 // Text returns s with every secret removed. It reads the current set of
