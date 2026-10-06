@@ -147,9 +147,9 @@ Each is a decision the spec leaves open, written as decision, reason, and cost i
 
 - [x] **Step 1:** `main` at `6ea960b`, pushed; `ROADMAP.md` and `CHANGELOG.md` read and true; F-126 recorded.
 - [x] **Step 2:** `git switch -c feat/platform-api`.
-- [ ] **Step 3:** Commit the OrbStack instructions (F-126): `git add AGENTS.md Makefile`; `docs: run Docker through OrbStack` (31 characters).
-- [ ] **Step 4:** `ROADMAP.md`: the summary line of 3.4 names this plan; a section "Phase 3.4" with P34-0 to P34-11, all `OPEN`; the rulings R143 to R163; the owner's approval with its date.
-- [ ] **Step 5:** Commit the plan: `docs(plan): add the plan of part 3.4` (36 characters).
+- [x] **Step 3:** Commit the OrbStack instructions (F-126): `git add AGENTS.md Makefile`; `docs: run Docker through OrbStack` (31 characters).
+- [x] **Step 4:** `ROADMAP.md`: the summary line of 3.4 names this plan; a section "Phase 3.4" with P34-0 to P34-11, all `OPEN`; the rulings R143 to R163; the owner's approval with its date.
+- [x] **Step 5:** Commit the plan: `docs(plan): add the plan of part 3.4` (36 characters).
 
 **Done when:** the plan is committed on the branch, approved by the owner, and `ROADMAP.md` holds the part.
 
