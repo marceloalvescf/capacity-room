@@ -47,6 +47,23 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a report runs.
 - The `admin import-profiles` command creates or revises profiles from a
   TOML file and can be run again without effect.
+- The `worker` command runs the report jobs of the platform, two at a time
+  by default, and answers its health checks on port 8091.
+- Sign-in records whose block is over, and sessions that ended longer than
+  a session lifetime ago, are removed once a minute.
+
+### Changed
+
+- `admin import-profiles` reports `recreated`, and records it apart from a
+  creation, for a profile that was deleted through the API.
+- The outbound policy refuses three more IPv6 forms that embed an IPv4
+  address.
+- The profile test gives up after two minutes at most.
+- A snapshot file read with `--from-snapshot` is refused when it repeats a
+  key, holds text that is not UTF-8, or holds a combination of values that
+  the program never writes.
+- The PDF that `report` writes takes its permissions from the umask, as the
+  snapshot file does.
 
 ## [0.1.0] - 2026-10-02
 

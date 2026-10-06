@@ -32,7 +32,7 @@ make generate         # writes the Go types of api/openapi.yaml
 make generate-check   # fails when the committed generated file is stale
 make postgres-up      # starts PostgreSQL 18 for the platform tests, through Compose
 make postgres-down    # removes it, with its volume
-make test-postgres    # postgres-up, the tests tagged postgres, postgres-down
+make test-postgres    # postgres-up, the tests tagged postgres (and the worker's with typst), postgres-down
 make gate             # everything above, from freshly built images
 make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files
@@ -138,6 +138,7 @@ Build tags in use:
 | `template` | `typst`, `pdftotext` | `make test-template`, which also runs `internal/cli` |
 | `golden` | `typst`, with `template` | `make test-golden` |
 | `postgres` | PostgreSQL, through `KCR_TEST_DATABASE_DSN` | `make test-postgres`, over `internal/platform/...` and `internal/cli` |
+| `postgres` with `template` | PostgreSQL and `typst` | `make test-postgres`, over `internal/platform/worker` |
 
 With the native tools installed, a subagent runs the tagged tests itself:
 
@@ -162,17 +163,22 @@ rank, or of its own layer.
 | 55 | `internal/collect` |
 | 60 | `internal/analysis` |
 | 70 | `internal/snapshot` |
+| 75 | `internal/pipeline` |
 | 80 | `internal/catalog` |
 | 90 | `internal/document` |
+| 100 | `internal/render` |
 | 95 | `internal/goldentest` |
 | 105 | `internal/platform/netpolicy` |
 | 110 | `internal/platform/settings` |
 | 120 | `internal/platform/store` |
 | 125 | `internal/platform/storetest` |
+| 128 | `internal/platform/health` |
 | 130 | `internal/platform/audit` |
 | 140 | `internal/platform/auth` |
 | 145 | `internal/platform/profiles` |
+| 146 | `internal/platform/reports` |
 | 150 | `internal/platform/api` |
+| 160 | `internal/platform/worker` |
 | 200 | `internal/cli` |
 
 The snapshot is the only handover. Everything after `snapshot.Build` reads
@@ -197,8 +203,8 @@ below the command; the core never imports `internal/platform/`.
 - **Every failure prints one line**, `error: <message>`, on standard error,
   and nothing on standard output.
 - **Output files are written beside their target and renamed.** They follow
-  the umask, which is never read or set. A file that the compiler wrote is
-  renamed only when it starts as a PDF does.
+  the umask, which is never read or set. PDF bytes are written only when
+  they start as a PDF does.
 - **A token is at least 8 characters long.** A shorter one cannot be told
   from ordinary text, and is refused before it reaches the redactor.
 - **The snapshot file has one reading.** The reader walks the file against
@@ -224,8 +230,8 @@ below the command; the core never imports `internal/platform/`.
 
 ## The platform
 
-`serve` is the web platform's backend and `admin` its operator commands.
-Both read one TOML deployment file, `--config` (default `platform.toml`),
+`serve` is the web platform's backend, `worker` runs its report jobs, and
+`admin` holds its operator commands. All three read one TOML deployment file, `--config` (default `platform.toml`),
 and the database DSN from `KCR_DATABASE_DSN` alone. The DSN enters the
 redactor the moment the settings are loaded, before the pool opens.
 
@@ -239,12 +245,19 @@ redactor the moment the settings are loaded, before the pool opens.
   a CIDR that covers a metadata address with more than that one address is
   refused), and `credential_dir` and `ca_bundle_dir` (the folders the
   reference files are read from, absolute, defaults `/run/secrets/metrics`
-  and `/run/config/ca`, not read at load).
+  and `/run/config/ca`, not read at load), and the ten keys of the worker
+  and the reports: `worker_slots`, `worker_drain_seconds`,
+  `collect_timeout_seconds`, `render_timeout_seconds`, `job_max_attempts`,
+  `report_retention_days`, `expired_report_days`, `admission_limit`,
+  `admission_profile_limit` (not above `admission_limit`), and
+  `admission_retry_seconds`, with no environment override.
 - **The schema is applied under a lock.** The migrations are SQL files
   embedded under `internal/platform/store/migrations/`, applied by goose
-  under the PostgreSQL session lock `72427301`, by `serve` before it listens
-  and by `admin migrate`. Every timestamp is passed from Go; no statement
-  calls `now()`. Every foreign key is `ON DELETE RESTRICT`; deletion is
+  under the PostgreSQL session lock `72427301`, by `serve` before it listens,
+  by `worker` before it starts, and by `admin migrate`. Every timestamp of
+  this project's tables is passed from Go; no statement of this project
+  calls `now()`. River's own tables, created by `00003_river.sql`, use
+  `now()` in River's SQL; that is the one exception. Every foreign key is `ON DELETE RESTRICT`; deletion is
   deactivation. The audit table refuses an update, a delete, and a truncate
   by triggers.
 - **A change of role or active flag takes the table lock first,** so the
@@ -263,8 +276,9 @@ redactor the moment the settings are loaded, before the pool opens.
   CSRF (403), body (400). The role is read from the database on every
   request. A body is at most 64 KiB, with no unknown, repeated, or
   wrongly typed key.
-- **`serve` and `admin` exit with 0, 1, or 2:** 1 for a failure at run time
-  (the database, the listener, a refusal of `bootstrap-admin`), 2 for the
+- **`serve`, `worker`, and `admin` exit with 0, 1, or 2:** 1 for a failure
+  at run time (the database, the listener, Typst for `worker`, jobs that did
+  not stop after the drain, a refusal of `bootstrap-admin`), 2 for the
   arguments or the settings file.
 - **`admin bootstrap-admin` runs only with `KCR_BOOTSTRAP_MODE=1`,** reads
   the password from standard input alone, and refuses when any user exists.
@@ -306,9 +320,51 @@ redactor the moment the settings are loaded, before the pool opens.
   refuses an unknown key (an inline credential key among them) and a
   repeated id, validates every document and every endpoint before any
   write, then creates or revises in one transaction with no actor, and
-  prints `created`, `revised`, or `unchanged` per profile. Profiles the file
-  does not name are left alone. A refused file is exit 2 before the pool
-  opens.
+  prints `created`, `revised`, `recreated`, or `unchanged` per profile; a
+  profile deleted through the API is recreated, continuing its revision
+  count, and audited `profile.recreate`. Profiles the file does not name are
+  left alone. A refused file is exit 2 before the pool opens.
+
+### The worker and the reports
+
+- **River is the queue, and its schema is a goose migration.**
+  `00003_river.sql` holds River's SQL of its versions 2 to 8 as the library
+  gives it, and a test compares the file with the library version by
+  version, so an upgrade of River fails until a new migration holds the new
+  versions; a River version that adds an enum value and one that uses it go
+  in two files. No `riverdatabasesql`, no `rivertest`.
+- **A report is `queued`, `running`, `collected`, or `failed`,** with a
+  phase bound to it by a check: `rendering` means a PDF row is `pending`,
+  `complete` means none is. A request takes the transaction advisory lock
+  `72427302` before its idempotency row and its admission counts, and
+  inserts the River job, the report carrying the job's id, the idempotency
+  row, and the audit row in one transaction.
+- **The attempt owns a running report.** A collect attempt claims the report
+  with its River attempt and never lowers it; every later write of the
+  report names that attempt and the status `running`, and writes nothing
+  when either differs. A PDF row is written only from `pending`. Every
+  handler writes its outcome and completes its River job in one
+  transaction. A stale attempt reaches River as `<kind>: STALE_ATTEMPT`.
+- **No stored text carries a failure's words.** A report or a PDF row
+  stores a code; a River job's error is `<kind>: <CODE>`; the cause goes to
+  the log through the run's redactor. A credential the worker reads enters
+  the redactor before it is used.
+- **Only an unreachable source and an internal failure are retried,** up to
+  `job_max_attempts`; a deadline and every other code are stored at once.
+- **A snapshot is stored as the bytes `snapshot.Encode` wrote,** in `bytea`,
+  at most 32 MiB, with its SHA-256 and size, never as `jsonb`; a PDF at most
+  64 MiB. A render recomputes the snapshot's SHA-256 before decoding it.
+- **The maintenance job runs every minute** on the elected River leader, in
+  five steps of their own: reconcile (a report or PDF row whose River job is
+  gone or final fails `JOB_ATTEMPTS_EXHAUSTED` or `PDF_ATTEMPTS_EXHAUSTED`),
+  expire (after `report_retention_days` the snapshot and PDF rows go and the
+  report is kept as expired), purge (after `expired_report_days` more the
+  report goes), the sign-in throttle rows whose block is over, and the
+  sessions ended longer than a session lifetime ago.
+- **The `worker` stop is bounded:** it takes no new job, waits
+  `worker_drain_seconds`, cancels the rest (River returns them with the
+  attempt restored), waits once more, and then exits 1 with `jobs did not
+  stop`; readiness is false from the moment the stop begins.
 
 ### Golden snapshots and data files
 

@@ -21,10 +21,15 @@ full design is in
   the executive summary, and the appendix.
 - The command `serve`, the backend of the web platform: sign-in with local
   accounts in three roles, sessions, the reader's own account, and the
-  administration of users, over an HTTP API described in
-  [api/openapi.yaml](api/openapi.yaml). The reports through the API, the
-  worker, and the frontend are not there yet.
-- The command `admin`, with `migrate`, `bootstrap-admin`, and `probe`.
+  administration of users and of metric-source profiles, over an HTTP API
+  described in [api/openapi.yaml](api/openapi.yaml). The report routes and
+  the frontend are not there yet.
+- The command `worker`, which runs the report jobs of the platform: it
+  collects a requested report through the outbound policy, stores its
+  snapshot, writes one PDF per language, and expires and removes reports
+  after their retention.
+- The command `admin`, with `migrate`, `bootstrap-admin`, `probe`, and
+  `import-profiles`.
 - A container image that carries the binary and Typst 0.15.1.
 - The report template, in two layers under [template/](template/): a generic
   page shell and the layout of the capacity report.
@@ -35,7 +40,8 @@ full design is in
 
 - Go 1.27
 - Docker with Buildx
-- For `serve` and `admin`: PostgreSQL 18
+- For `serve`, `worker`, and `admin`: PostgreSQL 18
+- For `worker`: `typst` 0.15.1, as for a PDF
 - To write a PDF outside the container: `typst` 0.15.1 on `PATH`, or its path
   in `KCR_TYPST`. Any other version is refused.
 
@@ -335,8 +341,45 @@ warning_percent = 60
 bin/k8s-capacity-report admin import-profiles --file profiles.toml --config platform.toml
 ```
 
-`serve` and `admin` exit with 0, with 1 for a failure at run time (the
-database, the listener, a refusal of `bootstrap-admin`), and with 2 for the
+`worker` reads the same deployment file and DSN. It applies the schema
+under the same lock as `serve`, so the two start in any order, answers
+`GET /health/live` and `GET /health/ready` on `--health-listen` (default
+`:8091`), and runs the report jobs through River, the job queue that lives
+in the same database. On a stop signal it takes no new job, waits
+`worker_drain_seconds` for the running ones, then cancels them; a cancelled
+job returns to the queue and runs again from the start.
+
+```bash
+bin/k8s-capacity-report worker --config platform.toml --health-listen :8091
+```
+
+These keys of the deployment file govern the reports; each shows its
+default and its bounds.
+
+| Key | Default | Bounds | Meaning |
+|---|---|---|---|
+| `worker_slots` | 2 | 1 to 16 | Report jobs one worker runs at once |
+| `worker_drain_seconds` | 30 | 1 to 3600 | Wait for running jobs at a stop, before they are cancelled |
+| `collect_timeout_seconds` | 900 | 60 to 3600 | Longest collection |
+| `render_timeout_seconds` | 300 | 10 to 3600 | Longest compilation of one PDF |
+| `job_max_attempts` | 3 | 1 to 10 | Attempts of a job whose source was unreachable or that failed inside |
+| `report_retention_days` | 7 | 1 to 365 | Days a report keeps its snapshot and PDFs |
+| `expired_report_days` | 30 | 1 to 365 | Days an expired report is kept as a record before it is removed |
+| `admission_limit` | 20 | 1 to 1000 | Reports queued or running at once |
+| `admission_profile_limit` | 5 | 1 to `admission_limit` | Reports queued or running at once for one profile |
+| `admission_retry_seconds` | 5 | 1 to 300 | The wait a refused request is told to keep |
+
+A report is collected once, stored as a snapshot, and compiled into one
+PDF for each language. A collection whose source cannot be reached is tried
+again, up to `job_max_attempts`; any other failure is final and stored as a
+code. After `report_retention_days` the snapshot and the PDFs are deleted
+and the report is kept as expired; after `expired_report_days` more it is
+removed. Once a minute the worker also removes sign-in records whose block
+is over and sessions that ended longer than a session lifetime ago.
+
+`serve`, `worker`, and `admin` exit with 0, with 1 for a failure at run time
+(the database, the listener, Typst for `worker`, jobs that did not stop
+after the drain, a refusal of `bootstrap-admin`), and with 2 for the
 arguments or the settings file.
 
 ## Commands
@@ -353,7 +396,7 @@ make generate         # writes the Go types of api/openapi.yaml
 make generate-check   # fails when the committed generated file is stale
 make postgres-up      # starts PostgreSQL 18 for the platform tests, through Compose
 make postgres-down    # removes it, with its volume
-make test-postgres    # postgres-up, the tests tagged postgres, postgres-down
+make test-postgres    # postgres-up, the tests tagged postgres (and the worker's with typst), postgres-down
 make gate             # everything above, from freshly built images
 make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files
