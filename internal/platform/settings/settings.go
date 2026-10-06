@@ -33,15 +33,16 @@ var metadataAddresses = []netip.Addr{
 }
 
 var (
-	errTTLRange       = errors.New("session_ttl_seconds must be between 60 and 2592000")
-	errIdleRange      = errors.New("session_idle_seconds must be between 60 and 2592000")
-	errIdleOverTTL    = errors.New("session_idle_seconds must not exceed session_ttl_seconds")
-	errSecretRequired = errors.New("server_secret_path is required")
-	errSecretRelative = errors.New("server_secret_path must be absolute")
-	errProxies        = errors.New("trusted_proxies must hold CIDR ranges")
-	errDSNUnset       = errors.New(dsnVariable + " is not set")
-	errDSNScheme      = errors.New(dsnVariable + " must be a postgres:// or postgresql:// URL")
-	errSecretShort    = errors.New("the server secret must hold at least 32 bytes")
+	errTTLRange         = errors.New("session_ttl_seconds must be between 60 and 2592000")
+	errIdleRange        = errors.New("session_idle_seconds must be between 60 and 2592000")
+	errIdleOverTTL      = errors.New("session_idle_seconds must not exceed session_ttl_seconds")
+	errProfileOverLimit = errors.New("admission_profile_limit must not exceed admission_limit")
+	errSecretRequired   = errors.New("server_secret_path is required")
+	errSecretRelative   = errors.New("server_secret_path must be absolute")
+	errProxies          = errors.New("trusted_proxies must hold CIDR ranges")
+	errDSNUnset         = errors.New(dsnVariable + " is not set")
+	errDSNScheme        = errors.New(dsnVariable + " must be a postgres:// or postgresql:// URL")
+	errSecretShort      = errors.New("the server secret must hold at least 32 bytes")
 )
 
 // Settings is the deployment file of spec 11.2, read once at start by serve
@@ -57,6 +58,17 @@ type Settings struct {
 	CABundleDir              string         // ca_bundle_dir
 	AllowedEndpointHostnames []string       // allowed_endpoint_hostnames, normalised and unique
 	AllowedEndpointCIDRs     []netip.Prefix // allowed_endpoint_cidrs, unique
+
+	WorkerSlots           int           // worker_slots
+	WorkerDrain           time.Duration // worker_drain_seconds
+	CollectTimeout        time.Duration // collect_timeout_seconds
+	RenderTimeout         time.Duration // render_timeout_seconds
+	JobMaxAttempts        int           // job_max_attempts
+	ReportRetention       time.Duration // report_retention_days
+	ExpiredReportKept     time.Duration // expired_report_days
+	AdmissionLimit        int           // admission_limit
+	AdmissionProfileLimit int           // admission_profile_limit
+	AdmissionRetry        time.Duration // admission_retry_seconds
 }
 
 // tomlSettings mirrors the keys of the deployment file. A key the file does
@@ -71,6 +83,17 @@ type tomlSettings struct {
 	CABundleDir              string   `toml:"ca_bundle_dir"`
 	AllowedEndpointHostnames []string `toml:"allowed_endpoint_hostnames"`
 	AllowedEndpointCIDRs     []string `toml:"allowed_endpoint_cidrs"`
+
+	WorkerSlots           int64 `toml:"worker_slots"`
+	WorkerDrainSeconds    int64 `toml:"worker_drain_seconds"`
+	CollectTimeoutSeconds int64 `toml:"collect_timeout_seconds"`
+	RenderTimeoutSeconds  int64 `toml:"render_timeout_seconds"`
+	JobMaxAttempts        int64 `toml:"job_max_attempts"`
+	ReportRetentionDays   int64 `toml:"report_retention_days"`
+	ExpiredReportDays     int64 `toml:"expired_report_days"`
+	AdmissionLimit        int64 `toml:"admission_limit"`
+	AdmissionProfileLimit int64 `toml:"admission_profile_limit"`
+	AdmissionRetrySeconds int64 `toml:"admission_retry_seconds"`
 }
 
 // Load reads the TOML file at path, then the environment through getenv,
@@ -83,6 +106,17 @@ func Load(path string, getenv func(string) string) (Settings, error) {
 		SessionIdleSeconds: 3600,
 		CredentialDir:      defaultCredentialDir,
 		CABundleDir:        defaultCABundleDir,
+
+		WorkerSlots:           2,
+		WorkerDrainSeconds:    30,
+		CollectTimeoutSeconds: 900,
+		RenderTimeoutSeconds:  300,
+		JobMaxAttempts:        3,
+		ReportRetentionDays:   7,
+		ExpiredReportDays:     30,
+		AdmissionLimit:        20,
+		AdmissionProfileLimit: 5,
+		AdmissionRetrySeconds: 5,
 	}
 	md, err := toml.DecodeFile(path, &file)
 	if err != nil {
@@ -119,6 +153,29 @@ func build(file tomlSettings, dsn string) (Settings, error) {
 	}
 	if file.SessionIdleSeconds > file.SessionTTLSeconds {
 		return Settings{}, errIdleOverTTL
+	}
+	for _, k := range []struct {
+		key        string
+		value, min int64
+		max        int64
+	}{
+		{"worker_slots", file.WorkerSlots, 1, 16},
+		{"worker_drain_seconds", file.WorkerDrainSeconds, 1, 3600},
+		{"collect_timeout_seconds", file.CollectTimeoutSeconds, 60, 3600},
+		{"render_timeout_seconds", file.RenderTimeoutSeconds, 10, 3600},
+		{"job_max_attempts", file.JobMaxAttempts, 1, 10},
+		{"report_retention_days", file.ReportRetentionDays, 1, 365},
+		{"expired_report_days", file.ExpiredReportDays, 1, 365},
+		{"admission_limit", file.AdmissionLimit, 1, 1000},
+		{"admission_profile_limit", file.AdmissionProfileLimit, 1, 1000},
+		{"admission_retry_seconds", file.AdmissionRetrySeconds, 1, 300},
+	} {
+		if k.value < k.min || k.value > k.max {
+			return Settings{}, fmt.Errorf("%s must be between %d and %d", k.key, k.min, k.max)
+		}
+	}
+	if file.AdmissionProfileLimit > file.AdmissionLimit {
+		return Settings{}, errProfileOverLimit
 	}
 	if file.ServerSecretPath == "" {
 		return Settings{}, errSecretRequired
@@ -165,6 +222,17 @@ func build(file tomlSettings, dsn string) (Settings, error) {
 		CABundleDir:              file.CABundleDir,
 		AllowedEndpointHostnames: hostnames,
 		AllowedEndpointCIDRs:     cidrs,
+
+		WorkerSlots:           int(file.WorkerSlots),
+		WorkerDrain:           time.Duration(file.WorkerDrainSeconds) * time.Second,
+		CollectTimeout:        time.Duration(file.CollectTimeoutSeconds) * time.Second,
+		RenderTimeout:         time.Duration(file.RenderTimeoutSeconds) * time.Second,
+		JobMaxAttempts:        int(file.JobMaxAttempts),
+		ReportRetention:       time.Duration(file.ReportRetentionDays) * 24 * time.Hour,
+		ExpiredReportKept:     time.Duration(file.ExpiredReportDays) * 24 * time.Hour,
+		AdmissionLimit:        int(file.AdmissionLimit),
+		AdmissionProfileLimit: int(file.AdmissionProfileLimit),
+		AdmissionRetry:        time.Duration(file.AdmissionRetrySeconds) * time.Second,
 	}, nil
 }
 

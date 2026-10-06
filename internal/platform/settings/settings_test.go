@@ -2,6 +2,7 @@ package settings
 
 import (
 	"bytes"
+	"fmt"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -83,9 +84,9 @@ func TestLoadEveryKey(t *testing.T) {
 }
 
 func TestLoadRefusesUnknownKey(t *testing.T) {
-	path := write(t, secretLine+"worker_slots = 2\n")
+	path := write(t, secretLine+"worker_slot = 2\n")
 	_, err := Load(path, env(goodDSN))
-	wantError(t, err, path+": unknown key worker_slots")
+	wantError(t, err, path+": unknown key worker_slot")
 }
 
 func TestLoadRefusesUnknownSection(t *testing.T) {
@@ -277,4 +278,89 @@ func TestLoadCIDRsAccepted(t *testing.T) {
 			t.Fatalf("got %v", s.AllowedEndpointCIDRs)
 		}
 	}
+}
+
+var workerKeys = []struct {
+	key      string
+	min, max int
+}{
+	{"worker_slots", 1, 16},
+	{"worker_drain_seconds", 1, 3600},
+	{"collect_timeout_seconds", 60, 3600},
+	{"render_timeout_seconds", 10, 3600},
+	{"job_max_attempts", 1, 10},
+	{"report_retention_days", 1, 365},
+	{"expired_report_days", 1, 365},
+	{"admission_limit", 1, 1000},
+	{"admission_profile_limit", 1, 1000},
+	{"admission_retry_seconds", 1, 300},
+}
+
+func TestLoadWorkerDefaults(t *testing.T) {
+	s, err := loadText(t, secretLine, goodDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	day := 24 * time.Hour
+	if s.WorkerSlots != 2 || s.WorkerDrain != 30*time.Second || s.CollectTimeout != 900*time.Second ||
+		s.RenderTimeout != 300*time.Second || s.JobMaxAttempts != 3 || s.ReportRetention != 7*day ||
+		s.ExpiredReportKept != 30*day || s.AdmissionLimit != 20 || s.AdmissionProfileLimit != 5 ||
+		s.AdmissionRetry != 5*time.Second {
+		t.Fatalf("got %+v", s)
+	}
+}
+
+func TestLoadWorkerRanges(t *testing.T) {
+	for _, k := range workerKeys {
+		want := fmt.Sprintf("%s must be between %d and %d", k.key, k.min, k.max)
+		for _, v := range []int{k.min - 1, k.max + 1} {
+			_, err := loadText(t, secretLine+fmt.Sprintf("%s = %d\n", k.key, v), goodDSN)
+			wantError(t, err, want)
+		}
+	}
+}
+
+func TestLoadWorkerBounds(t *testing.T) {
+	for _, k := range workerKeys {
+		for _, v := range []int{k.min, k.max} {
+			text := secretLine + fmt.Sprintf("%s = %d\n", k.key, v)
+			if k.key == "admission_limit" && v < 5 {
+				text += "admission_profile_limit = 1\n"
+			}
+			if k.key == "admission_profile_limit" && v > 20 {
+				text += "admission_limit = 1000\n"
+			}
+			if _, err := loadText(t, text, goodDSN); err != nil {
+				t.Fatalf("%s = %d: %v", k.key, v, err)
+			}
+		}
+	}
+}
+
+func TestLoadWorkerValues(t *testing.T) {
+	text := secretLine + "worker_slots = 4\nworker_drain_seconds = 10\ncollect_timeout_seconds = 120\n" +
+		"render_timeout_seconds = 20\njob_max_attempts = 5\nreport_retention_days = 2\n" +
+		"expired_report_days = 3\nadmission_limit = 9\nadmission_profile_limit = 9\nadmission_retry_seconds = 7\n"
+	s, err := loadText(t, text, goodDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	day := 24 * time.Hour
+	if s.WorkerSlots != 4 || s.WorkerDrain != 10*time.Second || s.CollectTimeout != 120*time.Second ||
+		s.RenderTimeout != 20*time.Second || s.JobMaxAttempts != 5 || s.ReportRetention != 2*day ||
+		s.ExpiredReportKept != 3*day || s.AdmissionLimit != 9 || s.AdmissionProfileLimit != 9 ||
+		s.AdmissionRetry != 7*time.Second {
+		t.Fatalf("got %+v", s)
+	}
+}
+
+func TestLoadAdmissionProfileAboveGlobal(t *testing.T) {
+	_, err := loadText(t, secretLine+"admission_limit = 3\nadmission_profile_limit = 4\n", goodDSN)
+	wantError(t, err, "admission_profile_limit must not exceed admission_limit")
+}
+
+func TestLoadWorkerWrongType(t *testing.T) {
+	path := write(t, secretLine+"worker_slots = \"two\"\n")
+	_, err := Load(path, env(goodDSN))
+	wantError(t, err, path+" has a value of the wrong type")
 }
