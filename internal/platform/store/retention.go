@@ -165,15 +165,15 @@ RETURNING id`, due, now)
 	return ids, nil
 }
 
-// PurgeExpiredReports deletes up to limit expired reports whose expires_at
-// plus kept is not after now, oldest first: their PDF, snapshot, and
-// idempotency rows, then the reports. Rows another transaction holds are left alone. It returns the
-// purged ids.
+// PurgeExpiredReports deletes up to limit expired reports whose expired_at
+// plus kept is not after now, the earliest expired first: their PDF,
+// snapshot, and idempotency rows, then the reports. Rows another transaction
+// holds are left alone. It returns the purged ids.
 func PurgeExpiredReports(ctx context.Context, tx pgx.Tx, now time.Time, kept time.Duration, limit int) ([]uuid.UUID, error) {
 	rows, err := tx.Query(ctx, `
 SELECT id FROM reports
-WHERE expired_at IS NOT NULL AND expires_at <= $1
-ORDER BY expires_at, id
+WHERE expired_at IS NOT NULL AND expired_at <= $1
+ORDER BY expired_at, id
 LIMIT $2
 FOR UPDATE SKIP LOCKED`, now.Add(-kept), limit)
 	if err != nil {

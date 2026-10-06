@@ -205,8 +205,9 @@ func TestReportEndToEnd(t *testing.T) {
 		t.Fatalf("%d PDF rows after expiry", n)
 	}
 
-	// Purge: the clock moves expired_report_days further.
-	clock.set(got.ExpiresAt.Add(endToEndRetained))
+	// Purge: the clock moves expired_report_days past the moment the report
+	// was marked expired.
+	clock.set(expired.ExpiredAt.Add(endToEndRetained))
 	e.runMaintenance()
 	if n := e.count(`SELECT count(*) FROM reports WHERE id = $1`, id); n != 0 {
 		t.Fatalf("%d report rows after the purge", n)

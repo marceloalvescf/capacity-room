@@ -133,6 +133,7 @@ func (e *env) exists(query string, args ...any) bool {
 // dueRows holds the ids that matter of what seedDueRows inserts.
 type dueRows struct {
 	stuck, rendering, toExpire, toPurge uuid.UUID
+	expiredLate                         uuid.UUID
 	oldSession, liveSession             uuid.UUID
 }
 
@@ -157,8 +158,13 @@ func (e *env) seedDueRows() dueRows {
 		e.t.Fatal(err)
 	}
 
-	expiredAt := fixedNow.Add(-testKept - time.Hour)
-	d.toPurge = e.seedReport("failed", "complete", absentJob, fixedNow.Add(-testKept), func(r *store.Report) { r.ExpiredAt = &expiredAt }).ID
+	// Both reports were expired an hour after their deadline; the keeping
+	// period runs from the moment each was marked expired.
+	deadline := fixedNow.Add(-testKept - time.Hour)
+	expiredAt := fixedNow.Add(-testKept)
+	d.toPurge = e.seedReport("failed", "complete", absentJob, deadline, func(r *store.Report) { r.ExpiredAt = &expiredAt }).ID
+	expiredLater := expiredAt.Add(time.Second)
+	d.expiredLate = e.seedReport("failed", "complete", absentJob, deadline, func(r *store.Report) { r.ExpiredAt = &expiredLater }).ID
 	if err := store.InsertIdempotencyKey(ctx, e.pool, e.op.ID, "purge-key", "sum", d.toPurge, fixedNow); err != nil {
 		e.t.Fatal(err)
 	}
@@ -196,6 +202,9 @@ func TestMaintenanceRunsEveryStep(t *testing.T) {
 	}
 	if e.count(`SELECT count(*) FROM reports WHERE id = $1`, d.toPurge)+e.count(`SELECT count(*) FROM report_idempotency_keys`) != 0 {
 		t.Fatal("the purged report remains")
+	}
+	if e.count(`SELECT count(*) FROM reports WHERE id = $1`, d.expiredLate) != 1 {
+		t.Fatal("a report expired less than the keeping period ago was purged")
 	}
 	if e.count(`SELECT count(*) FROM login_rate_limits`) != 0 {
 		t.Fatal("the old throttle row remains")

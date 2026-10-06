@@ -504,6 +504,38 @@ func TestPurgeExpiredReports(t *testing.T) {
 	}
 }
 
+// A report kept past its deadline, because it was not yet terminal or the
+// maintenance did not run, is kept for the whole period from the moment it
+// was marked expired.
+func TestPurgeMeasuresFromExpiredAt(t *testing.T) {
+	pool := storetest.New(t)
+	f := newReportFixture(t, pool)
+	kept := 30 * 24 * time.Hour
+	late := now.Add(10 * 24 * time.Hour)
+	r := queuedReport(f, f.profile, f.revision)
+	r.Status, r.Phase, r.FailureCode, r.ExpiresAt = "failed", "complete", ptr("INTERNAL_FAILURE"), now
+	mustInsertReport(t, pool, r)
+	if _, err := pool.Exec(context.Background(), `UPDATE reports SET expired_at = $1 WHERE id = $2`, late, r.ID); err != nil {
+		t.Fatal(err)
+	}
+	purge := func(at time.Time) []uuid.UUID {
+		var ids []uuid.UUID
+		inTx(t, pool, func(tx pgx.Tx) (err error) {
+			ids, err = store.PurgeExpiredReports(context.Background(), tx, at, kept, 100)
+			return err
+		})
+		return ids
+	}
+	for _, at := range []time.Time{now.Add(kept), late.Add(kept - time.Second)} {
+		if ids := purge(at); len(ids) != 0 {
+			t.Fatalf("purged %v at %v, before expired_at plus the kept period", ids, at)
+		}
+	}
+	if ids := purge(late.Add(kept)); len(ids) != 1 || ids[0] != r.ID {
+		t.Fatalf("purged %v at expired_at plus the kept period, want %v", ids, r.ID)
+	}
+}
+
 func TestPurgeExpiredReportsRemovesStrayRows(t *testing.T) {
 	pool := storetest.New(t)
 	f := newReportFixture(t, pool)

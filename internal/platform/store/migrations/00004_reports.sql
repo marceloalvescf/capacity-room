@@ -32,7 +32,7 @@ CREATE TABLE reports (
 );
 CREATE INDEX ix_reports_active_by_profile ON reports (profile_id) WHERE status IN ('queued', 'running');
 CREATE INDEX ix_reports_due_for_expiry ON reports (expires_at, id) WHERE expired_at IS NULL;
-CREATE INDEX ix_reports_due_for_purge ON reports (expires_at, id) WHERE expired_at IS NOT NULL;
+CREATE INDEX ix_reports_due_for_purge ON reports (expired_at, id) WHERE expired_at IS NOT NULL;
 
 CREATE TABLE report_snapshots (
     report_id uuid NOT NULL,
