@@ -80,7 +80,7 @@ func NewEmpty(t *testing.T) *pgxpool.Pool {
 	}
 	u.Path = "/" + name
 
-	pool, err := store.Open(ctx, u.String())
+	pool, err := store.Open(ctx, u.String(), 0)
 	if err != nil {
 		t.Fatalf("open pool: %v", err)
 	}

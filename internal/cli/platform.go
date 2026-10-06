@@ -27,7 +27,7 @@ func openPlatform(ctx context.Context, env Env, redactor *redact.Redactor, confi
 	if err != nil {
 		return settings.Settings{}, nil, err
 	}
-	pool, err := openPool(ctx, loaded)
+	pool, err := openPool(ctx, loaded, 0)
 	if err != nil {
 		return settings.Settings{}, nil, err
 	}
@@ -45,9 +45,10 @@ func loadPlatformSettings(env Env, redactor *redact.Redactor, configPath string)
 	return loaded, nil
 }
 
-// openPool opens the pool of the loaded settings. A problem is exit code 1.
-func openPool(ctx context.Context, loaded settings.Settings) (*pgxpool.Pool, error) {
-	pool, err := store.Open(ctx, loaded.DatabaseDSN)
+// openPool opens the pool of the loaded settings, with at least minConns
+// connections allowed. A problem is exit code 1.
+func openPool(ctx context.Context, loaded settings.Settings, minConns int32) (*pgxpool.Pool, error) {
+	pool, err := store.Open(ctx, loaded.DatabaseDSN, minConns)
 	if err != nil {
 		return nil, &exitError{1, fmt.Errorf("cannot connect to the database: %w", err)}
 	}

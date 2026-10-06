@@ -25,7 +25,7 @@ func TestTransactReadsCommitted(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A fresh pool opens fresh connections, which take the new default.
-	pool, err := store.Open(ctx, admin.Config().ConnString())
+	pool, err := store.Open(ctx, admin.Config().ConnString(), 0)
 	if err != nil {
 		t.Fatal(err)
 	}

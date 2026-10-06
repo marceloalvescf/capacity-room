@@ -200,7 +200,7 @@ func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.
 		// with everything else this package already writes itself.
 		DisableSuggestions: true,
 		// This program has the commands its design names (admin,
-		// report, and serve) and no other. Cobra's
+		// report, serve, and worker) and no other. Cobra's
 		// default completion command is not one of them, and it carries
 		// its own unmodified cobra.NoArgs, which repeats a stray argument
 		// verbatim — the same leak the root's own Args function above
@@ -222,6 +222,7 @@ func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.
 	cmd.AddCommand(newAdminCmd(ctx, env, redactor))
 	cmd.AddCommand(newReportCmd(ctx, env, redactor))
 	cmd.AddCommand(newServeCmd(ctx, env, redactor))
+	cmd.AddCommand(newWorkerCmd(ctx, env, redactor))
 	// Cobra only adds its default "help" command lazily, inside Execute();
 	// registering it here instead means commandNames' one walk of
 	// cmd.Commands() already sees it before Run's own pre-check

@@ -133,7 +133,7 @@ func newImportProfilesCmd(ctx context.Context, env Env, redactor *redact.Redacto
 			if err != nil {
 				return &exitError{2, err}
 			}
-			pool, err := openPool(ctx, loaded)
+			pool, err := openPool(ctx, loaded, 0)
 			if err != nil {
 				return err
 			}
