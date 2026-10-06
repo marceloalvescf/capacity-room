@@ -4,6 +4,7 @@ package store_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -57,16 +58,21 @@ func activeReport(t *testing.T, pool *pgxpool.Pool, f reportFixture, status stri
 	return r
 }
 
-// collectedReport inserts a collected report in phase rendering with a
+// collectedReport inserts a collected report, in phase rendering when a row is pending and complete otherwise, with a
 // snapshot and one pdf row per language: statuses maps a language to
 // "pending", "ready", or "failed", and jobs to the job of a pending row.
 func collectedReport(t *testing.T, pool *pgxpool.Pool, f reportFixture, expires time.Time, statuses map[string]string, jobs map[string]int64) store.Report {
 	t.Helper()
 	ctx := context.Background()
 	r := queuedReport(f, f.profile, f.revision)
-	r.Status, r.Phase, r.Attempt = "collected", "rendering", 1
+	r.Status, r.Phase, r.Attempt = "collected", "complete", 1
 	collected := now
-	r.CollectedAt = &collected
+	r.CollectedAt, r.CompletedAt = &collected, &collected
+	for _, status := range statuses {
+		if status == "pending" {
+			r.Phase, r.CompletedAt = "rendering", nil
+		}
+	}
 	r.ExpiresAt = expires
 	mustInsertReport(t, pool, r)
 	if err := store.InsertSnapshot(ctx, pool, r.ID, "1", []byte("{}"), now); err != nil {
@@ -206,9 +212,9 @@ func TestReconcilePDFs(t *testing.T) {
 	pool := storetest.New(t)
 	f := newReportFixture(t, pool)
 	discarded := insertJob(t, pool, "discarded")
-	first := collectedReport(t, pool, f, now.Add(time.Hour),
+	first := collectedReport(t, pool, f, now.Add(2*time.Hour),
 		map[string]string{"en": "pending", "pt-BR": "ready"}, map[string]int64{"en": discarded})
-	second := collectedReport(t, pool, f, now.Add(time.Hour),
+	second := collectedReport(t, pool, f, now.Add(2*time.Hour),
 		map[string]string{"en": "pending", "pt-BR": "pending"},
 		map[string]int64{"en": insertJob(t, pool, "discarded"), "pt-BR": insertJob(t, pool, "available")})
 
@@ -242,6 +248,23 @@ func TestReconcilePDFs(t *testing.T) {
 	}
 	if r := getReportT(t, pool, second.ID); r.Phase != "rendering" || r.CompletedAt != nil {
 		t.Fatalf("second report %+v", r)
+	}
+}
+
+func TestReconcilePDFsLeavesAReportPastExpiry(t *testing.T) {
+	pool := storetest.New(t)
+	f := newReportFixture(t, pool)
+	r := collectedReport(t, pool, f, now.Add(time.Hour), map[string]string{"en": "pending"}, map[string]int64{"en": insertJob(t, pool, "completed")})
+	var keys []store.PDFKey
+	inTx(t, pool, func(tx pgx.Tx) (err error) {
+		keys, err = store.ReconcilePDFs(context.Background(), tx, now.Add(time.Hour), 100)
+		return err
+	})
+	if len(keys) != 0 {
+		t.Fatalf("reconciled %v a report that is due for expiry", keys)
+	}
+	if p, _ := store.GetPDF(context.Background(), pool, r.ID, "en"); p.Status != "pending" {
+		t.Fatalf("row %+v", p)
 	}
 }
 
@@ -294,8 +317,8 @@ func TestReconcilePDFsSkipsALockedReport(t *testing.T) {
 	pool := storetest.New(t)
 	f := newReportFixture(t, pool)
 	gone := map[string]int64{"en": deletedJob(t, pool)}
-	locked := collectedReport(t, pool, f, now.Add(time.Hour), map[string]string{"en": "pending"}, gone)
-	other := collectedReport(t, pool, f, now.Add(time.Hour), map[string]string{"en": "pending"}, map[string]int64{"en": deletedJob(t, pool)})
+	locked := collectedReport(t, pool, f, now.Add(2*time.Hour), map[string]string{"en": "pending"}, gone)
+	other := collectedReport(t, pool, f, now.Add(2*time.Hour), map[string]string{"en": "pending"}, map[string]int64{"en": deletedJob(t, pool)})
 	holdReportLock(t, pool, locked.ID)
 
 	var keys []store.PDFKey
@@ -335,7 +358,8 @@ func TestExpireDueReports(t *testing.T) {
 	f := newReportFixture(t, pool)
 	at := now.Add(time.Hour)
 	langs := map[string]string{"en": "ready", "pt-BR": "failed"}
-	due := collectedReport(t, pool, f, at, langs, nil)
+	due := collectedReport(t, pool, f, at, map[string]string{"en": "pending", "pt-BR": "ready"}, nil)
+	complete := collectedReport(t, pool, f, at, langs, nil)
 	later := collectedReport(t, pool, f, at.Add(time.Second), langs, nil)
 	running := queuedReport(f, f.profile, f.revision)
 	running.Status, running.Phase, running.Attempt, running.ExpiresAt = "running", "collecting", 1, at.Add(-time.Hour)
@@ -347,12 +371,17 @@ func TestExpireDueReports(t *testing.T) {
 	}
 
 	ids := expireDue(t, pool, at, 100)
-	if len(ids) != 1 || ids[0] != due.ID {
-		t.Fatalf("expired %v, want %v", ids, due.ID)
+	if len(ids) != 2 || !slices.Contains(ids, due.ID) || !slices.Contains(ids, complete.ID) {
+		t.Fatalf("expired %v, want %v and %v", ids, due.ID, complete.ID)
 	}
 	got := getReportT(t, pool, due.ID)
-	if got.ExpiredAt == nil || !got.ExpiredAt.Equal(at) || !got.UpdatedAt.Equal(at) || got.Status != "collected" {
-		t.Fatalf("expired report %+v", got)
+	if got.ExpiredAt == nil || !got.ExpiredAt.Equal(at) || !got.UpdatedAt.Equal(at) || got.Status != "collected" ||
+		got.Phase != "complete" || got.CompletedAt == nil || !got.CompletedAt.Equal(at) {
+		t.Fatalf("expired report that was rendering %+v", got)
+	}
+	got = getReportT(t, pool, complete.ID)
+	if got.ExpiredAt == nil || got.Phase != "complete" || got.CompletedAt == nil || !got.CompletedAt.Equal(now) {
+		t.Fatalf("expired report that was complete %+v", got)
 	}
 	if n := countRows(t, pool, `SELECT count(*) FROM report_snapshots WHERE report_id = $1`, due.ID) +
 		countRows(t, pool, `SELECT count(*) FROM report_pdfs WHERE report_id = $1`, due.ID); n != 0 {
@@ -384,6 +413,9 @@ func TestExpireFailedReport(t *testing.T) {
 	mustInsertReport(t, pool, r)
 	if ids := expireDue(t, pool, now, 100); len(ids) != 1 || ids[0] != r.ID {
 		t.Fatalf("expired %v", ids)
+	}
+	if got := getReportT(t, pool, r.ID); got.Phase != "complete" || got.CompletedAt != nil || got.Status != "failed" {
+		t.Fatalf("expired failed report %+v", got)
 	}
 }
 
@@ -469,6 +501,25 @@ func TestPurgeExpiredReports(t *testing.T) {
 	}
 	if n := countRows(t, pool, `SELECT count(*) FROM reports WHERE id = $1`, live.ID); n != 1 {
 		t.Fatal("a report that was never expired was purged")
+	}
+}
+
+func TestPurgeExpiredReportsRemovesStrayRows(t *testing.T) {
+	pool := storetest.New(t)
+	f := newReportFixture(t, pool)
+	kept := time.Hour
+	r := collectedReport(t, pool, f, now, map[string]string{"en": "ready"}, nil)
+	if _, err := pool.Exec(context.Background(), `UPDATE reports SET expired_at = $1 WHERE id = $2`, now, r.ID); err != nil {
+		t.Fatal(err)
+	}
+	var ids []uuid.UUID
+	inTx(t, pool, func(tx pgx.Tx) (err error) {
+		ids, err = store.PurgeExpiredReports(context.Background(), tx, now.Add(kept), kept, 100)
+		return err
+	})
+	if len(ids) != 1 || countRows(t, pool, `SELECT count(*) FROM reports`)+countRows(t, pool, `SELECT count(*) FROM report_pdfs`)+
+		countRows(t, pool, `SELECT count(*) FROM report_snapshots`) != 0 {
+		t.Fatalf("purged %v, rows remain", ids)
 	}
 }
 

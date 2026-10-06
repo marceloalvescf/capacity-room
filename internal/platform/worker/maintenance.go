@@ -43,7 +43,8 @@ type MaintenanceWorker struct {
 // it fails the reports and PDF rows whose job River gave up on, expires the
 // reports past their retention, purges the expired reports past their keeping
 // period, and deletes old sign-in throttle rows and old sessions. A failed
-// step is logged and the next one still runs; Work returns the first error.
+// step is logged with its cause and the next one still runs; Work returns
+// "maintenance: INTERNAL_FAILURE" when any step failed.
 func (w *MaintenanceWorker) Work(ctx context.Context, _ *river.Job[MaintenanceArgs]) error {
 	now := w.Deps.Now().UTC()
 	steps := []struct {

@@ -130,13 +130,13 @@ func (e *env) exists(query string, args ...any) bool {
 	return e.count(query, args...) == 1
 }
 
-// seedDueRows inserts one row of every kind the job handles and returns the
-// ids that matter.
+// dueRows holds the ids that matter of what seedDueRows inserts.
 type dueRows struct {
 	stuck, rendering, toExpire, toPurge uuid.UUID
 	oldSession, liveSession             uuid.UUID
 }
 
+// seedDueRows inserts one row of every kind the job handles.
 func (e *env) seedDueRows() dueRows {
 	e.t.Helper()
 	ctx := context.Background()
@@ -234,14 +234,36 @@ func TestMaintenanceContinuesAfterAFailure(t *testing.T) {
 	if _, err := e.pool.Exec(context.Background(), `DROP TABLE login_rate_limits`); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.maintain(); err == nil {
-		t.Fatal("the failed step returned no error")
+	if err := e.maintain(); err == nil || err.Error() != "maintenance: INTERNAL_FAILURE" {
+		t.Fatalf("error %v, want maintenance: INTERNAL_FAILURE", err)
 	}
 	if e.exists(`SELECT count(*) FROM sessions WHERE id = $1`, d.oldSession) {
 		t.Fatal("the session step did not run after the failure")
 	}
 	if got := e.report(d.stuck); got.Status != "failed" {
 		t.Fatalf("the steps before the failure did not run: %+v", got)
+	}
+}
+
+func TestMaintenanceDoesNotBlameARenderPastExpiry(t *testing.T) {
+	e := maintenanceEnv(t)
+	past := fixedNow.Add(-time.Minute)
+	id := e.seedReport("collected", "rendering", absentJob, past, nil).ID
+	if err := store.InsertSnapshot(context.Background(), e.pool, id, "1", []byte("{}"), fixedNow); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.InsertPendingPDF(context.Background(), e.pool, id, "en", e.insertJobRow("completed"), fixedNow); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.maintain(); err != nil {
+		t.Fatal(err)
+	}
+	got := e.report(id)
+	if got.ExpiredAt == nil || got.Phase != "complete" || got.CompletedAt == nil || !got.CompletedAt.Equal(fixedNow) {
+		t.Fatalf("report %+v", got)
+	}
+	if e.count(`SELECT count(*) FROM report_pdfs WHERE report_id = $1`, id) != 0 || len(e.audits(reports.ActionReportRender)) != 0 {
+		t.Fatal("a pdf row or a render audit row remains")
 	}
 }
 

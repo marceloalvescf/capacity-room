@@ -65,13 +65,14 @@ RETURNING reports.id`, now, limit)
 // ReconcilePDFs fails up to limit pending PDF rows whose render job is absent
 // from river_job or final, with the code PDF_ATTEMPTS_EXHAUSTED, and moves a
 // report to phase complete when none of its rows is pending any more. The
-// report is locked first; a report another transaction holds is left alone.
+// report is locked first; a report another transaction holds is left alone,
+// and so is one past its expires_at, which expiry settles.
 func ReconcilePDFs(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]PDFKey, error) {
 	rows, err := tx.Query(ctx, `
 WITH due AS (
     SELECT p.report_id, p.language FROM report_pdfs p
     JOIN reports r ON r.id = p.report_id
-    WHERE p.status = 'pending' AND r.status = 'collected' AND `+jobGone("p.job_id")+`
+    WHERE p.status = 'pending' AND r.status = 'collected' AND r.expires_at > $1 AND `+jobGone("p.job_id")+`
     ORDER BY p.updated_at, p.report_id, p.language
     LIMIT $2
     FOR UPDATE OF r SKIP LOCKED)
@@ -119,7 +120,8 @@ WHERE id = ANY($1) AND status = 'collected' AND phase = 'rendering'
 
 // ExpireDueReports expires up to limit collected or failed reports whose
 // expires_at is not after now, oldest first: their snapshot and PDF rows are
-// deleted and expired_at is set. Rows another transaction holds are left
+// deleted and expired_at is set. A report still rendering becomes complete,
+// completed_at now, since its PDF rows are gone. Rows another transaction holds are left
 // alone. It returns the expired ids.
 func ExpireDueReports(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]uuid.UUID, error) {
 	rows, err := tx.Query(ctx, `
@@ -147,7 +149,10 @@ FOR UPDATE SKIP LOCKED`, now, limit)
 		}
 	}
 	rows, err = tx.Query(ctx, `
-UPDATE reports SET expired_at = $2, updated_at = $2
+UPDATE reports
+SET expired_at = $2, updated_at = $2,
+    phase = CASE WHEN phase = 'rendering' THEN 'complete' ELSE phase END,
+    completed_at = CASE WHEN phase = 'rendering' THEN $2 ELSE completed_at END
 WHERE id = ANY($1) AND expired_at IS NULL
 RETURNING id`, due, now)
 	if err != nil {
@@ -161,8 +166,8 @@ RETURNING id`, due, now)
 }
 
 // PurgeExpiredReports deletes up to limit expired reports whose expires_at
-// plus kept is not after now, oldest first: their idempotency rows, then the
-// reports. Rows another transaction holds are left alone. It returns the
+// plus kept is not after now, oldest first: their PDF, snapshot, and
+// idempotency rows, then the reports. Rows another transaction holds are left alone. It returns the
 // purged ids.
 func PurgeExpiredReports(ctx context.Context, tx pgx.Tx, now time.Time, kept time.Duration, limit int) ([]uuid.UUID, error) {
 	rows, err := tx.Query(ctx, `
@@ -181,8 +186,14 @@ FOR UPDATE SKIP LOCKED`, now.Add(-kept), limit)
 	if len(due) == 0 {
 		return nil, nil
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM report_idempotency_keys WHERE report_id = ANY($1)`, due); err != nil {
-		return nil, fmt.Errorf("purge reports: %w", err)
+	for _, sql := range []string{
+		`DELETE FROM report_pdfs WHERE report_id = ANY($1)`,
+		`DELETE FROM report_snapshots WHERE report_id = ANY($1)`,
+		`DELETE FROM report_idempotency_keys WHERE report_id = ANY($1)`,
+	} {
+		if _, err := tx.Exec(ctx, sql, due); err != nil {
+			return nil, fmt.Errorf("purge reports: %w", err)
+		}
 	}
 	rows, err = tx.Query(ctx, `DELETE FROM reports WHERE id = ANY($1) RETURNING id`, due)
 	if err != nil {

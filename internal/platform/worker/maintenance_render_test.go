@@ -50,8 +50,8 @@ func TestExpiryBeforeRenderWritesNoPDF(t *testing.T) {
 	if err := late.Work(context.Background(), nil); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.report(report.ID); got.ExpiredAt == nil {
-		t.Fatalf("report %+v was not expired", got)
+	if got := e.report(report.ID); got.ExpiredAt == nil || got.Phase != "complete" || got.CompletedAt == nil || !got.CompletedAt.Equal(report.ExpiresAt) {
+		t.Fatalf("report %+v was not expired and completed", got)
 	}
 	close(release)
 
