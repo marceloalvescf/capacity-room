@@ -4,6 +4,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -222,11 +223,13 @@ func TestMaintenanceRunsEveryStep(t *testing.T) {
 		render[0].Meta["language"] != "en" || render[0].Meta["code"] != "PDF_ATTEMPTS_EXHAUSTED" || len(render[0].Meta) != 2 {
 		t.Fatalf("render audit %+v", render)
 	}
-	for _, action := range []string{reports.ActionReportExpire, reports.ActionReportPurge} {
-		got := e.audits(action)
-		if len(got) != 1 || got[0].Outcome != "succeeded" || got[0].ActorID != nil || len(got[0].Meta) != 0 {
-			t.Fatalf("%s audit %+v", action, got)
-		}
+	expire := e.audits(reports.ActionReportExpire)
+	if len(expire) != 1 || expire[0].Outcome != "succeeded" || expire[0].ActorID != nil || len(expire[0].Meta) != 0 {
+		t.Fatalf("expire audit %+v", expire)
+	}
+	purge := e.audits(reports.ActionReportPurge)
+	if len(purge) != 1 || purge[0].Outcome != "succeeded" || purge[0].ActorID != nil || len(purge[0].Meta) != 1 || purge[0].Meta["cause"] != "expired" {
+		t.Fatalf("purge audit %+v", purge)
 	}
 	if err := e.maintain(); err != nil {
 		t.Fatal(err)
@@ -297,5 +300,110 @@ func TestMaintenanceLeavesLiveJobs(t *testing.T) {
 	}
 	if n := len(e.audits(reports.ActionReportCollect)); n != 0 {
 		t.Fatalf("%d audit rows", n)
+	}
+}
+
+func (e *env) deleteMark(r store.Report) {
+	e.t.Helper()
+	if _, err := e.pool.Exec(context.Background(), `UPDATE reports SET deleted_at = $2 WHERE id = $1`, r.ID, fixedNow.Add(-time.Minute)); err != nil {
+		e.t.Fatal(err)
+	}
+}
+
+func (e *env) purgeCauses(id uuid.UUID) []any {
+	e.t.Helper()
+	events, err := store.ListAuditEvents(context.Background(), e.pool)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	var causes []any
+	for _, ev := range events {
+		if ev.Action != reports.ActionReportPurge || ev.TargetID == nil || *ev.TargetID != id.String() {
+			continue
+		}
+		var m map[string]any
+		if err := json.Unmarshal(ev.Metadata, &m); err != nil {
+			e.t.Fatal(err)
+		}
+		causes = append(causes, m["cause"])
+	}
+	return causes
+}
+
+func TestSweepStepRemovesDeleted(t *testing.T) {
+	e := maintenanceEnv(t)
+	ctx := context.Background()
+	future := fixedNow.Add(24 * time.Hour)
+	queued := e.seedReport("queued", "waiting", absentJob, future, nil)
+	failed := e.seedReport("failed", "complete", absentJob, future, nil)
+	collected := e.seedReport("collected", "complete", absentJob, future, nil)
+	live := e.insertJobRow("running")
+	running := e.seedReport("running", "collecting", live, future, nil)
+	live2 := e.insertJobRow("running")
+	untouched := e.seedReport("queued", "waiting", live2, future, nil)
+	if err := store.InsertSnapshot(ctx, e.pool, collected.ID, "1", []byte("{}"), fixedNow); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.InsertIdempotencyKey(ctx, e.pool, e.op.ID, "swept-key", "sum", queued.ID, fixedNow); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range []store.Report{queued, failed, collected, running} {
+		e.deleteMark(r)
+	}
+
+	if err := e.maintain(); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range []store.Report{queued, failed, collected} {
+		if e.exists(`SELECT count(*) FROM reports WHERE id = $1`, r.ID) {
+			t.Errorf("the deleted %s report remains", r.Status)
+		}
+		if c := e.purgeCauses(r.ID); len(c) != 1 || c[0] != "deleted" {
+			t.Errorf("%s purge causes %v", r.Status, c)
+		}
+	}
+	if e.count(`SELECT count(*) FROM report_snapshots`)+e.count(`SELECT count(*) FROM report_idempotency_keys`) != 0 {
+		t.Fatal("the rows of a swept report remain")
+	}
+	if !e.exists(`SELECT count(*) FROM reports WHERE id = $1`, running.ID) || !e.exists(`SELECT count(*) FROM reports WHERE id = $1`, untouched.ID) {
+		t.Fatal("a report that must stay was removed")
+	}
+	if n := len(e.audits(reports.ActionReportPurge)); n != 3 {
+		t.Fatalf("%d purge audit rows", n)
+	}
+	for _, a := range e.audits(reports.ActionReportPurge) {
+		if a.ActorID != nil || a.Outcome != "succeeded" || len(a.Meta) != 1 {
+			t.Fatalf("purge audit %+v", a)
+		}
+	}
+
+	// The collect job of the running report ends; the next run removes it.
+	if _, err := e.pool.Exec(ctx, `UPDATE river_job SET state = 'discarded', finalized_at = now() WHERE id = $1`, live); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.maintain(); err != nil {
+		t.Fatal(err)
+	}
+	if e.exists(`SELECT count(*) FROM reports WHERE id = $1`, running.ID) {
+		t.Fatal("the deleted running report remains after its job ended")
+	}
+	if c := e.purgeCauses(running.ID); len(c) != 1 || c[0] != "deleted" {
+		t.Fatalf("running purge causes %v", c)
+	}
+	if got := e.report(untouched.ID); got.Status != "queued" || got.DeletedAt != nil {
+		t.Fatalf("report %+v", got)
+	}
+}
+
+func TestPurgeNamesItsCause(t *testing.T) {
+	e := maintenanceEnv(t)
+	deadline := fixedNow.Add(-testKept - time.Hour)
+	expiredAt := fixedNow.Add(-testKept)
+	id := e.seedReport("failed", "complete", absentJob, deadline, func(r *store.Report) { r.ExpiredAt = &expiredAt }).ID
+	if err := e.maintain(); err != nil {
+		t.Fatal(err)
+	}
+	if c := e.purgeCauses(id); len(c) != 1 || c[0] != "expired" {
+		t.Fatalf("purge causes %v", c)
 	}
 }

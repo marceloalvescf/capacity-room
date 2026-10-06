@@ -123,7 +123,7 @@ func requestDigest(sel Selection) (string, error) {
 func currentRevision(ctx context.Context, tx pgx.Tx, id string) (store.ProfileRevision, error) {
 	profile, err := store.GetProfileForShare(ctx, tx, id)
 	if errors.Is(err, store.ErrNotFound) || (err == nil && profile.CurrentRevisionID == nil) {
-		return store.ProfileRevision{}, &Error{Code: "PROFILE_NOT_FOUND"}
+		return store.ProfileRevision{}, &Error{Code: CodeProfileNotFound}
 	}
 	if err != nil {
 		return store.ProfileRevision{}, fmt.Errorf("read profile: %w", err)
@@ -139,10 +139,10 @@ func (s *Service) Request(ctx context.Context, actor auth.Principal, key string,
 		return Accepted{}, err
 	}
 	if !keyPattern.MatchString(key) {
-		return Accepted{}, &Error{Code: "IDEMPOTENCY_KEY_INVALID"}
+		return Accepted{}, &Error{Code: CodeIdempotencyKeyInvalid}
 	}
 	if fields := checkSyntax(sel); fields != nil {
-		return Accepted{}, &Error{Code: "REQUEST_INVALID", Fields: fields}
+		return Accepted{}, &Error{Code: CodeRequestInvalid, Fields: fields}
 	}
 	digest, err := requestDigest(sel)
 	if err != nil {
@@ -158,19 +158,26 @@ func (s *Service) Request(ctx context.Context, actor auth.Principal, key string,
 		switch {
 		case err == nil:
 			if storedDigest != digest {
-				return &Error{Code: "IDEMPOTENCY_KEY_REUSED"}
+				return &Error{Code: CodeIdempotencyKeyReused}
 			}
 			if s.afterKeyRead != nil {
 				s.afterKeyRead(ctx)
 			}
 			// A purge that committed after the key was read leaves no
-			// report; it is answered as an expired one.
+			// report; it is answered as an expired one. A deleted report is
+			// answered as an absent one.
 			stored, err := store.GetReport(ctx, tx, storedID)
 			if errors.Is(err, store.ErrNotFound) {
-				return &Error{Code: "REPORT_EXPIRED"}
+				return &Error{Code: CodeReportExpired}
 			}
 			if err != nil {
 				return err
+			}
+			switch {
+			case stored.DeletedAt != nil:
+				return &Error{Code: CodeReportNotFound}
+			case isExpired(stored.ExpiresAt, stored.ExpiredAt, now):
+				return &Error{Code: CodeReportExpired}
 			}
 			out = Accepted{ID: stored.ID, Status: stored.Status, Phase: stored.Phase, ExpiresAt: stored.ExpiresAt, Replayed: true}
 			return nil
@@ -183,7 +190,7 @@ func (s *Service) Request(ctx context.Context, actor auth.Principal, key string,
 			return err
 		}
 		if !revision.Active {
-			return &Error{Code: "PROFILE_INACTIVE"}
+			return &Error{Code: CodeProfileInactive}
 		}
 		var document profiles.Document
 		if err := json.Unmarshal(revision.Document, &document); err != nil {
@@ -191,7 +198,7 @@ func (s *Service) Request(ctx context.Context, actor auth.Principal, key string,
 		}
 		resolved, fields := resolve(sel, document)
 		if fields != nil {
-			return &Error{Code: "REPORT_SELECTION_NOT_PERMITTED", Fields: fields}
+			return &Error{Code: CodeSelectionNotPermitted, Fields: fields}
 		}
 		global, perProfile, err := store.CountActiveReports(ctx, tx, sel.ProfileID)
 		if err != nil {
@@ -199,9 +206,9 @@ func (s *Service) Request(ctx context.Context, actor auth.Principal, key string,
 		}
 		switch {
 		case global >= s.Settings.AdmissionLimit:
-			return &Error{Code: "ADMISSION_GLOBAL_LIMIT", RetryAfter: s.Settings.AdmissionRetry}
+			return &Error{Code: CodeAdmissionGlobalLimit, RetryAfter: s.Settings.AdmissionRetry}
 		case perProfile >= s.Settings.AdmissionProfileLimit:
-			return &Error{Code: "ADMISSION_PROFILE_LIMIT", RetryAfter: s.Settings.AdmissionRetry}
+			return &Error{Code: CodeAdmissionProfileLimit, RetryAfter: s.Settings.AdmissionRetry}
 		}
 
 		request, err := json.Marshal(resolved)

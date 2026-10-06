@@ -100,6 +100,12 @@ func (r *renderRoute) release(langs ...string) {
 // route, and stops it when the test ends. gated languages wait for release.
 func (e *env) startRender(toolchains map[string]typst.Toolchain, workers int, hooks renderHooks, gated ...string) *renderRoute {
 	e.t.Helper()
+	return e.startRoutes(collectHooks{}, toolchains, workers, hooks, gated...)
+}
+
+// startRoutes is startRender with hooks on the collect worker.
+func (e *env) startRoutes(collect collectHooks, toolchains map[string]typst.Toolchain, workers int, hooks renderHooks, gated ...string) *renderRoute {
+	e.t.Helper()
 	if e.deps.Settings.RenderTimeout == 0 {
 		e.deps.Settings.RenderTimeout = time.Minute
 	}
@@ -114,7 +120,7 @@ func (e *env) startRender(toolchains map[string]typst.Toolchain, workers int, ho
 		route.gates[l] = make(chan struct{})
 	}
 	wk := river.NewWorkers()
-	river.AddWorker(wk, &CollectWorker{Deps: e.deps})
+	river.AddWorker(wk, &CollectWorker{Deps: e.deps, hooks: collect})
 	river.AddWorker(wk, route)
 	client, err := river.NewClient(riverpgxv5.New(e.pool), &river.Config{
 		TestOnly:     true,

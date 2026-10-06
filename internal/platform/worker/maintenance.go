@@ -21,6 +21,12 @@ const (
 	codePDFAttemptsExhausted = "PDF_ATTEMPTS_EXHAUSTED"
 )
 
+// The causes a purge names in its audit row.
+const (
+	causeDeleted = "deleted"
+	causeExpired = "expired"
+)
+
 // The most rows each step handles in one run.
 const (
 	reportBatch = 100
@@ -39,10 +45,11 @@ type MaintenanceWorker struct {
 	Deps Deps
 }
 
-// Work reads the clock once and runs five steps, each in its own transaction:
-// it fails the reports and PDF rows whose job River gave up on, expires the
-// reports past their retention, purges the expired reports past their keeping
-// period, and deletes old sign-in throttle rows and old sessions. A failed
+// Work reads the clock once and runs six steps, each in its own transaction:
+// it fails the reports and PDF rows whose job River gave up on, removes the
+// deleted reports that no job holds, expires the reports past their
+// retention, purges the expired reports past their keeping period, and
+// deletes old sign-in throttle rows and old sessions. A failed
 // step is logged with its cause and the next one still runs; Work returns
 // "maintenance: INTERNAL_FAILURE" when any step failed.
 func (w *MaintenanceWorker) Work(ctx context.Context, _ *river.Job[MaintenanceArgs]) error {
@@ -52,6 +59,7 @@ func (w *MaintenanceWorker) Work(ctx context.Context, _ *river.Job[MaintenanceAr
 		run  func(ctx context.Context, tx pgx.Tx, now time.Time) error
 	}{
 		{"reconcile", w.reconcile},
+		{"sweep", w.sweep},
 		{"expire", w.expire},
 		{"purge", w.purge},
 		{"throttle", w.purgeThrottle},
@@ -107,6 +115,19 @@ func (w *MaintenanceWorker) reconcile(ctx context.Context, tx pgx.Tx, now time.T
 	return nil
 }
 
+func (w *MaintenanceWorker) sweep(ctx context.Context, tx pgx.Tx, now time.Time) error {
+	ids, err := store.SweepDeletedReports(ctx, tx, reportBatch)
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if err := audit.Append(ctx, tx, now, reportEvent(reports.ActionReportPurge, id.String(), audit.Metadata{"cause": causeDeleted}, false)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (w *MaintenanceWorker) expire(ctx context.Context, tx pgx.Tx, now time.Time) error {
 	ids, err := store.ExpireDueReports(ctx, tx, now, reportBatch)
 	if err != nil {
@@ -126,7 +147,7 @@ func (w *MaintenanceWorker) purge(ctx context.Context, tx pgx.Tx, now time.Time)
 		return err
 	}
 	for _, id := range ids {
-		if err := audit.Append(ctx, tx, now, reportEvent(reports.ActionReportPurge, id.String(), audit.Metadata{}, false)); err != nil {
+		if err := audit.Append(ctx, tx, now, reportEvent(reports.ActionReportPurge, id.String(), audit.Metadata{"cause": causeExpired}, false)); err != nil {
 			return err
 		}
 	}

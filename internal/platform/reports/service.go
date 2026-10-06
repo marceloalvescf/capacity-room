@@ -29,12 +29,31 @@ const (
 
 const targetReport = "report"
 
+// The codes of an Error, as the API carries them.
+const (
+	CodeRequestInvalid        = "REQUEST_INVALID"
+	CodeReportNotFound        = "REPORT_NOT_FOUND"
+	CodeReportExpired         = "REPORT_EXPIRED"
+	CodeSnapshotNotReady      = "SNAPSHOT_NOT_READY"
+	CodePDFNotReady           = "PDF_NOT_READY"
+	CodePDFRetryNotAllowed    = "PDF_RETRY_NOT_ALLOWED"
+	CodeProfileNotFound       = "PROFILE_NOT_FOUND"
+	CodeProfileInactive       = "PROFILE_INACTIVE"
+	CodeIdempotencyKeyInvalid = "IDEMPOTENCY_KEY_INVALID"
+	CodeIdempotencyKeyReused  = "IDEMPOTENCY_KEY_REUSED"
+	CodeSelectionNotPermitted = "REPORT_SELECTION_NOT_PERMITTED"
+	CodeAdmissionGlobalLimit  = "ADMISSION_GLOBAL_LIMIT"
+	CodeAdmissionProfileLimit = "ADMISSION_PROFILE_LIMIT"
+	CodeCursorInvalid         = "CURSOR_INVALID"
+)
+
 // The words of Error.Fields.
 const (
 	wordMissing      = "missing"
 	wordInvalid      = "invalid"
 	wordRepeated     = "repeated"
 	wordEmpty        = "empty"
+	wordTooMany      = "too_many"
 	wordNotPermitted = "not_permitted"
 )
 
@@ -49,6 +68,10 @@ type Service struct {
 	// afterKeyRead, when set, runs in Request between the read of an
 	// idempotency row and the read of the report it names.
 	afterKeyRead func(context.Context)
+
+	// beforeMark, when set, runs in DeleteMany after every id is judged and
+	// before the first is marked.
+	beforeMark func(context.Context)
 }
 
 // Selection is a request as the operator sends it; a nil field takes the profile's default.
@@ -104,6 +127,14 @@ func (s *Service) newID() uuid.UUID {
 	return uuid.New()
 }
 
+// isExpired reports whether a report is past its retention at now, or was
+// marked expired by maintenance.
+func isExpired(expiresAt time.Time, expiredAt *time.Time, now time.Time) bool {
+	return !expiresAt.After(now) || expiredAt != nil
+}
+
+func validLanguage(language string) bool { return language == "pt-BR" || language == "en" }
+
 func requireOperator(actor auth.Principal) error {
 	if actor.Role != auth.RoleOperator && actor.Role != auth.RoleAdministrator {
 		return auth.ErrForbidden
@@ -117,27 +148,30 @@ func (s *Service) RetryPDF(ctx context.Context, actor auth.Principal, reportID u
 	if err := requireOperator(actor); err != nil {
 		return err
 	}
-	if language != "pt-BR" && language != "en" {
-		return &Error{Code: "REQUEST_INVALID", Fields: map[string]string{"language": wordInvalid}}
+	if !validLanguage(language) {
+		return &Error{Code: CodeRequestInvalid, Fields: map[string]string{"language": wordInvalid}}
 	}
 	now := s.now()
 	return store.Transact(ctx, s.Pool, func(tx pgx.Tx) error {
 		report, err := store.GetReportForUpdate(ctx, tx, reportID)
 		if errors.Is(err, store.ErrNotFound) {
-			return &Error{Code: "REPORT_NOT_FOUND"}
+			return &Error{Code: CodeReportNotFound}
 		}
 		if err != nil {
 			return err
 		}
-		if !report.ExpiresAt.After(now) {
-			return &Error{Code: "REPORT_EXPIRED"}
+		if report.DeletedAt != nil {
+			return &Error{Code: CodeReportNotFound}
+		}
+		if isExpired(report.ExpiresAt, report.ExpiredAt, now) {
+			return &Error{Code: CodeReportExpired}
 		}
 		if report.Status != "collected" {
-			return &Error{Code: "SNAPSHOT_NOT_READY"}
+			return &Error{Code: CodeSnapshotNotReady}
 		}
 		row, err := store.GetPDF(ctx, tx, reportID, language)
 		if errors.Is(err, store.ErrNotFound) {
-			return &Error{Code: "PDF_RETRY_NOT_ALLOWED"}
+			return &Error{Code: CodePDFRetryNotAllowed}
 		}
 		if err != nil {
 			return err
@@ -147,7 +181,7 @@ func (s *Service) RetryPDF(ctx context.Context, actor auth.Principal, reportID u
 			return nil
 		case "failed":
 		default:
-			return &Error{Code: "PDF_RETRY_NOT_ALLOWED"}
+			return &Error{Code: CodePDFRetryNotAllowed}
 		}
 		job, err := s.Queue.InsertTx(ctx, tx, RenderArgs{ReportID: reportID, Language: language}, RenderInsertOpts(s.Settings))
 		if err != nil {
