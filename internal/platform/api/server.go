@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,8 +30,53 @@ type Server struct {
 	Now      func() time.Time
 	Logger   *slog.Logger // nil logs nowhere
 
+	// downloadSlots and downloadDeadline are the number of downloads served
+	// at once and the time a download may take to be written, once its body
+	// is ready; zero means the defaults.
+	downloadSlots    int
+	downloadDeadline time.Duration
+	slotsOnce        sync.Once
+	slots            chan struct{}
+
 	// extraRoutes are routes a test adds; Handler registers them after Routes.
 	extraRoutes []Route
+}
+
+const (
+	defaultDownloadSlots    = 4
+	defaultDownloadDeadline = 2 * time.Minute
+)
+
+// downloads is the set of download slots: a slot is taken by sending into it.
+func (s *Server) downloads() chan struct{} {
+	s.slotsOnce.Do(func() {
+		n := s.downloadSlots
+		if n == 0 {
+			n = defaultDownloadSlots
+		}
+		s.slots = make(chan struct{}, n)
+	})
+	return s.slots
+}
+
+func (s *Server) writeDeadline() time.Duration {
+	if s.downloadDeadline == 0 {
+		return defaultDownloadDeadline
+	}
+	return s.downloadDeadline
+}
+
+// acquireDownload waits for a download slot until the request's context
+// ends. It reports false, taking no slot and writing nothing, when the
+// context ended first; otherwise the caller gives the slot back with release.
+func (s *Server) acquireDownload(r *http.Request) (release func(), ok bool) {
+	slots := s.downloads()
+	select {
+	case slots <- struct{}{}:
+		return func() { <-slots }, true
+	case <-r.Context().Done():
+		return nil, false
+	}
 }
 
 // logger is the logger of the server, or one that writes nowhere.

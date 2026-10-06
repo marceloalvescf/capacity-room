@@ -90,6 +90,13 @@ func (ts *testServer) as(t *testing.T, a *actor, method, path, body string, head
 	return ts.call(t, method, path, body, h, a.cookie)
 }
 
+// requestAs builds a request carrying the cookie of a.
+func (ts *testServer) requestAs(a *actor, method, path string) *http.Request {
+	r := httptest.NewRequest(method, path, nil)
+	r.AddCookie(a.cookie)
+	return r
+}
+
 func decodeStrict[T any](t *testing.T, w *httptest.ResponseRecorder) T {
 	t.Helper()
 	var v T

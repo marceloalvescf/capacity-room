@@ -186,8 +186,11 @@ func (s *Server) getReport(w http.ResponseWriter, r *http.Request, a auth.Authen
 }
 
 // serveBody answers a download: the tag, the cache rule, and the type are
-// set, and ServeContent does the conditional answer, Range, and HEAD.
-func serveBody(w http.ResponseWriter, r *http.Request, body []byte, tag, contentType, disposition string) {
+// set, and ServeContent does the conditional answer, Range, and HEAD. The
+// write must end within the write deadline of the server.
+func (s *Server) serveBody(w http.ResponseWriter, r *http.Request, body []byte, tag, contentType, disposition string) {
+	// A writer that cannot take a deadline is a test recorder.
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(s.writeDeadline()))
 	h := w.Header()
 	h.Set("ETag", `"`+tag+`"`)
 	h.Set("Cache-Control", "private, no-cache")
@@ -208,6 +211,11 @@ func (s *Server) viewReport(w http.ResponseWriter, r *http.Request, a auth.Authe
 	if !ok {
 		return
 	}
+	release, ok := s.acquireDownload(r)
+	if !ok {
+		return
+	}
+	defer release()
 	stored, err := s.Reports.Snapshot(r.Context(), a.Principal, id)
 	if err != nil {
 		s.fail(w, r, err)
@@ -218,7 +226,7 @@ func (s *Server) viewReport(w http.ResponseWriter, r *http.Request, a auth.Authe
 		s.fail(w, r, err)
 		return
 	}
-	serveBody(w, r, body, sha256Hex(body), "application/json", "")
+	s.serveBody(w, r, body, sha256Hex(body), "application/json", "")
 }
 
 func encodeView(raw []byte, lang catalog.Language) ([]byte, error) {
@@ -242,12 +250,17 @@ func (s *Server) getReportSnapshot(w http.ResponseWriter, r *http.Request, a aut
 	if !ok {
 		return
 	}
+	release, ok := s.acquireDownload(r)
+	if !ok {
+		return
+	}
+	defer release()
 	stored, err := s.Reports.Snapshot(r.Context(), a.Principal, id)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	serveBody(w, r, stored.Body, stored.SHA256, "application/json", `attachment; filename="report-`+id.String()+`.json"`)
+	s.serveBody(w, r, stored.Body, stored.SHA256, "application/json", `attachment; filename="report-`+id.String()+`.json"`)
 }
 
 func (s *Server) getReportPDF(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
@@ -259,12 +272,17 @@ func (s *Server) getReportPDF(w http.ResponseWriter, r *http.Request, a auth.Aut
 	if !ok {
 		return
 	}
+	release, ok := s.acquireDownload(r)
+	if !ok {
+		return
+	}
+	defer release()
 	stored, err := s.Reports.PDF(r.Context(), a.Principal, id, string(lang))
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	serveBody(w, r, stored.Body, stored.SHA256, "application/pdf",
+	s.serveBody(w, r, stored.Body, stored.SHA256, "application/pdf",
 		`attachment; filename="report-`+id.String()+`-`+string(lang)+`.pdf"`)
 }
 
