@@ -23,6 +23,10 @@ const (
 
 	defaultCredentialDir = "/run/secrets/metrics"
 	defaultCABundleDir   = "/run/config/ca"
+
+	// defaultAdmissionProfileLimit is admission_profile_limit when the file
+	// omits it and admission_limit is not smaller.
+	defaultAdmissionProfileLimit = 5
 )
 
 // metadataAddresses are the cloud instance metadata endpoints that no
@@ -115,7 +119,6 @@ func Load(path string, getenv func(string) string) (Settings, error) {
 		ReportRetentionDays:   7,
 		ExpiredReportDays:     30,
 		AdmissionLimit:        20,
-		AdmissionProfileLimit: 5,
 		AdmissionRetrySeconds: 5,
 	}
 	md, err := toml.DecodeFile(path, &file)
@@ -124,6 +127,10 @@ func Load(path string, getenv func(string) string) (Settings, error) {
 	}
 	if undecoded := md.Undecoded(); len(undecoded) > 0 {
 		return Settings{}, fmt.Errorf("%s: unknown key %s", path, undecoded[0])
+	}
+	// An omitted profile limit fits under the global limit the file sets.
+	if !md.IsDefined("admission_profile_limit") {
+		file.AdmissionProfileLimit = min(defaultAdmissionProfileLimit, file.AdmissionLimit)
 	}
 	return build(file, getenv(dsnVariable))
 }

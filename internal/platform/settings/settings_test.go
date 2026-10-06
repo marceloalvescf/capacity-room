@@ -324,9 +324,6 @@ func TestLoadWorkerBounds(t *testing.T) {
 	for _, k := range workerKeys {
 		for _, v := range []int{k.min, k.max} {
 			text := secretLine + fmt.Sprintf("%s = %d\n", k.key, v)
-			if k.key == "admission_limit" && v < 5 {
-				text += "admission_profile_limit = 1\n"
-			}
 			if k.key == "admission_profile_limit" && v > 20 {
 				text += "admission_limit = 1000\n"
 			}
@@ -351,6 +348,29 @@ func TestLoadWorkerValues(t *testing.T) {
 		s.ExpiredReportKept != 3*day || s.AdmissionLimit != 9 || s.AdmissionProfileLimit != 9 ||
 		s.AdmissionRetry != 7*time.Second {
 		t.Fatalf("got %+v", s)
+	}
+}
+
+// An omitted admission_profile_limit is 5, or admission_limit when that is
+// smaller, so a file that lowers only the global limit loads.
+func TestLoadAdmissionProfileDefaultFitsTheLimit(t *testing.T) {
+	for _, c := range []struct {
+		text string
+		want int
+	}{
+		{"admission_limit = 3\n", 3},
+		{"admission_limit = 1\n", 1},
+		{"admission_limit = 5\n", 5},
+		{"admission_limit = 6\n", 5},
+		{"admission_limit = 1000\n", 5},
+	} {
+		s, err := loadText(t, secretLine+c.text, goodDSN)
+		if err != nil {
+			t.Fatalf("%q: %v", c.text, err)
+		}
+		if s.AdmissionProfileLimit != c.want {
+			t.Fatalf("%q: admission_profile_limit %d, want %d", c.text, s.AdmissionProfileLimit, c.want)
+		}
 	}
 }
 
