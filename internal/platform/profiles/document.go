@@ -87,6 +87,11 @@ func ValidReferenceName(name string) bool {
 	return ReferenceNamePattern.MatchString(name) && !strings.Contains(name, "..")
 }
 
+// ValidNamespace reports whether name is a valid namespace name.
+func ValidNamespace(name string) bool {
+	return namespacePattern.MatchString(name)
+}
+
 // ResolvedDefaults returns the four effective defaults of d.
 func (d Document) ResolvedDefaults() (period, timezone, reportProfile, minSeverity string) {
 	return orFallback(d.DefaultPeriod, FallbackPeriod),
