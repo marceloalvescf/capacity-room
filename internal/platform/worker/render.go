@@ -53,8 +53,17 @@ type RenderWorker struct {
 // renderHooks let a test hold an attempt at a point of the run; nil does
 // nothing.
 type renderHooks struct {
-	beforeStore func(ctx context.Context, language string) // after the compile, before the outcome's transaction
-	insideStore func(language string)                      // inside the transaction that stores a PDF
+	beforeStore    func(ctx context.Context, language string) // after the compile, before the outcome's transaction
+	insideStore    func(language string)                      // inside the transaction that stores a PDF
+	outcomeTimeout time.Duration                              // the outcome timeout; zero means outcomeTimeout
+}
+
+// outcome is the time the transaction of an outcome may run.
+func (w *RenderWorker) outcome() time.Duration {
+	if w.hooks.outcomeTimeout > 0 {
+		return w.hooks.outcomeTimeout
+	}
+	return outcomeTimeout
 }
 
 // Timeout is the longest a render may run.
@@ -77,8 +86,8 @@ func (w *RenderWorker) Work(ctx context.Context, job *river.Job[reports.RenderAr
 			if h := w.hooks.beforeStore; h != nil {
 				h(ctx, job.Args.Language)
 			}
-			wctx, cancel := outcomeContext(ctx)
-			err = w.store(wctx, job, pdf, "")
+			wctx, cancel := successContext(ctx, w.outcome())
+			err = successFailure(wctx, w.store(wctx, job, pdf, ""))
 			cancel()
 			if err == nil {
 				return nil
@@ -88,19 +97,43 @@ func (w *RenderWorker) Work(ctx context.Context, job *river.Job[reports.RenderAr
 	return w.handle(ctx, job, err)
 }
 
-// needsRender reports whether the report still wants this language rendered.
-func needsRender(ctx context.Context, tx pgx.Tx, report store.Report, language string) (bool, error) {
-	if report.Status != "collected" || report.ExpiredAt != nil {
-		return false, nil
+// The lines a skipped render writes, one for each reason.
+const (
+	skipNotCollected = "render skipped: report not collected"
+	skipExpired      = "render skipped: report expired"
+	skipNoPDFRow     = "render skipped: no PDF row"
+	skipPDFSettled   = "render skipped: PDF row is not pending"
+)
+
+// reportSkip names why a report no longer wants a render, or is empty when it
+// still does.
+func reportSkip(report store.Report, now time.Time) string {
+	switch {
+	case report.Status != "collected":
+		return skipNotCollected
+	case report.ExpiredAt != nil || !report.ExpiresAt.After(now):
+		return skipExpired
+	}
+	return ""
+}
+
+// needsRender names why the report no longer wants this language rendered, or
+// is empty when it does.
+func needsRender(ctx context.Context, tx pgx.Tx, report store.Report, language string, now time.Time) (string, error) {
+	if skip := reportSkip(report, now); skip != "" {
+		return skip, nil
 	}
 	row, err := store.GetPDF(ctx, tx, report.ID, language)
 	if errors.Is(err, store.ErrNotFound) {
-		return false, nil
+		return skipNoPDFRow, nil
 	}
 	if err != nil {
-		return false, err
+		return "", err
 	}
-	return row.Status == "pending", nil
+	if row.Status != "pending" {
+		return skipPDFSettled, nil
+	}
+	return "", nil
 }
 
 // load reads the snapshot under the lock of the report. It reports done when
@@ -118,12 +151,12 @@ func (w *RenderWorker) load(ctx context.Context, job *river.Job[reports.RenderAr
 		if err != nil {
 			return err
 		}
-		wanted, err := needsRender(ctx, tx, report, lang)
+		skip, err := needsRender(ctx, tx, report, lang, w.Deps.Now().UTC())
 		if err != nil {
 			return err
 		}
-		if !wanted || !report.ExpiresAt.After(w.Deps.Now().UTC()) {
-			w.note(id, job.Attempt, "render job skipped a report that needs nothing")
+		if skip != "" {
+			w.note(id, job.Attempt, skip)
 			done = true
 			_, err := river.JobCompleteTx[*riverpgxv5.Driver](ctx, tx, job)
 			return err
@@ -182,8 +215,8 @@ func (w *RenderWorker) store(ctx context.Context, job *river.Job[reports.RenderA
 			return err
 		}
 		now := d.Now().UTC()
-		if report.Status != "collected" || report.ExpiredAt != nil || !report.ExpiresAt.After(now) {
-			w.note(id, job.Attempt, "render job skipped a report that needs nothing")
+		if skip := reportSkip(report, now); skip != "" {
+			w.note(id, job.Attempt, skip)
 			_, err := river.JobCompleteTx[*riverpgxv5.Driver](ctx, tx, job)
 			return err
 		}
@@ -259,7 +292,10 @@ func (w *RenderWorker) handle(ctx context.Context, job *river.Job[reports.Render
 		w.log(job, "STALE_ATTEMPT", cause, "render attempt is stale")
 		return renderStaleError{}
 	}
-	code, stop := renderClassify(ctx, cause)
+	code, stop := codeInternalFailure, error(nil)
+	if !errors.Is(cause, errOutcomeExpired) {
+		code, stop = renderClassify(ctx, cause)
+	}
 	if stop != nil {
 		return stop
 	}
@@ -268,7 +304,7 @@ func (w *RenderWorker) handle(ctx context.Context, job *river.Job[reports.Render
 		w.log(job, code, cause, "render attempt failed")
 		return failure
 	}
-	wctx, cancel := outcomeContext(ctx)
+	wctx, cancel := outcomeContext(ctx, w.outcome())
 	defer cancel()
 	err := w.store(wctx, job, nil, code)
 	switch {

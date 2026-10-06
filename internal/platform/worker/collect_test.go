@@ -693,6 +693,53 @@ func TestCollectSuccessOutlivesTheDeadline(t *testing.T) {
 	}
 }
 
+// A success write that runs longer than the outcome timeout while the job's
+// budget remains is stored, not turned into a failure.
+func TestCollectSlowSuccessWriteKeepsItsBudget(t *testing.T) {
+	e, _, _ := scenarioEnv(t, func(s *settings.Settings) {
+		s.CollectTimeout = 60 * time.Second
+		s.JobMaxAttempts = 1
+	})
+	e.start(collectHooks{
+		outcomeTimeout:  time.Second,
+		insideCollected: func(context.Context, int) { time.Sleep(2 * time.Second) },
+	})
+	report := e.request()
+	e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+	got := e.report(report.ID)
+	if got.Status != "collected" || got.Phase != "rendering" || got.FailureCode != nil {
+		code := ""
+		if got.FailureCode != nil {
+			code = *got.FailureCode
+		}
+		t.Fatalf("report %s/%s with code %q, want collected/rendering", got.Status, got.Phase, code)
+	}
+}
+
+// A success write that outlives the job's own deadline is an internal
+// failure of the platform, never a fault of the metric source or a collection
+// timeout.
+func TestCollectSuccessWritePastItsDeadlineIsInternal(t *testing.T) {
+	e, _, _ := scenarioEnv(t, func(s *settings.Settings) {
+		s.CollectTimeout = 3 * time.Second
+		s.JobMaxAttempts = 1
+	})
+	e.start(collectHooks{
+		outcomeTimeout: time.Second,
+		insideCollected: func(ctx context.Context, _ int) {
+			deadline, ok := ctx.Deadline()
+			if !ok {
+				t.Error("the job has no deadline")
+				return
+			}
+			time.Sleep(time.Until(deadline.Add(time.Second)))
+		},
+	})
+	report := e.request()
+	// assertFailedWith also checks the failed audit row and its code.
+	e.assertFailedWith(report, "INTERNAL_FAILURE")
+}
+
 // hold blocks an attempt at a hook until released; it signals when attempt
 // arrives. Other attempts pass.
 type hold struct {

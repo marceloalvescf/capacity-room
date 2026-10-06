@@ -535,3 +535,166 @@ func TestRenderStaleRowWritesNothing(t *testing.T) {
 		t.Fatalf("report %+v", got)
 	}
 }
+
+// waitFirstError waits for River to record the first error of the job, which
+// then waits for its retry, and returns the job as it stands.
+func (e *env) waitFirstError(id int64) *rivertype.JobRow {
+	e.t.Helper()
+	deadline := time.Now().Add(waitLimit)
+	for time.Now().Before(deadline) {
+		job, err := e.client.JobGet(context.Background(), id)
+		if err != nil {
+			e.t.Fatal(err)
+		}
+		if len(job.Errors) > 0 {
+			return job
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	e.t.Fatalf("job %d recorded no error", id)
+	return nil
+}
+
+// A success write that runs longer than the outcome timeout while the job's
+// budget remains is stored.
+func TestRenderSlowSuccessWriteKeepsItsBudget(t *testing.T) {
+	e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.RenderTimeout = 60 * time.Second })
+	e.startRender(both(pdfToolchain(t)), 2, renderHooks{
+		outcomeTimeout: time.Second,
+		insideStore:    func(string) { time.Sleep(2 * time.Second) },
+	})
+	report := e.collected()
+	e.waitPDF(report.ID, langPT, "ready")
+	e.waitPDF(report.ID, langEN, "ready")
+	if got := e.report(report.ID); got.Phase != "complete" || got.CompletedAt == nil {
+		t.Fatalf("report %+v", got)
+	}
+}
+
+// A success write that outlives the job's own deadline is an internal
+// failure: retried while attempts remain, stored on the last.
+func TestRenderSuccessWritePastItsDeadlineIsInternal(t *testing.T) {
+	const timeout = 3 * time.Second
+	hooks := renderHooks{
+		outcomeTimeout: time.Second,
+		insideStore: func(lang string) {
+			// One language alone holds the report's lock past the deadline;
+			// a single worker runs the other before or after it.
+			if lang == langPT {
+				time.Sleep(timeout + 1500*time.Millisecond)
+			}
+		},
+	}
+
+	t.Run("attempts left", func(t *testing.T) {
+		e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.RenderTimeout = timeout; s.JobMaxAttempts = 3 })
+		e.startRender(both(pdfToolchain(t)), 1, hooks)
+		report := e.collected()
+		job := e.waitFirstError(e.pdfJob(report.ID, langPT))
+		if job.Attempt != 1 || len(job.Errors) != 1 || !strings.Contains(job.Errors[0].Error, "render: INTERNAL_FAILURE") {
+			t.Fatalf("job attempt %d, errors %+v", job.Attempt, job.Errors)
+		}
+		if row := e.pdf(report.ID, langPT); row.Status != "pending" || row.FailureCode != nil {
+			t.Fatalf("row %+v", row)
+		}
+	})
+
+	t.Run("last attempt", func(t *testing.T) {
+		e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.RenderTimeout = timeout; s.JobMaxAttempts = 1 })
+		e.startRender(both(pdfToolchain(t)), 1, hooks)
+		report := e.collected()
+		e.assertFailedPDF(report.ID, langPT, "INTERNAL_FAILURE")
+		e.waitPDF(report.ID, langEN, "ready")
+	})
+}
+
+// A report that expires between the load and the store is skipped: nothing
+// is written and the job completes.
+func TestRenderSkipsAReportExpiredBetweenTransactions(t *testing.T) {
+	e, _, _ := scenarioEnv(t, nil)
+	var once sync.Once
+	e.startRender(both(pdfToolchain(t)), 2, renderHooks{beforeStore: func(ctx context.Context, _ string) {
+		once.Do(func() {
+			past := fixedNow.Add(-time.Hour)
+			if _, err := e.pool.Exec(ctx, `UPDATE reports SET expired_at = $1, expires_at = $1`, past); err != nil {
+				t.Error(err)
+			}
+		})
+	}})
+	report := e.collected()
+	for _, lang := range []string{langPT, langEN} {
+		e.waitJob(e.pdfJob(report.ID, lang), rivertype.JobStateCompleted)
+		if row := e.pdf(report.ID, lang); row.Status != "pending" || e.pdfBody(report.ID, lang) != nil {
+			t.Fatalf("%s row %+v", lang, row)
+		}
+	}
+	if n := len(e.audits(reports.ActionReportRender)); n != 0 {
+		t.Fatalf("%d render audit rows", n)
+	}
+	if got := e.report(report.ID); got.Phase != "rendering" {
+		t.Fatalf("report %+v", got)
+	}
+	if !strings.Contains(e.logs.String(), "render skipped: report expired") {
+		t.Fatalf("no skip line:\n%s", e.logs.String())
+	}
+}
+
+// A failure that no code names is retried while attempts remain: the row
+// stays pending and River records the code.
+func TestRenderInternalFailureWithAttemptsLeft(t *testing.T) {
+	e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 3 })
+	route := e.startRender(both(pdfToolchain(t)), 2, renderHooks{}, langPT, langEN)
+	report := e.collected()
+	// A snapshot that matches its digest and does not decode.
+	for _, stmt := range []string{
+		`ALTER TABLE report_snapshots DISABLE TRIGGER report_snapshots_are_immutable`,
+		`UPDATE report_snapshots SET body = '\x7b7d'::bytea, size_bytes = 2, sha256 = encode(sha256('\x7b7d'::bytea), 'hex')`,
+	} {
+		if _, err := e.pool.Exec(context.Background(), stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	route.release(langPT, langEN)
+	job := e.waitFirstError(e.pdfJob(report.ID, langPT))
+	if job.Attempt != 1 || len(job.Errors) != 1 || !strings.Contains(job.Errors[0].Error, "render: INTERNAL_FAILURE") {
+		t.Fatalf("job attempt %d, errors %+v", job.Attempt, job.Errors)
+	}
+	if row := e.pdf(report.ID, langPT); row.Status != "pending" || row.FailureCode != nil {
+		t.Fatalf("row %+v", row)
+	}
+}
+
+// Each reason a render is skipped has a line of its own.
+func TestNeedsRenderNamesEachSkip(t *testing.T) {
+	const (
+		notCollected = "render skipped: report not collected"
+		expired      = "render skipped: report expired"
+		noRow        = "render skipped: no PDF row"
+	)
+	cases := []struct {
+		name, statement, want string
+	}{
+		{"not collected", `UPDATE reports SET status = 'failed', phase = 'complete', failure_code = 'INTERNAL_FAILURE'`, notCollected},
+		{"expired", `UPDATE reports SET expired_at = expires_at`, expired},
+		{"no row", `DELETE FROM report_pdfs`, noRow},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e, _, _ := scenarioEnv(t, nil)
+			route := e.startRender(both(pdfToolchain(t)), 2, renderHooks{}, langPT, langEN)
+			report := e.collected()
+			job := e.pdfJob(report.ID, langPT)
+			if _, err := e.pool.Exec(context.Background(), c.statement); err != nil {
+				t.Fatal(err)
+			}
+			route.release(langPT, langEN)
+			e.waitJob(job, rivertype.JobStateCompleted)
+			logs := e.logs.String()
+			for _, line := range []string{notCollected, expired, noRow} {
+				if has := strings.Contains(logs, line); has != (line == c.want) {
+					t.Fatalf("line %q present: %v\n%s", line, has, logs)
+				}
+			}
+		})
+	}
+}

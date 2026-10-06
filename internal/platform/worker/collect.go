@@ -38,13 +38,39 @@ const (
 // attempt, which runs after the attempt's own context may be done.
 const outcomeTimeout = 10 * time.Second
 
-// outcomeContext is the context of the transaction that stores the outcome
-// of an attempt, success or failure: it does not stop with the attempt's own
-// deadline or cancel, so finished work is not lost to a deadline that passes
-// while it is written, and it keeps the values of ctx, which the completion
+// errOutcomeExpired marks the error of a success write whose own context ran
+// out: a fault of the platform, whatever the cause says.
+var errOutcomeExpired = errors.New("outcome write ran out of time")
+
+// successContext is the context of the transaction that stores a success:
+// free of the job's cancel, with its deadline at the later of the job's
+// deadline and now plus the outcome timeout, so a write that starts late
+// still has the outcome timeout and one that starts early may use what is
+// left of the job's budget. It keeps the values of ctx, which the completion
 // of the job needs.
-func outcomeContext(ctx context.Context) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.WithoutCancel(ctx), outcomeTimeout)
+func successContext(ctx context.Context, outcome time.Duration) (context.Context, context.CancelFunc) {
+	deadline := time.Now().Add(outcome)
+	if d, ok := ctx.Deadline(); ok && d.After(deadline) {
+		deadline = d
+	}
+	return context.WithDeadline(context.WithoutCancel(ctx), deadline)
+}
+
+// successFailure marks the error of a success write as an internal failure
+// when the write's own context is done, and returns any other error as it is.
+func successFailure(wctx context.Context, err error) error {
+	if err != nil && !errors.Is(err, ErrStaleAttempt) && wctx.Err() != nil {
+		return fmt.Errorf("%w: %w", errOutcomeExpired, err)
+	}
+	return err
+}
+
+// outcomeContext is the context of the transaction that stores a failure: it
+// does not stop with the attempt's own deadline or cancel, so a failure is
+// not lost to a deadline that has passed, and it keeps the values of ctx,
+// which the completion of the job needs.
+func outcomeContext(ctx context.Context, outcome time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), outcome)
 }
 
 // staleAttemptError is what a stale attempt returns to River: its text is the
@@ -85,6 +111,15 @@ type collectHooks struct {
 	afterClaim      func(ctx context.Context, attempt int) // after the claim committed
 	beforeCollected func(ctx context.Context, attempt int) // after the snapshot is encoded, before its transaction
 	insideCollected func(ctx context.Context, attempt int) // inside the transaction that stores the snapshot
+	outcomeTimeout  time.Duration                          // the outcome timeout; zero means outcomeTimeout
+}
+
+// outcome is the time the transaction of an outcome may run.
+func (w *CollectWorker) outcome() time.Duration {
+	if w.hooks.outcomeTimeout > 0 {
+		return w.hooks.outcomeTimeout
+	}
+	return outcomeTimeout
 }
 
 // Timeout is the longest a collection may run.
@@ -200,9 +235,9 @@ func (w *CollectWorker) collect(ctx context.Context, job *river.Job[reports.Coll
 		h(ctx, attempt)
 	}
 
-	wctx, cancel := outcomeContext(ctx)
+	wctx, cancel := successContext(ctx, w.outcome())
 	defer cancel()
-	return store.Transact(wctx, d.Pool, func(tx pgx.Tx) error {
+	err = store.Transact(wctx, d.Pool, func(tx pgx.Tx) error {
 		now := d.Now().UTC()
 		if err := store.CollectReport(wctx, tx, id, attempt, now); err != nil {
 			return err
@@ -231,6 +266,7 @@ func (w *CollectWorker) collect(ctx context.Context, job *river.Job[reports.Coll
 		_, err := river.JobCompleteTx[*riverpgxv5.Driver](wctx, tx, job)
 		return err
 	})
+	return successFailure(wctx, err)
 }
 
 // classify maps the failure of an attempt to a code. A stop of the worker is
@@ -277,11 +313,14 @@ func (w *CollectWorker) handle(ctx context.Context, job *river.Job[reports.Colle
 		w.log(id, attempt, "STALE_ATTEMPT", cause, "collect attempt is stale")
 		return staleAttemptError{}
 	}
-	code, stop := classify(ctx, cause)
+	code, stop := codeInternalFailure, error(nil)
+	if !errors.Is(cause, errOutcomeExpired) {
+		code, stop = classify(ctx, cause)
+	}
 	if stop != nil {
 		return stop
 	}
-	wctx, cancel := outcomeContext(ctx)
+	wctx, cancel := outcomeContext(ctx, w.outcome())
 	defer cancel()
 	failure := fmt.Errorf("collect: %s", code)
 
