@@ -137,10 +137,8 @@ check-runtime: $(IMAGE_DEP)
 	set -o pipefail; test "$$(docker run --rm --entrypoint /usr/local/bin/typst $(IMAGE) --version | cut -d' ' -f2)" = "$(TYPST_VERSION)"
 	test "$$(docker inspect --format '{{.Config.User}}' $(IMAGE))" = "10001:10001"
 	# The snapshot must exist: Docker makes a folder at a mount source that
-	# is missing. The output folder is kept between runs and only the file
-	# is removed, because Docker Desktop holds a stale mount for a folder
-	# that was removed and made again. Its mode is 1777, not 0777: the
-	# sticky bit keeps another account from replacing report.pdf.
+	# is missing. The output folder's mode is 1777, not 0777: the sticky
+	# bit keeps another account from replacing report.pdf.
 	test -f $(CHECK_SNAPSHOT)
 	mkdir -p $(CHECK_RUNTIME_OUT)
 	chmod 1777 $(CHECK_RUNTIME_OUT)

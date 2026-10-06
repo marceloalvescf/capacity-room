@@ -13,6 +13,9 @@ the authority when this file and the code disagree with it.
 - `typst` 0.15.1 and `pdftotext` are installed natively for fast feedback.
 - Anything whose result must be exact runs in the Linux test image, through
   Docker. A native result never closes a gate.
+- Docker is OrbStack's engine, never Docker Desktop. Before a Docker step,
+  `orb start` starts it and `docker context show` prints `orbstack`; any other
+  context is the wrong engine.
 - There are no Nix files in this repository.
 - Scratch files go under `.cache/`, never under `/tmp` on the host.
 - `older/` holds the two original projects as read-only reference. It is
