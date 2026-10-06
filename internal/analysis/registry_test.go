@@ -1,6 +1,8 @@
 package analysis
 
 import (
+	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
@@ -284,4 +286,90 @@ func equalStrings(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// TestEveryDefinitionHasAConfidenceRule walks the registry: a definition
+// holds a list of fixed confidences or exactly one source, never both and
+// never neither.
+func TestEveryDefinitionHasAConfidenceRule(t *testing.T) {
+	valid := []string{"exact", "inferred", "unknown"}
+	for _, definition := range Registry {
+		rule := definition.Confidence
+		sources := 0
+		for _, set := range []bool{rule.FromApproximate, rule.FromPool, rule.FromAutoscaling} {
+			if set {
+				sources++
+			}
+		}
+		if len(rule.Fixed) == 0 && sources != 1 {
+			t.Errorf("%s holds no fixed confidence and %d sources, want exactly one", definition.Code, sources)
+		}
+		if len(rule.Fixed) > 0 && sources != 0 {
+			t.Errorf("%s holds fixed confidences and a source", definition.Code)
+		}
+		for _, c := range rule.Fixed {
+			if !slices.Contains(valid, c) {
+				t.Errorf("%s holds the fixed confidence %q, which is not one of %v", definition.Code, c, valid)
+			}
+		}
+	}
+}
+
+// TestConfidenceRuleOfEveryCode pins the rule of each code to what the
+// analysis writes.
+func TestConfidenceRuleOfEveryCode(t *testing.T) {
+	exact := ConfidenceRule{Fixed: []string{"exact"}}
+	inferred := ConfidenceRule{Fixed: []string{"inferred"}}
+	unknown := ConfidenceRule{Fixed: []string{"unknown"}}
+	approximate := ConfidenceRule{FromApproximate: true}
+	want := map[string]ConfidenceRule{
+		"HPA_PINNED_REPLICAS":                exact,
+		"HPA_MAX_REPLICAS_REACHED":           exact,
+		"HPA_NEAR_MAX_REPLICAS":              exact,
+		"HPA_REPLICA_DIVERGENCE":             inferred,
+		"DEPLOYMENT_WITHOUT_HPA":             exact,
+		"STATEFULSET_WITHOUT_HPA_INFO":       exact,
+		"NODE_OVERREQUESTED":                 inferred,
+		"NODE_LOW_UTILIZATION":               exact,
+		"NODEPOOL_UNKNOWN":                   unknown,
+		"NODEPOOL_CPU_UNEVEN":                {FromPool: true},
+		"NODEPOOL_MEMORY_UNEVEN":             {FromPool: true},
+		"NODE_AUTOSCALING_UNKNOWN":           unknown,
+		"NODE_AUTOSCALING_DISABLED":          {FromAutoscaling: true},
+		"NODE_AUTOSCALING_DISABLED_PRESSURE": {FromAutoscaling: true},
+		"NODE_AUTOSCALING_NEAR_MAX":          {FromAutoscaling: true},
+		"NODE_AUTOSCALING_BOUNDS_UNKNOWN":    {FromAutoscaling: true},
+		"NODE_AUTOSCALING_AT_MIN":            {FromAutoscaling: true},
+		"NODE_AUTOSCALING_ENABLED":           {FromAutoscaling: true},
+	}
+	for _, prefix := range []string{"NAMESPACE", "WORKLOAD"} {
+		for _, resource := range []string{"CPU", "MEMORY"} {
+			base := prefix + "_" + resource + "_"
+			for _, suffix := range []string{"REQUEST_MISSING", "LIMIT_MISSING", "BURSTY"} {
+				want[base+suffix] = exact
+			}
+			for _, suffix := range []string{"REQUEST_HEALTHY", "REQUEST_ATTENTION", "REQUEST_CRITICAL", "LIMIT_HEALTHY", "LIMIT_ATTENTION", "LIMIT_CRITICAL", "OVERREQUESTED"} {
+				want[base+suffix] = approximate
+			}
+		}
+	}
+	for _, resource := range []string{"CPU", "MEMORY"} {
+		want["NODE_"+resource+"_REQUEST_HIGH"] = exact
+		for _, severity := range []string{"HEALTHY", "ATTENTION", "CRITICAL"} {
+			want["NODE_"+resource+"_USAGE_"+severity] = exact
+		}
+	}
+	if len(want) != len(Registry) {
+		t.Fatalf("the table holds %d codes, the registry %d", len(want), len(Registry))
+	}
+	for _, definition := range Registry {
+		rule, ok := want[definition.Code]
+		if !ok {
+			t.Errorf("%s is not in the table", definition.Code)
+			continue
+		}
+		if !reflect.DeepEqual(definition.Confidence, rule) {
+			t.Errorf("%s has the rule %+v, want %+v", definition.Code, definition.Confidence, rule)
+		}
+	}
 }

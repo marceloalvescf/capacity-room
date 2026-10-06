@@ -416,9 +416,15 @@ func TestBuildEveryFieldChangesTheBytes(t *testing.T) {
 		{"Collected.Nodes.MemoryRequestPercent", func(in *Input) { in.Collected.Nodes.Rows[0].MemoryRequestPercent = known(76) }},
 		{"Collected.Nodes.Ready", func(in *Input) { in.Collected.Nodes.Rows[0].Ready = collect.Flag{Value: false, Known: true} }},
 		{"Collected.Nodes.Schedulable", func(in *Input) { in.Collected.Nodes.Rows[0].Schedulable = collect.Flag{Value: true, Known: true} }},
-		{"Collected.Autoscaling.Status", func(in *Input) { in.Collected.Autoscaling.Status = collect.AutoscalingDisabled }},
-		{"Collected.Autoscaling.Source", func(in *Input) { in.Collected.Autoscaling.Source = discovery.StrategyConfigured }},
-		{"Collected.Autoscaling.Confidence", func(in *Input) { in.Collected.Autoscaling.Confidence = discovery.ConfidenceExact }},
+		{"Collected.Autoscaling.Status", func(in *Input) {
+			in.Collected.Autoscaling = collect.AutoscalingEvidence{Status: collect.AutoscalingDisabled, Source: discovery.StrategyConfigured, Confidence: discovery.ConfidenceExact}
+		}},
+		{"Collected.Autoscaling.Source", func(in *Input) {
+			in.Collected.Autoscaling = collect.AutoscalingEvidence{Status: collect.AutoscalingEnabled, Source: discovery.StrategyConfigured, Confidence: discovery.ConfidenceExact}
+		}},
+		{"Collected.Autoscaling.Confidence", func(in *Input) {
+			in.Collected.Autoscaling = collect.AutoscalingEvidence{Status: collect.AutoscalingUnknown, Source: discovery.StrategyNone, Confidence: discovery.ConfidenceUnknown}
+		}},
 		{"Collected.Autoscaling.ManagedNodeGroups", func(in *Input) { in.Collected.Autoscaling.ManagedNodeGroups = known(3) }},
 		{"Collected.Autoscaling.CurrentNodes", func(in *Input) { in.Collected.Autoscaling.CurrentNodes = known(6) }},
 		{"Collected.Autoscaling.MinNodes", func(in *Input) { in.Collected.Autoscaling.MinNodes = known(3) }},
@@ -915,7 +921,7 @@ func clusterInput() Input {
 		},
 		{
 			Code: "NODE_LOW_UTILIZATION", Severity: analysis.SeverityAttention,
-			ScopeType: analysis.ScopeNode, ScopeName: "node-b1", Confidence: discovery.ConfidenceInferred,
+			ScopeType: analysis.ScopeNode, ScopeName: "node-b1", Confidence: discovery.ConfidenceExact,
 			Evidence: []analysis.Evidence{{Name: "maximum_average_percent", Value: analysis.Number(12)}},
 		},
 		{
@@ -1114,7 +1120,7 @@ func TestBuildRefusesAScopeThatDoesNotExist(t *testing.T) {
 	}{
 		{"a node finding for a node that is not there", analysis.Finding{
 			Code: "NODE_LOW_UTILIZATION", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeNode, ScopeName: "ghost",
-			Confidence: discovery.ConfidenceInferred,
+			Confidence: discovery.ConfidenceExact,
 			Evidence:   []analysis.Evidence{{Name: "maximum_average_percent", Value: analysis.Number(12)}},
 		}, "findings[0].scope_name is not a node of the snapshot"},
 		{"an HPA finding for an HPA that is not there", analysis.Finding{
@@ -1141,7 +1147,7 @@ func TestBuildRefusesAScopeThatDoesNotExist(t *testing.T) {
 		}, "findings[0].scope_name is not an uncovered workload of the snapshot"},
 		{"a node finding that names a kind", analysis.Finding{
 			Code: "NODE_LOW_UTILIZATION", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeNode, ScopeKind: "Node", ScopeName: "node-b1",
-			Confidence: discovery.ConfidenceInferred,
+			Confidence: discovery.ConfidenceExact,
 			Evidence:   []analysis.Evidence{{Name: "maximum_average_percent", Value: analysis.Number(12)}},
 		}, "findings[0].scope_kind must be empty for a node finding"},
 	}
@@ -1232,7 +1238,7 @@ func TestBuildFillsTheRecommendations(t *testing.T) {
 
 	want := []Recommendation{
 		{Code: "HPA_MAX_REPLICAS_REACHED", Severity: "critical", ScopeType: "hpa", Scopes: []string{"payments/web"}, Confidence: "exact"},
-		{Code: "NODE_LOW_UTILIZATION", Severity: "attention", ScopeType: "node", Scopes: []string{"node-b1"}, Confidence: "inferred"},
+		{Code: "NODE_LOW_UTILIZATION", Severity: "attention", ScopeType: "node", Scopes: []string{"node-b1"}, Confidence: "exact"},
 	}
 	if !reflect.DeepEqual(snap.Recommendations, want) {
 		t.Errorf("Recommendations = %+v, want %+v", snap.Recommendations, want)

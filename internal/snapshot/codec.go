@@ -3,6 +3,8 @@ package snapshot
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -105,7 +107,9 @@ func Encode(s Snapshot) ([]byte, error) {
 
 // Decode reads exactly one snapshot from data and checks it.
 //
-// The document is decoded loosely exactly once, into a plain map: that map
+// The document is decoded loosely exactly once, into a plain map, by
+// encoding/json/v2, which refuses a repeated key at any depth and text that
+// is not UTF-8: that map
 // is the one reading of the file, and everything Decode judges afterwards
 // — the schema version, every key of the contract, and the typed Snapshot
 // itself — is read from it, never from the bytes a second time. Two
@@ -123,12 +127,15 @@ func Encode(s Snapshot) ([]byte, error) {
 // that order at each key); the typed Snapshot, filled from the same map
 // once it has passed that walk; and finally Check.
 func Decode(data []byte) (Snapshot, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
+	dec := jsontext.NewDecoder(bytes.NewReader(data))
 	var loose any
-	if err := dec.Decode(&loose); err != nil {
+	if err := jsonv2.UnmarshalDecode(dec, &loose); err != nil {
+		if path, ok := repeatedKeyPath(err); ok {
+			return Snapshot{}, fmt.Errorf("snapshot repeats the key %s", path)
+		}
 		return Snapshot{}, fmt.Errorf("snapshot is not valid JSON: %s", err)
 	}
-	if err := dec.Decode(new(struct{})); !errors.Is(err, io.EOF) {
+	if _, err := dec.ReadToken(); !errors.Is(err, io.EOF) {
 		return Snapshot{}, errors.New("snapshot holds data after the document")
 	}
 
@@ -158,6 +165,25 @@ func Decode(data []byte) (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	return snap, nil
+}
+
+// repeatedKeyPath reports whether err is the refusal of a repeated key, and
+// where the key is, written as the messages of Check write a path:
+// findings[0].code. The JSON pointer of the error names the repeated key.
+func repeatedKeyPath(err error) (string, bool) {
+	var syntactic *jsontext.SyntacticError
+	if !errors.As(err, &syntactic) || !errors.Is(err, jsontext.ErrDuplicateName) {
+		return "", false
+	}
+	path := ""
+	for token := range syntactic.JSONPointer.Tokens() {
+		if _, err := strconv.ParseUint(token, 10, 64); err == nil && path != "" {
+			path += "[" + token + "]"
+			continue
+		}
+		path = joinPath(path, token)
+	}
+	return path, true
 }
 
 // decodeFromMap fills a Snapshot from obj, the same map checkKeys has
@@ -571,6 +597,12 @@ func (s Snapshot) Check() error {
 	if err := checkFindingScope(s); err != nil {
 		return err
 	}
+	if err := checkFindingAutoscaling(s); err != nil {
+		return err
+	}
+	if err := checkFindingConfidence(s); err != nil {
+		return err
+	}
 	if err := checkFindingsOrder(s.Findings); err != nil {
 		return err
 	}
@@ -869,8 +901,8 @@ func workloadStatisticsFields(wl Workload) []statisticsField {
 }
 
 // checkStatistics refuses a state outside validStatisticsStates, a state
-// value with no number, any other state with a number, and a number that is
-// NaN or infinite.
+// value that lacks its average or its peak, any other state with a number,
+// and a number that is NaN or infinite.
 func checkStatistics(path string, s Statistics) error {
 	if !slices.Contains(validStatisticsStates, s.State) {
 		return fmt.Errorf("%s.state has an unknown value: %q", path, s.State)
@@ -887,8 +919,8 @@ func checkStatistics(path string, s Statistics) error {
 	}
 
 	if s.State == collect.StateValue {
-		if s.Average == nil && s.Minimum == nil && s.Peak == nil && s.Current == nil {
-			return fmt.Errorf("%s has state %q and no number", path, collect.StateValue)
+		if s.Average == nil || s.Peak == nil {
+			return fmt.Errorf("%s has the state %s and lacks a number", path, collect.StateValue)
 		}
 	} else {
 		for _, n := range numbers {
@@ -1164,6 +1196,71 @@ func checkFindingScope(s Snapshot) error {
 	return nil
 }
 
+// autoscalingCodes lists, for each autoscaling status, the autoscaling
+// findings that analysis gives under it.
+var autoscalingCodes = map[string][]string{
+	collect.AutoscalingUnknown:  {"NODE_AUTOSCALING_UNKNOWN"},
+	collect.AutoscalingDisabled: {"NODE_AUTOSCALING_DISABLED", "NODE_AUTOSCALING_DISABLED_PRESSURE"},
+	collect.AutoscalingEnabled:  {"NODE_AUTOSCALING_NEAR_MAX", "NODE_AUTOSCALING_BOUNDS_UNKNOWN", "NODE_AUTOSCALING_AT_MIN", "NODE_AUTOSCALING_ENABLED"},
+}
+
+// checkFindingAutoscaling refuses an autoscaling finding that the status of
+// summary.autoscaling never gives.
+func checkFindingAutoscaling(s Snapshot) error {
+	status := s.Summary.Autoscaling.Status
+	for i, f := range s.Findings {
+		if strings.HasPrefix(f.Code, "NODE_AUTOSCALING_") && !slices.Contains(autoscalingCodes[status], f.Code) {
+			return fmt.Errorf("findings[%d] is %s, which the autoscaling status %s never gives", i, f.Code, status)
+		}
+	}
+	return nil
+}
+
+// checkFindingConfidence refuses a finding whose confidence is not one the
+// definition of its code allows: a fixed list, the confidence the
+// approximate flag of its row decides, the confidence of its node pool, or
+// the confidence of the cluster autoscaling.
+func checkFindingConfidence(s Snapshot) error {
+	approximate := make(map[workloadIdentity]bool, len(s.Workloads))
+	for _, wl := range s.Workloads {
+		approximate[workloadIdentity{wl.Namespace, wl.Name, wl.Kind}] = wl.Approximate
+	}
+	namespaces := make(map[string]bool, len(s.Namespaces))
+	for _, ns := range s.Namespaces {
+		namespaces[ns.Name] = ns.Approximate
+	}
+	pools := make(map[string]string, len(s.Nodepools))
+	for _, pool := range s.Nodepools {
+		pools[pool.Name] = pool.Confidence
+	}
+
+	for i, f := range s.Findings {
+		def, _ := analysis.Lookup(f.Code)
+		rule := def.Confidence
+		allowed := rule.Fixed
+		switch {
+		case rule.FromApproximate:
+			isApproximate := namespaces[f.ScopeName]
+			if f.ScopeType == analysis.ScopeWorkload {
+				namespace, name, _ := strings.Cut(f.ScopeName, "/")
+				isApproximate = approximate[workloadIdentity{namespace, name, f.ScopeKind}]
+			}
+			allowed = []string{discovery.ConfidenceExact}
+			if isApproximate {
+				allowed = []string{discovery.ConfidenceInferred}
+			}
+		case rule.FromPool:
+			allowed = []string{pools[f.ScopeName]}
+		case rule.FromAutoscaling:
+			allowed = []string{s.Summary.Autoscaling.Confidence}
+		}
+		if !slices.Contains(allowed, f.Confidence) {
+			return fmt.Errorf("findings[%d].confidence %s does not match the definition of %s", i, f.Confidence, f.Code)
+		}
+	}
+	return nil
+}
+
 // checkFindingsOrder refuses two findings that share a code, scope type,
 // scope kind, and scope name, and a findings list that is not in the order
 // analysis.Sort gives a copy of it.
@@ -1296,12 +1393,27 @@ func checkSummary(s Snapshot) error {
 	return nil
 }
 
+// autoscalingShape is a combination of status, source, and confidence.
+type autoscalingShape struct {
+	status, source, confidence string
+}
+
+// autoscalingShapes are the combinations analysis writes: a configured
+// mode, no evidence at all, and the evidence of the raw metrics.
+var autoscalingShapes = []autoscalingShape{
+	{collect.AutoscalingEnabled, discovery.StrategyConfigured, discovery.ConfidenceExact},
+	{collect.AutoscalingDisabled, discovery.StrategyConfigured, discovery.ConfidenceExact},
+	{collect.AutoscalingUnknown, discovery.StrategyNone, discovery.ConfidenceUnknown},
+	{collect.AutoscalingEnabled, discovery.StrategyRawMetrics, discovery.ConfidenceInferred},
+}
+
 // checkAutoscaling refuses an autoscaling whose status, source, or
 // confidence is outside its values, whose configured source comes with a
 // status that is unknown, whose unknown status comes with a source or a
-// confidence, or whose counts are not numbers of the right kind: the four
-// counts of nodes and groups are whole numbers, zero or above; the two
-// others are finite numbers, zero or above.
+// confidence, whose combination of the three is not one that analysis
+// writes, whose configured or empty source holds a count, or whose counts
+// are not numbers of the right kind: the four counts of nodes and groups
+// are whole numbers; the two others are finite numbers.
 func checkAutoscaling(a Autoscaling) error {
 	if err := checkEnum("summary.autoscaling.status", a.Status, validAutoscalingStatuses); err != nil {
 		return err
@@ -1317,6 +1429,16 @@ func checkAutoscaling(a Autoscaling) error {
 	}
 	if a.Status == collect.AutoscalingUnknown && (a.Source != discovery.StrategyNone || a.Confidence != discovery.ConfidenceUnknown) {
 		return errors.New("summary.autoscaling is unknown and has a source or a confidence other than none and unknown")
+	}
+	if !slices.Contains(autoscalingShapes, autoscalingShape{a.Status, a.Source, a.Confidence}) {
+		return fmt.Errorf("summary.autoscaling holds status %s, source %s, and confidence %s, which analysis never writes", a.Status, a.Source, a.Confidence)
+	}
+	if a.Source != discovery.StrategyRawMetrics {
+		for _, count := range []*float64{a.ManagedNodeGroups, a.CurrentNodes, a.MinNodes, a.MaxNodes, a.ScaleEvents, a.UnschedulablePods} {
+			if count != nil {
+				return fmt.Errorf("summary.autoscaling with source %s holds a count", a.Source)
+			}
+		}
 	}
 
 	wholes := []struct {
@@ -1359,7 +1481,8 @@ func checkFinite(path string, value *float64) error {
 // checkHPARows refuses an hpas list that is not sorted by namespace and
 // name, holds a repeated row, or holds a row with a namespace outside the
 // scope, an empty name, a slash in its namespace or name, a target that is
-// only half named, or a number that is not finite.
+// only half named, a number that is not finite, or a minimum above its
+// maximum.
 func checkHPARows(hpas []HPA, scopeNamespaces []string) error {
 	for i := 1; i < len(hpas); i++ {
 		prev, cur := hpas[i-1], hpas[i]
@@ -1388,6 +1511,9 @@ func checkHPARows(hpas []HPA, scopeNamespaces []string) error {
 		}
 		if err := checkFinite(fmt.Sprintf("hpas[%d].spec_max", i), hpa.SpecMax); err != nil {
 			return err
+		}
+		if hpa.SpecMin != nil && hpa.SpecMax != nil && *hpa.SpecMin > *hpa.SpecMax {
+			return fmt.Errorf("hpas[%d].spec_min is greater than hpas[%d].spec_max", i, i)
 		}
 		if err := checkStatistics(fmt.Sprintf("hpas[%d].current", i), hpa.Current); err != nil {
 			return err
@@ -1506,7 +1632,8 @@ func checkNodepoolRows(nodes []Node, pools []NodePool) error {
 }
 
 // checkWorkloadCoverage refuses a workload whose hpa_coverage is outside
-// its values, an uncovered workload that an HPA targets, and a row with no
+// its values, an uncovered workload that an HPA targets, a covered workload
+// that no HPA targets, and a row with no
 // observed usage that is not uncovered, holds pods, or holds a statistic
 // that is not unavailable.
 func checkWorkloadCoverage(workloads []Workload, hpas []HPA) error {
@@ -1514,13 +1641,18 @@ func checkWorkloadCoverage(workloads []Workload, hpas []HPA) error {
 		if err := checkEnum(fmt.Sprintf("workloads[%d].hpa_coverage", i), wl.HPACoverage, validCoverages); err != nil {
 			return err
 		}
-		if wl.HPACoverage == CoverageUncovered {
-			for j, hpa := range hpas {
-				if hpa.TargetKind != "" && hpa.TargetName != "" &&
-					hpa.Namespace == wl.Namespace && hpa.TargetName == wl.Name && hpa.TargetKind == wl.Kind {
+		targeted := false
+		for j, hpa := range hpas {
+			if hpa.TargetKind != "" && hpa.TargetName != "" &&
+				hpa.Namespace == wl.Namespace && hpa.TargetName == wl.Name && hpa.TargetKind == wl.Kind {
+				targeted = true
+				if wl.HPACoverage == CoverageUncovered {
 					return fmt.Errorf("workloads[%d] (%s/%s) is uncovered and is the target of hpas[%d]", i, wl.Namespace, wl.Name, j)
 				}
 			}
+		}
+		if wl.HPACoverage == CoverageCovered && !targeted {
+			return fmt.Errorf("workloads[%d] (%s/%s) is covered and no HPA targets it", i, wl.Namespace, wl.Name)
 		}
 		if wl.ObservedUsage {
 			continue

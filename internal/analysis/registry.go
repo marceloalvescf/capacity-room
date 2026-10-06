@@ -80,6 +80,15 @@ type Finding struct {
 	Confidence string
 }
 
+// ConfidenceRule says which confidence a finding of a code may carry. When
+// Fixed is empty, exactly one of the three sources decides.
+type ConfidenceRule struct {
+	Fixed           []string // the confidences allowed whatever the row
+	FromApproximate bool     // exact when the row is not approximate, inferred when it is
+	FromPool        bool     // equal to the confidence of the node pool in scope
+	FromAutoscaling bool     // equal to the confidence of the cluster autoscaling
+}
+
 // Definition is what the registry knows of one code.
 type Definition struct {
 	Code       string
@@ -88,7 +97,18 @@ type Definition struct {
 	ScopeType  string
 	Params     map[string]string
 	Evidence   []EvidenceSpec
+	Confidence ConfidenceRule
 }
+
+// The confidence rules the codes of the registry share.
+var (
+	fixedExact      = ConfidenceRule{Fixed: []string{"exact"}}
+	fixedInferred   = ConfidenceRule{Fixed: []string{"inferred"}}
+	fixedUnknown    = ConfidenceRule{Fixed: []string{"unknown"}}
+	fromApproximate = ConfidenceRule{FromApproximate: true}
+	fromPool        = ConfidenceRule{FromPool: true}
+	fromAutoscaling = ConfidenceRule{FromAutoscaling: true}
+)
 
 // ending describes one of the ten endings of a code, in the order the
 // registry lists them.
@@ -98,20 +118,21 @@ type ending struct {
 	severity string
 	hasRisk  bool
 	evidence []string
+	rule     ConfidenceRule
 }
 
 // endings holds the ten endings of the table of the design, in order.
 var endings = []ending{
-	{"REQUEST_HEALTHY", "resource_request_usage", SeverityHealthy, false, []string{"average_percent", "peak_percent"}},
-	{"REQUEST_ATTENTION", "resource_request_usage", SeverityAttention, false, []string{"average_percent", "peak_percent"}},
-	{"REQUEST_CRITICAL", "resource_request_usage", SeverityCritical, false, []string{"average_percent", "peak_percent"}},
-	{"LIMIT_HEALTHY", "resource_limit_usage", SeverityHealthy, true, []string{"average_percent", "peak_percent"}},
-	{"LIMIT_ATTENTION", "resource_limit_usage", SeverityAttention, true, []string{"average_percent", "peak_percent"}},
-	{"LIMIT_CRITICAL", "resource_limit_usage", SeverityCritical, true, []string{"average_percent", "peak_percent"}},
-	{"REQUEST_MISSING", "resource_request_missing", SeverityAttention, false, []string{}},
-	{"LIMIT_MISSING", "resource_limit_missing", SeverityAttention, false, []string{}},
-	{"OVERREQUESTED", "resource_overrequested", SeverityAttention, false, []string{"average_percent", "peak_percent"}},
-	{"BURSTY", "resource_bursty", SeverityAttention, false, []string{"average", "peak", "gap_percent"}},
+	{"REQUEST_HEALTHY", "resource_request_usage", SeverityHealthy, false, []string{"average_percent", "peak_percent"}, fromApproximate},
+	{"REQUEST_ATTENTION", "resource_request_usage", SeverityAttention, false, []string{"average_percent", "peak_percent"}, fromApproximate},
+	{"REQUEST_CRITICAL", "resource_request_usage", SeverityCritical, false, []string{"average_percent", "peak_percent"}, fromApproximate},
+	{"LIMIT_HEALTHY", "resource_limit_usage", SeverityHealthy, true, []string{"average_percent", "peak_percent"}, fromApproximate},
+	{"LIMIT_ATTENTION", "resource_limit_usage", SeverityAttention, true, []string{"average_percent", "peak_percent"}, fromApproximate},
+	{"LIMIT_CRITICAL", "resource_limit_usage", SeverityCritical, true, []string{"average_percent", "peak_percent"}, fromApproximate},
+	{"REQUEST_MISSING", "resource_request_missing", SeverityAttention, false, []string{}, fixedExact},
+	{"LIMIT_MISSING", "resource_limit_missing", SeverityAttention, false, []string{}, fixedExact},
+	{"OVERREQUESTED", "resource_overrequested", SeverityAttention, false, []string{"average_percent", "peak_percent"}, fromApproximate},
+	{"BURSTY", "resource_bursty", SeverityAttention, false, []string{"average", "peak", "gap_percent"}, fixedExact},
 }
 
 // prefixes holds the two prefixes of a code, in order, each with the
@@ -158,6 +179,7 @@ func buildRegistry() []Definition {
 					ScopeType:  prefix.scopeType,
 					Params:     params,
 					Evidence:   evidence,
+					Confidence: e.rule,
 				})
 			}
 		}
@@ -196,6 +218,7 @@ func clusterDefinitions() []Definition {
 				ScopeType:  ScopeNode,
 				Params:     map[string]string{"resource": resource},
 				Evidence:   usageEvidence(),
+				Confidence: fixedExact,
 			})
 		}
 	}
@@ -207,15 +230,16 @@ func clusterDefinitions() []Definition {
 			ScopeType:  ScopeNode,
 			Params:     map[string]string{"resource": resource},
 			Evidence:   numbers("percent"),
+			Confidence: fixedExact,
 		})
 	}
 	definitions = append(definitions,
 		Definition{Code: "NODE_OVERREQUESTED", Family: "node_overrequested", Severities: []string{SeverityAttention}, ScopeType: ScopeNode, Params: map[string]string{},
-			Evidence: []EvidenceSpec{{Name: "resources", Kind: KindText}}},
+			Evidence: []EvidenceSpec{{Name: "resources", Kind: KindText}}, Confidence: fixedInferred},
 		Definition{Code: "NODE_LOW_UTILIZATION", Family: "node_low_utilization", Severities: []string{SeverityAttention}, ScopeType: ScopeNode, Params: map[string]string{},
-			Evidence: numbers("maximum_average_percent")},
+			Evidence: numbers("maximum_average_percent"), Confidence: fixedExact},
 		Definition{Code: "NODEPOOL_UNKNOWN", Family: "nodepool_unknown", Severities: []string{SeverityAttention}, ScopeType: ScopeNodepool, Params: map[string]string{},
-			Evidence: numbers("affected_nodes")},
+			Evidence: numbers("affected_nodes"), Confidence: fixedUnknown},
 	)
 	for _, resource := range []string{"cpu", "memory"} {
 		definitions = append(definitions, Definition{
@@ -225,26 +249,27 @@ func clusterDefinitions() []Definition {
 			ScopeType:  ScopeNodepool,
 			Params:     map[string]string{"resource": resource},
 			Evidence:   numbers("minimum_peak_percent", "maximum_peak_percent", "spread_percent"),
+			Confidence: fromPool,
 		})
 	}
-	plain := func(code, family, severity, scopeType string, evidence []EvidenceSpec) Definition {
-		return Definition{Code: code, Family: family, Severities: []string{severity}, ScopeType: scopeType, Params: map[string]string{}, Evidence: evidence}
+	plain := func(code, family, severity, scopeType string, evidence []EvidenceSpec, rule ConfidenceRule) Definition {
+		return Definition{Code: code, Family: family, Severities: []string{severity}, ScopeType: scopeType, Params: map[string]string{}, Evidence: evidence, Confidence: rule}
 	}
 	pressure := []EvidenceSpec{{Name: "node_pressure", Kind: KindBoolean}}
 	return append(definitions,
-		plain("HPA_PINNED_REPLICAS", "hpa_pinned", SeverityHealthy, ScopeHPA, numbers("spec_min", "spec_max")),
-		plain("HPA_MAX_REPLICAS_REACHED", "hpa_max_reached", SeverityCritical, ScopeHPA, numbers("current_peak", "spec_max")),
-		plain("HPA_NEAR_MAX_REPLICAS", "hpa_near_max", SeverityAttention, ScopeHPA, numbers("current_average", "spec_max")),
-		plain("HPA_REPLICA_DIVERGENCE", "hpa_divergence", SeverityAttention, ScopeHPA, numbers("average_difference")),
-		plain("DEPLOYMENT_WITHOUT_HPA", "deployment_without_hpa", SeverityAttention, ScopeWorkload, numbers()),
-		plain("STATEFULSET_WITHOUT_HPA_INFO", "statefulset_without_hpa", SeverityHealthy, ScopeWorkload, numbers()),
-		plain("NODE_AUTOSCALING_UNKNOWN", "autoscaling_unknown", SeverityAttention, ScopeCluster, numbers()),
-		plain("NODE_AUTOSCALING_DISABLED", "autoscaling_disabled", SeverityAttention, ScopeCluster, pressure),
-		plain("NODE_AUTOSCALING_DISABLED_PRESSURE", "autoscaling_disabled", SeverityCritical, ScopeCluster, pressure),
-		plain("NODE_AUTOSCALING_NEAR_MAX", "autoscaling_near_max", SeverityAttention, ScopeCluster, numbers("current_nodes", "max_nodes")),
-		plain("NODE_AUTOSCALING_BOUNDS_UNKNOWN", "autoscaling_bounds_unknown", SeverityHealthy, ScopeCluster, numbers()),
-		plain("NODE_AUTOSCALING_AT_MIN", "autoscaling_at_min", SeverityHealthy, ScopeCluster, numbers("min_nodes")),
-		plain("NODE_AUTOSCALING_ENABLED", "autoscaling_enabled", SeverityHealthy, ScopeCluster, numbers()),
+		plain("HPA_PINNED_REPLICAS", "hpa_pinned", SeverityHealthy, ScopeHPA, numbers("spec_min", "spec_max"), fixedExact),
+		plain("HPA_MAX_REPLICAS_REACHED", "hpa_max_reached", SeverityCritical, ScopeHPA, numbers("current_peak", "spec_max"), fixedExact),
+		plain("HPA_NEAR_MAX_REPLICAS", "hpa_near_max", SeverityAttention, ScopeHPA, numbers("current_average", "spec_max"), fixedExact),
+		plain("HPA_REPLICA_DIVERGENCE", "hpa_divergence", SeverityAttention, ScopeHPA, numbers("average_difference"), fixedInferred),
+		plain("DEPLOYMENT_WITHOUT_HPA", "deployment_without_hpa", SeverityAttention, ScopeWorkload, numbers(), fixedExact),
+		plain("STATEFULSET_WITHOUT_HPA_INFO", "statefulset_without_hpa", SeverityHealthy, ScopeWorkload, numbers(), fixedExact),
+		plain("NODE_AUTOSCALING_UNKNOWN", "autoscaling_unknown", SeverityAttention, ScopeCluster, numbers(), fixedUnknown),
+		plain("NODE_AUTOSCALING_DISABLED", "autoscaling_disabled", SeverityAttention, ScopeCluster, pressure, fromAutoscaling),
+		plain("NODE_AUTOSCALING_DISABLED_PRESSURE", "autoscaling_disabled", SeverityCritical, ScopeCluster, pressure, fromAutoscaling),
+		plain("NODE_AUTOSCALING_NEAR_MAX", "autoscaling_near_max", SeverityAttention, ScopeCluster, numbers("current_nodes", "max_nodes"), fromAutoscaling),
+		plain("NODE_AUTOSCALING_BOUNDS_UNKNOWN", "autoscaling_bounds_unknown", SeverityHealthy, ScopeCluster, numbers(), fromAutoscaling),
+		plain("NODE_AUTOSCALING_AT_MIN", "autoscaling_at_min", SeverityHealthy, ScopeCluster, numbers("min_nodes"), fromAutoscaling),
+		plain("NODE_AUTOSCALING_ENABLED", "autoscaling_enabled", SeverityHealthy, ScopeCluster, numbers(), fromAutoscaling),
 	)
 }
 

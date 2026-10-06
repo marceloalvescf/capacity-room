@@ -1,11 +1,15 @@
 package snapshot
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math"
 	"os"
 	"reflect"
+	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -379,36 +383,6 @@ func TestDecodeRefusesOnlyAnotherLetterCase(t *testing.T) {
 	}
 	if err.Error() != want {
 		t.Fatalf("Decode() = %q, want %q", err.Error(), want)
-	}
-}
-
-// TestDecodeReadsWhatTheMapHolds writes report.classification twice, with
-// the same letters and two different values: not something Encode ever
-// produces, but something a hand-edited or foreign file legally could,
-// since JSON itself does not forbid a repeated key. The map is the one
-// reading of the file, and a map keeps the last value written to a key, so
-// the snapshot must hold that last value too — one reading, the last one,
-// never the first one a second, independent reading might have kept.
-func TestDecodeReadsWhatTheMapHolds(t *testing.T) {
-	snap := validSnapshot(t)
-	good, err := Encode(snap)
-	if err != nil {
-		t.Fatalf("Encode() error = %v", err)
-	}
-
-	original := fmt.Sprintf("%q: %q,", "classification", snap.Report.Classification)
-	if !strings.Contains(string(good), original) {
-		t.Fatalf("did not find %s in the encoded snapshot", original)
-	}
-	duplicated := original + "\n    " + fmt.Sprintf("%q: %q,", "classification", "a repeated value wins")
-	data := []byte(strings.Replace(string(good), original, duplicated, 1))
-
-	got, err := Decode(data)
-	if err != nil {
-		t.Fatalf("Decode() error = %v, want nil", err)
-	}
-	if got.Report.Classification != "a repeated value wins" {
-		t.Fatalf("Report.Classification = %q, want %q (the last value written)", got.Report.Classification, "a repeated value wins")
 	}
 }
 
@@ -1400,7 +1374,7 @@ func TestEncodeDecodeRoundTrip(t *testing.T) {
 }
 
 // TestDecodeAcceptsNullNumber covers that a *float64 field, such as
-// namespaces[0].cpu_usage.average, reads a JSON null as a nil pointer.
+// namespaces[0].pods, reads a JSON null as a nil pointer.
 func TestDecodeAcceptsNullNumber(t *testing.T) {
 	snap := validSnapshotWithRows(t)
 	good, err := Encode(snap)
@@ -1408,14 +1382,14 @@ func TestDecodeAcceptsNullNumber(t *testing.T) {
 		t.Fatalf("Encode() error = %v", err)
 	}
 
-	data := nullJSONKey(t, good, "namespaces[0].cpu_usage.average")
+	data := nullJSONKey(t, good, "namespaces[0].pods")
 
 	got, err := Decode(data)
 	if err != nil {
 		t.Fatalf("Decode() error = %v, want nil", err)
 	}
-	if got.Namespaces[0].CPUUsage.Average != nil {
-		t.Fatalf("Namespaces[0].CPUUsage.Average = %v, want nil", *got.Namespaces[0].CPUUsage.Average)
+	if got.Namespaces[0].Pods != nil {
+		t.Fatalf("Namespaces[0].Pods = %v, want nil", *got.Namespaces[0].Pods)
 	}
 }
 
@@ -1712,7 +1686,7 @@ func TestCheckRules(t *testing.T) {
 		}, `namespaces[0].cpu_usage.state has an unknown value: "bogus"`},
 		{"namespaces[0].cpu_usage has state value and no number", func(s *Snapshot) {
 			s.Namespaces[0].CPUUsage = Statistics{State: collect.StateValue}
-		}, `namespaces[0].cpu_usage has state "value" and no number`},
+		}, `namespaces[0].cpu_usage has the state value and lacks a number`},
 		{"namespaces[0].cpu_usage.average set for a state that is not value", func(s *Snapshot) {
 			s.Namespaces[0].CPUUsage.State = collect.StateUnavailable
 		}, `namespaces[0].cpu_usage.average is set for a state that is not "value"`},
@@ -2187,16 +2161,16 @@ func TestCheckRecomputesTheRecommendations(t *testing.T) {
 		}, "recommendations holds 3 entries, want 2 from the findings"},
 		{"two entries swapped", func(s *Snapshot) {
 			s.Recommendations[0], s.Recommendations[1] = s.Recommendations[1], s.Recommendations[0]
-		}, "recommendations[0] differs from the findings: got NODE_LOW_UTILIZATION attention node [node-b1] inferred, want HPA_MAX_REPLICAS_REACHED critical hpa [payments/web] exact"},
+		}, "recommendations[0] differs from the findings: got NODE_LOW_UTILIZATION attention node [node-b1] exact, want HPA_MAX_REPLICAS_REACHED critical hpa [payments/web] exact"},
 		{"a scope renamed", func(s *Snapshot) {
 			s.Recommendations[0].Scopes = []string{"payments/other"}
 		}, "recommendations[0] differs from the findings: got HPA_MAX_REPLICAS_REACHED critical hpa [payments/other] exact, want HPA_MAX_REPLICAS_REACHED critical hpa [payments/web] exact"},
 		{"a confidence changed", func(s *Snapshot) {
-			s.Recommendations[1].Confidence = "exact"
-		}, "recommendations[1] differs from the findings: got NODE_LOW_UTILIZATION attention node [node-b1] exact, want NODE_LOW_UTILIZATION attention node [node-b1] inferred"},
+			s.Recommendations[1].Confidence = "inferred"
+		}, "recommendations[1] differs from the findings: got NODE_LOW_UTILIZATION attention node [node-b1] inferred, want NODE_LOW_UTILIZATION attention node [node-b1] exact"},
 		{"the severity changed", func(s *Snapshot) {
 			s.Recommendations[1].Severity = "critical"
-		}, "recommendations[1] differs from the findings: got NODE_LOW_UTILIZATION critical node [node-b1] inferred, want NODE_LOW_UTILIZATION attention node [node-b1] inferred"},
+		}, "recommendations[1] differs from the findings: got NODE_LOW_UTILIZATION critical node [node-b1] exact, want NODE_LOW_UTILIZATION attention node [node-b1] exact"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2235,5 +2209,264 @@ func TestCheckRefusesANonFiniteThreshold(t *testing.T) {
 				t.Fatalf("Check() error = %v, want %q", err, want)
 			}
 		})
+	}
+}
+
+// goldenBytes reads the golden snapshot of a scenario.
+func goldenBytes(t *testing.T, name string) []byte {
+	t.Helper()
+	data, err := os.ReadFile("../../testdata/snapshot/" + name + ".json")
+	if err != nil {
+		t.Fatalf("reading the snapshot of %s: %v", name, err)
+	}
+	return data
+}
+
+// decodeGolden decodes the golden snapshot of a scenario.
+func decodeGolden(t *testing.T, name string) Snapshot {
+	t.Helper()
+	snap, err := Decode(goldenBytes(t, name))
+	if err != nil {
+		t.Fatalf("Decode(%s) error = %v", name, err)
+	}
+	return snap
+}
+
+// checkRefusesWith expects Check of snap to refuse it with message.
+func checkRefusesWith(t *testing.T, snap Snapshot, message string) {
+	t.Helper()
+	err := snap.Check()
+	if err == nil {
+		t.Fatalf("Check() = nil, want error %q", message)
+	}
+	if err.Error() != message {
+		t.Fatalf("Check() = %q, want %q", err.Error(), message)
+	}
+}
+
+func TestDecodeRefusesARepeatedKey(t *testing.T) {
+	good := string(goldenBytes(t, "direct-complete"))
+	findings := strings.Index(good, `"findings": [`)
+	firstCode := findings + strings.Index(good[findings:], `"code": `)
+	codeLine := good[firstCode : firstCode+strings.Index(good[firstCode:], "\n")]
+	tests := []struct {
+		name    string
+		data    string
+		message string
+	}{
+		{"at the top", strings.Replace(good, `"schema_version": "1.0",`, `"schema_version": "1.0", "schema_version": "1.0",`, 1), "snapshot repeats the key schema_version"},
+		{"inside report", strings.Replace(good, `"profile": "detailed",`, `"profile": "detailed", "profile": "executive",`, 1), "snapshot repeats the key report.profile"},
+		{"inside a finding", good[:firstCode] + codeLine + " " + codeLine + good[firstCode+len(codeLine):], "snapshot repeats the key findings[0].code"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.data == good {
+				t.Fatal("the mutation changed nothing")
+			}
+			_, err := Decode([]byte(tt.data))
+			if err == nil || err.Error() != tt.message {
+				t.Fatalf("Decode() error = %v, want %q", err, tt.message)
+			}
+		})
+	}
+}
+
+func TestDecodeRefusesTextThatIsNotUTF8(t *testing.T) {
+	good := string(goldenBytes(t, "direct-complete"))
+	data := strings.Replace(good, `"organization": "ACME"`, "\"organization\": \"AC\xffME\"", 1)
+	if data == good {
+		t.Fatal("the mutation changed nothing")
+	}
+	_, err := Decode([]byte(data))
+	const want = `snapshot is not valid JSON: jsontext: invalid UTF-8 within "/report/organization" after offset 412`
+	if err == nil || err.Error() != want {
+		t.Fatalf("Decode() error = %v, want %q", err, want)
+	}
+}
+
+func TestCheckRefusesACoveredWorkloadNoHPATargets(t *testing.T) {
+	snap := decodeGolden(t, "direct-complete")
+	covered := slices.IndexFunc(snap.Workloads, func(w Workload) bool { return w.HPACoverage == CoverageCovered })
+	if covered < 0 {
+		t.Fatal("the snapshot holds no covered workload")
+	}
+	wl := snap.Workloads[covered]
+	targeting := slices.IndexFunc(snap.HPAs, func(h HPA) bool {
+		return h.Namespace == wl.Namespace && h.TargetName == wl.Name && h.TargetKind == wl.Kind
+	})
+	if targeting < 0 {
+		t.Fatal("no HPA targets the covered workload")
+	}
+	snap.HPAs = slices.Delete(snap.HPAs, targeting, targeting+1)
+	snap.Summary.HPAs--
+	checkRefusesWith(t, snap, fmt.Sprintf("workloads[%d] (%s/%s) is covered and no HPA targets it", covered, wl.Namespace, wl.Name))
+}
+
+func TestCheckRefusesAnAutoscalingShape(t *testing.T) {
+	const shape = "summary.autoscaling holds status %s, source %s, and confidence %s, which analysis never writes"
+	const count = "summary.autoscaling with source %s holds a count"
+	tests := []struct {
+		name    string
+		mutate  func(*Autoscaling)
+		message string
+	}{
+		{"configured with inferred", func(a *Autoscaling) {
+			a.Status, a.Source, a.Confidence = "enabled", "configured", "inferred"
+		}, fmt.Sprintf(shape, "enabled", "configured", "inferred")},
+		{"raw_metrics with disabled", func(a *Autoscaling) {
+			a.Status = "disabled"
+		}, fmt.Sprintf(shape, "disabled", "raw_metrics", "inferred")},
+		{"configured with a count", func(a *Autoscaling) {
+			*a = Autoscaling{Status: "enabled", Source: "configured", Confidence: "exact", MinNodes: ptr(1)}
+		}, fmt.Sprintf(count, "configured")},
+		{"none with a count", func(a *Autoscaling) {
+			*a = Autoscaling{Status: "unknown", Source: "none", Confidence: "unknown", MaxNodes: ptr(1)}
+		}, fmt.Sprintf(count, "none")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checkRefuses(t, func(s *Snapshot) { tt.mutate(&s.Summary.Autoscaling) }, tt.message)
+		})
+	}
+}
+
+func TestCheckAcceptsTheAutoscalingShapesAnalysisWrites(t *testing.T) {
+	for _, a := range []Autoscaling{
+		{Status: "enabled", Source: "configured", Confidence: "exact"},
+		{Status: "disabled", Source: "configured", Confidence: "exact"},
+		{Status: "unknown", Source: "none", Confidence: "unknown"},
+	} {
+		snap := clusterSnapshot(t)
+		snap.Summary.Autoscaling = a
+		snap.Findings = slices.DeleteFunc(snap.Findings, func(f Finding) bool { return strings.HasPrefix(f.Code, "NODE_AUTOSCALING_") })
+		snap.Summary.Findings = float64(len(snap.Findings))
+		if err := checkAutoscaling(snap.Summary.Autoscaling); err != nil {
+			t.Errorf("checkAutoscaling(%+v) = %v, want nil", a, err)
+		}
+	}
+}
+
+func TestCheckRefusesAContraryAutoscalingFinding(t *testing.T) {
+	snap := decodeGolden(t, "edge-scaling")
+	snap.Summary.Autoscaling = Autoscaling{Status: "disabled", Source: "configured", Confidence: "exact"}
+	contrary := slices.IndexFunc(snap.Findings, func(f Finding) bool { return f.Code == "NODE_AUTOSCALING_NEAR_MAX" })
+	if contrary < 0 {
+		t.Fatal("the snapshot holds no NODE_AUTOSCALING_NEAR_MAX finding")
+	}
+	checkRefusesWith(t, snap, fmt.Sprintf("findings[%d] is NODE_AUTOSCALING_NEAR_MAX, which the autoscaling status disabled never gives", contrary))
+}
+
+func TestCheckRefusesAValueMissingANumber(t *testing.T) {
+	checkRefuses(t, func(s *Snapshot) {
+		s.Namespaces[0].CPUUsage = Statistics{State: collect.StateValue, Average: ptr(1), Minimum: ptr(1), Current: ptr(1)}
+	}, "namespaces[0].cpu_usage has the state value and lacks a number")
+}
+
+func TestCheckRefusesSpecMinAboveSpecMax(t *testing.T) {
+	checkRefuses(t, func(s *Snapshot) {
+		s.HPAs[0].SpecMin = ptr(5)
+		s.HPAs[0].SpecMax = ptr(2)
+	}, "hpas[0].spec_min is greater than hpas[0].spec_max")
+}
+
+// setConfidence gives every finding of code the confidence, and every
+// recommendation of the code the same, so that the recommendations still
+// follow the findings.
+func setConfidence(t *testing.T, snap *Snapshot, code, confidence string) int {
+	t.Helper()
+	index := -1
+	for i := range snap.Findings {
+		if snap.Findings[i].Code == code {
+			snap.Findings[i].Confidence = confidence
+			index = i
+		}
+	}
+	if index < 0 {
+		t.Fatalf("the snapshot holds no %s finding", code)
+	}
+	findings := make([]analysis.Finding, len(snap.Findings))
+	for i, f := range snap.Findings {
+		findings[i] = analysis.Finding{Code: f.Code, Severity: f.Severity, ScopeType: f.ScopeType, ScopeKind: f.ScopeKind, ScopeName: f.ScopeName, Confidence: f.Confidence}
+	}
+	snap.Recommendations = snap.Recommendations[:0]
+	for _, r := range analysis.Recommendations(findings) {
+		snap.Recommendations = append(snap.Recommendations, Recommendation{Code: r.Code, Severity: r.Severity, ScopeType: r.ScopeType, Scopes: r.Scopes, Confidence: r.Confidence})
+	}
+	return index
+}
+
+func TestCheckRefusesAConfidenceTheCodeNeverTakes(t *testing.T) {
+	missing := decodeGolden(t, "edge-values")
+	index := setConfidence(t, &missing, "WORKLOAD_CPU_REQUEST_MISSING", "inferred")
+	checkRefusesWith(t, missing, fmt.Sprintf("findings[%d].confidence inferred does not match the definition of WORKLOAD_CPU_REQUEST_MISSING", index))
+
+	healthy := decodeGolden(t, "direct-complete")
+	index = setConfidence(t, &healthy, "WORKLOAD_CPU_REQUEST_ATTENTION", "inferred")
+	namespace, name, _ := strings.Cut(healthy.Findings[index].ScopeName, "/")
+	for _, wl := range healthy.Workloads {
+		if wl.Namespace == namespace && wl.Name == name && wl.Approximate {
+			t.Fatal("the workload row is approximate")
+		}
+	}
+	checkRefusesWith(t, healthy, fmt.Sprintf("findings[%d].confidence inferred does not match the definition of WORKLOAD_CPU_REQUEST_ATTENTION", index))
+}
+
+func TestCheckBindsAFindingConfidenceToItsSource(t *testing.T) {
+	uneven := func(f Finding) bool {
+		return strings.HasPrefix(f.Code, "NODEPOOL_") && strings.HasSuffix(f.Code, "_UNEVEN")
+	}
+	t.Run("a pool finding takes the confidence of its pool", func(t *testing.T) {
+		snap := decodeGolden(t, "edge-scaling")
+		index := slices.IndexFunc(snap.Findings, uneven)
+		if index < 0 {
+			t.Fatal("the snapshot holds no uneven pool finding")
+		}
+		if snap.Findings[index].Confidence == "unknown" {
+			t.Fatal("the pool of the finding is already unknown")
+		}
+		code := snap.Findings[index].Code
+		setConfidence(t, &snap, code, "unknown")
+		checkRefusesWith(t, snap, fmt.Sprintf("findings[%d].confidence unknown does not match the definition of %s", index, code))
+	})
+	t.Run("an autoscaling finding takes the confidence of the autoscaling", func(t *testing.T) {
+		snap := decodeGolden(t, "edge-scaling")
+		index := slices.IndexFunc(snap.Findings, func(f Finding) bool { return f.Code == "NODE_AUTOSCALING_NEAR_MAX" })
+		if index < 0 {
+			t.Fatal("the snapshot holds no NODE_AUTOSCALING_NEAR_MAX finding")
+		}
+		setConfidence(t, &snap, "NODE_AUTOSCALING_NEAR_MAX", "exact")
+		checkRefusesWith(t, snap, fmt.Sprintf("findings[%d].confidence exact does not match the definition of NODE_AUTOSCALING_NEAR_MAX", index))
+	})
+	t.Run("an approximate row gives inferred", func(t *testing.T) {
+		snap := decodeGolden(t, "raw-fallback")
+		index := slices.IndexFunc(snap.Findings, func(f Finding) bool { return f.Code == "WORKLOAD_CPU_REQUEST_HEALTHY" })
+		if index < 0 {
+			t.Fatal("the snapshot holds no WORKLOAD_CPU_REQUEST_HEALTHY finding")
+		}
+		namespace, name, _ := strings.Cut(snap.Findings[index].ScopeName, "/")
+		row := slices.IndexFunc(snap.Workloads, func(w Workload) bool { return w.Namespace == namespace && w.Name == name })
+		if snap.Workloads[row].Approximate {
+			t.Fatal("the workload row is approximate")
+		}
+		snap.Workloads[row].Approximate = true
+		first := slices.IndexFunc(snap.Findings, func(f Finding) bool {
+			def, _ := analysis.Lookup(f.Code)
+			return f.ScopeType == analysis.ScopeWorkload && f.ScopeName == snap.Findings[index].ScopeName && def.Confidence.FromApproximate
+		})
+		checkRefusesWith(t, snap, fmt.Sprintf("findings[%d].confidence exact does not match the definition of %s", first, snap.Findings[first].Code))
+	})
+}
+
+// TestSchemaShapeIsFrozen pins the key paths of the contract: a change of
+// shape fails until the schema version is raised and the new shape is
+// recorded here.
+func TestSchemaShapeIsFrozen(t *testing.T) {
+	paths := contractKeyPaths(0)
+	sort.Strings(paths)
+	sum := sha256.Sum256([]byte(strings.Join(paths, "\n")))
+	const frozen = "215eeea27e8f7c08d4aa3d466d31f669bf8325cf27f71ae0bf10c85dff385482"
+	if got := hex.EncodeToString(sum[:]); got != frozen {
+		t.Logf("hash of the key paths: %s", got)
+		t.Fatalf("the shape of schema %s changed; raise snapshot.SchemaVersion and record the new shape", SchemaVersion)
 	}
 }
