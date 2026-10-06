@@ -194,7 +194,8 @@ below the command; the core never imports `internal/platform/`.
   and wraps both streams with it. Nothing below `Run` sees a raw stream. A
   secret is added to it as soon as it is known: the value of `--token` before
   the flags are read, the token of the configuration as soon as it is loaded.
-  No function passes a list of secrets.
+  No function passes a list of secrets. A secret is matched as it is and in
+  its `%q`-escaped and JSON-escaped forms.
 - **One message, one write.** The redactor reads each write as one text, so a
   line is built whole and written once.
 - **A log value is redacted before it is formatted.** Every logger of
@@ -205,7 +206,8 @@ below the command; the core never imports `internal/platform/`.
   the text handler escapes a quote or a backslash and the stream redactor
   matches literal text. A test reads the Go files of `internal/cli` and
   `internal/platform` and fails on any other handler, default logger, or
-  `log` call, the two `io.Discard` handlers of the API excepted.
+  `log` call, the two `io.Discard` handlers of the API excepted. The
+  `ErrorLog` of every HTTP server writes through that logger too.
 - **The assignment pattern keeps the structure around a secret.** A `token`,
   `api_key`, or `access_token` value in quotes is replaced inside its quotes,
   which are kept; a bare value runs to white space, `,`, `;`, a quote, `}`,
@@ -314,16 +316,20 @@ redactor the moment the settings are loaded, before the pool opens.
   the view's bytes) and `Cache-Control: private, no-cache`, and are answered
   through `http.ServeContent`, whose 304, 206, 412, and 416 the contract
   names. No 304, 409, or 410 reaches a caller who could not read the report.
+  At most four downloads read and write a body at once; a waiting request
+  holds no body, and the write of an answer has two minutes.
 - **The view is a second product of `internal/document`.** `BuildView`
   words a snapshot for the web from the helpers the PDF uses, so every text
   is the PDF's and the rows kept are the PDF's (the action plan's
-  recommendations through one helper); a closed set travels as its code.
+  recommendations through one helper); a closed set travels as its code,
+  and the mark the PDF prints beside a text travels as its status.
   The contract describes it as `ReportView`, excluded from the Go
   generation, and `TestViewMatchesTheContract` walks the view of every
   golden snapshot against that schema both ways.
 - **A delete marks.** `deleted_at` is set where it is null, with
   `report.delete` in the same transaction; from the mark the report answers
-  404 everywhere and a replay of its key answers `REPORT_NOT_FOUND`. A bulk
+  404 everywhere and a replay of its key answers `REPORT_NOT_FOUND` until
+  the sweep, after which the key is free, as after the purge. A bulk
   delete marks in id order, so two bulk deletes cannot deadlock. A replay
   reads its key and its report in one statement.
 - **`serve`, `worker`, and `admin` exit with 0, 1, or 2:** 1 for a failure
