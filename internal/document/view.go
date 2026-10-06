@@ -258,7 +258,7 @@ func BuildView(s snapshot.Snapshot, c *catalog.Catalog) (View, error) {
 		Report:          vb.report(s),
 		Summary:         vb.summary(s.Summary),
 		Findings:        vb.findings(s.Findings, minRank),
-		Recommendations: vb.recommendations(s.Recommendations, minRank),
+		Recommendations: vb.recommendations(planRecommendations(s, minRank)),
 		Namespaces:      vb.namespaces(s, minRank),
 		Workloads:       vb.workloads(s, minRank),
 		HPAs:            vb.hpas(s.HPAs),
@@ -476,12 +476,9 @@ func (vb *viewBuilder) evidence(evidence []snapshot.Evidence) []ViewEvidence {
 	return out
 }
 
-func (vb *viewBuilder) recommendations(recommendations []snapshot.Recommendation, minRank int) []ViewRecommendation {
+func (vb *viewBuilder) recommendations(recommendations []snapshot.Recommendation) []ViewRecommendation {
 	out := make([]ViewRecommendation, 0, len(recommendations))
 	for _, r := range recommendations {
-		if analysis.Rank(r.Severity) < minRank {
-			continue
-		}
 		definition, ok := analysis.Lookup(r.Code)
 		if !ok {
 			if vb.b.err == nil {

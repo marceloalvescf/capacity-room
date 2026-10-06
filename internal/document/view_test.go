@@ -68,7 +68,7 @@ func requireText(t *testing.T, what, got, want string) {
 }
 
 func TestViewSaysWhatThePDFSays(t *testing.T) {
-	var namespaces, workloads, hpas, nodes, reasons int
+	var namespaces, workloads, hpas, nodes, reasons, recs int
 	for _, name := range goldenNames {
 		for _, lang := range catalog.Languages() {
 			s := goldenSnapshot(t, name)
@@ -76,6 +76,7 @@ func TestViewSaysWhatThePDFSays(t *testing.T) {
 			view := mustView(t, s, lang)
 			doc := detailedDocument(t, s, lang)
 			where := name + "/" + string(lang)
+			cat := mustCatalog(t, lang)
 
 			viewNamespaces := map[string]ViewNamespace{}
 			for _, n := range view.Namespaces {
@@ -170,6 +171,34 @@ func TestViewSaysWhatThePDFSays(t *testing.T) {
 						requireText(t, where+" node memory peak", n.MemoryUsagePercent.Peak.Text, cellText(row[2][2:]))
 						requireText(t, where+" node reason", n.Reason, cellText(row[3]))
 					}
+				case "action-plan":
+					plan := 0
+					for _, row := range table.Rows {
+						if plan >= len(view.Recommendations) {
+							break
+						}
+						r := view.Recommendations[plan]
+						plan++
+						recs++
+						shared := 0
+						for _, other := range view.Recommendations {
+							if other.Action == r.Action {
+								shared++
+							}
+						}
+						wantAction := r.Action
+						if shared > 1 {
+							wantAction = catText(t, cat, catalog.SectionsExecutiveActionQualified, catalog.Params{
+								"Action":    r.Action,
+								"Qualifier": catText(t, cat, catalog.ScopeQualifier(r.ScopeType), nil),
+							})
+						}
+						requireText(t, where+" action", wantAction, cellText(row[2]))
+						requireText(t, where+" scope", r.ScopeText, cellText(row[3]))
+					}
+					if len(table.Rows) != len(view.Recommendations) {
+						t.Errorf("%s: the action plan has %d rows, the view %d recommendations", where, len(table.Rows), len(view.Recommendations))
+					}
 				case "priority-workloads":
 					for _, row := range table.Rows {
 						reasons++
@@ -209,7 +238,7 @@ func TestViewSaysWhatThePDFSays(t *testing.T) {
 			}
 		}
 	}
-	for what, n := range map[string]int{"namespace": namespaces, "workload": workloads, "HPA": hpas, "node": nodes, "reason": reasons} {
+	for what, n := range map[string]int{"namespace": namespaces, "workload": workloads, "HPA": hpas, "node": nodes, "reason": reasons, "recommendation": recs} {
 		if n == 0 {
 			t.Errorf("no %s was compared: the test checks nothing", what)
 		}
@@ -222,11 +251,11 @@ func TestViewNarrowsAsThePDF(t *testing.T) {
 		wantMin                 string
 		findings, recs          int
 	}{
-		{"all", "detailed", "all", "all", 26, 19},
-		{"attention", "detailed", "attention", "attention", 19, 19},
-		{"critical", "detailed", "critical", "critical", 9, 9},
-		{"executive at all", "executive", "all", "attention", 19, 19},
-		{"executive at critical", "executive", "critical", "critical", 9, 9},
+		{"all", "detailed", "all", "all", 26, 10},
+		{"attention", "detailed", "attention", "attention", 19, 10},
+		{"critical", "detailed", "critical", "critical", 9, 7},
+		{"executive at all", "executive", "all", "attention", 19, 10},
+		{"executive at critical", "executive", "critical", "critical", 9, 7},
 	}
 	for _, tc := range cases {
 		for _, lang := range catalog.Languages() {

@@ -504,11 +504,10 @@ func poolObservation(b *builder, f snapshot.Finding) string {
 	return b.text(catalog.FindingObservation(definition.Family, definition.Params["resource"]), nil)
 }
 
-// actionPlan writes the recommendations at or above the raised minimum
-// that are not about a node or a pool: severity first, then code, then
-// scopes. An action that more than one row shares carries the qualifier
-// of its scope type. It follows _recommendation_rows of the original.
-func actionPlan(b *builder, s snapshot.Snapshot, minRank int) []Block {
+// planRecommendations returns the recommendations of the action plan: those
+// at or above minRank that are not about a node or a pool, severity first,
+// then code, then scopes.
+func planRecommendations(s snapshot.Snapshot, minRank int) []snapshot.Recommendation {
 	var included []snapshot.Recommendation
 	for _, r := range s.Recommendations {
 		if analysis.Rank(r.Severity) < minRank || strings.HasPrefix(r.Code, "NODE_") || strings.HasPrefix(r.Code, "NODEPOOL_") {
@@ -522,6 +521,13 @@ func actionPlan(b *builder, s snapshot.Snapshot, minRank int) []Block {
 			strings.Compare(a.Code, c.Code),
 			slices.Compare(a.Scopes, c.Scopes))
 	})
+	return included
+}
+
+// actionPlan writes the rows of planRecommendations. An action that more
+// than one row shares carries the qualifier of its scope type. It follows _recommendation_rows of the original.
+func actionPlan(b *builder, s snapshot.Snapshot, minRank int) []Block {
+	included := planRecommendations(s, minRank)
 
 	actions := make([]string, len(included))
 	counts := make(map[string]int)
