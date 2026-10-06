@@ -175,13 +175,16 @@ func TestRetryPDFTwiceAtOnce(t *testing.T) {
 	const n = 10
 	errs := make([]error, n)
 	var wg sync.WaitGroup
+	start := make(chan struct{})
 	for i := 0; i < n; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			<-start
 			errs[i] = f.svc.RetryPDF(context.Background(), f.op, id, "en")
 		}()
 	}
+	close(start)
 	wg.Wait()
 	for i, err := range errs {
 		if err != nil {
@@ -190,5 +193,37 @@ func TestRetryPDFTwiceAtOnce(t *testing.T) {
 	}
 	if len(f.jobs(t, "render")) != 1 || len(f.auditActions(t, ActionReportPDFRetry)) != 1 {
 		t.Fatalf("jobs %d audit rows %d", len(f.jobs(t, "render")), len(f.auditActions(t, ActionReportPDFRetry)))
+	}
+}
+
+func TestRetryPDFRollsBackTheJobOnALaterFailure(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	id := f.seedReport(t, "collected", "complete", fixedNow.Add(time.Hour), "failed")
+	// The audit row names an actor that no user row holds, so it fails after
+	// the job, the row, and the phase were written.
+	ghost := auth.Principal{ID: uuid.New(), Username: "ghost", Role: auth.RoleOperator, Language: "en"}
+	if err := f.svc.RetryPDF(ctx, ghost, id, "en"); err == nil {
+		t.Fatal("no error")
+	}
+	if len(f.jobs(t, "render")) != 0 || len(f.auditActions(t, ActionReportPDFRetry)) != 0 {
+		t.Fatal("a failed retry left a job or an audit row")
+	}
+	row, err := store.GetPDF(ctx, f.pool, id, "en")
+	if err != nil || row.Status != "failed" || row.JobID != 1 {
+		t.Fatalf("row = %+v (%v)", row, err)
+	}
+	r, err := store.GetReport(ctx, f.pool, id)
+	if err != nil || r.Phase != "complete" || r.CompletedAt == nil {
+		t.Fatalf("report = %+v (%v)", r, err)
+	}
+}
+
+func TestRetryPDFAcceptsAnAdministrator(t *testing.T) {
+	f := newFixture(t)
+	id := f.seedReport(t, "collected", "complete", fixedNow.Add(time.Hour), "failed")
+	admin := newPrincipal(t, f.pool, "root", auth.RoleAdministrator)
+	if err := f.svc.RetryPDF(context.Background(), admin, id, "en"); err != nil {
+		t.Fatal(err)
 	}
 }

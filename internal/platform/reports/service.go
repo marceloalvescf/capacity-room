@@ -13,7 +13,6 @@ import (
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/audit"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 )
@@ -43,7 +42,6 @@ const (
 type Service struct {
 	Pool     *pgxpool.Pool
 	Queue    *river.Client[pgx.Tx]
-	Profiles *profiles.Service
 	Settings settings.Settings
 	Now      func() time.Time
 	NewID    func() uuid.UUID

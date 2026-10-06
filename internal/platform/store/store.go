@@ -22,9 +22,11 @@ func Open(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 }
 
 // Transact runs fn inside one transaction, committing when fn returns nil
-// and rolling back otherwise, including on a panic, which it re-raises.
+// and rolling back otherwise, including on a panic, which it re-raises. The
+// transaction reads committed rows whatever the database default is, which
+// the exact admission of reports depends on.
 func Transact(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) (err error) {
-	tx, err := pool.Begin(ctx)
+	tx, err := pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}

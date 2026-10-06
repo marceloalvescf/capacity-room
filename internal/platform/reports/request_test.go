@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/google/uuid"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
@@ -146,13 +146,16 @@ func TestRequestSameKeyConcurrently(t *testing.T) {
 	results := make([]Accepted, n)
 	errs := make([]error, n)
 	var wg sync.WaitGroup
+	start := make(chan struct{})
 	for i := 0; i < n; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			<-start
 			results[i], errs[i] = f.svc.Request(context.Background(), f.op, "same", f.selection())
 		}()
 	}
+	close(start)
 	wg.Wait()
 	replayed := 0
 	for i := 0; i < n; i++ {
@@ -362,13 +365,16 @@ func TestAdmissionConcurrentExactlyLimit(t *testing.T) {
 	const n = 30
 	errs := make([]error, n)
 	var wg sync.WaitGroup
+	start := make(chan struct{})
 	for i := 0; i < n; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			<-start
 			_, errs[i] = f.svc.Request(context.Background(), f.op, string(rune('a'+i%26))+string(rune('a'+i/26)), f.selection())
 		}()
 	}
+	close(start)
 	wg.Wait()
 	accepted, refused := 0, 0
 	for _, err := range errs {
@@ -397,9 +403,7 @@ func TestRequestRefusesAReader(t *testing.T) {
 	if !errors.Is(err, auth.ErrForbidden) {
 		t.Fatalf("err = %v", err)
 	}
-	if f.count(t, `SELECT count(*) FROM reports`) != 0 || len(f.jobs(t, "collect")) != 0 {
-		t.Fatal("a refused request wrote a row")
-	}
+	f.requireCounts(t, 0)
 }
 
 func TestRequestRollsBackOnAQueueFailure(t *testing.T) {
@@ -413,14 +417,92 @@ func TestRequestRollsBackOnAQueueFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	queue := f.svc.Queue
 	f.svc.Queue = broken
 	_, err = f.svc.Request(context.Background(), f.op, "k1", f.selection())
 	if err == nil || !strings.Contains(err.Error(), "queue collect") {
 		t.Fatalf("err = %v", err)
 	}
-	if f.count(t, `SELECT count(*) FROM reports`) != 0 || f.count(t, `SELECT count(*) FROM report_idempotency_keys`) != 0 ||
-		len(f.auditActions(t, ActionReportSubmit)) != 0 || len(f.jobs(t, "collect")) != 0 {
-		t.Fatal("a failed request left a row")
+	f.svc.Queue = queue
+	f.requireCounts(t, 0)
+}
+
+// requireCounts checks that exactly n requests left their rows.
+func (f *fixture) requireCounts(t *testing.T, n int) {
+	t.Helper()
+	if got := f.count(t, `SELECT count(*) FROM reports`); got != n {
+		t.Fatalf("reports = %d, want %d", got, n)
+	}
+	if got := f.count(t, `SELECT count(*) FROM report_idempotency_keys`); got != n {
+		t.Fatalf("idempotency rows = %d, want %d", got, n)
+	}
+	if got := len(f.auditActions(t, ActionReportSubmit)); got != n {
+		t.Fatalf("audit rows = %d, want %d", got, n)
+	}
+	if got := len(f.jobs(t, "collect")); got != n {
+		t.Fatalf("collect jobs = %d, want %d", got, n)
+	}
+}
+
+func TestRequestRollsBackTheJobOnALaterFailure(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	first, err := f.svc.Request(context.Background(), f.op, "k1", f.selection())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The second report takes the id of the first, so the report insert fails
+	// on its primary key after the job row exists.
+	f.svc.NewID = func() uuid.UUID { return first.ID }
+	if _, err := f.svc.Request(context.Background(), f.op, "k2", f.selection()); err == nil {
+		t.Fatal("no error")
+	}
+	f.requireCounts(t, 1)
+}
+
+func TestRequestStoresTheDigest(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	got, err := f.svc.Request(context.Background(), f.op, "k1", f.selection())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var digest string
+	err = f.pool.QueryRow(context.Background(), `SELECT request_sha256 FROM report_idempotency_keys WHERE report_id = $1`, got.ID).Scan(&digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if digest != "35978a24ae6a2911ce12b9a64d9bbdcf9f3f0438a58bfe1675e95bca87ca8844" {
+		t.Fatalf("digest = %s", digest)
+	}
+}
+
+func TestRequestKeepsTheOrderOfTheNamespaces(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	got, err := f.svc.Request(context.Background(), f.op, "k1", f.selection("billing", "payments"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := store.GetReport(context.Background(), f.pool, got.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stored Resolved
+	if err := json.Unmarshal(r.Request, &stored); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(stored.Namespaces, []string{"billing", "payments"}) {
+		t.Fatalf("namespaces = %v", stored.Namespaces)
+	}
+}
+
+func TestRequestAcceptsAnAdministrator(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	admin := newPrincipal(t, f.pool, "root", auth.RoleAdministrator)
+	if _, err := f.svc.Request(context.Background(), admin, "k1", f.selection()); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -458,5 +540,3 @@ func TestRequestTakesTheRequestLock(t *testing.T) {
 		t.Fatal("the request did not finish after the lock was released")
 	}
 }
-
-var _ pgx.Tx
