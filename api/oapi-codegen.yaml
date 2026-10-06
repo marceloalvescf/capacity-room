@@ -10,6 +10,7 @@ output-options:
   exclude-schemas:
     - Session
     - ReportView
+    - ViewMark
     - ViewValue
     - ViewStatistic
     - ViewReport

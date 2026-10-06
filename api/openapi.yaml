@@ -1807,10 +1807,17 @@ components:
             $ref: "#/components/schemas/ViewNodepool"
         quality:
           $ref: "#/components/schemas/ViewQuality"
+    ViewMark:
+      type: string
+      nullable: true
+      description: >-
+        The status the PDF marks a text with, as the symbol beside a cell;
+        null when the PDF prints the text without a mark.
+      enum: [healthy, attention, critical, undefined, unavailable, null]
     ViewValue:
       type: object
-      description: A number with the text the PDF prints for it.
-      required: [raw, text]
+      description: A number with the text the PDF prints for it and the mark it prints beside it.
+      required: [raw, text, status]
       properties:
         raw:
           type: number
@@ -1820,6 +1827,8 @@ components:
         text:
           type: string
           description: The text the PDF prints, its placeholder when the number is missing.
+        status:
+          $ref: "#/components/schemas/ViewMark"
     ViewStatistic:
       type: object
       required: [state, average, minimum, peak, current]
@@ -1985,6 +1994,11 @@ components:
           type: string
         raw:
           description: The value as the snapshot stores it, a number, a boolean, or a text.
+          oneOf:
+            - type: number
+              format: double
+            - type: boolean
+            - type: string
         text:
           type: string
     ViewRecommendation:
@@ -2123,7 +2137,10 @@ components:
           description: The reason the PDF prints in its priority tables; empty when it prints none.
     ViewHPA:
       type: object
-      required: [namespace, name, target_kind, target_name, spec_min, spec_max, current, desired, situation]
+      description: >-
+        An HPA of the snapshot. Every HPA is listed, those scaled to zero
+        included, which the PDF's table leaves out.
+      required: [namespace, name, target_kind, target_name, spec_min, spec_max, current, desired, situation, situation_status]
       properties:
         namespace:
           type: string
@@ -2144,6 +2161,8 @@ components:
         situation:
           type: string
           description: The situation cell of the PDF.
+        situation_status:
+          $ref: "#/components/schemas/ViewMark"
     ViewNode:
       type: object
       required:
@@ -2162,11 +2181,13 @@ components:
         - ready
         - schedulable
         - reason
+        - reason_status
       properties:
         name:
           type: string
         pool:
           type: string
+          description: The name of the node's pool, or the code unknown, which a client words.
         pool_confidence:
           type: string
         status:
@@ -2197,6 +2218,8 @@ components:
         reason:
           type: string
           description: The reason cell of the PDF.
+        reason_status:
+          $ref: "#/components/schemas/ViewMark"
     ViewNodepool:
       type: object
       required: [name, confidence, nodes]
@@ -2211,6 +2234,7 @@ components:
             type: string
     ViewQuality:
       type: object
+      description: The quality of the collection, whole at every minimum.
       required: [capabilities, warnings, notices, collection_started_at, collection_completed_at]
       properties:
         capabilities:
