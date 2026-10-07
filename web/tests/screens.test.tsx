@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { findBannedTerms } from "@/i18n/vocabulary";
 import { i18next } from "@/i18n/i18n";
 import type { Language } from "@/i18n/language";
-import { anonymous, signedIn, installMockApi } from "./msw";
+import { anonymous, installMockApi, profileSummary, report, signedIn } from "./msw";
 import { location, renderApp } from "./render";
 import { mockColourScheme } from "./match-media";
 
@@ -19,6 +19,7 @@ beforeEach(() => {
 const languages: Language[] = ["en", "pt-BR"];
 const screens = [
   { name: "sign-in", path: "/login", signedIn: false, heading: "login.title" },
+  { name: "reports", path: "/reports", signedIn: true, heading: "reports.title" },
   { name: "account", path: "/account", signedIn: true, heading: "account.title" },
   { name: "not found", path: "/nothing", signedIn: true, heading: "notFound.title" },
 ] as const;
@@ -34,6 +35,8 @@ describe("screens", () => {
       for (const theme of ["light", "dark"]) {
         it(`axe and vocabulary: ${screenCase.name}, ${language}, ${theme}`, async () => {
           document.documentElement.setAttribute("data-theme", theme);
+          mock.reports = [report(), report({ id: "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a02", status: "running", phase: "collecting" })];
+          mock.profiles = [profileSummary()];
           mock.session = screenCase.signedIn ? signedIn({ language }) : anonymous();
           const { container } = await renderApp(screenCase.path, language);
           await screen.findByRole("heading", { level: 1, name: i18next.t(screenCase.heading) });
@@ -71,11 +74,11 @@ describe("screens", () => {
     });
   });
 
-  it("routes: signed-in sign-in and start page lead to the account", async () => {
+  it("routes: signed-in sign-in and start page lead to the reports", async () => {
     for (const path of ["/login", "/"]) {
       const { router, unmount } = await renderApp(path);
       await waitFor(() => {
-        expect(location(router)).toBe("/account");
+        expect(location(router)).toBe("/reports");
       });
       unmount();
     }

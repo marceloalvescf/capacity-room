@@ -33,12 +33,12 @@ describe("login", () => {
     expect(mock.calls.find((c) => c.method === "POST")?.csrf).toBe("login-1");
   });
 
-  it("success without next goes to the account", async () => {
+  it("success without next goes to the reports", async () => {
     const user = userEvent.setup();
     const { router } = await renderApp("/login");
     await fill(user);
     await waitFor(() => {
-      expect(location(router)).toBe("/account");
+      expect(location(router)).toBe("/reports");
     });
   });
 
@@ -113,7 +113,7 @@ describe("login", () => {
     const user = userEvent.setup();
     await renderApp("/login");
     await fill(user);
-    expect(await screen.findByRole("heading", { name: "Conta" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Relatórios", level: 1 })).toBeInTheDocument();
     expect(window.localStorage.getItem("kcr.language")).toBeNull();
     expect(document.documentElement.lang).toBe("pt-BR");
   });

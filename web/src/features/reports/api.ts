@@ -3,6 +3,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
   type InfiniteData,
   type UseInfiniteQueryResult,
   type UseQueryResult,
@@ -124,14 +125,24 @@ export function useRequestPDF(id: string) {
   });
 }
 
+// The list reloads; the deleted reports' own queries go, so that none checks a
+// report that is no longer there.
+function forget(queryClient: QueryClient, ids: string[]): Promise<void> {
+  for (const id of ids) {
+    queryClient.removeQueries({ queryKey: [...reportsKey, id], exact: true });
+  }
+  return queryClient.invalidateQueries({ queryKey: reportsKey, exact: true });
+}
+
 export function useDeleteReport() {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
       await api.DELETE("/reports/{id}", { params: { path: { id } } });
+      return id;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: reportsKey }),
+    onSuccess: (id) => forget(queryClient, [id]),
   });
 }
 
@@ -146,6 +157,10 @@ export function useDeleteReports() {
       }
       return data.results;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: reportsKey }),
+    onSuccess: (results) =>
+      forget(
+        queryClient,
+        results.filter((result) => result.outcome !== "forbidden").map((result) => result.id),
+      ),
   });
 }

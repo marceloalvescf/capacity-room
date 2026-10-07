@@ -4,15 +4,16 @@ import { cn } from "@/lib/cn";
 interface CheckboxProps extends ComponentProps<"input"> {
   label: string;
   indeterminate?: boolean;
+  hideLabel?: boolean;
 }
 
-export function Checkbox({ label, indeterminate = false, className, ...rest }: CheckboxProps) {
+export function Checkbox({ label, indeterminate = false, hideLabel = false, className, ...rest }: CheckboxProps) {
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (input.current !== null) {
       input.current.indeterminate = indeterminate;
     }
-  }, [indeterminate]);
+  });
   return (
     <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 text-sm">
       <input
@@ -25,7 +26,7 @@ export function Checkbox({ label, indeterminate = false, className, ...rest }: C
         )}
         {...rest}
       />
-      {label}
+      <span className={cn(hideLabel && "sr-only")}>{label}</span>
     </label>
   );
 }

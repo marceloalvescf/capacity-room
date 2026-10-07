@@ -54,6 +54,14 @@ export function Shell() {
           <ul>
             <li>
               <NavLink
+                to="/reports"
+                className="block rounded-md px-3 py-2 text-sm motion-safe:transition-colors aria-[current=page]:bg-sidebar-active aria-[current=page]:text-sidebar-active-fg"
+              >
+                {t("nav.reports")}
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
                 to="/account"
                 className="block rounded-md px-3 py-2 text-sm motion-safe:transition-colors aria-[current=page]:bg-sidebar-active aria-[current=page]:text-sidebar-active-fg"
               >

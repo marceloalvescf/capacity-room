@@ -58,6 +58,21 @@ describe("select and checkbox", () => {
   });
 });
 
+describe("checkbox indeterminate", () => {
+  it("is set again on every render, so a click does not clear it", async () => {
+    function Host() {
+      const [clicks, setClicks] = useState(0);
+      return <Checkbox label={`All ${String(clicks)}`} indeterminate onChange={() => { setClicks((n) => n + 1); }} />;
+    }
+    render(<Host />);
+    const box = screen.getByRole<HTMLInputElement>("checkbox");
+    expect(box.indeterminate).toBe(true);
+    await userEvent.setup().click(box);
+    expect(screen.getByText("All 1")).toBeInTheDocument();
+    expect(box.indeterminate).toBe(true);
+  });
+});
+
 describe("confirm dialog", () => {
   it("is an alert dialog named by its title, focuses Cancel, and closes on Escape", async () => {
     const onOpenChange = vi.fn<(open: boolean) => void>();

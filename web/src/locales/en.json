@@ -9,6 +9,8 @@
   },
   "nav": {
     "label": "Main navigation",
+    "reports": "Reports",
+    "generate": "New report",
     "account": "Account"
   },
   "header": {
@@ -182,5 +184,38 @@
       "15d": "Last 15 days",
       "30d": "Last 30 days"
     }
+  },
+  "reports": {
+    "title": "Reports",
+    "updating": "Updating while a report runs",
+    "column": {
+      "requested": "Requested",
+      "profile": "Profile",
+      "status": "Status",
+      "pdf": "PDF",
+      "keptUntil": "Kept until"
+    },
+    "open": "Open",
+    "delete": "Delete",
+    "select": "Select the report of {{time}}",
+    "selectAll": "Select all",
+    "selected": "Selected: {{count}}",
+    "deleteSelected": "Delete selected",
+    "clearSelection": "Clear selection",
+    "loadMore": "Load more",
+    "empty": "No reports yet.",
+    "expired": "Expired",
+    "notGenerated": "Not generated",
+    "loadFailed": "The reports could not be loaded.",
+    "retry": "Try again",
+    "deleteForbidden": "Some reports could not be deleted: your role does not allow it."
+  },
+  "delete": {
+    "oneTitle": "Delete this report?",
+    "oneBody": "{{profile}} · {{time}}, by {{username}}. Its data and its PDFs are removed. This cannot be undone.",
+    "manyTitle": "Delete {{count}} reports?",
+    "manyBody": "Their data and their PDFs are removed. This cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel"
   }
 }

@@ -9,6 +9,8 @@
   },
   "nav": {
     "label": "Navegação principal",
+    "reports": "Relatórios",
+    "generate": "Novo relatório",
     "account": "Conta"
   },
   "header": {
@@ -182,5 +184,38 @@
       "15d": "Últimos 15 dias",
       "30d": "Últimos 30 dias"
     }
+  },
+  "reports": {
+    "title": "Relatórios",
+    "updating": "Atualizando enquanto há relatórios em andamento",
+    "column": {
+      "requested": "Criado em",
+      "profile": "Perfil",
+      "status": "Status",
+      "pdf": "PDF",
+      "keptUntil": "Disponível até"
+    },
+    "open": "Abrir",
+    "delete": "Excluir",
+    "select": "Selecionar o relatório de {{time}}",
+    "selectAll": "Selecionar todos",
+    "selected": "Selecionados: {{count}}",
+    "deleteSelected": "Excluir selecionados",
+    "clearSelection": "Limpar seleção",
+    "loadMore": "Carregar mais",
+    "empty": "Nenhum relatório ainda.",
+    "expired": "Expirado",
+    "notGenerated": "Não gerado",
+    "loadFailed": "Não foi possível carregar os relatórios.",
+    "retry": "Tentar de novo",
+    "deleteForbidden": "Alguns relatórios não puderam ser excluídos: seu papel não permite."
+  },
+  "delete": {
+    "oneTitle": "Excluir este relatório?",
+    "oneBody": "{{profile}} · {{time}}, por {{username}}. Os dados e os PDFs são removidos. Esta ação não pode ser desfeita.",
+    "manyTitle": "Excluir {{count}} relatórios?",
+    "manyBody": "Os dados e os PDFs são removidos. Esta ação não pode ser desfeita.",
+    "confirm": "Excluir",
+    "cancel": "Cancelar"
   }
 }

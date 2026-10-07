@@ -116,6 +116,20 @@ export function installMockApi(initial: Session): Mock {
     return body;
   }
 
+  // Deletes a report as the signed-in principal may: an operator only their own.
+  function remove(id: string): Schemas["ReportDeleteOutcome"] {
+    const found = mock.reports.find((r) => r.id === id);
+    if (found === undefined) {
+      return "not_found";
+    }
+    const current = mock.session.authenticated && "principal" in mock.session ? mock.session.principal : null;
+    if (current === null || current.role === "reader" || (current.role === "operator" && found.owner_id !== current.id)) {
+      return "forbidden";
+    }
+    mock.reports = mock.reports.filter((r) => r.id !== id);
+    return "deleted";
+  }
+
   const handlers = [
     http.get(api("/auth/session"), async ({ request }) => {
       await record(request);
@@ -175,11 +189,9 @@ export function installMockApi(initial: Session): Mock {
       );
     }),
     http.post(api("/reports/delete"), async ({ request }) => {
-      const body = (await record(request)) as { ids: string[] };
-      const known = new Set(mock.reports.map((r) => r.id));
-      return HttpResponse.json({
-        results: body.ids.map((id) => ({ id, outcome: known.has(id) ? "deleted" : "not_found" })),
-      });
+      const body = (await record(request)) as Schemas["ReportDeleteRequest"];
+      const results = body.ids.map((id): Schemas["ReportDeleteResult"] => ({ id, outcome: remove(id) }));
+      return HttpResponse.json({ results } satisfies Schemas["ReportDeleteResults"]);
     }),
     http.post(api("/reports/:id/pdfs"), async ({ request }) => {
       const body = (await record(request)) as { language: Schemas["Language"] };
@@ -194,7 +206,11 @@ export function installMockApi(initial: Session): Mock {
     }),
     http.delete(api("/reports/:id"), async ({ request, params }) => {
       await record(request);
-      return mock.reports.some((r) => r.id === params["id"])
+      const outcome = remove(String(params["id"]));
+      if (outcome === "forbidden") {
+        return HttpResponse.json(errorBody("FORBIDDEN"), { status: 403 });
+      }
+      return outcome === "deleted"
         ? new HttpResponse(null, { status: 204 })
         : HttpResponse.json(errorBody("REPORT_NOT_FOUND"), { status: 404 });
     }),

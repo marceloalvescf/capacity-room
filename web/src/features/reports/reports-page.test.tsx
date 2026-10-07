@@ -1,0 +1,347 @@
+import { act, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { components } from "@/api/schema.gen";
+import { formatTime } from "@/lib/format";
+import { i18next } from "@/i18n/i18n";
+import { installMockApi, profileSummary, report, server, signedIn } from "../../../tests/msw";
+import { renderApp } from "../../../tests/render";
+import { mockColourScheme } from "../../../tests/match-media";
+import { reportsKey } from "./api";
+
+const mock = installMockApi(signedIn());
+
+type Role = components["schemas"]["Role"];
+
+const other = "9a9a9a9a-0000-4000-8000-000000000001";
+
+function id(n: number): string {
+  return `${String(n).padStart(8, "0")}-0000-4000-8000-000000000000`;
+}
+
+function many(count: number, overrides: (n: number) => Partial<ReturnType<typeof report>> = () => ({})) {
+  return Array.from({ length: count }, (_, n) =>
+    report({
+      id: id(n),
+      created_at: new Date(Date.UTC(2026, 9, 7, 17, 0) - n * 60_000).toISOString(),
+      ...overrides(n),
+    }),
+  );
+}
+
+function signIn(role: Role) {
+  mock.session = signedIn({ role });
+}
+
+function rowOf(reportId: string): HTMLElement {
+  const created = mock.reports.find((r) => r.id === reportId)?.created_at ?? "";
+  const cell = screen.getByText(formatTime(created));
+  return cell.closest("tr") as HTMLElement;
+}
+
+const t = (key: string, options: Record<string, string | number> = {}): string => i18next.t(key, options);
+
+beforeEach(() => {
+  window.localStorage.clear();
+  mockColourScheme(false);
+  mock.profiles = [profileSummary()];
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe("report list", () => {
+  it("newest first, load more", async () => {
+    mock.reports = many(60);
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findByRole("heading", { level: 1, name: t("reports.title") });
+    await waitFor(() => {
+      expect(screen.getAllByRole("row")).toHaveLength(51);
+    });
+    const requested = screen
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getAllByRole("cell")[1]?.textContent);
+    expect(requested[0]).toBe(formatTime(mock.reports[0]?.created_at ?? ""));
+    expect(requested[49]).toBe(formatTime(mock.reports[49]?.created_at ?? ""));
+    await user.click(screen.getByRole("button", { name: t("reports.loadMore") }));
+    await waitFor(() => {
+      expect(screen.getAllByRole("row")).toHaveLength(61);
+    });
+    expect(screen.queryByRole("button", { name: t("reports.loadMore") })).not.toBeInTheDocument();
+  });
+
+  it("polling keeps the loaded pages", async () => {
+    mock.reports = many(60, (n) => (n === 3 ? { status: "running", phase: "collecting", completed_at: null } : {}));
+    const user = userEvent.setup({
+      advanceTimers: vi.advanceTimersByTimeAsync,
+    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await renderApp("/reports");
+    await waitFor(() => {
+      expect(screen.getAllByRole("row")).toHaveLength(51);
+    });
+    expect(screen.getByText(t("reports.updating"))).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: t("reports.loadMore") }));
+    await waitFor(() => {
+      expect(screen.getAllByRole("row")).toHaveLength(61);
+    });
+    expect(within(rowOf(id(3))).getByText(t("reportStatus.running"))).toBeInTheDocument();
+
+    mock.reports = many(60);
+    mock.calls.length = 0;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    await waitFor(() => {
+      expect(within(rowOf(id(3))).getByText(t("reportStatus.collected"))).toBeInTheDocument();
+    });
+    const rows = screen.getAllByRole("row");
+    expect(rows).toHaveLength(61);
+    const times = rows.slice(1).map((row) => within(row).getAllByRole("cell")[1]?.textContent);
+    expect(new Set(times).size).toBe(60);
+    expect(screen.queryByText(t("reports.updating"))).not.toBeInTheDocument();
+
+    mock.calls.length = 0;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(mock.calls.filter((call) => call.path === "/reports")).toEqual([]);
+  });
+
+  it("a reader", async () => {
+    signIn("reader");
+    mock.reports = many(2);
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    expect(screen.getAllByRole("row")).toHaveLength(3);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: t("reports.delete") })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: t("nav.generate") })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: t("reports.open") })).toHaveLength(2);
+  });
+
+  it("an operator deletes only their own", async () => {
+    signIn("operator");
+    mock.reports = many(3, (n) => (n === 1 ? { owner_id: other, owner_username: "bia" } : {}));
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    expect(within(rowOf(id(0))).getByRole("checkbox")).toBeInTheDocument();
+    expect(within(rowOf(id(0))).getByRole("button", { name: t("reports.delete") })).toBeInTheDocument();
+    expect(within(rowOf(id(1))).queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(within(rowOf(id(1))).queryByRole("button", { name: t("reports.delete") })).not.toBeInTheDocument();
+    expect(within(rowOf(id(2))).getByRole("checkbox")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: t("nav.generate") })).toBeInTheDocument();
+  });
+
+  it("delete one", async () => {
+    mock.reports = many(3, (n) => (n === 1 ? { owner_username: "bia" } : {}));
+    const user = userEvent.setup();
+    const { queryClient } = await renderApp("/reports");
+    await screen.findAllByRole("row");
+    queryClient.setQueryData([...reportsKey, id(1)], mock.reports[1]);
+    mock.calls.length = 0;
+    await user.click(within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText(t("delete.oneTitle"))).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        t("delete.oneBody", {
+          profile: "Production",
+          time: formatTime(mock.reports[1]?.created_at ?? ""),
+          username: "bia",
+        }),
+      ),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: t("delete.confirm") }));
+    await waitFor(() => {
+      expect(screen.getAllByRole("row")).toHaveLength(3);
+    });
+    expect(mock.calls.filter((call) => call.method === "DELETE").map((call) => call.path)).toEqual([
+      `/reports/${id(1)}`,
+    ]);
+    expect(mock.calls.filter((call) => call.path === `/reports/${id(1)}` && call.method === "GET")).toEqual([]);
+    expect(queryClient.getQueryData([...reportsKey, id(1)])).toBeUndefined();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("bulk delete", async () => {
+    mock.reports = many(4);
+    let sent: string[] = [];
+    server.use(
+      http.post(`${window.location.origin}/api/v1/reports/delete`, async ({ request }) => {
+        const body = (await request.json()) as { ids: string[] };
+        sent = body.ids;
+        const outcomes = ["deleted", "not_found", "forbidden"] as const;
+        return HttpResponse.json({
+          results: body.ids.map((one, n) => ({
+            id: one,
+            outcome: outcomes[n],
+          })),
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    for (const n of [0, 1, 2]) {
+      await user.click(within(rowOf(id(n))).getByRole("checkbox"));
+    }
+    expect(screen.getByText(t("reports.selected", { count: 3 }))).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText(t("delete.manyTitle", { count: 3 }))).toBeInTheDocument();
+    mock.calls.length = 0;
+    await user.click(within(dialog).getByRole("button", { name: t("delete.confirm") }));
+    expect(await screen.findByText(t("reports.deleteForbidden"))).toBeInTheDocument();
+    expect(sent).toEqual([id(0), id(1), id(2)]);
+    expect(screen.getByText(t("reports.selected", { count: 1 }))).toBeInTheDocument();
+    expect(within(rowOf(id(2))).getByRole("checkbox")).toBeChecked();
+    expect(within(rowOf(id(3))).getByRole("checkbox")).not.toBeChecked();
+  });
+
+  it("bulk delete through the mock removes the rows and reloads", async () => {
+    mock.reports = many(4);
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(screen.getByRole("checkbox", { name: t("reports.selectAll") }));
+    expect(screen.getByText(t("reports.selected", { count: 4 }))).toBeInTheDocument();
+    await user.click(within(rowOf(id(3))).getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
+    await waitFor(() => {
+      expect(screen.getAllByRole("row")).toHaveLength(2);
+    });
+    expect(mock.reports.map((r) => r.id)).toEqual([id(3)]);
+    expect(screen.queryByText(t("reports.deleteForbidden"))).not.toBeInTheDocument();
+  });
+
+  it("bulk of one", async () => {
+    mock.reports = many(2);
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(within(rowOf(id(0))).getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText(t("delete.oneTitle"))).toBeInTheDocument();
+  });
+
+  it("cancel keeps everything", async () => {
+    mock.reports = many(2);
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(within(rowOf(id(0))).getByRole("checkbox"));
+    mock.calls.length = 0;
+    await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
+    await user.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: t("delete.cancel"),
+      }),
+    );
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(mock.calls).toEqual([]);
+    expect(within(rowOf(id(0))).getByRole("checkbox")).toBeChecked();
+    expect(screen.getByText(t("reports.selected", { count: 1 }))).toBeInTheDocument();
+  });
+
+  it("select all stays indeterminate after a click that leaves the selection partial", async () => {
+    mock.reports = many(3);
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(within(rowOf(id(0))).getByRole("checkbox"));
+    const all = screen.getByRole<HTMLInputElement>("checkbox", { name: t("reports.selectAll") });
+    expect(all.indeterminate).toBe(true);
+    await user.click(within(rowOf(id(1))).getByRole("checkbox"));
+    expect(all.indeterminate).toBe(true);
+    await user.click(all);
+    expect(all.indeterminate).toBe(false);
+    expect(all).toBeChecked();
+    await user.click(all);
+    expect(all).not.toBeChecked();
+    expect(screen.queryByText(t("reports.selected", { count: 0 }))).not.toBeInTheDocument();
+  });
+
+  it("expired row", async () => {
+    mock.reports = many(1, () => ({ expired: true }));
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    const row = rowOf(id(0));
+    expect(within(row).getByText(t("reports.expired"))).toBeInTheDocument();
+    expect(within(row).queryByRole("link", { name: t("reports.open") })).not.toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: t("reports.delete") })).toBeInTheDocument();
+  });
+
+  it("the interface language's PDF", async () => {
+    mock.reports = many(3, (n) => ({
+      pdfs: [
+        {
+          language: "en",
+          status: n === 0 ? "ready" : "pending",
+          failure_code: null,
+        },
+        {
+          language: "pt-BR",
+          status: "failed",
+          failure_code: "PDF_COMPILE_FAILED",
+        },
+      ],
+    }));
+    mock.reports[2] = report({
+      id: id(2),
+      created_at: many(3)[2]?.created_at ?? "",
+      pdfs: [{ language: "pt-BR", status: "ready", failure_code: null }],
+    });
+    mock.reports[1] = report({
+      id: id(1),
+      created_at: many(3)[1]?.created_at ?? "",
+      status: "queued",
+      phase: "waiting",
+      completed_at: null,
+    });
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    expect(within(rowOf(id(0))).getByText(t("pdfStatus.ready"))).toBeInTheDocument();
+    expect(within(rowOf(id(2))).getByText(t("reports.notGenerated"))).toBeInTheDocument();
+    expect(within(rowOf(id(1))).queryByText(t("reports.notGenerated"))).not.toBeInTheDocument();
+  });
+
+  it("the profile's id when it is not listed", async () => {
+    mock.reports = many(1, () => ({ profile_id: "gone" }));
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    expect(within(rowOf(id(0))).getByText("gone")).toBeInTheDocument();
+  });
+
+  it("empty", async () => {
+    signIn("operator");
+    await renderApp("/reports");
+    expect(await screen.findByText(t("reports.empty"))).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: t("nav.generate") }).length).toBeGreaterThan(0);
+  });
+
+  it("a failed load offers a retry", async () => {
+    const url = `${window.location.origin}/api/v1/reports`;
+    let fail = true;
+    server.use(
+      http.get(url, () =>
+        fail
+          ? HttpResponse.json({ error: { code: "INTERNAL_ERROR", message: "m", fields: {} } }, { status: 500 })
+          : HttpResponse.json({ items: many(1), next_cursor: null }),
+      ),
+    );
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    expect(await screen.findByText(t("reports.loadFailed"))).toBeInTheDocument();
+    fail = false;
+    await user.click(screen.getByRole("button", { name: t("reports.retry") }));
+    await screen.findAllByRole("row");
+    expect(screen.queryByText(t("reports.loadFailed"))).not.toBeInTheDocument();
+  });
+});
