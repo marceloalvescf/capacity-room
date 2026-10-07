@@ -1,0 +1,8 @@
+[[profiles]]
+id = "e2e-prod"
+display_name = "Production"
+endpoint_url = "http://fake-prometheus:9090/api/v1"
+endpoint_type = "prometheus"
+cluster_name = "prod"
+allowed_namespaces = ["payments"]
+active = true

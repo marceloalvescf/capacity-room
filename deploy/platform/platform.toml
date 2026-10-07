@@ -2,3 +2,4 @@ session_ttl_seconds = 43200
 session_idle_seconds = 3600
 server_secret_path = "/etc/kcr/server-secret"
 trusted_proxies = []
+allowed_endpoint_hostnames = ["fake-prometheus"]

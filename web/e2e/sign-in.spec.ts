@@ -1,38 +1,14 @@
-import AxeBuilder from "@axe-core/playwright";
-import { expect, test as base, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import en from "../src/locales/en.json" with { type: "json" };
 import ptBR from "../src/locales/pt-BR.json" with { type: "json" };
+import { expect, expectNoViolations, test } from "./fixtures";
 
 const username = "e2e-admin";
 const password = "e2e-Fixture-Pass-01!";
 const newPassword = "e2e-Changed-Pass-02!";
 
-const policyMessage = /Content[- ]Security[- ]Policy|securitypolicyviolation/i;
-
-const test = base.extend<{ cspGuard: undefined }>({
-  cspGuard: [
-    async ({ page }, use) => {
-      const messages: string[] = [];
-      page.on("console", (message) => {
-        if (policyMessage.test(message.text())) {
-          messages.push(message.text());
-        }
-      });
-      await page.addInitScript({ path: "e2e/csp-listener.js" });
-      await use(undefined);
-      expect(messages).toEqual([]);
-    },
-    { auto: true },
-  ],
-});
-
 // The words of a name that come before its first parameter.
 const before = (text: string) => text.split("{{")[0] ?? text;
-
-async function expectNoViolations(page: Page) {
-  const result = await new AxeBuilder({ page }).analyze();
-  expect(result.violations).toEqual([]);
-}
 
 async function signIn(page: Page, secret: string) {
   await page.getByLabel(en.login.username, { exact: true }).fill(username);
@@ -86,7 +62,7 @@ test("sign in, switch language, change password, and sign out", async ({ page })
 
   await page.getByLabel(en.login.password, { exact: true }).fill(newPassword);
   await page.getByRole("button", { name: en.login.submit, exact: true }).click();
-  await expect(page.getByRole("heading", { name: en.account.title, level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: en.reports.title, level: 1 })).toBeVisible();
   await page.getByRole("button", { name: en.header.signOut }).click();
   await expect(page.getByRole("heading", { name: en.login.title })).toBeVisible();
 });

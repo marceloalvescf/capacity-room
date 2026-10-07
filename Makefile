@@ -170,18 +170,21 @@ check-runtime: $(IMAGE_DEP)
 		$(IMAGE) report --from-snapshot /data/snapshot.json --lang en --output /out/report.pdf
 	test "$$(head -c 5 $(CHECK_RUNTIME_OUT)/report.pdf)" = "%PDF-"
 
-# The end-to-end stack: PostgreSQL, the schema, the first administrator, then
-# serve, worker, and the Playwright container, whose exit status is the
-# target's. The stack is removed with its volumes first and last.
+# The end-to-end stack: PostgreSQL, the schema, the first administrator, the
+# profile of the fake Prometheus, then serve, worker, and the Playwright
+# container, whose exit status is the target's. The stack is removed with its
+# volumes first and last.
 E2E_COMPOSE := docker compose -f deploy/compose.yaml -f deploy/compose.integration.yaml
 
 e2e: $(IMAGE_DEP)
+	docker build $(BUILD_FLAGS) --file deploy/Containerfile --target fake-prometheus --tag k8s-capacity-report-fake-prometheus:$(VERSION) .
 	@export KCR_VERSION=$(VERSION) KCR_CONFIG_DIR=$(CURDIR)/deploy/platform KCR_POSTGRES_PASSWORD=kcr_e2e_only; \
 	mkdir -p .cache/e2e; \
 	$(E2E_COMPOSE) down --volumes; \
 	$(E2E_COMPOSE) up -d --wait postgres \
 		&& $(E2E_COMPOSE) run --rm -T migrate \
 		&& $(E2E_COMPOSE) run --rm -T bootstrap < deploy/platform/e2e-admin-password \
+		&& $(E2E_COMPOSE) run --rm -T profiles \
 		&& $(E2E_COMPOSE) up --abort-on-container-exit --exit-code-from playwright serve worker playwright; \
 	status=$$?; $(E2E_COMPOSE) down --volumes; exit $$status
 

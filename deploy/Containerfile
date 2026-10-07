@@ -18,6 +18,11 @@ COPY . .
 COPY --from=frontend /src/web/dist /src/web/dist
 RUN CGO_ENABLED=0 go build -trimpath -o /out/k8s-capacity-report ./cmd/k8s-capacity-report
 
+# The fake Prometheus of the end-to-end stack, on the same base as the runtime
+# image. `make e2e` builds it; `make image` never does.
+FROM build AS fake-prometheus-build
+RUN CGO_ENABLED=0 go build -trimpath -o /out/fake-prometheus ./cmd/fake-prometheus
+
 # Source of the typst binary only. The binary is statically linked, so it
 # runs unchanged on the Debian and distroless stages below.
 FROM ghcr.io/typst/typst:0.15.1@sha256:032e292249bcd378480cc7c142cfa324b63ef8aadeb88d7e7230320c4c9c422f AS typst
@@ -45,3 +50,8 @@ COPY --from=build /out/k8s-capacity-report /usr/local/bin/k8s-capacity-report
 COPY --from=typst /bin/typst /usr/local/bin/typst
 USER 10001:10001
 ENTRYPOINT ["/usr/local/bin/k8s-capacity-report"]
+
+FROM gcr.io/distroless/static-debian12@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2 AS fake-prometheus
+COPY --from=fake-prometheus-build /out/fake-prometheus /usr/local/bin/fake-prometheus
+USER 10001:10001
+ENTRYPOINT ["/usr/local/bin/fake-prometheus"]
