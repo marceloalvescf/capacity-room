@@ -614,4 +614,16 @@ describe("report list", () => {
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(screen.queryByText(t("reports.deleted", { count: 1 }))).not.toBeInTheDocument();
   });
+
+  it("an operator whose shown rows are all someone else's has no select column", async () => {
+    signIn("operator");
+    mock.reports = many(2, () => ({ owner_id: other, owner_username: "bia" }));
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    const headers = screen.getAllByRole("columnheader");
+    expect(headers).toHaveLength(6);
+    expect(headers.every((header) => header.textContent !== "")).toBe(true);
+    expect(within(rowOf(id(0))).getAllByRole("cell")).toHaveLength(6);
+  });
 });

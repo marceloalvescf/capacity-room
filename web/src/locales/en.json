@@ -202,7 +202,8 @@
       "profile": "Profile",
       "status": "Status",
       "pdf": "PDF",
-      "keptUntil": "Kept until"
+      "keptUntil": "Kept until",
+      "actions": "Actions"
     },
     "open": "Open",
     "delete": "Delete",

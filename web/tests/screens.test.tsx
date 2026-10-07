@@ -54,6 +54,9 @@ describe("screens", () => {
           mock.session = screenCase.signedIn ? signedIn({ language }) : anonymous();
           const { container } = await renderApp(screenCase.path, language);
           await screen.findByRole("heading", { level: 1, name: i18next.t(screenCase.heading, options) });
+          if (screenCase.name === "reports") {
+            await screen.findByRole("table");
+          }
           const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
           expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
           expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);

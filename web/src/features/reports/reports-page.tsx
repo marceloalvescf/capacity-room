@@ -64,6 +64,7 @@ export function ReportsPage() {
   const profileName = (row: ReportSummary): string => names.get(row.profile_id) ?? row.profile_id;
   const deletable = rows.filter((row) => canDelete(principal, row));
   const chosen = deletable.filter((row) => selected.has(row.id));
+  const selectable = deletable.length > 0;
   const canRequest = principal.role !== "reader";
   const updating = rows.some(isActive);
   const busy = deleteOne.isPending || deleteMany.isPending;
@@ -184,19 +185,17 @@ export function ReportsPage() {
             <caption className="sr-only">{t("reports.title")}</caption>
             <thead>
               <tr className="text-left text-xs text-muted-fg">
-                {canRequest ? (
+                {selectable ? (
                   <th scope="col" className="px-3 py-2">
-                    {deletable.length === 0 ? null : (
-                      <Checkbox
-                        hideLabel
-                        label={t("reports.selectAll")}
-                        checked={chosen.length === deletable.length}
-                        indeterminate={chosen.length > 0 && chosen.length < deletable.length}
-                        onChange={(event) => {
-                          setSelected(new Set(event.target.checked ? deletable.map((row) => row.id) : []));
-                        }}
-                      />
-                    )}
+                    <Checkbox
+                      hideLabel
+                      label={t("reports.selectAll")}
+                      checked={chosen.length === deletable.length}
+                      indeterminate={chosen.length > 0 && chosen.length < deletable.length}
+                      onChange={(event) => {
+                        setSelected(new Set(event.target.checked ? deletable.map((row) => row.id) : []));
+                      }}
+                    />
                   </th>
                 ) : null}
                 <th scope="col" className="px-3 py-2 font-semibold">
@@ -214,7 +213,9 @@ export function ReportsPage() {
                 <th scope="col" className="px-3 py-2 font-semibold">
                   {t("reports.column.keptUntil")}
                 </th>
-                <th scope="col" className="px-3 py-2" />
+                <th scope="col" className="px-3 py-2">
+                  <span className="sr-only">{t("reports.column.actions")}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -224,7 +225,7 @@ export function ReportsPage() {
                 const pdf = row.pdfs.find((state) => state.language === i18n.language);
                 return (
                   <tr key={row.id} className="border-t border-border">
-                    {canRequest ? (
+                    {selectable ? (
                       <td className="px-3 py-2">
                         {mine ? (
                           <Checkbox
