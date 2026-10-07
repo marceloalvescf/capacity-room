@@ -918,8 +918,9 @@ data quality. The report header holds the PDF block of the progress screen.
   reader sees the downloads alone. When it failed, the reason and its code,
   a link back to the list, and, for an operator, a link that opens the form
   with the values of this report.
-- Delete asks in one dialog that names the report, or counts the reports of
-  a bulk delete; Cancel holds the focus first. There is no undo.
+- Delete asks in one dialog, which says the selected report's data and PDFs
+  are removed, or counts the reports of a bulk delete; Cancel holds the focus
+  first. There is no undo.
 - A report status is drawn with the PDF's shapes: queued, running, and a
   pending PDF as the outlined circle; collected and a ready PDF as the
   filled circle; failed as the diamond; expired as the dash. A PDF never
