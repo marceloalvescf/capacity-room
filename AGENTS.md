@@ -616,8 +616,10 @@ redactor the moment the settings are loaded, before the pool opens.
   calendar name, or a typed range of two wall times. A calendar name is
   resolved in the form's zone when the request is sent, never when it is
   picked; weeks start on Monday in both languages; an empty resolved range
-  sends nothing. An attempt that got no answer keeps its resolved range, so
-  a resend replays. The calendar is styled through `classNames` alone.
+  sends nothing and shows `period.range.order` on the period. The resolved
+  range of an attempt is kept as long as its idempotency key, so a resend
+  replays. The calendar is styled through `classNames` and
+  `modifiersClassNames` alone, never through the library's stylesheet.
 
 ## The template
 

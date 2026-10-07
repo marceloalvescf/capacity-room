@@ -19,6 +19,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - A report stored before this version can no longer be opened or given a new
   PDF; request it again.
+- A snapshot file written by an earlier version can no longer be read by
+  `--from-snapshot`; collect it again.
 
 ## [0.3.0] - 2026-10-07
 
