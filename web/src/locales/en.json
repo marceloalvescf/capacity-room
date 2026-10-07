@@ -69,7 +69,10 @@
     "required": "Fill in this field.",
     "passwordShort": "Use at least 12 characters.",
     "passwordLong": "Use at most 1024 characters.",
-    "passwordsDiffer": "The two passwords differ."
+    "passwordsDiffer": "The two passwords differ.",
+    "namespaces": "Choose at least one namespace.",
+    "notPermitted": "The profile does not permit this value.",
+    "invalid": "This value is not valid."
   },
   "notFound": {
     "title": "Page not found",
@@ -174,7 +177,10 @@
   },
   "period": {
     "custom": {
-      "value": "Last {{duration}}"
+      "value": "Last {{duration}}",
+      "title": "Custom",
+      "label": "Length",
+      "hint": "A number and a unit: m minutes, h hours, d days. For example 90m, 36h, 10d."
     },
     "quick": {
       "1h": "Last hour",
@@ -183,7 +189,10 @@
       "7d": "Last 7 days",
       "15d": "Last 15 days",
       "30d": "Last 30 days"
-    }
+    },
+    "apply": "Apply",
+    "invalid": "Write a number followed by m, h, or d.",
+    "restricted": "This profile permits only these periods."
   },
   "reports": {
     "title": "Reports",
@@ -218,5 +227,23 @@
     "manyBody": "Their data and their PDFs are removed. This cannot be undone.",
     "confirm": "Delete",
     "cancel": "Cancel"
+  },
+  "generate": {
+    "title": "New report",
+    "profile": "Profile",
+    "namespaces": "Namespaces",
+    "language": "Report language",
+    "options": "Options",
+    "change": "Change",
+    "period": "Period",
+    "timezone": "Time zone",
+    "reportProfile": "Report profile",
+    "minSeverity": "Minimum severity",
+    "submit": "Request report",
+    "submitting": "Requesting…",
+    "noProfiles": "No profile is available. An administrator creates profiles.",
+    "profilesFailed": "The profiles could not be loaded.",
+    "profileChanged": "The profile changed. Its choices were loaded again.",
+    "longPeriod": "Periods over 15 days read older data through Thanos and can raise CPU and memory use."
   }
 }

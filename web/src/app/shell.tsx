@@ -12,6 +12,9 @@ import { Brand } from "./brand";
 import { LanguageMenu } from "./language-menu";
 import { useAnnounce } from "./live-region";
 
+const navLink =
+  "block rounded-md px-3 py-2 text-sm motion-safe:transition-colors aria-[current=page]:bg-sidebar-active aria-[current=page]:text-sidebar-active-fg";
+
 const version = import.meta.env.VITE_KCR_VERSION;
 
 export function Shell() {
@@ -53,18 +56,19 @@ export function Shell() {
         <nav aria-label={t("nav.label")} className="flex-1">
           <ul>
             <li>
-              <NavLink
-                to="/reports"
-                className="block rounded-md px-3 py-2 text-sm motion-safe:transition-colors aria-[current=page]:bg-sidebar-active aria-[current=page]:text-sidebar-active-fg"
-              >
+              <NavLink to="/reports" className={navLink}>
                 {t("nav.reports")}
               </NavLink>
             </li>
+            {principal.role === "reader" ? null : (
+              <li>
+                <NavLink to="/generate" className={navLink}>
+                  {t("nav.generate")}
+                </NavLink>
+              </li>
+            )}
             <li>
-              <NavLink
-                to="/account"
-                className="block rounded-md px-3 py-2 text-sm motion-safe:transition-colors aria-[current=page]:bg-sidebar-active aria-[current=page]:text-sidebar-active-fg"
-              >
+              <NavLink to="/account" className={navLink}>
                 {t("nav.account")}
               </NavLink>
             </li>

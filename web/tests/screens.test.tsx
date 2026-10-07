@@ -20,6 +20,7 @@ const languages: Language[] = ["en", "pt-BR"];
 const screens = [
   { name: "sign-in", path: "/login", signedIn: false, heading: "login.title" },
   { name: "reports", path: "/reports", signedIn: true, heading: "reports.title" },
+  { name: "new report", path: "/generate", signedIn: true, heading: "generate.title" },
   { name: "account", path: "/account", signedIn: true, heading: "account.title" },
   { name: "not found", path: "/nothing", signedIn: true, heading: "notFound.title" },
 ] as const;

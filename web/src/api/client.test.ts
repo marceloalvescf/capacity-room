@@ -43,7 +43,13 @@ describe("client", () => {
     server.use(
       http.patch(url("/account"), ({ request }) => {
         patches += 1;
-        mock.calls.push({ method: "PATCH", path: "/account", csrf: request.headers.get("X-CSRF-Token"), body: null });
+        mock.calls.push({
+          method: "PATCH",
+          path: "/account",
+          csrf: request.headers.get("X-CSRF-Token"),
+          key: null,
+          body: null,
+        });
         return patches === 1
           ? HttpResponse.json(errorBody("CSRF_REJECTED"), { status: 403 })
           : HttpResponse.json(signedIn().principal);
@@ -60,7 +66,13 @@ describe("client", () => {
     const { api } = setup();
     server.use(
       http.patch(url("/account"), ({ request }) => {
-        mock.calls.push({ method: "PATCH", path: "/account", csrf: request.headers.get("X-CSRF-Token"), body: null });
+        mock.calls.push({
+          method: "PATCH",
+          path: "/account",
+          csrf: request.headers.get("X-CSRF-Token"),
+          key: null,
+          body: null,
+        });
         return HttpResponse.json(errorBody("CSRF_REJECTED"), { status: 403 });
       }),
     );

@@ -20,6 +20,16 @@ export function parsePeriod(input: string): string | null {
   return /^[1-9][0-9]*[mhd]$/.test(trimmed) ? trimmed : null;
 }
 
+const unitDays = { m: 1 / 1440, h: 1 / 24, d: 1 } as const;
+
+// The length of a period in days, or null when it is outside the grammar.
+export function periodDays(period: string): number | null {
+  if (parsePeriod(period) !== period) {
+    return null;
+  }
+  return Number(period.slice(0, -1)) * unitDays[period.slice(-1) as keyof typeof unitDays];
+}
+
 function isQuick(period: string): period is QuickRange {
   return quickRanges.some((range) => range === period);
 }
@@ -27,6 +37,9 @@ function isQuick(period: string): period is QuickRange {
 export function periodText(t: TFunction, language: Language, period: string): string {
   if (isQuick(period)) {
     return t(quickKeys[period], { lng: language });
+  }
+  if (parsePeriod(period) !== period) {
+    return period;
   }
   const unit = units[period.slice(-1) as keyof typeof units];
   const duration = new Intl.NumberFormat(language, { style: "unit", unit, unitDisplay: "long" }).format(

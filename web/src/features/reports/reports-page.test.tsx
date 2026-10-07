@@ -182,7 +182,7 @@ describe("report list", () => {
     expect(within(rowOf(id(1))).queryByRole("checkbox")).not.toBeInTheDocument();
     expect(within(rowOf(id(1))).queryByRole("button", { name: t("reports.delete") })).not.toBeInTheDocument();
     expect(within(rowOf(id(2))).getByRole("checkbox")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: t("nav.generate") })).toBeInTheDocument();
+    expect(within(screen.getByRole("main")).getByRole("link", { name: t("nav.generate") })).toBeInTheDocument();
   });
 
   it("delete one", async () => {

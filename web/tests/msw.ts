@@ -11,6 +11,7 @@ export interface Call {
   method: string;
   path: string;
   csrf: string | null;
+  key: string | null;
   body: unknown;
 }
 
@@ -32,8 +33,20 @@ export function anonymous(loginCsrf = "login-1"): Schemas["AnonymousSession"] {
   return { authenticated: false, login_csrf: loginCsrf };
 }
 
-export function errorBody(code: Schemas["ErrorCode"]): Schemas["Error"] {
-  return { error: { code, message: "message", fields: {} } };
+export function errorBody(code: Schemas["ErrorCode"], fields: Record<string, string> = {}): Schemas["Error"] {
+  return { error: { code, message: "message", fields } };
+}
+
+// An error answer of the contract, with the fields and the Retry-After it may carry.
+export function failure(
+  status: number,
+  code: Schemas["ErrorCode"],
+  extra: { fields?: Record<string, string>; retryAfter?: number } = {},
+): Response {
+  return HttpResponse.json(errorBody(code, extra.fields), {
+    status,
+    headers: extra.retryAfter === undefined ? {} : { "Retry-After": String(extra.retryAfter) },
+  });
 }
 
 type Report = Schemas["Report"];
@@ -93,6 +106,8 @@ export interface Mock {
   calls: Call[];
   reports: Report[];
   profiles: ProfileSummary[];
+  // The reports requested by key, so that a key sent again answers the same report.
+  requested: Map<string, { body: string; id: string }>;
 }
 
 const api = (path: string): string => `${window.location.origin}/api/v1${path}`;
@@ -102,7 +117,7 @@ export const server = setupServer();
 // Installs the handlers of the contract, held by one mutable state, and the
 // hooks that start and stop the server around a test file.
 export function installMockApi(initial: Session): Mock {
-  const mock: Mock = { session: initial, calls: [], reports: [], profiles: [] };
+  const mock: Mock = { session: initial, calls: [], reports: [], profiles: [], requested: new Map() };
 
   async function record(request: Request): Promise<unknown> {
     const text = await request.clone().text();
@@ -111,6 +126,7 @@ export function installMockApi(initial: Session): Mock {
       method: request.method,
       path: new URL(request.url).pathname.replace("/api/v1", ""),
       csrf: request.headers.get("X-CSRF-Token"),
+      key: request.headers.get("Idempotency-Key"),
       body,
     });
     return body;
@@ -176,14 +192,22 @@ export function installMockApi(initial: Session): Mock {
       });
     }),
     http.post(api("/reports"), async ({ request }) => {
-      await record(request);
+      const body = await record(request);
+      const key = request.headers.get("Idempotency-Key") ?? "";
+      const text = JSON.stringify(body);
+      const earlier = mock.requested.get(key);
+      if (earlier !== undefined && earlier.body !== text) {
+        return failure(409, "IDEMPOTENCY_KEY_REUSED");
+      }
+      const id = earlier?.id ?? crypto.randomUUID();
+      mock.requested.set(key, { body: text, id });
       return HttpResponse.json(
         {
-          id: report().id,
+          id,
           status: "queued",
           phase: "waiting",
           expires_at: "2026-11-06T17:05:00Z",
-          replayed: false,
+          replayed: earlier !== undefined,
         } satisfies Schemas["ReportAccepted"],
         { status: 202 },
       );
@@ -224,6 +248,7 @@ export function installMockApi(initial: Session): Mock {
     mock.session = initial;
     mock.reports = [];
     mock.profiles = [];
+    mock.requested = new Map();
     server.resetHandlers(...handlers);
   });
   afterAll(() => {

@@ -69,7 +69,10 @@
     "required": "Preencha este campo.",
     "passwordShort": "Use pelo menos 12 caracteres.",
     "passwordLong": "Use no máximo 1024 caracteres.",
-    "passwordsDiffer": "As duas senhas são diferentes."
+    "passwordsDiffer": "As duas senhas são diferentes.",
+    "namespaces": "Escolha pelo menos um namespace.",
+    "notPermitted": "O perfil não permite este valor.",
+    "invalid": "Este valor não é válido."
   },
   "notFound": {
     "title": "Página não encontrada",
@@ -174,7 +177,10 @@
   },
   "period": {
     "custom": {
-      "value": "{{duration}} até agora"
+      "value": "{{duration}} até agora",
+      "title": "Personalizado",
+      "label": "Duração",
+      "hint": "Um número e uma unidade: m minutos, h horas, d dias. Por exemplo 90m, 36h, 10d."
     },
     "quick": {
       "1h": "Última hora",
@@ -183,7 +189,10 @@
       "7d": "Últimos 7 dias",
       "15d": "Últimos 15 dias",
       "30d": "Últimos 30 dias"
-    }
+    },
+    "apply": "Aplicar",
+    "invalid": "Escreva um número seguido de m, h ou d.",
+    "restricted": "Este perfil permite apenas estes períodos."
   },
   "reports": {
     "title": "Relatórios",
@@ -218,5 +227,23 @@
     "manyBody": "Os dados e os PDFs são removidos. Esta ação não pode ser desfeita.",
     "confirm": "Excluir",
     "cancel": "Cancelar"
+  },
+  "generate": {
+    "title": "Novo relatório",
+    "profile": "Perfil",
+    "namespaces": "Namespaces",
+    "language": "Idioma do relatório",
+    "options": "Opções",
+    "change": "Alterar",
+    "period": "Período",
+    "timezone": "Fuso horário",
+    "reportProfile": "Perfil do relatório",
+    "minSeverity": "Severidade mínima",
+    "submit": "Gerar relatório",
+    "submitting": "Gerando…",
+    "noProfiles": "Nenhum perfil disponível. Um administrador cria os perfis.",
+    "profilesFailed": "Não foi possível carregar os perfis.",
+    "profileChanged": "O perfil mudou. Suas opções foram carregadas de novo.",
+    "longPeriod": "Períodos acima de 15 dias leem dados antigos pelo Thanos e podem elevar o uso de CPU e memória."
   }
 }
