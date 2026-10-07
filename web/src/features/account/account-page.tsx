@@ -36,8 +36,6 @@ export const schema = z
 
 type Values = z.infer<typeof schema>;
 
-const version = import.meta.env.VITE_KCR_VERSION;
-
 export function AccountPage() {
   const { t } = useTranslation();
   const api = useApi();
@@ -144,8 +142,6 @@ export function AccountPage() {
           </Button>
         </form>
       </section>
-
-      <p className="font-mono text-sm text-muted-fg">{t("app.version", { version })}</p>
     </div>
   );
 }

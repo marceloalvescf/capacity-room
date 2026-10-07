@@ -28,7 +28,7 @@ describe("account", () => {
   it("shows who is signed in and the version", async () => {
     await renderApp("/account");
     expect(await screen.findByText("Signed in as ana, administrator.")).toBeInTheDocument();
-    expect(screen.getByText(/^Version /)).toHaveClass("font-mono");
+    expect(within(screen.getByRole("complementary")).getByText(/^Version /)).toHaveClass("font-mono");
   });
 
   it("language: one PATCH, the screen follows, the live region says so", async () => {

@@ -39,7 +39,6 @@
   },
   "login": {
     "title": "Sign in",
-    "subtitle": "Kubernetes capacity reports",
     "username": "User name",
     "password": "Password",
     "submit": "Sign in",

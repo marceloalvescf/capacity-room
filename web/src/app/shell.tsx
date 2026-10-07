@@ -1,3 +1,4 @@
+import { SignOutIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useNavigate } from "react-router";
@@ -5,11 +6,13 @@ import { useApi } from "@/api/context";
 import { ApiFailure } from "@/api/client";
 import { errorText, toError } from "@/api/errors";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { usePrincipal } from "@/session/session";
 import { Brand } from "./brand";
 import { LanguageMenu } from "./language-menu";
 import { useAnnounce } from "./live-region";
+
+const version = import.meta.env.VITE_KCR_VERSION;
 
 export function Shell() {
   const { t } = useTranslation();
@@ -62,19 +65,21 @@ export function Shell() {
         <div className="flex flex-col text-sm">
           <span className="font-mono">{principal.username}</span>
           <span>{t(`role.${principal.role}`)}</span>
+          <span className="mt-3 font-mono">{t("app.version", { version })}</span>
         </div>
       </aside>
       <div className="flex min-w-0 flex-col">
         <header className="flex flex-wrap items-center justify-end gap-2 border-b border-border px-6 py-3">
           <LanguageMenu />
           <ThemeToggle />
-          <Button
+          <IconButton
+            label={t("header.signOut")}
             onClick={() => {
               void signOut();
             }}
           >
-            {t("header.signOut")}
-          </Button>
+            <SignOutIcon aria-hidden="true" className="size-5" />
+          </IconButton>
         </header>
         <main id="main" tabIndex={-1} className="flex-1 p-6 outline-none">
           <Outlet />

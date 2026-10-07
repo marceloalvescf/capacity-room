@@ -1,6 +1,7 @@
+import { TranslateIcon } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { languageValues } from "@/api/schema.gen";
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Menu, MenuContent, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/ui/menu";
 import { chooseLanguage } from "@/i18n/i18n";
 import { isLanguage } from "@/i18n/language";
@@ -27,7 +28,9 @@ export function LanguageMenu() {
   return (
     <Menu>
       <MenuTrigger asChild>
-        <Button>{t("header.language", { language: t(`language.${current}`) })}</Button>
+        <IconButton label={t("header.language", { language: t(`language.${current}`) })}>
+          <TranslateIcon aria-hidden="true" className="size-5" />
+        </IconButton>
       </MenuTrigger>
       <MenuContent>
         <MenuRadioGroup value={current} onValueChange={choose}>

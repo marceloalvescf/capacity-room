@@ -69,10 +69,7 @@ export function LoginPage() {
       </header>
       <main id="main" tabIndex={-1} className="flex justify-center p-6 outline-none">
         <div className="flex w-full max-w-sm flex-col gap-4 rounded-md border border-border bg-surface p-6 text-surface-fg">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-semibold">{t("login.title")}</h1>
-            <p className="text-sm text-muted-fg">{t("login.subtitle")}</p>
-          </div>
+          <h1 className="text-xl font-semibold">{t("login.title")}</h1>
           {params.get("changed") === "1" ? <Alert tone="notice">{t("login.passwordChanged")}</Alert> : null}
           {params.get("ended") === "1" ? <Alert tone="notice">{t("login.sessionEnded")}</Alert> : null}
           {failure === null ? null : (

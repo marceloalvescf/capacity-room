@@ -39,7 +39,6 @@
   },
   "login": {
     "title": "Entrar",
-    "subtitle": "Relatórios de capacidade do Kubernetes",
     "username": "Usuário",
     "password": "Senha",
     "submit": "Entrar",
