@@ -1,10 +1,9 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "report": {
     "id": "00000000-0000-4000-8000-000000000001",
     "generator_version": "0.0.0-golden",
     "emitted_at": "2026-07-15T14:30:00-03:00",
-    "period": "24h",
     "period_start": "2026-07-14T14:30:00-03:00",
     "period_end": "2026-07-15T14:30:00-03:00",
     "timezone": "America/Sao_Paulo",
