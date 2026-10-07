@@ -4,6 +4,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -30,22 +31,23 @@ func TestExpiryBeforeRenderWritesNoPDF(t *testing.T) {
 	}}
 	e.startRender(both(pdfToolchain(t)), 2, hooks)
 	report := e.collected()
+	e.requestPDF(report.ID, langEN)
 
 	deadline := time.Now().Add(waitLimit)
 	for {
 		mu.Lock()
 		n := held
 		mu.Unlock()
-		if n == 1 {
+		if n == 2 {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("%d renders reached the hold, want 1", n)
+			t.Fatalf("%d renders reached the hold, want 2", n)
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
 
-	jobs := map[string]int64{langPT: e.pdfJob(report.ID, langPT)}
+	jobs := map[string]int64{langPT: e.pdfJob(report.ID, langPT), langEN: e.pdfJob(report.ID, langEN)}
 	late := &MaintenanceWorker{Deps: e.deps}
 	late.Deps.Now = func() time.Time { return report.ExpiresAt }
 	if err := late.Work(context.Background(), nil); err != nil {
@@ -56,7 +58,7 @@ func TestExpiryBeforeRenderWritesNoPDF(t *testing.T) {
 	}
 	close(release)
 
-	for _, lang := range []string{langPT} {
+	for _, lang := range []string{langPT, langEN} {
 		job := e.waitJob(jobs[lang], rivertype.JobStateCompleted)
 		if job.Attempt != 1 {
 			t.Fatalf("%s job attempt %d", lang, job.Attempt)
@@ -81,11 +83,18 @@ func TestDeleteWhileRunningIsSweptAfter(t *testing.T) {
 	report := e.request()
 	reportID = report.ID
 	e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
-	for _, lang := range []string{langPT} {
-		e.waitJob(e.pdfJob(report.ID, lang), rivertype.JobStateCompleted)
-		if row := e.pdf(report.ID, lang); row.Status != "pending" {
-			t.Fatalf("%s row %+v", lang, row)
-		}
+	e.waitJob(e.pdfJob(report.ID, langPT), rivertype.JobStateCompleted)
+	if row := e.pdf(report.ID, langPT); row.Status != "pending" {
+		t.Fatalf("%s row %+v", langPT, row)
+	}
+	// A deleted report takes no second language.
+	err := e.reports.RequestPDF(context.Background(), e.op, report.ID, langEN)
+	var rerr *reports.Error
+	if !errors.As(err, &rerr) || rerr.Code != reports.CodeReportNotFound {
+		t.Fatalf("request after the delete: %v", err)
+	}
+	if n := e.count(`SELECT count(*) FROM report_pdfs WHERE report_id = $1`, report.ID); n != 1 {
+		t.Fatalf("%d pdf rows", n)
 	}
 	got := e.report(report.ID)
 	if got.Status != "collected" || got.DeletedAt == nil {

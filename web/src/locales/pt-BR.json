@@ -109,7 +109,7 @@
     "PROFILE_INACTIVE": "Este perfil não está ativo.",
     "SNAPSHOT_NOT_READY": "Os dados deste relatório ainda não estão prontos.",
     "PDF_NOT_READY": "Este PDF ainda não está pronto.",
-    "PDF_RETRY_NOT_ALLOWED": "Este PDF não pode ser gerado de novo agora.",
+    "PDF_ALREADY_READY": "Este PDF já está pronto.",
     "REPORT_EXPIRED": "Este relatório expirou.",
     "REPORT_SELECTION_NOT_PERMITTED": "O perfil não permite esta seleção.",
     "ADMISSION_GLOBAL_LIMIT": "A plataforma já está gerando o máximo de relatórios. Tente de novo em {{seconds}} segundos.",

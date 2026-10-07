@@ -287,8 +287,8 @@ func (s *Server) getReportPDF(w http.ResponseWriter, r *http.Request, a auth.Aut
 		`attachment; filename="report-`+id.String()+`-`+string(lang)+`.pdf"`)
 }
 
-func (s *Server) retryReportPDF(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
-	var body PDFRetryRequest
+func (s *Server) requestReportPDF(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
+	var body PDFRequest
 	if p := DecodeBody(r, &body, []string{"language"}, map[string]int{"language": maxLanguage}); p != nil {
 		WriteProblem(w, p)
 		return
@@ -301,11 +301,11 @@ func (s *Server) retryReportPDF(w http.ResponseWriter, r *http.Request, a auth.A
 	if !ok {
 		return
 	}
-	if err := s.Reports.RetryPDF(r.Context(), a.Principal, id, string(body.Language)); err != nil {
+	if err := s.Reports.RequestPDF(r.Context(), a.Principal, id, string(body.Language)); err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusAccepted, PDFRetryAccepted{Language: body.Language, Status: PDFStatusPending})
+	writeJSON(w, http.StatusAccepted, PDFRequestAccepted{Language: body.Language, Status: PDFStatusPending})
 }
 
 func (s *Server) deleteReport(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {

@@ -55,7 +55,7 @@ const (
 	CodeProfileInactive       Code = "PROFILE_INACTIVE"
 	CodeSnapshotNotReady      Code = "SNAPSHOT_NOT_READY"
 	CodePDFNotReady           Code = "PDF_NOT_READY"
-	CodePDFRetryNotAllowed    Code = "PDF_RETRY_NOT_ALLOWED"
+	CodePDFAlreadyReady       Code = "PDF_ALREADY_READY"
 	CodeReportExpired         Code = "REPORT_EXPIRED"
 	CodeSelectionNotPermitted Code = "REPORT_SELECTION_NOT_PERMITTED"
 	CodeAdmissionGlobalLimit  Code = "ADMISSION_GLOBAL_LIMIT"
@@ -110,7 +110,7 @@ var problems = map[Code]struct {
 	CodeProfileInactive:       {409, "This profile is not active."},
 	CodeSnapshotNotReady:      {409, "This report's data is not ready yet."},
 	CodePDFNotReady:           {409, "This report's PDF is not ready yet."},
-	CodePDFRetryNotAllowed:    {409, "This report's PDF cannot be retried right now."},
+	CodePDFAlreadyReady:       {409, "This PDF is already ready."},
 	CodeReportExpired:         {410, "This report has expired."},
 	CodeSelectionNotPermitted: {422, "This selection is not permitted by the profile."},
 	CodeAdmissionGlobalLimit:  {429, "The platform is at its global report admission limit."},

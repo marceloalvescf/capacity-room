@@ -411,15 +411,15 @@ type NodeAutoscaling string
 // PDFFailureCode Why a PDF failed; a client words the code.
 type PDFFailureCode string
 
-// PDFRetryAccepted defines model for PDFRetryAccepted.
-type PDFRetryAccepted struct {
-	Language Language  `json:"language"`
-	Status   PDFStatus `json:"status"`
+// PDFRequest defines model for PDFRequest.
+type PDFRequest struct {
+	Language Language `json:"language"`
 }
 
-// PDFRetryRequest defines model for PDFRetryRequest.
-type PDFRetryRequest struct {
-	Language Language `json:"language"`
+// PDFRequestAccepted defines model for PDFRequestAccepted.
+type PDFRequestAccepted struct {
+	Language Language  `json:"language"`
+	Status   PDFStatus `json:"status"`
 }
 
 // PDFStatus defines model for PDFStatus.
@@ -1068,8 +1068,8 @@ type GetReportPDFParams struct {
 	IfNoneMatch *IfNoneMatch `json:"If-None-Match,omitempty"`
 }
 
-// RetryReportPDFParams defines parameters for RetryReportPDF.
-type RetryReportPDFParams struct {
+// RequestReportPDFParams defines parameters for RequestReportPDF.
+type RequestReportPDFParams struct {
 	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
@@ -1113,5 +1113,5 @@ type RequestReportJSONRequestBody = ReportRequest
 // DeleteReportsJSONRequestBody defines body for DeleteReports for application/json ContentType.
 type DeleteReportsJSONRequestBody = ReportDeleteRequest
 
-// RetryReportPDFJSONRequestBody defines body for RetryReportPDF for application/json ContentType.
-type RetryReportPDFJSONRequestBody = PDFRetryRequest
+// RequestReportPDFJSONRequestBody defines body for RequestReportPDF for application/json ContentType.
+type RequestReportPDFJSONRequestBody = PDFRequest

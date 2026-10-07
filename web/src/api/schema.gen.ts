@@ -304,7 +304,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/reports/{id}/pdf-retries": {
+    "/reports/{id}/pdfs": {
         parameters: {
             query?: never;
             header?: never;
@@ -316,8 +316,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Render the PDF of one language again after it failed; an operator or an administrator. A PDF that is pending is accepted and changes nothing. */
-        post: operations["retryReportPDF"];
+        /** Make the PDF of one language of a collected report; an operator or an administrator. The PDF is created when it was never asked for and compiled again when it failed; a PDF that is pending is accepted and changes nothing. */
+        post: operations["requestReportPDF"];
         delete?: never;
         options?: never;
         head?: never;
@@ -424,10 +424,10 @@ export interface components {
             /** @description The cursor of the next page; null on the last page. */
             next_cursor: string | null;
         };
-        PDFRetryRequest: {
+        PDFRequest: {
             language: components["schemas"]["Language"];
         };
-        PDFRetryAccepted: {
+        PDFRequestAccepted: {
             language: components["schemas"]["Language"];
             status: components["schemas"]["PDFStatus"];
         };
@@ -455,7 +455,7 @@ export interface components {
          * @description A code of the contract; the interface shows its own translation.
          * @enum {string}
          */
-        ErrorCode: "REQUEST_INVALID" | "INVALID_CREDENTIALS" | "UNAUTHENTICATED" | "CSRF_REJECTED" | "FORBIDDEN" | "USER_NOT_FOUND" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "USERNAME_TAKEN" | "LAST_ADMIN" | "SELF_DELETE" | "SELF_DEACTIVATE" | "SELF_DEMOTE" | "INVALID_USERNAME" | "PASSWORD_TOO_SHORT" | "PASSWORD_TOO_LONG" | "AUTH_RATE_LIMITED" | "DATABASE_UNAVAILABLE" | "PROFILE_NOT_FOUND" | "PROFILE_ID_TAKEN" | "PROFILE_REVISION_STALE" | "PROFILE_DOCUMENT_INVALID" | "ENDPOINT_URL_REJECTED" | "ENDPOINT_ADDRESS_REJECTED" | "INTERNAL_ERROR" | "IDEMPOTENCY_KEY_INVALID" | "CURSOR_INVALID" | "REPORT_NOT_FOUND" | "IDEMPOTENCY_KEY_REUSED" | "PROFILE_INACTIVE" | "SNAPSHOT_NOT_READY" | "PDF_NOT_READY" | "PDF_RETRY_NOT_ALLOWED" | "REPORT_EXPIRED" | "REPORT_SELECTION_NOT_PERMITTED" | "ADMISSION_GLOBAL_LIMIT" | "ADMISSION_PROFILE_LIMIT";
+        ErrorCode: "REQUEST_INVALID" | "INVALID_CREDENTIALS" | "UNAUTHENTICATED" | "CSRF_REJECTED" | "FORBIDDEN" | "USER_NOT_FOUND" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "USERNAME_TAKEN" | "LAST_ADMIN" | "SELF_DELETE" | "SELF_DEACTIVATE" | "SELF_DEMOTE" | "INVALID_USERNAME" | "PASSWORD_TOO_SHORT" | "PASSWORD_TOO_LONG" | "AUTH_RATE_LIMITED" | "DATABASE_UNAVAILABLE" | "PROFILE_NOT_FOUND" | "PROFILE_ID_TAKEN" | "PROFILE_REVISION_STALE" | "PROFILE_DOCUMENT_INVALID" | "ENDPOINT_URL_REJECTED" | "ENDPOINT_ADDRESS_REJECTED" | "INTERNAL_ERROR" | "IDEMPOTENCY_KEY_INVALID" | "CURSOR_INVALID" | "REPORT_NOT_FOUND" | "IDEMPOTENCY_KEY_REUSED" | "PROFILE_INACTIVE" | "SNAPSHOT_NOT_READY" | "PDF_NOT_READY" | "PDF_ALREADY_READY" | "REPORT_EXPIRED" | "REPORT_SELECTION_NOT_PERMITTED" | "ADMISSION_GLOBAL_LIMIT" | "ADMISSION_PROFILE_LIMIT";
         ErrorBody: {
             code: components["schemas"]["ErrorCode"];
             /** @description A fixed English sentence chosen by the code, never text from an exception. */
@@ -1946,7 +1946,7 @@ export interface operations {
             default: components["responses"]["Unexpected"];
         };
     };
-    retryReportPDF: {
+    requestReportPDF: {
         parameters: {
             query?: never;
             header: {
@@ -1961,7 +1961,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PDFRetryRequest"];
+                "application/json": components["schemas"]["PDFRequest"];
             };
         };
         responses: {
@@ -1971,14 +1971,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PDFRetryAccepted"];
+                    "application/json": components["schemas"]["PDFRequestAccepted"];
                 };
             };
             400: components["responses"]["RequestInvalid"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["ForbiddenOrCSRF"];
             404: components["responses"]["ReportNotFound"];
-            /** @description SNAPSHOT_NOT_READY when the report is not collected; PDF_RETRY_NOT_ALLOWED when the PDF is ready or has no row. */
+            /** @description SNAPSHOT_NOT_READY when the report is not collected; PDF_ALREADY_READY when the PDF is ready. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2006,7 +2006,7 @@ export const reportFailureCodeValues: ReadonlyArray<FlattenedDeepRequired<compon
 export const pDFStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PDFStatus"]> = ["pending", "ready", "failed"];
 export const pDFFailureCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PDFFailureCode"]> = ["PDF_COMPILE_FAILED", "PDF_TOO_LARGE", "PDF_ATTEMPTS_EXHAUSTED", "INTERNAL_FAILURE"];
 export const reportDeleteOutcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportDeleteOutcome"]> = ["deleted", "not_found", "expired", "forbidden"];
-export const errorCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorCode"]> = ["REQUEST_INVALID", "INVALID_CREDENTIALS", "UNAUTHENTICATED", "CSRF_REJECTED", "FORBIDDEN", "USER_NOT_FOUND", "NOT_FOUND", "METHOD_NOT_ALLOWED", "USERNAME_TAKEN", "LAST_ADMIN", "SELF_DELETE", "SELF_DEACTIVATE", "SELF_DEMOTE", "INVALID_USERNAME", "PASSWORD_TOO_SHORT", "PASSWORD_TOO_LONG", "AUTH_RATE_LIMITED", "DATABASE_UNAVAILABLE", "PROFILE_NOT_FOUND", "PROFILE_ID_TAKEN", "PROFILE_REVISION_STALE", "PROFILE_DOCUMENT_INVALID", "ENDPOINT_URL_REJECTED", "ENDPOINT_ADDRESS_REJECTED", "INTERNAL_ERROR", "IDEMPOTENCY_KEY_INVALID", "CURSOR_INVALID", "REPORT_NOT_FOUND", "IDEMPOTENCY_KEY_REUSED", "PROFILE_INACTIVE", "SNAPSHOT_NOT_READY", "PDF_NOT_READY", "PDF_RETRY_NOT_ALLOWED", "REPORT_EXPIRED", "REPORT_SELECTION_NOT_PERMITTED", "ADMISSION_GLOBAL_LIMIT", "ADMISSION_PROFILE_LIMIT"];
+export const errorCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorCode"]> = ["REQUEST_INVALID", "INVALID_CREDENTIALS", "UNAUTHENTICATED", "CSRF_REJECTED", "FORBIDDEN", "USER_NOT_FOUND", "NOT_FOUND", "METHOD_NOT_ALLOWED", "USERNAME_TAKEN", "LAST_ADMIN", "SELF_DELETE", "SELF_DEACTIVATE", "SELF_DEMOTE", "INVALID_USERNAME", "PASSWORD_TOO_SHORT", "PASSWORD_TOO_LONG", "AUTH_RATE_LIMITED", "DATABASE_UNAVAILABLE", "PROFILE_NOT_FOUND", "PROFILE_ID_TAKEN", "PROFILE_REVISION_STALE", "PROFILE_DOCUMENT_INVALID", "ENDPOINT_URL_REJECTED", "ENDPOINT_ADDRESS_REJECTED", "INTERNAL_ERROR", "IDEMPOTENCY_KEY_INVALID", "CURSOR_INVALID", "REPORT_NOT_FOUND", "IDEMPOTENCY_KEY_REUSED", "PROFILE_INACTIVE", "SNAPSHOT_NOT_READY", "PDF_NOT_READY", "PDF_ALREADY_READY", "REPORT_EXPIRED", "REPORT_SELECTION_NOT_PERMITTED", "ADMISSION_GLOBAL_LIMIT", "ADMISSION_PROFILE_LIMIT"];
 export const roleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Role"]> = ["administrator", "operator", "reader"];
 export const languageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Language"]> = ["pt-BR", "en"];
 export const endpointTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["EndpointType"]> = ["auto", "prometheus", "grafana"];

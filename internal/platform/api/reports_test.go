@@ -267,7 +267,7 @@ func TestReportRoutesCheckInOrder(t *testing.T) {
 		{name: "view", method: "GET", path: base + "/view?lang=en", badPath: base + "/view"},
 		{name: "snapshot", method: "GET", path: base + "/snapshot"},
 		{name: "pdf", method: "GET", path: base + "/pdf?lang=en", badPath: base + "/pdf"},
-		{name: "retry", method: "POST", path: base + "/pdf-retries", body: `{"language":"en"}`, write: true, badBody: `{"language":1}`},
+		{name: "pdfs", method: "POST", path: base + "/pdfs", body: `{"language":"en"}`, write: true, badBody: `{"language":1}`},
 		{name: "delete", method: "DELETE", path: base, write: true},
 		{name: "bulk delete", method: "POST", path: "/api/v1/reports/delete", body: `{"ids":["` + id + `"]}`, write: true, badBody: `{"ids":"x"}`},
 	}
@@ -629,20 +629,34 @@ func TestPDFNotReadyRoute(t *testing.T) {
 		map[string]string{"status": "failed", "failure_code": "PDF_COMPILE_FAILED"})
 }
 
-func TestRetryRoute(t *testing.T) {
+func TestPostPDFsRoute(t *testing.T) {
 	ts := newTestServer(t)
 	c := ts.cast(t)
+	id := ts.seedReport(t, stored{owner: c.ops.user.ID})
+	if _, err := ts.pool.Exec(context.Background(), `DELETE FROM report_pdfs WHERE report_id = $1 AND language = 'pt-BR'`, id); err != nil {
+		t.Fatal(err)
+	}
+	w := ts.as(t, &c.ops, "POST", "/api/v1/reports/"+id.String()+"/pdfs", `{"language":"pt-BR"}`, nil)
+	if w.Code != 202 || strings.TrimSpace(w.Body.String()) != `{"language":"pt-BR","status":"pending"}` {
+		t.Fatalf("request: %d %s", w.Code, w.Body.String())
+	}
 	failed := ts.seedReport(t, stored{owner: c.ops.user.ID, status: "collected", phase: "complete", pdfs: "failed"})
-	w := ts.as(t, &c.ops, "POST", "/api/v1/reports/"+failed.String()+"/pdf-retries", `{"language":"en"}`, nil)
+	w = ts.as(t, &c.ops, "POST", "/api/v1/reports/"+failed.String()+"/pdfs", `{"language":"en"}`, nil)
 	if w.Code != 202 || strings.TrimSpace(w.Body.String()) != `{"language":"en","status":"pending"}` {
 		t.Fatalf("retry: %d %s", w.Code, w.Body.String())
 	}
 	ready := ts.seedReport(t, stored{owner: c.ops.user.ID})
-	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/"+ready.String()+"/pdf-retries", `{"language":"en"}`, nil), 409, "PDF_RETRY_NOT_ALLOWED", nil)
-	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/"+ready.String()+"/pdf-retries", `{"language":"fr"}`, nil), 400, CodeRequestInvalid, nil)
-	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/"+uuid.NewString()+"/pdf-retries", `{"language":"en"}`, nil), 404, "REPORT_NOT_FOUND", nil)
-	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/nope/pdf-retries", `{"language":"en"}`, nil), 404, "REPORT_NOT_FOUND", nil)
-	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/nope/pdf-retries", `{"language":"fr"}`, nil), 400, CodeRequestInvalid, map[string]string{"language": "invalid"})
+	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/"+ready.String()+"/pdfs", `{"language":"fr"}`, nil), 400, CodeRequestInvalid, nil)
+	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/"+uuid.NewString()+"/pdfs", `{"language":"en"}`, nil), 404, "REPORT_NOT_FOUND", nil)
+	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/nope/pdfs", `{"language":"en"}`, nil), 404, "REPORT_NOT_FOUND", nil)
+	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/nope/pdfs", `{"language":"fr"}`, nil), 400, CodeRequestInvalid, map[string]string{"language": "invalid"})
+}
+
+func TestPostPDFsWhenReady(t *testing.T) {
+	ts := newTestServer(t)
+	c := ts.cast(t)
+	ready := ts.seedReport(t, stored{owner: c.ops.user.ID})
+	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports/"+ready.String()+"/pdfs", `{"language":"en"}`, nil), 409, "PDF_ALREADY_READY", nil)
 }
 
 func TestDeleteRoute(t *testing.T) {

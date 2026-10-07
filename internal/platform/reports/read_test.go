@@ -238,7 +238,8 @@ func TestGetCarriesTheRequest(t *testing.T) {
 	want := Resolved{Namespaces: []string{"payments"}, Period: "24h", Timezone: "UTC", ReportProfile: "detailed", MinSeverity: "all", Language: "pt-BR"}
 	if d.Attempt != 2 || d.StartedAt == nil || d.CollectedAt != nil || d.ProfileRevisionID == uuid.Nil ||
 		!slices.Equal(d.Selection.Namespaces, want.Namespaces) || d.Selection.Period != want.Period ||
-		d.Selection.Timezone != want.Timezone || d.Selection.ReportProfile != want.ReportProfile || d.Selection.MinSeverity != want.MinSeverity {
+		d.Selection.Timezone != want.Timezone || d.Selection.ReportProfile != want.ReportProfile || d.Selection.MinSeverity != want.MinSeverity ||
+		d.Selection.Language != want.Language {
 		t.Fatalf("detail %+v", d)
 	}
 }

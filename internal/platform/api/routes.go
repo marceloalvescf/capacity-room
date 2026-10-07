@@ -40,6 +40,6 @@ func (s *Server) Routes() []Route {
 		{"GET", "/api/v1/reports/{id}/view", s.readerRoute(s.viewReport)},
 		{"GET", "/api/v1/reports/{id}/snapshot", s.readerRoute(s.getReportSnapshot)},
 		{"GET", "/api/v1/reports/{id}/pdf", s.readerRoute(s.getReportPDF)},
-		{"POST", "/api/v1/reports/{id}/pdf-retries", s.writerRoute(s.retryReportPDF)},
+		{"POST", "/api/v1/reports/{id}/pdfs", s.writerRoute(s.requestReportPDF)},
 	}
 }

@@ -24,7 +24,7 @@ var allCodes = []Code{
 	CodeInternalError, CodeProfileNotFound, CodeProfileIDTaken, CodeProfileRevisionStale,
 	CodeProfileDocumentInvalid, CodeEndpointURLRejected, CodeEndpointAddressRejected,
 	CodeIdempotencyKeyInvalid, CodeCursorInvalid, CodeReportNotFound, CodeIdempotencyKeyReused,
-	CodeProfileInactive, CodeSnapshotNotReady, CodePDFNotReady, CodePDFRetryNotAllowed,
+	CodeProfileInactive, CodeSnapshotNotReady, CodePDFNotReady, CodePDFAlreadyReady,
 	CodeReportExpired, CodeSelectionNotPermitted, CodeAdmissionGlobalLimit, CodeAdmissionProfileLimit,
 }
 

@@ -19,12 +19,12 @@ import (
 
 // The audit actions of the reports, with target type report.
 const (
-	ActionReportSubmit   = "report.submit"
-	ActionReportCollect  = "report.collect"
-	ActionReportRender   = "report.render"
-	ActionReportPDFRetry = "report.pdf_retry"
-	ActionReportExpire   = "report.expire"
-	ActionReportPurge    = "report.purge"
+	ActionReportSubmit     = "report.submit"
+	ActionReportCollect    = "report.collect"
+	ActionReportRender     = "report.render"
+	ActionReportPDFRequest = "report.pdf_request"
+	ActionReportExpire     = "report.expire"
+	ActionReportPurge      = "report.purge"
 )
 
 const targetReport = "report"
@@ -36,7 +36,7 @@ const (
 	CodeReportExpired         = "REPORT_EXPIRED"
 	CodeSnapshotNotReady      = "SNAPSHOT_NOT_READY"
 	CodePDFNotReady           = "PDF_NOT_READY"
-	CodePDFRetryNotAllowed    = "PDF_RETRY_NOT_ALLOWED"
+	CodePDFAlreadyReady       = "PDF_ALREADY_READY"
 	CodeProfileNotFound       = "PROFILE_NOT_FOUND"
 	CodeProfileInactive       = "PROFILE_INACTIVE"
 	CodeIdempotencyKeyInvalid = "IDEMPOTENCY_KEY_INVALID"
@@ -145,9 +145,10 @@ func requireOperator(actor auth.Principal) error {
 	return nil
 }
 
-// RetryPDF queues the render of one language of a collected report whose PDF
-// failed. A language that is already pending is accepted and changes nothing.
-func (s *Service) RetryPDF(ctx context.Context, actor auth.Principal, reportID uuid.UUID, language string) error {
+// RequestPDF makes the PDF of one language of a collected report: it creates
+// the PDF when it was never asked for, compiles it again when it failed, and
+// changes nothing while it is pending.
+func (s *Service) RequestPDF(ctx context.Context, actor auth.Principal, reportID uuid.UUID, language string) error {
 	if err := requireOperator(actor); err != nil {
 		return err
 	}
@@ -173,31 +174,36 @@ func (s *Service) RetryPDF(ctx context.Context, actor auth.Principal, reportID u
 			return &Error{Code: CodeSnapshotNotReady}
 		}
 		row, err := store.GetPDF(ctx, tx, reportID, language)
-		if errors.Is(err, store.ErrNotFound) {
-			return &Error{Code: CodePDFRetryNotAllowed}
-		}
-		if err != nil {
+		missing := errors.Is(err, store.ErrNotFound)
+		if err != nil && !missing {
 			return err
 		}
-		switch row.Status {
-		case "pending":
-			return nil
-		case "failed":
-		default:
-			return &Error{Code: CodePDFRetryNotAllowed}
+		if !missing {
+			switch row.Status {
+			case "pending":
+				return nil
+			case "failed":
+			default:
+				return &Error{Code: CodePDFAlreadyReady}
+			}
 		}
 		job, err := s.Queue.InsertTx(ctx, tx, RenderArgs{ReportID: reportID, Language: language}, RenderInsertOpts(s.Settings))
 		if err != nil {
 			return fmt.Errorf("queue render: %w", err)
 		}
-		if err := store.RetryPDF(ctx, tx, reportID, language, job.Job.ID, now); err != nil {
+		if missing {
+			err = store.InsertPendingPDF(ctx, tx, reportID, language, job.Job.ID, now)
+		} else {
+			err = store.RetryPDF(ctx, tx, reportID, language, job.Job.ID, now)
+		}
+		if err != nil {
 			return err
 		}
 		if err := store.SetReportPhase(ctx, tx, reportID, "rendering", nil, now); err != nil {
 			return err
 		}
 		return audit.Append(ctx, tx, now, audit.Event{
-			ActorID: &actor.ID, Action: ActionReportPDFRetry, TargetType: targetReport, TargetID: reportID.String(),
+			ActorID: &actor.ID, Action: ActionReportPDFRequest, TargetType: targetReport, TargetID: reportID.String(),
 			Metadata: audit.Metadata{"language": language},
 		})
 	})

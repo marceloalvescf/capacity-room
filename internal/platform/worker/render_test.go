@@ -159,35 +159,12 @@ func (e *env) collected() store.Report {
 }
 
 // collectedBoth is collected for a report that holds a pending PDF in each
-// language: the second is added as a later request for it would.
+// language: the second is requested as an operator would.
 func (e *env) collectedBoth() store.Report {
 	e.t.Helper()
 	report := e.collected()
-	e.addPDF(report.ID, langEN)
+	e.requestPDF(report.ID, langEN)
 	return report
-}
-
-// addPDF gives a collected report one more pending PDF, in lang, and its
-// render job, and puts the report back in rendering.
-func (e *env) addPDF(id uuid.UUID, lang string) {
-	e.t.Helper()
-	ctx := context.Background()
-	err := store.Transact(ctx, e.pool, func(tx pgx.Tx) error {
-		if _, err := store.GetReportForUpdate(ctx, tx, id); err != nil {
-			return err
-		}
-		inserted, err := e.reports.Queue.InsertTx(ctx, tx, reports.RenderArgs{ReportID: id, Language: lang}, reports.RenderInsertOpts(e.settings))
-		if err != nil {
-			return err
-		}
-		if err := store.InsertPendingPDF(ctx, tx, id, lang, inserted.Job.ID, fixedNow); err != nil {
-			return err
-		}
-		return store.SetReportPhase(ctx, tx, id, "rendering", nil, fixedNow)
-	})
-	if err != nil {
-		e.t.Fatal(err)
-	}
 }
 
 func (e *env) pdf(id uuid.UUID, lang string) store.ReportPDF {
@@ -543,7 +520,7 @@ func TestRenderAfterARetry(t *testing.T) {
 	if err := os.WriteFile(flag, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.reports.RetryPDF(context.Background(), e.op, report.ID, langPT); err != nil {
+	if err := e.reports.RequestPDF(context.Background(), e.op, report.ID, langPT); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.report(report.ID); got.Phase != "rendering" || got.CompletedAt != nil {

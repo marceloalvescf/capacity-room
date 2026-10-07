@@ -330,11 +330,11 @@ func TestReplayOfAnExpiredReport(t *testing.T) {
 	}
 }
 
-func TestRetryOfADeletedReport(t *testing.T) {
+func TestRequestPDFOfADeletedReport(t *testing.T) {
 	f := newFixture(t)
 	id := f.seedReport(t, "collected", "complete", fixedNow.Add(time.Hour), "failed")
 	f.markDeleted(t, id)
-	err := f.svc.RetryPDF(context.Background(), f.op, id, "en")
+	err := f.svc.RequestPDF(context.Background(), f.op, id, "en")
 	if e := asError(t, err); e.Code != CodeReportNotFound {
 		t.Fatalf("%+v", e)
 	}
@@ -344,11 +344,11 @@ func TestRetryOfADeletedReport(t *testing.T) {
 	}
 }
 
-func TestRetryOfAMarkedExpiredReport(t *testing.T) {
+func TestRequestPDFOfAMarkedExpiredReport(t *testing.T) {
 	f := newFixture(t)
 	id := f.seedReport(t, "collected", "complete", fixedNow.Add(time.Hour), "failed")
 	f.exec(t, `UPDATE reports SET expired_at = $2 WHERE id = $1`, id, fixedNow)
-	err := f.svc.RetryPDF(context.Background(), f.op, id, "en")
+	err := f.svc.RequestPDF(context.Background(), f.op, id, "en")
 	if e := asError(t, err); e.Code != CodeReportExpired {
 		t.Fatalf("%+v", e)
 	}

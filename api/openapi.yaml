@@ -746,15 +746,16 @@ paths:
           $ref: "#/components/responses/ReportExpired"
         default:
           $ref: "#/components/responses/Unexpected"
-  /reports/{id}/pdf-retries:
+  /reports/{id}/pdfs:
     parameters:
       - $ref: "#/components/parameters/ReportID"
     post:
-      operationId: retryReportPDF
+      operationId: requestReportPDF
       summary: >-
-        Render the PDF of one language again after it failed; an operator or
-        an administrator. A PDF that is pending is accepted and changes
-        nothing.
+        Make the PDF of one language of a collected report; an operator or an
+        administrator. The PDF is created when it was never asked for and
+        compiled again when it failed; a PDF that is pending is accepted and
+        changes nothing.
       parameters:
         - $ref: "#/components/parameters/CSRFHeader"
       requestBody:
@@ -762,14 +763,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PDFRetryRequest"
+              $ref: "#/components/schemas/PDFRequest"
       responses:
         "202":
           description: The PDF is pending.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PDFRetryAccepted"
+                $ref: "#/components/schemas/PDFRequestAccepted"
         "400":
           $ref: "#/components/responses/RequestInvalid"
         "401":
@@ -781,7 +782,7 @@ paths:
         "409":
           description: >-
             SNAPSHOT_NOT_READY when the report is not collected;
-            PDF_RETRY_NOT_ALLOWED when the PDF is ready or has no row.
+            PDF_ALREADY_READY when the PDF is ready.
           content:
             application/json:
               schema:
@@ -1247,13 +1248,13 @@ components:
           type: string
           nullable: true
           description: The cursor of the next page; null on the last page.
-    PDFRetryRequest:
+    PDFRequest:
       type: object
       required: [language]
       properties:
         language:
           $ref: "#/components/schemas/Language"
-    PDFRetryAccepted:
+    PDFRequestAccepted:
       type: object
       required: [language, status]
       properties:
@@ -1346,7 +1347,7 @@ components:
         - PROFILE_INACTIVE
         - SNAPSHOT_NOT_READY
         - PDF_NOT_READY
-        - PDF_RETRY_NOT_ALLOWED
+        - PDF_ALREADY_READY
         - REPORT_EXPIRED
         - REPORT_SELECTION_NOT_PERMITTED
         - ADMISSION_GLOBAL_LIMIT

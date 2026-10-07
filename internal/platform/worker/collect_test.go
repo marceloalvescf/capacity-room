@@ -252,6 +252,14 @@ func (e *env) language() string {
 	return "pt-BR"
 }
 
+// requestPDF asks for the PDF of lang as the operator of the env.
+func (e *env) requestPDF(id uuid.UUID, lang string) {
+	e.t.Helper()
+	if err := e.reports.RequestPDF(context.Background(), e.op, id, lang); err != nil {
+		e.t.Fatal(err)
+	}
+}
+
 // request queues a report and returns it with its collect job.
 func (e *env) request() store.Report {
 	e.t.Helper()
@@ -490,7 +498,8 @@ func TestCollectStoresTheSnapshot(t *testing.T) {
 		t.Fatalf("sha256 %s", sum)
 	}
 
-	for _, lang := range []string{"pt-BR"} {
+	e.requestPDF(report.ID, "en")
+	for _, lang := range []string{"pt-BR", "en"} {
 		row, err := store.GetPDF(context.Background(), e.pool, report.ID, lang)
 		if err != nil {
 			t.Fatal(err)
