@@ -77,6 +77,11 @@
   --font-mono: "Geist Mono Variable", ui-monospace, monospace;
 }
 
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* The modal layers set data-scroll-locked on the body through
    src/lib/remove-scroll-bar.ts, which injects no style element. These static
    rules are the scroll lock itself. */

@@ -75,13 +75,30 @@ describe("ui", () => {
     expect(await screen.findByRole("menuitemradio", { name: "English" })).toBeChecked();
   });
 
+  it("a keyboard-highlighted item carries the focus outline", async () => {
+    const user = userEvent.setup();
+    render(<ThemeToggle />);
+    screen.getByRole("button", { name: /Theme/ }).focus();
+    await user.keyboard("{Enter}");
+    await screen.findByRole("menu");
+    await user.keyboard("{ArrowDown}");
+    const highlighted = document.querySelector("[data-highlighted]");
+    expect(highlighted).not.toBeNull();
+    for (const name of ["data-[highlighted]:outline-2", "data-[highlighted]:outline-accent", "data-[highlighted]:-outline-offset-2"]) {
+      expect(highlighted?.classList.contains(name)).toBe(true);
+    }
+  });
+
   it("the theme toggle chooses dark, then system", async () => {
     const media = mockColourScheme(false);
     const user = userEvent.setup();
     render(<ThemeToggle />);
 
     await user.click(screen.getByRole("button", { name: /Theme/ }));
-    await user.click(await screen.findByRole("menuitemradio", { name: "Dark" }));
+    const items = await screen.findAllByRole("menuitemradio");
+    expect(items.filter((item) => item.querySelector("svg") !== null)).toHaveLength(1);
+    expect(screen.getByRole("menuitemradio", { name: "System" }).querySelector("svg")).not.toBeNull();
+    await user.click(screen.getByRole("menuitemradio", { name: "Dark" }));
     expect(root.getAttribute("data-theme")).toBe("dark");
     expect(window.localStorage.getItem("kcr.theme")).toBe("dark");
 

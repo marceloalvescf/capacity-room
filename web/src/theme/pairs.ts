@@ -31,4 +31,5 @@ export const pairs: readonly Pair[] = [
   text("info-surface-fg", "info-surface"),
   { fg: "input-border", bg: "surface", min: 3 },
   { fg: "accent", bg: "surface", min: 3 },
+  { fg: "accent", bg: "bg", min: 3 },
 ];

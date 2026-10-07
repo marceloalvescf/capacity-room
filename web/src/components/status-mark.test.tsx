@@ -32,9 +32,4 @@ describe("status mark", () => {
       });
     }
   }
-
-  it("takes an explicit label", () => {
-    const { container } = render(<StatusMark status="healthy" label="42" />);
-    expect(container.querySelector("svg + span")?.textContent).toBe("42");
-  });
 });

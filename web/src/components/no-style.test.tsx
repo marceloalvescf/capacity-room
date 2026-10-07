@@ -7,7 +7,7 @@ import { i18next } from "@/i18n/i18n";
 it("opening and closing a modal menu injects no style element", async () => {
   await i18next.changeLanguage("en");
   const seen: string[] = [];
-  const observer = new MutationObserver((records) => {
+  function collect(records: MutationRecord[]): void {
     for (const record of records) {
       record.addedNodes.forEach((node) => {
         if (node instanceof HTMLStyleElement) {
@@ -15,7 +15,8 @@ it("opening and closing a modal menu injects no style element", async () => {
         }
       });
     }
-  });
+  }
+  const observer = new MutationObserver(collect);
   observer.observe(document, { childList: true, subtree: true });
 
   const user = userEvent.setup();
@@ -41,7 +42,7 @@ it("opening and closing a modal menu injects no style element", async () => {
   expect(document.body).not.toHaveAttribute("data-scroll-locked");
   expect(document.querySelectorAll("style")).toHaveLength(0);
 
-  observer.takeRecords();
+  collect(observer.takeRecords());
   observer.disconnect();
   expect(seen).toEqual([]);
 });
