@@ -124,6 +124,9 @@ function GenerateForm({
   // changes, so that a resend of an attempt that got no answer is replayed.
   const key = useRef(crypto.randomUUID());
   const answered = useRef(false);
+  // The period fields of an attempt that got no answer, sent again as they were
+  // while no value changes, so a resend carries the body its key was made for.
+  const unanswered = useRef<ReturnType<typeof bodyPeriod>>(null);
   const sending = useRef(false);
   const form = useRef<HTMLFormElement>(null);
   const periodTrigger = useRef<HTMLButtonElement>(null);
@@ -156,12 +159,14 @@ function GenerateForm({
   function renewKey() {
     key.current = crypto.randomUUID();
     answered.current = false;
+    unanswered.current = null;
   }
 
   function edit(next: Partial<Values>, cleared: Marked[] = []) {
     if (answered.current) {
       renewKey();
     }
+    unanswered.current = null;
     setValues((current) => ({ ...current, ...next }));
     setProblems((current) => {
       return Object.fromEntries(Object.entries(current).filter(([name]) => !cleared.some((gone) => gone === name)));
@@ -176,6 +181,7 @@ function GenerateForm({
     if (answered.current) {
       renewKey();
     }
+    unanswered.current = null;
     setValues(defaultsOf(next, values.language));
     setProblems({});
   }
@@ -226,7 +232,7 @@ function GenerateForm({
       setMarks((count) => count + 1);
       return;
     }
-    const when = bodyPeriod(values.period, values.timezone);
+    const when = unanswered.current ?? bodyPeriod(values.period, values.timezone);
     if (when === null) {
       setProblems({ period: "order" });
       setOptionsOpen(true);
@@ -256,9 +262,11 @@ function GenerateForm({
       sending.current = false;
       const error = toError(thrown);
       if (!(error instanceof ApiFailure)) {
+        unanswered.current = when;
         setFailure(errorText(t, error));
       } else {
         answered.current = true;
+        unanswered.current = null;
         if (error.code === "PROFILE_INACTIVE") {
           setFailure(t("generate.profileChanged"));
           reload();

@@ -623,6 +623,35 @@ describe("calendar ranges", () => {
     expect(screen.getByText("2026-09-01 00:00 to 2026-10-01 00:00 · America/Sao_Paulo · Detailed · All")).toBeInTheDocument();
   });
 
+  it("a resend of a calendar name keeps the key and the body", async () => {
+    atTime("2026-10-07T21:00:42Z");
+    const { user } = await open();
+    await ready(user);
+    const dialog = await openPeriod(user);
+    await user.click(within(dialog).getByRole("button", { name: t("period.calendar.today") }));
+    const first: { key: string; body: unknown }[] = [];
+    server.use(
+      http.post(
+        reportsUrl,
+        async ({ request }) => {
+          first.push({ key: request.headers.get("Idempotency-Key") ?? "", body: await request.json() });
+          return HttpResponse.error();
+        },
+        { once: true },
+      ),
+    );
+    await user.click(submit());
+    expect(await screen.findByText(t("error.network"))).toBeInTheDocument();
+    vi.setSystemTime(new Date("2026-10-07T21:02:10Z"));
+    await user.click(submit());
+    await waitFor(() => {
+      expect(posts()).toHaveLength(1);
+    });
+    expect(posts()[0]?.key).toBe(first[0]?.key);
+    expect(posts()[0]?.body).toEqual(first[0]?.body);
+    expect(posts()[0]?.body).toMatchObject({ period: null, start: "2026-10-07 00:00", end: "2026-10-07 18:00" });
+  });
+
   it("long range", async () => {
     atTime("2026-10-07T21:00:42Z");
     const { user } = await open();
