@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Menu, MenuContent, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/ui/menu";
+import { PeriodPicker } from "@/features/reports/period-picker";
 import { i18next } from "@/i18n/i18n";
 
 // Watches the document for any style element added to it.
@@ -122,6 +123,30 @@ it("no style from the popover and the dialog", async () => {
   expect(document.querySelectorAll("style")).toHaveLength(0);
   await user.keyboard("{Escape}");
   expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(document.querySelectorAll("style")).toHaveLength(0);
+  expect(stop()).toEqual([]);
+});
+
+it("the period picker on Range with a calendar open writes no style", async () => {
+  await i18next.changeLanguage("en");
+  const stop = watchStyles();
+  const user = userEvent.setup();
+  render(
+    <PeriodPicker
+      value={{ kind: "range", start: "2026-09-01 00:00", end: "2026-10-01 00:00" }}
+      zone="UTC"
+      permitted={[]}
+      onChange={() => undefined}
+    />,
+  );
+  await user.click(screen.getByRole("button", { name: /Period/ }));
+  await user.click(await screen.findByRole("button", { name: i18next.t("period.range.pickFrom") }));
+  expect(await screen.findByRole("grid")).toBeInTheDocument();
+  // Radix sets custom properties on its own layers through the DOM; the calendar writes none.
+  const calendar = (await screen.findByRole("grid")).closest(".rdp-root");
+  expect(calendar).not.toBeNull();
+  expect([calendar, ...(calendar?.querySelectorAll("[style]") ?? [])].filter((node) => node?.hasAttribute("style"))).toEqual([]);
+  expect(screen.getByRole("dialog").querySelector("form")?.querySelectorAll("[style]")).toHaveLength(0);
   expect(document.querySelectorAll("style")).toHaveLength(0);
   expect(stop()).toEqual([]);
 });

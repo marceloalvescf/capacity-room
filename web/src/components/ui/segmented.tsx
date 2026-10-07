@@ -2,16 +2,17 @@ import { cn } from "@/lib/cn";
 
 interface SegmentedProps<T extends string> {
   legend: string;
+  hideLegend?: boolean;
   name: string;
   value: T;
   options: readonly { value: T; label: string; lang?: string }[];
   onChange: (value: T) => void;
 }
 
-export function Segmented<T extends string>({ legend, name, value, options, onChange }: SegmentedProps<T>) {
+export function Segmented<T extends string>({ legend, hideLegend = false, name, value, options, onChange }: SegmentedProps<T>) {
   return (
     <fieldset className="flex">
-      <legend className="mb-3 text-lg font-semibold">{legend}</legend>
+      <legend className={hideLegend ? "sr-only" : "mb-3 text-lg font-semibold"}>{legend}</legend>
       {options.map((option) => (
         <label
           key={option.value}

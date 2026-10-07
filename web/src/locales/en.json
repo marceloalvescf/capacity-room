@@ -178,7 +178,6 @@
   "period": {
     "custom": {
       "value": "Last {{duration}}",
-      "title": "Custom",
       "label": "Length",
       "hint": "A number and a unit: m minutes, h hours, d days. For example 90m, 36h, 10d."
     },

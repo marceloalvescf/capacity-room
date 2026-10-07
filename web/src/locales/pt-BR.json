@@ -178,7 +178,6 @@
   "period": {
     "custom": {
       "value": "{{duration}} até agora",
-      "title": "Personalizado",
       "label": "Duração",
       "hint": "Um número e uma unidade: m minutos, h horas, d dias. Por exemplo 90m, 36h, 10d."
     },

@@ -1,4 +1,5 @@
 import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import { findBannedTerms } from "@/i18n/vocabulary";
@@ -63,6 +64,26 @@ describe("screens", () => {
           expect(document.title).toBe(i18next.t("app.title", { screen: i18next.t(title) }));
         });
       }
+    }
+  }
+
+  for (const language of languages) {
+    for (const theme of ["light", "dark"]) {
+      it(`axe and vocabulary: the period picker open on Range with a calendar, ${language}, ${theme}`, async () => {
+        document.documentElement.setAttribute("data-theme", theme);
+        mock.profiles = [profileSummary()];
+        mock.session = signedIn({ language });
+        await renderApp("/generate", language);
+        const user = userEvent.setup();
+        await user.click(await screen.findByRole("button", { name: i18next.t("generate.change") }));
+        await user.click(screen.getByRole("button", { name: new RegExp(i18next.t("generate.period")) }));
+        await user.click(await screen.findByRole("radio", { name: i18next.t("period.mode.range") }));
+        await user.click(screen.getByRole("button", { name: i18next.t("period.range.pickFrom") }));
+        await screen.findByRole("grid");
+        const result = await axe.run(document.body, { rules: { "color-contrast": { enabled: false } } });
+        expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+        expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);
+      });
     }
   }
 

@@ -12,21 +12,21 @@ import { Segmented } from "@/components/ui/segmented";
 import { Select } from "@/components/ui/select";
 import { isLanguage, type Language } from "@/i18n/language";
 import { useProfiles, useReport, useRequestReport, type ProfileSummary, type Report } from "./api";
-import { periodDays, periodText } from "./period";
+import { periodDays, periodText, resolveCalendar, type PeriodValue } from "./period";
 import { PeriodPicker } from "./period-picker";
 
 interface Values {
   profileId: string;
   namespaces: string[];
   language: Language;
-  period: string;
+  period: PeriodValue;
   timezone: string;
   reportProfile: string;
   minSeverity: string;
 }
 
 type Marked = "namespaces" | "period" | "timezone" | "report_profile" | "min_severity";
-type Problem = "notPermitted" | "invalid" | "required";
+type Problem = "notPermitted" | "invalid" | "required" | "wallClock" | "order" | "future";
 
 const markable: readonly string[] = [
   "namespaces",
@@ -36,12 +36,20 @@ const markable: readonly string[] = [
   "min_severity",
 ] satisfies Marked[];
 
+// How the form words a reason the server gives for the start or the end.
+const rangeWords: Record<string, Problem | undefined> = {
+  invalid: "wallClock",
+  order: "order",
+  future: "future",
+  not_permitted: "notPermitted",
+};
+
 function defaultsOf(profile: ProfileSummary, language: Language): Values {
   return {
     profileId: profile.id,
     namespaces: [],
     language,
-    period: profile.default_period,
+    period: { kind: "length", period: profile.default_period },
     timezone: profile.default_timezone,
     reportProfile: profile.default_report_profile,
     minSeverity: profile.default_min_severity,
@@ -54,11 +62,15 @@ function fromReport(source: Report, profiles: ProfileSummary[], fallback: Langua
     return defaultsOf(profiles[0] as ProfileSummary, fallback);
   }
   const { selection } = source;
+  const period: PeriodValue =
+    selection.period === null
+      ? { kind: "range", start: selection.start ?? "", end: selection.end ?? "" }
+      : { kind: "length", period: selection.period };
   return {
     profileId: profile.id,
     namespaces: selection.namespaces.filter((name) => profile.allowed_namespaces.includes(name)),
     language: selection.language,
-    period: selection.period ?? profile.default_period,
+    period,
     timezone: selection.timezone,
     reportProfile: selection.report_profile,
     minSeverity: selection.min_severity,
@@ -77,6 +89,19 @@ function zonesOf(profile: ProfileSummary): readonly string[] {
   }
   const all = Intl.supportedValuesOf("timeZone");
   return all.includes(profile.default_timezone) ? all : [profile.default_timezone, ...all];
+}
+
+// The period fields of the request body, or null for a range with no time in it.
+function bodyPeriod(
+  value: PeriodValue,
+  zone: string,
+): { period: string; start: null; end: null } | { period: null; start: string; end: string } | null {
+  if (value.kind === "length") {
+    return { period: value.period, start: null, end: null };
+  }
+  const { start, end } = value.kind === "calendar" ? resolveCalendar(value.name, zone, new Date()) : value;
+  // Wall strings of the grammar compare as text.
+  return start < end ? { period: null, start, end } : null;
 }
 
 function GenerateForm({
@@ -167,7 +192,14 @@ function GenerateForm({
     const marked: Partial<Record<Marked, Problem>> = {};
     let rest = false;
     for (const [name, reason] of Object.entries(error.fields)) {
-      if (markable.includes(name)) {
+      if (name === "start" || name === "end") {
+        const word = rangeWords[reason];
+        if (word === undefined) {
+          rest = true;
+        } else {
+          marked.period ??= word;
+        }
+      } else if (markable.includes(name)) {
         marked[name as Marked] = reason === "not_permitted" ? "notPermitted" : "invalid";
       } else {
         rest = true;
@@ -194,6 +226,13 @@ function GenerateForm({
       setMarks((count) => count + 1);
       return;
     }
+    const when = bodyPeriod(values.period, values.timezone);
+    if (when === null) {
+      setProblems({ period: "order" });
+      setOptionsOpen(true);
+      setMarks((count) => count + 1);
+      return;
+    }
     sending.current = true;
     setFailure(null);
     setProblems({});
@@ -204,7 +243,7 @@ function GenerateForm({
           profile_id: values.profileId,
           language: values.language,
           namespaces,
-          period: values.period,
+          ...when,
           timezone: values.timezone,
           report_profile: values.reportProfile,
           min_severity: values.minSeverity,
@@ -239,15 +278,29 @@ function GenerateForm({
     if (problem === undefined) {
       return undefined;
     }
-    if (problem === "required") {
-      return t("validation.namespaces");
+    switch (problem) {
+      case "required":
+        return t("validation.namespaces");
+      case "notPermitted":
+        return t("validation.notPermitted");
+      case "wallClock":
+        return t("period.range.wallClock", { zone: values.timezone });
+      case "order":
+        return t("period.range.order");
+      case "future":
+        return t("period.range.future");
+      case "invalid":
+        return t("validation.invalid");
     }
-    return problem === "notPermitted" ? t("validation.notPermitted") : t("validation.invalid");
   };
 
-  const days = periodDays({ kind: "length", period: values.period });
+  const days = periodDays(
+    values.period.kind === "calendar"
+      ? { kind: "range", ...resolveCalendar(values.period.name, values.timezone, new Date()) }
+      : values.period,
+  );
   const summary = [
-    periodText(t, language, { kind: "length", period: values.period }),
+    periodText(t, language, values.period),
     values.timezone,
     t(`reportProfile.${values.reportProfile}`),
     t(`minSeverity.${values.minSeverity}`),
@@ -340,6 +393,7 @@ function GenerateForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <PeriodPicker
               value={values.period}
+              zone={values.timezone}
               permitted={profile.permitted_periods}
               error={problemText("period")}
               triggerRef={periodTrigger}

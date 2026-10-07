@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18next } from "@/i18n/i18n";
 import type { Language } from "@/i18n/language";
 import { failure, installMockApi, profileSummary, report, server, signedIn } from "../../../tests/msw";
@@ -23,6 +23,10 @@ const staging = profileSummary({
   default_timezone: "UTC",
   default_report_profile: "executive",
   default_min_severity: "attention",
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 beforeEach(() => {
@@ -139,6 +143,8 @@ describe("new report form", () => {
       language: "pt-BR",
       namespaces: ["payments", "checkout"],
       period: "24h",
+      start: null,
+      end: null,
       timezone: "America/Sao_Paulo",
       report_profile: "detailed",
       min_severity: "all",
@@ -473,5 +479,166 @@ describe("new report form", () => {
         .getAllByRole("link")
         .map((link) => link.textContent),
     ).toEqual([t("nav.reports"), t("nav.account")]);
+  });
+});
+
+describe("calendar ranges", () => {
+  function atTime(iso: string) {
+    vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ["Date"] });
+    vi.setSystemTime(new Date(iso));
+  }
+
+  async function openPeriod(user: ReturnType<typeof userEvent.setup>) {
+    const change = screen.queryByRole("button", { name: t("generate.change") });
+    if (change !== null) {
+      await user.click(change);
+    }
+    await user.click(screen.getByRole("button", { name: new RegExp(t("generate.period")) }));
+    return screen.findByRole("dialog");
+  }
+
+  async function typeRange(user: ReturnType<typeof userEvent.setup>, start: string, end: string) {
+    const dialog = await openPeriod(user);
+    await user.click(within(dialog).getByRole("radio", { name: t("period.mode.range") }));
+    for (const [label, text] of [
+      [t("period.range.from"), start],
+      [t("period.range.to"), end],
+    ] as const) {
+      const input = within(dialog).getByLabelText(label);
+      await user.clear(input);
+      await user.type(input, text);
+    }
+    await user.click(within(dialog).getByRole("button", { name: t("period.apply") }));
+  }
+
+  async function ready(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(namespace("payments"));
+  }
+
+  it("sends a calendar range resolved", async () => {
+    atTime("2026-10-07T21:00:42Z");
+    const { user } = await open();
+    await ready(user);
+    const dialog = await openPeriod(user);
+    await user.click(within(dialog).getByRole("button", { name: t("period.calendar.previousWeek") }));
+    await user.click(submit());
+    await waitFor(() => {
+      expect(posts()).toHaveLength(1);
+    });
+    expect(posts()[0]?.body).toMatchObject({ period: null, start: "2026-09-28 00:00", end: "2026-10-05 00:00" });
+  });
+
+  it("sends a length", async () => {
+    const { user } = await open();
+    await ready(user);
+    const dialog = await openPeriod(user);
+    await user.click(within(dialog).getByRole("button", { name: t("period.quick.7d") }));
+    await user.click(submit());
+    await waitFor(() => {
+      expect(posts()).toHaveLength(1);
+    });
+    expect(posts()[0]?.body).toMatchObject({ period: "7d", start: null, end: null });
+  });
+
+  it("sends a typed range trimmed", async () => {
+    atTime("2026-10-07T21:00:42Z");
+    const { user } = await open();
+    await ready(user);
+    await typeRange(user, " 2026-09-01 00:00 ", "2026-10-01 00:00 ");
+    await user.click(submit());
+    await waitFor(() => {
+      expect(posts()).toHaveLength(1);
+    });
+    expect(posts()[0]?.body).toMatchObject({ period: null, start: "2026-09-01 00:00", end: "2026-10-01 00:00" });
+  });
+
+  it("an empty so-far range", async () => {
+    atTime("2026-10-07T03:00:20Z");
+    const { user } = await open();
+    await ready(user);
+    const dialog = await openPeriod(user);
+    await user.click(within(dialog).getByRole("button", { name: t("period.calendar.today") }));
+    await user.click(submit());
+    expect(await screen.findByText(t("period.range.order"))).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: new RegExp(t("generate.period")) })).toHaveAccessibleDescription(
+      t("period.range.order"),
+    );
+    expect(posts()).toEqual([]);
+  });
+
+  const serverWords = [
+    { name: "server wall-clock word", status: 400, code: "REQUEST_INVALID", field: "start", reason: "invalid", word: () => t("period.range.wallClock", { zone: "America/Sao_Paulo" }) },
+    { name: "server order word", status: 400, code: "REQUEST_INVALID", field: "start", reason: "order", word: () => t("period.range.order") },
+    { name: "server future word", status: 400, code: "REQUEST_INVALID", field: "end", reason: "future", word: () => t("period.range.future") },
+    { name: "range not permitted", status: 422, code: "REPORT_SELECTION_NOT_PERMITTED", field: "start", reason: "not_permitted", word: () => t("validation.notPermitted") },
+  ] as const;
+  for (const c of serverWords) {
+    it(c.name, async () => {
+      const { user } = await open();
+      await ready(user);
+      server.use(
+        http.post(reportsUrl, () => failure(c.status, c.code, { fields: { [c.field]: c.reason } }), { once: true }),
+      );
+      await user.click(submit());
+      expect(await screen.findByText(c.word())).toBeInTheDocument();
+      expect(screen.getByLabelText(t("generate.timezone"))).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: new RegExp(t("generate.period")) })).toHaveAccessibleDescription(c.word());
+    });
+  }
+
+  it("zone change keeps the walls", async () => {
+    atTime("2026-10-07T21:00:42Z");
+    const { user } = await open();
+    await ready(user);
+    await typeRange(user, "2026-09-01 00:00", "2026-10-01 00:00");
+    await user.selectOptions(screen.getByLabelText(t("generate.timezone")), "America/New_York");
+    await user.click(submit());
+    await waitFor(() => {
+      expect(posts()).toHaveLength(1);
+    });
+    expect(posts()[0]?.body).toMatchObject({
+      period: null,
+      start: "2026-09-01 00:00",
+      end: "2026-10-01 00:00",
+      timezone: "America/New_York",
+    });
+  });
+
+  it("from a range report", async () => {
+    const source = report({
+      status: "failed",
+      selection: {
+        namespaces: [],
+        period: null,
+        start: "2026-09-01 00:00",
+        end: "2026-10-01 00:00",
+        timezone: "America/Sao_Paulo",
+        report_profile: "detailed",
+        min_severity: "all",
+        language: "en",
+      },
+    });
+    mock.reports = [source];
+    await open(`/generate?from=${source.id}`);
+    expect(screen.getByText("2026-09-01 00:00 to 2026-10-01 00:00 · America/Sao_Paulo · Detailed · All")).toBeInTheDocument();
+  });
+
+  it("long range", async () => {
+    atTime("2026-10-07T21:00:42Z");
+    const { user } = await open();
+    await ready(user);
+    await typeRange(user, "2026-09-01 00:00", "2026-09-17 00:00");
+    expect(screen.getByText(t("generate.longPeriod"))).toBeInTheDocument();
+    await typeRange(user, "2026-09-01 00:00", "2026-09-16 00:00");
+    expect(screen.queryByText(t("generate.longPeriod"))).not.toBeInTheDocument();
+  });
+
+  it("a calendar name over 15 days warns", async () => {
+    atTime("2026-10-31T21:00:42Z");
+    const { user } = await open();
+    await ready(user);
+    const dialog = await openPeriod(user);
+    await user.click(within(dialog).getByRole("button", { name: t("period.calendar.thisMonth") }));
+    expect(screen.getByText(t("generate.longPeriod"))).toBeInTheDocument();
   });
 });
