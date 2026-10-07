@@ -125,7 +125,7 @@ export function ReportsPage() {
         const refused = results.filter((result) => result.outcome === "forbidden").map((result) => result.id);
         setSelected(new Set(refused));
         setForbidden(refused.length > 0);
-        went = results.length - refused.length;
+        went = results.filter((result) => result.outcome === "deleted" || result.outcome === "not_found").length;
       }
       announce(t("reports.deleted", { count: went }));
     } catch (thrown) {

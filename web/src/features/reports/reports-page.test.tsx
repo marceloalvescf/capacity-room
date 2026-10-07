@@ -472,6 +472,62 @@ describe("report list", () => {
     expect(post?.body).toEqual({ ids: [id(0), id(1)] });
   });
 
+  it("an expired row can be deleted, one at a time and in a bulk", async () => {
+    mock.reports = many(3, () => ({ expired: true }));
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(within(rowOf(id(0))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
+    expect(await screen.findByText(t("reports.deleted", { count: 1 }))).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByRole("row")).toHaveLength(3);
+    });
+    await user.click(screen.getByRole("checkbox", { name: t("reports.selectAll") }));
+    await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
+    expect(await screen.findByText(t("reports.deleted", { count: 2 }))).toBeInTheDocument();
+    expect(mock.reports).toEqual([]);
+  });
+
+  it("a bulk delete over 200 ids goes in chunks of 200, one request after the other", async () => {
+    mock.reports = many(230);
+    const sent: number[] = [];
+    let running = 0;
+    let overlapped = false;
+    server.use(
+      http.post(`${window.location.origin}/api/v1/reports/delete`, async ({ request }) => {
+        const body = (await request.json()) as { ids: string[] };
+        sent.push(body.ids.length);
+        running += 1;
+        overlapped ||= running > 1;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        running -= 1;
+        return HttpResponse.json({ results: body.ids.map((one) => ({ id: one, outcome: "deleted" })) });
+      }),
+    );
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    for (let page = 1; page < 5; page += 1) {
+      await user.click(await screen.findByRole("button", { name: t("reports.loadMore") }));
+      await waitFor(() => {
+        expect(screen.getAllByRole("row")).toHaveLength(Math.min(50 * (page + 1), 230) + 1);
+      });
+    }
+    await user.click(screen.getByRole("checkbox", { name: t("reports.selectAll") }));
+    await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: t("delete.confirm") }));
+    await waitFor(() => {
+      expect(within(dialog).getByRole("button", { name: t("delete.cancel") })).toBeDisabled();
+    });
+    expect(await screen.findByText(t("reports.deleted", { count: 230 }))).toBeInTheDocument();
+    expect(sent).toEqual([200, 30]);
+    expect(overlapped).toBe(false);
+  });
+
   it("a double click on confirm sends one request", async () => {
     mock.reports = many(3);
     let posts = 0;

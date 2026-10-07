@@ -153,16 +153,23 @@ export function useDeleteReport() {
   });
 }
 
+// The contract takes at most 200 ids in one request.
+const deleteChunk = 200;
+
 export function useDeleteReports() {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      const { data } = await api.POST("/reports/delete", { body: { ids } });
-      if (data === undefined) {
-        throw new Error("the delete answer is empty");
+      const results: Schemas["ReportDeleteResult"][] = [];
+      for (let start = 0; start < ids.length; start += deleteChunk) {
+        const { data } = await api.POST("/reports/delete", { body: { ids: ids.slice(start, start + deleteChunk) } });
+        if (data === undefined) {
+          throw new Error("the delete answer is empty");
+        }
+        results.push(...data.results);
       }
-      return data.results;
+      return results;
     },
     onSettled: (results) =>
       settle(
