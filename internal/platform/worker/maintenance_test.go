@@ -344,6 +344,14 @@ func TestSweepStepRemovesDeleted(t *testing.T) {
 	if err := store.InsertSnapshot(ctx, e.pool, collected.ID, "1", []byte("{}"), fixedNow); err != nil {
 		t.Fatal(err)
 	}
+	for _, lang := range []string{"en", "pt-BR"} {
+		if err := store.InsertPendingPDF(ctx, e.pool, collected.ID, lang, absentJob, fixedNow); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.FinishPDF(ctx, e.pool, collected.ID, lang, []byte("%PDF-"+lang), fixedNow); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if err := store.InsertIdempotencyKey(ctx, e.pool, e.op.ID, "swept-key", "sum", queued.ID, fixedNow); err != nil {
 		t.Fatal(err)
 	}
@@ -362,7 +370,7 @@ func TestSweepStepRemovesDeleted(t *testing.T) {
 			t.Errorf("%s purge causes %v", r.Status, c)
 		}
 	}
-	if e.count(`SELECT count(*) FROM report_snapshots`)+e.count(`SELECT count(*) FROM report_idempotency_keys`) != 0 {
+	if e.count(`SELECT count(*) FROM report_snapshots`)+e.count(`SELECT count(*) FROM report_pdfs`)+e.count(`SELECT count(*) FROM report_idempotency_keys`) != 0 {
 		t.Fatal("the rows of a swept report remain")
 	}
 	if !e.exists(`SELECT count(*) FROM reports WHERE id = $1`, running.ID) || !e.exists(`SELECT count(*) FROM reports WHERE id = $1`, untouched.ID) {
