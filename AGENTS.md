@@ -490,8 +490,8 @@ redactor the moment the settings are loaded, before the pool opens.
   keys with the same parameters, every key is used, every error code of the
   contract has its `error.<CODE>`, and a family of keys, such as `role.*`,
   is declared in `web/src/i18n/families.ts`. A Zod check carries a locale
-  key as its message, never Zod's own text. ESLint refuses a string literal
-  of letters as a JSX child.
+  key as its message, never Zod's own text. ESLint refuses JSX text that
+  holds a letter; it does not see a string in braces, which review catches.
 - **The banned terms are one file,** `internal/catalog/banned-terms.json`,
   read by the Go guard and by the frontend's vocabulary test with the same
   matching. The wording rule of the report holds: technical terms are
@@ -502,8 +502,9 @@ redactor the moment the settings are loaded, before the pool opens.
   3:1 for a large heading and for an input border or a focus ring against
   its surface, in both themes. A new pair on the screen enters the list.
 - **No inline style.** No `style` prop, no `dangerouslySetInnerHTML`, and no
-  `<style>` element added at run time; a test opens every Radix layer and
-  finds none. The CSP stays `script-src 'self'` and `style-src 'self'`
+  `<style>` element added at run time; a test opens the menu and the
+  tooltip, the two Radix layers in use, and finds none. A new layer joins
+  that test. The CSP stays `script-src 'self'` and `style-src 'self'`
   until a style hash enters with its test. Zod runs with its JIT off,
   because its probe of `new Function` breaks the CSP.
 - **Status is a shape, then a label, then a colour,** with the five shapes of

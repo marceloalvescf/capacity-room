@@ -18,8 +18,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- `serve` no longer keeps the memory of a large download on idle database
-  connections.
+- Downloading a large report no longer leaves `serve` holding the memory of
+  that download afterwards.
 
 ## [0.2.0] - 2026-10-06
 
