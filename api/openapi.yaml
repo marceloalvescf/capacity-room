@@ -1082,7 +1082,7 @@ components:
     ReportSelection:
       type: object
       description: The selection the report runs, with every default resolved.
-      required: [namespaces, period, timezone, report_profile, min_severity]
+      required: [namespaces, period, timezone, report_profile, min_severity, language]
       properties:
         namespaces:
           type: array
@@ -1096,14 +1096,18 @@ components:
           $ref: "#/components/schemas/ReportProfile"
         min_severity:
           $ref: "#/components/schemas/MinSeverity"
+        language:
+          $ref: "#/components/schemas/Language"
     ReportRequest:
       type: object
-      description: A selection; a field left out or null takes the profile's default.
-      required: [profile_id]
+      description: A selection; a field left out or null takes the profile's default, except the language, which is required.
+      required: [profile_id, language]
       properties:
         profile_id:
           type: string
           maxLength: 63
+        language:
+          $ref: "#/components/schemas/Language"
         namespaces:
           type: array
           nullable: true

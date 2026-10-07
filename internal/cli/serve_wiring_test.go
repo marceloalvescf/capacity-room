@@ -186,7 +186,7 @@ func TestServeBuildsTheReportRoutes(t *testing.T) {
 	client := &reader{t: t, base: front.URL, cookies: map[string]string{}, header: map[string]string{"Idempotency-Key": "wiring-1"}}
 	csrf := client.signIn("olga", "operator password one")
 	accepted := client.mustStatus(202, "POST", "/api/v1/reports", csrf,
-		map[string]any{"profile_id": "prod", "namespaces": []string{"payments"}})
+		map[string]any{"profile_id": "prod", "namespaces": []string{"payments"}, "language": "en"})
 	id, _ := accepted["id"].(string)
 	if id == "" || accepted["replayed"] != false {
 		t.Fatalf("answer %v", accepted)

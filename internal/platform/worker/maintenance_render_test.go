@@ -36,16 +36,16 @@ func TestExpiryBeforeRenderWritesNoPDF(t *testing.T) {
 		mu.Lock()
 		n := held
 		mu.Unlock()
-		if n == 2 {
+		if n == 1 {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("%d renders reached the hold, want 2", n)
+			t.Fatalf("%d renders reached the hold, want 1", n)
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
 
-	jobs := map[string]int64{langPT: e.pdfJob(report.ID, langPT), langEN: e.pdfJob(report.ID, langEN)}
+	jobs := map[string]int64{langPT: e.pdfJob(report.ID, langPT)}
 	late := &MaintenanceWorker{Deps: e.deps}
 	late.Deps.Now = func() time.Time { return report.ExpiresAt }
 	if err := late.Work(context.Background(), nil); err != nil {
@@ -56,7 +56,7 @@ func TestExpiryBeforeRenderWritesNoPDF(t *testing.T) {
 	}
 	close(release)
 
-	for _, lang := range []string{langPT, langEN} {
+	for _, lang := range []string{langPT} {
 		job := e.waitJob(jobs[lang], rivertype.JobStateCompleted)
 		if job.Attempt != 1 {
 			t.Fatalf("%s job attempt %d", lang, job.Attempt)
@@ -81,7 +81,7 @@ func TestDeleteWhileRunningIsSweptAfter(t *testing.T) {
 	report := e.request()
 	reportID = report.ID
 	e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
-	for _, lang := range []string{langPT, langEN} {
+	for _, lang := range []string{langPT} {
 		e.waitJob(e.pdfJob(report.ID, lang), rivertype.JobStateCompleted)
 		if row := e.pdf(report.ID, lang); row.Status != "pending" {
 			t.Fatalf("%s row %+v", lang, row)

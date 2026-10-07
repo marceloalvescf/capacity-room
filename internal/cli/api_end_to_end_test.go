@@ -181,7 +181,7 @@ func TestReportThroughTheAPI(t *testing.T) {
 	// The report is requested and polled until its PDFs are done.
 	operator.header = map[string]string{"Idempotency-Key": uuid.NewString()}
 	accepted := operator.mustStatus(202, "POST", "/api/v1/reports", csrf,
-		map[string]any{"profile_id": "prod", "namespaces": []string{"payments"}})
+		map[string]any{"profile_id": "prod", "namespaces": []string{"payments"}, "language": "en"})
 	operator.header = nil
 	idText, _ := accepted["id"].(string)
 	id, err := uuid.Parse(idText)
@@ -273,6 +273,11 @@ func TestReportThroughTheAPI(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		checks = append(checks,
+			expected{path: path + "/view?lang=" + string(lang), body: wantView, contentType: "application/json", tag: digest(wantView)})
+		if lang != catalog.English {
+			continue
+		}
 		data, err := render.Document(want.Snapshot, lang, document.Options{})
 		if err != nil {
 			t.Fatal(err)
@@ -282,7 +287,6 @@ func TestReportThroughTheAPI(t *testing.T) {
 			t.Fatal(err)
 		}
 		checks = append(checks,
-			expected{path: path + "/view?lang=" + string(lang), body: wantView, contentType: "application/json", tag: digest(wantView)},
 			expected{
 				path: path + "/pdf?lang=" + string(lang), body: wantPDF, contentType: "application/pdf",
 				disposition: `attachment; filename="report-` + idText + `-` + string(lang) + `.pdf"`, tag: digest(wantPDF),
@@ -358,7 +362,7 @@ func TestReportThroughTheAPI(t *testing.T) {
 	}
 	wantActions := []string{
 		reports.ActionReportSubmit, reports.ActionReportCollect,
-		reports.ActionReportRender, reports.ActionReportRender,
+		reports.ActionReportRender,
 		reports.ActionReportDelete, reports.ActionReportPurge,
 	}
 	if !slices.Equal(actions, wantActions) {

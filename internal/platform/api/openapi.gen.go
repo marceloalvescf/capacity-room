@@ -803,8 +803,10 @@ type ReportPhase string
 // ReportProfile defines model for ReportProfile.
 type ReportProfile string
 
-// ReportRequest A selection; a field left out or null takes the profile's default.
+// ReportRequest A selection; a field left out or null takes the profile's default, except the language, which is required.
 type ReportRequest struct {
+	Language Language `json:"language"`
+
 	// MinSeverity all, attention, or critical.
 	MinSeverity *string   `json:"min_severity,omitempty"`
 	Namespaces  *[]string `json:"namespaces,omitempty"`
@@ -818,6 +820,7 @@ type ReportRequest struct {
 
 // ReportSelection The selection the report runs, with every default resolved.
 type ReportSelection struct {
+	Language      Language      `json:"language"`
 	MinSeverity   MinSeverity   `json:"min_severity"`
 	Namespaces    []string      `json:"namespaces"`
 	Period        string        `json:"period"`

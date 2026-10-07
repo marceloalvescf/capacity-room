@@ -121,20 +121,21 @@ func (*idleRender) Work(ctx context.Context, _ *river.Job[reports.RenderArgs]) e
 }
 
 type env struct {
-	t        *testing.T
-	pool     *pgxpool.Pool
-	profiles *profiles.Service
-	reports  *reports.Service
-	settings settings.Settings
-	deps     Deps
-	op       auth.Principal
-	root     auth.Principal
-	credDir  string
-	logs     *syncBuffer
-	raw      *syncBuffer // what the logger wrote before the redactor, when redacted was called
-	errs     *errorLog
-	client   *river.Client[pgx.Tx]
-	stopped  bool
+	t               *testing.T
+	pool            *pgxpool.Pool
+	profiles        *profiles.Service
+	reports         *reports.Service
+	settings        settings.Settings
+	deps            Deps
+	op              auth.Principal
+	root            auth.Principal
+	credDir         string
+	logs            *syncBuffer
+	requestLanguage string
+	raw             *syncBuffer // what the logger wrote before the redactor, when redacted was called
+	errs            *errorLog
+	client          *river.Client[pgx.Tx]
+	stopped         bool
 }
 
 func newPrincipal(t *testing.T, pool *pgxpool.Pool, name, role string) auth.Principal {
@@ -243,10 +244,19 @@ func (e *env) addProfile(endpoint, credentialFile string) {
 	}
 }
 
+// language is the language a request of the env names; pt-BR unless a test sets requestLanguage.
+func (e *env) language() string {
+	if e.requestLanguage != "" {
+		return e.requestLanguage
+	}
+	return "pt-BR"
+}
+
 // request queues a report and returns it with its collect job.
 func (e *env) request() store.Report {
 	e.t.Helper()
-	acc, err := e.reports.Request(context.Background(), e.op, uuid.NewString(), reports.Selection{ProfileID: "prod", Namespaces: []string{"payments"}})
+	acc, err := e.reports.Request(context.Background(), e.op, uuid.NewString(),
+		reports.Selection{ProfileID: "prod", Namespaces: []string{"payments"}, Language: ptrTo(e.language())})
 	if err != nil {
 		e.t.Fatal(err)
 	}
@@ -480,7 +490,7 @@ func TestCollectStoresTheSnapshot(t *testing.T) {
 		t.Fatalf("sha256 %s", sum)
 	}
 
-	for _, lang := range []string{"pt-BR", "en"} {
+	for _, lang := range []string{"pt-BR"} {
 		row, err := store.GetPDF(context.Background(), e.pool, report.ID, lang)
 		if err != nil {
 			t.Fatal(err)
@@ -503,14 +513,47 @@ func TestCollectStoresTheSnapshot(t *testing.T) {
 			t.Fatalf("%s job %s %s %d %s", lang, kind, queue, priority, args)
 		}
 	}
-	if n := e.count(`SELECT count(*) FROM river_job WHERE kind = 'render'`); n != 2 {
-		t.Fatalf("%d render jobs", n)
-	}
 	audits := e.audits(reports.ActionReportCollect)
 	if len(audits) != 1 || audits[0].Outcome != "succeeded" || audits[0].ActorID != nil || len(audits[0].Meta) != 0 {
 		t.Fatalf("audit %+v", audits)
 	}
 }
+
+func TestCollectQueuesOnePDF(t *testing.T) {
+	e, _, _ := scenarioEnv(t, nil)
+	e.requestLanguage = "en"
+	e.start(collectHooks{})
+	report := e.request()
+	e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+	if got := e.report(report.ID); got.Status != "collected" {
+		t.Fatalf("report %+v", got)
+	}
+	if n := e.count(`SELECT count(*) FROM report_pdfs WHERE report_id = $1`, report.ID); n != 1 {
+		t.Fatalf("%d PDF rows", n)
+	}
+	row, err := store.GetPDF(context.Background(), e.pool, report.ID, "en")
+	if err != nil || row.Status != "pending" {
+		t.Fatalf("row %+v, %v", row, err)
+	}
+	if n := e.count(`SELECT count(*) FROM river_job WHERE kind = 'render'`); n != 1 {
+		t.Fatalf("%d render jobs", n)
+	}
+}
+
+func TestCollectFailsAStoredRequestWithoutLanguage(t *testing.T) {
+	e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 1 })
+	report := e.request()
+	if _, err := e.pool.Exec(context.Background(), `UPDATE reports SET request = request - 'language' WHERE id = $1`, report.ID); err != nil {
+		t.Fatal(err)
+	}
+	e.start(collectHooks{})
+	e.assertFailedWith(report, "INTERNAL_FAILURE")
+	if n := e.count(`SELECT count(*) FROM report_pdfs`); n != 0 {
+		t.Fatalf("%d PDF rows", n)
+	}
+}
+
+func ptrTo(s string) *string { return &s }
 
 func digestOf(body []byte) string {
 	sum := sha256.Sum256(body)
@@ -896,7 +939,7 @@ func TestCollectRunsAnInactiveRevision(t *testing.T) {
 		t.Fatal("the revision is still active")
 	}
 	request, err := json.Marshal(reports.Resolved{
-		Namespaces: []string{"payments"}, Period: "24h", Timezone: "America/Sao_Paulo", ReportProfile: "detailed", MinSeverity: "all",
+		Namespaces: []string{"payments"}, Period: "24h", Timezone: "America/Sao_Paulo", ReportProfile: "detailed", MinSeverity: "all", Language: "en",
 	})
 	if err != nil {
 		t.Fatal(err)

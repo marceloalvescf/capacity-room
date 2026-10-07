@@ -49,7 +49,7 @@ func TestRequestStoresAndQueues(t *testing.T) {
 	if err := json.Unmarshal(r.Request, &stored); err != nil {
 		t.Fatal(err)
 	}
-	want := Resolved{Namespaces: []string{"payments", "billing"}, Period: "24h", Timezone: "America/Sao_Paulo", ReportProfile: "detailed", MinSeverity: "all"}
+	want := Resolved{Namespaces: []string{"payments", "billing"}, Period: "24h", Timezone: "America/Sao_Paulo", ReportProfile: "detailed", MinSeverity: "all", Language: "en"}
 	if !reflect.DeepEqual(stored, want) {
 		t.Fatalf("stored selection = %+v, want %+v", stored, want)
 	}
@@ -189,6 +189,70 @@ func TestRequestSameKeyAnotherBody(t *testing.T) {
 	}
 	if f.count(t, `SELECT count(*) FROM reports`) != 1 || len(f.jobs(t, "collect")) != 1 || len(f.auditActions(t, ActionReportSubmit)) != 1 {
 		t.Fatal("a refused request wrote a row")
+	}
+}
+
+func TestKeyReusedWithAnotherLanguage(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	first := f.selection()
+	first.Language = ptr("en")
+	if _, err := f.svc.Request(context.Background(), f.op, "k1", first); err != nil {
+		t.Fatal(err)
+	}
+	second := f.selection()
+	second.Language = ptr("pt-BR")
+	_, err := f.svc.Request(context.Background(), f.op, "k1", second)
+	if asError(t, err).Code != "IDEMPOTENCY_KEY_REUSED" {
+		t.Fatalf("err = %v", err)
+	}
+	if f.count(t, `SELECT count(*) FROM reports`) != 1 {
+		t.Fatal("a refused request wrote a report")
+	}
+}
+
+func TestRequestNeedsALanguage(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	sel := f.selection()
+	sel.Language = nil
+	_, err := f.svc.Request(context.Background(), f.op, "k", sel)
+	e := asError(t, err)
+	if e.Code != "REQUEST_INVALID" || !reflect.DeepEqual(e.Fields, map[string]string{"language": "missing"}) {
+		t.Fatalf("error = %+v", e)
+	}
+	if f.count(t, `SELECT count(*) FROM reports`) != 0 {
+		t.Fatal("a refused request wrote a report")
+	}
+}
+
+func TestRequestRefusesAnUnknownLanguage(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	sel := f.selection()
+	sel.Language = ptr("es")
+	_, err := f.svc.Request(context.Background(), f.op, "k", sel)
+	e := asError(t, err)
+	if e.Code != "REQUEST_INVALID" || !reflect.DeepEqual(e.Fields, map[string]string{"language": "invalid"}) {
+		t.Fatalf("error = %+v", e)
+	}
+}
+
+func TestRequestStoresTheLanguage(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	sel := f.selection()
+	sel.Language = ptr("en")
+	acc, err := f.svc.Request(context.Background(), f.op, "k1", sel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := f.svc.Get(context.Background(), f.op, acc.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Selection.Language != "en" {
+		t.Fatalf("language %q", got.Selection.Language)
 	}
 }
 
@@ -525,7 +589,7 @@ func TestRequestStoresTheDigest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if digest != "35978a24ae6a2911ce12b9a64d9bbdcf9f3f0438a58bfe1675e95bca87ca8844" {
+	if digest != "6f7ca3542fa84347adb27b3894763e8ca7a1277cd04de6fd2558b5a3937cf11f" {
 		t.Fatalf("digest = %s", digest)
 	}
 }

@@ -56,6 +56,12 @@ func checkSyntax(sel Selection) map[string]string {
 	if sel.MinSeverity != nil && !slices.Contains([]string{"all", "attention", "critical"}, *sel.MinSeverity) {
 		fields["min_severity"] = wordInvalid
 	}
+	switch {
+	case sel.Language == nil:
+		fields["language"] = wordMissing
+	case !validLanguage(*sel.Language):
+		fields["language"] = wordInvalid
+	}
 	if len(fields) == 0 {
 		return nil
 	}
@@ -80,7 +86,7 @@ func resolve(sel Selection, d profiles.Document) (Resolved, map[string]string) {
 	}
 	out := Resolved{
 		Namespaces: slices.Clone(sel.Namespaces), Period: period, Timezone: zone,
-		ReportProfile: reportProfile, MinSeverity: severity,
+		ReportProfile: reportProfile, MinSeverity: severity, Language: *sel.Language,
 	}
 	fields := map[string]string{}
 	for _, ns := range sel.Namespaces {

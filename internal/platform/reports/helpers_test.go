@@ -116,7 +116,7 @@ func (f *fixture) selection(namespaces ...string) Selection {
 	if len(namespaces) == 0 {
 		namespaces = []string{"payments"}
 	}
-	return Selection{ProfileID: "prod", Namespaces: namespaces}
+	return Selection{ProfileID: "prod", Namespaces: namespaces, Language: ptr("en")}
 }
 
 func (f *fixture) count(t *testing.T, query string, args ...any) int {

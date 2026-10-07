@@ -178,8 +178,9 @@ func newRig(t *testing.T, slots, drain int) *rig {
 // request queues a report.
 func (r *rig) request() store.Report {
 	r.t.Helper()
+	language := "en"
 	acc, err := r.reports.Request(context.Background(), r.op, uuid.NewString(),
-		reports.Selection{ProfileID: "prod", Namespaces: []string{"payments"}})
+		reports.Selection{ProfileID: "prod", Namespaces: []string{"payments"}, Language: &language})
 	if err != nil {
 		r.t.Fatal(err)
 	}

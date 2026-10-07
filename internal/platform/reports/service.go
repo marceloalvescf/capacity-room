@@ -83,6 +83,7 @@ type Selection struct {
 	Timezone      *string  `json:"timezone"`
 	ReportProfile *string  `json:"report_profile"`
 	MinSeverity   *string  `json:"min_severity"`
+	Language      *string  `json:"language"`
 }
 
 // Resolved is the selection a report stores and the worker runs.
@@ -92,6 +93,7 @@ type Resolved struct {
 	Timezone      string   `json:"timezone"`
 	ReportProfile string   `json:"report_profile"`
 	MinSeverity   string   `json:"min_severity"`
+	Language      string   `json:"language"`
 }
 
 // Accepted is the answer to a request.

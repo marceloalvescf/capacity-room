@@ -158,6 +158,38 @@ func (e *env) collected() store.Report {
 	return report
 }
 
+// collectedBoth is collected for a report that holds a pending PDF in each
+// language: the second is added as a later request for it would.
+func (e *env) collectedBoth() store.Report {
+	e.t.Helper()
+	report := e.collected()
+	e.addPDF(report.ID, langEN)
+	return report
+}
+
+// addPDF gives a collected report one more pending PDF, in lang, and its
+// render job, and puts the report back in rendering.
+func (e *env) addPDF(id uuid.UUID, lang string) {
+	e.t.Helper()
+	ctx := context.Background()
+	err := store.Transact(ctx, e.pool, func(tx pgx.Tx) error {
+		if _, err := store.GetReportForUpdate(ctx, tx, id); err != nil {
+			return err
+		}
+		inserted, err := e.reports.Queue.InsertTx(ctx, tx, reports.RenderArgs{ReportID: id, Language: lang}, reports.RenderInsertOpts(e.settings))
+		if err != nil {
+			return err
+		}
+		if err := store.InsertPendingPDF(ctx, tx, id, lang, inserted.Job.ID, fixedNow); err != nil {
+			return err
+		}
+		return store.SetReportPhase(ctx, tx, id, "rendering", nil, fixedNow)
+	})
+	if err != nil {
+		e.t.Fatal(err)
+	}
+}
+
 func (e *env) pdf(id uuid.UUID, lang string) store.ReportPDF {
 	e.t.Helper()
 	row, err := store.GetPDF(context.Background(), e.pool, id, lang)
@@ -222,7 +254,7 @@ func TestRenderStoresThePDF(t *testing.T) {
 	e, _, _ := scenarioEnv(t, nil)
 	tc := realToolchain(t)
 	e.startRender(both(tc), 2, renderHooks{}, langPT)
-	report := e.collected()
+	report := e.collectedBoth()
 	row := e.waitPDF(report.ID, langEN, "ready")
 
 	_, raw, _, err := store.GetSnapshot(context.Background(), e.pool, report.ID)
@@ -266,7 +298,7 @@ func TestRenderStoresThePDF(t *testing.T) {
 func TestRenderCompletesTheReport(t *testing.T) {
 	e, _, _ := scenarioEnv(t, nil)
 	e.startRender(both(pdfToolchain(t)), 2, renderHooks{})
-	report := e.collected()
+	report := e.collectedBoth()
 	e.waitPDF(report.ID, langPT, "ready")
 	e.waitPDF(report.ID, langEN, "ready")
 	e.waitJob(e.pdfJob(report.ID, langPT), rivertype.JobStateCompleted)
@@ -288,7 +320,7 @@ func TestRenderSuccessOutlivesTheDeadline(t *testing.T) {
 	e.startRender(both(pdfToolchain(t)), 2, renderHooks{insideStore: func(string) {
 		time.Sleep(timeout + time.Second)
 	}})
-	report := e.collected()
+	report := e.collectedBoth()
 	e.waitPDF(report.ID, langPT, "ready")
 	e.waitPDF(report.ID, langEN, "ready")
 	e.waitJob(e.pdfJob(report.ID, langPT), rivertype.JobStateCompleted)
@@ -331,7 +363,7 @@ func TestRenderBothLanguagesCompleteOnce(t *testing.T) {
 	for run := 0; run < 20; run++ {
 		current.Store(newBarrier(2))
 		sw.set(promtest.NewServer(scenarioFixture(t)))
-		report := e.collected()
+		report := e.collectedBoth()
 		e.waitPDF(report.ID, langPT, "ready")
 		e.waitPDF(report.ID, langEN, "ready")
 		e.waitJob(e.pdfJob(report.ID, langPT), rivertype.JobStateCompleted)
@@ -352,7 +384,7 @@ func TestRenderCompileFailure(t *testing.T) {
 		langPT: scriptToolchain(t, "exit 1"),
 		langEN: pdfToolchain(t),
 	}, 2, renderHooks{}, langEN)
-	report := e.collected()
+	report := e.collectedBoth()
 	e.assertFailedPDF(report.ID, langPT, "PDF_COMPILE_FAILED")
 	if row := e.pdf(report.ID, langEN); row.Status != "pending" || row.FailureCode != nil {
 		t.Fatalf("en row %+v", row)
@@ -402,7 +434,7 @@ func TestRenderTooLarge(t *testing.T) {
 func TestRenderDigestMismatch(t *testing.T) {
 	e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 1 })
 	route := e.startRender(both(pdfToolchain(t)), 2, renderHooks{}, langPT, langEN)
-	report := e.collected()
+	report := e.collectedBoth()
 	ctx := context.Background()
 	for _, stmt := range []string{
 		`ALTER TABLE report_snapshots DISABLE TRIGGER report_snapshots_are_immutable`,
@@ -422,7 +454,7 @@ func TestRenderDigestMismatch(t *testing.T) {
 func TestRenderSkipsAnExpiredReport(t *testing.T) {
 	e, _, _ := scenarioEnv(t, nil)
 	route := e.startRender(both(pdfToolchain(t)), 2, renderHooks{}, langPT, langEN)
-	report := e.collected()
+	report := e.collectedBoth()
 	if _, err := e.pool.Exec(context.Background(), `UPDATE reports SET expired_at = $2 WHERE id = $1`, report.ID, fixedNow); err != nil {
 		t.Fatal(err)
 	}
@@ -450,7 +482,7 @@ func TestRenderSkipsAnExpiredReport(t *testing.T) {
 func TestNeedsRenderSkipsADeletedReport(t *testing.T) {
 	e, _, _ := scenarioEnv(t, nil)
 	route := e.startRender(both(pdfToolchain(t)), 2, renderHooks{}, langPT, langEN)
-	report := e.collected()
+	report := e.collectedBoth()
 	if err := store.Transact(context.Background(), e.pool, func(tx pgx.Tx) error {
 		_, err := store.MarkReportDeleted(context.Background(), tx, report.ID, fixedNow)
 		return err
@@ -501,7 +533,7 @@ func TestRenderAfterARetry(t *testing.T) {
 		langPT: scriptToolchain(t, `if [ -e `+flag+` ]; then printf '%%PDF-1.7 fake' > "$out"; else exit 1; fi`),
 		langEN: pdfToolchain(t),
 	}, 2, renderHooks{})
-	report := e.collected()
+	report := e.collectedBoth()
 	e.assertFailedPDF(report.ID, langPT, "PDF_COMPILE_FAILED")
 	e.waitPDF(report.ID, langEN, "ready")
 	e.waitJob(e.pdfJob(report.ID, langEN), rivertype.JobStateCompleted)
@@ -547,7 +579,7 @@ func TestRenderStaleRowWritesNothing(t *testing.T) {
 		})
 	}}
 	e.startRender(both(pdfToolchain(t)), 2, hooks, langPT)
-	report := e.collected()
+	report := e.collectedBoth()
 	e.waitJob(e.pdfJob(report.ID, langEN), rivertype.JobStateCompleted)
 
 	var stale bool
@@ -598,7 +630,7 @@ func TestRenderSlowSuccessWriteKeepsItsBudget(t *testing.T) {
 		outcomeTimeout: time.Second,
 		insideStore:    func(string) { time.Sleep(2 * time.Second) },
 	})
-	report := e.collected()
+	report := e.collectedBoth()
 	e.waitPDF(report.ID, langPT, "ready")
 	e.waitPDF(report.ID, langEN, "ready")
 	if got := e.report(report.ID); got.Phase != "complete" || got.CompletedAt == nil {
@@ -624,7 +656,7 @@ func TestRenderSuccessWritePastItsDeadlineIsInternal(t *testing.T) {
 	t.Run("attempts left", func(t *testing.T) {
 		e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.RenderTimeout = timeout; s.JobMaxAttempts = 3 })
 		e.startRender(both(pdfToolchain(t)), 1, hooks)
-		report := e.collected()
+		report := e.collectedBoth()
 		job := e.waitFirstError(e.pdfJob(report.ID, langPT))
 		if job.Attempt != 1 || len(job.Errors) != 1 || !strings.Contains(job.Errors[0].Error, "render: INTERNAL_FAILURE") {
 			t.Fatalf("job attempt %d, errors %+v", job.Attempt, job.Errors)
@@ -637,7 +669,7 @@ func TestRenderSuccessWritePastItsDeadlineIsInternal(t *testing.T) {
 	t.Run("last attempt", func(t *testing.T) {
 		e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.RenderTimeout = timeout; s.JobMaxAttempts = 1 })
 		e.startRender(both(pdfToolchain(t)), 1, hooks)
-		report := e.collected()
+		report := e.collectedBoth()
 		e.assertFailedPDF(report.ID, langPT, "INTERNAL_FAILURE")
 		e.waitPDF(report.ID, langEN, "ready")
 	})
@@ -656,7 +688,7 @@ func TestRenderSkipsAReportExpiredBetweenTransactions(t *testing.T) {
 			}
 		})
 	}})
-	report := e.collected()
+	report := e.collectedBoth()
 	for _, lang := range []string{langPT, langEN} {
 		e.waitJob(e.pdfJob(report.ID, lang), rivertype.JobStateCompleted)
 		if row := e.pdf(report.ID, lang); row.Status != "pending" || e.pdfBody(report.ID, lang) != nil {
@@ -724,7 +756,7 @@ func TestRenderSuccessWriteErrorIsInternal(t *testing.T) {
 				}
 			}
 			e.startRender(both(pdfToolchain(t)), 1, hooks)
-			report := e.collected()
+			report := e.collectedBoth()
 			e.assertFailedPDF(report.ID, langPT, "INTERNAL_FAILURE")
 			e.assertFailedPDF(report.ID, langEN, "INTERNAL_FAILURE")
 		})

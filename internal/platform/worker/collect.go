@@ -209,6 +209,9 @@ func (w *CollectWorker) collect(ctx context.Context, job *river.Job[reports.Coll
 	if err := json.Unmarshal(report.Request, &r); err != nil {
 		return fmt.Errorf("decode request: %w", err)
 	}
+	if _, err := catalog.ParseLanguage(r.Language); err != nil {
+		return fmt.Errorf("stored request of report %s: %w", id, err)
+	}
 	cfg := rev.Document.RunConfig(r.Period, r.Timezone, r.ReportProfile, r.MinSeverity, r.Namespaces)
 	opts, err := d.Profiles.Source(rev.Document, cfg.Metrics)
 	if err != nil {
@@ -263,21 +266,19 @@ func (w *CollectWorker) collect(ctx context.Context, job *river.Job[reports.Coll
 			return err
 		}
 		queue := river.ClientFromContext[pgx.Tx](wctx)
-		for _, lang := range catalog.Languages() {
-			inserted, err := queue.InsertTx(wctx, tx, reports.RenderArgs{ReportID: id, Language: string(lang)}, reports.RenderInsertOpts(d.Settings))
-			if err != nil {
-				return fmt.Errorf("queue render: %w", err)
-			}
-			if err := store.InsertPendingPDF(wctx, tx, id, string(lang), inserted.Job.ID, now); err != nil {
-				return err
-			}
+		inserted, err := queue.InsertTx(wctx, tx, reports.RenderArgs{ReportID: id, Language: r.Language}, reports.RenderInsertOpts(d.Settings))
+		if err != nil {
+			return fmt.Errorf("queue render: %w", err)
+		}
+		if err := store.InsertPendingPDF(wctx, tx, id, r.Language, inserted.Job.ID, now); err != nil {
+			return err
 		}
 		if err := audit.Append(wctx, tx, now, audit.Event{
 			Action: reports.ActionReportCollect, TargetType: "report", TargetID: id.String(), Metadata: audit.Metadata{},
 		}); err != nil {
 			return err
 		}
-		_, err := river.JobCompleteTx[*riverpgxv5.Driver](wctx, tx, job)
+		_, err = river.JobCompleteTx[*riverpgxv5.Driver](wctx, tx, job)
 		return err
 	})
 	return successFailure(err)

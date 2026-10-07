@@ -92,7 +92,7 @@ func TestReportEndToEnd(t *testing.T) {
 	e.reports.Now = clock.Now
 
 	acc, err := e.reports.Request(context.Background(), e.op, uuid.NewString(),
-		reports.Selection{ProfileID: "prod", Namespaces: []string{"payments"}})
+		reports.Selection{ProfileID: "prod", Namespaces: []string{"payments"}, Language: ptrTo(langEN)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestReportEndToEnd(t *testing.T) {
 		t.Fatalf("the stored snapshot (%d bytes) differs from the pipeline's (%d bytes)", len(body), len(wantBody))
 	}
 
-	for lang, cat := range map[string]catalog.Language{langPT: catalog.PortugueseBrazil, langEN: catalog.English} {
+	for lang, cat := range map[string]catalog.Language{langEN: catalog.English} {
 		row := e.pdf(id, lang)
 		if row.Status != "ready" {
 			t.Fatalf("%s row %+v", lang, row)
@@ -236,14 +236,14 @@ func TestReportEndToEnd(t *testing.T) {
 	}
 	wantActions := []string{
 		reports.ActionReportSubmit, reports.ActionReportCollect,
-		reports.ActionReportRender, reports.ActionReportRender,
+		reports.ActionReportRender,
 		reports.ActionReportExpire, reports.ActionReportPurge,
 	}
 	if !slices.Equal(actions, wantActions) {
 		t.Fatalf("audit actions %v, want %v", actions, wantActions)
 	}
 	slices.Sort(languages)
-	if !slices.Equal(languages, []string{langEN, langPT}) {
+	if !slices.Equal(languages, []string{langEN}) {
 		t.Fatalf("render languages %v", languages)
 	}
 }

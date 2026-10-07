@@ -127,6 +127,7 @@ func reportOf(d reports.Detail) Report {
 		Selection: ReportSelection{
 			Namespaces: namespaces, Period: d.Selection.Period, Timezone: d.Selection.Timezone,
 			ReportProfile: ReportProfile(d.Selection.ReportProfile), MinSeverity: MinSeverity(d.Selection.MinSeverity),
+			Language: Language(d.Selection.Language),
 		},
 	}
 }
@@ -134,7 +135,7 @@ func reportOf(d reports.Detail) Report {
 // requestReport takes a report request under the Idempotency-Key header.
 func (s *Server) requestReport(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
 	var sel reports.Selection
-	if p := DecodeBody(r, &sel, nil, nil); p != nil {
+	if p := DecodeBody(r, &sel, []string{"language"}, nil); p != nil {
 		WriteProblem(w, p)
 		return
 	}

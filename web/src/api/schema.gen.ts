@@ -360,10 +360,12 @@ export interface components {
             timezone: string;
             report_profile: components["schemas"]["ReportProfile"];
             min_severity: components["schemas"]["MinSeverity"];
+            language: components["schemas"]["Language"];
         };
-        /** @description A selection; a field left out or null takes the profile's default. */
+        /** @description A selection; a field left out or null takes the profile's default, except the language, which is required. */
         ReportRequest: {
             profile_id: string;
+            language: components["schemas"]["Language"];
             namespaces?: string[] | null;
             period?: string | null;
             timezone?: string | null;

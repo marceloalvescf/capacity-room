@@ -162,6 +162,7 @@ type stored struct {
 	created  time.Time
 	snapshot []byte
 	pdfBody  []byte
+	language string // en when empty
 }
 
 var pdfBody = []byte("%PDF-1.7 stored body")
@@ -181,9 +182,12 @@ func (ts *testServer) seedReport(t *testing.T, o stored) uuid.UUID {
 	if o.pdfBody == nil {
 		o.pdfBody = pdfBody
 	}
+	if o.language == "" {
+		o.language = "en"
+	}
 	r := store.Report{
 		ID: uuid.New(), OwnerID: o.owner, ProfileID: "prod", ProfileRevisionID: ts.profileRevision(t),
-		Request: []byte(`{"namespaces":["payments"],"period":"24h","timezone":"UTC","report_profile":"detailed","min_severity":"all"}`),
+		Request: []byte(`{"namespaces":["payments"],"period":"24h","timezone":"UTC","report_profile":"detailed","min_severity":"all","language":"` + o.language + `"}`),
 		Status:  o.status, Phase: o.phase, CollectJobID: 1,
 		CreatedAt: o.created, ExpiresAt: o.expires, UpdatedAt: o.created,
 	}
@@ -257,7 +261,7 @@ func TestReportRoutesCheckInOrder(t *testing.T) {
 		badPath, badBody         string
 	}{
 		{name: "list", method: "GET", path: "/api/v1/reports", badPath: "/api/v1/reports?limit=x"},
-		{name: "request", method: "POST", path: "/api/v1/reports", body: `{"profile_id":"prod","namespaces":["payments"]}`,
+		{name: "request", method: "POST", path: "/api/v1/reports", body: `{"profile_id":"prod","namespaces":["payments"],"language":"en"}`,
 			header: map[string]string{"Idempotency-Key": "k1"}, write: true, badBody: `[]`},
 		{name: "detail", method: "GET", path: base},
 		{name: "view", method: "GET", path: base + "/view?lang=en", badPath: base + "/view"},
@@ -299,7 +303,7 @@ func TestRequestReportRoute(t *testing.T) {
 	ts := newTestServer(t)
 	c := ts.cast(t)
 	ts.profileRevision(t)
-	body := `{"profile_id":"prod","namespaces":["payments"]}`
+	body := `{"profile_id":"prod","namespaces":["payments"],"language":"en"}`
 	key := map[string]string{"Idempotency-Key": "key-1"}
 
 	w := ts.as(t, &c.ops, "POST", "/api/v1/reports", body, key)
@@ -326,12 +330,36 @@ func TestRequestReportRoute(t *testing.T) {
 		t.Fatalf("%d collect jobs, want 1", n)
 	}
 
-	other := `{"profile_id":"prod","namespaces":["billing"]}`
+	other := `{"profile_id":"prod","namespaces":["billing"],"language":"en"}`
 	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports", other, key), 409, "IDEMPOTENCY_KEY_REUSED", nil)
 	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports", body, nil), 400, "IDEMPOTENCY_KEY_INVALID", nil)
 	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports", body, map[string]string{"Idempotency-Key": "bad key!"}), 400, "IDEMPOTENCY_KEY_INVALID", nil)
-	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports", `{"profile_id":"prod","namespaces":["payments"],"extra":1}`, key), 400, CodeRequestInvalid, map[string]string{"extra": "unknown"})
-	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports", `{"profile_id":"nope","namespaces":["payments"]}`, map[string]string{"Idempotency-Key": "key-2"}), 404, CodeProfileNotFound, nil)
+	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports", `{"profile_id":"prod","namespaces":["payments"],"language":"en","extra":1}`, key), 400, CodeRequestInvalid, map[string]string{"extra": "unknown"})
+	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports", `{"profile_id":"nope","namespaces":["payments"],"language":"en"}`, map[string]string{"Idempotency-Key": "key-2"}), 404, CodeProfileNotFound, nil)
+}
+
+func TestPostReportWithoutLanguage(t *testing.T) {
+	ts := newTestServer(t)
+	c := ts.cast(t)
+	ts.profileRevision(t)
+	w := ts.as(t, &c.ops, "POST", "/api/v1/reports", `{"profile_id":"prod","namespaces":["payments"]}`, map[string]string{"Idempotency-Key": "k"})
+	wantProblem(t, w, 400, CodeRequestInvalid, map[string]string{"language": "missing"})
+	if n := ts.count(t, `SELECT count(*) FROM reports`); n != 0 {
+		t.Fatalf("%d reports", n)
+	}
+}
+
+func TestReportShowsItsLanguage(t *testing.T) {
+	ts := newTestServer(t)
+	c := ts.cast(t)
+	id := ts.seedReport(t, stored{owner: c.ops.user.ID, language: "pt-BR"})
+	w := ts.as(t, &c.eve, "GET", "/api/v1/reports/"+id.String(), "", nil)
+	if w.Code != 200 {
+		t.Fatalf("%d %s", w.Code, w.Body.String())
+	}
+	if got := decodeStrict[Report](t, w).Selection.Language; got != "pt-BR" {
+		t.Fatalf("language %q", got)
+	}
 }
 
 func TestAdmissionAnswers429(t *testing.T) {
@@ -340,7 +368,7 @@ func TestAdmissionAnswers429(t *testing.T) {
 	ts.profileRevision(t)
 	ts.Reports.Settings.AdmissionLimit = 1
 	ts.Reports.Settings.AdmissionRetry = 5 * time.Second
-	body := `{"profile_id":"prod","namespaces":["payments"]}`
+	body := `{"profile_id":"prod","namespaces":["payments"],"language":"en"}`
 
 	if w := ts.as(t, &c.ops, "POST", "/api/v1/reports", body, map[string]string{"Idempotency-Key": "a"}); w.Code != 202 {
 		t.Fatalf("first: %d %s", w.Code, w.Body.String())
@@ -356,14 +384,15 @@ func TestSelectionRefused(t *testing.T) {
 	ts := newTestServer(t)
 	c := ts.cast(t)
 	ts.profileRevision(t)
+	en := "en"
 	_, err := ts.Reports.Request(context.Background(),
 		auth.Principal{ID: c.ops.user.ID, Username: "ops", Role: auth.RoleOperator},
-		"direct", reports.Selection{ProfileID: "prod", Namespaces: []string{"secret"}})
+		"direct", reports.Selection{ProfileID: "prod", Namespaces: []string{"secret"}, Language: &en})
 	refused, ok := err.(*reports.Error)
 	if !ok || len(refused.Fields) == 0 {
 		t.Fatalf("service error %v", err)
 	}
-	w := ts.as(t, &c.ops, "POST", "/api/v1/reports", `{"profile_id":"prod","namespaces":["secret"]}`, map[string]string{"Idempotency-Key": "k"})
+	w := ts.as(t, &c.ops, "POST", "/api/v1/reports", `{"profile_id":"prod","namespaces":["secret"],"language":"en"}`, map[string]string{"Idempotency-Key": "k"})
 	wantProblem(t, w, 422, "REPORT_SELECTION_NOT_PERMITTED", refused.Fields)
 }
 

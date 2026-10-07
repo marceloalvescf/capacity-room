@@ -230,12 +230,12 @@ func TestGetCarriesTheRequest(t *testing.T) {
 	f := newFixture(t)
 	id := f.seedReport(t, "running", "collecting", fixedNow.Add(time.Hour), "")
 	f.exec(t, `UPDATE reports SET request = $2, attempt = 2, started_at = $3 WHERE id = $1`, id,
-		`{"namespaces":["payments"],"period":"24h","timezone":"UTC","report_profile":"detailed","min_severity":"all"}`, fixedNow)
+		`{"namespaces":["payments"],"period":"24h","timezone":"UTC","report_profile":"detailed","min_severity":"all","language":"pt-BR"}`, fixedNow)
 	d, err := f.svc.Get(context.Background(), f.read, id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Resolved{Namespaces: []string{"payments"}, Period: "24h", Timezone: "UTC", ReportProfile: "detailed", MinSeverity: "all"}
+	want := Resolved{Namespaces: []string{"payments"}, Period: "24h", Timezone: "UTC", ReportProfile: "detailed", MinSeverity: "all", Language: "pt-BR"}
 	if d.Attempt != 2 || d.StartedAt == nil || d.CollectedAt != nil || d.ProfileRevisionID == uuid.Nil ||
 		!slices.Equal(d.Selection.Namespaces, want.Namespaces) || d.Selection.Period != want.Period ||
 		d.Selection.Timezone != want.Timezone || d.Selection.ReportProfile != want.ReportProfile || d.Selection.MinSeverity != want.MinSeverity {
