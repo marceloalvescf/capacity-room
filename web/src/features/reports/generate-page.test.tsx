@@ -652,6 +652,81 @@ describe("calendar ranges", () => {
     expect(posts()[0]?.body).toMatchObject({ period: null, start: "2026-10-07 00:00", end: "2026-10-07 18:00" });
   });
 
+  it.each([
+    [503, "DATABASE_UNAVAILABLE"],
+    [429, "ADMISSION_GLOBAL_LIMIT"],
+  ] as const)("a resend of a calendar name after an answered %i keeps the key and the body", async (status, code) => {
+    atTime("2026-10-07T21:00:42Z");
+    const { user } = await open();
+    await ready(user);
+    const dialog = await openPeriod(user);
+    await user.click(within(dialog).getByRole("button", { name: t("period.calendar.today") }));
+    const first: { key: string; body: unknown }[] = [];
+    server.use(
+      http.post(
+        reportsUrl,
+        async ({ request }) => {
+          first.push({ key: request.headers.get("Idempotency-Key") ?? "", body: await request.json() });
+          return failure(status, code, { retryAfter: 30 });
+        },
+        { once: true },
+      ),
+    );
+    await user.click(submit());
+    await waitFor(() => {
+      expect(first).toHaveLength(1);
+    });
+    await screen.findByRole("alert");
+    vi.setSystemTime(new Date("2026-10-07T21:02:10Z"));
+    await user.click(submit());
+    await waitFor(() => {
+      expect(posts()).toHaveLength(1);
+    });
+    expect(posts()[0]?.key).toBe(first[0]?.key);
+    expect(posts()[0]?.body).toEqual(first[0]?.body);
+  });
+
+  it("a profile that is gone renews the key", async () => {
+    const { user } = await open();
+    await user.selectOptions(profileSelect(), "staging");
+    await user.click(namespace("web"));
+    mock.profiles = [prod];
+    const keys = answerOnce(() => failure(409, "PROFILE_INACTIVE"));
+    await user.click(submit());
+    await screen.findByText(t("generate.profileChanged"));
+    await waitFor(() => {
+      expect(profileSelect().value).toBe("prod");
+    });
+    await user.click(namespace("payments"));
+    await user.click(submit());
+    await waitFor(() => {
+      expect(posts()).toHaveLength(1);
+    });
+    expect(posts()[0]?.key).not.toBe(keys[0]);
+  });
+
+  it("a range report of a restricted profile falls back to the profile's period", async () => {
+    mock.profiles = [
+      profileSummary({ allowed_namespaces: ["payments"], permitted_periods: ["24h", "7d"], default_period: "7d" }),
+    ];
+    const source = report({
+      status: "failed",
+      selection: {
+        namespaces: [],
+        period: null,
+        start: "2026-09-01 00:00",
+        end: "2026-10-01 00:00",
+        timezone: "America/Sao_Paulo",
+        report_profile: "detailed",
+        min_severity: "all",
+        language: "en",
+      },
+    });
+    mock.reports = [source];
+    await open(`/generate?from=${source.id}`);
+    expect(screen.getByText("Last 7 days · America/Sao_Paulo · Detailed · All")).toBeInTheDocument();
+  });
+
   it("long range", async () => {
     atTime("2026-10-07T21:00:42Z");
     const { user } = await open();

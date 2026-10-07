@@ -62,10 +62,13 @@ function fromReport(source: Report, profiles: ProfileSummary[], fallback: Langua
     return defaultsOf(profiles[0] as ProfileSummary, fallback);
   }
   const { selection } = source;
+  // A profile that now limits its periods allows no range.
   const period: PeriodValue =
-    selection.period === null
-      ? { kind: "range", start: selection.start ?? "", end: selection.end ?? "" }
-      : { kind: "length", period: selection.period };
+    selection.period !== null
+      ? { kind: "length", period: selection.period }
+      : profile.permitted_periods.length > 0
+        ? defaultsOf(profile, fallback).period
+        : { kind: "range", start: selection.start ?? "", end: selection.end ?? "" };
   return {
     profileId: profile.id,
     namespaces: selection.namespaces.filter((name) => profile.allowed_namespaces.includes(name)),
@@ -124,9 +127,9 @@ function GenerateForm({
   // changes, so that a resend of an attempt that got no answer is replayed.
   const key = useRef(crypto.randomUUID());
   const answered = useRef(false);
-  // The period fields of an attempt that got no answer, sent again as they were
-  // while no value changes, so a resend carries the body its key was made for.
-  const unanswered = useRef<ReturnType<typeof bodyPeriod>>(null);
+  // The period fields of the last attempt, sent again as they were for as long
+  // as its key is kept, so a resend carries the body its key was made for.
+  const kept = useRef<ReturnType<typeof bodyPeriod>>(null);
   const sending = useRef(false);
   const form = useRef<HTMLFormElement>(null);
   const periodTrigger = useRef<HTMLButtonElement>(null);
@@ -141,6 +144,17 @@ function GenerateForm({
       form.current?.querySelector<HTMLElement>('[aria-invalid="true"], [data-invalid="true"]')?.focus();
     }
   }, [marks]);
+
+  // A profile that vanished resets the form to the first one, which is a new
+  // request: its key and its kept body go too.
+  const vanished = !profiles.some((candidate) => candidate.id === values.profileId);
+  useEffect(() => {
+    if (vanished) {
+      key.current = crypto.randomUUID();
+      answered.current = false;
+      kept.current = null;
+    }
+  }, [vanished]);
 
   useEffect(() => {
     if (optionsOpen && focusPeriodOnOpen.current) {
@@ -159,14 +173,14 @@ function GenerateForm({
   function renewKey() {
     key.current = crypto.randomUUID();
     answered.current = false;
-    unanswered.current = null;
+    kept.current = null;
   }
 
   function edit(next: Partial<Values>, cleared: Marked[] = []) {
     if (answered.current) {
       renewKey();
     }
-    unanswered.current = null;
+    kept.current = null;
     setValues((current) => ({ ...current, ...next }));
     setProblems((current) => {
       return Object.fromEntries(Object.entries(current).filter(([name]) => !cleared.some((gone) => gone === name)));
@@ -181,7 +195,7 @@ function GenerateForm({
     if (answered.current) {
       renewKey();
     }
-    unanswered.current = null;
+    kept.current = null;
     setValues(defaultsOf(next, values.language));
     setProblems({});
   }
@@ -232,13 +246,14 @@ function GenerateForm({
       setMarks((count) => count + 1);
       return;
     }
-    const when = unanswered.current ?? bodyPeriod(values.period, values.timezone);
+    const when = kept.current ?? bodyPeriod(values.period, values.timezone);
     if (when === null) {
       setProblems({ period: "order" });
       setOptionsOpen(true);
       setMarks((count) => count + 1);
       return;
     }
+    kept.current = when;
     sending.current = true;
     setFailure(null);
     setProblems({});
@@ -262,11 +277,9 @@ function GenerateForm({
       sending.current = false;
       const error = toError(thrown);
       if (!(error instanceof ApiFailure)) {
-        unanswered.current = when;
         setFailure(errorText(t, error));
       } else {
         answered.current = true;
-        unanswered.current = null;
         if (error.code === "PROFILE_INACTIVE") {
           setFailure(t("generate.profileChanged"));
           reload();
