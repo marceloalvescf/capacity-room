@@ -9,6 +9,21 @@ const reader = { username: "e2e-reader", password: "e2e-Reader-Pass-04!" };
 
 const collectTimeout = 60_000;
 
+// The profile e2e-prod names no time zone, so the report takes the fallback
+// zone of the profiles.
+const reportZone = "America/Sao_Paulo";
+
+// The wall text, at 00:00 in the zone, of the Monday of the week that holds
+// now, moved by whole weeks.
+function mondayText(now: Date, zone: string, weeks: number): string {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+  const today = new Date(Date.UTC(get("year"), get("month") - 1, get("day")));
+  const sinceMonday = (today.getUTCDay() + 6) % 7;
+  const monday = new Date(today.getTime() + (weeks * 7 - sinceMonday) * 86_400_000);
+  return `${monday.toISOString().slice(0, 10)} 00:00`;
+}
+
 async function signIn(page: Page, user: { username: string; password: string }, path: string) {
   await page.goto(path);
   await expect(page.getByRole("heading", { name: en.login.title })).toBeVisible({ timeout: 10_000 });
@@ -55,6 +70,9 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await page.getByLabel(en.generate.profile, { exact: true }).selectOption({ label: "Production" });
     await page.getByRole("checkbox", { name: "payments", exact: true }).check();
     await page.getByRole("radio", { name: en.language.en, exact: true }).check();
+    await page.getByRole("button", { name: en.generate.change, exact: true }).click();
+    await page.getByRole("button", { name: new RegExp(en.generate.period) }).click();
+    await page.getByRole("dialog").getByRole("button", { name: en.period.calendar.previousWeek, exact: true }).click();
     await expectNoViolations(page);
     // The fake Prometheus serves its scenario once, so one stack runs exactly
     // one collection: this is the only report the spec requests, and the
@@ -65,6 +83,22 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
   });
 
   const jobUrl = page.url();
+
+  await test.step("the stored selection is the previous calendar week", async () => {
+    const id = /[0-9a-f-]{36}$/.exec(jobUrl)?.[0] ?? "";
+    const response = await page.request.get(`/api/v1/reports/${id}`);
+    expect(response.ok()).toBe(true);
+    const { selection } = (await response.json()) as {
+      selection: { period: string | null; start: string | null; end: string | null; timezone: string };
+    };
+    const now = new Date();
+    expect(selection).toMatchObject({
+      period: null,
+      timezone: reportZone,
+      start: mondayText(now, reportZone, -1),
+      end: mondayText(now, reportZone, 0),
+    });
+  });
 
   await test.step("the progress page reaches Collected and the English PDF", async () => {
     await expect(page.getByText(en.reportStatus.collected, { exact: true })).toBeVisible({ timeout: collectTimeout });
