@@ -1,0 +1,58 @@
+# The end-to-end stack of `make e2e`, over compose.yaml. The one-shot services
+# are run by the make target, in order; serve does not wait for them.
+name: kcr-e2e
+
+x-one-shot: &one-shot
+  image: k8s-capacity-report:${KCR_VERSION:?set KCR_VERSION}
+  read_only: true
+  tmpfs:
+    - /tmp
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  environment:
+    KCR_DATABASE_DSN: postgres://kcr:kcr_e2e_only@postgres:5432/kcr?sslmode=disable
+  volumes:
+    - ./platform/platform.toml:/etc/kcr/platform.toml:ro
+    - ./platform/server-secret:/run/kcr/server-secret:ro
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  migrate:
+    <<: *one-shot
+    command: ["admin", "migrate", "--config", "/etc/kcr/platform.toml"]
+
+  bootstrap:
+    <<: *one-shot
+    environment:
+      KCR_DATABASE_DSN: postgres://kcr:kcr_e2e_only@postgres:5432/kcr?sslmode=disable
+      KCR_BOOTSTRAP_MODE: "1"
+    command:
+      - admin
+      - bootstrap-admin
+      - --username
+      - e2e-admin
+      - --language
+      - en
+      - --password-stdin
+      - --config
+      - /etc/kcr/platform.toml
+
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+    network_mode: service:serve
+    depends_on:
+      serve:
+        condition: service_healthy
+    working_dir: /web
+    volumes:
+      - ../web:/web:ro
+      - web-node-modules:/web/node_modules
+      - ../.cache/e2e:/results
+    command: ["sh", "-c", "npm ci && npx playwright test"]
+
+volumes:
+  web-node-modules:

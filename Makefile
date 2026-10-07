@@ -49,7 +49,7 @@ WEB_STAMP := web/node_modules/.package-lock.json
 
 .PHONY: web build test lint image test-toolchain test-template test-golden \
 	update-golden update-testdata check-runtime gate postgres-up postgres-down \
-	test-postgres generate generate-check
+	test-postgres generate generate-check e2e
 
 $(WEB_STAMP): web/package-lock.json
 	cd web && npm ci
@@ -170,6 +170,20 @@ check-runtime: $(IMAGE_DEP)
 		$(IMAGE) report --from-snapshot /data/snapshot.json --lang en --output /out/report.pdf
 	test "$$(head -c 5 $(CHECK_RUNTIME_OUT)/report.pdf)" = "%PDF-"
 
+# The end-to-end stack: PostgreSQL, the schema, the first administrator, then
+# serve, worker, and the Playwright container, whose exit status is the
+# target's. The stack is removed with its volumes first and last.
+E2E_COMPOSE := docker compose -f deploy/compose.yaml -f deploy/compose.integration.yaml
+
+e2e: $(IMAGE_DEP)
+	@export KCR_VERSION=$(VERSION); mkdir -p .cache/e2e; \
+	$(E2E_COMPOSE) down --volumes; \
+	$(E2E_COMPOSE) up -d --wait postgres \
+		&& $(E2E_COMPOSE) run --rm -T migrate \
+		&& $(E2E_COMPOSE) run --rm -T bootstrap < deploy/platform/e2e-admin-password \
+		&& $(E2E_COMPOSE) up --abort-on-container-exit --exit-code-from playwright serve worker playwright; \
+	status=$$?; $(E2E_COMPOSE) down --volumes; exit $$status
+
 # Runs every check from freshly built images and keeps one log per step.
 # Each step is piped into `tee`, so each line turns on `pipefail`; without it
 # the exit status would be that of `tee` and a failed step would pass. The
@@ -191,4 +205,5 @@ gate:
 	@set -o pipefail; $(MAKE) test-template IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-template.log
 	@set -o pipefail; $(MAKE) test-golden IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-golden.log
 	@set -o pipefail; $(MAKE) check-runtime IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/check-runtime.log
+	@set -o pipefail; $(MAKE) e2e IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/e2e.log
 	@echo "gate passed for version $(VERSION)"

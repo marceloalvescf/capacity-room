@@ -53,7 +53,7 @@ export default defineConfig(
     languageOptions: { globals: { ...globals.node } },
   },
   {
-    files: ["public/**/*.js"],
+    files: ["public/**/*.js", "e2e/**/*.js"],
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: { sourceType: "script" },
   },

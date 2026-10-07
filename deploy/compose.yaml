@@ -1,0 +1,60 @@
+# The platform: PostgreSQL, the web server, and the worker. The image is the
+# runtime image of the version in KCR_VERSION. The postgres image is pinned by
+# tag and by index digest, as the Containerfile pins its bases.
+name: kcr
+
+x-app: &app
+  image: k8s-capacity-report:${KCR_VERSION:?set KCR_VERSION}
+  read_only: true
+  tmpfs:
+    - /tmp
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  environment:
+    KCR_DATABASE_DSN: postgres://kcr:kcr_e2e_only@postgres:5432/kcr?sslmode=disable
+  volumes:
+    - ./platform/platform.toml:/etc/kcr/platform.toml:ro
+    - ./platform/server-secret:/run/kcr/server-secret:ro
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+    environment:
+      POSTGRES_DB: kcr
+      POSTGRES_USER: kcr
+      POSTGRES_PASSWORD: kcr_e2e_only
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kcr -d kcr"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  serve:
+    <<: *app
+    command: ["serve", "--config", "/etc/kcr/platform.toml", "--listen", ":8080"]
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/k8s-capacity-report", "admin", "probe", "http://127.0.0.1:8080/health/ready"]
+      interval: 2s
+      timeout: 6s
+      retries: 30
+
+  worker:
+    <<: *app
+    command: ["worker", "--config", "/etc/kcr/platform.toml", "--health-listen", ":8091"]
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/k8s-capacity-report", "admin", "probe", "http://127.0.0.1:8091/health/ready"]
+      interval: 2s
+      timeout: 6s
+      retries: 30
+
+volumes:
+  postgres-data:
