@@ -22,6 +22,22 @@ function params(text: string): string[] {
   return [...text.matchAll(/\{\{(.*?)\}\}/g)].map((m) => m[1] ?? "").sort();
 }
 
+const sources = Object.entries(
+  import.meta.glob<string>(["/src/**/*.ts", "/src/**/*.tsx", "!/src/**/*.test.*"], {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }),
+).map(([, text]) => text);
+
+function isUsed(key: string): boolean {
+  const family = Object.keys(families).find((name) => key.startsWith(`${name}.`));
+  if (family !== undefined) {
+    return true;
+  }
+  return sources.some((text) => [`"${key}"`, `'${key}'`, `\`${key}\``].some((literal) => text.includes(literal)));
+}
+
 const files = { en: flatten(en), "pt-BR": flatten(ptBR) };
 
 describe("locales", () => {
@@ -51,5 +67,10 @@ describe("locales", () => {
         name: file.get("app.name"),
       });
     }
+  });
+
+  it("every key is used", () => {
+    const unused = [...files.en.keys()].filter((key) => !isUsed(key));
+    expect(unused).toEqual([]);
   });
 });

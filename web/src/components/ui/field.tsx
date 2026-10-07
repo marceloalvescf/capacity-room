@@ -1,10 +1,10 @@
-import { useId, type InputHTMLAttributes } from "react";
+import { useId, type ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
-interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "id"> {
+interface FieldProps extends Omit<ComponentProps<"input">, "id"> {
   label: string;
-  hint?: string;
-  error?: string;
+  hint?: string | undefined;
+  error?: string | undefined;
 }
 
 export function Field({ label, hint, error, className, ...rest }: FieldProps) {
