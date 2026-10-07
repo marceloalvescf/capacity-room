@@ -125,6 +125,8 @@ describe("period", () => {
     expect(checkRange(a, a, zone, wed)).toEqual({ start: "order" });
     expect(checkRange(a, "2026-10-07 18:01", zone, wed)).toEqual({ end: "future" });
     expect(checkRange(a, "2026-10-07 18:00", zone, wed)).toEqual({});
+    expect(checkRange(a, " 2026-12-01 00:00", zone, wed)).toEqual({ end: "future" });
+    expect(checkRange(" 2026-09-03 00:00 ", "2026-09-02 00:00", zone, wed)).toEqual({ start: "order" });
     expect(checkRange("bad", "2026-09-02 00:00", zone, wed)).toEqual({ start: "invalid" });
     expect(checkRange(a, "bad", zone, wed)).toEqual({ end: "invalid" });
   });

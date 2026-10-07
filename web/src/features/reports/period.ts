@@ -112,20 +112,15 @@ export function checkRange(
   zone: string,
   now: Date,
 ): { start?: RangeProblem; end?: RangeProblem } {
-  const problems: { start?: RangeProblem; end?: RangeProblem } = {};
-  if (parseWallTime(start) === null) {
-    problems.start = "invalid";
+  const from = parseWallTime(start);
+  const to = parseWallTime(end);
+  if (from === null || to === null) {
+    return { ...(from === null && { start: "invalid" as const }), ...(to === null && { end: "invalid" as const }) };
   }
-  if (parseWallTime(end) === null) {
-    problems.end = "invalid";
-  }
-  if (problems.start !== undefined || problems.end !== undefined) {
-    return problems;
-  }
-  if (start >= end) {
+  if (from >= to) {
     return { start: "order" };
   }
-  if (end > wallNow(zone, now)) {
+  if (to > wallNow(zone, now)) {
     return { end: "future" };
   }
   return {};
