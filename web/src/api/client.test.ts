@@ -77,6 +77,22 @@ describe("client", () => {
     expect(navigate).toHaveBeenCalledWith("/login?next=%2Faccount&ended=1");
   });
 
+  it("a 401 on a path that only starts like sign-in opens sign-in", async () => {
+    window.history.replaceState(null, "", "/loginx");
+    const { api, navigate } = setup();
+    server.use(http.get(url("/auth/session"), () => HttpResponse.json(errorBody("UNAUTHENTICATED"), { status: 401 })));
+    await expect(api.GET("/auth/session")).rejects.toBeInstanceOf(ApiFailure);
+    expect(navigate).toHaveBeenCalledWith("/login?next=%2Floginx&ended=1");
+  });
+
+  it("a 401 on the sign-in screen stays there", async () => {
+    window.history.replaceState(null, "", "/login");
+    const { api, navigate } = setup();
+    server.use(http.get(url("/auth/session"), () => HttpResponse.json(errorBody("UNAUTHENTICATED"), { status: 401 })));
+    await expect(api.GET("/auth/session")).rejects.toBeInstanceOf(ApiFailure);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it("a 401 UNAUTHENTICATED on the account change opens sign-in", async () => {
     const { api, queryClient, navigate } = setup();
     server.use(http.patch(url("/account"), () => HttpResponse.json(errorBody("UNAUTHENTICATED"), { status: 401 })));

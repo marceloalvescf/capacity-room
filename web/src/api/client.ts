@@ -100,7 +100,7 @@ export function createApi(queryClient: QueryClient, navigate: (to: string) => vo
       const here = window.location.pathname;
       const next = encodeURIComponent(here + window.location.search);
       queryClient.clear();
-      if (!here.startsWith("/login")) {
+      if (here !== "/login") {
         navigate(`/login?next=${next}&ended=1`);
       }
     }

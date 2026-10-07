@@ -10,6 +10,7 @@ function text(fg: string, bg: string): Pair {
 
 export const pairs: readonly Pair[] = [
   text("fg", "bg"),
+  text("bg", "fg"),
   text("surface-fg", "surface"),
   text("fg", "surface"),
   text("sidebar-fg", "sidebar"),
@@ -33,4 +34,6 @@ export const pairs: readonly Pair[] = [
   { fg: "input-border", bg: "surface", min: 3 },
   { fg: "accent", bg: "surface", min: 3 },
   { fg: "accent", bg: "bg", min: 3 },
+  { fg: "accent", bg: "sidebar", min: 3 },
+  { fg: "accent", bg: "sidebar-active", min: 3 },
 ];

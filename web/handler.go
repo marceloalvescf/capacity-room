@@ -44,7 +44,9 @@ func handler(files fs.FS) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
 		if name == "" || !isFile(files, name) {
-			if strings.HasPrefix("/"+name, assetsPrefix) {
+			// The trailing slash makes the folder itself, which Clean
+			// leaves as "assets", fall under the prefix too.
+			if strings.HasPrefix("/"+name+"/", assetsPrefix) {
 				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 				w.WriteHeader(http.StatusNotFound)
 				_, _ = w.Write([]byte("Not Found"))
