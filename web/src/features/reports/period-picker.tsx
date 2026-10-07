@@ -86,7 +86,7 @@ export function PeriodPicker({ value, permitted, error, triggerRef, onChange }: 
             aria-describedby={error === undefined ? undefined : errorId}
             className="flex min-h-9 items-center justify-between gap-2 rounded-md border border-input-border bg-surface px-3 text-sm text-surface-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
-            {periodText(t, language, value)}
+            {periodText(t, language, { kind: "length", period: value })}
             <CaretDownIcon aria-hidden="true" className="size-4" />
           </button>
         </PopoverTrigger>
@@ -108,7 +108,7 @@ export function PeriodPicker({ value, permitted, error, triggerRef, onChange }: 
                     pick(range);
                   }}
                 >
-                  {periodText(t, language, range)}
+                  {periodText(t, language, { kind: "length", period: range })}
                 </button>
               ))}
             </div>

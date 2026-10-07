@@ -245,9 +245,9 @@ function GenerateForm({
     return problem === "notPermitted" ? t("validation.notPermitted") : t("validation.invalid");
   };
 
-  const days = periodDays(values.period);
+  const days = periodDays({ kind: "length", period: values.period });
   const summary = [
-    periodText(t, language, values.period),
+    periodText(t, language, { kind: "length", period: values.period }),
     values.timezone,
     t(`reportProfile.${values.reportProfile}`),
     t(`minSeverity.${values.minSeverity}`),

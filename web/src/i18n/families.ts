@@ -11,6 +11,7 @@ import {
   roleValues,
 } from "@/api/schema.gen";
 import { statusValues } from "@/components/status-mark";
+import { calendarRanges } from "@/features/reports/period";
 import { themeChoices } from "@/theme/theme";
 
 // Each family of keys, with the list its members must equal.
@@ -27,4 +28,5 @@ export const families: Readonly<Record<string, readonly string[]>> = {
   minSeverity: minSeverityValues,
   pdfFailure: pDFFailureCodeValues,
   reportFailure: reportFailureCodeValues,
+  "period.calendar": calendarRanges,
 };

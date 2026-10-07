@@ -192,7 +192,34 @@
     },
     "apply": "Apply",
     "invalid": "Write a number followed by m, h, or d.",
-    "restricted": "This profile permits only these periods."
+    "restricted": "This profile permits only these periods.",
+    "mode": {
+      "length": "Length",
+      "range": "Range"
+    },
+    "range": {
+      "from": "From",
+      "to": "To",
+      "value": "{{start}} to {{end}}",
+      "hint": "Year-month-day and hour:minute, in the report's time zone, {{zone}}.",
+      "pickFrom": "Pick the start day",
+      "pickTo": "Pick the end day",
+      "previous": "Show the previous month",
+      "next": "Show the next month",
+      "months": "Months",
+      "invalid": "Write a date and time such as 2026-09-01 00:00.",
+      "order": "The start must come before the end.",
+      "future": "The end cannot be after now.",
+      "wallClock": "This time does not exist, or occurs twice, in {{zone}}."
+    },
+    "calendar": {
+      "today": "Today so far",
+      "yesterday": "Yesterday",
+      "thisWeek": "This week so far",
+      "previousWeek": "Previous week",
+      "thisMonth": "This month so far",
+      "previousMonth": "Previous month"
+    }
   },
   "reports": {
     "title": "Reports",

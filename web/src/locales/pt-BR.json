@@ -192,7 +192,34 @@
     },
     "apply": "Aplicar",
     "invalid": "Escreva um número seguido de m, h ou d.",
-    "restricted": "Este perfil permite apenas estes períodos."
+    "restricted": "Este perfil permite apenas estes períodos.",
+    "mode": {
+      "length": "Duração",
+      "range": "Intervalo"
+    },
+    "range": {
+      "from": "De",
+      "to": "Até",
+      "value": "{{start}} a {{end}}",
+      "hint": "Ano-mês-dia e hora:minuto, no fuso horário do relatório, {{zone}}.",
+      "pickFrom": "Escolher o dia de início",
+      "pickTo": "Escolher o dia de fim",
+      "previous": "Mostrar o mês anterior",
+      "next": "Mostrar o próximo mês",
+      "months": "Meses",
+      "invalid": "Escreva uma data e hora como 2026-09-01 00:00.",
+      "order": "O início deve vir antes do fim.",
+      "future": "O fim não pode ser depois de agora.",
+      "wallClock": "Este horário não existe, ou ocorre duas vezes, em {{zone}}."
+    },
+    "calendar": {
+      "today": "Hoje até agora",
+      "yesterday": "Ontem",
+      "thisWeek": "Esta semana até agora",
+      "previousWeek": "Semana anterior",
+      "thisMonth": "Este mês até agora",
+      "previousMonth": "Mês anterior"
+    }
   },
   "reports": {
     "title": "Relatórios",
