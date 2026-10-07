@@ -79,6 +79,7 @@ reference. That folder is never tracked by Git.
 | Portuguese sentences translate every term: solicitação, limite, carga de trabalho, pool de nós | Every technical term is English in both languages; only a common noun is Portuguese | Owner's decision of 2026-09-30: Brazilian readers use the Kubernetes vocabulary in English |
 | Table cells set at the top left | Every table cell, the header row included, is centred horizontally and vertically | Owner's decision of 2026-10-02, after reading the report of a real cluster |
 | Page margins of 2.5 cm on every side | One inch at the top, the left, and the right; half an inch at the bottom | Owner's decision of 2026-10-02, for more rows per page |
+| A period always ends when the report runs ("the last N") | A period is the last N or a calendar range that ends at or before the run | Owner's decision of 2026-10-07 (F-131): a report of a past month or of a past incident |
 
 Accepted consequences:
 
@@ -179,6 +180,7 @@ Tests enforce the first, third, and fourth rules (section 13).
 k8s-capacity-report report --config report.toml --lang en --output report.pdf
 k8s-capacity-report report --config report.toml --check
 k8s-capacity-report report --config report.toml --snapshot cluster.json
+k8s-capacity-report report --config report.toml --start "2026-09-01 00:00" --end "2026-10-01 00:00"
 k8s-capacity-report report --from-snapshot cluster.json --lang pt-BR --output report.pdf
 ```
 
@@ -209,6 +211,8 @@ column.
 | `cluster.filter_mode` | string | `required` | `required`, `auto`, `none` |
 | `cluster.nodepool_label` | string | empty | Valid label name when set |
 | `analysis.period` | string | `24h` | `^[1-9][0-9]*[mhd]$` |
+| `analysis.start` | string | empty | A wall time, see below; set with `analysis.end` |
+| `analysis.end` | string | empty | A wall time, see below; set with `analysis.start` |
 | `analysis.timezone` | string | `America/Sao_Paulo` | IANA zone |
 | `analysis.node_autoscaling` | string | `auto` | `auto`, `enabled`, `disabled` |
 | `analysis.excluded_containers` | list | empty | |
@@ -234,12 +238,32 @@ Environment variables keep the `KCR_` prefix of the original:
 `KCR_METRICS_URL`, `KCR_ENDPOINT_TYPE`, `KCR_CLUSTER`, `KCR_CLUSTER_LABEL`,
 `KCR_CLUSTER_FILTER`, `KCR_NAMESPACES`, `KCR_PERIOD`, `KCR_TIMEZONE`,
 `KCR_NODE_AUTOSCALING`, `KCR_MIN_SEVERITY`, `KCR_REPORT_PROFILE`,
-`KCR_OUTPUT_DIRECTORY`, plus the new `KCR_LANGUAGE` and `KCR_TYPST`.
+`KCR_OUTPUT_DIRECTORY`, plus the new `KCR_LANGUAGE`, `KCR_TYPST`,
+`KCR_START`, and `KCR_END`.
 
 Flags: `--config`, `--metrics-url`, `--endpoint-type`, `--token`, `--insecure`,
 `--cluster`, `--cluster-label`, `--cluster-filter`, `--namespaces`, `--period`,
-`--timezone`, `--node-autoscaling`, `--min-severity`, `--report-profile`,
-`--lang`, `--output`, `--snapshot`, `--from-snapshot`, `--check`, `--verbose`.
+`--start`, `--end`, `--timezone`, `--node-autoscaling`, `--min-severity`,
+`--report-profile`, `--lang`, `--output`, `--snapshot`, `--from-snapshot`,
+`--check`, `--verbose`.
+
+The period of a report is a length, `analysis.period`, that ends when the run
+starts, or a calendar range, `analysis.start` and `analysis.end`, that ends at
+or before it.
+
+- A wall time is written `YYYY-MM-DD HH:MM`, a real calendar date with hours
+  `00` to `23` and minutes `00` to `59`, and is read in `analysis.timezone`.
+  The same grammar serves the file, the environment, the flags, the API, and
+  the form.
+- A wall time that does not exist in the zone, or that occurs twice in it
+  because of a daylight-saving change, is refused.
+- The length and the range are one setting. Each source (file, environment,
+  flags) sets one form or the other, and a later source replaces the setting
+  whole: `--start` and `--end` replace a `period` of the file. A source that
+  sets both forms, or a start without an end, is refused.
+- The start comes before the end, and the end is not after the emission time.
+  Both are judged before the first request, with exit code 2, as an empty
+  period is; `--check` judges them too.
 
 ### 5.3 Exit codes
 
@@ -308,6 +332,11 @@ Nine capabilities, in this order: `namespace_usage`, `workload_usage`,
   alignment is added.
 - The period start is the emission time minus the period, with no
   daylight-saving correction, as in the original.
+- A calendar range gives the start and the end as written, converted from
+  its zone. The step comes from the table above by the range's length, and
+  the `increase` span of the cluster autoscaling is the range's length in
+  seconds. The last N gives the same window and the same query text as
+  before ranges existed.
 - Time zone data is embedded in the binary.
 - Node pool identity follows the original order: configured label, known
   provider labels, AKS node name, OKE node name, shared name label, unknown.
@@ -358,8 +387,14 @@ exact confidence, and are ordered by severity, confidence, scope, and code.
 
 ## 8. Snapshot
 
-The snapshot is one JSON document, `schema_version` `"1.0"`. It is a new
+The snapshot is one JSON document, `schema_version` `"2.0"`. It is a new
 format and does not read snapshots written by the Python platform.
+
+Version `2.0` replaced `1.0` with calendar ranges: `report.period`, the
+requested length, left the document, since the start and the end say what
+was covered, and the period may now end before the emission time. The reader
+names `1.0` and refuses it; a report stored by an earlier release cannot be
+viewed or given a new PDF, and is requested again.
 
 ```text
 report        id, generator version, emission time, period start and end,
@@ -411,6 +446,8 @@ reasons.
   node.
 - The snapshot is stored with its SHA-256 digest. The digest is checked again
   before each PDF compile.
+- The period start comes before its end, and the end is at or before the
+  emission time.
 - The schema version changes only when the shape changes. A code is never
   reused for another meaning and never removed while its schema version is
   supported.
@@ -745,6 +782,9 @@ A profile describes one metric source.
   root.
 - `admin import-profiles` creates or revises profiles from a TOML file and is
   repeatable.
+- A permitted or default period is a length. A profile with permitted periods
+  permits those alone and refuses a calendar range; a profile with none
+  permits any length and any range.
 
 ### 11.7 Reports and jobs
 
@@ -757,6 +797,15 @@ pdf      at most one row per language: pending -> ready | failed
 
 - A request names the language of its report, `pt-BR` or `en`, with no
   default. The report keeps it.
+- A request names a `period`, or a `start` and an `end` in the wall-time
+  grammar of 5.2, read in its resolved time zone, or neither, which takes the
+  profile's default period. A refusal names its field: `invalid` for a bad
+  shape or a wall time that does not exist or occurs twice in the zone,
+  `missing` for one end without the other, `conflict` on `period` sent with a
+  range, `order` on `start` not before its end, `future` on `end` after the
+  moment of the request, and `not_permitted` on `start` under a profile with
+  permitted periods. The report keeps the range as sent, and its selection
+  answers `period`, `start`, and `end`, the unused ones null.
 - The report becomes `collected` in the same transaction that stores the
   snapshot and creates the pending PDF row of that language. From then on
   the web view is available.
@@ -945,12 +994,32 @@ them one line shows the period, time zone, report profile, and minimum
 severity, taken from the profile's defaults, with a button that opens the
 four fields in place. Choosing a profile loads its defaults.
 
-- The period offers quick ranges (the last hour, 6 hours, 24 hours, 7 days,
-  15 days, 30 days) and a custom period typed as a number and a unit,
-  checked against the grammar of 5.2. A profile with permitted periods
-  offers those alone, with no custom period. The form warns above 15 days.
-- A period always ends when the report runs. A calendar range that ends in
-  the past is a later part of phase 4.
+- The period picker holds one of three kinds of value: a length, a calendar
+  range by name, or a typed range. On the left, two joined buttons switch
+  between Length, a number and a unit checked against the grammar of 5.2,
+  and Range, a From and a To typed as wall times in the grammar of 5.2, each
+  with a button that opens a month calendar under its field. The calendar
+  starts on Monday and names the month in the interface language; a day
+  picked there replaces the date of its field and keeps the time. On the
+  right, the six quick lengths (the last hour, 6 hours, 24 hours, 7 days, 15
+  days, 30 days) sit over the six calendar ranges: today so far, yesterday,
+  this week so far, previous week, this month so far, previous month.
+- A week starts on Monday in both languages. A calendar range is resolved in
+  the report's time zone when the request is sent, so a form left open past
+  midnight sends the right day; "so far" ends at the minute of sending. The
+  report keeps the resolved start and end, not the name.
+- The period button and the line of options show a length or a name by its
+  words, and a range as `2026-09-01 00:00 to 2026-10-01 00:00`, in the time
+  format of the list.
+- The form checks the shape, a start before its end, and an end not after
+  now, each under its field; the server's answer for a wall time that does
+  not exist or occurs twice lands on its field too. A refused Apply keeps
+  the picker open.
+- A typed range keeps its wall times when the time zone changes. "Try again"
+  and a request copied from a report bring back a range as a typed range.
+- A profile with permitted periods offers those alone, with no custom length,
+  no range, and no calendar range. The form warns when the period, or the
+  range, is longer than 15 days.
 - Profile, time zone, report profile, and minimum severity use the
   browser's own select. The time zones are the profile's, or, when it
   permits any, the browser's list.
@@ -1023,6 +1092,9 @@ when the tool is missing.
 
 The six scenarios of the original are carried over: complete, Grafana with
 token, several clusters, raw fallback, partial data, and value edge cases.
+A scenario of this project runs the complete one over a calendar range that
+ends before the emission time; the original had no ranges, so it has no
+record of the original to compare with.
 
 Catalog guards:
 
