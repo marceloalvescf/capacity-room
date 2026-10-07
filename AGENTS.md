@@ -617,8 +617,8 @@ redactor the moment the settings are loaded, before the pool opens.
   resolved in the form's zone when the request is sent, never when it is
   picked; weeks start on Monday in both languages; an empty resolved range
   sends nothing and shows `period.range.order` on the period. The resolved
-  range of an attempt is kept as long as its idempotency key, so a resend
-  replays. The calendar is styled through `classNames` and
+  range of an attempt is kept until a value changes or the key renews, so a
+  resend replays. The calendar is styled through `classNames` and
   `modifiersClassNames` alone, never through the library's stylesheet.
 
 ## The template
