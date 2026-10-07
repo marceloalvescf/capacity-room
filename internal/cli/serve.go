@@ -86,9 +86,7 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 		logger.Warn(notice)
 	}
 
-	httpServer := newHTTPServer(handler, logger)
-	conns := &connCount{}
-	httpServer.ConnState = conns.track
+	httpServer, conns := newServeServer(handler, logger)
 	served := make(chan error, 1)
 	go func() { served <- httpServer.Serve(listener) }()
 
@@ -211,6 +209,15 @@ func outboundNotice(loaded settings.Settings) string {
 		return "serve: the outbound allowlists are empty; no metric source is reachable"
 	}
 	return ""
+}
+
+// newServeServer is the server of serve with the count of its open
+// connections, which the stop reads to name the ones it closed.
+func newServeServer(handler http.Handler, logger *slog.Logger) (*http.Server, *connCount) {
+	httpServer := newHTTPServer(handler, logger)
+	conns := &connCount{}
+	httpServer.ConnState = conns.track
+	return httpServer, conns
 }
 
 // newHTTPServer is the server of serve and of the worker's health endpoint.
