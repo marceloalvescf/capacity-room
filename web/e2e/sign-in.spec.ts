@@ -63,6 +63,18 @@ test("sign in, switch language, change password, and sign out", async ({ page })
   await page.getByLabel(en.login.password, { exact: true }).fill(newPassword);
   await page.getByRole("button", { name: en.login.submit, exact: true }).click();
   await expect(page.getByRole("heading", { name: en.reports.title, level: 1 })).toBeVisible();
+
+  // The password goes back to the original, so that the other specs, run in
+  // any order or alone, sign in with it.
+  await page.goto("/account");
+  await page.getByLabel(en.account.password.current, { exact: true }).fill(newPassword);
+  await page.getByLabel(en.account.password.new, { exact: true }).fill(password);
+  await page.getByLabel(en.account.password.repeat, { exact: true }).fill(password);
+  await page.getByRole("button", { name: en.account.password.submit }).click();
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByText(en.login.passwordChanged)).toBeVisible();
+  await signIn(page, password);
+  await expect(page.getByRole("heading", { name: en.reports.title, level: 1 })).toBeVisible();
   await page.getByRole("button", { name: en.header.signOut }).click();
   await expect(page.getByRole("heading", { name: en.login.title })).toBeVisible();
 });
