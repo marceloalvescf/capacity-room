@@ -886,12 +886,19 @@ func TestStoredSnapshotChangedUnderItsDigestAnswers500(t *testing.T) {
 	if _, err := ts.pool.Exec(ctx, `ALTER TABLE report_snapshots DISABLE TRIGGER report_snapshots_are_immutable`); err != nil {
 		t.Fatal(err)
 	}
-	changed := bytes.Replace(golden, []byte("{"), []byte(" "), 1)
+	// One digit of a number changes, so the body stays valid JSON and only
+	// the digest can tell.
+	changed := bytes.Replace(golden, []byte(`"warning_percent": 70`), []byte(`"warning_percent": 71`), 1)
+	if !json.Valid(changed) || bytes.Equal(changed, golden) {
+		t.Fatal("the changed snapshot must be valid JSON and differ from the stored one")
+	}
 	if _, err := ts.pool.Exec(ctx, `UPDATE report_snapshots SET body = $2 WHERE report_id = $1`, id, changed); err != nil {
 		t.Fatal(err)
 	}
 	base := "/api/v1/reports/" + id.String()
 	for _, path := range []string{base + "/snapshot", base + "/view?lang=en"} {
-		wantProblem(t, ts.as(t, &c.eve, "GET", path, "", nil), 500, CodeInternalError, nil)
+		t.Run(path[strings.LastIndex(path, "/")+1:], func(t *testing.T) {
+			wantProblem(t, ts.as(t, &c.eve, "GET", path, "", nil), 500, CodeInternalError, nil)
+		})
 	}
 }

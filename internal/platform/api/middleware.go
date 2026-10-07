@@ -18,7 +18,7 @@ type SessionHandler func(w http.ResponseWriter, r *http.Request, a auth.Authenti
 func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
 	if r.Context().Err() != nil && errors.Is(err, context.Canceled) {
 		// The client left; nobody reads an envelope.
-		s.logger().Debug("request canceled by the client", "method", r.Method, "path", r.URL.Path)
+		s.logger().Debug("request canceled by the client", "method", r.Method, "path", r.URL.Path, "error", err)
 		return
 	}
 	if n, ok := w.(errorNoter); ok {

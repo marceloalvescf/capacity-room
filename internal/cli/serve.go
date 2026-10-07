@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -86,6 +87,8 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 	}
 
 	httpServer := newHTTPServer(handler, logger)
+	conns := &connCount{}
+	httpServer.ConnState = conns.track
 	served := make(chan error, 1)
 	go func() { served <- httpServer.Serve(listener) }()
 
@@ -96,14 +99,62 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 	}
 	logger.Info("serve: stopping")
 
-	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
-	defer cancel()
-	if err := httpServer.Shutdown(stopCtx); err != nil {
-		return &exitError{1, fmt.Errorf("cannot stop the server: %w", err)}
+	if err := stopServer(ctx, httpServer, conns, shutdownTimeout, logger); err != nil {
+		return &exitError{1, err}
 	}
 	if err := <-served; !errors.Is(err, http.ErrServerClosed) {
 		return &exitError{1, err}
 	}
+	return nil
+}
+
+// connCount counts the connections of a server that are not yet closed or
+// handed away, through http.Server.ConnState.
+type connCount struct {
+	mu   sync.Mutex
+	open map[net.Conn]struct{}
+}
+
+// track is the ConnState hook.
+func (c *connCount) track(conn net.Conn, state http.ConnState) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	switch state {
+	case http.StateNew:
+		if c.open == nil {
+			c.open = map[net.Conn]struct{}{}
+		}
+		c.open[conn] = struct{}{}
+	case http.StateClosed, http.StateHijacked:
+		delete(c.open, conn)
+	}
+}
+
+// count is the number of connections still open.
+func (c *connCount) count() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.open)
+}
+
+// stopServer shuts httpServer down within timeout; connections still open
+// then are closed and counted in one warning. It fails only when the
+// listener cannot be closed.
+func stopServer(ctx context.Context, httpServer *http.Server, conns *connCount, timeout time.Duration, logger *slog.Logger) error {
+	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
+	defer cancel()
+	err := httpServer.Shutdown(stopCtx)
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("cannot stop the server: %w", err)
+	}
+	open := conns.count()
+	if err := httpServer.Close(); err != nil {
+		return fmt.Errorf("cannot stop the server: %w", err)
+	}
+	logger.Warn(fmt.Sprintf("serve: connections closed before they finished: %d", open))
 	return nil
 }
 

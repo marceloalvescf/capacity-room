@@ -122,3 +122,17 @@ func TestCanceledRequestIsNotAnErrorLine(t *testing.T) {
 		t.Fatalf("a cancellation of the service alone: %d %s", w.Code, buf.String())
 	}
 }
+
+func TestCanceledRequestLogsItsError(t *testing.T) {
+	var buf bytes.Buffer
+	s := &Server{Logger: slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))}
+	s.extraRoutes = []Route{{Method: "GET", Pattern: "/api/v1/probe", Handler: func(w http.ResponseWriter, r *http.Request) {
+		s.fail(w, r, context.Canceled)
+	}}}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	s.Handler().ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/api/v1/probe", nil).WithContext(ctx))
+	if !strings.Contains(buf.String(), "error=") {
+		t.Fatalf("the debug line holds no error: %s", buf.String())
+	}
+}
