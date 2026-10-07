@@ -152,7 +152,8 @@ Standalone
 Platform
   browser -> BFF -> report row + job, one transaction
   worker:  profile revision -> collection and analysis -> snapshot, stored
-           -> one PDF per language, each stored with its own status
+           -> one PDF, in the language of the request, stored with its status
+  on request: the PDF of another language, from the stored snapshot
   reading: BFF turns snapshot + reader's language into the report view
 ```
 
@@ -648,6 +649,10 @@ present in the container image.
 | `worker` | `k8s-capacity-report worker` | Two slots by default; health on port 8091 |
 | `postgres` | PostgreSQL | |
 
+- `serve`, asked to stop, waits 30 seconds for the requests in flight, then
+  closes the connections still open, logs how many it closed, and exits 0. A
+  client that stopped reading a download is not a failure of `serve`.
+
 ### 11.2 Deployment settings
 
 One TOML file mounted into `serve` and `worker`, plus `KCR_DATABASE_DSN` in the
@@ -668,7 +673,7 @@ that the throttle table never lists attempted user names in readable form.
 |---|---|---|---|
 | Manage users | Yes | No | No |
 | Manage and test profiles | Yes | No | No |
-| Request a report, retry a PDF | Yes | Yes | No |
+| Request a report, request or retry a PDF | Yes | Yes | No |
 | Delete a report | Yes | Own requests | No |
 | Open reports, download PDFs and snapshots | Yes | Yes | Yes |
 | Change own password and language | Yes | Yes | Yes |
@@ -747,15 +752,22 @@ A profile describes one metric source.
 status   queued -> running -> collected | failed
 phase    waiting -> preflight -> collecting -> analyzing -> snapshotting
          -> rendering -> complete
-pdf      one row per language: pending -> ready | failed
+pdf      at most one row per language: pending -> ready | failed
 ```
 
+- A request names the language of its report, `pt-BR` or `en`, with no
+  default. The report keeps it.
 - The report becomes `collected` in the same transaction that stores the
-  snapshot and creates the two pending PDF rows. From then on the web view is
-  available.
+  snapshot and creates the pending PDF row of that language. From then on
+  the web view is available.
+- The PDF of the other language is made only when an operator asks for it.
+  A language with no row was never asked for.
+- A request for a PDF creates its row when there is none, compiles it again
+  when it failed, changes nothing while it is pending, and is refused with
+  `PDF_ALREADY_READY` when it is ready. It compiles from the stored
+  snapshot; collection runs once per report. It is not a report request,
+  so the admission limits do not count it.
 - A failed compile never changes the report status or the other language.
-- A PDF retry compiles from the stored snapshot. Collection runs once per
-  report.
 - River runs the jobs. It keeps its own tables, picks up jobs abandoned by a
   crashed worker, and retries with backoff up to a limit.
 - The report row holds the state the interface shows. The job handler updates
@@ -767,6 +779,8 @@ pdf      one row per language: pending -> ready | failed
 - A request carries an `Idempotency-Key`. The same key and body return the
   same report. The same key with another body is a conflict.
 - The browser asks for progress every 1.5 seconds, slowing to 6 seconds.
+  The report list asks every 5 seconds while a report it shows is queued or
+  running or has a pending PDF, and not otherwise.
 
 ### 11.8 Storage and retention
 
@@ -816,7 +830,7 @@ All routes are under `/api/v1` and are described in `api/openapi.yaml`.
 | `GET /reports/{id}/view?lang=` | Any | Report written in one language |
 | `GET /reports/{id}/snapshot` | Any | Stored snapshot |
 | `GET /reports/{id}/pdf?lang=` | Any | PDF in one language |
-| `POST /reports/{id}/pdf-retries` | Operator | Retry one language |
+| `POST /reports/{id}/pdfs` | Operator | Make or retry the PDF of one language |
 | `DELETE /reports/{id}` | Operator | Delete |
 | `POST /reports/delete` | Operator | Delete up to 200 |
 
@@ -879,17 +893,37 @@ The interface is named "kcr - Kubernetes Capacity Report" in both languages.
 | Route | Screen | Who |
 |---|---|---|
 | `/login` | Sign in | Everyone |
+| `/` | Opens `/reports` | Signed in |
 | `/reports` | Report list | Signed in |
 | `/reports/:id/...` | Report, seven tabs | Signed in |
 | `/generate` | New report | Operator |
-| `/jobs/:id` | Progress | Signed in |
+| `/jobs/:id` | Progress, and the PDFs of the report | Signed in |
 | `/account` | Password and language | Signed in |
 | `/profiles`, `/profiles/new`, `/profiles/:id/edit` | Profiles | Administrator |
 | `/users` | Users | Administrator |
 
 Report tabs: overview, findings, namespaces, workloads, autoscaling, nodes,
-data quality. The report header holds the PDF downloads: one per language,
-each with its status and a retry button.
+data quality. The report header holds the PDF block of the progress screen.
+
+- Report list: newest first, by page, with "Load more"; no filter. Columns:
+  requested, profile, status, the PDF of the interface language, kept until.
+  Each row opens its progress screen; an expired report offers only delete.
+  An operator selects rows and deletes them together. An empty list says so,
+  with a link to the new report form for an operator.
+- Progress: the title, who requested the report and when, and its status;
+  never the values of the request. While the report runs, the steps of its
+  phase and the elapsed time. Once collected, the PDF of the interface
+  language first, then the other language: "not generated" with a button
+  to generate it, its state while pending, and a retry when it failed; a
+  reader sees the downloads alone. When it failed, the reason and its code,
+  a link back to the list, and, for an operator, a link that opens the form
+  with the values of this report.
+- Delete asks in one dialog that names the report, or counts the reports of
+  a bulk delete; Cancel holds the focus first. There is no undo.
+- A report status is drawn with the PDF's shapes: queued, running, and a
+  pending PDF as the outlined circle; collected and a ready PDF as the
+  filled circle; failed as the diamond; expired as the dash. A PDF never
+  asked for has no mark.
 
 - Findings: list and detail pane, filters and selection kept in the address,
   free-text search, critical first.
@@ -904,8 +938,23 @@ each with its status and a retry button.
 
 ### 12.3 New report form
 
-Profile, namespaces from the profile's allowed list, period, time zone,
-report profile, and minimum severity. Choosing a profile loads its defaults.
+Profile, namespaces from the profile's allowed list, and the report
+language, as two joined buttons that start on the interface language. Below
+them one line shows the period, time zone, report profile, and minimum
+severity, taken from the profile's defaults, with a button that opens the
+four fields in place. Choosing a profile loads its defaults.
+
+- The period offers quick ranges (the last hour, 6 hours, 24 hours, 7 days,
+  15 days, 30 days) and a custom period typed as a number and a unit,
+  checked against the grammar of 5.2. A profile with permitted periods
+  offers those alone, with no custom period. The form warns above 15 days.
+- A period always ends when the report runs. A calendar range that ends in
+  the past is a later part of phase 4.
+- Profile, time zone, report profile, and minimum severity use the
+  browser's own select. The time zones are the profile's, or, when it
+  permits any, the browser's list.
+- Each attempt carries a new `Idempotency-Key` once a value changed after
+  an attempt was sent.
 
 ### 12.4 Language
 
