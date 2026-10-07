@@ -10,10 +10,8 @@ import (
 	"io"
 	"math"
 	"reflect"
-	"regexp"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -21,41 +19,6 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 )
-
-// periodRe matches report.period: a positive integer with no leading zero,
-// followed by m, h, or d. internal/config carries the same rule for the
-// configuration; this copy is deliberate, not a shortcut: the snapshot is a
-// stored contract and must be able to judge a file that no configuration of
-// this version produced.
-var periodRe = regexp.MustCompile(`^[1-9][0-9]*[mhd]$`)
-
-// periodUnitNanos returns the length, in nanoseconds, of one unit of a
-// period's trailing letter: 'm' for minutes, 'h' for hours, and anything
-// else (periodRe accepts only 'd' besides those two) for days.
-func periodUnitNanos(unit byte) int64 {
-	switch unit {
-	case 'm':
-		return int64(time.Minute)
-	case 'h':
-		return int64(time.Hour)
-	default: // 'd', the only other letter periodRe accepts
-		return int64(24 * time.Hour)
-	}
-}
-
-// periodTooLong reports whether period, already known to match periodRe,
-// names a length that does not fit in a time.Duration: more digits than an
-// int64 can hold, or a value whose product with its unit overflows. The
-// design sets no upper limit of its own on a period, so the only limit is
-// what the type that carries it can hold.
-func periodTooLong(period string) bool {
-	value, err := strconv.ParseInt(period[:len(period)-1], 10, 64)
-	if err != nil {
-		return true
-	}
-	unit := periodUnitNanos(period[len(period)-1])
-	return value > math.MaxInt64/unit
-}
 
 // validProfiles, validSeverities, validFilterModes, validEndpointTypes, and
 // validNodeAutoscaling are the values of the configuration that report and
@@ -492,11 +455,11 @@ func (s Snapshot) Check() error {
 		return err
 	}
 
-	if !times.periodEnd.Equal(times.emittedAt) {
-		return errors.New("report.period_end differs from report.emitted_at")
-	}
 	if !times.periodStart.Before(times.periodEnd) {
 		return errors.New("report.period_start is not before report.period_end")
+	}
+	if times.periodEnd.After(times.emittedAt) {
+		return errors.New("report.period_end is after report.emitted_at")
 	}
 	if times.collectionCompleted.Before(times.collectionStarted) {
 		return errors.New("quality.collection_completed_at is before quality.collection_started_at")
@@ -544,12 +507,6 @@ func (s Snapshot) Check() error {
 		}
 	}
 
-	if !periodRe.MatchString(s.Report.Period) {
-		return fmt.Errorf("report.period has an unknown value: %q", s.Report.Period)
-	}
-	if periodTooLong(s.Report.Period) {
-		return fmt.Errorf("report.period is too long: %q", s.Report.Period)
-	}
 	if err := checkEnum("report.settings.node_autoscaling", s.Report.Settings.NodeAutoscaling, validNodeAutoscaling); err != nil {
 		return err
 	}

@@ -131,17 +131,17 @@ func TestDecodeOrder(t *testing.T) {
 		{"a JSON number", []byte(`3`), "snapshot is not a JSON object", false},
 		{"schema_version null", []byte(`{"schema_version": null}`), "snapshot has no schema_version", false},
 		{"schema_version a number", []byte(`{"schema_version": 1.0}`), "snapshot has no schema_version", false},
-		{"schema_version another version", []byte(`{"schema_version": "2.0"}`), `snapshot has schema_version "2.0"; this version reads "1.0"`, false},
+		{"schema_version another version", []byte(`{"schema_version": "3.0"}`), `snapshot has schema_version "3.0"; this version reads "2.0"`, false},
 		{
 			"another version, a missing key, and an unknown key at once",
-			[]byte(`{"schema_version": "2.0", "report": {}, "extra": 1}`),
-			`snapshot has schema_version "2.0"; this version reads "1.0"`,
+			[]byte(`{"schema_version": "3.0", "report": {}, "extra": 1}`),
+			`snapshot has schema_version "3.0"; this version reads "2.0"`,
 			false,
 		},
 		{
 			"a valid snapshot of another version",
-			mutateJSON(t, good, func(tree map[string]any) { tree["schema_version"] = "2.0" }),
-			`snapshot has schema_version "2.0"; this version reads "1.0"`,
+			mutateJSON(t, good, func(tree map[string]any) { tree["schema_version"] = "3.0" }),
+			`snapshot has schema_version "3.0"; this version reads "2.0"`,
 			false,
 		},
 		{
@@ -158,7 +158,7 @@ func TestDecodeOrder(t *testing.T) {
 		},
 		{
 			"a valid snapshot of another version, followed by another document",
-			append(mutateJSON(t, good, func(tree map[string]any) { tree["schema_version"] = "2.0" }), []byte("{}")...),
+			append(mutateJSON(t, good, func(tree map[string]any) { tree["schema_version"] = "3.0" }), []byte("{}")...),
 			"snapshot holds data after the document",
 			false,
 		},
@@ -225,9 +225,9 @@ func TestDecodeRefuses(t *testing.T) {
 		{
 			name: "another schema_version",
 			data: mutateJSON(t, good, func(tree map[string]any) {
-				tree["schema_version"] = "2.0"
+				tree["schema_version"] = "3.0"
 			}),
-			want: `snapshot has schema_version "2.0"; this version reads "1.0"`,
+			want: `snapshot has schema_version "3.0"; this version reads "2.0"`,
 		},
 		{
 			name: "an integrity failure",
@@ -304,15 +304,15 @@ func parentAndKey(t *testing.T, tree map[string]any, path string) (map[string]an
 	return nil, ""
 }
 
-// TestDecodeRefusesAnotherLetterCase builds, for each of the 81 paths of
+// TestDecodeRefusesAnotherLetterCase builds, for each of the 80 paths of
 // the contract, a valid snapshot with one more key beside the real one: the
 // same name, its first letter capitalised, holding a forged value. The
 // walk of the map compares a key letter for letter, so every one of these
 // is refused as an unknown key, never silently merged into the real one by
 // a case-insensitive struct decode.
 func TestDecodeRefusesAnotherLetterCase(t *testing.T) {
-	if len(contractPaths) != 81 {
-		t.Fatalf("contractPaths has %d entries, want 81", len(contractPaths))
+	if len(contractPaths) != 80 {
+		t.Fatalf("contractPaths has %d entries, want 80", len(contractPaths))
 	}
 
 	snap := fullSnapshot(t)
@@ -451,9 +451,10 @@ func TestCheckRefuses(t *testing.T) {
 		{"report.generator_version empty", func(s *Snapshot) { s.Report.GeneratorVersion = "" }, "report.generator_version is empty"},
 		{"report.emitted_at unparsable", func(s *Snapshot) { s.Report.EmittedAt = "not-a-time" },
 			`report.emitted_at is not an RFC 3339 time: "not-a-time"`},
-		{"report.period_end differs from report.emitted_at", func(s *Snapshot) {
-			s.Report.PeriodEnd = "2099-01-01T00:00:00Z"
-		}, "report.period_end differs from report.emitted_at"},
+		{"report.period_end after report.emitted_at", func(s *Snapshot) {
+			emitted, _ := Time(s.Report.EmittedAt)
+			s.Report.PeriodEnd = formatTime(emitted.Add(time.Second), emitted.Location())
+		}, "report.period_end is after report.emitted_at"},
 		{"report.period_start not before report.period_end", func(s *Snapshot) {
 			s.Report.PeriodStart = s.Report.PeriodEnd
 		}, "report.period_start is not before report.period_end"},
@@ -500,8 +501,6 @@ func TestCheckRefuses(t *testing.T) {
 			s.Quality.Capabilities[0].State = discovery.StatePartial
 			s.Quality.Capabilities[0].Reasons = []string{discovery.ReasonCodes[0], discovery.ReasonCodes[0]}
 		}, "quality.capabilities[0].reasons holds a repeated value"},
-		{"report.period unknown", func(s *Snapshot) { s.Report.Period = "bogus" }, `report.period has an unknown value: "bogus"`},
-		{"report.period too long", func(s *Snapshot) { s.Report.Period = "999999999d" }, `report.period is too long: "999999999d"`},
 		{"report.settings.node_autoscaling unknown", func(s *Snapshot) { s.Report.Settings.NodeAutoscaling = "bogus" }, `report.settings.node_autoscaling has an unknown value: "bogus"`},
 		{"report.timezone empty", func(s *Snapshot) { s.Report.Timezone = "" }, "report.timezone is empty"},
 		{"scope.cluster_label empty", func(s *Snapshot) { s.Scope.ClusterLabel = "" }, "scope.cluster_label is empty"},
@@ -861,7 +860,7 @@ func TestDecodeRefusesAMissingKey(t *testing.T) {
 	}
 }
 
-// contractPaths is the 81 key paths of the snapshot contract, written by
+// contractPaths is the 80 key paths of the snapshot contract, written by
 // hand, in the order the types declare them. TestKeyPathsAreTheContract
 // compares it against contractKeyPaths(3), the same list built by walking
 // the types with reflect, so that the two can actually drift apart if a
@@ -872,7 +871,6 @@ var contractPaths = []string{
 	"report.id",
 	"report.generator_version",
 	"report.emitted_at",
-	"report.period",
 	"report.period_start",
 	"report.period_end",
 	"report.timezone",
@@ -1006,7 +1004,7 @@ func TestDecodeReportsTheFirstMissingKey(t *testing.T) {
 // TestDecodeRefusesNull mirrors TestDecodeRefusesAMissingKey exactly, but
 // leaves every key in place and sets its value to JSON null instead of
 // removing it: the writer never writes null, so a snapshot holding one at
-// any of the 81 paths of the contract must be refused, by its own message.
+// any of the 80 paths of the contract must be refused, by its own message.
 func TestDecodeRefusesNull(t *testing.T) {
 	snap := fullSnapshot(t)
 	good, err := Encode(snap)
@@ -1562,13 +1560,13 @@ func TestDecodeRefusesUnknownKeyInNewSections(t *testing.T) {
 }
 
 // TestDecodeRefusesMissingNewSection reads
-// testdata/schema-1.0-before-rows.json, a snapshot whose top level holds
+// testdata/schema-2.0-before-rows.json, a snapshot whose top level holds
 // no namespaces, workloads, or findings, and whose quality holds no
 // warnings or notices: checkKeys visits quality's fields in their
 // declared order, so the first one this fixture lacks, warnings, is the
 // one Decode reports.
 func TestDecodeRefusesMissingNewSection(t *testing.T) {
-	data, err := os.ReadFile("testdata/schema-1.0-before-rows.json")
+	data, err := os.ReadFile("testdata/schema-2.0-before-rows.json")
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
 	}
@@ -2255,7 +2253,7 @@ func TestDecodeRefusesARepeatedKey(t *testing.T) {
 		data    string
 		message string
 	}{
-		{"at the top", strings.Replace(good, `"schema_version": "1.0",`, `"schema_version": "1.0", "schema_version": "1.0",`, 1), "snapshot repeats the key schema_version"},
+		{"at the top", strings.Replace(good, `"schema_version": "2.0",`, `"schema_version": "2.0", "schema_version": "2.0",`, 1), "snapshot repeats the key schema_version"},
 		{"inside report", strings.Replace(good, `"profile": "detailed",`, `"profile": "detailed", "profile": "executive",`, 1), "snapshot repeats the key report.profile"},
 		{"inside a finding", good[:firstCode] + codeLine + " " + codeLine + good[firstCode+len(codeLine):], "snapshot repeats the key findings[0].code"},
 	}
@@ -2294,12 +2292,12 @@ func TestDecodeNamesAWrongVersionBeforeARepeatedKey(t *testing.T) {
 	firstCode := findings + strings.Index(good[findings:], `"code": `)
 	codeLine := good[firstCode : firstCode+strings.Index(good[firstCode:], "\n")]
 	repeated := good[:firstCode] + codeLine + " " + codeLine + good[firstCode+len(codeLine):]
-	data := strings.Replace(repeated, `"schema_version": "1.0"`, `"schema_version": "0.9"`, 1)
+	data := strings.Replace(repeated, `"schema_version": "2.0"`, `"schema_version": "0.9"`, 1)
 	if data == repeated {
 		t.Fatal("the mutation changed nothing")
 	}
 	_, err := Decode([]byte(data))
-	const want = `snapshot has schema_version "0.9"; this version reads "1.0"`
+	const want = `snapshot has schema_version "0.9"; this version reads "2.0"`
 	if err == nil || err.Error() != want {
 		t.Fatalf("Decode() error = %v, want %q", err, want)
 	}
@@ -2567,9 +2565,71 @@ func TestSchemaShapeIsFrozen(t *testing.T) {
 	paths := shapePaths(reflect.TypeOf(Snapshot{}), "")
 	sort.Strings(paths)
 	sum := sha256.Sum256([]byte(strings.Join(paths, "\n")))
-	const frozen = "f65e7a232d3af47bb8ee94e2257407eac4d9eb7768db2d4b34e11085056a173f"
+	const frozen = "377c249cde3f0ff946d1784d43a29b5804b841a73c8a688ed92669e121abca3e"
 	if got := hex.EncodeToString(sum[:]); got != frozen {
 		t.Logf("%d paths, hash of the key paths: %s", len(paths), got)
 		t.Fatalf("the shape of schema %s changed; raise snapshot.SchemaVersion and record the new shape", SchemaVersion)
+	}
+}
+
+func TestSnapshotHasNoPeriod(t *testing.T) {
+	data, err := Encode(validSnapshot(t))
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+	var tree map[string]any
+	if err := json.Unmarshal(data, &tree); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if tree["schema_version"] != "2.0" {
+		t.Errorf("schema_version = %v, want 2.0", tree["schema_version"])
+	}
+	if _, ok := tree["report"].(map[string]any)["period"]; ok {
+		t.Error("report holds the key period")
+	}
+}
+
+func TestSnapshotEndMayPrecedeTheEmission(t *testing.T) {
+	s := validSnapshot(t)
+	emitted, _ := Time(s.Report.EmittedAt)
+	s.Report.PeriodEnd = formatTime(emitted.Add(-24*time.Hour), emitted.Location())
+	s.Report.PeriodStart = formatTime(emitted.Add(-48*time.Hour), emitted.Location())
+	data, err := Encode(s)
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+	if _, err := Decode(data); err != nil {
+		t.Fatalf("Decode() error = %v", err)
+	}
+}
+
+func TestSnapshotEndAfterTheEmission(t *testing.T) {
+	s := validSnapshot(t)
+	emitted, _ := Time(s.Report.EmittedAt)
+	s.Report.PeriodEnd = formatTime(emitted.Add(time.Second), emitted.Location())
+	err := s.Check()
+	if err == nil || err.Error() != "report.period_end is after report.emitted_at" {
+		t.Fatalf("Check() error = %v", err)
+	}
+}
+
+func TestSnapshotNamesVersionOne(t *testing.T) {
+	data := mutateJSON(t, goldenBytes(t, "direct-complete"), func(tree map[string]any) { tree["schema_version"] = "1.0" })
+	_, err := Decode(data)
+	const want = `snapshot has schema_version "1.0"; this version reads "2.0"`
+	if err == nil || err.Error() != want {
+		t.Fatalf("Decode() error = %v, want %q", err, want)
+	}
+}
+
+func TestSnapshotRefusesAPeriodKey(t *testing.T) {
+	data, err := Encode(validSnapshot(t))
+	if err != nil {
+		t.Fatalf("Encode() error = %v", err)
+	}
+	data = mutateJSON(t, data, func(tree map[string]any) { tree["report"].(map[string]any)["period"] = "24h" })
+	_, err = Decode(data)
+	if err == nil || !strings.HasPrefix(err.Error(), "snapshot holds an unknown key: ") {
+		t.Fatalf("Decode() error = %v, want an unknown key", err)
 	}
 }

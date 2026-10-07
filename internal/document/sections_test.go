@@ -222,7 +222,6 @@ func scenarioSnapshot(t *testing.T) snapshot.Snapshot {
 			ID:               "run-001",
 			GeneratorVersion: "kcr-9.9.9",
 			EmittedAt:        "2026-07-15T14:30:00-03:00",
-			Period:           "24h",
 			PeriodStart:      "2026-07-14T14:30:00-03:00",
 			PeriodEnd:        "2026-07-15T14:30:00-03:00",
 			Timezone:         "America/Sao_Paulo",

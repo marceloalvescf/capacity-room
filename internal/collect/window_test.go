@@ -172,3 +172,69 @@ func TestNewWindowAcrossTheSkippedHour(t *testing.T) {
 		})
 	}
 }
+
+func rangeAnalysis(start, end string) config.Analysis {
+	return config.Analysis{Start: start, End: end, Timezone: "America/Sao_Paulo"}
+}
+
+func saoPaulo(t *testing.T) *time.Location {
+	t.Helper()
+	loc, err := time.LoadLocation("America/Sao_Paulo")
+	if err != nil {
+		t.Fatalf("LoadLocation: %v", err)
+	}
+	return loc
+}
+
+func TestWindowOfARange(t *testing.T) {
+	emitted := time.Date(2026, 7, 15, 14, 30, 0, 0, saoPaulo(t))
+	got, err := NewWindow(rangeAnalysis("2026-07-13 00:00", "2026-07-14 00:00"), emitted)
+	if err != nil {
+		t.Fatalf("NewWindow: %v", err)
+	}
+	wantStart := time.Date(2026, 7, 13, 3, 0, 0, 0, time.UTC)
+	wantEnd := time.Date(2026, 7, 14, 3, 0, 0, 0, time.UTC)
+	if !got.Start.Equal(wantStart) || !got.End.Equal(wantEnd) || got.Step != "5m" {
+		t.Errorf("window = %v %v %q, want %v %v 5m", got.Start.UTC(), got.End.UTC(), got.Step, wantStart, wantEnd)
+	}
+}
+
+func TestWindowStepFollowsTheRange(t *testing.T) {
+	emitted := time.Date(2026, 9, 20, 0, 0, 0, 0, saoPaulo(t))
+	tests := []struct{ name, start, end, want string }{
+		{"30 minutes", "2026-08-01 00:00", "2026-08-01 00:30", "30s"},
+		{"6 hours", "2026-08-01 00:00", "2026-08-01 06:00", "2m"},
+		{"7 days", "2026-08-01 00:00", "2026-08-08 00:00", "15m"},
+		{"31 days", "2026-08-01 00:00", "2026-09-01 00:00", "1h"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewWindow(rangeAnalysis(tt.start, tt.end), emitted)
+			if err != nil {
+				t.Fatalf("NewWindow: %v", err)
+			}
+			if got.Step != tt.want {
+				t.Errorf("Step = %q, want %q", got.Step, tt.want)
+			}
+		})
+	}
+}
+
+func TestWindowRangeEndingAtTheRun(t *testing.T) {
+	emitted := time.Date(2026, 7, 14, 0, 0, 0, 900_000_000, saoPaulo(t))
+	if _, err := NewWindow(rangeAnalysis("2026-07-13 00:00", "2026-07-14 00:00"), emitted); err != nil {
+		t.Fatalf("NewWindow: %v", err)
+	}
+}
+
+func TestWindowRangeAfterTheRun(t *testing.T) {
+	emitted := time.Date(2026, 7, 13, 23, 59, 0, 0, saoPaulo(t))
+	_, err := NewWindow(rangeAnalysis("2026-07-13 00:00", "2026-07-14 00:00"), emitted)
+	if !errors.Is(err, ErrRangeAfterRun) {
+		t.Fatalf("err = %v, want ErrRangeAfterRun", err)
+	}
+	want := "analysis.end: the range ends at 2026-07-14 00:00, after the run started at 2026-07-13 23:59 in America/Sao_Paulo"
+	if err.Error() != want {
+		t.Errorf("message = %q, want %q", err.Error(), want)
+	}
+}

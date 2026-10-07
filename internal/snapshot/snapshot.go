@@ -10,7 +10,7 @@ package snapshot
 
 // SchemaVersion is the only schema version this package writes, and the
 // only one Decode accepts.
-const SchemaVersion = "1.0"
+const SchemaVersion = "2.0"
 
 // Snapshot is the stored contract of one report run.
 type Snapshot struct {
@@ -36,7 +36,6 @@ type Report struct {
 	ID               string     `json:"id"`
 	GeneratorVersion string     `json:"generator_version"`
 	EmittedAt        string     `json:"emitted_at"` // RFC 3339, with offset, cut to whole seconds
-	Period           string     `json:"period"`
 	PeriodStart      string     `json:"period_start"`
 	PeriodEnd        string     `json:"period_end"`
 	Timezone         string     `json:"timezone"`

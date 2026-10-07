@@ -180,9 +180,6 @@ func TestBuildCopiesEveryField(t *testing.T) {
 	if snap.Report.GeneratorVersion != in.GeneratorVersion {
 		t.Errorf("Report.GeneratorVersion = %q, want %q", snap.Report.GeneratorVersion, in.GeneratorVersion)
 	}
-	if snap.Report.Period != in.Config.Analysis.Period {
-		t.Errorf("Report.Period = %q, want %q", snap.Report.Period, in.Config.Analysis.Period)
-	}
 	if snap.Report.Timezone != in.Config.Analysis.Timezone {
 		t.Errorf("Report.Timezone = %q, want %q", snap.Report.Timezone, in.Config.Analysis.Timezone)
 	}
@@ -370,7 +367,6 @@ func TestBuildEveryFieldChangesTheBytes(t *testing.T) {
 			in.Collected.Namespaces.Rows = baseCollectedNamespaces(in.Config.Cluster.Namespaces)
 		}},
 		{"Config.Cluster.NodepoolLabel", func(in *Input) { in.Config.Cluster.NodepoolLabel = "other-label" }},
-		{"Config.Analysis.Period", func(in *Input) { in.Config.Analysis.Period = "7d" }},
 		{"Config.Analysis.Timezone", func(in *Input) { in.Config.Analysis.Timezone = "America/New_York" }},
 		{"Config.Analysis.NodeAutoscaling", func(in *Input) { in.Config.Analysis.NodeAutoscaling = "enabled" }},
 		{"Config.Analysis.ExcludedContainers", func(in *Input) { in.Config.Analysis.ExcludedContainers = []string{"other-sidecar"} }},

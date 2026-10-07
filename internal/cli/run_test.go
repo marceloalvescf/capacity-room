@@ -881,10 +881,10 @@ func TestSnapshotFileRefusals(t *testing.T) {
 	}{
 		{"missing file", func(t *testing.T) string { return filepath.Join(t.TempDir(), "missing.json") }},
 		{"other schema version", func(t *testing.T) string {
-			return writeVariant(t, []byte(strings.Replace(string(golden), `"schema_version": "1.0"`, `"schema_version": "9.9"`, 1)))
+			return writeVariant(t, []byte(strings.Replace(string(golden), `"schema_version": "2.0"`, `"schema_version": "9.9"`, 1)))
 		}},
 		{"unknown key", func(t *testing.T) string {
-			return writeVariant(t, []byte(strings.Replace(string(golden), "\"schema_version\": \"1.0\",", "\"schema_version\": \"1.0\", \"bogus\": true,", 1)))
+			return writeVariant(t, []byte(strings.Replace(string(golden), "\"schema_version\": \"2.0\",", "\"schema_version\": \"2.0\", \"bogus\": true,", 1)))
 		}},
 		{"two documents", func(t *testing.T) string {
 			return writeVariant(t, append(append([]byte{}, golden...), golden...))
@@ -1782,7 +1782,7 @@ func TestCommandStopsOnASlash(t *testing.T) {
 // missing key: it is read straight from internal/snapshot's own fixture,
 // never copied.
 func TestFromSnapshotRefusesASnapshotOfThePartBefore(t *testing.T) {
-	snapPath, err := filepath.Abs(filepath.Join("..", "snapshot", "testdata", "schema-1.0-before-rows.json"))
+	snapPath, err := filepath.Abs(filepath.Join("..", "snapshot", "testdata", "schema-2.0-before-rows.json"))
 	if err != nil {
 		t.Fatalf("resolving path: %v", err)
 	}
@@ -1994,5 +1994,51 @@ func TestRunPrintsTheCollectionLines(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("last lines =\n%q\nwant\n%q", got, want)
+	}
+}
+
+// TestRunRefusesARangeAfterTheRun proves that a range that ends after the
+// clock stops every mode with exit code 2, one line naming analysis.end, and
+// no request.
+func TestRunRefusesARangeAfterTheRun(t *testing.T) {
+	tests := []struct {
+		name string
+		args func(cfgPath, outDir string) []string
+	}{
+		{"check", func(cfgPath, _ string) []string {
+			return []string{"report", "--config", cfgPath, "--check"}
+		}},
+		{"snapshot", func(cfgPath, outDir string) []string {
+			return []string{"report", "--config", cfgPath, "--snapshot", filepath.Join(outDir, "s.json")}
+		}},
+		{"pdf", func(cfgPath, outDir string) []string {
+			return []string{"report", "--config", cfgPath, "--output", filepath.Join(outDir, "r.pdf")}
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server, handler, scenario := startScenario(t, "direct-complete")
+			defer server.Close()
+
+			outDir := t.TempDir()
+			text := strings.Replace(emptyPeriodConfig(server, scenario, outDir),
+				"period = \"1h\"\ntimezone = \"Europe/Berlin\"",
+				"start = \"2026-07-14 00:00\"\nend = \"2026-07-16 00:00\"\ntimezone = \"America/Sao_Paulo\"", 1)
+			cfgPath := writeConfig(t, text)
+
+			stdout, stderr, code := runArgs(context.Background(), testEnv(t), tt.args(cfgPath, outDir))
+			if code != 2 {
+				t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
+			}
+			if !strings.HasPrefix(stderr, "error: analysis.end: the range ends at 2026-07-16 00:00, after the run started at ") {
+				t.Fatalf("stderr = %q", stderr)
+			}
+			if stdout != "" {
+				t.Fatalf("stdout = %q, want empty", stdout)
+			}
+			if len(handler.Seen()) != 0 {
+				t.Fatalf("the server saw %d requests, want 0", len(handler.Seen()))
+			}
+		})
 	}
 }

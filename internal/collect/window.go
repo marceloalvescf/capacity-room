@@ -21,6 +21,23 @@ type Window struct {
 // ErrEmptyPeriod is the error of a period whose start is not before its end.
 var ErrEmptyPeriod = errors.New("the analysis period is empty")
 
+// ErrRangeAfterRun is the error of a range that ends after the run started.
+var ErrRangeAfterRun = errors.New("the analysis range ends after the run")
+
+// rangeAfterRunError names the end of a refused range, the emission time, and
+// the zone, and wraps ErrRangeAfterRun.
+type rangeAfterRunError struct {
+	end     string
+	emitted string
+	zone    string
+}
+
+func (e *rangeAfterRunError) Error() string {
+	return fmt.Sprintf("analysis.end: the range ends at %s, after the run started at %s in %s", e.end, e.emitted, e.zone)
+}
+
+func (e *rangeAfterRunError) Unwrap() error { return ErrRangeAfterRun }
+
 // emptyPeriodError names the period, the end, and the zone of a refused
 // window, and wraps ErrEmptyPeriod.
 type emptyPeriodError struct {
@@ -39,11 +56,16 @@ func (e *emptyPeriodError) Unwrap() error { return ErrEmptyPeriod }
 // emittedAt cut to whole seconds; Start is the wall clock of End in the
 // zone of analysis, less the period, normalised by the zone; Step comes
 // from Step. When the zone's offset changes inside the period, Start can
-// end up not before End; that window is refused.
+// end up not before End; that window is refused. When analysis holds a
+// range, Start and End are its two instants, and an End after emittedAt cut
+// to whole seconds is refused.
 func NewWindow(analysis config.Analysis, emittedAt time.Time) (Window, error) {
 	loc, err := analysis.Location()
 	if err != nil {
 		return Window{}, err
+	}
+	if analysis.Start != "" {
+		return rangeWindow(analysis, loc, emittedAt)
 	}
 	period, err := analysis.Duration()
 	if err != nil {
@@ -62,6 +84,23 @@ func NewWindow(analysis config.Analysis, emittedAt time.Time) (Window, error) {
 	}
 
 	return Window{Start: start, End: end, Step: Step(period)}, nil
+}
+
+// rangeWindow builds the window of the range of analysis.
+func rangeWindow(analysis config.Analysis, loc *time.Location, emittedAt time.Time) (Window, error) {
+	start, end, err := analysis.Range()
+	if err != nil {
+		return Window{}, err
+	}
+	run := emittedAt.Truncate(time.Second)
+	if end.After(run) {
+		return Window{}, &rangeAfterRunError{
+			end:     end.In(loc).Format(config.WallTimeLayout),
+			emitted: run.In(loc).Format(config.WallTimeLayout),
+			zone:    analysis.Timezone,
+		}
+	}
+	return Window{Start: start, End: end, Step: Step(end.Sub(start))}, nil
 }
 
 // periodStart computes the wall clock of emittedAt in loc, less period, and

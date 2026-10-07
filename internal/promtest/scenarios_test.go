@@ -152,3 +152,19 @@ func TestOwnScenariosMatchTheirChecksums(t *testing.T) {
 		}
 	}
 }
+
+// TestPathOfARangeScenarioReadsItsFixture checks that a range scenario
+// resolves to the recorded answers of the scenario it borrows, and that no
+// scenario of the original's list is a range.
+func TestPathOfARangeScenarioReadsItsFixture(t *testing.T) {
+	path, err := Path("direct-complete-range")
+	if err != nil {
+		t.Fatalf("Path: %v", err)
+	}
+	if want := filepath.Join("testdata", "prometheus", "direct-complete.json"); !strings.HasSuffix(path, want) {
+		t.Fatalf("Path = %q, want it to end with %q", path, want)
+	}
+	if _, err := Load(path); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+}

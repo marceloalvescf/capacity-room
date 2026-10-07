@@ -154,8 +154,9 @@ func TestGoldenSnapshotsAreUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) != len(promtest.Scenarios) {
-		t.Fatalf("found %d golden snapshots, want %d", len(files), len(promtest.Scenarios))
+	want := len(promtest.Scenarios) + len(promtest.RangeScenarios)
+	if len(files) != want {
+		t.Fatalf("found %d golden snapshots, want %d", len(files), want)
 	}
 	for _, file := range files {
 		data, err := os.ReadFile(file)

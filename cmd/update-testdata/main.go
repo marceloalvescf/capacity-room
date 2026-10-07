@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/goldentest"
@@ -92,8 +93,9 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	snapshots := make(map[string][]byte, len(promtest.Scenarios))
-	for _, scenario := range promtest.Scenarios {
+	all := slices.Concat(promtest.Scenarios, promtest.RangeScenarios)
+	snapshots := make(map[string][]byte, len(all))
+	for _, scenario := range all {
 		data, err := goldentest.Snapshot(ctx, scenario)
 		if err != nil {
 			return err

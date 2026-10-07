@@ -53,7 +53,6 @@ func Build(in Input) (Snapshot, error) {
 			ID:               in.ID,
 			GeneratorVersion: in.GeneratorVersion,
 			EmittedAt:        emittedAt,
-			Period:           in.Config.Analysis.Period,
 			PeriodStart:      formatTime(in.Window.Start, loc),
 			PeriodEnd:        formatTime(in.Window.End, loc),
 			Timezone:         in.Config.Analysis.Timezone,

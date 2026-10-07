@@ -81,6 +81,9 @@ func fixedConfig(scenario promtest.Scenario, serverURL string) config.Config {
 	cfg.Cluster.Name = clusterName
 	cfg.Cluster.Namespaces = namespaces
 	cfg.Analysis.NodeAutoscaling = scenario.NodeAutoscaling
+	if scenario.Start != "" {
+		cfg.Analysis.Period, cfg.Analysis.Start, cfg.Analysis.End = "", scenario.Start, scenario.End
+	}
 	cfg.Analysis.ExcludedContainers = excludedContainers
 	cfg.Report.Organization = organization
 	cfg.Report.Classification = classification

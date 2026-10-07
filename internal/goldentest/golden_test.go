@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -43,10 +44,11 @@ func compareGolden(path string, got []byte) error {
 	return nil
 }
 
-// TestGoldenSnapshots runs every scenario of promtest.Scenarios through
+// TestGoldenSnapshots runs every scenario of promtest.Scenarios and
+// promtest.RangeScenarios through
 // Snapshot and compares the result with its golden file.
 func TestGoldenSnapshots(t *testing.T) {
-	for _, scenario := range promtest.Scenarios {
+	for _, scenario := range slices.Concat(promtest.Scenarios, promtest.RangeScenarios) {
 		t.Run(scenario.Name, func(t *testing.T) {
 			got, err := Snapshot(context.Background(), scenario)
 			if err != nil {
@@ -134,11 +136,12 @@ func jsonStems(t *testing.T, dir string) []string {
 	return fileStems(t, dir, ".json")
 }
 
-// TestGoldenQueries runs every scenario of promtest.Scenarios through
+// TestGoldenQueries runs every scenario of promtest.Scenarios and
+// promtest.RangeScenarios through
 // Queries and compares the result with its golden file: the queries the
 // program sends for that scenario are pinned exactly like its snapshot.
 func TestGoldenQueries(t *testing.T) {
-	for _, scenario := range promtest.Scenarios {
+	for _, scenario := range slices.Concat(promtest.Scenarios, promtest.RangeScenarios) {
 		t.Run(scenario.Name, func(t *testing.T) {
 			got, err := Queries(context.Background(), scenario)
 			if err != nil {
@@ -357,7 +360,7 @@ func TestGoldenFoldersHoldNoStranger(t *testing.T) {
 			t.Fatalf("SnapshotPath: %v", err)
 		}
 		var want []string
-		for _, s := range promtest.Scenarios {
+		for _, s := range slices.Concat(promtest.Scenarios, promtest.RangeScenarios) {
 			want = append(want, s.Name)
 		}
 		sort.Strings(want)
@@ -401,7 +404,7 @@ func TestGoldenFoldersHoldNoStranger(t *testing.T) {
 			t.Fatalf("QueriesPath: %v", err)
 		}
 		var want []string
-		for _, s := range promtest.Scenarios {
+		for _, s := range slices.Concat(promtest.Scenarios, promtest.RangeScenarios) {
 			want = append(want, s.Name)
 		}
 		sort.Strings(want)
