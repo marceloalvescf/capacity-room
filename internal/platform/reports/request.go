@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -47,6 +48,22 @@ func checkSyntax(sel Selection) map[string]string {
 	if sel.Period != nil && config.ValidatePeriod(*sel.Period) != nil {
 		fields["period"] = wordInvalid
 	}
+	for _, e := range []struct {
+		field        string
+		value, other *string
+	}{{"start", sel.Start, sel.End}, {"end", sel.End, sel.Start}} {
+		switch {
+		case e.value == nil && e.other != nil:
+			fields[e.field] = wordMissing
+		case e.value != nil:
+			if _, err := config.ParseWallTime(*e.value, time.UTC); err != nil {
+				fields[e.field] = wordInvalid
+			}
+			if sel.Period != nil {
+				fields["period"] = wordConflict
+			}
+		}
+	}
 	if sel.Timezone != nil && config.ValidateTimezone(*sel.Timezone) != nil {
 		fields["timezone"] = wordInvalid
 	}
@@ -68,11 +85,15 @@ func checkSyntax(sel Selection) map[string]string {
 	return fields
 }
 
-// resolve judges the selection against the document of the pinned revision
-// and fills the defaults.
-func resolve(sel Selection, d profiles.Document) (Resolved, map[string]string) {
+// resolve fills the defaults of the selection from the document of the
+// pinned revision. A range has no period.
+func resolve(sel Selection, d profiles.Document) Resolved {
 	period, zone, reportProfile, severity := d.ResolvedDefaults()
-	if sel.Period != nil {
+	var start, end string
+	switch {
+	case sel.Start != nil:
+		period, start, end = "", *sel.Start, *sel.End
+	case sel.Period != nil:
 		period = *sel.Period
 	}
 	if sel.Timezone != nil {
@@ -84,11 +105,48 @@ func resolve(sel Selection, d profiles.Document) (Resolved, map[string]string) {
 	if sel.MinSeverity != nil {
 		severity = *sel.MinSeverity
 	}
-	out := Resolved{
-		Namespaces: slices.Clone(sel.Namespaces), Period: period, Timezone: zone,
+	return Resolved{
+		Namespaces: slices.Clone(sel.Namespaces), Period: period, Start: start, End: end, Timezone: zone,
 		ReportProfile: reportProfile, MinSeverity: severity, Language: *sel.Language,
 	}
+}
+
+// judgeRange judges the wall times of a resolved range in the zone: a time
+// the zone lacks or holds twice is invalid, a start not before the end is
+// out of order, and an end after now is in the future. A length has no range.
+func judgeRange(start, end string, zone *time.Location, now time.Time) map[string]string {
+	if start == "" {
+		return nil
+	}
 	fields := map[string]string{}
+	from, errStart := config.ParseWallTime(start, zone)
+	to, errEnd := config.ParseWallTime(end, zone)
+	if errStart != nil {
+		fields["start"] = wordInvalid
+	}
+	if errEnd != nil {
+		fields["end"] = wordInvalid
+	}
+	if errStart == nil && errEnd == nil && !from.Before(to) {
+		fields["start"] = wordOrder
+	}
+	if errEnd == nil && to.After(now) {
+		fields["end"] = wordFuture
+	}
+	if len(fields) == 0 {
+		return nil
+	}
+	return fields
+}
+
+// permits judges a resolved selection against the permitted lists of the
+// document. A range is held against the permitted periods as a whole.
+func permits(sel Selection, out Resolved, d profiles.Document) map[string]string {
+	period, zone, reportProfile, severity := out.Period, out.Timezone, out.ReportProfile, out.MinSeverity
+	fields := map[string]string{}
+	if sel.Start != nil && len(d.PermittedPeriods) > 0 {
+		fields["start"] = wordNotPermitted
+	}
 	for _, ns := range sel.Namespaces {
 		if !slices.Contains(d.AllowedNamespaces, ns) {
 			fields["namespaces"] = wordNotPermitted
@@ -98,7 +156,7 @@ func resolve(sel Selection, d profiles.Document) (Resolved, map[string]string) {
 		field, value string
 		permitted    []string
 	}{
-		{"period", period, d.PermittedPeriods},
+		{"period", period, periodsOf(sel, d)},
 		{"timezone", zone, d.PermittedTimezones},
 		{"report_profile", reportProfile, d.PermittedReportProfiles},
 		{"min_severity", severity, d.PermittedMinSeverities},
@@ -108,9 +166,17 @@ func resolve(sel Selection, d profiles.Document) (Resolved, map[string]string) {
 		}
 	}
 	if len(fields) == 0 {
-		return out, nil
+		return nil
 	}
-	return out, fields
+	return fields
+}
+
+// periodsOf is the list the period of a selection is held to: none for a range.
+func periodsOf(sel Selection, d profiles.Document) []string {
+	if sel.Start != nil {
+		return nil
+	}
+	return d.PermittedPeriods
 }
 
 // requestDigest is the SHA-256 of the selection as the operator sent it, in
@@ -194,8 +260,15 @@ func (s *Service) Request(ctx context.Context, actor auth.Principal, key string,
 		if err := json.Unmarshal(revision.Document, &document); err != nil {
 			return fmt.Errorf("decode profile document: %w", err)
 		}
-		resolved, fields := resolve(sel, document)
-		if fields != nil {
+		resolved := resolve(sel, document)
+		zone, err := time.LoadLocation(resolved.Timezone)
+		if err != nil {
+			return fmt.Errorf("load time zone: %w", err)
+		}
+		if fields := judgeRange(resolved.Start, resolved.End, zone, now); fields != nil {
+			return &Error{Code: CodeRequestInvalid, Fields: fields}
+		}
+		if fields := permits(sel, resolved, document); fields != nil {
 			return &Error{Code: CodeSelectionNotPermitted, Fields: fields}
 		}
 		global, perProfile, err := store.CountActiveReports(ctx, tx, sel.ProfileID)

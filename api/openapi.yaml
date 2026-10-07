@@ -479,7 +479,7 @@ paths:
           description: >-
             IDEMPOTENCY_KEY_INVALID when the header is missing or malformed;
             REQUEST_INVALID with one field per problem of the body (missing,
-            invalid, repeated, empty, unknown).
+            invalid, repeated, empty, unknown, conflict, order, future).
           content:
             application/json:
               schema:
@@ -1082,7 +1082,7 @@ components:
     ReportSelection:
       type: object
       description: The selection the report runs, with every default resolved.
-      required: [namespaces, period, timezone, report_profile, min_severity, language]
+      required: [namespaces, period, start, end, timezone, report_profile, min_severity, language]
       properties:
         namespaces:
           type: array
@@ -1090,6 +1090,16 @@ components:
             type: string
         period:
           type: string
+          nullable: true
+          description: The length of the period; null for a calendar range.
+        start:
+          type: string
+          nullable: true
+          description: The first wall time of a calendar range, in the report's time zone; null for a length.
+        end:
+          type: string
+          nullable: true
+          description: The last wall time of a calendar range, in the report's time zone; null for a length.
         timezone:
           type: string
         report_profile:
@@ -1116,6 +1126,16 @@ components:
         period:
           type: string
           nullable: true
+        start:
+          type: string
+          nullable: true
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}$"
+          description: The first wall time of a calendar range, in the request's resolved time zone; sent with end, never with period.
+        end:
+          type: string
+          nullable: true
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}$"
+          description: The last wall time of a calendar range, in the request's resolved time zone; at or before the request time.
         timezone:
           type: string
           nullable: true

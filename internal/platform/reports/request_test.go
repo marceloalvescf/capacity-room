@@ -589,7 +589,7 @@ func TestRequestStoresTheDigest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if digest != "6f7ca3542fa84347adb27b3894763e8ca7a1277cd04de6fd2558b5a3937cf11f" {
+	if digest != "d7b88d2ce0f570e772b732b3da3570d7df393ce531168ba0e3e9866aae88c5d9" {
 		t.Fatalf("digest = %s", digest)
 	}
 }
@@ -655,5 +655,143 @@ func TestRequestTakesTheRequestLock(t *testing.T) {
 		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("the request did not finish after the lock was released")
+	}
+}
+
+func rangeSelection(f *fixture, start, end string) Selection {
+	sel := f.selection()
+	sel.Start, sel.End = &start, &end
+	return sel
+}
+
+func wantInvalid(t *testing.T, f *fixture, sel Selection, code, field, word string) {
+	t.Helper()
+	_, err := f.svc.Request(context.Background(), f.op, "k-"+field+word, sel)
+	e := asError(t, err)
+	if e.Code != code || !reflect.DeepEqual(e.Fields, map[string]string{field: word}) {
+		t.Fatalf("error = %+v, want %s %s=%s", e, code, field, word)
+	}
+}
+
+func TestRequestStoresARange(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	got, err := f.svc.Request(context.Background(), f.op, "k1", rangeSelection(f, "2026-09-01 00:00", "2026-10-01 00:00"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := store.GetReport(context.Background(), f.pool, got.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stored Resolved
+	if err := json.Unmarshal(r.Request, &stored); err != nil {
+		t.Fatal(err)
+	}
+	want := Resolved{Namespaces: []string{"payments"}, Period: "", Start: "2026-09-01 00:00", End: "2026-10-01 00:00",
+		Timezone: "America/Sao_Paulo", ReportProfile: "detailed", MinSeverity: "all", Language: "en"}
+	if !reflect.DeepEqual(stored, want) {
+		t.Fatalf("stored selection = %+v, want %+v", stored, want)
+	}
+}
+
+func TestRequestRangeShape(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	sel := f.selection()
+	sel.Start, sel.End = ptr("2026-9-1 0:00"), ptr("2026-10-01 00:00")
+	wantInvalid(t, f, sel, "REQUEST_INVALID", "start", "invalid")
+}
+
+func TestRequestRangeNeedsBothEnds(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	sel := f.selection()
+	sel.Start = ptr("2026-09-01 00:00")
+	wantInvalid(t, f, sel, "REQUEST_INVALID", "end", "missing")
+	sel = f.selection()
+	sel.End = ptr("2026-09-01 00:00")
+	wantInvalid(t, f, sel, "REQUEST_INVALID", "start", "missing")
+}
+
+func TestRequestRangeWithAPeriod(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	sel := rangeSelection(f, "2026-09-01 00:00", "2026-10-01 00:00")
+	sel.Period = ptr("7d")
+	wantInvalid(t, f, sel, "REQUEST_INVALID", "period", "conflict")
+}
+
+func TestRequestRangeOrder(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	wantInvalid(t, f, rangeSelection(f, "2026-10-01 00:00", "2026-09-01 00:00"), "REQUEST_INVALID", "start", "order")
+	wantInvalid(t, f, rangeSelection(f, "2026-09-01 00:00", "2026-09-01 00:00"), "REQUEST_INVALID", "start", "order")
+}
+
+func TestRequestRangeInAGap(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	sel := rangeSelection(f, "2026-03-08 02:30", "2026-03-08 04:00")
+	sel.Timezone = ptr("America/New_York")
+	wantInvalid(t, f, sel, "REQUEST_INVALID", "start", "invalid")
+}
+
+func atWall(t *testing.T, zone, wall string) time.Time {
+	t.Helper()
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	at, err := time.ParseInLocation("2006-01-02 15:04:05", wall, loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return at
+}
+
+func TestRequestRangeEndingNow(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	now := atWall(t, "America/Sao_Paulo", "2026-10-07 18:00:42")
+	f.svc.Now = func() time.Time { return now }
+	if _, err := f.svc.Request(context.Background(), f.op, "k1", rangeSelection(f, "2026-10-07 00:00", "2026-10-07 18:00")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRequestRangeInTheFuture(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	now := atWall(t, "America/Sao_Paulo", "2026-10-07 18:00:42")
+	f.svc.Now = func() time.Time { return now }
+	wantInvalid(t, f, rangeSelection(f, "2026-10-07 00:00", "2026-10-07 18:01"), "REQUEST_INVALID", "end", "future")
+}
+
+func TestRequestRangeUnderPermittedPeriods(t *testing.T) {
+	f := newFixture(t)
+	d := baseDocument()
+	d.PermittedPeriods = []string{"24h"}
+	f.addProfile(t, "prod", d)
+	wantInvalid(t, f, rangeSelection(f, "2026-09-01 00:00", "2026-10-01 00:00"), "REPORT_SELECTION_NOT_PERMITTED", "start", "not_permitted")
+}
+
+func TestRequestRangeWordsBeforePermits(t *testing.T) {
+	f := newFixture(t)
+	d := baseDocument()
+	d.PermittedPeriods = []string{"24h"}
+	f.addProfile(t, "prod", d)
+	wantInvalid(t, f, rangeSelection(f, "2026-10-01 00:00", "2026-09-01 00:00"), "REQUEST_INVALID", "start", "order")
+}
+
+func TestKeyReusedWithAnotherRange(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	if _, err := f.svc.Request(context.Background(), f.op, "k1", rangeSelection(f, "2026-09-01 00:00", "2026-10-01 00:00")); err != nil {
+		t.Fatal(err)
+	}
+	_, err := f.svc.Request(context.Background(), f.op, "k1", rangeSelection(f, "2026-09-01 00:00", "2026-09-30 00:00"))
+	if e := asError(t, err); e.Code != CodeIdempotencyKeyReused {
+		t.Fatalf("error = %+v", e)
 	}
 }

@@ -73,6 +73,8 @@ export function report(overrides: Partial<Report> = {}): Report {
     selection: {
       namespaces: [],
       period: "24h",
+      start: null,
+      end: null,
       timezone: "America/Sao_Paulo",
       report_profile: "detailed",
       min_severity: "all",

@@ -409,6 +409,8 @@ describe("new report form", () => {
       selection: {
         namespaces: ["checkout"],
         period: "36h",
+        start: null,
+        end: null,
         timezone: "America/Sao_Paulo",
         report_profile: "detailed",
         min_severity: "critical",

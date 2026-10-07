@@ -494,7 +494,7 @@ func TestReportRouteStatuses(t *testing.T) {
 	}
 	r := decodeStrict[Report](t, w)
 	if r.Id != queued || r.Status != ReportStatusQueued || r.Phase != Waiting || r.OwnerUsername != "ops" ||
-		r.ProfileId != "prod" || r.Selection.Period != "24h" || len(r.Selection.Namespaces) != 1 || r.Expired {
+		r.ProfileId != "prod" || r.Selection.Period == nil || *r.Selection.Period != "24h" || len(r.Selection.Namespaces) != 1 || r.Expired {
 		t.Fatalf("report %+v", r)
 	}
 	if !strings.Contains(w.Body.String(), `"pdfs":[]`) {
@@ -903,5 +903,41 @@ func TestStoredSnapshotChangedUnderItsDigestAnswers500(t *testing.T) {
 		t.Run(path[strings.LastIndex(path, "/")+1:], func(t *testing.T) {
 			wantProblem(t, ts.as(t, &c.eve, "GET", path, "", nil), 500, CodeInternalError, nil)
 		})
+	}
+}
+
+func postAndGet(t *testing.T, ts *testServer, c *cast, body string) Report {
+	t.Helper()
+	w := ts.as(t, &c.ops, "POST", "/api/v1/reports", body, map[string]string{"Idempotency-Key": "key-1"})
+	if w.Code != 202 {
+		t.Fatalf("post: %d %s", w.Code, w.Body.String())
+	}
+	id := decodeStrict[ReportAccepted](t, w).Id
+	w = ts.as(t, &c.ops, "GET", "/api/v1/reports/"+id.String(), "", nil)
+	if w.Code != 200 {
+		t.Fatalf("get: %d %s", w.Code, w.Body.String())
+	}
+	return decodeStrict[Report](t, w)
+}
+
+func TestPostReportWithARange(t *testing.T) {
+	ts := newTestServer(t)
+	c := ts.cast(t)
+	ts.profileRevision(t)
+	got := postAndGet(t, ts, &c, `{"profile_id":"prod","namespaces":["payments"],"language":"en","start":"2026-09-01 00:00","end":"2026-10-01 00:00"}`)
+	sel := got.Selection
+	if sel.Period != nil || sel.Start == nil || *sel.Start != "2026-09-01 00:00" || sel.End == nil || *sel.End != "2026-10-01 00:00" {
+		t.Fatalf("selection %+v", sel)
+	}
+}
+
+func TestPostReportWithALength(t *testing.T) {
+	ts := newTestServer(t)
+	c := ts.cast(t)
+	ts.profileRevision(t)
+	got := postAndGet(t, ts, &c, `{"profile_id":"prod","namespaces":["payments"],"language":"en","period":"7d"}`)
+	sel := got.Selection
+	if sel.Period == nil || *sel.Period != "7d" || sel.Start != nil || sel.End != nil {
+		t.Fatalf("selection %+v", sel)
 	}
 }

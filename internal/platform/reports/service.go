@@ -54,6 +54,9 @@ const (
 	wordRepeated     = "repeated"
 	wordEmpty        = "empty"
 	wordTooMany      = "too_many"
+	wordConflict     = "conflict"
+	wordOrder        = "order"
+	wordFuture       = "future"
 	wordNotPermitted = "not_permitted"
 )
 
@@ -80,6 +83,8 @@ type Selection struct {
 	ProfileID     string   `json:"profile_id"`
 	Namespaces    []string `json:"namespaces"`
 	Period        *string  `json:"period"`
+	Start         *string  `json:"start"`
+	End           *string  `json:"end"`
 	Timezone      *string  `json:"timezone"`
 	ReportProfile *string  `json:"report_profile"`
 	MinSeverity   *string  `json:"min_severity"`
@@ -90,6 +95,8 @@ type Selection struct {
 type Resolved struct {
 	Namespaces    []string `json:"namespaces"`
 	Period        string   `json:"period"`
+	Start         string   `json:"start"`
+	End           string   `json:"end"`
 	Timezone      string   `json:"timezone"`
 	ReportProfile string   `json:"report_profile"`
 	MinSeverity   string   `json:"min_severity"`
@@ -106,7 +113,7 @@ type Accepted struct {
 }
 
 // Error is a refusal; Fields map a field of the selection to one of
-// missing, invalid, repeated, empty, not_permitted.
+// missing, invalid, repeated, empty, conflict, order, future, not_permitted.
 type Error struct {
 	Code       string
 	Fields     map[string]string

@@ -469,7 +469,7 @@ func TestCollectStoresTheSnapshot(t *testing.T) {
 	if err := json.Unmarshal(report.Request, &r); err != nil {
 		t.Fatal(err)
 	}
-	cfg := rev.Document.RunConfig(r.Period, r.Timezone, r.ReportProfile, r.MinSeverity, r.Namespaces)
+	cfg := rev.Document.RunConfig(r.Period, r.Start, r.End, r.Timezone, r.ReportProfile, r.MinSeverity, r.Namespaces)
 	opts, err := e.profiles.Source(rev.Document, cfg.Metrics)
 	if err != nil {
 		t.Fatal(err)
@@ -525,6 +525,41 @@ func TestCollectStoresTheSnapshot(t *testing.T) {
 	audits := e.audits(reports.ActionReportCollect)
 	if len(audits) != 1 || audits[0].Outcome != "succeeded" || audits[0].ActorID != nil || len(audits[0].Meta) != 0 {
 		t.Fatalf("audit %+v", audits)
+	}
+}
+
+func TestCollectARange(t *testing.T) {
+	e, _, _ := scenarioEnv(t, nil)
+	e.start(collectHooks{})
+	start, end, zone := "2026-10-04 12:00", "2026-10-05 12:00", "UTC"
+	acc, err := e.reports.Request(context.Background(), e.op, uuid.NewString(), reports.Selection{
+		ProfileID: "prod", Namespaces: []string{"payments"}, Language: ptrTo(e.language()),
+		Start: &start, End: &end, Timezone: &zone,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := e.report(acc.ID)
+	e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+	if got := e.report(report.ID); got.Status != "collected" {
+		t.Fatalf("report %+v", got)
+	}
+	_, body, _, err := store.GetSnapshot(context.Background(), e.pool, report.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap, err := snapshot.Decode(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := snap.Report.PeriodStart; got != "2026-10-04T12:00:00Z" {
+		t.Fatalf("period_start %q", got)
+	}
+	if got := snap.Report.PeriodEnd; got != "2026-10-05T12:00:00Z" {
+		t.Fatalf("period_end %q", got)
+	}
+	if got := snap.Report.EmittedAt; got != "2026-10-06T12:00:00Z" {
+		t.Fatalf("emitted_at %q", got)
 	}
 }
 

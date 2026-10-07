@@ -75,7 +75,7 @@ const testCeiling = 120 * time.Second
 // runTest holds no database connection: it reads files and sends requests.
 func (s *Service) runTest(ctx context.Context, d Document) (TestResult, error) {
 	period, zone, profile, severity := d.ResolvedDefaults()
-	cfg := d.RunConfig(period, zone, profile, severity, d.AllowedNamespaces)
+	cfg := d.RunConfig(period, "", "", zone, profile, severity, d.AllowedNamespaces)
 	opts, err := s.Source(d, cfg.Metrics)
 	if err != nil {
 		return resultOf(ctx, err)

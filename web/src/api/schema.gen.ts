@@ -356,7 +356,12 @@ export interface components {
         /** @description The selection the report runs, with every default resolved. */
         ReportSelection: {
             namespaces: string[];
-            period: string;
+            /** @description The length of the period; null for a calendar range. */
+            period: string | null;
+            /** @description The first wall time of a calendar range, in the report's time zone; null for a length. */
+            start: string | null;
+            /** @description The last wall time of a calendar range, in the report's time zone; null for a length. */
+            end: string | null;
             timezone: string;
             report_profile: components["schemas"]["ReportProfile"];
             min_severity: components["schemas"]["MinSeverity"];
@@ -368,6 +373,10 @@ export interface components {
             language: components["schemas"]["Language"];
             namespaces?: string[] | null;
             period?: string | null;
+            /** @description The first wall time of a calendar range, in the request's resolved time zone; sent with end, never with period. */
+            start?: string | null;
+            /** @description The last wall time of a calendar range, in the request's resolved time zone; at or before the request time. */
+            end?: string | null;
             timezone?: string | null;
             /** @description detailed or executive. */
             report_profile?: string | null;
@@ -1662,7 +1671,7 @@ export interface operations {
                     "application/json": components["schemas"]["ReportAccepted"];
                 };
             };
-            /** @description IDEMPOTENCY_KEY_INVALID when the header is missing or malformed; REQUEST_INVALID with one field per problem of the body (missing, invalid, repeated, empty, unknown). */
+            /** @description IDEMPOTENCY_KEY_INVALID when the header is missing or malformed; REQUEST_INVALID with one field per problem of the body (missing, invalid, repeated, empty, unknown, conflict, order, future). */
             400: {
                 headers: {
                     [name: string]: unknown;

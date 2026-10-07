@@ -228,7 +228,7 @@ func checkDefault(set *string, resolved string, permitted []string, ok func(stri
 // RunConfig builds the configuration of a run from the document and the
 // selection. The token never enters the configuration, and neither does the
 // CA bundle: the caller's transport carries it.
-func (d Document) RunConfig(period, timezone, reportProfile, minSeverity string, namespaces []string) config.Config {
+func (d Document) RunConfig(period, start, end, timezone, reportProfile, minSeverity string, namespaces []string) config.Config {
 	c := config.Default()
 	c.Metrics = config.Metrics{
 		URL:            d.EndpointURL,
@@ -245,6 +245,8 @@ func (d Document) RunConfig(period, timezone, reportProfile, minSeverity string,
 	}
 	c.Analysis = config.Analysis{
 		Period:             period,
+		Start:              start,
+		End:                end,
 		Timezone:           timezone,
 		NodeAutoscaling:    d.NodeAutoscaling,
 		ExcludedContainers: d.ExcludedContainers,

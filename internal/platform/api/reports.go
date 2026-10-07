@@ -112,6 +112,14 @@ func reportSummaryOf(s reports.Summary) ReportSummary {
 	}
 }
 
+// nullable maps an empty string to null.
+func nullable(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
 func reportOf(d reports.Detail) Report {
 	namespaces := d.Selection.Namespaces
 	if namespaces == nil {
@@ -125,7 +133,7 @@ func reportOf(d reports.Detail) Report {
 		CollectedAt: utc(d.CollectedAt), CompletedAt: utc(d.CompletedAt),
 		ExpiresAt: d.ExpiresAt.UTC(), Expired: d.Expired,
 		Selection: ReportSelection{
-			Namespaces: namespaces, Period: d.Selection.Period, Timezone: d.Selection.Timezone,
+			Namespaces: namespaces, Period: nullable(d.Selection.Period), Start: nullable(d.Selection.Start), End: nullable(d.Selection.End), Timezone: d.Selection.Timezone,
 			ReportProfile: ReportProfile(d.Selection.ReportProfile), MinSeverity: MinSeverity(d.Selection.MinSeverity),
 			Language: Language(d.Selection.Language),
 		},

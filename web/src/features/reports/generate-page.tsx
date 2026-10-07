@@ -58,7 +58,7 @@ function fromReport(source: Report, profiles: ProfileSummary[], fallback: Langua
     profileId: profile.id,
     namespaces: selection.namespaces.filter((name) => profile.allowed_namespaces.includes(name)),
     language: selection.language,
-    period: selection.period,
+    period: selection.period ?? profile.default_period,
     timezone: selection.timezone,
     reportProfile: selection.report_profile,
     minSeverity: selection.min_severity,

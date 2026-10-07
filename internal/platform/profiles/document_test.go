@@ -194,7 +194,7 @@ func TestRunConfig(t *testing.T) {
 	d.TimeoutSeconds = 45
 	d.NodeAutoscaling = "enabled"
 	d.NodepoolLabel = "pool"
-	got := d.RunConfig("7d", "UTC", "executive", "critical", []string{"payments"})
+	got := d.RunConfig("7d", "", "", "UTC", "executive", "critical", []string{"payments"})
 	want := config.Default()
 	want.Metrics = config.Metrics{URL: "https://metrics.internal", EndpointType: "grafana", TLSVerify: true, TimeoutSeconds: 45}
 	want.Cluster = config.Cluster{Name: "prod-east", Namespaces: []string{"payments"}, Label: "cluster", FilterMode: "required", NodepoolLabel: "pool"}
@@ -209,3 +209,11 @@ func TestRunConfig(t *testing.T) {
 }
 
 func nan() float64 { var z float64; return z / z }
+
+func TestRunConfigCarriesARange(t *testing.T) {
+	got := validExample().RunConfig("", "2026-09-01 00:00", "2026-10-01 00:00", "UTC", "executive", "critical", []string{"payments"})
+	a := got.Analysis
+	if a.Period != "" || a.Start != "2026-09-01 00:00" || a.End != "2026-10-01 00:00" || a.Timezone != "UTC" {
+		t.Fatalf("analysis = %+v", a)
+	}
+}

@@ -802,6 +802,8 @@ type ReportProfile string
 
 // ReportRequest A selection; a field left out or null takes the profile's default, except the language, which is required.
 type ReportRequest struct {
+	// End The last wall time of a calendar range, in the request's resolved time zone; at or before the request time.
+	End      *string  `json:"end,omitempty"`
 	Language Language `json:"language"`
 
 	// MinSeverity all, attention, or critical.
@@ -812,17 +814,27 @@ type ReportRequest struct {
 
 	// ReportProfile detailed or executive.
 	ReportProfile *string `json:"report_profile,omitempty"`
-	Timezone      *string `json:"timezone,omitempty"`
+
+	// Start The first wall time of a calendar range, in the request's resolved time zone; sent with end, never with period.
+	Start    *string `json:"start,omitempty"`
+	Timezone *string `json:"timezone,omitempty"`
 }
 
 // ReportSelection The selection the report runs, with every default resolved.
 type ReportSelection struct {
-	Language      Language      `json:"language"`
-	MinSeverity   MinSeverity   `json:"min_severity"`
-	Namespaces    []string      `json:"namespaces"`
-	Period        string        `json:"period"`
+	// End The last wall time of a calendar range, in the report's time zone; null for a length.
+	End         *string     `json:"end"`
+	Language    Language    `json:"language"`
+	MinSeverity MinSeverity `json:"min_severity"`
+	Namespaces  []string    `json:"namespaces"`
+
+	// Period The length of the period; null for a calendar range.
+	Period        *string       `json:"period"`
 	ReportProfile ReportProfile `json:"report_profile"`
-	Timezone      string        `json:"timezone"`
+
+	// Start The first wall time of a calendar range, in the report's time zone; null for a length.
+	Start    *string `json:"start"`
+	Timezone string  `json:"timezone"`
 }
 
 // ReportStatus defines model for ReportStatus.
