@@ -396,10 +396,6 @@ func scanImports(t *testing.T, root string) map[string][]string {
 		if err := decoder.Decode(&pkg); err != nil {
 			t.Fatalf("decoding go list output: %v", err)
 		}
-		if strings.Contains(pkg.ImportPath, "/web/node_modules/") {
-			// The frontend's dependencies may ship Go sources of their own.
-			continue
-		}
 		imports[pkg.ImportPath] = pkg.Imports
 	}
 	return imports

@@ -2,6 +2,8 @@ module github.com/marceloalvescf/k8s-capacity-report
 
 go 1.27
 
+ignore ./web/node_modules
+
 require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/alexedwards/argon2id v1.0.0
