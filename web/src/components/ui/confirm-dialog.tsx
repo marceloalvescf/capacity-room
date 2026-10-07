@@ -26,7 +26,15 @@ export function ConfirmDialog({
   onOpenChange,
 }: ConfirmDialogProps) {
   return (
-    <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
+    <AlertDialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        // A delete at work cannot be dismissed.
+        if (!busy) {
+          onOpenChange(next);
+        }
+      }}
+    >
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="fixed inset-0 bg-fg/40" />
         <AlertDialog.Content
@@ -37,7 +45,7 @@ export function ConfirmDialog({
           <AlertDialog.Description>{body}</AlertDialog.Description>
           <div className="flex justify-end gap-2">
             <AlertDialog.Cancel asChild>
-              <Button>{cancel}</Button>
+              <Button disabled={busy}>{cancel}</Button>
             </AlertDialog.Cancel>
             <AlertDialog.Action asChild>
               <Button

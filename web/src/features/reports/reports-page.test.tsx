@@ -537,4 +537,81 @@ describe("report list", () => {
     expect(await screen.findByText(t("reports.loadFailed"))).toBeInTheDocument();
     expect(screen.getAllByRole("row")).toHaveLength(3);
   });
+
+  it("a delete at work cannot be dismissed, and the next cancel returns focus to its trigger", async () => {
+    mock.reports = many(3);
+    let release = (): void => undefined;
+    server.use(
+      http.delete(`${window.location.origin}/api/v1/reports/${id(0)}`, async () => {
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        mock.reports = mock.reports.filter((r) => r.id !== id(0));
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(within(rowOf(id(0))).getByRole("button", { name: t("reports.delete") }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: t("delete.confirm") }));
+    await waitFor(() => {
+      expect(within(dialog).getByRole("button", { name: t("delete.cancel") })).toBeDisabled();
+    });
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    release();
+    await waitFor(() => {
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 1, name: t("reports.title") })).toHaveFocus();
+    });
+    const trigger = within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") });
+    await user.click(trigger);
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.cancel") }));
+    await waitFor(() => {
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(trigger).toHaveFocus();
+    });
+  });
+
+  it("a single delete answering 404 counts as gone", async () => {
+    mock.reports = many(2);
+    server.use(
+      http.delete(`${window.location.origin}/api/v1/reports/${id(1)}`, () => {
+        mock.reports = mock.reports.filter((r) => r.id !== id(1));
+        return HttpResponse.json({ error: { code: "REPORT_NOT_FOUND", message: "m", fields: {} } }, { status: 404 });
+      }),
+    );
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
+    expect(await screen.findByText(t("reports.deleted", { count: 1 }))).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 1, name: t("reports.title") })).toHaveFocus();
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("another failure of a single delete shows the error", async () => {
+    mock.reports = many(2);
+    server.use(
+      http.delete(`${window.location.origin}/api/v1/reports/${id(1)}`, () =>
+        HttpResponse.json({ error: { code: "FORBIDDEN", message: "m", fields: {} } }, { status: 403 }),
+      ),
+    );
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText(t("reports.deleted", { count: 1 }))).not.toBeInTheDocument();
+  });
 });

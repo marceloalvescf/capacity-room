@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
+import { ApiFailure } from "@/api/client";
 import { errorText, toError } from "@/api/errors";
 import { useAnnounce } from "@/app/live-region";
 import { useScreenTitle } from "@/app/title";
@@ -39,6 +40,7 @@ export function ReportsPage() {
   const announce = useAnnounce();
   const heading = useRef<HTMLHeadingElement>(null);
   const focusHeading = useRef(false);
+  const opener = useRef<Element | null>(null);
   useScreenTitle(t("reports.title"));
 
   const rows = reports.data?.pages.flatMap((page) => page.items) ?? [];
@@ -79,12 +81,19 @@ export function ReportsPage() {
     });
   }
 
+  // The dialog is not opened by a trigger of its own, so the page remembers
+  // what opened it and gives focus back there.
+  function open(next: DeleteTarget) {
+    opener.current = document.activeElement;
+    setTarget(next);
+  }
+
   function askBulk() {
     const [only] = chosen;
     if (only === undefined) {
       return;
     }
-    setTarget(
+    open(
       chosen.length === 1
         ? { kind: "one", report: only, profile: profileName(only) }
         : { kind: "many", ids: chosen.map((row) => row.id) },
@@ -101,7 +110,14 @@ export function ReportsPage() {
     let went = 0;
     try {
       if (current.kind === "one") {
-        await deleteOne.mutateAsync(current.report.id);
+        try {
+          await deleteOne.mutateAsync(current.report.id);
+        } catch (thrown) {
+          // A report already gone counts as gone.
+          if (!(thrown instanceof ApiFailure && thrown.status === 404)) {
+            throw thrown;
+          }
+        }
         toggle(current.report.id, false);
         went = 1;
       } else {
@@ -251,7 +267,7 @@ export function ReportsPage() {
                         {mine ? (
                           <Button
                             onClick={() => {
-                              setTarget({
+                              open({
                                 kind: "one",
                                 report: row,
                                 profile: profileName(row),
@@ -309,16 +325,21 @@ export function ReportsPage() {
         target={target}
         busy={busy}
         onCloseAutoFocus={(event) => {
-          if (focusHeading.current) {
-            event.preventDefault();
-            focusHeading.current = false;
+          event.preventDefault();
+          const back = opener.current;
+          if (!focusHeading.current && back instanceof HTMLElement && back.isConnected) {
+            back.focus();
+          } else {
             heading.current?.focus();
           }
+          focusHeading.current = false;
+          opener.current = null;
         }}
         onConfirm={() => {
           void confirm();
         }}
         onCancel={() => {
+          focusHeading.current = false;
           setTarget(null);
         }}
       />
