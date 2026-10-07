@@ -319,3 +319,26 @@ func TestPDFRefusesALanguage(t *testing.T) {
 		t.Fatalf("%+v", e)
 	}
 }
+
+func TestBodiesReadThroughTheDownloadPool(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	id, _ := f.readable(t)
+
+	main, bodies := f.svc.Pool.Stat().AcquireCount(), f.svc.Bodies.Stat().AcquireCount()
+	if _, err := f.svc.Snapshot(ctx, f.read, id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.PDF(ctx, f.read, id, "en"); err != nil {
+		t.Fatal(err)
+	}
+	if f.svc.Bodies == f.svc.Pool {
+		t.Fatal("the service reads bodies from its main pool")
+	}
+	if got := f.svc.Bodies.Stat().AcquireCount() - bodies; got != 2 {
+		t.Fatalf("the download pool acquired %d times, want 2", got)
+	}
+	if got := f.svc.Pool.Stat().AcquireCount() - main; got != 0 {
+		t.Fatalf("the main pool acquired %d times, want 0", got)
+	}
+}

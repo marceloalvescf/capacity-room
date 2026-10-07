@@ -58,11 +58,16 @@ func newFixture(t *testing.T) *fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bodies, err := store.OpenDownloads(context.Background(), pool.Config().ConnString())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(bodies.Close)
 	f := &fixture{pool: pool}
 	f.op = newPrincipal(t, pool, "ops", auth.RoleOperator)
 	f.read = newPrincipal(t, pool, "eve", auth.RoleReader)
 	f.svc = &Service{
-		Pool: pool, Queue: queue, Settings: testSettings(),
+		Pool: pool, Bodies: bodies, Queue: queue, Settings: testSettings(),
 		Now: func() time.Time { return fixedNow },
 	}
 	return f

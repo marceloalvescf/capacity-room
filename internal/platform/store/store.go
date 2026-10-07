@@ -31,6 +31,33 @@ func Open(ctx context.Context, dsn string, maxConnsFloor int32) (*pgxpool.Pool, 
 	return pool, nil
 }
 
+// DownloadConns is the number of connections of the pool that reads the
+// body of a view, a snapshot, or a PDF, and the number of downloads the API
+// serves at once.
+const DownloadConns = 4
+
+// OpenDownloads connects the pool that reads report bodies to dsn and pings
+// it once. A connection of this pool is closed when it is released, so no
+// idle connection keeps the buffer of a large row.
+func OpenDownloads(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return nil, fmt.Errorf("open download pool: %w", err)
+	}
+	cfg.MaxConns = DownloadConns
+	cfg.MinConns = 0
+	cfg.AfterRelease = func(*pgx.Conn) bool { return false }
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("open download pool: %w", err)
+	}
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
+	return pool, nil
+}
+
 // Transact runs fn inside one transaction, committing when fn returns nil
 // and rolling back otherwise, including on a panic, which it re-raises. The
 // transaction reads committed rows whatever the database default is, which

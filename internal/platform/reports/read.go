@@ -170,7 +170,7 @@ func (s *Service) Get(ctx context.Context, _ auth.Principal, id uuid.UUID) (Deta
 // Snapshot returns the stored snapshot of a collected report.
 func (s *Service) Snapshot(ctx context.Context, _ auth.Principal, id uuid.UUID) (Download, error) {
 	now := s.now()
-	read, err := store.ReadSnapshot(ctx, s.Pool, id, now)
+	read, err := store.ReadSnapshot(ctx, s.Bodies, id, now)
 	if errors.Is(err, store.ErrNotFound) {
 		return Download{}, &Error{Code: CodeReportNotFound}
 	}
@@ -199,7 +199,7 @@ func (s *Service) PDF(ctx context.Context, _ auth.Principal, id uuid.UUID, langu
 		return Download{}, &Error{Code: CodeRequestInvalid, Fields: map[string]string{"language": wordInvalid}}
 	}
 	now := s.now()
-	read, err := store.ReadPDF(ctx, s.Pool, id, language, now)
+	read, err := store.ReadPDF(ctx, s.Bodies, id, language, now)
 	if errors.Is(err, store.ErrNotFound) {
 		return Download{}, &Error{Code: CodeReportNotFound}
 	}

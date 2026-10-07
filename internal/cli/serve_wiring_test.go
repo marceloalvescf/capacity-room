@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
@@ -46,7 +47,7 @@ func TestServeWiresTheProfiles(t *testing.T) {
 		SessionTTL: 12 * time.Hour, SessionIdle: time.Hour,
 		CredentialDir: t.TempDir(), CABundleDir: t.TempDir(),
 	}
-	server, err := buildServer(pool, loaded, []byte("0123456789abcdef0123456789abcdef"),
+	server, err := buildServer(pool, openDownloads(t, pool), loaded, []byte("0123456789abcdef0123456789abcdef"),
 		func() time.Time { return now }, slog.New(slog.NewTextHandler(io.Discard, nil)), redact.New())
 	if err != nil {
 		t.Fatal(err)
@@ -110,7 +111,7 @@ func TestServeRevealsACredential(t *testing.T) {
 	if redactor.Text(token) != token {
 		t.Fatal("the redactor knew the credential before the test")
 	}
-	server, err := buildServer(pool, loaded, []byte("0123456789abcdef0123456789abcdef"),
+	server, err := buildServer(pool, openDownloads(t, pool), loaded, []byte("0123456789abcdef0123456789abcdef"),
 		func() time.Time { return now }, slog.New(slog.NewTextHandler(io.Discard, nil)), redactor)
 	if err != nil {
 		t.Fatal(err)
@@ -174,7 +175,7 @@ func TestServeBuildsTheReportRoutes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	server, err := buildServer(pool, loaded, []byte("0123456789abcdef0123456789abcdef"),
+	server, err := buildServer(pool, openDownloads(t, pool), loaded, []byte("0123456789abcdef0123456789abcdef"),
 		func() time.Time { return now }, slog.New(slog.NewTextHandler(io.Discard, nil)), redact.New())
 	if err != nil {
 		t.Fatal(err)
@@ -194,5 +195,29 @@ func TestServeBuildsTheReportRoutes(t *testing.T) {
 	err = pool.QueryRow(ctx, `SELECT count(*) FROM river_job WHERE kind = 'collect' AND args->>'report_id' = $1`, id).Scan(&jobs)
 	if err != nil || jobs != 1 {
 		t.Fatalf("%d collect jobs for the report, %v", jobs, err)
+	}
+}
+
+// openDownloads opens the pool that reads report bodies on the database of pool.
+func openDownloads(t *testing.T, pool *pgxpool.Pool) *pgxpool.Pool {
+	t.Helper()
+	downloads, err := store.OpenDownloads(context.Background(), pool.Config().ConnString())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(downloads.Close)
+	return downloads
+}
+
+func TestServeOpensTheDownloadPool(t *testing.T) {
+	pool := storetest.New(t)
+	downloads := openDownloads(t, pool)
+	server, err := buildServer(pool, downloads, settings.Settings{}, []byte("0123456789abcdef0123456789abcdef"),
+		time.Now, slog.New(slog.NewTextHandler(io.Discard, nil)), redact.New())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if server.Reports.Bodies != downloads || server.Reports.Bodies == pool {
+		t.Fatal("the reports service does not read bodies through the download pool")
 	}
 }

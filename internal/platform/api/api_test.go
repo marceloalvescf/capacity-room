@@ -79,8 +79,13 @@ func newTestServer(t *testing.T) *testServer {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bodies, err := store.OpenDownloads(context.Background(), pool.Config().ConnString())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(bodies.Close)
 	ts.Reports = &reports.Service{
-		Pool: pool, Queue: queue, Now: now,
+		Pool: pool, Bodies: bodies, Queue: queue, Now: now,
 		Settings: settings.Settings{
 			JobMaxAttempts: 3, ReportRetention: 7 * 24 * time.Hour,
 			AdmissionLimit: 20, AdmissionProfileLimit: 5, AdmissionRetry: 5 * time.Second,

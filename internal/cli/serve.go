@@ -62,8 +62,14 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 		return &exitError{1, err}
 	}
 
+	downloads, err := store.OpenDownloads(ctx, loaded.DatabaseDSN)
+	if err != nil {
+		return &exitError{1, fmt.Errorf("cannot connect to the database: %w", err)}
+	}
+	defer downloads.Close()
+
 	logger := newLogger(cmd.ErrOrStderr(), redactor)
-	server, err := buildServer(pool, loaded, secret, env.Now, logger, redactor)
+	server, err := buildServer(pool, downloads, loaded, secret, env.Now, logger, redactor)
 	if err != nil {
 		return &exitError{1, err}
 	}
@@ -100,11 +106,11 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 	return nil
 }
 
-// buildServer assembles the API server of serve from the pool, the loaded
-// settings, the server secret, the clock, the logger, and the redactor that
-// learns every credential the profiles read. It fails when the report queue
-// cannot be built.
-func buildServer(pool *pgxpool.Pool, loaded settings.Settings, secret []byte, now func() time.Time, logger *slog.Logger, redactor *redact.Redactor) (*api.Server, error) {
+// buildServer assembles the API server of serve from the pool, the pool that
+// reads report bodies, the loaded settings, the server secret, the clock, the
+// logger, and the redactor that learns every credential the profiles
+// read. It fails when the report queue cannot be built.
+func buildServer(pool, downloads *pgxpool.Pool, loaded settings.Settings, secret []byte, now func() time.Time, logger *slog.Logger, redactor *redact.Redactor) (*api.Server, error) {
 	queue, err := reports.NewQueue(pool, logger)
 	if err != nil {
 		return nil, fmt.Errorf("cannot build the report queue: %w", err)
@@ -134,6 +140,7 @@ func buildServer(pool *pgxpool.Pool, loaded settings.Settings, secret []byte, no
 		},
 		Reports: &reports.Service{
 			Pool:     pool,
+			Bodies:   downloads,
 			Queue:    queue,
 			Settings: loaded,
 			Now:      now,

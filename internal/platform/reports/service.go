@@ -60,6 +60,7 @@ const (
 // Service requests reports and retries their PDFs.
 type Service struct {
 	Pool     *pgxpool.Pool
+	Bodies   *pgxpool.Pool // reads the bodies of snapshots and PDFs
 	Queue    *river.Client[pgx.Tx]
 	Settings settings.Settings
 	Now      func() time.Time

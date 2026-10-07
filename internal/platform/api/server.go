@@ -16,6 +16,7 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 )
 
 // Server builds the handler of serve.
@@ -43,7 +44,7 @@ type Server struct {
 }
 
 const (
-	defaultDownloadSlots    = 4
+	defaultDownloadSlots    = store.DownloadConns
 	defaultDownloadDeadline = 2 * time.Minute
 )
 

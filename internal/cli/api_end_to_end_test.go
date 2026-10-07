@@ -142,7 +142,7 @@ func TestReportThroughTheAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	server, err := buildServer(pool, loaded, serverSecret, clock, logger, redact.New())
+	server, err := buildServer(pool, openDownloads(t, pool), loaded, serverSecret, clock, logger, redact.New())
 	if err != nil {
 		t.Fatal(err)
 	}
