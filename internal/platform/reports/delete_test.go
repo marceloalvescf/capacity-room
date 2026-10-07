@@ -67,8 +67,8 @@ func TestDeleteJudgesInOrder(t *testing.T) {
 		id    uuid.UUID
 		code  string
 	}{
-		"absent":         {f.op, uuid.New(), CodeReportNotFound},
-		"deleted":        {f.op, deleted, CodeReportNotFound},
+		"absent":  {f.op, uuid.New(), CodeReportNotFound},
+		"deleted": {f.op, deleted, CodeReportNotFound},
 	} {
 		if e := asError(t, f.svc.Delete(ctx, c.actor, c.id)); e.Code != c.code {
 			t.Errorf("%s: %s", name, e.Code)
