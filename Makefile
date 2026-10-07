@@ -176,7 +176,8 @@ check-runtime: $(IMAGE_DEP)
 E2E_COMPOSE := docker compose -f deploy/compose.yaml -f deploy/compose.integration.yaml
 
 e2e: $(IMAGE_DEP)
-	@export KCR_VERSION=$(VERSION); mkdir -p .cache/e2e; \
+	@export KCR_VERSION=$(VERSION) KCR_CONFIG_DIR=$(CURDIR)/deploy/platform KCR_POSTGRES_PASSWORD=kcr_e2e_only; \
+	mkdir -p .cache/e2e; \
 	$(E2E_COMPOSE) down --volumes; \
 	$(E2E_COMPOSE) up -d --wait postgres \
 		&& $(E2E_COMPOSE) run --rm -T migrate \

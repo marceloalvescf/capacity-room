@@ -13,10 +13,9 @@ x-app: &app
   cap_drop:
     - ALL
   environment:
-    KCR_DATABASE_DSN: postgres://kcr:kcr_e2e_only@postgres:5432/kcr?sslmode=disable
+    KCR_DATABASE_DSN: postgres://kcr:${KCR_POSTGRES_PASSWORD:?set KCR_POSTGRES_PASSWORD to the database password}@postgres:5432/kcr?sslmode=disable
   volumes:
-    - ./platform/platform.toml:/etc/kcr/platform.toml:ro
-    - ./platform/server-secret:/run/kcr/server-secret:ro
+    - ${KCR_CONFIG_DIR:?set KCR_CONFIG_DIR to the folder holding platform.toml and server-secret}:/etc/kcr:ro
   depends_on:
     postgres:
       condition: service_healthy
@@ -27,7 +26,7 @@ services:
     environment:
       POSTGRES_DB: kcr
       POSTGRES_USER: kcr
-      POSTGRES_PASSWORD: kcr_e2e_only
+      POSTGRES_PASSWORD: ${KCR_POSTGRES_PASSWORD:?set KCR_POSTGRES_PASSWORD to the database password}
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:
