@@ -11,6 +11,7 @@ const collectTimeout = 60_000;
 
 async function signIn(page: Page, user: { username: string; password: string }, path: string) {
   await page.goto(path);
+  await expect(page.getByRole("heading", { name: en.login.title })).toBeVisible({ timeout: 10_000 });
   await page.getByLabel(en.login.username, { exact: true }).fill(user.username);
   await page.getByLabel(en.login.password, { exact: true }).fill(user.password);
   await page.getByRole("button", { name: en.login.submit, exact: true }).click();
@@ -115,7 +116,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
 
   await test.step("the reader sees no control that changes anything", async () => {
     try {
-      await signIn(other, reader, "/reports");
+      await other.goto("/reports");
       await expect(other.getByRole("heading", { name: en.reports.title, level: 1 })).toBeVisible();
       await expect(other.getByRole("row").filter({ hasText: en.reportStatus.collected })).toHaveCount(1);
       await expect(other.getByRole("link", { name: en.nav.generate, exact: true })).toHaveCount(0);
