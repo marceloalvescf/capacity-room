@@ -24,7 +24,7 @@ func (f *fixture) seedReport(t *testing.T, status, phase string, expiresAt time.
 	revID := f.addProfileOnce(t)
 	r := store.Report{
 		ID: uuid.New(), OwnerID: f.op.ID, ProfileID: "prod", ProfileRevisionID: revID,
-		Request: []byte(`{}`), Status: status, Phase: phase, CollectJobID: 1,
+		Request: []byte(`{"language":"en"}`), Status: status, Phase: phase, CollectJobID: 1,
 		CreatedAt: fixedNow, ExpiresAt: expiresAt, UpdatedAt: fixedNow,
 	}
 	if status == "collected" && phase == "complete" {

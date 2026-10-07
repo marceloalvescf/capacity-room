@@ -158,6 +158,9 @@ func (s *Service) Get(ctx context.Context, _ auth.Principal, id uuid.UUID) (Deta
 	if err := json.Unmarshal(it.Request, &selection); err != nil {
 		return Detail{}, fmt.Errorf("decode stored selection: %w", err)
 	}
+	if !validLanguage(selection.Language) {
+		return Detail{}, fmt.Errorf("decode stored selection: language %q", selection.Language)
+	}
 	if selection.Namespaces == nil {
 		selection.Namespaces = []string{}
 	}

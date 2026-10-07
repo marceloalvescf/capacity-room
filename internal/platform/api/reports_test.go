@@ -362,6 +362,26 @@ func TestReportShowsItsLanguage(t *testing.T) {
 	}
 }
 
+func TestStoredRequestWithoutLanguage(t *testing.T) {
+	ts := newTestServer(t)
+	c := ts.cast(t)
+	id := ts.seedReport(t, stored{owner: c.ops.user.ID})
+	if _, err := ts.pool.Exec(context.Background(), `UPDATE reports SET request = request - 'language' WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	path := "/api/v1/reports/" + id.String()
+
+	w := ts.as(t, &c.ops, "GET", "/api/v1/reports", "", nil)
+	if w.Code != 200 || !strings.Contains(w.Body.String(), id.String()) {
+		t.Fatalf("list: %d %s", w.Code, w.Body.String())
+	}
+	wantProblem(t, ts.as(t, &c.ops, "GET", path, "", nil), 500, CodeInternalError, nil)
+	if w := ts.as(t, &c.ops, "DELETE", path, "", nil); w.Code != 204 {
+		t.Fatalf("delete: %d %s", w.Code, w.Body.String())
+	}
+	wantProblem(t, ts.as(t, &c.ops, "GET", path, "", nil), 404, "REPORT_NOT_FOUND", nil)
+}
+
 func TestAdmissionAnswers429(t *testing.T) {
 	ts := newTestServer(t)
 	c := ts.cast(t)
