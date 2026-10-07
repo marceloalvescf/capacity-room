@@ -1,11 +1,12 @@
 import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
-type Variant = "primary" | "secondary";
+type Variant = "primary" | "secondary" | "danger";
 
 const variants: Record<Variant, string> = {
   primary: "bg-accent text-accent-fg border-accent",
   secondary: "bg-surface text-surface-fg border-input-border",
+  danger: "bg-critical text-surface border-critical",
 };
 
 export function Button({

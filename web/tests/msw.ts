@@ -36,9 +36,63 @@ export function errorBody(code: Schemas["ErrorCode"]): Schemas["Error"] {
   return { error: { code, message: "message", fields: {} } };
 }
 
+type Report = Schemas["Report"];
+type ProfileSummary = Schemas["ProfileSummary"];
+
+export function report(overrides: Partial<Report> = {}): Report {
+  return {
+    id: "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a01",
+    owner_id: principal().id,
+    owner_username: "ana",
+    profile_id: "prod",
+    status: "collected",
+    phase: "complete",
+    failure_code: null,
+    pdfs: [],
+    created_at: "2026-10-07T17:02:00Z",
+    completed_at: "2026-10-07T17:05:00Z",
+    expires_at: "2026-11-06T17:05:00Z",
+    expired: false,
+    profile_revision_id: "1c7d4c63-3f1f-4e1b-9e68-7f7f7d2f1b02",
+    attempt: 1,
+    started_at: "2026-10-07T17:02:05Z",
+    collected_at: "2026-10-07T17:05:00Z",
+    selection: {
+      namespaces: [],
+      period: "24h",
+      timezone: "America/Sao_Paulo",
+      report_profile: "detailed",
+      min_severity: "all",
+      language: "en",
+    },
+    ...overrides,
+  };
+}
+
+export function profileSummary(overrides: Partial<ProfileSummary> = {}): ProfileSummary {
+  return {
+    id: "prod",
+    display_name: "Production",
+    allowed_namespaces: [],
+    permitted_periods: [],
+    default_period: "24h",
+    permitted_timezones: [],
+    default_timezone: "America/Sao_Paulo",
+    permitted_report_profiles: ["detailed", "executive"],
+    default_report_profile: "detailed",
+    permitted_min_severities: ["all", "attention", "critical"],
+    default_min_severity: "all",
+    ...overrides,
+  };
+}
+
+// The data the report and profile handlers serve; a test sets it, and it is
+// emptied after each test.
 export interface Mock {
   session: Session;
   calls: Call[];
+  reports: Report[];
+  profiles: ProfileSummary[];
 }
 
 const api = (path: string): string => `${window.location.origin}/api/v1${path}`;
@@ -48,7 +102,7 @@ export const server = setupServer();
 // Installs the handlers of the contract, held by one mutable state, and the
 // hooks that start and stop the server around a test file.
 export function installMockApi(initial: Session): Mock {
-  const mock: Mock = { session: initial, calls: [] };
+  const mock: Mock = { session: initial, calls: [], reports: [], profiles: [] };
 
   async function record(request: Request): Promise<unknown> {
     const text = await request.clone().text();
@@ -92,6 +146,58 @@ export function installMockApi(initial: Session): Mock {
       }
       return HttpResponse.json(errorBody("UNAUTHENTICATED"), { status: 401 });
     }),
+    http.get(api("/profiles"), async ({ request }) => {
+      await record(request);
+      return HttpResponse.json({ profiles: mock.profiles });
+    }),
+    http.get(api("/reports"), async ({ request }) => {
+      await record(request);
+      const url = new URL(request.url);
+      const limit = Number(url.searchParams.get("limit") ?? "50");
+      const start = Number(url.searchParams.get("cursor") ?? "0");
+      const end = start + limit;
+      return HttpResponse.json({
+        items: mock.reports.slice(start, end),
+        next_cursor: end < mock.reports.length ? String(end) : null,
+      });
+    }),
+    http.post(api("/reports"), async ({ request }) => {
+      await record(request);
+      return HttpResponse.json(
+        {
+          id: report().id,
+          status: "queued",
+          phase: "waiting",
+          expires_at: "2026-11-06T17:05:00Z",
+          replayed: false,
+        } satisfies Schemas["ReportAccepted"],
+        { status: 202 },
+      );
+    }),
+    http.post(api("/reports/delete"), async ({ request }) => {
+      const body = (await record(request)) as { ids: string[] };
+      const known = new Set(mock.reports.map((r) => r.id));
+      return HttpResponse.json({
+        results: body.ids.map((id) => ({ id, outcome: known.has(id) ? "deleted" : "not_found" })),
+      });
+    }),
+    http.post(api("/reports/:id/pdfs"), async ({ request }) => {
+      const body = (await record(request)) as { language: Schemas["Language"] };
+      return HttpResponse.json({ language: body.language, status: "pending" }, { status: 202 });
+    }),
+    http.get(api("/reports/:id"), async ({ request, params }) => {
+      await record(request);
+      const found = mock.reports.find((r) => r.id === params["id"]);
+      return found === undefined
+        ? HttpResponse.json(errorBody("REPORT_NOT_FOUND"), { status: 404 })
+        : HttpResponse.json(found);
+    }),
+    http.delete(api("/reports/:id"), async ({ request, params }) => {
+      await record(request);
+      return mock.reports.some((r) => r.id === params["id"])
+        ? new HttpResponse(null, { status: 204 })
+        : HttpResponse.json(errorBody("REPORT_NOT_FOUND"), { status: 404 });
+    }),
   ];
 
   beforeAll(() => {
@@ -100,6 +206,8 @@ export function installMockApi(initial: Session): Mock {
   afterEach(() => {
     mock.calls.length = 0;
     mock.session = initial;
+    mock.reports = [];
+    mock.profiles = [];
     server.resetHandlers(...handlers);
   });
   afterAll(() => {

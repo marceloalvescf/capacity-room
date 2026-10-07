@@ -114,5 +114,73 @@
     "REPORT_SELECTION_NOT_PERMITTED": "The profile does not permit this selection.",
     "ADMISSION_GLOBAL_LIMIT": "The platform is generating as many reports as it can. Try again in {{seconds}} seconds.",
     "ADMISSION_PROFILE_LIMIT": "This profile is generating as many reports as it can. Try again in {{seconds}} seconds."
+  },
+  "reportStatus": {
+    "queued": "Queued",
+    "running": "Running",
+    "collected": "Collected",
+    "failed": "Failed"
+  },
+  "reportPhase": {
+    "waiting": "Waiting",
+    "preflight": "Checking the source",
+    "collecting": "Collecting",
+    "analyzing": "Analyzing",
+    "snapshotting": "Snapshot",
+    "rendering": "PDF",
+    "complete": "Complete"
+  },
+  "pdfStatus": {
+    "pending": "Preparing",
+    "ready": "Ready",
+    "failed": "Failed"
+  },
+  "reportProfile": {
+    "detailed": "Detailed",
+    "executive": "Executive"
+  },
+  "minSeverity": {
+    "all": "All",
+    "attention": "Attention and critical",
+    "critical": "Critical only"
+  },
+  "pdfFailure": {
+    "PDF_COMPILE_FAILED": "The PDF could not be compiled.",
+    "PDF_TOO_LARGE": "The PDF is larger than allowed.",
+    "PDF_ATTEMPTS_EXHAUSTED": "The PDF failed after every attempt.",
+    "INTERNAL_FAILURE": "Something went wrong while making the PDF."
+  },
+  "reportFailure": {
+    "ENDPOINT_URL_REJECTED": "The address of the metric source is not allowed.",
+    "ENDPOINT_ADDRESS_REJECTED": "The metric source resolves to an address that is not allowed.",
+    "ENDPOINT_RESOLUTION_FAILED": "The name of the metric source could not be resolved.",
+    "ENDPOINT_CONNECTION_REJECTED": "The connection to the metric source was refused.",
+    "ENDPOINT_REDIRECT_REJECTED": "The metric source answered with a redirect, which is not allowed.",
+    "PROFILE_CREDENTIAL_UNAVAILABLE": "The credential file of the profile could not be read.",
+    "PROFILE_CA_BUNDLE_UNAVAILABLE": "The CA bundle of the profile could not be read.",
+    "ENDPOINT_TLS_FAILED": "The TLS connection to the metric source failed.",
+    "ENDPOINT_AUTH_REJECTED": "The metric source refused the credential.",
+    "ENDPOINT_API_NOT_FOUND": "No Prometheus API was found at the address of the metric source.",
+    "ENDPOINT_UNREACHABLE": "The metric source did not answer in time.",
+    "CLUSTER_SCOPE_NOT_FOUND": "The cluster of the profile was not found in the metrics.",
+    "CAPABILITIES_INSUFFICIENT": "The metric source lacks the metrics a report needs.",
+    "NOTHING_TO_REPORT": "The metrics held nothing to report for this selection.",
+    "SNAPSHOT_TOO_LARGE": "The report's data is larger than allowed.",
+    "COLLECTION_TIMEOUT": "The collection took longer than allowed.",
+    "JOB_ATTEMPTS_EXHAUSTED": "The report failed after every attempt.",
+    "INTERNAL_FAILURE": "Something went wrong while making the report."
+  },
+  "period": {
+    "custom": {
+      "value": "Last {{duration}}"
+    },
+    "quick": {
+      "1h": "Last hour",
+      "6h": "Last 6 hours",
+      "24h": "Last 24 hours",
+      "7d": "Last 7 days",
+      "15d": "Last 15 days",
+      "30d": "Last 30 days"
+    }
   }
 }

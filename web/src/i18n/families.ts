@@ -1,4 +1,15 @@
-import { errorCodeValues, languageValues, roleValues } from "@/api/schema.gen";
+import {
+  errorCodeValues,
+  languageValues,
+  minSeverityValues,
+  pDFFailureCodeValues,
+  pDFStatusValues,
+  reportFailureCodeValues,
+  reportPhaseValues,
+  reportProfileValues,
+  reportStatusValues,
+  roleValues,
+} from "@/api/schema.gen";
 import { statusValues } from "@/components/status-mark";
 import { themeChoices } from "@/theme/theme";
 
@@ -9,4 +20,11 @@ export const families: Readonly<Record<string, readonly string[]>> = {
   language: languageValues,
   status: statusValues,
   theme: themeChoices,
+  reportStatus: reportStatusValues,
+  reportPhase: reportPhaseValues,
+  pdfStatus: pDFStatusValues,
+  reportProfile: reportProfileValues,
+  minSeverity: minSeverityValues,
+  pdfFailure: pDFFailureCodeValues,
+  reportFailure: reportFailureCodeValues,
 };

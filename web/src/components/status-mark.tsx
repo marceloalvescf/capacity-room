@@ -27,14 +27,14 @@ function Shape({ status }: { status: Status }) {
   }
 }
 
-export function StatusMark({ status }: { status: Status }) {
+export function StatusMark({ status, label }: { status: Status; label?: string }) {
   const { t } = useTranslation();
   return (
     <span className={cn("inline-flex items-center gap-1.5", colour[status])}>
       <svg aria-hidden="true" viewBox="0 0 12 12" className="size-3 shrink-0">
         <Shape status={status} />
       </svg>
-      <span className={cn(status === "critical" && "font-bold")}>{t(`status.${status}`)}</span>
+      <span className={cn(status === "critical" && "font-bold")}>{label ?? t(`status.${status}`)}</span>
     </span>
   );
 }

@@ -134,4 +134,23 @@ describe("client", () => {
       retryAfter: 120,
     });
   });
+
+  it("client keeps the fields of an error", async () => {
+    const { api } = setup();
+    server.use(
+      http.get(url("/auth/session"), () =>
+        HttpResponse.json(
+          { error: { code: "REQUEST_INVALID", message: "message", fields: { period: "not_permitted" } } },
+          { status: 422 },
+        ),
+      ),
+    );
+    await expect(api.GET("/auth/session")).rejects.toMatchObject({ fields: { period: "not_permitted" } });
+    server.use(
+      http.get(url("/auth/session"), () => HttpResponse.json({ error: { code: "REQUEST_INVALID" } }, { status: 422 })),
+    );
+    await expect(api.GET("/auth/session")).rejects.toMatchObject({ fields: {} });
+    server.use(http.get(url("/auth/session"), () => new HttpResponse("nope", { status: 500 })));
+    await expect(api.GET("/auth/session")).rejects.toMatchObject({ fields: {} });
+  });
 });

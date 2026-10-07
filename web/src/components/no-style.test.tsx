@@ -1,7 +1,10 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { expect, it } from "vitest";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Menu, MenuContent, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/ui/menu";
 import { i18next } from "@/i18n/i18n";
 
@@ -78,6 +81,47 @@ it("an icon button shows its name on focus and on hover, opens its menu, and inj
   expect(within(await screen.findByRole("tooltip", {}, { timeout: 2000 })).getByText("Theme: System")).toBeInTheDocument();
   await user.unhover(button);
 
+  expect(document.querySelectorAll("style")).toHaveLength(0);
+  expect(stop()).toEqual([]);
+});
+
+it("no style from the popover and the dialog", async () => {
+  await i18next.changeLanguage("en");
+  const stop = watchStyles();
+  const user = userEvent.setup();
+  function Both() {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <Popover>
+          <PopoverTrigger>{"Pick"}</PopoverTrigger>
+          <PopoverContent>{"Inside"}</PopoverContent>
+        </Popover>
+        <button type="button" onClick={() => { setOpen(true); }}>
+          {"Ask"}
+        </button>
+        <ConfirmDialog
+          open={open}
+          title="Title"
+          body="Body"
+          confirm="Yes"
+          cancel="No"
+          onConfirm={() => { setOpen(false); }}
+          onOpenChange={setOpen}
+        />
+      </>
+    );
+  }
+  render(<Both />);
+  await user.click(screen.getByRole("button", { name: "Pick" }));
+  expect(await screen.findByText("Inside")).toBeInTheDocument();
+  expect(document.querySelectorAll("style")).toHaveLength(0);
+  await user.keyboard("{Escape}");
+  await user.click(screen.getByRole("button", { name: "Ask" }));
+  expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
+  expect(document.querySelectorAll("style")).toHaveLength(0);
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("alertdialog")).toBeNull();
   expect(document.querySelectorAll("style")).toHaveLength(0);
   expect(stop()).toEqual([]);
 });

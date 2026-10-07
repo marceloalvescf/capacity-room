@@ -33,3 +33,12 @@ describe("status mark", () => {
     }
   }
 });
+
+describe("status mark label", () => {
+  it("status mark prints its label", async () => {
+    await i18next.changeLanguage("en");
+    const { container } = render(<StatusMark status="undefined" label="Running" />);
+    expect(container.querySelector("svg + span")?.textContent).toBe("Running");
+    expect(container.querySelector("circle")?.getAttribute("fill")).toBe("none");
+  });
+});

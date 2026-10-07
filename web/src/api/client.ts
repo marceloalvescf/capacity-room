@@ -26,12 +26,19 @@ export class ApiFailure extends Error {
   readonly status: number;
   readonly code: ErrorCode | null;
   readonly retryAfter: number | null;
+  readonly fields: Readonly<Record<string, string>>;
 
-  constructor(status: number, code: ErrorCode | null, retryAfter: number | null) {
+  constructor(
+    status: number,
+    code: ErrorCode | null,
+    retryAfter: number | null,
+    fields: Readonly<Record<string, string>> = {},
+  ) {
     super(`request failed with status ${String(status)}`);
     this.status = status;
     this.code = code;
     this.retryAfter = retryAfter;
+    this.fields = fields;
   }
 }
 
@@ -42,14 +49,32 @@ function isErrorCode(value: unknown): value is ErrorCode {
   return errorCodeValues.some((code) => code === value);
 }
 
-async function codeOf(response: Response): Promise<ErrorCode | null> {
+interface ErrorDetail {
+  code: ErrorCode | null;
+  fields: Record<string, string>;
+}
+
+async function detailOf(response: Response): Promise<ErrorDetail> {
   try {
-    const body = (await response.clone().json()) as { error?: { code?: unknown } } | null;
+    const body = (await response.clone().json()) as { error?: { code?: unknown; fields?: unknown } } | null;
     const code = body?.error?.code;
-    return isErrorCode(code) ? code : null;
+    const raw = body?.error?.fields;
+    const fields: Record<string, string> = {};
+    if (typeof raw === "object" && raw !== null) {
+      for (const [name, value] of Object.entries(raw)) {
+        if (typeof value === "string") {
+          fields[name] = value;
+        }
+      }
+    }
+    return { code: isErrorCode(code) ? code : null, fields };
   } catch {
-    return null;
+    return { code: null, fields: {} };
   }
+}
+
+async function codeOf(response: Response): Promise<ErrorCode | null> {
+  return (await detailOf(response)).code;
 }
 
 function retryAfterOf(response: Response): number | null {
@@ -95,7 +120,7 @@ export function createApi(queryClient: QueryClient, navigate: (to: string) => vo
     if (response.ok) {
       return response;
     }
-    const code = await codeOf(response);
+    const { code, fields } = await detailOf(response);
     if (response.status === 401 && code !== "INVALID_CREDENTIALS" && !isLogout(request)) {
       const here = window.location.pathname;
       const next = encodeURIComponent(here + window.location.search);
@@ -104,7 +129,7 @@ export function createApi(queryClient: QueryClient, navigate: (to: string) => vo
         navigate(`/login?next=${next}&ended=1`);
       }
     }
-    throw new ApiFailure(response.status, code, retryAfterOf(response));
+    throw new ApiFailure(response.status, code, retryAfterOf(response), fields);
   }
 
   const client = createClient<ApiPaths>({
