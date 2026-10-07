@@ -60,6 +60,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     // Playwright configuration keeps retries at zero.
     await page.getByRole("button", { name: en.generate.submit, exact: true }).click();
     await expect(page).toHaveURL(/\/jobs\/[0-9a-f-]{36}$/);
+    await expectNoViolations(page);
   });
 
   const jobUrl = page.url();
@@ -75,6 +76,25 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     const file = await (await downloading).path();
     const bytes = await readFile(file);
     expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+  });
+
+  // The reader looks at the progress page while the Portuguese PDF is not
+  // generated, the one moment an operator is offered Generate PDF.
+  const context = await browser.newContext(baseURL === undefined ? {} : { baseURL });
+  const other = await context.newPage();
+  const violations = await watchPolicy(other);
+
+  await test.step("the reader sees no control on the progress page", async () => {
+    await expect(pdfGroup(page, en.language["pt-BR"]).getByRole("button", { name: en.progress.generatePdf, exact: true })).toBeVisible();
+    await signIn(other, reader, new URL(jobUrl).pathname);
+    const english = pdfGroup(other, en.language.en);
+    await expect(english.getByText(en.pdfStatus.ready, { exact: true })).toBeVisible();
+    await expect(pdfGroup(other, en.language["pt-BR"]).getByText(en.reports.notGenerated)).toBeVisible();
+    const section = other.locator("section").filter({ has: other.getByRole("heading", { name: en.progress.pdf, exact: true }) });
+    await expect(section.getByRole("link", { name: en.progress.download, exact: true })).toHaveCount(1);
+    await expect(section.getByRole("button")).toHaveCount(0);
+    await expect(other.getByRole("button", { name: en.progress.deleteReport, exact: true })).toHaveCount(0);
+    await expectNoViolations(other);
   });
 
   await test.step("the operator generates the Portuguese PDF", async () => {
@@ -94,11 +114,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
   });
 
   await test.step("the reader sees no control that changes anything", async () => {
-    const context = await browser.newContext(baseURL === undefined ? {} : { baseURL });
     try {
-      const other = await context.newPage();
-      const violations = await watchPolicy(other);
-
       await signIn(other, reader, "/reports");
       await expect(other.getByRole("heading", { name: en.reports.title, level: 1 })).toBeVisible();
       await expect(other.getByRole("row").filter({ hasText: en.reportStatus.collected })).toHaveCount(1);
@@ -112,11 +128,8 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
       await expectNoViolations(other);
 
       await other.goto(new URL(jobUrl).pathname);
-      await expect(other.getByText(en.reportStatus.collected, { exact: true })).toBeVisible();
       await expect(other.getByRole("link", { name: en.progress.download, exact: true })).toHaveCount(2);
       await expect(other.getByRole("button", { name: en.progress.generatePdf, exact: true })).toHaveCount(0);
-      await expect(other.getByRole("button", { name: en.progress.retryPdf, exact: true })).toHaveCount(0);
-      await expect(other.getByRole("button", { name: en.progress.deleteReport, exact: true })).toHaveCount(0);
       await expectNoViolations(other);
 
       expect(violations).toEqual([]);
@@ -131,6 +144,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText("Production");
     await expect(dialog).toContainText(operator.username);
+    await expectNoViolations(page);
     await dialog.getByRole("button", { name: en.delete.confirm, exact: true }).click();
     await expect(page.getByText(en.reports.empty)).toBeVisible();
     await expectNoViolations(page);
