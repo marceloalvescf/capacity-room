@@ -28,6 +28,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A report request names the language of its report, and only the PDF in
   that language is made at first; the PDF in the other language is made
   when someone asks for it.
+- An expired report can be deleted, one at a time or several at once, where
+  before the delete was refused.
+- The Compose file gives `serve` and `worker` the time their stop needs
+  before Docker ends them.
 
 ### Removed
 

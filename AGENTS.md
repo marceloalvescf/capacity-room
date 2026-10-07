@@ -321,7 +321,8 @@ redactor the moment the settings are loaded, before the pool opens.
   path that queues sets the phase to `rendering` and writes
   `report.pdf_request`.
 - **A report answers 404 once deleted or purged, and 410 from its expiry
-  until its purge.** Expired means `expires_at` at or before now or
+  until its purge,** except to a delete: an expired report is deleted like
+  any other, as spec 12.2 offers it. Expired means `expires_at` at or before now or
   `expired_at` set, judged with one reading of the clock per request; the
   maintenance job's clock may run ahead of the API's.
 - **Authorization runs before any conditional answer.** The view, the

@@ -413,7 +413,8 @@ with `If-None-Match` answers 304 when nothing changed, and only once the
 reader is known to be allowed to read the report. From the end of
 `report_retention_days` a report answers 410 `REPORT_EXPIRED` until it is
 removed `expired_report_days` later, and 404 after; a deleted report answers
-404 at once.
+404 at once. An expired report can still be deleted, by whoever may delete
+it.
 
 `serve`, `worker`, and `admin` exit with 0, with 1 for a failure at run time
 (the database, the listener, Typst for `worker`, jobs that did not stop
@@ -436,7 +437,10 @@ docker compose -f deploy/compose.yaml up -d
 
 `serve` listens on `127.0.0.1:8080` and speaks plain HTTP. On a stop
 signal it waits up to 30 seconds for the requests in flight, closes the
-connections still open after that with one warning, and exits 0. The session
+connections still open after that with one warning, and exits 0. The Compose
+file gives `serve` 45 seconds and `worker` 75 seconds to stop before Docker
+kills them; a deployment that raises `worker_drain_seconds` raises the
+worker's `stop_grace_period` with it. The session
 cookie is `Secure`, so a browser reaches `serve` at localhost or through a
 TLS proxy that the operator provides. The Compose files hold no proxy and no
 certificate. `deploy/compose.integration.yaml` and the files of
