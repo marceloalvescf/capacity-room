@@ -32,6 +32,7 @@ export const pairs: readonly Pair[] = [
   text("critical-surface-fg", "critical-surface"),
   text("info-surface-fg", "info-surface"),
   { fg: "input-border", bg: "surface", min: 3 },
+  { fg: "input-border", bg: "bg", min: 3 },
   { fg: "accent", bg: "surface", min: 3 },
   { fg: "accent", bg: "bg", min: 3 },
   { fg: "accent", bg: "sidebar", min: 3 },

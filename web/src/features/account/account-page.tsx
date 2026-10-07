@@ -13,6 +13,7 @@ import { useScreenTitle } from "@/app/title";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
+import { cn } from "@/lib/cn";
 import { isLanguage } from "@/i18n/language";
 import { usePrincipal } from "@/session/session";
 import { useChangeLanguage } from "@/session/use-change-language";
@@ -85,11 +86,20 @@ export function AccountPage() {
         <p>{t("account.signedInAs", { username: principal.username, role: t(`role.${principal.role}`) })}</p>
       </div>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-lg font-semibold">{t("account.language.title")}</legend>
+      <fieldset className="flex">
+        <legend className="mb-3 text-lg font-semibold">{t("account.language.title")}</legend>
         {languageValues.map((language) => (
-          <label key={language} className="flex min-h-9 items-center gap-2 text-sm">
+          <label
+            key={language}
+            className={cn(
+              "relative inline-flex min-h-9 cursor-pointer items-center border border-input-border bg-surface px-4 text-sm font-medium text-surface-fg",
+              "first:rounded-l-md last:rounded-r-md not-first:-ml-px",
+              "has-checked:z-10 has-checked:border-accent has-checked:bg-accent has-checked:text-accent-fg",
+              "has-focus-visible:z-20 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent",
+            )}
+          >
             <input
+              className="absolute inset-0 m-0 cursor-pointer appearance-none opacity-0"
               type="radio"
               name="language"
               value={language}
