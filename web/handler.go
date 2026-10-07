@@ -44,8 +44,10 @@ func handler(files fs.FS) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
 		if name == "" || !isFile(files, name) {
-			if strings.HasPrefix(r.URL.Path, assetsPrefix) {
-				http.NotFound(w, r)
+			if strings.HasPrefix("/"+name, assetsPrefix) {
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.WriteHeader(http.StatusNotFound)
+				_, _ = w.Write([]byte("Not Found"))
 				return
 			}
 			name = indexName

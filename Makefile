@@ -73,7 +73,7 @@ postgres-down:
 
 # Starts PostgreSQL, runs the tagged tests, and removes the server even when
 # a test fails; the exit status is the tests'.
-test-postgres:
+test-postgres: web
 	@set -o pipefail; $(MAKE) postgres-up; \
 	listed=$$(go list ./internal/platform/... ./internal/cli/...); status=$$?; \
 	packages=$$(printf '%s\n' "$$listed" | grep -v -e /internal/platform/worker$$ -e /internal/cli$$); \

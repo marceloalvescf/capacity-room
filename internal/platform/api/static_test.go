@@ -49,3 +49,26 @@ func TestStaticCarriesSecurityHeaders(t *testing.T) {
 		}
 	}
 }
+
+func TestUnmatchedUncleanPathsRedirect(t *testing.T) {
+	stub := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("stub"))
+	})
+	cases := map[string]string{
+		"//api/v1/nothing":     "/api/v1/nothing",
+		"/x/../api/v1/nothing": "/api/v1/nothing",
+		"/x/../health/nothing": "/health/nothing",
+		"/a/../account":        "/account",
+	}
+	for path, want := range cases {
+		t.Run(path, func(t *testing.T) {
+			r := httptest.NewRequest("GET", "/", nil)
+			r.URL.Path = path
+			w := httptest.NewRecorder()
+			(&Server{Static: stub}).Handler().ServeHTTP(w, r)
+			if w.Code != http.StatusTemporaryRedirect || w.Header().Get("Location") != want || w.Body.String() == "stub" {
+				t.Fatalf("%d %q %q, want 307 to %q", w.Code, w.Header().Get("Location"), w.Body.String(), want)
+			}
+		})
+	}
+}

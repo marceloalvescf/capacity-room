@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -134,12 +135,20 @@ func (u unmatched) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // servesStatic reports whether an unmatched request belongs to the static
-// handler: a GET or HEAD outside /api and /health/.
+// handler: a GET or HEAD outside /api and /health/ whose path is already
+// clean, so that the mux still redirects an unclean path first.
 func servesStatic(r *http.Request) bool {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		return false
 	}
 	p := r.URL.Path
+	clean := path.Clean("/" + p)
+	if strings.HasSuffix(p, "/") && clean != "/" {
+		clean += "/"
+	}
+	if clean != p {
+		return false
+	}
 	return p != "/api" && !strings.HasPrefix(p, "/api/") && !strings.HasPrefix(p, "/health/")
 }
 
