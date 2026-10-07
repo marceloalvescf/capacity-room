@@ -238,19 +238,24 @@ func applyFile(path string, cfg *Config) error {
 	_, hasPeriod := table["period"]
 	_, hasStart := table["start"]
 	_, hasEnd := table["end"]
-	if err := setWindow(&cfg.Analysis, hasPeriod, hasStart || hasEnd, errFileWindow); err != nil {
+	if err := setWindow(&cfg.Analysis, hasPeriod, hasStart, hasEnd, errFileWindow); err != nil {
 		return err
 	}
 	return nil
 }
 
 // setWindow settles one source's say on the window: a source that sets a
-// period and a range together is refused with refusal; a source that sets a
-// range clears the period, and one that sets a period clears the range.
-func setWindow(a *Analysis, period, rng bool, refusal error) error {
+// period and a range together is refused with refusal, and one that sets a
+// start without an end, or an end without a start, is refused; a source that
+// sets a range replaces both ends and clears the period, and one that sets a
+// period clears the range.
+func setWindow(a *Analysis, period, start, end bool, refusal error) error {
+	rng := start || end
 	switch {
 	case period && rng:
 		return refusal
+	case start != end:
+		return errRangeTogether
 	case rng:
 		a.Period = ""
 	case period:
@@ -359,7 +364,7 @@ func applyEnvironment(cfg *Config, getenv func(string) string) error {
 	if end != "" {
 		cfg.Analysis.End = end
 	}
-	if err := setWindow(&cfg.Analysis, period != "", start != "" || end != "", errEnvWindow); err != nil {
+	if err := setWindow(&cfg.Analysis, period != "", start != "", end != "", errEnvWindow); err != nil {
 		return err
 	}
 	if v := getenv("KCR_TIMEZONE"); v != "" {
@@ -412,7 +417,7 @@ func applyFlags(cfg *Config, flags Flags) error {
 	if flags.End != nil {
 		cfg.Analysis.End = *flags.End
 	}
-	if err := setWindow(&cfg.Analysis, flags.Period != nil, flags.Start != nil || flags.End != nil, errFlagWindow); err != nil {
+	if err := setWindow(&cfg.Analysis, flags.Period != nil, flags.Start != nil, flags.End != nil, errFlagWindow); err != nil {
 		return err
 	}
 	if flags.Timezone != nil {

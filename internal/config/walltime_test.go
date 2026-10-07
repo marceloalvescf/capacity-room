@@ -193,3 +193,41 @@ func TestDefaultPeriodIsKept(t *testing.T) {
 		t.Fatalf("Period = %q", got)
 	}
 }
+
+func TestASourceSetsBothEnds(t *testing.T) {
+	const want = "analysis.start and analysis.end must be set together"
+	tests := []struct {
+		name string
+		src  Source
+	}{
+		{"file start with environment end", Source{File: writeFile(t, rangeFile("start = \"2026-09-01 00:00\"")), Getenv: rangeEnv(map[string]string{"KCR_END": "2026-10-01 00:00"})}},
+		{"file end alone", Source{File: writeFile(t, rangeFile("end = \"2026-10-01 00:00\"")), Getenv: noEnv}},
+		{"environment start with flag end", Source{File: writeFile(t, rangeFile("")), Getenv: rangeEnv(map[string]string{"KCR_START": "2026-09-01 00:00"}), Flags: Flags{End: strPtr("2026-10-01 00:00")}}},
+		{"environment end alone", Source{File: writeFile(t, rangeFile("")), Getenv: rangeEnv(map[string]string{"KCR_END": "2026-10-01 00:00"})}},
+		{"file range with flag start alone", Source{File: writeFile(t, rangeFile("start = \"2026-09-01 00:00\"\nend = \"2026-10-01 00:00\"")), Getenv: noEnv, Flags: Flags{Start: strPtr("2026-09-05 00:00")}}},
+		{"file range with flag end alone", Source{File: writeFile(t, rangeFile("start = \"2026-09-01 00:00\"\nend = \"2026-10-01 00:00\"")), Getenv: noEnv, Flags: Flags{End: strPtr("2026-09-20 00:00")}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Load(tt.src)
+			if err == nil || err.Error() != want {
+				t.Fatalf("error = %v, want %q", err, want)
+			}
+		})
+	}
+}
+
+func TestAFlagRangeReplacesTheFileRange(t *testing.T) {
+	loaded, err := Load(Source{
+		File:   writeFile(t, rangeFile("start = \"2026-09-01 00:00\"\nend = \"2026-10-01 00:00\"")),
+		Getenv: noEnv,
+		Flags:  Flags{Start: strPtr("2026-09-05 00:00"), End: strPtr("2026-09-20 00:00")},
+	})
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	a := loaded.Config.Analysis
+	if a.Period != "" || a.Start != "2026-09-05 00:00" || a.End != "2026-09-20 00:00" {
+		t.Fatalf("Analysis = %+v", a)
+	}
+}
