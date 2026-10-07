@@ -56,7 +56,7 @@ const calendarClasses: Partial<ClassNames> = {
   week: "[&>td]:py-px",
   day: "p-0 text-center",
   day_button:
-    "h-8 w-full rounded-md font-mono text-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
+    "h-8 w-full rounded-md font-mono text-sm focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
   outside: "text-muted-fg",
   selected: "rounded-md bg-accent text-accent-fg data-[outside=true]:text-accent-fg",
 };

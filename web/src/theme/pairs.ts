@@ -36,6 +36,7 @@ export const pairs: readonly Pair[] = [
   { fg: "input-border", bg: "bg", min: 3 },
   { fg: "accent", bg: "surface", min: 3 },
   { fg: "accent", bg: "bg", min: 3 },
+  { fg: "accent", bg: "info-surface", min: 3 },
   { fg: "accent", bg: "sidebar", min: 3 },
   { fg: "accent", bg: "sidebar-active", min: 3 },
 ];

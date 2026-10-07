@@ -286,6 +286,17 @@ describe("period picker", () => {
       });
     });
 
+    it("a day's focus ring sits outside its cell", async () => {
+      const user = userEvent.setup();
+      open([], range("2026-09-01 00:00", "2026-10-01 00:00"));
+      const dialog = await trigger(user);
+      await pick(user, "from");
+      await within(dialog).findByRole("grid");
+      const day = dialog.querySelector<HTMLElement>('td[data-day="2026-09-10"] button');
+      expect(day).toHaveClass("focus-visible:outline-offset-2");
+      expect(day?.className).not.toMatch(/-outline-offset-/);
+    });
+
     it("starts on Monday and speaks the language", async () => {
       await i18next.changeLanguage("pt-BR");
       const user = userEvent.setup();
