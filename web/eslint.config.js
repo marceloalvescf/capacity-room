@@ -53,6 +53,11 @@ export default defineConfig(
     languageOptions: { globals: { ...globals.node } },
   },
   {
+    files: ["public/**/*.js"],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: { sourceType: "script" },
+  },
+  {
     files: ["**/*.test.ts", "**/*.test.tsx", "tests/**"],
     plugins: { vitest },
     rules: {

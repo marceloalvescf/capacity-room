@@ -1,0 +1,55 @@
+import { describe, expect, it } from "vitest";
+import en from "@/locales/en.json";
+import ptBR from "@/locales/pt-BR.json";
+import { families } from "./families";
+
+function flatten(tree: object, prefix = ""): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const [key, value] of Object.entries(tree)) {
+    const path = prefix === "" ? key : `${prefix}.${key}`;
+    if (typeof value === "string") {
+      out.set(path, value);
+    } else {
+      for (const [k, v] of flatten(value as object, path)) {
+        out.set(k, v);
+      }
+    }
+  }
+  return out;
+}
+
+function params(text: string): string[] {
+  return [...text.matchAll(/\{\{(.*?)\}\}/g)].map((m) => m[1] ?? "").sort();
+}
+
+const files = { en: flatten(en), "pt-BR": flatten(ptBR) };
+
+describe("locales", () => {
+  it("same keys, same parameters", () => {
+    expect([...files["pt-BR"].keys()].sort()).toEqual([...files.en.keys()].sort());
+    for (const [key, text] of files.en) {
+      expect({ key, params: params(files["pt-BR"].get(key) ?? "") }).toEqual({ key, params: params(text) });
+    }
+  });
+
+  it("families are exact", () => {
+    for (const [family, members] of Object.entries(families)) {
+      for (const [lang, file] of Object.entries(files)) {
+        const keys = [...file.keys()]
+          .filter((key) => key.startsWith(`${family}.`))
+          .map((key) => key.slice(family.length + 1))
+          .sort();
+        expect({ family, lang, keys }).toEqual({ family, lang, keys: [...members].sort() });
+      }
+    }
+  });
+
+  it("product name", () => {
+    for (const [lang, file] of Object.entries(files)) {
+      expect({ lang, name: `${file.get("app.short") ?? ""} - ${file.get("app.long") ?? ""}` }).toEqual({
+        lang,
+        name: file.get("app.name"),
+      });
+    }
+  });
+});

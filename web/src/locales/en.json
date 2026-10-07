@@ -1,0 +1,119 @@
+{
+  "app": {
+    "name": "kcr - Kubernetes Capacity Report",
+    "short": "kcr",
+    "long": "Kubernetes Capacity Report",
+    "title": "{{screen}} · kcr - Kubernetes Capacity Report",
+    "skip": "Skip to content",
+    "version": "Version {{version}}"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "account": "Account"
+  },
+  "header": {
+    "language": "Language: {{language}}",
+    "theme": "Theme: {{theme}}",
+    "signOut": "Sign out"
+  },
+  "language": {
+    "en": "English",
+    "pt-BR": "Português (Brasil)"
+  },
+  "theme": {
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "role": {
+    "administrator": "administrator",
+    "operator": "operator",
+    "reader": "reader"
+  },
+  "status": {
+    "healthy": "Healthy",
+    "attention": "Attention",
+    "critical": "Critical",
+    "undefined": "Undefined",
+    "unavailable": "Unavailable"
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Kubernetes capacity reports",
+    "username": "User name",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "passwordChanged": "Your password was changed. Sign in again with the new password.",
+    "sessionEnded": "Your session ended. Sign in again."
+  },
+  "account": {
+    "title": "Account",
+    "signedInAs": "Signed in as {{username}}, {{role}}.",
+    "language": {
+      "title": "Language",
+      "saved": "Language saved."
+    },
+    "password": {
+      "title": "Password",
+      "current": "Current password",
+      "new": "New password",
+      "repeat": "Repeat the new password",
+      "hint": "12 to 1024 characters. Changing it signs you out everywhere.",
+      "submit": "Change password",
+      "submitting": "Changing…"
+    }
+  },
+  "validation": {
+    "required": "Fill in this field.",
+    "passwordShort": "Use at least 12 characters.",
+    "passwordLong": "Use at most 1024 characters.",
+    "passwordsDiffer": "The two passwords differ."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "This address leads to no screen of the console.",
+    "home": "Go to the start page"
+  },
+  "error": {
+    "general": "Something went wrong. Try again.",
+    "network": "The server could not be reached.",
+    "REQUEST_INVALID": "Some of the information sent is not valid.",
+    "INVALID_CREDENTIALS": "The user name or the password is wrong.",
+    "UNAUTHENTICATED": "Your session ended. Sign in again.",
+    "CSRF_REJECTED": "The page was out of date. Try again.",
+    "FORBIDDEN": "Your role does not allow this.",
+    "USER_NOT_FOUND": "No such user was found.",
+    "NOT_FOUND": "Nothing was found at this address.",
+    "METHOD_NOT_ALLOWED": "This action is not available here.",
+    "USERNAME_TAKEN": "This user name is already taken.",
+    "LAST_ADMIN": "The last active administrator cannot be removed.",
+    "SELF_DELETE": "You cannot delete your own account.",
+    "SELF_DEACTIVATE": "You cannot deactivate your own account.",
+    "SELF_DEMOTE": "You cannot lower your own role.",
+    "INVALID_USERNAME": "This user name is not valid.",
+    "PASSWORD_TOO_SHORT": "The password must have at least 12 characters.",
+    "PASSWORD_TOO_LONG": "The password must have at most 1024 characters.",
+    "AUTH_RATE_LIMITED": "Too many failed attempts. Try again in {{seconds}} seconds.",
+    "DATABASE_UNAVAILABLE": "The database is unavailable. Try again shortly.",
+    "PROFILE_NOT_FOUND": "No such profile was found.",
+    "PROFILE_ID_TAKEN": "This profile id is already taken.",
+    "PROFILE_REVISION_STALE": "This profile changed since you opened it. Load it again.",
+    "PROFILE_DOCUMENT_INVALID": "The profile is not valid.",
+    "ENDPOINT_URL_REJECTED": "The address of the metric source is not allowed.",
+    "ENDPOINT_ADDRESS_REJECTED": "The metric source resolves to an address that is not allowed.",
+    "INTERNAL_ERROR": "Something went wrong on the server.",
+    "IDEMPOTENCY_KEY_INVALID": "The request could not be identified. Try again.",
+    "CURSOR_INVALID": "The list could not continue. Load it again.",
+    "REPORT_NOT_FOUND": "No such report was found.",
+    "IDEMPOTENCY_KEY_REUSED": "This request was already sent with other values.",
+    "PROFILE_INACTIVE": "This profile is not active.",
+    "SNAPSHOT_NOT_READY": "This report's data is not ready yet.",
+    "PDF_NOT_READY": "This PDF is not ready yet.",
+    "PDF_RETRY_NOT_ALLOWED": "This PDF cannot be generated again now.",
+    "REPORT_EXPIRED": "This report has expired.",
+    "REPORT_SELECTION_NOT_PERMITTED": "The profile does not permit this selection.",
+    "ADMISSION_GLOBAL_LIMIT": "The platform is generating as many reports as it can. Try again in {{seconds}} seconds.",
+    "ADMISSION_PROFILE_LIMIT": "This profile is generating as many reports as it can. Try again in {{seconds}} seconds."
+  }
+}

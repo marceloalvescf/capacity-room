@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f7f9;
+  --fg: #15181d;
+  --surface: #ffffff;
+  --surface-fg: #15181d;
+  --sidebar: #eceef2;
+  --sidebar-fg: #4a515c;
+  --sidebar-active: #dfe3ea;
+  --sidebar-active-fg: #15181d;
+  --muted-fg: #5e6570;
+  --border: #dde0e6;
+  --input-border: #8a909a;
+  --accent: #2f5bd3;
+  --accent-fg: #ffffff;
+  --healthy: #1d6b40;
+  --attention: #a15c00;
+  --critical: #b42318;
+  --neutral: #5e6570;
+  --critical-surface: #fdecea;
+  --critical-border: #f1b5ae;
+  --critical-surface-fg: #8c1d13;
+  --info-surface: #eef2fc;
+  --info-surface-fg: #2443a3;
+}
+
+:root[data-theme="dark"] {
+  --bg: #111318;
+  --fg: #e6e8ec;
+  --surface: #1a1d23;
+  --surface-fg: #e6e8ec;
+  --sidebar: #16181d;
+  --sidebar-fg: #aab0bb;
+  --sidebar-active: #252932;
+  --sidebar-active-fg: #f1f2f4;
+  --muted-fg: #9aa1ad;
+  --border: #2a2e36;
+  --input-border: #6b7280;
+  --accent: #7d9bf0;
+  --accent-fg: #0d1530;
+  --healthy: #6fcf97;
+  --attention: #f2b84b;
+  --critical: #f28b82;
+  --neutral: #9aa1ad;
+  --critical-surface: #2a1716;
+  --critical-border: #6b2a26;
+  --critical-surface-fg: #f2b8b2;
+  --info-surface: #18213a;
+  --info-surface-fg: #9db4f5;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-surface: var(--surface);
+  --color-surface-fg: var(--surface-fg);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-fg: var(--sidebar-fg);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-active-fg: var(--sidebar-active-fg);
+  --color-muted-fg: var(--muted-fg);
+  --color-border: var(--border);
+  --color-input-border: var(--input-border);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-healthy: var(--healthy);
+  --color-attention: var(--attention);
+  --color-critical: var(--critical);
+  --color-neutral: var(--neutral);
+  --color-critical-surface: var(--critical-surface);
+  --color-critical-border: var(--critical-border);
+  --color-critical-surface-fg: var(--critical-surface-fg);
+  --color-info-surface: var(--info-surface);
+  --color-info-surface-fg: var(--info-surface-fg);
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+}
+
+/* The modal layers set data-scroll-locked on the body through
+   src/lib/remove-scroll-bar.ts, which injects no style element. These static
+   rules are the scroll lock itself. */
+body[data-scroll-locked] {
+  overflow: hidden !important;
+  overscroll-behavior: contain;
+}

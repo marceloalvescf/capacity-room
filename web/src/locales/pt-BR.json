@@ -1,0 +1,119 @@
+{
+  "app": {
+    "name": "kcr - Kubernetes Capacity Report",
+    "short": "kcr",
+    "long": "Kubernetes Capacity Report",
+    "title": "{{screen}} · kcr - Kubernetes Capacity Report",
+    "skip": "Pular para o conteúdo",
+    "version": "Versão {{version}}"
+  },
+  "nav": {
+    "label": "Navegação principal",
+    "account": "Conta"
+  },
+  "header": {
+    "language": "Idioma: {{language}}",
+    "theme": "Tema: {{theme}}",
+    "signOut": "Sair"
+  },
+  "language": {
+    "en": "English",
+    "pt-BR": "Português (Brasil)"
+  },
+  "theme": {
+    "system": "Sistema",
+    "light": "Claro",
+    "dark": "Escuro"
+  },
+  "role": {
+    "administrator": "administrador",
+    "operator": "operador",
+    "reader": "leitor"
+  },
+  "status": {
+    "healthy": "Saudável",
+    "attention": "Atenção",
+    "critical": "Crítico",
+    "undefined": "Indefinido",
+    "unavailable": "Indisponível"
+  },
+  "login": {
+    "title": "Entrar",
+    "subtitle": "Relatórios de capacidade do Kubernetes",
+    "username": "Usuário",
+    "password": "Senha",
+    "submit": "Entrar",
+    "submitting": "Entrando…",
+    "passwordChanged": "Sua senha foi alterada. Entre de novo com a nova senha.",
+    "sessionEnded": "Sua sessão terminou. Entre de novo."
+  },
+  "account": {
+    "title": "Conta",
+    "signedInAs": "Conectado como {{username}}, {{role}}.",
+    "language": {
+      "title": "Idioma",
+      "saved": "Idioma salvo."
+    },
+    "password": {
+      "title": "Senha",
+      "current": "Senha atual",
+      "new": "Nova senha",
+      "repeat": "Repita a nova senha",
+      "hint": "De 12 a 1024 caracteres. Alterar a senha encerra todas as suas sessões.",
+      "submit": "Alterar senha",
+      "submitting": "Alterando…"
+    }
+  },
+  "validation": {
+    "required": "Preencha este campo.",
+    "passwordShort": "Use pelo menos 12 caracteres.",
+    "passwordLong": "Use no máximo 1024 caracteres.",
+    "passwordsDiffer": "As duas senhas são diferentes."
+  },
+  "notFound": {
+    "title": "Página não encontrada",
+    "body": "Este endereço não leva a nenhuma tela do console.",
+    "home": "Ir para o início"
+  },
+  "error": {
+    "general": "Algo deu errado. Tente de novo.",
+    "network": "Não foi possível falar com o servidor.",
+    "REQUEST_INVALID": "Parte das informações enviadas não é válida.",
+    "INVALID_CREDENTIALS": "Usuário ou senha incorretos.",
+    "UNAUTHENTICATED": "Sua sessão terminou. Entre de novo.",
+    "CSRF_REJECTED": "A página estava desatualizada. Tente de novo.",
+    "FORBIDDEN": "Seu papel não permite esta ação.",
+    "USER_NOT_FOUND": "Usuário não encontrado.",
+    "NOT_FOUND": "Nada foi encontrado neste endereço.",
+    "METHOD_NOT_ALLOWED": "Esta ação não está disponível aqui.",
+    "USERNAME_TAKEN": "Este nome de usuário já está em uso.",
+    "LAST_ADMIN": "O último administrador ativo não pode ser removido.",
+    "SELF_DELETE": "Você não pode excluir a sua própria conta.",
+    "SELF_DEACTIVATE": "Você não pode desativar a sua própria conta.",
+    "SELF_DEMOTE": "Você não pode rebaixar o seu próprio papel.",
+    "INVALID_USERNAME": "Este nome de usuário não é válido.",
+    "PASSWORD_TOO_SHORT": "A senha precisa ter pelo menos 12 caracteres.",
+    "PASSWORD_TOO_LONG": "A senha pode ter no máximo 1024 caracteres.",
+    "AUTH_RATE_LIMITED": "Muitas tentativas falharam. Tente de novo em {{seconds}} segundos.",
+    "DATABASE_UNAVAILABLE": "O banco de dados está indisponível. Tente de novo em instantes.",
+    "PROFILE_NOT_FOUND": "Perfil não encontrado.",
+    "PROFILE_ID_TAKEN": "Este id de perfil já está em uso.",
+    "PROFILE_REVISION_STALE": "Este perfil mudou desde que você o abriu. Carregue-o de novo.",
+    "PROFILE_DOCUMENT_INVALID": "O perfil não é válido.",
+    "ENDPOINT_URL_REJECTED": "O endereço da fonte de métricas não é permitido.",
+    "ENDPOINT_ADDRESS_REJECTED": "A fonte de métricas aponta para um endereço que não é permitido.",
+    "INTERNAL_ERROR": "Algo deu errado no servidor.",
+    "IDEMPOTENCY_KEY_INVALID": "Não foi possível identificar o pedido. Tente de novo.",
+    "CURSOR_INVALID": "A lista não pôde continuar. Carregue-a de novo.",
+    "REPORT_NOT_FOUND": "Relatório não encontrado.",
+    "IDEMPOTENCY_KEY_REUSED": "Este pedido já foi enviado com outros valores.",
+    "PROFILE_INACTIVE": "Este perfil não está ativo.",
+    "SNAPSHOT_NOT_READY": "Os dados deste relatório ainda não estão prontos.",
+    "PDF_NOT_READY": "Este PDF ainda não está pronto.",
+    "PDF_RETRY_NOT_ALLOWED": "Este PDF não pode ser gerado de novo agora.",
+    "REPORT_EXPIRED": "Este relatório expirou.",
+    "REPORT_SELECTION_NOT_PERMITTED": "O perfil não permite esta seleção.",
+    "ADMISSION_GLOBAL_LIMIT": "A plataforma já está gerando o máximo de relatórios. Tente de novo em {{seconds}} segundos.",
+    "ADMISSION_PROFILE_LIMIT": "Este perfil já está gerando o máximo de relatórios. Tente de novo em {{seconds}} segundos."
+  }
+}
