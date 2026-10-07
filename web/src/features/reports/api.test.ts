@@ -19,8 +19,12 @@ describe("reports api", () => {
   it("is active while queued, running, or a PDF is pending", () => {
     expect(isActive({ status: "queued", pdfs: [] })).toBe(true);
     expect(isActive({ status: "running", pdfs: [] })).toBe(true);
-    expect(isActive({ status: "collected", pdfs: [{ language: "en", status: "pending", failure_code: null }] })).toBe(true);
-    expect(isActive({ status: "collected", pdfs: [{ language: "en", status: "ready", failure_code: null }] })).toBe(false);
+    expect(isActive({ status: "collected", pdfs: [{ language: "en", status: "pending", failure_code: null }] })).toBe(
+      true,
+    );
+    expect(isActive({ status: "collected", pdfs: [{ language: "en", status: "ready", failure_code: null }] })).toBe(
+      false,
+    );
     expect(isActive({ status: "failed", pdfs: [] })).toBe(false);
   });
 
@@ -29,7 +33,9 @@ describe("reports api", () => {
     const api = createApi(new QueryClient(), vi.fn());
     const first = await api.GET("/reports", { params: { query: { limit: 2 } } });
     expect(first.data?.items.map((r) => r.id)).toEqual(["a", "b"]);
-    const second = await api.GET("/reports", { params: { query: { limit: 2, cursor: first.data?.next_cursor ?? "" } } });
+    const second = await api.GET("/reports", {
+      params: { query: { limit: 2, cursor: first.data?.next_cursor ?? "" } },
+    });
     expect(second.data?.items.map((r) => r.id)).toEqual(["c"]);
     expect(second.data?.next_cursor).toBeNull();
   });

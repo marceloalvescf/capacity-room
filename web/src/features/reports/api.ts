@@ -24,7 +24,9 @@ export const reportsKey = ["reports"] as const;
 const profilesKey = ["profiles"] as const;
 
 export function isActive(report: { status: Schemas["ReportStatus"]; pdfs: ReportPDFState[] }): boolean {
-  return report.status === "queued" || report.status === "running" || report.pdfs.some((pdf) => pdf.status === "pending");
+  return (
+    report.status === "queued" || report.status === "running" || report.pdfs.some((pdf) => pdf.status === "pending")
+  );
 }
 
 export function canDelete(principal: Principal, report: { owner_id: string }): boolean {
@@ -57,7 +59,8 @@ export function useReports(): UseInfiniteQueryResult<InfiniteData<ReportPage>> {
       return data;
     },
     getNextPageParam: (last) => last.next_cursor,
-    refetchInterval: (query) => (query.state.data?.pages.some((page) => page.items.some(isActive)) === true ? 5000 : false),
+    refetchInterval: (query) =>
+      query.state.data?.pages.some((page) => page.items.some(isActive)) === true ? 5000 : false,
   });
 }
 
@@ -125,10 +128,11 @@ export function useRequestPDF(id: string) {
   });
 }
 
-// The list reloads; the deleted reports' own queries go, so that none checks a
-// report that is no longer there.
-function forget(queryClient: QueryClient, ids: string[]): Promise<void> {
-  for (const id of ids) {
+// The list reloads whatever the answer was, so that a row already gone does not
+// stay to be tried again; the deleted reports' own queries go, so that none
+// checks a report that is no longer there.
+function settle(queryClient: QueryClient, gone: string[]): Promise<void> {
+  for (const id of gone) {
     queryClient.removeQueries({ queryKey: [...reportsKey, id], exact: true });
   }
   return queryClient.invalidateQueries({ queryKey: reportsKey, exact: true });
@@ -142,7 +146,7 @@ export function useDeleteReport() {
       await api.DELETE("/reports/{id}", { params: { path: { id } } });
       return id;
     },
-    onSuccess: (id) => forget(queryClient, [id]),
+    onSettled: (_id, error, requested) => settle(queryClient, error === null ? [requested] : []),
   });
 }
 
@@ -157,10 +161,10 @@ export function useDeleteReports() {
       }
       return data.results;
     },
-    onSuccess: (results) =>
-      forget(
+    onSettled: (results) =>
+      settle(
         queryClient,
-        results.filter((result) => result.outcome !== "forbidden").map((result) => result.id),
+        (results ?? []).filter((result) => result.outcome !== "forbidden").map((result) => result.id),
       ),
   });
 }

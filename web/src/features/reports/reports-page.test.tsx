@@ -40,6 +40,10 @@ function rowOf(reportId: string): HTMLElement {
   return cell.closest("tr") as HTMLElement;
 }
 
+function listCalls() {
+  return mock.calls.filter((call) => call.method === "GET" && call.path === "/reports");
+}
+
 const t = (key: string, options: Record<string, string | number> = {}): string => i18next.t(key, options);
 
 beforeEach(() => {
@@ -80,7 +84,7 @@ describe("report list", () => {
       advanceTimers: vi.advanceTimersByTimeAsync,
     });
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    await renderApp("/reports");
+    const { queryClient } = await renderApp("/reports");
     await waitFor(() => {
       expect(screen.getAllByRole("row")).toHaveLength(51);
     });
@@ -91,10 +95,20 @@ describe("report list", () => {
     });
     expect(within(rowOf(id(3))).getByText(t("reportStatus.running"))).toBeInTheDocument();
 
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: reportsKey });
+    });
     mock.reports = many(60);
     mock.calls.length = 0;
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(5000);
+      await vi.advanceTimersByTimeAsync(4000);
+    });
+    expect(listCalls()).toEqual([]);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1100);
+    });
+    await waitFor(() => {
+      expect(listCalls()).toHaveLength(2);
     });
     await waitFor(() => {
       expect(within(rowOf(id(3))).getByText(t("reportStatus.collected"))).toBeInTheDocument();
@@ -110,6 +124,40 @@ describe("report list", () => {
       await vi.advanceTimersByTimeAsync(10_000);
     });
     expect(mock.calls.filter((call) => call.path === "/reports")).toEqual([]);
+  });
+
+  it("a pending PDF keeps the checking until it is ready", async () => {
+    const pending = (status: "pending" | "ready") => [{ language: "en" as const, status, failure_code: null }];
+    mock.reports = many(2, (n) => (n === 0 ? { pdfs: pending("pending") } : {}));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { queryClient } = await renderApp("/reports");
+    await screen.findByText(t("reports.updating"));
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: reportsKey });
+    });
+    mock.calls.length = 0;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
+    });
+    expect(listCalls()).toEqual([]);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1100);
+    });
+    await waitFor(() => {
+      expect(listCalls()).toHaveLength(1);
+    });
+    mock.reports = many(2, (n) => (n === 0 ? { pdfs: pending("ready") } : {}));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    await waitFor(() => {
+      expect(screen.queryByText(t("reports.updating"))).not.toBeInTheDocument();
+    });
+    mock.calls.length = 0;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
+    expect(listCalls()).toEqual([]);
   });
 
   it("a reader", async () => {
@@ -343,5 +391,150 @@ describe("report list", () => {
     await user.click(screen.getByRole("button", { name: t("reports.retry") }));
     await screen.findAllByRole("row");
     expect(screen.queryByText(t("reports.loadFailed"))).not.toBeInTheDocument();
+  });
+
+  it("a delete the server refuses as gone still reloads the list", async () => {
+    mock.reports = many(2);
+    server.use(
+      http.delete(`${window.location.origin}/api/v1/reports/${id(1)}`, () => {
+        mock.reports = mock.reports.filter((r) => r.id !== id(1));
+        return HttpResponse.json({ error: { code: "REPORT_NOT_FOUND", message: "m", fields: {} } }, { status: 404 });
+      }),
+    );
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
+    await waitFor(() => {
+      expect(screen.getAllByRole("row")).toHaveLength(2);
+    });
+  });
+
+  it("after deleting one, focus is on the heading and the outcome is announced", async () => {
+    mock.reports = many(2);
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(within(rowOf(id(0))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 1, name: t("reports.title") })).toHaveFocus();
+    });
+    expect(await screen.findByText(t("reports.deleted", { count: 1 }))).toBeInTheDocument();
+  });
+
+  it("after a bulk delete, focus is on the heading and the count that went is announced", async () => {
+    mock.reports = many(4);
+    server.use(
+      http.post(`${window.location.origin}/api/v1/reports/delete`, async ({ request }) => {
+        const body = (await request.json()) as { ids: string[] };
+        const outcomes = ["deleted", "not_found", "forbidden"] as const;
+        return HttpResponse.json({ results: body.ids.map((one, n) => ({ id: one, outcome: outcomes[n] })) });
+      }),
+    );
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    for (const n of [0, 1, 2]) {
+      await user.click(within(rowOf(id(n))).getByRole("checkbox"));
+    }
+    await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
+    expect(await screen.findByText(t("reports.deleted", { count: 2 }))).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 1, name: t("reports.title") })).toHaveFocus();
+    });
+  });
+
+  it("the bulk dialog sends the ids it counted, never an empty list", async () => {
+    mock.reports = many(3);
+    const user = userEvent.setup();
+    const { queryClient } = await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(within(rowOf(id(0))).getByRole("checkbox"));
+    await user.click(within(rowOf(id(1))).getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText(t("delete.manyTitle", { count: 2 }))).toBeInTheDocument();
+    const gone = mock.reports;
+    mock.reports = [];
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: reportsKey });
+    });
+    mock.reports = gone;
+    mock.calls.length = 0;
+    await user.click(within(dialog).getByRole("button", { name: t("delete.confirm") }));
+    await waitFor(() => {
+      expect(mock.calls.some((call) => call.method === "POST" && call.path === "/reports/delete")).toBe(true);
+    });
+    const post = mock.calls.find((call) => call.method === "POST" && call.path === "/reports/delete");
+    expect(post?.body).toEqual({ ids: [id(0), id(1)] });
+  });
+
+  it("a double click on confirm sends one request", async () => {
+    mock.reports = many(3);
+    let posts = 0;
+    server.use(
+      http.post(`${window.location.origin}/api/v1/reports/delete`, async ({ request }) => {
+        posts += 1;
+        const body = (await request.json()) as { ids: string[] };
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        return HttpResponse.json({ results: body.ids.map((one) => ({ id: one, outcome: "deleted" })) });
+      }),
+    );
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(within(rowOf(id(0))).getByRole("checkbox"));
+    await user.click(within(rowOf(id(1))).getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
+    const confirm = within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") });
+    await user.dblClick(confirm);
+    await waitFor(() => {
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    });
+    expect(posts).toBe(1);
+  });
+
+  it("the selection keeps only the rows still shown", async () => {
+    mock.reports = many(3);
+    const user = userEvent.setup();
+    const { queryClient } = await renderApp("/reports");
+    await screen.findAllByRole("row");
+    for (const n of [0, 1, 2]) {
+      await user.click(within(rowOf(id(n))).getByRole("checkbox"));
+    }
+    const all = mock.reports;
+    mock.reports = all.filter((r) => r.id !== id(1));
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: reportsKey });
+    });
+    expect(await screen.findByText(t("reports.selected", { count: 2 }))).toBeInTheDocument();
+    mock.reports = all;
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: reportsKey });
+    });
+    await waitFor(() => {
+      expect(screen.getAllByRole("row")).toHaveLength(4);
+    });
+    expect(within(rowOf(id(1))).getByRole("checkbox")).not.toBeChecked();
+    expect(screen.getByText(t("reports.selected", { count: 2 }))).toBeInTheDocument();
+  });
+
+  it("a failed check keeps the rows and shows an alert above them", async () => {
+    mock.reports = many(2);
+    const { queryClient } = await renderApp("/reports");
+    await screen.findAllByRole("row");
+    server.use(
+      http.get(`${window.location.origin}/api/v1/reports`, () =>
+        HttpResponse.json({ error: { code: "INTERNAL_ERROR", message: "m", fields: {} } }, { status: 500 }),
+      ),
+    );
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: reportsKey });
+    });
+    expect(await screen.findByText(t("reports.loadFailed"))).toBeInTheDocument();
+    expect(screen.getAllByRole("row")).toHaveLength(3);
   });
 });

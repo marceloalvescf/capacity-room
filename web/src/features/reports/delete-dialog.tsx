@@ -3,15 +3,17 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatTime } from "@/lib/format";
 import type { ReportSummary } from "./api";
 
-export type DeleteTarget = { kind: "one"; report: ReportSummary; profile: string } | { kind: "many"; count: number };
+export type DeleteTarget = { kind: "one"; report: ReportSummary; profile: string } | { kind: "many"; ids: string[] };
 
 interface DeleteDialogProps {
   target: DeleteTarget | null;
+  busy: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  onCloseAutoFocus: (event: Event) => void;
 }
 
-export function DeleteDialog({ target, onConfirm, onCancel }: DeleteDialogProps) {
+export function DeleteDialog({ target, busy, onConfirm, onCancel, onCloseAutoFocus }: DeleteDialogProps) {
   const { t } = useTranslation();
   let title = "";
   let body = "";
@@ -23,7 +25,7 @@ export function DeleteDialog({ target, onConfirm, onCancel }: DeleteDialogProps)
       username: target.report.owner_username,
     });
   } else if (target?.kind === "many") {
-    title = t("delete.manyTitle", { count: target.count });
+    title = t("delete.manyTitle", { count: target.ids.length });
     body = t("delete.manyBody");
   }
   return (
@@ -33,7 +35,9 @@ export function DeleteDialog({ target, onConfirm, onCancel }: DeleteDialogProps)
       body={body}
       confirm={t("delete.confirm")}
       cancel={t("delete.cancel")}
+      busy={busy}
       onConfirm={onConfirm}
+      onCloseAutoFocus={onCloseAutoFocus}
       onOpenChange={(open) => {
         if (!open) {
           onCancel();

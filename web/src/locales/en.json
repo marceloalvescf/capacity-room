@@ -208,7 +208,8 @@
     "notGenerated": "Not generated",
     "loadFailed": "The reports could not be loaded.",
     "retry": "Try again",
-    "deleteForbidden": "Some reports could not be deleted: your role does not allow it."
+    "deleteForbidden": "Some reports could not be deleted: your role does not allow it.",
+    "deleted": "Deleted: {{count}}"
   },
   "delete": {
     "oneTitle": "Delete this report?",

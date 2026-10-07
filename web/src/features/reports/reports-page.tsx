@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { errorText, toError } from "@/api/errors";
+import { useAnnounce } from "@/app/live-region";
 import { useScreenTitle } from "@/app/title";
 import { StatusMark } from "@/components/status-mark";
 import { Alert } from "@/components/ui/alert";
@@ -35,19 +36,36 @@ export function ReportsPage() {
   const [target, setTarget] = useState<DeleteTarget | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const announce = useAnnounce();
+  const heading = useRef<HTMLHeadingElement>(null);
+  const focusHeading = useRef(false);
   useScreenTitle(t("reports.title"));
+
+  const rows = reports.data?.pages.flatMap((page) => page.items) ?? [];
+  // The selection keeps only the rows still shown: it is pruned when the data changes.
+  const [prunedFor, setPrunedFor] = useState(reports.data);
+  if (reports.data !== prunedFor) {
+    setPrunedFor(reports.data);
+    if (reports.data !== undefined) {
+      const shown = new Set(rows.map((row) => row.id));
+      const kept = [...selected].filter((id) => shown.has(id));
+      if (kept.length !== selected.size) {
+        setSelected(new Set(kept));
+      }
+    }
+  }
 
   if (principal === null) {
     return null;
   }
 
-  const rows = reports.data?.pages.flatMap((page) => page.items) ?? [];
   const names = new Map(profiles.data?.map((profile) => [profile.id, profile.display_name]));
   const profileName = (row: ReportSummary): string => names.get(row.profile_id) ?? row.profile_id;
   const deletable = rows.filter((row) => canDelete(principal, row));
   const chosen = deletable.filter((row) => selected.has(row.id));
   const canRequest = principal.role !== "reader";
   const updating = rows.some(isActive);
+  const busy = deleteOne.isPending || deleteMany.isPending;
 
   function toggle(id: string, on: boolean) {
     setSelected((current) => {
@@ -62,34 +80,43 @@ export function ReportsPage() {
   }
 
   function askBulk() {
+    const [only] = chosen;
+    if (only === undefined) {
+      return;
+    }
     setTarget(
-      chosen.length === 1 && chosen[0] !== undefined
-        ? { kind: "one", report: chosen[0], profile: profileName(chosen[0]) }
-        : { kind: "many", count: chosen.length },
+      chosen.length === 1
+        ? { kind: "one", report: only, profile: profileName(only) }
+        : { kind: "many", ids: chosen.map((row) => row.id) },
     );
   }
 
   async function confirm() {
     const current = target;
-    setTarget(null);
-    setFailure(null);
-    setForbidden(false);
-    if (current === null) {
+    if (current === null || busy) {
       return;
     }
+    setFailure(null);
+    setForbidden(false);
+    let went = 0;
     try {
       if (current.kind === "one") {
         await deleteOne.mutateAsync(current.report.id);
         toggle(current.report.id, false);
+        went = 1;
       } else {
-        const results = await deleteMany.mutateAsync(chosen.map((row) => row.id));
+        const results = await deleteMany.mutateAsync(current.ids);
         const refused = results.filter((result) => result.outcome === "forbidden").map((result) => result.id);
         setSelected(new Set(refused));
         setForbidden(refused.length > 0);
+        went = results.length - refused.length;
       }
+      announce(t("reports.deleted", { count: went }));
     } catch (thrown) {
       setFailure(errorText(t, toError(thrown)));
     }
+    focusHeading.current = true;
+    setTarget(null);
   }
 
   const newReport = canRequest ? (
@@ -262,7 +289,9 @@ export function ReportsPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="text-xl font-semibold">{t("reports.title")}</h1>
+          <h1 ref={heading} tabIndex={-1} className="text-xl font-semibold outline-none">
+            {t("reports.title")}
+          </h1>
           {updating ? (
             <p className="flex items-center gap-2 text-sm text-muted-fg">
               <span aria-hidden="true" className="size-2 rounded-full bg-accent motion-safe:animate-pulse" />
@@ -278,6 +307,14 @@ export function ReportsPage() {
       {content}
       <DeleteDialog
         target={target}
+        busy={busy}
+        onCloseAutoFocus={(event) => {
+          if (focusHeading.current) {
+            event.preventDefault();
+            focusHeading.current = false;
+            heading.current?.focus();
+          }
+        }}
         onConfirm={() => {
           void confirm();
         }}

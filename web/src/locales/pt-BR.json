@@ -208,7 +208,8 @@
     "notGenerated": "Não gerado",
     "loadFailed": "Não foi possível carregar os relatórios.",
     "retry": "Tentar de novo",
-    "deleteForbidden": "Alguns relatórios não puderam ser excluídos: seu papel não permite."
+    "deleteForbidden": "Alguns relatórios não puderam ser excluídos: seu papel não permite.",
+    "deleted": "Excluídos: {{count}}"
   },
   "delete": {
     "oneTitle": "Excluir este relatório?",
