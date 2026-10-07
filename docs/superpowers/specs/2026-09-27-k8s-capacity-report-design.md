@@ -121,7 +121,7 @@ template/
   graphite/    generic package: typst.toml, lib.typ, src/, assets/fonts/,
                examples/, starter, README.md
   capacity/    layout of this report
-web/           React application
+web/           React application, and the Go package that embeds its build
 deploy/        Containerfile and Compose files
 testdata/      Prometheus scenarios, golden files
 docs/reference/            original documents and inventories of their source
@@ -777,6 +777,10 @@ pdf      one row per language: pending -> ready | failed
 - An expired report answers 410 for 30 days, then the row is deleted.
 - Expiry runs every minute as a periodic job.
 - There is no limit on the lookback period. The form warns above 15 days.
+- `serve` reads the body of a view, a snapshot, or a PDF through a pool of
+  its own, with four connections to match the four download slots. A
+  connection of that pool is closed when it is released, so no idle
+  connection keeps the buffer of a large row.
 
 ### 11.9 Audit
 
@@ -856,9 +860,19 @@ with a test that fails when the library changes it.
 
 React 19, React Router, TanStack Query, TanStack Table, React Hook Form with
 Zod, Radix UI, Tailwind CSS 4, Phosphor icons, react-i18next, Vite, and
-TypeScript. Fonts are Inter and Geist Mono, served by the BFF.
+TypeScript. Fonts are Inter and Geist Mono, bundled from their Fontsource
+packages in the latin and latin-ext subsets and served by the BFF.
 
-API types are generated from `api/openapi.yaml`.
+API types are generated from `api/openapi.yaml` by `openapi-typescript`, and
+requests go through `openapi-fetch`.
+
+The build is embedded in the binary by the Go package `web` and served by
+`serve`. A `GET` or `HEAD` outside `/api/` and `/health/` that names no file
+answers `index.html`, so that a client route loads; an unknown path under
+`/api/` keeps its JSON 404. Files under `/assets/`, whose names carry a hash,
+are cached for a year as immutable; `index.html` is never cached.
+
+The interface is named "kcr - Kubernetes Capacity Report" in both languages.
 
 ### 12.2 Screens
 
@@ -883,6 +897,10 @@ each with its status and a retry button.
   sheet per row.
 - Data quality is the only place metric names appear.
 - The unknown node pool is shown as plain text without the copy control.
+- The `:id` of `/jobs/:id` is the id of the report, whose progress
+  `GET /reports/{id}` answers.
+- The navigation lists only the screens that exist and that the role may
+  open.
 
 ### 12.3 New report form
 
@@ -895,15 +913,44 @@ report profile, and minimum severity. Choosing a profile loads its defaults.
 - Before sign-in, a browser set to Portuguese shows Portuguese; any other
   shows English. After sign-in the saved choice applies.
 - Switching loads the report view again in the new language.
+- Before sign-in, a choice made with the switch is kept in the browser and
+  overrides the browser's language until sign-in. A browser is set to
+  Portuguese when the first entry of its languages starts with `pt`.
+- After sign-in, the switch changes the account's language through
+  `PATCH /account` and applies at once.
+- The interface's own wording lives in react-i18next locale files under
+  `web/`, one per language. The report's words come from the Go catalog
+  through the report view. Every error code of the contract has its
+  translation; a code the interface does not know shows the general error
+  sentence.
 
 ### 12.5 Design
 
-- Restrained and neutral, with light and dark themes.
+- Restrained and neutral, with light and dark themes: an operations console
+  with a left sidebar, cool slate neutrals, and a cobalt blue accent for
+  links, focus, the active tab, and the primary button.
+- The theme follows the system unless the reader picks light or dark with
+  the toggle; the choice is kept in the browser. A script file loaded from
+  the page head sets the theme before the first paint.
+- Colours are tokens in pairs, a surface and its foreground, for each theme.
 - Status is always a shape and a label, using the same shapes as the PDF.
 - Names and numbers use the monospaced font.
 - Contrast meets WCAG AA and a test checks every colour pair.
 - Reduced motion is honoured. Live regions announce progress and results.
 - No inline style.
+
+### 12.6 Session
+
+- The interface reads the CSRF token from the body of `GET /auth/session`:
+  the sign-in token for an anonymous reader, the session token once signed
+  in. Every state-changing request carries it.
+- A request refused with `CSRF_REJECTED` loads the session again and is
+  retried once.
+- A `401` from any route clears what the interface holds and opens the
+  sign-in screen with the current path in `next`. `next` is followed only
+  when it is a path that starts with a single `/`.
+- A password change revokes every session of the reader, so the interface
+  opens the sign-in screen with a notice after it.
 
 ## 13. Tests and gates
 
@@ -974,13 +1021,28 @@ a vocabulary test in both languages over visible text and accessible names,
 and end-to-end tests in a browser against the Compose stack: main path,
 security, concurrency, and PDF recovery.
 
+- The banned terms live in one data file that the Go catalog guard and the
+  vocabulary test both read.
+- Both locale files hold the same keys with the same parameters, and every
+  key is used.
+- Every colour pair meets WCAG AA in both themes.
+- No inline style appears in the source or in the build.
+- The style hashes of the Content-Security-Policy equal the styles the
+  component library injects.
+- The built version equals `VERSION`.
+- A lint rule forbids a skipped or focused test, the frontend's form of the
+  rule of 13.1.
+- Every end-to-end page is checked with axe, and a violation of the
+  Content-Security-Policy fails the test.
+
 ### 13.5 Commands
 
 ```bash
 make test            # Go and frontend, no services
 make test-postgres   # platform tests; starts PostgreSQL in Compose
 make test-template   # template tests in the image
-make e2e             # full stack with the fake Prometheus
+make web             # installs and builds the frontend; build, test, lint need it
+make e2e             # full stack with the fake Prometheus, Playwright in Docker
 make lint            # gofmt, go vet, golangci-lint, frontend lint
 make generate        # code from openapi.yaml and SQL; fails if output changes
 make gate            # all of the above from a freshly built image
@@ -992,7 +1054,7 @@ make gate            # all of the above from a freshly built image
 
 | Stage | Base | Output |
 |---|---|---|
-| Frontend | Node | Static files |
+| Frontend | Node 26 | Static files |
 | Build | Go 1.27 | One static binary with frontend, template, and fonts embedded |
 | Typst | `ghcr.io/typst/typst:0.15.1` | The `typst` binary |
 | Runtime | Distroless static | Binary and `typst` |
@@ -1007,7 +1069,13 @@ make gate            # all of the above from a freshly built image
 
 - `deploy/compose.yaml`: `serve`, `worker`, `postgres`.
 - `deploy/compose.integration.yaml`: adds the fake Prometheus, fixture
-  profiles, and a way to make a compile fail on purpose.
+  profiles, and a way to make a compile fail on purpose, and the Playwright
+  service, which shares the network of `serve` and reaches it at
+  `localhost:8080`.
+
+`serve` speaks plain HTTP. The session cookie is `Secure`, so a browser
+reaches `serve` through the operator's TLS proxy, or at localhost. The
+Compose files hold no proxy and no certificate.
 - `deploy/compose.test.yaml`: PostgreSQL alone, for `make test-postgres`.
 
 `serve` and `worker` run with a read-only root file system, a temporary file
