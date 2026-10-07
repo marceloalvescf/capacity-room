@@ -49,6 +49,7 @@ const pdfGroup = (page: Page, language: string) => page.getByRole("group", { nam
 
 test("an operator requests a report and a reader reads it", async ({ page, browser, baseURL }) => {
   test.setTimeout(240_000);
+  let requestedAt = new Date();
 
   await test.step("the administrator creates an operator and a reader", async () => {
     await signIn(page, admin, "/account");
@@ -71,12 +72,20 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await page.getByRole("checkbox", { name: "payments", exact: true }).check();
     await page.getByRole("radio", { name: en.language.en, exact: true }).check();
     await page.getByRole("button", { name: en.generate.change, exact: true }).click();
-    await page.getByRole("button", { name: new RegExp(en.generate.period) }).click();
-    await page.getByRole("dialog").getByRole("button", { name: en.period.calendar.previousWeek, exact: true }).click();
+    await page.getByRole("button", { name: new RegExp(`^${en.generate.period}`) }).click();
+    const picker = page.getByRole("dialog");
+    await picker.getByRole("radio", { name: en.period.mode.range, exact: true }).check();
+    await picker.getByRole("button", { name: en.period.range.pickFrom, exact: true }).click();
+    await expect(picker.getByRole("grid")).toBeVisible();
+    await expectNoViolations(page);
+    await page.keyboard.press("Escape");
+    await expect(picker.getByRole("grid")).toHaveCount(0);
+    await picker.getByRole("button", { name: en.period.calendar.previousWeek, exact: true }).click();
     await expectNoViolations(page);
     // The fake Prometheus serves its scenario once, so one stack runs exactly
     // one collection: this is the only report the spec requests, and the
     // Playwright configuration keeps retries at zero.
+    requestedAt = new Date();
     await page.getByRole("button", { name: en.generate.submit, exact: true }).click();
     await expect(page).toHaveURL(/\/jobs\/[0-9a-f-]{36}$/);
     await expectNoViolations(page);
@@ -91,12 +100,11 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     const { selection } = (await response.json()) as {
       selection: { period: string | null; start: string | null; end: string | null; timezone: string };
     };
-    const now = new Date();
     expect(selection).toMatchObject({
       period: null,
       timezone: reportZone,
-      start: mondayText(now, reportZone, -1),
-      end: mondayText(now, reportZone, 0),
+      start: mondayText(requestedAt, reportZone, -1),
+      end: mondayText(requestedAt, reportZone, 0),
     });
   });
 
