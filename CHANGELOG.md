@@ -6,6 +6,20 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A report can cover a calendar range that has ended, such as September
+  2026, typed or picked on a calendar in the form, or given with `--start`
+  and `--end` on the command line.
+- The form offers six calendar ranges: today so far, yesterday, this week so
+  far, the previous week, this month so far, and the previous month, with
+  weeks starting on Monday.
+
+### Changed
+
+- A report stored before this version can no longer be opened or given a new
+  PDF; request it again.
+
 ## [0.3.0] - 2026-10-07
 
 ### Added

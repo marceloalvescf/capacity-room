@@ -80,6 +80,17 @@ variable is unset or empty, the run stops. A token shorter than 8 characters
 is refused: a text that short cannot be told from ordinary words, so it could
 not be removed from the messages the program prints.
 
+A report covers the last 24 hours by default. `analysis.period` (`--period`,
+`KCR_PERIOD`) sets another length, such as `7d`, ending when the run starts.
+`analysis.start` and `analysis.end` (`--start` and `--end`, `KCR_START` and
+`KCR_END`) set a calendar range instead, such as `2026-09-01 00:00` to
+`2026-10-01 00:00`. Each is a date and a time to the minute, read in
+`analysis.timezone`. The start must come before the end, and the end may not
+be after the run starts. A time that does not exist in the zone, or occurs
+twice in it, because the clock moves there, is refused. A length and a range
+exclude each other: one source may not set both, and a later source that sets
+one replaces the other.
+
 ### The four modes
 
 ```bash
@@ -91,6 +102,9 @@ k8s-capacity-report report --config report.toml --lang en --output report.pdf
 
 # Store what was found, without writing a PDF. Needs no typst.
 k8s-capacity-report report --config report.toml --snapshot cluster.json
+
+# Write a PDF of a calendar range that has ended.
+k8s-capacity-report report --config report.toml --start "2026-09-01 00:00" --end "2026-10-01 00:00" --output september.pdf
 
 # Write a PDF from a stored snapshot. Makes no request to the endpoint.
 k8s-capacity-report report --from-snapshot cluster.json --lang pt-BR --output report.pdf
@@ -403,6 +417,11 @@ A report is requested, read, and removed under `/api/v1/reports`:
 | `POST /reports/{id}/pdfs` | operator, administrator | 202; makes the PDF of a language, or compiles a failed one again; 409 `PDF_ALREADY_READY` once it is ready |
 | `DELETE /reports/{id}` | administrator; an operator for its own | 204 |
 | `POST /reports/delete` | administrator; an operator for its own | one outcome per id, up to 200 |
+
+The body of `POST /reports` names a length, `period` such as `"7d"`, or a
+calendar range, `start` and `end` such as `"2026-09-01 00:00"`, read in the
+request's time zone, never both. A range must end at or before the moment of
+the request. A profile with `permitted_periods` refuses a range.
 
 A request carries an `Idempotency-Key` header of the client's choosing: the
 same key with the same body answers the report it created, and the same key

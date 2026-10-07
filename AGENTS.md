@@ -233,7 +233,9 @@ below the command; the core never imports `internal/platform/`.
   from ordinary text, and is refused before it reaches the redactor.
 - **The snapshot file has one reading.** The reader walks the file against
   the contract, letter for letter, and fills the snapshot from what it
-  walked. It names a wrong schema version before anything else.
+  walked. It names a wrong schema version before anything else. The schema
+  is `2.0`, with no `report.period`: a snapshot `1.0` is named and refused,
+  with no reader of it. Its period ends at or before its emission.
 - **The probes keep the order of the original**, short cuts included. The
   fake server answers a query with the first recorded answer whose text is
   part of the query, so another order consumes the wrong answers.
@@ -248,7 +250,13 @@ below the command; the core never imports `internal/platform/`.
   of the cluster autoscaling is unknown, the run stops after the collectors
   and before the clock is read the second time.
 - **The period is judged before the first request.** A period whose start is
-  not before its end stops the run with exit code 2.
+  not before its end stops the run with exit code 2, and so does a range
+  that ends after the run starts (`collect.ErrRangeAfterRun`). A range is
+  `analysis.start` and `analysis.end`, two wall times `YYYY-MM-DD HH:MM` read
+  in the zone by `config.ParseWallTime`, the one parser of the program; a
+  time the zone skips or repeats is refused. A length and a range exclude
+  each other within a source, and a later source that sets one clears the
+  other.
 - **The clock is read twice in a run that collects:** for the emission time,
   which is also the start of the collection, and for its end.
 
@@ -309,6 +317,14 @@ redactor the moment the settings are loaded, before the pool opens.
   Every signed-in user reads every report that is not deleted; an operator
   or an administrator requests reports and PDFs; an administrator deletes
   any report, an operator its own.
+- **A request names a length or a range, never both.** `POST /reports`
+  takes `period`, or `start` and `end` as wall times in the resolved zone.
+  The syntax is judged first (`invalid`, `missing`, `conflict`); then, once
+  the zone is resolved, the range against the zone and the request's clock
+  (`invalid` for a time the zone skips or repeats, `order`, `future`), all
+  400; then the permits: a profile with `permitted_periods` refuses a range
+  with 422 `not_permitted` on `start`. A stored range reaches the window as
+  given.
 - **A request names its language, and the worker makes that PDF alone.**
   `POST /reports` requires `language`, stored with the selection, so a key
   reused with another language is a conflict. The collect handler queues
@@ -467,6 +483,11 @@ redactor the moment the settings are loaded, before the pool opens.
   queries can show that a probe asks what it should.
   `template/tests/capacity/fixtures/command/` holds the data files made from
   them, which are also fixtures of the template and sources of golden pages.
+- `promtest.RangeScenarios` holds `direct-complete-range`: the fixture of
+  `direct-complete` over a range of 24 hours that ended the day before the
+  fixed emission. It has a snapshot and a list of queries, and no data file
+  and no golden page. It stays outside `promtest.Scenarios`, so every
+  comparison with the original walks the eight it always walked.
 - A test never writes one. `make update-testdata` does. It needs no image.
 - After `make update-testdata`, read every file that changed, whole, before
   committing. A value that cannot be explained is a defect.
@@ -591,6 +612,12 @@ redactor the moment the settings are loaded, before the pool opens.
   any other value reads `period.custom.value`, with the duration from
   `Intl.NumberFormat` in long units, so it agrees in number in both
   languages.
+- **The period picker holds one of three kinds of value:** a length, a
+  calendar name, or a typed range of two wall times. A calendar name is
+  resolved in the form's zone when the request is sent, never when it is
+  picked; weeks start on Monday in both languages; an empty resolved range
+  sends nothing. An attempt that got no answer keeps its resolved range, so
+  a resend replays. The calendar is styled through `classNames` alone.
 
 ## The template
 
