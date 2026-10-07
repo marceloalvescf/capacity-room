@@ -1,4 +1,4 @@
-import { useRef, useState, type SyntheticEvent } from "react";
+import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 import { ApiFailure } from "@/api/client";
@@ -100,6 +100,26 @@ function GenerateForm({
   const key = useRef(crypto.randomUUID());
   const answered = useRef(false);
   const sending = useRef(false);
+  const form = useRef<HTMLFormElement>(null);
+  const periodTrigger = useRef<HTMLButtonElement>(null);
+  const focusPeriodOnOpen = useRef(false);
+  // Counts the attempts that left a field marked; each one moves focus to the
+  // first marked field once it is drawn. The period's trigger is a button,
+  // which has no aria-invalid, so it says so with data-invalid.
+  const [marks, setMarks] = useState(0);
+
+  useEffect(() => {
+    if (marks > 0) {
+      form.current?.querySelector<HTMLElement>('[aria-invalid="true"], [data-invalid="true"]')?.focus();
+    }
+  }, [marks]);
+
+  useEffect(() => {
+    if (optionsOpen && focusPeriodOnOpen.current) {
+      focusPeriodOnOpen.current = false;
+      periodTrigger.current?.focus();
+    }
+  }, [optionsOpen]);
 
   const profile = profiles.find((candidate) => candidate.id === values.profileId);
   if (profile === undefined) {
@@ -157,6 +177,9 @@ function GenerateForm({
     if (Object.keys(marked).some((name) => name !== "namespaces")) {
       setOptionsOpen(true);
     }
+    if (Object.keys(marked).length > 0) {
+      setMarks((count) => count + 1);
+    }
     return Object.keys(marked).length > 0 && !rest;
   }
 
@@ -168,6 +191,7 @@ function GenerateForm({
     const namespaces = profile.allowed_namespaces.filter((name) => values.namespaces.includes(name));
     if (namespaces.length === 0) {
       setProblems({ namespaces: "required" });
+      setMarks((count) => count + 1);
       return;
     }
     sending.current = true;
@@ -200,7 +224,8 @@ function GenerateForm({
           setFailure(t("generate.profileChanged"));
           reload();
         } else if (!mark(error)) {
-          if (error.code === "IDEMPOTENCY_KEY_REUSED") {
+          // A key whose first request made a report that is gone cannot be replayed.
+          if (error.code === "IDEMPOTENCY_KEY_REUSED" || error.status === 404 || error.status === 410) {
             renewKey();
           }
           setFailure(errorText(t, error));
@@ -231,6 +256,7 @@ function GenerateForm({
 
   return (
     <form
+      ref={form}
       noValidate
       className="flex max-w-3xl flex-col gap-6"
       onSubmit={(event) => {
@@ -253,7 +279,9 @@ function GenerateForm({
       </Select>
 
       <fieldset
-        className="flex flex-col gap-1 font-mono"
+        tabIndex={-1}
+        className="flex flex-col gap-1 font-mono focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        aria-invalid={namespaceProblem === undefined ? undefined : true}
         aria-describedby={namespaceProblem === undefined ? undefined : "namespaces-problem"}
       >
         <legend className="mb-1 font-sans text-sm font-medium">{t("generate.namespaces")}</legend>
@@ -298,8 +326,8 @@ function GenerateForm({
               <span className="font-mono text-sm text-muted-fg">{summary}</span>
               <Button
                 className="ml-auto"
-                aria-expanded={false}
                 onClick={() => {
+                  focusPeriodOnOpen.current = true;
                   setOptionsOpen(true);
                 }}
               >
@@ -314,6 +342,7 @@ function GenerateForm({
               value={values.period}
               permitted={profile.permitted_periods}
               error={problemText("period")}
+              triggerRef={periodTrigger}
               onChange={(period) => {
                 edit({ period }, ["period"]);
               }}

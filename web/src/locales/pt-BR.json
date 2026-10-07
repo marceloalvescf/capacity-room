@@ -269,7 +269,6 @@
     "expired": "Este relatório expirou; seus dados e PDFs foram removidos.",
     "announce": {
       "collected": "O relatório foi coletado.",
-      "failed": "O relatório falhou.",
       "pdfReady": "O PDF em {{language}} está pronto."
     }
   }

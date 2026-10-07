@@ -100,6 +100,30 @@ describe("new report form", () => {
     expect(screen.queryByText(t("validation.namespaces"))).not.toBeInTheDocument();
   });
 
+  it("a submit with no namespace marks the fieldset, describes it, and focuses it", async () => {
+    const { user } = await open();
+    await user.click(submit());
+    const fieldset = namespace("payments").closest("fieldset") as HTMLElement;
+    await waitFor(() => {
+      expect(fieldset).toHaveFocus();
+    });
+    expect(fieldset).toHaveAttribute("aria-invalid", "true");
+    expect(fieldset).toHaveAccessibleDescription(t("validation.namespaces"));
+    await user.click(namespace("payments"));
+    expect(fieldset).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("Change opens the options and moves focus to the period", async () => {
+    const { user } = await open();
+    const change = screen.getByRole("button", { name: t("generate.change") });
+    expect(change).not.toHaveAttribute("aria-expanded");
+    await user.click(change);
+    const trigger = screen.getByRole("button", { name: new RegExp(t("generate.period")) });
+    await waitFor(() => {
+      expect(trigger).toHaveFocus();
+    });
+  });
+
   it("sends the choices and goes to the job", async () => {
     const { user, router } = await open();
     await user.click(namespace("checkout"));
@@ -124,12 +148,15 @@ describe("new report form", () => {
 
   describe("one report per attempt", () => {
     it("a double click sends one request", async () => {
-      const { user } = await open();
+      const { user, router } = await open();
       await user.click(namespace("payments"));
       await user.dblClick(submit());
       await waitFor(() => {
-        expect(posts()).toHaveLength(1);
+        expect(location(router)).toMatch(/^\/jobs\/[0-9a-f-]{36}$/);
       });
+      // A second request one tick later would be seen here.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(posts()).toHaveLength(1);
     });
 
     it("a resend after a network failure keeps the key", async () => {
@@ -166,6 +193,22 @@ describe("new report form", () => {
       await user.click(submit());
       await screen.findByText(t("error.ADMISSION_GLOBAL_LIMIT", { seconds: 30 }));
       await user.click(namespace("catalog"));
+      await user.click(submit());
+      await waitFor(() => {
+        expect(posts()).toHaveLength(1);
+      });
+      expect(posts()[0]?.key).not.toBe(keys[0]);
+    });
+
+    it.each([
+      [404, "REPORT_NOT_FOUND"],
+      [410, "REPORT_EXPIRED"],
+    ] as const)("a key whose replay answered %i is renewed", async (status, code) => {
+      const { user } = await open();
+      await user.click(namespace("payments"));
+      const keys = answerOnce(() => failure(status, code));
+      await user.click(submit());
+      expect(await screen.findByText(t(`error.${code}`))).toBeInTheDocument();
       await user.click(submit());
       await waitFor(() => {
         expect(posts()).toHaveLength(1);
@@ -270,6 +313,11 @@ describe("new report form", () => {
     await user.click(submit());
     expect(await screen.findByText(t("validation.notPermitted"))).toBeInTheDocument();
     expect(screen.getByLabelText(t("generate.timezone"))).toBeInTheDocument();
+    const trigger = screen.getByRole("button", { name: new RegExp(t("generate.period")) });
+    await waitFor(() => {
+      expect(trigger).toHaveFocus();
+    });
+    expect(trigger).toHaveAccessibleDescription(t("validation.notPermitted"));
     expect(screen.queryByText(t("error.REPORT_SELECTION_NOT_PERMITTED"))).not.toBeInTheDocument();
   });
 

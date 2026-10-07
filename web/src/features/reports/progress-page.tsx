@@ -63,7 +63,7 @@ function Steps({ phase }: { phase: Report["phase"] }) {
           </svg>
           {t(`reportPhase.${name}`)}
           {index === current ? null : (
-            <span className="sr-only">{t(index < current ? "progress.stepDone" : "progress.stepPending")}</span>
+            <span className="sr-only">{`, ${t(index < current ? "progress.stepDone" : "progress.stepPending")}`}</span>
           )}
         </li>
       ))}
@@ -71,7 +71,8 @@ function Steps({ phase }: { phase: Report["phase"] }) {
   );
 }
 
-// Announces each change of status, and each PDF turning ready, once.
+// Announces a report turning collected, and each PDF turning ready, once. A
+// failure is not announced: its alert, which mounts with it, is read instead.
 function useAnnouncements(data: Report | undefined) {
   const { t } = useTranslation();
   const announce = useAnnounce();
@@ -82,8 +83,8 @@ function useAnnouncements(data: Report | undefined) {
     if (data === undefined || last === undefined || last === data) {
       return;
     }
-    if (last.status !== data.status && (data.status === "collected" || data.status === "failed")) {
-      announce(t(data.status === "collected" ? "progress.announce.collected" : "progress.announce.failed"));
+    if (last.status !== data.status && data.status === "collected") {
+      announce(t("progress.announce.collected"));
     }
     for (const state of data.pdfs) {
       if (state.status === "ready" && last.pdfs.some((p) => p.language === state.language && p.status === "pending")) {
@@ -129,7 +130,12 @@ export function ProgressPage() {
     return <Gone message={t(error.status === 404 ? "progress.notFound" : "progress.expired")} />;
   }
   if (data === undefined) {
-    return error === null ? null : <Alert tone="error">{errorText(t, toError(error))}</Alert>;
+    return error === null ? null : (
+      <div className="flex flex-col items-start gap-3">
+        <h1 className="text-xl font-semibold">{t("progress.screen")}</h1>
+        <Alert tone="error">{errorText(t, toError(error))}</Alert>
+      </div>
+    );
   }
 
   const profile = profiles.data?.find((candidate) => candidate.id === data.profile_id)?.display_name ?? data.profile_id;

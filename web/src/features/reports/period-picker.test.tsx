@@ -34,8 +34,26 @@ describe("period picker", () => {
         }),
       ).toBeInTheDocument();
     }
-    expect(within(dialog).getByRole("heading", { name: t("period.custom.title") })).toBeInTheDocument();
+    expect(within(dialog).getByText(t("period.custom.title"))).toBeInTheDocument();
+    expect(within(dialog).queryByRole("heading")).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText(t("period.custom.label"))).toHaveClass("font-mono");
+  });
+
+  it("the popover is a dialog named by the Period label", async () => {
+    const user = userEvent.setup();
+    open([]);
+    await trigger(user);
+    expect(screen.getByRole("dialog", { name: t("generate.period") })).toBeInTheDocument();
+  });
+
+  it("the focus ring of a quick range sits outside the button, on the popover", async () => {
+    const user = userEvent.setup();
+    open([], "7d");
+    const dialog = await trigger(user);
+    const pressed = within(dialog).getByRole("button", { name: t("period.quick.7d") });
+    expect(pressed).toHaveAttribute("aria-pressed", "true");
+    expect(pressed).toHaveClass("focus-visible:outline-offset-2");
+    expect(pressed.className).not.toMatch(/outline-offset-\[-/);
   });
 
   it("a quick range is applied at once", async () => {

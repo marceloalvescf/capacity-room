@@ -1,5 +1,5 @@
 import { CaretDownIcon } from "@phosphor-icons/react";
-import { useId, useState } from "react";
+import { useId, useState, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -12,12 +12,13 @@ interface PeriodPickerProps {
   // The periods the profile permits; empty means any.
   permitted: readonly string[];
   error?: string | undefined;
+  triggerRef?: Ref<HTMLButtonElement>;
   onChange: (period: string) => void;
 }
 
 const choice =
   "min-h-9 px-3 text-left text-sm text-surface-fg hover:underline aria-pressed:bg-accent aria-pressed:text-accent-fg " +
-  "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent";
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 function Custom({ initial, onApply }: { initial: string; onApply: (period: string) => void }) {
   const { t } = useTranslation();
@@ -36,7 +37,7 @@ function Custom({ initial, onApply }: { initial: string; onApply: (period: strin
         }
       }}
     >
-      <h3 className="text-xs font-semibold text-muted-fg uppercase">{t("period.custom.title")}</h3>
+      <p className="text-xs font-semibold text-muted-fg uppercase">{t("period.custom.title")}</p>
       <Field
         label={t("period.custom.label")}
         className="font-mono"
@@ -54,7 +55,7 @@ function Custom({ initial, onApply }: { initial: string; onApply: (period: strin
   );
 }
 
-export function PeriodPicker({ value, permitted, error, onChange }: PeriodPickerProps) {
+export function PeriodPicker({ value, permitted, error, triggerRef, onChange }: PeriodPickerProps) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const labelId = useId();
@@ -78,8 +79,10 @@ export function PeriodPicker({ value, permitted, error, onChange }: PeriodPicker
         <PopoverTrigger asChild>
           <button
             id={buttonId}
+            ref={triggerRef}
             type="button"
             aria-labelledby={`${labelId} ${buttonId}`}
+            data-invalid={error === undefined ? undefined : true}
             aria-describedby={error === undefined ? undefined : errorId}
             className="flex min-h-9 items-center justify-between gap-2 rounded-md border border-input-border bg-surface px-3 text-sm text-surface-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
@@ -87,7 +90,7 @@ export function PeriodPicker({ value, permitted, error, onChange }: PeriodPicker
             <CaretDownIcon aria-hidden="true" className="size-4" />
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-[min(32rem,calc(100vw-2rem))] p-0">
+        <PopoverContent align="start" aria-labelledby={labelId} className="w-[min(32rem,calc(100vw-2rem))] p-0">
           <div className={restricted ? "flex flex-col" : "grid sm:grid-cols-[1fr_12rem]"}>
             {restricted ? (
               <p className="p-3 text-sm text-muted-fg">{t("period.restricted")}</p>

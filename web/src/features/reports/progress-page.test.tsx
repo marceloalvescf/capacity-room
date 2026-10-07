@@ -85,7 +85,7 @@ describe("progress screen", () => {
     const heard = () => within(steps).getAllByRole("listitem").map((item) => item.textContent);
     expect(heard()).toEqual([
       t("reportPhase.waiting"),
-      ...phases.slice(1).map((phase) => `${t(`reportPhase.${phase}`)}${t("progress.stepPending")}`),
+      ...phases.slice(1).map((phase) => `${t(`reportPhase.${phase}`)}, ${t("progress.stepPending")}`),
     ]);
     expect(current()).toBe(t("reportPhase.waiting"));
 
@@ -98,7 +98,7 @@ describe("progress screen", () => {
       phases.map((phase, index) =>
         index === 2
           ? t("reportPhase.collecting")
-          : `${t(`reportPhase.${phase}`)}${t(index < 2 ? "progress.stepDone" : "progress.stepPending")}`,
+          : `${t(`reportPhase.${phase}`)}, ${t(index < 2 ? "progress.stepDone" : "progress.stepPending")}`,
       ),
     );
 
@@ -287,6 +287,13 @@ describe("progress screen", () => {
     expect(checks()).toEqual([]);
   });
 
+  it("a report that fails to load keeps the page's heading", async () => {
+    server.use(http.get(`${window.location.origin}/api/v1/reports/:id`, () => failure(500, "INTERNAL_ERROR")));
+    await renderApp(`/jobs/${id}`);
+    expect(await screen.findByRole("heading", { level: 1, name: t("progress.screen") })).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
   it("deletes from here", async () => {
     mock.reports = [report()];
     const user = userEvent.setup();
@@ -329,7 +336,7 @@ describe("progress screen", () => {
     ]);
   });
 
-  it("announces a failure once", async () => {
+  it("a failure is read once, through its alert, and not announced", async () => {
     mock.reports = [report(running)];
     vi.useFakeTimers({ shouldAdvanceTime: true });
     await open();
@@ -338,6 +345,6 @@ describe("progress screen", () => {
     await advance(1700);
     await screen.findByRole("alert");
     await advance(20_000);
-    expect(heard).toEqual([t("progress.announce.failed")]);
+    expect(heard).toEqual([]);
   });
 });
