@@ -1,0 +1,12 @@
+{
+  "en": {
+    "any_case": ["nodepool", "nodepools", "não", "está", "estão", "são", "foram", "para", "uma", "dos", "das"],
+    "phrases": [["node", "group"], ["node", "groups"]],
+    "as_written": ["cpu"]
+  },
+  "pt-BR": {
+    "any_case": ["solicitação", "solicitações", "limite", "limites", "rótulo", "rótulos", "nó", "nós", "réplica", "réplicas", "nodepool", "nodepools", "right-sizing", "headroom", "unknown", "memory", "the", "is", "are", "was", "were", "not", "found", "with", "from", "omitted", "cannot", "may", "only", "uses", "and", "of", "for", "by", "on", "to", "in", "an", "be", "could", "this", "that", "between", "without", "usage", "coverage"],
+    "phrases": [["carga", "de", "trabalho"], ["cargas", "de", "trabalho"], ["pool", "de", "nós"], ["pools", "de", "nós"], ["grupo", "de", "nós"], ["grupos", "de", "nós"], ["regra", "de", "gravação"], ["regras", "de", "gravação"], ["métricas", "brutas"], ["escalonamento", "automático"], ["limitação", "de", "cpu"]],
+    "as_written": ["cpu"]
+  }
+}
