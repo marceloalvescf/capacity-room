@@ -449,9 +449,13 @@ export interface components {
         Error: {
             error: components["schemas"]["ErrorBody"];
         };
+        /**
+         * @description A code of the contract; the interface shows its own translation.
+         * @enum {string}
+         */
+        ErrorCode: "REQUEST_INVALID" | "INVALID_CREDENTIALS" | "UNAUTHENTICATED" | "CSRF_REJECTED" | "FORBIDDEN" | "USER_NOT_FOUND" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "USERNAME_TAKEN" | "LAST_ADMIN" | "SELF_DELETE" | "SELF_DEACTIVATE" | "SELF_DEMOTE" | "INVALID_USERNAME" | "PASSWORD_TOO_SHORT" | "PASSWORD_TOO_LONG" | "AUTH_RATE_LIMITED" | "DATABASE_UNAVAILABLE" | "PROFILE_NOT_FOUND" | "PROFILE_ID_TAKEN" | "PROFILE_REVISION_STALE" | "PROFILE_DOCUMENT_INVALID" | "ENDPOINT_URL_REJECTED" | "ENDPOINT_ADDRESS_REJECTED" | "INTERNAL_ERROR" | "IDEMPOTENCY_KEY_INVALID" | "CURSOR_INVALID" | "REPORT_NOT_FOUND" | "IDEMPOTENCY_KEY_REUSED" | "PROFILE_INACTIVE" | "SNAPSHOT_NOT_READY" | "PDF_NOT_READY" | "PDF_RETRY_NOT_ALLOWED" | "REPORT_EXPIRED" | "REPORT_SELECTION_NOT_PERMITTED" | "ADMISSION_GLOBAL_LIMIT" | "ADMISSION_PROFILE_LIMIT";
         ErrorBody: {
-            /** @description A code of the contract, such as REQUEST_INVALID. */
-            code: string;
+            code: components["schemas"]["ErrorCode"];
             /** @description A fixed English sentence chosen by the code, never text from an exception. */
             message: string;
             /** @description The field problems of a REQUEST_INVALID answer; empty otherwise. */
@@ -2000,6 +2004,7 @@ export const reportFailureCodeValues: ReadonlyArray<FlattenedDeepRequired<compon
 export const pDFStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PDFStatus"]> = ["pending", "ready", "failed"];
 export const pDFFailureCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PDFFailureCode"]> = ["PDF_COMPILE_FAILED", "PDF_TOO_LARGE", "PDF_ATTEMPTS_EXHAUSTED", "INTERNAL_FAILURE"];
 export const reportDeleteOutcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportDeleteOutcome"]> = ["deleted", "not_found", "expired", "forbidden"];
+export const errorCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorCode"]> = ["REQUEST_INVALID", "INVALID_CREDENTIALS", "UNAUTHENTICATED", "CSRF_REJECTED", "FORBIDDEN", "USER_NOT_FOUND", "NOT_FOUND", "METHOD_NOT_ALLOWED", "USERNAME_TAKEN", "LAST_ADMIN", "SELF_DELETE", "SELF_DEACTIVATE", "SELF_DEMOTE", "INVALID_USERNAME", "PASSWORD_TOO_SHORT", "PASSWORD_TOO_LONG", "AUTH_RATE_LIMITED", "DATABASE_UNAVAILABLE", "PROFILE_NOT_FOUND", "PROFILE_ID_TAKEN", "PROFILE_REVISION_STALE", "PROFILE_DOCUMENT_INVALID", "ENDPOINT_URL_REJECTED", "ENDPOINT_ADDRESS_REJECTED", "INTERNAL_ERROR", "IDEMPOTENCY_KEY_INVALID", "CURSOR_INVALID", "REPORT_NOT_FOUND", "IDEMPOTENCY_KEY_REUSED", "PROFILE_INACTIVE", "SNAPSHOT_NOT_READY", "PDF_NOT_READY", "PDF_RETRY_NOT_ALLOWED", "REPORT_EXPIRED", "REPORT_SELECTION_NOT_PERMITTED", "ADMISSION_GLOBAL_LIMIT", "ADMISSION_PROFILE_LIMIT"];
 export const roleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Role"]> = ["administrator", "operator", "reader"];
 export const languageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Language"]> = ["pt-BR", "en"];
 export const endpointTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["EndpointType"]> = ["auto", "prometheus", "grafana"];

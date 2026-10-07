@@ -369,8 +369,8 @@ type Error struct {
 
 // ErrorBody defines model for ErrorBody.
 type ErrorBody struct {
-	// Code A code of the contract, such as REQUEST_INVALID.
-	Code string `json:"code"`
+	// Code A code of the contract; the interface shows its own translation.
+	Code ErrorCode `json:"code"`
 
 	// Fields The field problems of a REQUEST_INVALID answer; empty otherwise.
 	Fields map[string]string `json:"fields"`
@@ -378,6 +378,9 @@ type ErrorBody struct {
 	// Message A fixed English sentence chosen by the code, never text from an exception.
 	Message string `json:"message"`
 }
+
+// ErrorCode A code of the contract; the interface shows its own translation.
+type ErrorCode = Code
 
 // FilterMode defines model for FilterMode.
 type FilterMode string

@@ -1305,13 +1305,54 @@ components:
       properties:
         error:
           $ref: "#/components/schemas/ErrorBody"
+    ErrorCode:
+      type: string
+      description: A code of the contract; the interface shows its own translation.
+      x-go-type: Code
+      enum:
+        - REQUEST_INVALID
+        - INVALID_CREDENTIALS
+        - UNAUTHENTICATED
+        - CSRF_REJECTED
+        - FORBIDDEN
+        - USER_NOT_FOUND
+        - NOT_FOUND
+        - METHOD_NOT_ALLOWED
+        - USERNAME_TAKEN
+        - LAST_ADMIN
+        - SELF_DELETE
+        - SELF_DEACTIVATE
+        - SELF_DEMOTE
+        - INVALID_USERNAME
+        - PASSWORD_TOO_SHORT
+        - PASSWORD_TOO_LONG
+        - AUTH_RATE_LIMITED
+        - DATABASE_UNAVAILABLE
+        - PROFILE_NOT_FOUND
+        - PROFILE_ID_TAKEN
+        - PROFILE_REVISION_STALE
+        - PROFILE_DOCUMENT_INVALID
+        - ENDPOINT_URL_REJECTED
+        - ENDPOINT_ADDRESS_REJECTED
+        - INTERNAL_ERROR
+        - IDEMPOTENCY_KEY_INVALID
+        - CURSOR_INVALID
+        - REPORT_NOT_FOUND
+        - IDEMPOTENCY_KEY_REUSED
+        - PROFILE_INACTIVE
+        - SNAPSHOT_NOT_READY
+        - PDF_NOT_READY
+        - PDF_RETRY_NOT_ALLOWED
+        - REPORT_EXPIRED
+        - REPORT_SELECTION_NOT_PERMITTED
+        - ADMISSION_GLOBAL_LIMIT
+        - ADMISSION_PROFILE_LIMIT
     ErrorBody:
       type: object
       required: [code, message, fields]
       properties:
         code:
-          type: string
-          description: A code of the contract, such as REQUEST_INVALID.
+          $ref: "#/components/schemas/ErrorCode"
         message:
           type: string
           description: A fixed English sentence chosen by the code, never text from an exception.
