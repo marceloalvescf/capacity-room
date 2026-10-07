@@ -315,7 +315,7 @@ const (
 // collecting run; --from-snapshot refuses every one of them.
 var collectingFlagNames = []string{
 	"metrics-url", "endpoint-type", "token", "insecure", "cluster",
-	"cluster-label", "cluster-filter", "namespaces", "period",
+	"cluster-label", "cluster-filter", "namespaces", "period", "start", "end",
 	"timezone", "node-autoscaling",
 }
 
@@ -384,6 +384,8 @@ func buildConfigFlags(cmd *cobra.Command, f *reportFlags) config.Flags {
 		ClusterFilter:   stringFlagOrNil(cmd, "cluster-filter", f.clusterFilter),
 		Namespaces:      stringFlagOrNil(cmd, "namespaces", f.namespaces),
 		Period:          stringFlagOrNil(cmd, "period", f.period),
+		Start:           stringFlagOrNil(cmd, "start", f.start),
+		End:             stringFlagOrNil(cmd, "end", f.end),
 		Timezone:        stringFlagOrNil(cmd, "timezone", f.timezone),
 		NodeAutoscaling: stringFlagOrNil(cmd, "node-autoscaling", f.nodeAutoscaling),
 		MinSeverity:     stringFlagOrNil(cmd, "min-severity", f.minSeverity),

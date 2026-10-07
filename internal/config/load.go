@@ -23,7 +23,7 @@ var sectionOrder = []string{"metrics", "cluster", "analysis", "thresholds", "rep
 var sectionKeys = map[string][]string{
 	"metrics":    {"url", "endpoint_type", "token_env", "tls_verify", "ca_bundle", "timeout_seconds"},
 	"cluster":    {"name", "namespaces", "label", "filter_mode", "nodepool_label"},
-	"analysis":   {"period", "timezone", "node_autoscaling", "excluded_containers"},
+	"analysis":   {"period", "start", "end", "timezone", "node_autoscaling", "excluded_containers"},
 	"thresholds": {"warning_percent", "critical_percent", "low_utilization_percent", "autoscaler_near_max_percent", "nodepool_spread_points", "bursty_gap_percent", "hpa_replica_divergence"},
 	"report":     {"profile", "min_severity", "language", "organization", "classification", "author", "output_directory"},
 }
@@ -49,6 +49,8 @@ type tomlConfig struct {
 	}
 	Analysis struct {
 		Period             string   `toml:"period"`
+		Start              string   `toml:"start"`
+		End                string   `toml:"end"`
 		Timezone           string   `toml:"timezone"`
 		NodeAutoscaling    string   `toml:"node_autoscaling"`
 		ExcludedContainers []string `toml:"excluded_containers"`
@@ -87,6 +89,8 @@ func fromConfig(c Config) tomlConfig {
 	t.Cluster.FilterMode = c.Cluster.FilterMode
 	t.Cluster.NodepoolLabel = c.Cluster.NodepoolLabel
 	t.Analysis.Period = c.Analysis.Period
+	t.Analysis.Start = c.Analysis.Start
+	t.Analysis.End = c.Analysis.End
 	t.Analysis.Timezone = c.Analysis.Timezone
 	t.Analysis.NodeAutoscaling = c.Analysis.NodeAutoscaling
 	t.Analysis.ExcludedContainers = c.Analysis.ExcludedContainers
@@ -126,6 +130,8 @@ func toConfig(t tomlConfig) Config {
 		},
 		Analysis: Analysis{
 			Period:             t.Analysis.Period,
+			Start:              t.Analysis.Start,
+			End:                t.Analysis.End,
 			Timezone:           t.Analysis.Timezone,
 			NodeAutoscaling:    t.Analysis.NodeAutoscaling,
 			ExcludedContainers: t.Analysis.ExcludedContainers,
@@ -174,8 +180,12 @@ func Load(src Source) (Loaded, error) {
 		}
 	}
 
-	applyEnvironment(&cfg, getenv)
-	applyFlags(&cfg, src.Flags)
+	if err := applyEnvironment(&cfg, getenv); err != nil {
+		return Loaded{}, err
+	}
+	if err := applyFlags(&cfg, src.Flags); err != nil {
+		return Loaded{}, err
+	}
 
 	if err := cfg.Validate(); err != nil {
 		return Loaded{}, err
@@ -223,6 +233,29 @@ func applyFile(path string, cfg *Config) error {
 		return wrongTypeError(err)
 	}
 	*cfg = toConfig(target)
+
+	table, _ := raw["analysis"].(map[string]any)
+	_, hasPeriod := table["period"]
+	_, hasStart := table["start"]
+	_, hasEnd := table["end"]
+	if err := setWindow(&cfg.Analysis, hasPeriod, hasStart || hasEnd, errFileWindow); err != nil {
+		return err
+	}
+	return nil
+}
+
+// setWindow settles one source's say on the window: a source that sets a
+// period and a range together is refused with refusal; a source that sets a
+// range clears the period, and one that sets a period clears the range.
+func setWindow(a *Analysis, period, rng bool, refusal error) error {
+	switch {
+	case period && rng:
+		return refusal
+	case rng:
+		a.Period = ""
+	case period:
+		a.Start, a.End = "", ""
+	}
 	return nil
 }
 
@@ -297,7 +330,7 @@ func wrongTypeError(err error) error {
 
 // applyEnvironment overrides cfg with every KCR_ variable of spec 5.2 that
 // is set to a non-empty value.
-func applyEnvironment(cfg *Config, getenv func(string) string) {
+func applyEnvironment(cfg *Config, getenv func(string) string) error {
 	if v := getenv("KCR_METRICS_URL"); v != "" {
 		cfg.Metrics.URL = v
 	}
@@ -316,8 +349,18 @@ func applyEnvironment(cfg *Config, getenv func(string) string) {
 	if v := getenv("KCR_NAMESPACES"); v != "" {
 		cfg.Cluster.Namespaces = splitList(v)
 	}
-	if v := getenv("KCR_PERIOD"); v != "" {
-		cfg.Analysis.Period = v
+	period, start, end := getenv("KCR_PERIOD"), getenv("KCR_START"), getenv("KCR_END")
+	if period != "" {
+		cfg.Analysis.Period = period
+	}
+	if start != "" {
+		cfg.Analysis.Start = start
+	}
+	if end != "" {
+		cfg.Analysis.End = end
+	}
+	if err := setWindow(&cfg.Analysis, period != "", start != "" || end != "", errEnvWindow); err != nil {
+		return err
 	}
 	if v := getenv("KCR_TIMEZONE"); v != "" {
 		cfg.Analysis.Timezone = v
@@ -337,10 +380,11 @@ func applyEnvironment(cfg *Config, getenv func(string) string) {
 	if v := getenv("KCR_LANGUAGE"); v != "" {
 		cfg.Report.Language = v
 	}
+	return nil
 }
 
 // applyFlags overrides cfg with every flag that was given.
-func applyFlags(cfg *Config, flags Flags) {
+func applyFlags(cfg *Config, flags Flags) error {
 	if flags.MetricsURL != nil {
 		cfg.Metrics.URL = *flags.MetricsURL
 	}
@@ -362,6 +406,15 @@ func applyFlags(cfg *Config, flags Flags) {
 	if flags.Period != nil {
 		cfg.Analysis.Period = *flags.Period
 	}
+	if flags.Start != nil {
+		cfg.Analysis.Start = *flags.Start
+	}
+	if flags.End != nil {
+		cfg.Analysis.End = *flags.End
+	}
+	if err := setWindow(&cfg.Analysis, flags.Period != nil, flags.Start != nil || flags.End != nil, errFlagWindow); err != nil {
+		return err
+	}
 	if flags.Timezone != nil {
 		cfg.Analysis.Timezone = *flags.Timezone
 	}
@@ -380,6 +433,7 @@ func applyFlags(cfg *Config, flags Flags) {
 	if flags.Insecure {
 		cfg.Metrics.TLSVerify = false
 	}
+	return nil
 }
 
 // splitList splits s on commas, trims each item, drops an empty item, keeps

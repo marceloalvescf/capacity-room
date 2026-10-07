@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // labelRe matches a valid Prometheus label name.
@@ -19,6 +20,11 @@ var labelRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 var (
 	errPeriodShape          = errors.New("analysis.period must look like 30m, 4h, 24h, or 7d")
 	errPeriodTooLong        = errors.New("analysis.period is too long")
+	errFileWindow           = errors.New("the configuration file sets both analysis.period and a range")
+	errEnvWindow            = errors.New("the environment sets both KCR_PERIOD and KCR_START or KCR_END")
+	errFlagWindow           = errors.New("the flags set both --period and --start or --end")
+	errRangeTogether        = errors.New("analysis.start and analysis.end must be set together")
+	errRangeOrder           = errors.New("analysis.start must come before analysis.end")
 	errTimezoneUnknown      = errors.New("analysis.timezone is unknown")
 	errTokenTooShort        = errors.New("the token must hold at least 8 characters")
 	errMetricsURLShape      = errors.New("metrics.url must be an absolute HTTP or HTTPS URL")
@@ -140,11 +146,19 @@ func validateCluster(cl Cluster) error {
 }
 
 func validateAnalysis(a Analysis) error {
-	if err := ValidatePeriod(a.Period); err != nil {
-		return err
+	ranged := a.Period == "" && (a.Start != "" || a.End != "")
+	if !ranged {
+		if err := ValidatePeriod(a.Period); err != nil {
+			return err
+		}
 	}
 	if err := ValidateTimezone(a.Timezone); err != nil {
 		return err
+	}
+	if ranged {
+		if _, _, err := a.Range(); err != nil {
+			return err
+		}
 	}
 	switch a.NodeAutoscaling {
 	case "auto", "enabled", "disabled":
@@ -274,4 +288,43 @@ func checkWritableDir(path string) error {
 		return fmt.Errorf("report.output_directory holds a probe file that could not be removed: %s: %s", name, cause)
 	}
 	return nil
+}
+
+// Range returns the instants of analysis.start and analysis.end, read in
+// analysis.timezone. A message never repeats a value that is not a wall
+// time, and names the zone of one that is a wall time the zone lacks or
+// repeats.
+func (a Analysis) Range() (start, end time.Time, err error) {
+	if a.Start == "" || a.End == "" {
+		return time.Time{}, time.Time{}, errRangeTogether
+	}
+	loc, err := a.Location()
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	start, err = rangeEnd("analysis.start", a.Start, a.Timezone, loc)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	end, err = rangeEnd("analysis.end", a.End, a.Timezone, loc)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	if !start.Before(end) {
+		return time.Time{}, time.Time{}, errRangeOrder
+	}
+	return start, end, nil
+}
+
+func rangeEnd(key, text, zone string, loc *time.Location) (time.Time, error) {
+	instant, err := ParseWallTime(text, loc)
+	switch {
+	case errors.Is(err, ErrWallTimeShape):
+		return time.Time{}, fmt.Errorf("%s must look like 2026-09-01 00:00", key)
+	case errors.Is(err, ErrWallTimeAbsent):
+		return time.Time{}, fmt.Errorf("%s %s does not exist in %s", key, text, zone)
+	case errors.Is(err, ErrWallTimeTwice):
+		return time.Time{}, fmt.Errorf("%s %s occurs twice in %s", key, text, zone)
+	}
+	return instant, err
 }

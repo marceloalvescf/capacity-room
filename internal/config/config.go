@@ -69,7 +69,8 @@ type Cluster struct {
 
 // Analysis configures the time window and scope of the analysis.
 type Analysis struct {
-	Period             string // for example "24h"
+	Period             string // for example "24h"; empty when a range is set
+	Start, End         string // wall times in Timezone; empty when Period is set
 	Timezone           string
 	NodeAutoscaling    string // auto, enabled, disabled
 	ExcludedContainers []string
@@ -142,6 +143,7 @@ type Flags struct {
 	MetricsURL, EndpointType, Token               *string
 	Cluster, ClusterLabel, ClusterFilter          *string
 	Namespaces, Period, Timezone, NodeAutoscaling *string
+	Start, End                                    *string
 	MinSeverity, ReportProfile, Language          *string
 	Insecure                                      bool
 }

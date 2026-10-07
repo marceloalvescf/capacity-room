@@ -23,6 +23,8 @@ type reportFlags struct {
 	clusterFilter   string
 	namespaces      string
 	period          string
+	start           string
+	end             string
 	timezone        string
 	nodeAutoscaling string
 	minSeverity     string
@@ -74,6 +76,8 @@ func newReportCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobr
 	flags.StringVar(&f.clusterFilter, "cluster-filter", "", "Cluster filter mode: required, auto, or none.")
 	flags.StringVar(&f.namespaces, "namespaces", "", "Comma-separated namespaces to include.")
 	flags.StringVar(&f.period, "period", "", "Analysis period, such as 24h.")
+	flags.StringVar(&f.start, "start", "", "Start of a calendar range, such as 2026-09-01 00:00, in the time zone.")
+	flags.StringVar(&f.end, "end", "", "End of a calendar range, such as 2026-10-01 00:00, in the time zone.")
 	flags.StringVar(&f.timezone, "timezone", "", "IANA time zone of the analysis.")
 	flags.StringVar(&f.nodeAutoscaling, "node-autoscaling", "", "Node autoscaling: auto, enabled, or disabled.")
 	flags.StringVar(&f.minSeverity, "min-severity", "", "Minimum severity shown: all, attention, or critical.")

@@ -21,7 +21,7 @@ import (
 // checks each one appears in the command's own help text.
 var reportFlagNames = []string{
 	"config", "metrics-url", "endpoint-type", "token", "insecure",
-	"cluster", "cluster-label", "cluster-filter", "namespaces", "period",
+	"cluster", "cluster-label", "cluster-filter", "namespaces", "period", "start", "end",
 	"timezone", "node-autoscaling", "min-severity", "report-profile", "lang",
 	"output", "snapshot", "from-snapshot", "check", "verbose",
 }
@@ -712,4 +712,18 @@ func TestClockIsReadTwice(t *testing.T) {
 			t.Fatalf("Env.Now was called %d times, want 0", calls)
 		}
 	})
+}
+
+func TestReportCommandRefusesARange(t *testing.T) {
+	cfgPath := writeConfig(t, "[metrics]\nurl = \"https://prom.example.org\"\n[cluster]\nname = \"prod\"\nnamespaces = [\"default\"]\n")
+	stdout, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--config", cfgPath, "--check", "--start", "x", "--end", "y"})
+	if code != 2 {
+		t.Fatalf("code = %d, want 2; stderr = %q", code, stderr)
+	}
+	if want := "error: analysis.start must look like 2026-09-01 00:00\n"; stderr != want {
+		t.Fatalf("stderr = %q, want %q", stderr, want)
+	}
+	if stdout != "" {
+		t.Fatalf("stdout = %q, want empty", stdout)
+	}
 }
