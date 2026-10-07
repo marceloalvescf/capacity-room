@@ -31,6 +31,10 @@ type Server struct {
 	Now      func() time.Time
 	Logger   *slog.Logger // nil logs nowhere
 
+	// Static serves a GET or HEAD that matches no route and is outside /api
+	// and /health/; nil answers those with the plain 404.
+	Static http.Handler
+
 	// downloadSlots and downloadDeadline are the number of downloads served
 	// at once and the time a download may take to be written, once its body
 	// is ready; zero means the defaults.
@@ -99,7 +103,7 @@ func (s *Server) Handler() http.Handler {
 	checks := health.Handler([]health.Check{health.Database(s.Pool), health.Migrations(s.Pool)})
 	mux.Handle("GET /health/live", checks)
 	mux.Handle("GET /health/ready", checks)
-	return securityHeaders(unmatched{mux}, logger)
+	return securityHeaders(unmatched{mux: mux, static: s.Static}, logger)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -111,7 +115,10 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 // unmatched sends a request that matches no pattern through unmatchedWriter,
 // which turns the 404 and 405 of the mux into the answers of the contract.
-type unmatched struct{ mux *http.ServeMux }
+type unmatched struct {
+	mux    *http.ServeMux
+	static http.Handler
+}
 
 func (u unmatched) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h, pattern := u.mux.Handler(r)
@@ -119,7 +126,21 @@ func (u unmatched) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		u.mux.ServeHTTP(w, r)
 		return
 	}
+	if u.static != nil && servesStatic(r) {
+		u.static.ServeHTTP(w, r)
+		return
+	}
 	h.ServeHTTP(&unmatchedWriter{ResponseWriter: w, path: r.URL.Path}, r)
+}
+
+// servesStatic reports whether an unmatched request belongs to the static
+// handler: a GET or HEAD outside /api and /health/.
+func servesStatic(r *http.Request) bool {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		return false
+	}
+	p := r.URL.Path
+	return p != "/api" && !strings.HasPrefix(p, "/api/") && !strings.HasPrefix(p, "/health/")
 }
 
 // unmatchedWriter answers the 405 of the mux with the METHOD_NOT_ALLOWED

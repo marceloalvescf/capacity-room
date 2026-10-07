@@ -25,6 +25,7 @@ var Layers = []Layer{
 	{Path: "internal/redact", Rank: 0},
 	{Path: "internal/promtest", Rank: 0},
 	{Path: "template", Rank: 0},
+	{Path: "web", Rank: 0},
 	{Path: "template/golden", Rank: 10},
 	{Path: "internal/config", Rank: 20},
 	{Path: "internal/prom", Rank: 30},

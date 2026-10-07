@@ -21,6 +21,7 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
+	"github.com/marceloalvescf/k8s-capacity-report/web"
 )
 
 const shutdownTimeout = 30 * time.Second
@@ -148,6 +149,7 @@ func buildServer(pool, downloads *pgxpool.Pool, loaded settings.Settings, secret
 		},
 		Now:    now,
 		Logger: logger,
+		Static: web.Handler(),
 	}, nil
 }
 

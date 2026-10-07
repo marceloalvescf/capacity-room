@@ -1,11 +1,21 @@
 # Base images are pinned by tag and by index digest. To move one, resolve the
 # new digest with `docker buildx imagetools inspect <image>:<tag>`.
 
+FROM node:26-trixie-slim@sha256:930557a230abacbc3f4fd9b8648abf8f4bee1e17cb72195dcdfb2f709bc85b33 AS frontend
+WORKDIR /src/web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY api/openapi.yaml /src/api/openapi.yaml
+COPY VERSION /src/VERSION
+COPY web/ ./
+RUN npm run build
+
 FROM golang:1.27@sha256:3680233e3204827fbdc66088528ae6d4b3d034f51d03a99d454f6de034888244 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+COPY --from=frontend /src/web/dist /src/web/dist
 RUN CGO_ENABLED=0 go build -trimpath -o /out/k8s-capacity-report ./cmd/k8s-capacity-report
 
 # Source of the typst binary only. The binary is statically linked, so it

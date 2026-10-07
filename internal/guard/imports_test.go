@@ -306,6 +306,7 @@ func TestLayersHoldEveryPackageOfThisPart(t *testing.T) {
 		"internal/redact":             0,
 		"internal/promtest":           0,
 		"template":                    0,
+		"web":                         0,
 		"template/golden":             10,
 		"internal/config":             20,
 		"internal/prom":               30,
@@ -426,4 +427,8 @@ func TestRepositoryImportsPointOneWay(t *testing.T) {
 
 func TestLayersHoldArith(t *testing.T) {
 	checkLayerRanks(t, map[string]int{"internal/arith": 0})
+}
+
+func TestLayersHoldWeb(t *testing.T) {
+	checkLayerRanks(t, map[string]int{"web": 0})
 }
