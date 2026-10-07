@@ -159,7 +159,6 @@ func (e PDFStatus) Valid() bool {
 // Defines values for ReportDeleteOutcome.
 const (
 	ReportDeleteOutcomeDeleted   ReportDeleteOutcome = "deleted"
-	ReportDeleteOutcomeExpired   ReportDeleteOutcome = "expired"
 	ReportDeleteOutcomeForbidden ReportDeleteOutcome = "forbidden"
 	ReportDeleteOutcomeNotFound  ReportDeleteOutcome = "not_found"
 )
@@ -168,8 +167,6 @@ const (
 func (e ReportDeleteOutcome) Valid() bool {
 	switch e {
 	case ReportDeleteOutcomeDeleted:
-		return true
-	case ReportDeleteOutcomeExpired:
 		return true
 	case ReportDeleteOutcomeForbidden:
 		return true
@@ -756,7 +753,7 @@ type ReportAccepted struct {
 	Status   ReportStatus `json:"status"`
 }
 
-// ReportDeleteOutcome deleted; not_found for an unknown or already deleted id; expired; forbidden for an operator's request of a report another requested.
+// ReportDeleteOutcome deleted, an expired report included; not_found for an unknown or already deleted id; forbidden for an operator's request of a report another requested.
 type ReportDeleteOutcome string
 
 // ReportDeleteRequest defines model for ReportDeleteRequest.
@@ -768,7 +765,7 @@ type ReportDeleteRequest struct {
 type ReportDeleteResult struct {
 	Id uuid.UUID `json:"id"`
 
-	// Outcome deleted; not_found for an unknown or already deleted id; expired; forbidden for an operator's request of a report another requested.
+	// Outcome deleted, an expired report included; not_found for an unknown or already deleted id; forbidden for an operator's request of a report another requested.
 	Outcome ReportDeleteOutcome `json:"outcome"`
 }
 

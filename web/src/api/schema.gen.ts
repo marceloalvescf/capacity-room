@@ -237,7 +237,7 @@ export interface paths {
         get: operations["getReport"];
         put?: never;
         post?: never;
-        /** Delete a report: an administrator any, an operator its own request. From then on the report answers REPORT_NOT_FOUND everywhere. */
+        /** Delete a report: an administrator any, an operator its own request. An expired report can be deleted too. From then on the report answers REPORT_NOT_FOUND everywhere. */
         delete: operations["deleteReport"];
         options?: never;
         head?: never;
@@ -435,10 +435,10 @@ export interface components {
             ids: string[];
         };
         /**
-         * @description deleted; not_found for an unknown or already deleted id; expired; forbidden for an operator's request of a report another requested.
+         * @description deleted, an expired report included; not_found for an unknown or already deleted id; forbidden for an operator's request of a report another requested.
          * @enum {string}
          */
-        ReportDeleteOutcome: "deleted" | "not_found" | "expired" | "forbidden";
+        ReportDeleteOutcome: "deleted" | "not_found" | "forbidden";
         ReportDeleteResult: {
             /** Format: uuid */
             id: string;
@@ -1813,7 +1813,6 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["ForbiddenOrCSRF"];
             404: components["responses"]["ReportNotFound"];
-            410: components["responses"]["ReportExpired"];
             default: components["responses"]["Unexpected"];
         };
     };
@@ -2005,7 +2004,7 @@ export const reportPhaseValues: ReadonlyArray<FlattenedDeepRequired<components>[
 export const reportFailureCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportFailureCode"]> = ["ENDPOINT_URL_REJECTED", "ENDPOINT_ADDRESS_REJECTED", "ENDPOINT_RESOLUTION_FAILED", "ENDPOINT_CONNECTION_REJECTED", "ENDPOINT_REDIRECT_REJECTED", "PROFILE_CREDENTIAL_UNAVAILABLE", "PROFILE_CA_BUNDLE_UNAVAILABLE", "ENDPOINT_TLS_FAILED", "ENDPOINT_AUTH_REJECTED", "ENDPOINT_API_NOT_FOUND", "ENDPOINT_UNREACHABLE", "CLUSTER_SCOPE_NOT_FOUND", "CAPABILITIES_INSUFFICIENT", "NOTHING_TO_REPORT", "SNAPSHOT_TOO_LARGE", "COLLECTION_TIMEOUT", "JOB_ATTEMPTS_EXHAUSTED", "INTERNAL_FAILURE"];
 export const pDFStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PDFStatus"]> = ["pending", "ready", "failed"];
 export const pDFFailureCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PDFFailureCode"]> = ["PDF_COMPILE_FAILED", "PDF_TOO_LARGE", "PDF_ATTEMPTS_EXHAUSTED", "INTERNAL_FAILURE"];
-export const reportDeleteOutcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportDeleteOutcome"]> = ["deleted", "not_found", "expired", "forbidden"];
+export const reportDeleteOutcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportDeleteOutcome"]> = ["deleted", "not_found", "forbidden"];
 export const errorCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorCode"]> = ["REQUEST_INVALID", "INVALID_CREDENTIALS", "UNAUTHENTICATED", "CSRF_REJECTED", "FORBIDDEN", "USER_NOT_FOUND", "NOT_FOUND", "METHOD_NOT_ALLOWED", "USERNAME_TAKEN", "LAST_ADMIN", "SELF_DELETE", "SELF_DEACTIVATE", "SELF_DEMOTE", "INVALID_USERNAME", "PASSWORD_TOO_SHORT", "PASSWORD_TOO_LONG", "AUTH_RATE_LIMITED", "DATABASE_UNAVAILABLE", "PROFILE_NOT_FOUND", "PROFILE_ID_TAKEN", "PROFILE_REVISION_STALE", "PROFILE_DOCUMENT_INVALID", "ENDPOINT_URL_REJECTED", "ENDPOINT_ADDRESS_REJECTED", "INTERNAL_ERROR", "IDEMPOTENCY_KEY_INVALID", "CURSOR_INVALID", "REPORT_NOT_FOUND", "IDEMPOTENCY_KEY_REUSED", "PROFILE_INACTIVE", "SNAPSHOT_NOT_READY", "PDF_NOT_READY", "PDF_ALREADY_READY", "REPORT_EXPIRED", "REPORT_SELECTION_NOT_PERMITTED", "ADMISSION_GLOBAL_LIMIT", "ADMISSION_PROFILE_LIMIT"];
 export const roleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Role"]> = ["administrator", "operator", "reader"];
 export const languageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Language"]> = ["pt-BR", "en"];

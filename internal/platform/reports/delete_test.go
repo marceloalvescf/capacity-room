@@ -60,9 +60,6 @@ func TestDeleteJudgesInOrder(t *testing.T) {
 	ctx := context.Background()
 	deleted := f.seedReport(t, "queued", "waiting", fixedNow.Add(time.Hour), "")
 	f.markDeleted(t, deleted)
-	expired := f.seedReport(t, "failed", "complete", fixedNow, "")
-	marked := f.seedReport(t, "failed", "complete", fixedNow.Add(time.Hour), "")
-	f.exec(t, `UPDATE reports SET expired_at = $2 WHERE id = $1`, marked, fixedNow)
 	before := f.count(t, `SELECT count(*) FROM audit_events`)
 
 	for name, c := range map[string]struct {
@@ -72,18 +69,35 @@ func TestDeleteJudgesInOrder(t *testing.T) {
 	}{
 		"absent":         {f.op, uuid.New(), CodeReportNotFound},
 		"deleted":        {f.op, deleted, CodeReportNotFound},
-		"expired":        {f.op, expired, CodeReportExpired},
-		"marked expired": {f.op, marked, CodeReportExpired},
 	} {
 		if e := asError(t, f.svc.Delete(ctx, c.actor, c.id)); e.Code != c.code {
 			t.Errorf("%s: %s", name, e.Code)
 		}
 	}
-	if f.deletedAt(t, expired) != nil || f.deletedAt(t, marked) != nil {
-		t.Fatal("an expired report was marked")
-	}
 	if f.count(t, `SELECT count(*) FROM audit_events`) != before {
 		t.Fatal("a refused delete wrote an audit row")
+	}
+}
+
+func TestDeleteMarksAnExpiredReport(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	byTime := f.seedReport(t, "failed", "complete", fixedNow, "")
+	byMark := f.seedReport(t, "failed", "complete", fixedNow.Add(time.Hour), "")
+	f.exec(t, `UPDATE reports SET expired_at = $2 WHERE id = $1`, byMark, fixedNow)
+	for name, id := range map[string]uuid.UUID{"by time": byTime, "by mark": byMark} {
+		if err := f.svc.Delete(ctx, f.op, id); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if f.deletedAt(t, id) == nil {
+			t.Fatalf("%s: the report was not marked", name)
+		}
+	}
+	if n := len(f.auditActions(t, ActionReportDelete)); n != 2 {
+		t.Fatalf("%d audit rows, want 2", n)
+	}
+	if e := asError(t, f.svc.Delete(ctx, f.op, byTime)); e.Code != CodeReportNotFound {
+		t.Fatalf("a second delete: %s", e.Code)
 	}
 }
 
@@ -127,7 +141,7 @@ func TestDeleteManyOutcomes(t *testing.T) {
 	f.markDeleted(t, already)
 
 	ids := []uuid.UUID{own, foreign, expired, absent, already}
-	want := []DeleteOutcome{OutcomeDeleted, OutcomeForbidden, OutcomeExpired, OutcomeNotFound, OutcomeNotFound}
+	want := []DeleteOutcome{OutcomeDeleted, OutcomeForbidden, OutcomeDeleted, OutcomeNotFound, OutcomeNotFound}
 	for len(ids) < 200 {
 		id := f.seedReport(t, "queued", "waiting", future, "")
 		ids = append(ids, id)
@@ -145,11 +159,11 @@ func TestDeleteManyOutcomes(t *testing.T) {
 			t.Fatalf("id %d: %s, want %s", i, r.Outcome, want[i])
 		}
 	}
-	if n := len(f.auditActions(t, ActionReportDelete)); n != 196 {
-		t.Fatalf("%d audit rows, want 196", n)
+	if n := len(f.auditActions(t, ActionReportDelete)); n != 197 {
+		t.Fatalf("%d audit rows, want 197", n)
 	}
-	if f.deletedAt(t, foreign) != nil || f.deletedAt(t, expired) != nil {
-		t.Fatal("a refused id was marked")
+	if f.deletedAt(t, foreign) != nil || f.deletedAt(t, expired) == nil {
+		t.Fatal("a refused id was marked, or the expired one was not")
 	}
 }
 

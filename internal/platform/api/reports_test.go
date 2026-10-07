@@ -674,7 +674,10 @@ func TestDeleteRoute(t *testing.T) {
 	}
 	wantProblem(t, ts.as(t, &c.eve, "GET", "/api/v1/reports/"+own.String(), "", nil), 404, "REPORT_NOT_FOUND", nil)
 	wantProblem(t, del(&c.ops, theirs.String()), 403, CodeForbidden, nil)
-	wantProblem(t, del(&c.ops, expired.String()), 410, "REPORT_EXPIRED", nil)
+	if w := del(&c.ops, expired.String()); w.Code != 204 || w.Body.Len() != 0 {
+		t.Fatalf("expired: %d %q", w.Code, w.Body.String())
+	}
+	wantProblem(t, ts.as(t, &c.eve, "GET", "/api/v1/reports/"+expired.String(), "", nil), 404, "REPORT_NOT_FOUND", nil)
 	wantProblem(t, del(&c.ops, uuid.NewString()), 404, "REPORT_NOT_FOUND", nil)
 	if w := del(&c.root, theirs.String()); w.Code != 204 {
 		t.Fatalf("administrator: %d %s", w.Code, w.Body.String())
@@ -720,7 +723,7 @@ func TestBulkDeleteRoute(t *testing.T) {
 	}
 	got := decodeStrict[ReportDeleteResults](t, w)
 	want := []ReportDeleteResult{
-		{own, ReportDeleteOutcomeDeleted}, {theirs, ReportDeleteOutcomeForbidden}, {expired, ReportDeleteOutcomeExpired},
+		{own, ReportDeleteOutcomeDeleted}, {theirs, ReportDeleteOutcomeForbidden}, {expired, ReportDeleteOutcomeDeleted},
 		{absent, ReportDeleteOutcomeNotFound}, {gone, ReportDeleteOutcomeNotFound},
 	}
 	if fmt.Sprint(got.Results) != fmt.Sprint(want) {

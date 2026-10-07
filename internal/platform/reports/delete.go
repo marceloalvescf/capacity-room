@@ -27,7 +27,6 @@ type DeleteOutcome string
 const (
 	OutcomeDeleted   DeleteOutcome = "deleted"
 	OutcomeNotFound  DeleteOutcome = "not_found"
-	OutcomeExpired   DeleteOutcome = "expired"
 	OutcomeForbidden DeleteOutcome = "forbidden"
 )
 
@@ -39,14 +38,12 @@ type DeleteResult struct {
 
 // judgeDelete says whether the actor may delete the report as read: an
 // administrator any report, an operator its own, a reader none.
-func judgeDelete(actor auth.Principal, r store.Report, now time.Time) DeleteOutcome {
+func judgeDelete(actor auth.Principal, r store.Report) DeleteOutcome {
 	switch {
 	case r.DeletedAt != nil:
 		return OutcomeNotFound
 	case actor.Role != auth.RoleAdministrator && r.OwnerID != actor.ID:
 		return OutcomeForbidden
-	case isExpired(r.ExpiresAt, r.ExpiredAt, now):
-		return OutcomeExpired
 	}
 	return OutcomeDeleted
 }
@@ -65,7 +62,8 @@ func mark(ctx context.Context, tx pgx.Tx, actor auth.Principal, id uuid.UUID, no
 	})
 }
 
-// Delete marks one report deleted: from then on it is absent to every read.
+// Delete marks one report deleted, an expired one included: from then on it
+// is absent to every read.
 func (s *Service) Delete(ctx context.Context, actor auth.Principal, id uuid.UUID) error {
 	now := s.now()
 	return store.Transact(ctx, s.Pool, func(tx pgx.Tx) error {
@@ -81,9 +79,6 @@ func (s *Service) Delete(ctx context.Context, actor auth.Principal, id uuid.UUID
 		}
 		if actor.Role != auth.RoleAdministrator && (actor.Role != auth.RoleOperator || report.OwnerID != actor.ID) {
 			return auth.ErrForbidden
-		}
-		if isExpired(report.ExpiresAt, report.ExpiredAt, now) {
-			return &Error{Code: CodeReportExpired}
 		}
 		err = mark(ctx, tx, actor, id, now)
 		if errors.Is(err, store.ErrNotFound) {
@@ -124,7 +119,7 @@ func (s *Service) DeleteMany(ctx context.Context, actor auth.Principal, ids []uu
 			if err != nil {
 				return err
 			}
-			results[i].Outcome = judgeDelete(actor, report, now)
+			results[i].Outcome = judgeDelete(actor, report)
 		}
 		if s.beforeMark != nil {
 			s.beforeMark(ctx)

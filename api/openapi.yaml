@@ -591,7 +591,8 @@ paths:
       operationId: deleteReport
       summary: >-
         Delete a report: an administrator any, an operator its own request.
-        From then on the report answers REPORT_NOT_FOUND everywhere.
+        An expired report can be deleted too. From then on the report answers
+        REPORT_NOT_FOUND everywhere.
       parameters:
         - $ref: "#/components/parameters/CSRFHeader"
       responses:
@@ -603,8 +604,6 @@ paths:
           $ref: "#/components/responses/ForbiddenOrCSRF"
         "404":
           $ref: "#/components/responses/ReportNotFound"
-        "410":
-          $ref: "#/components/responses/ReportExpired"
         default:
           $ref: "#/components/responses/Unexpected"
   /reports/{id}/view:
@@ -1280,9 +1279,10 @@ components:
     ReportDeleteOutcome:
       type: string
       description: >-
-        deleted; not_found for an unknown or already deleted id; expired;
-        forbidden for an operator's request of a report another requested.
-      enum: [deleted, not_found, expired, forbidden]
+        deleted, an expired report included; not_found for an unknown or
+        already deleted id; forbidden for an operator's request of a report
+        another requested.
+      enum: [deleted, not_found, forbidden]
     ReportDeleteResult:
       type: object
       required: [id, outcome]
