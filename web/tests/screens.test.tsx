@@ -21,6 +21,14 @@ const screens = [
   { name: "sign-in", path: "/login", signedIn: false, heading: "login.title" },
   { name: "reports", path: "/reports", signedIn: true, heading: "reports.title" },
   { name: "new report", path: "/generate", signedIn: true, heading: "generate.title" },
+  {
+    name: "progress",
+    path: "/jobs/0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a01",
+    signedIn: true,
+    heading: "progress.title",
+    options: { profile: "Production" },
+    title: "progress.screen",
+  },
   { name: "account", path: "/account", signedIn: true, heading: "account.title" },
   { name: "not found", path: "/nothing", signedIn: true, heading: "notFound.title" },
 ] as const;
@@ -36,15 +44,20 @@ describe("screens", () => {
       for (const theme of ["light", "dark"]) {
         it(`axe and vocabulary: ${screenCase.name}, ${language}, ${theme}`, async () => {
           document.documentElement.setAttribute("data-theme", theme);
-          mock.reports = [report(), report({ id: "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a02", status: "running", phase: "collecting" })];
+          const options = "options" in screenCase ? screenCase.options : {};
+          const title = "title" in screenCase ? screenCase.title : screenCase.heading;
+          mock.reports = [
+            report({ pdfs: [{ language: "en", status: "ready", failure_code: null }] }),
+            report({ id: "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a02", status: "running", phase: "collecting" }),
+          ];
           mock.profiles = [profileSummary()];
           mock.session = screenCase.signedIn ? signedIn({ language }) : anonymous();
           const { container } = await renderApp(screenCase.path, language);
-          await screen.findByRole("heading", { level: 1, name: i18next.t(screenCase.heading) });
+          await screen.findByRole("heading", { level: 1, name: i18next.t(screenCase.heading, options) });
           const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
           expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
           expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);
-          expect(document.title).toBe(i18next.t("app.title", { screen: i18next.t(screenCase.heading) }));
+          expect(document.title).toBe(i18next.t("app.title", { screen: i18next.t(title) }));
         });
       }
     }

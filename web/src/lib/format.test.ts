@@ -18,4 +18,9 @@ describe("format", () => {
     expect(formatElapsed(42_000)).toBe("0:42");
     expect(formatElapsed(3_725_000)).toBe("1:02:05");
   });
+
+  it("clamps an elapsed time that is negative or not a number to 0:00", () => {
+    expect(formatElapsed(-1500)).toBe("0:00");
+    expect(formatElapsed(Number.NaN)).toBe("0:00");
+  });
 });

@@ -245,5 +245,29 @@
     "profilesFailed": "Não foi possível carregar os perfis.",
     "profileChanged": "O perfil mudou. Suas opções foram carregadas de novo.",
     "longPeriod": "Períodos acima de 15 dias leem dados antigos pelo Thanos e podem elevar o uso de CPU e memória."
+  },
+  "progress": {
+    "screen": "Relatório",
+    "title": "Relatório de {{profile}}",
+    "requested": "Criado em {{time}} por {{username}}",
+    "keptUntil": "Disponível até {{date}}",
+    "steps": "Progresso",
+    "elapsed": "Tempo decorrido {{time}}",
+    "closeable": "Você pode fechar esta página; o relatório continua sendo gerado.",
+    "pdf": "PDF",
+    "download": "Baixar PDF",
+    "generatePdf": "Gerar PDF",
+    "retryPdf": "Tentar de novo",
+    "deleteReport": "Excluir relatório",
+    "code": "Código {{code}}",
+    "requestAgain": "Gerar de novo com estes valores",
+    "back": "Voltar aos relatórios",
+    "notFound": "Este relatório não existe ou foi excluído.",
+    "expired": "Este relatório expirou; seus dados e PDFs foram removidos.",
+    "announce": {
+      "collected": "O relatório foi coletado.",
+      "failed": "O relatório falhou.",
+      "pdfReady": "O PDF em {{language}} está pronto."
+    }
   }
 }

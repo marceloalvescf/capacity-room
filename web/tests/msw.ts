@@ -217,9 +217,22 @@ export function installMockApi(initial: Session): Mock {
       const results = body.ids.map((id): Schemas["ReportDeleteResult"] => ({ id, outcome: remove(id) }));
       return HttpResponse.json({ results } satisfies Schemas["ReportDeleteResults"]);
     }),
-    http.post(api("/reports/:id/pdfs"), async ({ request }) => {
+    http.post(api("/reports/:id/pdfs"), async ({ request, params }) => {
       const body = (await record(request)) as { language: Schemas["Language"] };
-      return HttpResponse.json({ language: body.language, status: "pending" }, { status: 202 });
+      const found = mock.reports.find((r) => r.id === params["id"]);
+      if (found === undefined) {
+        return failure(404, "REPORT_NOT_FOUND");
+      }
+      const earlier = found.pdfs.find((pdf) => pdf.language === body.language);
+      if (earlier?.status === "ready") {
+        return failure(409, "PDF_ALREADY_READY");
+      }
+      const pending: Schemas["ReportPDFState"] = { language: body.language, status: "pending", failure_code: null };
+      found.pdfs = [...found.pdfs.filter((pdf) => pdf.language !== body.language), pending];
+      return HttpResponse.json(
+        { language: body.language, status: "pending" } satisfies Schemas["PDFRequestAccepted"],
+        { status: 202 },
+      );
     }),
     http.get(api("/reports/:id"), async ({ request, params }) => {
       await record(request);

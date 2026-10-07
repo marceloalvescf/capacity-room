@@ -7,7 +7,7 @@ import { useAnnounce } from "@/app/live-region";
 import { useScreenTitle } from "@/app/title";
 import { StatusMark } from "@/components/status-mark";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button, buttonStyles } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate, formatTime } from "@/lib/format";
 import { usePrincipal } from "@/session/session";
@@ -23,8 +23,7 @@ import {
 import { DeleteDialog, type DeleteTarget } from "./delete-dialog";
 import { pdfMark, reportMark } from "./marks";
 
-const linkButton =
-  "inline-flex min-h-9 items-center justify-center rounded-md border border-accent bg-accent px-3 text-sm font-medium text-accent-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+const linkButton = buttonStyles("primary");
 
 export function ReportsPage() {
   const { t, i18n } = useTranslation();

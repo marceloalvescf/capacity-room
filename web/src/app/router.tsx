@@ -2,6 +2,7 @@ import { Navigate, type RouteObject } from "react-router";
 import { AccountPage } from "@/features/account/account-page";
 import { LoginPage } from "@/features/auth/login-page";
 import { GeneratePage } from "@/features/reports/generate-page";
+import { ProgressPage } from "@/features/reports/progress-page";
 import { ReportsPage } from "@/features/reports/reports-page";
 import { RequireOperator } from "@/session/require-operator";
 import { RequireSession } from "@/session/require-session";
@@ -23,6 +24,7 @@ export const routes: RouteObject[] = [
             element: <RequireOperator />,
             children: [{ index: true, element: <GeneratePage /> }],
           },
+          { path: "jobs/:id", element: <ProgressPage /> },
           { path: "account", element: <AccountPage /> },
           { path: "*", element: <NotFound /> },
         ],

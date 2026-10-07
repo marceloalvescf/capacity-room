@@ -64,10 +64,13 @@ export function useReports(): UseInfiniteQueryResult<InfiniteData<ReportPage>> {
   });
 }
 
-export function useReport(id: string): UseQueryResult<Report> {
+// A screen that is deleting the report turns the checking off, so that none
+// reaches the report after it is gone.
+export function useReport(id: string, enabled = true): UseQueryResult<Report> {
   const api = useApi();
   return useQuery({
     queryKey: [...reportsKey, id],
+    enabled,
     queryFn: async () => {
       const { data } = await api.GET("/reports/{id}", { params: { path: { id } } });
       if (data === undefined) {

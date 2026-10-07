@@ -245,5 +245,29 @@
     "profilesFailed": "The profiles could not be loaded.",
     "profileChanged": "The profile changed. Its choices were loaded again.",
     "longPeriod": "Periods over 15 days read older data through Thanos and can raise CPU and memory use."
+  },
+  "progress": {
+    "screen": "Report",
+    "title": "Report on {{profile}}",
+    "requested": "Requested {{time}} by {{username}}",
+    "keptUntil": "Kept until {{date}}",
+    "steps": "Progress",
+    "elapsed": "Elapsed {{time}}",
+    "closeable": "You can close this page; the report keeps running.",
+    "pdf": "PDF",
+    "download": "Download PDF",
+    "generatePdf": "Generate PDF",
+    "retryPdf": "Try again",
+    "deleteReport": "Delete report",
+    "code": "Code {{code}}",
+    "requestAgain": "Request again with these values",
+    "back": "Back to reports",
+    "notFound": "This report does not exist, or was deleted.",
+    "expired": "This report has expired; its data and PDFs were removed.",
+    "announce": {
+      "collected": "The report was collected.",
+      "failed": "The report failed.",
+      "pdfReady": "The PDF in {{language}} is ready."
+    }
   }
 }
