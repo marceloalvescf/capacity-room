@@ -223,7 +223,7 @@
   },
   "delete": {
     "oneTitle": "Excluir este relatório?",
-    "oneBody": "{{profile}} · {{time}}, por {{username}}. Os dados e os PDFs são removidos. Esta ação não pode ser desfeita.",
+    "oneBody": "Os dados do relatório selecionado e seus PDFs são removidos. Esta ação não pode ser desfeita.",
     "manyTitle": "Excluir {{count}} relatórios?",
     "manyBody": "Os dados e os PDFs são removidos. Esta ação não pode ser desfeita.",
     "confirm": "Excluir",

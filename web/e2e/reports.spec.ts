@@ -143,8 +143,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await page.getByRole("button", { name: en.reports.delete, exact: true }).click();
     const dialog = page.getByRole("alertdialog", { name: en.delete.oneTitle });
     await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText("Production");
-    await expect(dialog).toContainText(operator.username);
+    await expect(dialog).toContainText(en.delete.oneBody);
     await expectNoViolations(page);
     await dialog.getByRole("button", { name: en.delete.confirm, exact: true }).click();
     await expect(page.getByText(en.reports.empty)).toBeVisible();

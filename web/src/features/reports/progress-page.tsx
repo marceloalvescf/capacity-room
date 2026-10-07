@@ -213,7 +213,7 @@ export function ProgressPage() {
         </div>
       ) : null}
       <DeleteDialog
-        target={asking ? { kind: "one", report: data, profile } : null}
+        target={asking ? { kind: "one", id: data.id } : null}
         busy={deleteReport.isPending}
         onCloseAutoFocus={(event) => {
           event.preventDefault();

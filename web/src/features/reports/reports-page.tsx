@@ -95,7 +95,7 @@ export function ReportsPage() {
     }
     open(
       chosen.length === 1
-        ? { kind: "one", report: only, profile: profileName(only) }
+        ? { kind: "one", id: only.id }
         : { kind: "many", ids: chosen.map((row) => row.id) },
     );
   }
@@ -111,14 +111,14 @@ export function ReportsPage() {
     try {
       if (current.kind === "one") {
         try {
-          await deleteOne.mutateAsync(current.report.id);
+          await deleteOne.mutateAsync(current.id);
         } catch (thrown) {
           // A report already gone counts as gone.
           if (!(thrown instanceof ApiFailure && thrown.status === 404)) {
             throw thrown;
           }
         }
-        toggle(current.report.id, false);
+        toggle(current.id, false);
         went = 1;
       } else {
         const results = await deleteMany.mutateAsync(current.ids);
@@ -267,11 +267,7 @@ export function ReportsPage() {
                         {mine ? (
                           <Button
                             onClick={() => {
-                              open({
-                                kind: "one",
-                                report: row,
-                                profile: profileName(row),
-                              });
+                              open({ kind: "one", id: row.id });
                             }}
                           >
                             {t("reports.delete")}

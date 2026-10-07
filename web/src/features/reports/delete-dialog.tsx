@@ -1,9 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatTime } from "@/lib/format";
-import type { ReportSummary } from "./api";
 
-export type DeleteTarget = { kind: "one"; report: ReportSummary; profile: string } | { kind: "many"; ids: string[] };
+export type DeleteTarget = { kind: "one"; id: string } | { kind: "many"; ids: string[] };
 
 interface DeleteDialogProps {
   target: DeleteTarget | null;
@@ -19,11 +17,7 @@ export function DeleteDialog({ target, busy, onConfirm, onCancel, onCloseAutoFoc
   let body = "";
   if (target?.kind === "one") {
     title = t("delete.oneTitle");
-    body = t("delete.oneBody", {
-      profile: target.profile,
-      time: formatTime(target.report.created_at),
-      username: target.report.owner_username,
-    });
+    body = t("delete.oneBody");
   } else if (target?.kind === "many") {
     title = t("delete.manyTitle", { count: target.ids.length });
     body = t("delete.manyBody");

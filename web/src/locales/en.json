@@ -223,7 +223,7 @@
   },
   "delete": {
     "oneTitle": "Delete this report?",
-    "oneBody": "{{profile}} · {{time}}, by {{username}}. Its data and its PDFs are removed. This cannot be undone.",
+    "oneBody": "The selected report's data and its PDFs are removed. This cannot be undone.",
     "manyTitle": "Delete {{count}} reports?",
     "manyBody": "Their data and their PDFs are removed. This cannot be undone.",
     "confirm": "Delete",

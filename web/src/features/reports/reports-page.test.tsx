@@ -195,15 +195,7 @@ describe("report list", () => {
     await user.click(within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") }));
     const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByText(t("delete.oneTitle"))).toBeInTheDocument();
-    expect(
-      within(dialog).getByText(
-        t("delete.oneBody", {
-          profile: "Production",
-          time: formatTime(mock.reports[1]?.created_at ?? ""),
-          username: "bia",
-        }),
-      ),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByText(t("delete.oneBody"))).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: t("delete.confirm") }));
     await waitFor(() => {
       expect(screen.getAllByRole("row")).toHaveLength(3);
