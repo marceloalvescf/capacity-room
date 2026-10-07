@@ -955,6 +955,14 @@ var paramStripPattern = regexp.MustCompile(`\{\{.*?\}\}`)
 // never match a banned term.
 var wordPattern = regexp.MustCompile(`[\p{L}\p{N}_-]+`)
 
+// bannedTermsFileFormat is the typed structure for banned-terms.json with
+// DisallowUnknownFields to refuse malformed files.
+type bannedTermsFileFormat map[string]struct {
+	AnyCase   []string   `json:"any_case"`
+	Phrases   [][]string `json:"phrases"`
+	AsWritten []string   `json:"as_written"`
+}
+
 var (
 	bannedTermsOnce  sync.Once
 	bannedTermsCache map[string]struct {
@@ -964,6 +972,91 @@ var (
 	}
 	bannedTermsError error
 )
+
+// loadBannedTermsFromBytes decodes bytes into banned terms, validating the
+// structure and content. It fails if the file has an unknown key, a language
+// other than "en" and "pt-BR", a missing language, an empty list, a phrase
+// with fewer than two words, or a word that is not lower case. The error
+// message includes "banned-terms.json" for the path.
+func loadBannedTermsFromBytes(data []byte) (map[string]struct {
+	anyCase   map[string]bool
+	phrases   [][]string
+	asWritten map[string]bool
+}, error) {
+	decoder := json.NewDecoder(strings.NewReader(string(data)))
+	decoder.DisallowUnknownFields()
+
+	var fileData bannedTermsFileFormat
+	if err := decoder.Decode(&fileData); err != nil {
+		return nil, fmt.Errorf("banned-terms.json: %w", err)
+	}
+
+	result := make(map[string]struct {
+		anyCase   map[string]bool
+		phrases   [][]string
+		asWritten map[string]bool
+	})
+
+	// Verify only en and pt-BR are present
+	for langStr := range fileData {
+		if langStr != "en" && langStr != "pt-BR" {
+			return nil, fmt.Errorf("banned-terms.json: unknown language %q", langStr)
+		}
+	}
+
+	// Verify both required languages are present
+	if _, hasEn := fileData["en"]; !hasEn {
+		return nil, fmt.Errorf("banned-terms.json: missing language \"en\"")
+	}
+	if _, hasPt := fileData["pt-BR"]; !hasPt {
+		return nil, fmt.Errorf("banned-terms.json: missing language \"pt-BR\"")
+	}
+
+	for langStr, langData := range fileData {
+		// Validate any_case
+		if len(langData.AnyCase) == 0 {
+			return nil, fmt.Errorf("banned-terms.json: %q any_case is empty", langStr)
+		}
+		anyCase := make(map[string]bool)
+		for _, term := range langData.AnyCase {
+			anyCase[term] = true
+		}
+
+		// Validate phrases
+		if len(langData.Phrases) == 0 {
+			return nil, fmt.Errorf("banned-terms.json: %q phrases is empty", langStr)
+		}
+		phrases := make([][]string, len(langData.Phrases))
+		for i, phrase := range langData.Phrases {
+			if len(phrase) < 2 {
+				return nil, fmt.Errorf("banned-terms.json: %q phrases[%d] has fewer than 2 words", langStr, i)
+			}
+			for j, word := range phrase {
+				if word != strings.ToLower(word) {
+					return nil, fmt.Errorf("banned-terms.json: %q phrases[%d][%d] is not lower case: %q", langStr, i, j, word)
+				}
+			}
+			phrases[i] = phrase
+		}
+
+		// Validate as_written
+		if len(langData.AsWritten) == 0 {
+			return nil, fmt.Errorf("banned-terms.json: %q as_written is empty", langStr)
+		}
+		asWritten := make(map[string]bool)
+		for _, term := range langData.AsWritten {
+			asWritten[term] = true
+		}
+
+		result[langStr] = struct {
+			anyCase   map[string]bool
+			phrases   [][]string
+			asWritten map[string]bool
+		}{anyCase, phrases, asWritten}
+	}
+
+	return result, nil
+}
 
 // loadBannedTerms reads banned-terms.json and caches the result. It is called
 // once per test binary.
@@ -979,89 +1072,13 @@ func loadBannedTerms() (map[string]struct {
 			return
 		}
 
-		var raw map[string]interface{}
-		if err := json.Unmarshal(data, &raw); err != nil {
-			bannedTermsError = fmt.Errorf("parsing banned-terms.json: %w", err)
+		cache, err := loadBannedTermsFromBytes(data)
+		if err != nil {
+			bannedTermsError = err
 			return
 		}
 
-		bannedTermsCache = make(map[string]struct {
-			anyCase   map[string]bool
-			phrases   [][]string
-			asWritten map[string]bool
-		})
-
-		for langStr, langData := range raw {
-			langMap, ok := langData.(map[string]interface{})
-			if !ok {
-				bannedTermsError = fmt.Errorf("banned-terms.json: language %q data is not an object", langStr)
-				return
-			}
-
-			anyCase := make(map[string]bool)
-			phrases := [][]string{}
-			asWritten := make(map[string]bool)
-
-			// Read any_case
-			if acData, ok := langMap["any_case"].([]interface{}); ok {
-				for _, item := range acData {
-					if s, ok := item.(string); ok {
-						anyCase[s] = true
-					}
-				}
-			} else if _, exists := langMap["any_case"]; exists {
-				bannedTermsError = fmt.Errorf("banned-terms.json: %q has invalid any_case", langStr)
-				return
-			}
-
-			// Read phrases
-			if phData, ok := langMap["phrases"].([]interface{}); ok {
-				for _, item := range phData {
-					if phrase, ok := item.([]interface{}); ok {
-						var words []string
-						for _, w := range phrase {
-							if s, ok := w.(string); ok {
-								words = append(words, s)
-							}
-						}
-						if len(words) >= 2 {
-							phrases = append(phrases, words)
-						}
-					}
-				}
-			} else if _, exists := langMap["phrases"]; exists {
-				bannedTermsError = fmt.Errorf("banned-terms.json: %q has invalid phrases", langStr)
-				return
-			}
-
-			// Read as_written
-			if awData, ok := langMap["as_written"].([]interface{}); ok {
-				for _, item := range awData {
-					if s, ok := item.(string); ok {
-						asWritten[s] = true
-					}
-				}
-			} else if _, exists := langMap["as_written"]; exists {
-				bannedTermsError = fmt.Errorf("banned-terms.json: %q has invalid as_written", langStr)
-				return
-			}
-
-			bannedTermsCache[langStr] = struct {
-				anyCase   map[string]bool
-				phrases   [][]string
-				asWritten map[string]bool
-			}{anyCase, phrases, asWritten}
-		}
-
-		// Verify both languages are present
-		if _, hasEn := bannedTermsCache["en"]; !hasEn {
-			bannedTermsError = fmt.Errorf("banned-terms.json: missing language %q", "en")
-			return
-		}
-		if _, hasPt := bannedTermsCache["pt-BR"]; !hasPt {
-			bannedTermsError = fmt.Errorf("banned-terms.json: missing language %q", "pt-BR")
-			return
-		}
+		bannedTermsCache = cache
 	})
 
 	return bannedTermsCache, bannedTermsError
@@ -1144,89 +1161,142 @@ func TestBannedTermsFileShape(t *testing.T) {
 		t.Fatalf("reading banned-terms.json: %v", err)
 	}
 
-	var raw map[string]interface{}
-	decoder := json.NewDecoder(strings.NewReader(string(data)))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&raw); err != nil {
-		t.Fatalf("parsing banned-terms.json with DisallowUnknownFields: %v", err)
+	_, err = loadBannedTermsFromBytes(data)
+	if err != nil {
+		t.Errorf("loadBannedTermsFromBytes(valid file) failed: %v", err)
 	}
+}
 
-	// Check both languages are present
-	if _, hasEn := raw["en"]; !hasEn {
-		t.Error("banned-terms.json: missing language \"en\"")
+func TestBannedTermsRefuseUnknownLanguage(t *testing.T) {
+	data := []byte(`{
+  "en": {
+    "any_case": ["test"],
+    "phrases": [["word", "phrase"]],
+    "as_written": ["word"]
+  },
+  "pt-BR": {
+    "any_case": ["teste"],
+    "phrases": [["palavra", "frase"]],
+    "as_written": ["palavra"]
+  },
+  "de": {
+    "any_case": ["test"],
+    "phrases": [["wort", "satz"]],
+    "as_written": ["wort"]
+  }
+}`)
+
+	_, err := loadBannedTermsFromBytes(data)
+	if err == nil {
+		t.Error("loadBannedTermsFromBytes should refuse unknown language \"de\"")
+	} else if !strings.Contains(err.Error(), "banned-terms.json") || !strings.Contains(err.Error(), "de") {
+		t.Errorf("loadBannedTermsFromBytes error should mention path and language: %v", err)
 	}
-	if _, hasPt := raw["pt-BR"]; !hasPt {
-		t.Error("banned-terms.json: missing language \"pt-BR\"")
+}
+
+func TestBannedTermsRefuseMissingLanguage(t *testing.T) {
+	data := []byte(`{
+  "en": {
+    "any_case": ["test"],
+    "phrases": [["word", "phrase"]],
+    "as_written": ["word"]
+  }
+}`)
+
+	_, err := loadBannedTermsFromBytes(data)
+	if err == nil {
+		t.Error("loadBannedTermsFromBytes should refuse missing \"pt-BR\" language")
+	} else if !strings.Contains(err.Error(), "banned-terms.json") || !strings.Contains(err.Error(), "pt-BR") {
+		t.Errorf("loadBannedTermsFromBytes error should mention path and language: %v", err)
 	}
+}
 
-	for langStr, langData := range raw {
-		langMap, ok := langData.(map[string]interface{})
-		if !ok {
-			t.Errorf("banned-terms.json: language %q data is not an object", langStr)
-			continue
-		}
+func TestBannedTermsRefuseUnknownKey(t *testing.T) {
+	data := []byte(`{
+  "en": {
+    "any_case": ["test"],
+    "phrases": [["word", "phrase"]],
+    "as_written": ["word"],
+    "extra_field": ["invalid"]
+  },
+  "pt-BR": {
+    "any_case": ["teste"],
+    "phrases": [["palavra", "frase"]],
+    "as_written": ["palavra"]
+  }
+}`)
 
-		for key := range langMap {
-			if key != "any_case" && key != "phrases" && key != "as_written" {
-				t.Errorf("banned-terms.json: %q has unknown key %q", langStr, key)
-			}
-		}
+	_, err := loadBannedTermsFromBytes(data)
+	if err == nil {
+		t.Error("loadBannedTermsFromBytes should refuse unknown key")
+	} else if !strings.Contains(err.Error(), "banned-terms.json") {
+		t.Errorf("loadBannedTermsFromBytes error should mention path: %v", err)
+	}
+}
 
-		// Check any_case is present and non-empty
-		if acData, ok := langMap["any_case"].([]interface{}); ok {
-			if len(acData) == 0 {
-				t.Errorf("banned-terms.json: %q any_case list is empty", langStr)
-			}
-			for i, item := range acData {
-				if _, ok := item.(string); !ok {
-					t.Errorf("banned-terms.json: %q any_case[%d] is not a string", langStr, i)
-				}
-			}
-		} else {
-			t.Errorf("banned-terms.json: %q any_case is missing or not an array", langStr)
-		}
+func TestBannedTermsRefuseEmptyList(t *testing.T) {
+	data := []byte(`{
+  "en": {
+    "any_case": [],
+    "phrases": [["word", "phrase"]],
+    "as_written": ["word"]
+  },
+  "pt-BR": {
+    "any_case": ["teste"],
+    "phrases": [["palavra", "frase"]],
+    "as_written": ["palavra"]
+  }
+}`)
 
-		// Check phrases is present and non-empty
-		if phData, ok := langMap["phrases"].([]interface{}); ok {
-			if len(phData) == 0 {
-				t.Errorf("banned-terms.json: %q phrases list is empty", langStr)
-			}
-			for i, item := range phData {
-				if phrase, ok := item.([]interface{}); ok {
-					if len(phrase) < 2 {
-						t.Errorf("banned-terms.json: %q phrases[%d] has fewer than 2 words", langStr, i)
-						continue
-					}
-					for j, w := range phrase {
-						if s, ok := w.(string); ok {
-							if s != strings.ToLower(s) {
-								t.Errorf("banned-terms.json: %q phrases[%d][%d] is not lower case: %q", langStr, i, j, s)
-							}
-						} else {
-							t.Errorf("banned-terms.json: %q phrases[%d][%d] is not a string", langStr, i, j)
-						}
-					}
-				} else {
-					t.Errorf("banned-terms.json: %q phrases[%d] is not an array", langStr, i)
-				}
-			}
-		} else {
-			t.Errorf("banned-terms.json: %q phrases is missing or not an array", langStr)
-		}
+	_, err := loadBannedTermsFromBytes(data)
+	if err == nil {
+		t.Error("loadBannedTermsFromBytes should refuse empty any_case")
+	} else if !strings.Contains(err.Error(), "banned-terms.json") || !strings.Contains(err.Error(), "any_case") {
+		t.Errorf("loadBannedTermsFromBytes error should mention path and field: %v", err)
+	}
+}
 
-		// Check as_written is present and non-empty
-		if awData, ok := langMap["as_written"].([]interface{}); ok {
-			if len(awData) == 0 {
-				t.Errorf("banned-terms.json: %q as_written list is empty", langStr)
-			}
-			for i, item := range awData {
-				if _, ok := item.(string); !ok {
-					t.Errorf("banned-terms.json: %q as_written[%d] is not a string", langStr, i)
-				}
-			}
-		} else {
-			t.Errorf("banned-terms.json: %q as_written is missing or not an array", langStr)
-		}
+func TestBannedTermsRefusePhraseShortThanTwoWords(t *testing.T) {
+	data := []byte(`{
+  "en": {
+    "any_case": ["test"],
+    "phrases": [["word"]],
+    "as_written": ["word"]
+  },
+  "pt-BR": {
+    "any_case": ["teste"],
+    "phrases": [["palavra", "frase"]],
+    "as_written": ["palavra"]
+  }
+}`)
+
+	_, err := loadBannedTermsFromBytes(data)
+	if err == nil {
+		t.Error("loadBannedTermsFromBytes should refuse phrase with fewer than 2 words")
+	} else if !strings.Contains(err.Error(), "banned-terms.json") || !strings.Contains(err.Error(), "fewer than 2") {
+		t.Errorf("loadBannedTermsFromBytes error should mention path and issue: %v", err)
+	}
+}
+
+func TestBannedTermsRefuseNonLowercaseWord(t *testing.T) {
+	data := []byte(`{
+  "en": {
+    "any_case": ["test"],
+    "phrases": [["word", "Phrase"]],
+    "as_written": ["word"]
+  },
+  "pt-BR": {
+    "any_case": ["teste"],
+    "phrases": [["palavra", "frase"]],
+    "as_written": ["palavra"]
+  }
+}`)
+
+	_, err := loadBannedTermsFromBytes(data)
+	if err == nil {
+		t.Error("loadBannedTermsFromBytes should refuse non-lowercase phrase word")
+	} else if !strings.Contains(err.Error(), "banned-terms.json") || !strings.Contains(err.Error(), "lower case") {
+		t.Errorf("loadBannedTermsFromBytes error should mention path and issue: %v", err)
 	}
 }
 
