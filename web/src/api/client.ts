@@ -57,13 +57,9 @@ function retryAfterOf(response: Response): number | null {
   return Number.isFinite(seconds) ? seconds : null;
 }
 
-// The two routes whose 401 is a wrong password, shown on the form.
-function answersWrongPassword(request: Request): boolean {
-  const path = new URL(request.url).pathname;
-  return (
-    (request.method === "POST" && path === `${apiPath}/auth/login`) ||
-    (request.method === "PATCH" && path === `${apiPath}/account`)
-  );
+// A 401 on sign-out means the reader is already signed out; the caller ends it.
+function isLogout(request: Request): boolean {
+  return request.method === "POST" && new URL(request.url).pathname === `${apiPath}/auth/logout`;
 }
 
 export function createApi(queryClient: QueryClient, navigate: (to: string) => void): Api {
@@ -99,7 +95,8 @@ export function createApi(queryClient: QueryClient, navigate: (to: string) => vo
     if (response.ok) {
       return response;
     }
-    if (response.status === 401 && !answersWrongPassword(request)) {
+    const code = await codeOf(response);
+    if (response.status === 401 && code !== "INVALID_CREDENTIALS" && !isLogout(request)) {
       const here = window.location.pathname;
       const next = encodeURIComponent(here + window.location.search);
       queryClient.clear();
@@ -107,7 +104,7 @@ export function createApi(queryClient: QueryClient, navigate: (to: string) => vo
         navigate(`/login?next=${next}&ended=1`);
       }
     }
-    throw new ApiFailure(response.status, await codeOf(response), retryAfterOf(response));
+    throw new ApiFailure(response.status, code, retryAfterOf(response));
   }
 
   const client = createClient<ApiPaths>({

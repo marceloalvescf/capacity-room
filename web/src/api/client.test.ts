@@ -77,6 +77,23 @@ describe("client", () => {
     expect(navigate).toHaveBeenCalledWith("/login?next=%2Faccount&ended=1");
   });
 
+  it("a 401 UNAUTHENTICATED on the account change opens sign-in", async () => {
+    const { api, queryClient, navigate } = setup();
+    server.use(http.patch(url("/account"), () => HttpResponse.json(errorBody("UNAUTHENTICATED"), { status: 401 })));
+    await expect(api.PATCH("/account", { body: { language: "en" } })).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
+    expect(queryClient.getQueryData(sessionKey)).toBeUndefined();
+    expect(navigate).toHaveBeenCalledWith("/login?next=%2Faccount&ended=1");
+  });
+
+  it("a 401 INVALID_CREDENTIALS on sign-in stays on the form", async () => {
+    const { api, navigate } = setup(anonymous());
+    server.use(http.post(url("/auth/login"), () => HttpResponse.json(errorBody("INVALID_CREDENTIALS"), { status: 401 })));
+    await expect(api.POST("/auth/login", { body: { username: "a", password: "b" } })).rejects.toMatchObject({
+      code: "INVALID_CREDENTIALS",
+    });
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it("the 401 of a wrong password stays on the form", async () => {
     const { api, queryClient, navigate } = setup();
     server.use(http.patch(url("/account"), () => HttpResponse.json(errorBody("INVALID_CREDENTIALS"), { status: 401 })));

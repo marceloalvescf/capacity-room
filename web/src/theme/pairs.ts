@@ -13,6 +13,7 @@ export const pairs: readonly Pair[] = [
   text("surface-fg", "surface"),
   text("fg", "surface"),
   text("sidebar-fg", "sidebar"),
+  text("sidebar-fg", "bg"),
   text("sidebar-active-fg", "sidebar-active"),
   text("muted-fg", "surface"),
   text("muted-fg", "bg"),

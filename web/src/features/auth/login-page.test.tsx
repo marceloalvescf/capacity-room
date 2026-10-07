@@ -73,6 +73,17 @@ describe("login", () => {
     expect(mock.calls.some((c) => c.method === "POST")).toBe(false);
   });
 
+  it("a password of 1025 characters is refused before any request", async () => {
+    const user = userEvent.setup();
+    await renderApp("/login");
+    await user.type(await screen.findByLabelText(i18next.t("login.username")), "ana");
+    await user.click(screen.getByLabelText(i18next.t("login.password")));
+    await user.paste("x".repeat(1025));
+    await user.click(screen.getByRole("button", { name: i18next.t("login.submit") }));
+    expect(await screen.findByText(i18next.t("validation.passwordLong"))).toBeInTheDocument();
+    expect(mock.calls.some((c) => c.method === "POST")).toBe(false);
+  });
+
   it("the notices follow the query", async () => {
     await renderApp("/login?changed=1&ended=1");
     expect(await screen.findByText(i18next.t("login.passwordChanged"))).toBeInTheDocument();

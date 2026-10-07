@@ -15,9 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { isSignedIn, safeNext, sessionKey, useSession } from "@/session/session";
 
-const schema = z.object({
-  username: z.string().min(1, "validation.required").max(256),
-  password: z.string().min(1, "validation.required").max(1024),
+export const schema = z.object({
+  username: z.string().min(1, "validation.required"),
+  password: z.string().min(1, "validation.required").max(1024, "validation.passwordLong"),
 });
 
 type Values = z.infer<typeof schema>;

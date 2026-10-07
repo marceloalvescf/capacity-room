@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useNavigate } from "react-router";
 import { useApi } from "@/api/context";
+import { ApiFailure } from "@/api/client";
 import { errorText, toError } from "@/api/errors";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -26,8 +27,11 @@ export function Shell() {
     try {
       await api.POST("/auth/logout");
     } catch (thrown) {
-      announce(errorText(t, toError(thrown)));
-      return;
+      const error = toError(thrown);
+      if (!(error instanceof ApiFailure && error.status === 401)) {
+        announce(errorText(t, error));
+        return;
+      }
     }
     queryClient.clear();
     void navigate("/login");

@@ -46,6 +46,15 @@ describe("screens", () => {
     }
   }
 
+  it("a notice holds no live-region role beside the shell's region", async () => {
+    mock.session = anonymous();
+    await renderApp("/login?changed=1&ended=1");
+    await screen.findByText(i18next.t("login.passwordChanged"));
+    expect(screen.getByText(i18next.t("login.sessionEnded"))).toBeInTheDocument();
+    expect(screen.queryAllByRole("status")).toHaveLength(1);
+    expect(document.querySelectorAll("[aria-live='polite']")).toHaveLength(1);
+  });
+
   it("routes: anonymous account opens sign-in with next", async () => {
     mock.session = anonymous();
     const { router } = await renderApp("/account");

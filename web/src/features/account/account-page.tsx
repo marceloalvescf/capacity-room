@@ -23,7 +23,7 @@ const newPassword = z
   .min(12, "validation.passwordShort")
   .max(1024, "validation.passwordLong");
 
-const schema = z
+export const schema = z
   .object({
     current: z.string().min(1, "validation.required").max(1024, "validation.passwordLong"),
     next: newPassword,

@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
-import { errorBody, server, signedIn, installMockApi } from "../../../tests/msw";
+import { anonymous, errorBody, server, signedIn, installMockApi } from "../../../tests/msw";
 import { location, renderApp } from "../../../tests/render";
 import { i18next } from "@/i18n/i18n";
 import { sessionKey } from "@/session/session";
@@ -101,6 +101,23 @@ describe("account", () => {
     await waitFor(() => {
       expect(queryClient.getQueryData(sessionKey)).toMatchObject({ authenticated: false });
     });
+  });
+
+  it("a 401 on sign-out ends the session quietly", async () => {
+    server.use(
+      http.post(url("/auth/logout"), () => {
+        mock.session = anonymous();
+        return HttpResponse.json(errorBody("UNAUTHENTICATED"), { status: 401 });
+      }),
+    );
+    const user = userEvent.setup();
+    const { router } = await renderApp("/account");
+    await user.click(within(await screen.findByRole("banner")).getByRole("button", { name: label("header.signOut") }));
+    await waitFor(() => {
+      expect(location(router)).toBe("/login");
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(location(router)).not.toContain("ended");
   });
 
   it("sign out posts the token and opens sign-in", async () => {
