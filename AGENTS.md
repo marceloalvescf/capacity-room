@@ -9,7 +9,7 @@ the authority when this file and the code disagree with it.
 
 ## Environment
 
-- Development happens on macOS with native Go 1.27.
+- Development happens on macOS with native Go 1.27 and Node 26.
 - `typst` 0.15.1 and `pdftotext` are installed natively for fast feedback.
 - Anything whose result must be exact runs in the Linux test image, through
   Docker. A native result never closes a gate.
@@ -24,18 +24,20 @@ the authority when this file and the code disagree with it.
 ## Commands
 
 ```bash
-make build            # bin/k8s-capacity-report
-make test             # Go tests that need no service and no tool
-make lint             # gofmt, go vet, golangci-lint
+make web              # npm ci when the lock file changed, then the frontend build in web/dist
+make build            # bin/k8s-capacity-report, with the frontend embedded
+make test             # Go tests that need no service and no tool, then the frontend tests
+make lint             # gofmt, go vet, golangci-lint, then tsc and ESLint over web/
 make image            # runtime image and test image
 make test-toolchain   # checks typst and pdftotext inside the test image
 make test-template    # compiles the template and writes reports in the test image
 make test-golden      # compares rendered pages with the golden pages
-make generate         # writes the Go types of api/openapi.yaml
+make generate         # writes the Go types and the TypeScript types of api/openapi.yaml
 make generate-check   # fails when the committed generated file is stale
 make postgres-up      # starts PostgreSQL 18 for the platform tests, through Compose
 make postgres-down    # removes it, with its volume
 make test-postgres    # postgres-up, the tests tagged postgres (worker and cli with typst), postgres-down
+make e2e              # the Compose stack and the Playwright spec in a real browser
 make gate             # everything above, from freshly built images
 make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files
@@ -48,6 +50,7 @@ Run one test while iterating:
 
 ```bash
 go test ./internal/guard/ -run TestForbiddenModules -v
+cd web && npx vitest run src/session/session.test.tsx
 ```
 
 ## Rules enforced by a guard
@@ -157,7 +160,7 @@ rank, or of its own layer.
 
 | Rank | Packages |
 |---|---|
-| 0 | `internal/guard`, `internal/arith`, `internal/typst`, `internal/redact`, `internal/promtest`, `template` |
+| 0 | `internal/guard`, `internal/arith`, `internal/typst`, `internal/redact`, `internal/promtest`, `template`, `web` |
 | 10 | `template/golden` |
 | 20 | `internal/config` |
 | 30 | `internal/prom` |
@@ -318,6 +321,13 @@ redactor the moment the settings are loaded, before the pool opens.
   names. No 304, 409, or 410 reaches a caller who could not read the report.
   At most four downloads read and write a body at once; a waiting request
   holds no body, and the write of an answer has two minutes.
+- **A body is read through the download pool.** `store.OpenDownloads` opens
+  a pool of `store.DownloadConns` connections, four, that keeps no idle
+  connection: every released one is destroyed, so the memory of a large
+  `bytea` leaves with it. The snapshot and the PDF are read through it, and
+  the view through the snapshot; every other read stays on the main pool.
+  The download slots of the API equal `store.DownloadConns`. `serve` opens
+  the pool after the main one and closes it before; `worker` never opens it.
 - **The view is a second product of `internal/document`.** `BuildView`
   words a snapshot for the web from the helpers the PDF uses, so every text
   is the PDF's and the rows kept are the PDF's (the action plan's
@@ -468,6 +478,77 @@ redactor the moment the settings are loaded, before the pool opens.
   means to count. A filter that matched one thing when it was written
   matches more when the program asks more.
 
+## The interface
+
+`web/` holds the frontend: React and TypeScript, built by Vite into
+`web/dist`, embedded in the binary by the Go package `web`, and served by
+`serve`. Spec 12 is its design.
+
+- **Every text the reader sees comes from the locale files,**
+  `web/src/locales/en.json` and `pt-BR.json`, through `t()`; so does every
+  accessible name, a tooltip, and the page title. The two files hold the same
+  keys with the same parameters, every key is used, every error code of the
+  contract has its `error.<CODE>`, and a family of keys, such as `role.*`,
+  is declared in `web/src/i18n/families.ts`. A Zod check carries a locale
+  key as its message, never Zod's own text. ESLint refuses a string literal
+  of letters as a JSX child.
+- **The banned terms are one file,** `internal/catalog/banned-terms.json`,
+  read by the Go guard and by the frontend's vocabulary test with the same
+  matching. The wording rule of the report holds: technical terms are
+  English in both languages.
+- **A colour is a token pair.** `web/src/theme/theme.css` defines the tokens
+  of both themes, and `web/src/theme/pairs.ts` lists every foreground and
+  background drawn together. The contrast test requires 4.5:1 for text, and
+  3:1 for a large heading and for an input border or a focus ring against
+  its surface, in both themes. A new pair on the screen enters the list.
+- **No inline style.** No `style` prop, no `dangerouslySetInnerHTML`, and no
+  `<style>` element added at run time; a test opens every Radix layer and
+  finds none. The CSP stays `script-src 'self'` and `style-src 'self'`
+  until a style hash enters with its test. Zod runs with its JIT off,
+  because its probe of `new Function` breaks the CSP.
+- **Status is a shape, then a label, then a colour,** with the five shapes of
+  the PDF, drawn by `StatusMark`.
+- **Names and numbers use the monospaced font,** and motion appears only
+  under `motion-safe:`.
+- **An icon button keeps its name.** `IconButton` puts the name in
+  `aria-label` and shows it in a tooltip on hover and on focus.
+- **The static handler answers what no route answers,** for `GET` and `HEAD`
+  only, and never under `/api` or `/health/`: the built file at the cleaned
+  path, a plain 404 for a missing file under `/assets/`, and `index.html`
+  for any other path. A file under `/assets/` is cached for a year as
+  immutable; every other file is `no-cache`. The content type comes from the
+  package's own table, and a test refuses a built file whose extension it
+  lacks.
+- **The session follows spec 12.6.** Every state-changing request carries
+  the CSRF token of the current session. A `CSRF_REJECTED` loads the session
+  again and repeats the request once. A `401` whose code is
+  `INVALID_CREDENTIALS` is a form error; every other `401` clears the query
+  cache and opens sign-in with `ended=1` and the current path in `next`,
+  except on sign-out, where it means the reader is already out. `next` is
+  followed only when it is a path that starts with a single `/`.
+- **The language and the theme survive refused storage.** Before sign-in
+  the language is the stored choice or the browser's; after it, the
+  account's, and the stored choice is removed. A refusal of `localStorage`
+  keeps a choice for the page's lifetime and throws nothing.
+- **No skipped or focused test.** ESLint refuses `skip`, `only`, `todo`, and
+  `fixme` in Vitest and in Playwright, as the Go guard refuses a skip.
+- **Every npm dependency has an exact version,** with no `^` or `~`, and
+  `web/package-lock.json` is committed. `npm ci` installs it with no
+  `--force` and no `--legacy-peer-deps`.
+- **The frontend's types come from the contract.** `make generate` writes
+  `web/src/api/schema.gen.ts` from `api/openapi.yaml`, and
+  `make generate-check` fails when the committed file is stale.
+- **The built version equals `VERSION`.** Vite reads `../VERSION` into the
+  meta `kcr-version` of `index.html`, and a Go test compares the embedded
+  file with it.
+- **`make e2e` runs the real stack.** `deploy/compose.yaml` holds
+  `postgres`, `serve`, and `worker`, and requires `KCR_VERSION`,
+  `KCR_CONFIG_DIR`, and `KCR_POSTGRES_PASSWORD`, with no default.
+  `deploy/compose.integration.yaml` adds the one-shot `migrate` and
+  `bootstrap` services and the Playwright service, which shares the network
+  of `serve`. The spec fails on any CSP violation and on any axe finding.
+  The fixtures of `deploy/platform/` serve this stack alone.
+
 ## The template
 
 `template/graphite/` is the generic page shell, a port of `graphite-report`
@@ -521,12 +602,12 @@ looks.
 
 The main thread plans, judges, and runs the gates. Subagents implement.
 
-- A subagent may run `go`, `make build`, `make test`, `make lint`,
-  `make generate`, and `make generate-check`.
+- A subagent may run `go`, `npm` inside `web/`, `make web`, `make build`,
+  `make test`, `make lint`, `make generate`, and `make generate-check`.
 - A subagent must not run Docker, so `make image`, `make test-toolchain`,
   `make test-template`, `make test-golden`, `make update-golden`,
-  `make postgres-up`, `make postgres-down`, `make test-postgres`, and
-  `make gate` stay on the main thread. The main thread starts PostgreSQL
+  `make postgres-up`, `make postgres-down`, `make test-postgres`,
+  `make e2e`, and `make gate` stay on the main thread. The main thread starts PostgreSQL
   with `make postgres-up` and gives the subagent the DSN; the subagent runs
   the tagged tests with `KCR_TEST_DATABASE_DSN` set.
 - Two agents in one checkout break each other's builds when they share a Go

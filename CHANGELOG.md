@@ -6,6 +6,21 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `serve` now serves a web interface, with a sign-in screen and an account
+  screen where a reader changes their password and language.
+- The interface is in Portuguese (Brazil) and English: it follows the
+  browser's language before sign-in and the account's language after.
+- The interface has a light and a dark theme, which follow the system unless
+  the reader chooses one.
+- A Compose file runs `serve`, `worker`, and PostgreSQL together.
+
+### Fixed
+
+- `serve` no longer keeps the memory of a large download on idle database
+  connections.
+
 ## [0.2.0] - 2026-10-06
 
 ### Added

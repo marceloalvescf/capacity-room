@@ -22,8 +22,11 @@ full design is in
 - The command `serve`, the backend of the web platform: sign-in with local
   accounts in three roles, sessions, the reader's own account, the
   administration of users and of metric-source profiles, and the reports,
-  over an HTTP API described in [api/openapi.yaml](api/openapi.yaml). The
-  frontend is not there yet.
+  over an HTTP API described in [api/openapi.yaml](api/openapi.yaml).
+- The web interface, served by `serve`: sign-in, and an account screen
+  where a reader changes their password and language, in Portuguese
+  (Brazil) and English, in a light and a dark theme. The screens of
+  profiles, reports, and users come later.
 - The command `worker`, which runs the report jobs of the platform: it
   collects a requested report through the outbound policy, stores its
   snapshot, writes one PDF per language, and expires and removes reports
@@ -39,6 +42,7 @@ full design is in
 ## Requirements
 
 - Go 1.27
+- Node 26 with npm, to build the interface
 - Docker with Buildx
 - For `serve`, `worker`, and `admin`: PostgreSQL 18
 - For `worker`: `typst` 0.15.1, as for a PDF
@@ -411,21 +415,55 @@ removed `expired_report_days` later, and 404 after; a deleted report answers
 after the drain, a refusal of `bootstrap-admin`), and with 2 for the
 arguments or the settings file.
 
+### The Compose stack
+
+`deploy/compose.yaml` runs PostgreSQL, `serve`, and `worker` from the
+runtime image. It refuses to start without three variables: `KCR_VERSION`,
+the image version; `KCR_CONFIG_DIR`, a folder that holds `platform.toml`
+and `server-secret`; and `KCR_POSTGRES_PASSWORD`. The schema and the first
+administrator are created with `admin migrate` and `admin bootstrap-admin`,
+as above.
+
+```bash
+export KCR_VERSION=$(cat VERSION) KCR_CONFIG_DIR=/etc/kcr KCR_POSTGRES_PASSWORD='...'
+docker compose -f deploy/compose.yaml up -d
+```
+
+`serve` listens on `127.0.0.1:8080` and speaks plain HTTP. The session
+cookie is `Secure`, so a browser reaches `serve` at localhost or through a
+TLS proxy that the operator provides. The Compose files hold no proxy and no
+certificate. `deploy/compose.integration.yaml` and the files of
+`deploy/platform/` serve `make e2e` alone, and never a deployment.
+
+### Working on the interface
+
+Vite serves the interface with live reload and passes `/api` and `/health`
+to `serve` on port 8080:
+
+```bash
+make postgres-up
+export KCR_DATABASE_DSN='postgres://kcr_test:kcr_test_only@127.0.0.1:55432/kcr_test?sslmode=disable'
+make build && bin/k8s-capacity-report serve --config platform.toml --listen 127.0.0.1:8080
+cd web && npm run dev    # http://localhost:5173
+```
+
 ## Commands
 
 ```bash
-make build            # bin/k8s-capacity-report
-make test             # Go tests that need no service and no tool
-make lint             # gofmt, go vet, golangci-lint
+make web              # the interface, built into web/dist
+make build            # bin/k8s-capacity-report, with the interface embedded
+make test             # Go tests that need no service and no tool, and the interface's tests
+make lint             # gofmt, go vet, golangci-lint, and tsc and ESLint over web/
 make image            # runtime image and test image
 make test-toolchain   # checks typst and pdftotext inside the test image
 make test-template    # compiles the template and writes reports in the test image
 make test-golden      # compares rendered pages with the golden pages
-make generate         # writes the Go types of api/openapi.yaml
+make generate         # writes the Go and TypeScript types of api/openapi.yaml
 make generate-check   # fails when the committed generated file is stale
 make postgres-up      # starts PostgreSQL 18 for the platform tests, through Compose
 make postgres-down    # removes it, with its volume
 make test-postgres    # postgres-up, the tests tagged postgres (and the worker's with typst), postgres-down
+make e2e              # the Compose stack and the browser test of the interface
 make gate             # everything above, from freshly built images
 make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files
