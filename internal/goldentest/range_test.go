@@ -83,14 +83,26 @@ func TestRangeScenarioEqualsItsBase(t *testing.T) {
 		delete(report, "period_end")
 		return out
 	}
-	a, _ := json.Marshal(tree(base))
-	b, _ := json.Marshal(tree(ranged))
+	a, err := json.Marshal(tree(base))
+	if err != nil {
+		t.Fatalf("Marshal(base): %v", err)
+	}
+	b, err := json.Marshal(tree(ranged))
+	if err != nil {
+		t.Fatalf("Marshal(range): %v", err)
+	}
 	if !bytes.Equal(a, b) {
 		t.Error("the snapshots differ in a field other than report.period_start and report.period_end")
 	}
 
-	baseSnap, _ := Snapshot(ctx, base)
-	rangeSnap, _ := Snapshot(ctx, ranged)
+	baseSnap, err := Snapshot(ctx, base)
+	if err != nil {
+		t.Fatalf("Snapshot(base): %v", err)
+	}
+	rangeSnap, err := Snapshot(ctx, ranged)
+	if err != nil {
+		t.Fatalf("Snapshot(range): %v", err)
+	}
 	if bytes.Equal(baseSnap, rangeSnap) {
 		t.Error("the period instants did not change")
 	}
