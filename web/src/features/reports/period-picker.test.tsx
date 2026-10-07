@@ -236,6 +236,56 @@ describe("period picker", () => {
       expect(screen.getByRole("button", { name: t("period.range.pickTo") })).toHaveAttribute("aria-expanded", "true");
     });
 
+    describe("the days around the month", () => {
+      async function september(user: ReturnType<typeof userEvent.setup>, start = "2026-09-01 00:00") {
+        open([], range(start, "2026-10-01 00:00"));
+        const dialog = await trigger(user);
+        await pick(user, "from");
+        await within(dialog).findByRole("grid");
+        return dialog;
+      }
+      const cell = (dialog: HTMLElement, day: string) => dialog.querySelector<HTMLElement>(`td[data-day="${day}"]`);
+
+      it("shows an outside day muted and never in range", async () => {
+        const dialog = await september(userEvent.setup());
+        const aug = cell(dialog, "2026-08-31");
+        expect(aug).not.toBeNull();
+        expect(aug?.querySelector("button")).not.toBeNull();
+        expect(aug).toHaveAttribute("data-outside", "true");
+        expect(aug?.className).toContain("text-muted-fg");
+        expect(aug?.className).not.toContain("bg-info-surface");
+      });
+
+      it("an outside day inside the range is not shaded", async () => {
+        const user = userEvent.setup();
+        open([], range("2026-09-01 00:00", "2026-10-01 00:00"));
+        const dialog = await trigger(user);
+        await pick(user, "to");
+        await within(dialog).findByRole("grid");
+        const sep = cell(dialog, "2026-09-30");
+        expect(sep).toHaveAttribute("data-outside", "true");
+        expect(sep?.className).toContain("data-[outside=true]:bg-transparent");
+        expect(sep?.className).toContain("data-[outside=true]:text-muted-fg");
+      });
+
+      it("an outside day that ends the range is selected", async () => {
+        const dialog = await september(userEvent.setup());
+        const oct = cell(dialog, "2026-10-01");
+        expect(oct).not.toBeNull();
+        expect(oct?.className).toContain("bg-accent");
+        expect(oct?.className).toContain("data-[outside=true]:text-accent-fg");
+      });
+
+      it("picking an outside day sets the date and keeps the time", async () => {
+        const user = userEvent.setup();
+        const dialog = await september(user);
+        await user.click(within(cell(dialog, "2026-08-31") as HTMLElement).getByRole("button"));
+        expect(from(dialog)).toHaveValue("2026-08-31 00:00");
+        expect(within(dialog).queryByRole("grid")).not.toBeInTheDocument();
+        expect(screen.getByRole("button", { name: t("period.range.pickFrom") })).toHaveFocus();
+      });
+    });
+
     it("starts on Monday and speaks the language", async () => {
       await i18next.changeLanguage("pt-BR");
       const user = userEvent.setup();

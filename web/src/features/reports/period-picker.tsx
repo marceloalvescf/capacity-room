@@ -57,7 +57,8 @@ const calendarClasses: Partial<ClassNames> = {
   day: "p-0 text-center",
   day_button:
     "h-8 w-full rounded-md font-mono text-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
-  selected: "rounded-md bg-accent text-accent-fg",
+  outside: "text-muted-fg",
+  selected: "rounded-md bg-accent text-accent-fg data-[outside=true]:text-accent-fg",
 };
 
 const problemKeys: Record<RangeProblem, string> = {
@@ -198,6 +199,7 @@ function Range({ initial, zone, calendar, buttons, onCalendar, onApply }: RangeP
       <DayPicker
         mode="single"
         required
+        showOutsideDays
         weekStartsOn={1}
         locale={language(i18n.language) === "pt-BR" ? ptBR : enUS}
         labels={{
@@ -213,8 +215,9 @@ function Range({ initial, zone, calendar, buttons, onCalendar, onApply }: RangeP
           otherEnd: far === null ? [] : [far],
         }}
         modifiersClassNames={{
-          between: "rounded-none bg-info-surface text-info-surface-fg",
-          otherEnd: "rounded-md bg-accent text-accent-fg",
+          between:
+            "rounded-none bg-info-surface text-info-surface-fg data-[outside=true]:bg-transparent data-[outside=true]:text-muted-fg",
+          otherEnd: "rounded-md bg-accent text-accent-fg data-[outside=true]:text-accent-fg",
         }}
         onSelect={(day) => {
           edit(side, withDay(text[side], day));
