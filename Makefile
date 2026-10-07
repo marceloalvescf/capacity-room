@@ -43,15 +43,27 @@ GOLDEN_OUT := .cache/template
 CHECK_SNAPSHOT := testdata/snapshot/direct-complete.json
 CHECK_RUNTIME_OUT := .cache/check-runtime
 
-.PHONY: build test lint image test-toolchain test-template test-golden \
+# The frontend's dependencies are installed from the lock file; the stamp
+# is newer than the lock file once they are.
+WEB_STAMP := web/node_modules/.package-lock.json
+
+.PHONY: web build test lint image test-toolchain test-template test-golden \
 	update-golden update-testdata check-runtime gate postgres-up postgres-down \
 	test-postgres generate generate-check
 
-build:
+$(WEB_STAMP): web/package-lock.json
+	cd web && npm ci
+
+# Always run: Vite is fast, and a stale dist is worse than a rebuilt one.
+web: $(WEB_STAMP)
+	cd web && npm run build
+
+build: web
 	go build -o bin/k8s-capacity-report ./cmd/k8s-capacity-report
 
-test:
+test: web
 	go test $(TEST_FLAGS) ./...
+	cd web && npm test
 
 postgres-up:
 	docker compose --file deploy/compose.test.yaml up --detach --wait
@@ -79,20 +91,21 @@ test-postgres:
 
 OAPI_CODEGEN := github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.8.0
 
-generate:
+generate: $(WEB_STAMP)
 	go run $(OAPI_CODEGEN) -config api/oapi-codegen.yaml api/openapi.yaml
 	gofmt -w internal/platform/api/openapi.gen.go
+	cd web && npm run generate
 
 # Fails when a fresh generation differs from the committed file.
 generate-check: generate
-	git diff --exit-code -- internal/platform/api/openapi.gen.go
+	git diff --exit-code -- internal/platform/api/openapi.gen.go web/src/api/schema.gen.ts
 
 # gofmt reads the Go files git knows about, tracked or new, so that scratch
 # files under ignored folders cannot fail the check. pipefail is turned on
 # for that one recipe line, so a failing `git ls-files` or a file gofmt
 # cannot parse (it lists nothing and exits non-zero) fails the step instead
 # of being read as "no files need formatting".
-lint:
+lint: web
 	@set -o pipefail; unformatted="$$(git ls-files --cached --others --exclude-standard -z -- '*.go' | xargs -0 gofmt -l)"; \
 	status=$$?; \
 	if [ $$status -ne 0 ]; then \
@@ -108,6 +121,7 @@ lint:
 	go vet -tags='template golden' ./...
 	go run $(GOLANGCI) run
 	go run $(GOLANGCI) run --build-tags=$(BUILD_TAGS)
+	cd web && npm run typecheck && npm run lint
 
 image:
 	docker build $(BUILD_FLAGS) --file deploy/Containerfile --target runtime --tag $(IMAGE) .
@@ -116,10 +130,10 @@ image:
 test-toolchain: $(IMAGE_DEP)
 	$(RUN_TEST_IMAGE) go test -v -tags=toolchain ./internal/typst/...
 
-test-template: $(IMAGE_DEP)
+test-template: web $(IMAGE_DEP)
 	$(RUN_TEST_IMAGE) go test -v -tags=template ./internal/typst/... ./template/... ./internal/cli/...
 
-test-golden: $(IMAGE_DEP)
+test-golden: web $(IMAGE_DEP)
 	@mkdir -p $(GOLDEN_OUT)
 	docker run $(RUN_TEST_IMAGE_FLAGS) \
 		--volume "$(CURDIR)/$(GOLDEN_OUT):/out" --env KCR_GOLDEN_OUT=/out \

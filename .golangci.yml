@@ -14,6 +14,7 @@ linters:
   exclusions:
     paths:
       - older
+      - web/node_modules
       - .cache
     rules:
       # Test files quote Portuguese text from fixtures, which the English
@@ -28,4 +29,5 @@ formatters:
   exclusions:
     paths:
       - older
+      - web/node_modules
       - .cache
