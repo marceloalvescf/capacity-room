@@ -342,7 +342,8 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
         <PopoverContent
           align="start"
           aria-labelledby={labelId}
-          className="w-[min(36rem,calc(100vw-2rem))] p-0"
+          collisionPadding={8}
+          className="max-h-(--radix-popover-content-available-height) w-[min(36rem,calc(100vw-2rem))] overflow-y-auto p-0"
           onEscapeKeyDown={(event) => {
             if (calendar !== null) {
               event.preventDefault();

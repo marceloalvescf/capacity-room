@@ -61,6 +61,14 @@ describe("period picker", () => {
     expect(await screen.findByRole("dialog", { name: t("generate.period") })).toBeInTheDocument();
   });
 
+  it("the popover is bounded to the window and scrolls inside", async () => {
+    const user = userEvent.setup();
+    open([], range("2026-09-01 00:00", "2026-10-01 00:00"));
+    const dialog = await trigger(user);
+    expect(dialog).toHaveClass("max-h-(--radix-popover-content-available-height)");
+    expect(dialog).toHaveClass("overflow-y-auto");
+  });
+
   it("the focus ring of a quick range sits outside the button, on the popover", async () => {
     const user = userEvent.setup();
     open([], length("7d"));
