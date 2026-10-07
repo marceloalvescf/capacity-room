@@ -84,7 +84,7 @@ describe("ui", () => {
     await user.keyboard("{ArrowDown}");
     const highlighted = document.querySelector("[data-highlighted]");
     expect(highlighted).not.toBeNull();
-    for (const name of ["data-[highlighted]:outline-2", "data-[highlighted]:outline-accent", "data-[highlighted]:-outline-offset-2"]) {
+    for (const name of ["data-[highlighted]:outline-solid", "data-[highlighted]:outline-2", "data-[highlighted]:outline-accent", "data-[highlighted]:-outline-offset-2"]) {
       expect(highlighted?.classList.contains(name)).toBe(true);
     }
   });

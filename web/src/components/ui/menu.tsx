@@ -25,7 +25,7 @@ export function MenuRadioItem({ className, children, ...rest }: ComponentProps<t
     <DropdownMenu.RadioItem
       className={cn(
         "flex min-h-9 cursor-pointer items-center gap-2 rounded px-2 text-sm outline-none",
-        "data-[highlighted]:outline-2 data-[highlighted]:-outline-offset-2 data-[highlighted]:outline-accent",
+        "data-[highlighted]:outline-solid data-[highlighted]:outline-2 data-[highlighted]:-outline-offset-2 data-[highlighted]:outline-accent",
         "data-[highlighted]:bg-sidebar-active data-[highlighted]:text-sidebar-active-fg",
         className,
       )}
