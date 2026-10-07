@@ -304,11 +304,22 @@ redactor the moment the settings are loaded, before the pool opens.
 - **The report routes are those of spec 11.10:** `POST /reports`,
   `GET /reports` (a keyset page on creation time and id), `GET /reports/{id}`,
   its `/view?lang=`, `/snapshot`, and `/pdf?lang=`, `POST
-  /reports/{id}/pdf-retries`, `DELETE /reports/{id}`, and `POST
+  /reports/{id}/pdfs`, `DELETE /reports/{id}`, and `POST
   /reports/delete` (up to 200 ids, one outcome each, in the order sent).
   Every signed-in user reads every report that is not deleted; an operator
-  or an administrator requests and retries; an administrator deletes any
-  report, an operator its own.
+  or an administrator requests reports and PDFs; an administrator deletes
+  any report, an operator its own.
+- **A request names its language, and the worker makes that PDF alone.**
+  `POST /reports` requires `language`, stored with the selection, so a key
+  reused with another language is a conflict. The collect handler queues
+  one render, for that language. A stored request without a valid language
+  fails its collection with `INTERNAL_FAILURE`, and `GET /reports/{id}`
+  answers 500 for it; there is no fallback. `POST /reports/{id}/pdfs`
+  makes the PDF of a language under the report's row lock: no row inserts a
+  pending one with a render job, a failed row is compiled again, a pending
+  row changes nothing, and a ready row answers `PDF_ALREADY_READY`; each
+  path that queues sets the phase to `rendering` and writes
+  `report.pdf_request`.
 - **A report answers 404 once deleted or purged, and 410 from its expiry
   until its purge.** Expired means `expires_at` at or before now or
   `expired_at` set, judged with one reading of the clock per request; the
@@ -342,6 +353,10 @@ redactor the moment the settings are loaded, before the pool opens.
   the sweep, after which the key is free, as after the purge. A bulk
   delete marks in id order, so two bulk deletes cannot deadlock. A replay
   reads its key and its report in one statement.
+- **`serve`'s stop is bounded.** It waits 30 seconds for the requests in
+  flight, then closes the connections still open, counted by a `ConnState`
+  hook, logs one warning with their number, and exits 0; it fails only when
+  the listener cannot be closed.
 - **`serve`, `worker`, and `admin` exit with 0, 1, or 2:** 1 for a failure
   at run time (the database, the listener, Typst for `worker`, jobs that did
   not stop after the drain, a refusal of `bootstrap-admin`), 2 for the
@@ -502,8 +517,9 @@ redactor the moment the settings are loaded, before the pool opens.
   3:1 for a large heading and for an input border or a focus ring against
   its surface, in both themes. A new pair on the screen enters the list.
 - **No inline style.** No `style` prop, no `dangerouslySetInnerHTML`, and no
-  `<style>` element added at run time; a test opens the menu and the
-  tooltip, the two Radix layers in use, and finds none. A new layer joins
+  `<style>` element added at run time; a test opens the menu, the
+  tooltip, the popover, and the alert dialog, the four Radix layers in use,
+  and finds none. A new layer joins
   that test. The CSP stays `script-src 'self'` and `style-src 'self'`
   until a style hash enters with its test. Zod runs with its JIT off,
   because its probe of `new Function` breaks the CSP.
@@ -547,8 +563,33 @@ redactor the moment the settings are loaded, before the pool opens.
   `KCR_CONFIG_DIR`, and `KCR_POSTGRES_PASSWORD`, with no default.
   `deploy/compose.integration.yaml` adds the one-shot `migrate` and
   `bootstrap` services and the Playwright service, which shares the network
-  of `serve`. The spec fails on any CSP violation and on any axe finding.
-  The fixtures of `deploy/platform/` serve this stack alone.
+  of `serve`, and the fake Prometheus, built by `make e2e` from the
+  `fake-prometheus` stage of `deploy/Containerfile` and never by
+  `make image`, with the one-shot `profiles` service that imports
+  `deploy/platform/profiles.toml`. The fake serves its scenario once, so the
+  stack runs one collection: the reports spec requests one report and
+  Playwright never retries. The spec fails on any CSP violation and on any
+  axe finding. The fixtures of `deploy/platform/` serve this stack alone.
+- **The report screens check only while something moves.** The list
+  refetches every loaded page every 5 seconds while a loaded row is queued,
+  running, or has a pending PDF, and not otherwise. The progress page
+  checks after 1.5 s for its first 20 answers, 3 s for the next 20, then
+  6 s, while the report is queued, running, or has a pending PDF; a 404 or
+  410 stops it.
+- **The screens show what the role allows.** A checkbox and Delete appear
+  on a row only for an administrator, or for an operator on their own
+  report; Generate PDF, Try again, and New report only for operators and
+  administrators. A bulk outcome `forbidden` keeps its row selected.
+- **One idempotency key per attempt.** The form makes a key when it opens
+  and renews it when a value changes after an attempt got an answer, or on
+  `IDEMPOTENCY_KEY_REUSED`; an attempt that got no answer keeps it, so a
+  resend replays.
+- **A select is the browser's own `<select>`,** styled, so no style hash
+  enters the CSP.
+- **A period shows its words.** The six quick ranges have their own keys;
+  any other value reads `period.custom.value`, with the duration from
+  `Intl.NumberFormat` in long units, so it agrees in number in both
+  languages.
 
 ## The template
 

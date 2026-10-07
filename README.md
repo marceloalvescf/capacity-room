@@ -23,14 +23,18 @@ full design is in
   accounts in three roles, sessions, the reader's own account, the
   administration of users and of metric-source profiles, and the reports,
   over an HTTP API described in [api/openapi.yaml](api/openapi.yaml).
-- The web interface, served by `serve`: sign-in, and an account screen
-  where a reader changes their password and language, in Portuguese
-  (Brazil) and English, in a light and a dark theme. The screens of
-  profiles, reports, and users come later.
+- The web interface, served by `serve`, in Portuguese (Brazil) and English,
+  in a light and a dark theme: sign-in; an account screen where a reader
+  changes their password and language; the list of reports, with bulk
+  delete; the form that requests a report, with quick and typed periods;
+  and the progress page of a report, where its PDFs are downloaded and the
+  PDF of the other language is generated. The tabs of a report and the
+  screens of profiles and users come later.
 - The command `worker`, which runs the report jobs of the platform: it
   collects a requested report through the outbound policy, stores its
-  snapshot, writes one PDF per language, and expires and removes reports
-  after their retention.
+  snapshot, writes the PDF of the language it was requested in, writes the
+  other language's PDF when someone asks for it, and expires and removes
+  reports after their retention.
 - The command `admin`, with `migrate`, `bootstrap-admin`, `probe`, and
   `import-profiles`.
 - A container image that carries the binary and Typst 0.15.1.
@@ -376,8 +380,9 @@ default and its bounds.
 | `admission_profile_limit` | 5, or `admission_limit` when smaller | 1 to `admission_limit` | Reports queued or running at once for one profile |
 | `admission_retry_seconds` | 5 | 1 to 300 | The wait a refused request is told to keep |
 
-A report is collected once, stored as a snapshot, and compiled into one
-PDF for each language. A collection whose source cannot be reached is tried
+A report is collected once, stored as a snapshot, and compiled into the
+PDF of the language its request names; the PDF of the other language is
+compiled when an operator or an administrator asks for it. A collection whose source cannot be reached is tried
 again, up to `job_max_attempts`; any other failure is final and stored as a
 code. After `report_retention_days` the snapshot and the PDFs are deleted
 and the report is kept as expired; after `expired_report_days` more it is
@@ -389,13 +394,13 @@ A report is requested, read, and removed under `/api/v1/reports`:
 
 | Route | Who | Answer |
 |---|---|---|
-| `POST /reports` | operator, administrator | 202 with the report's id, status, and phase |
+| `POST /reports` | operator, administrator | 202 with the report's id, status, and phase; the body names the report's `language` |
 | `GET /reports?limit=&cursor=` | every signed-in reader | a page of reports, newest first, with `next_cursor` |
 | `GET /reports/{id}` | every signed-in reader | the report, its request, its progress, its PDFs |
 | `GET /reports/{id}/view?lang=` | every signed-in reader | the report worded in `pt-BR` or `en` for the web |
 | `GET /reports/{id}/snapshot` | every signed-in reader | the stored snapshot, the input of `--from-snapshot` |
 | `GET /reports/{id}/pdf?lang=` | every signed-in reader | the PDF of one language |
-| `POST /reports/{id}/pdf-retries` | operator, administrator | 202; compiles a failed PDF again |
+| `POST /reports/{id}/pdfs` | operator, administrator | 202; makes the PDF of a language, or compiles a failed one again; 409 `PDF_ALREADY_READY` once it is ready |
 | `DELETE /reports/{id}` | administrator; an operator for its own | 204 |
 | `POST /reports/delete` | administrator; an operator for its own | one outcome per id, up to 200 |
 
@@ -429,11 +434,15 @@ export KCR_VERSION=$(cat VERSION) KCR_CONFIG_DIR=/etc/kcr KCR_POSTGRES_PASSWORD=
 docker compose -f deploy/compose.yaml up -d
 ```
 
-`serve` listens on `127.0.0.1:8080` and speaks plain HTTP. The session
+`serve` listens on `127.0.0.1:8080` and speaks plain HTTP. On a stop
+signal it waits up to 30 seconds for the requests in flight, closes the
+connections still open after that with one warning, and exits 0. The session
 cookie is `Secure`, so a browser reaches `serve` at localhost or through a
 TLS proxy that the operator provides. The Compose files hold no proxy and no
 certificate. `deploy/compose.integration.yaml` and the files of
-`deploy/platform/` serve `make e2e` alone, and never a deployment.
+`deploy/platform/` serve `make e2e` alone, and never a deployment: they add
+a fake Prometheus, built from its own stage of `deploy/Containerfile`, and
+one profile that points at it.
 
 ### Working on the interface
 

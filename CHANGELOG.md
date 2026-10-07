@@ -15,11 +15,31 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The interface has a light and a dark theme, which follow the system unless
   the reader chooses one.
 - A Compose file runs `serve`, `worker`, and PostgreSQL together.
+- The interface lists the reports, newest first, and lets an operator delete
+  their own reports, and an administrator any report, one at a time or
+  several at once.
+- The interface has a form that requests a report, with quick periods such
+  as the last 24 hours and a typed period such as `36h` or `10d`.
+- Each report has a progress page that follows it while it runs, downloads
+  its PDF, and generates the PDF in the other language on request.
+
+### Changed
+
+- A report request names the language of its report, and only the PDF in
+  that language is made at first; the PDF in the other language is made
+  when someone asks for it.
+
+### Removed
+
+- The API route that compiled a failed PDF again is gone; the route that
+  requests the PDF of a language does that and more.
 
 ### Fixed
 
 - Downloading a large report no longer leaves `serve` holding the memory of
   that download afterwards.
+- Stopping `serve` no longer fails while a download is stalled: it waits 30
+  seconds, closes what is left, and exits cleanly.
 
 ## [0.2.0] - 2026-10-06
 
