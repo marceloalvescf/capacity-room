@@ -23,4 +23,9 @@ describe("format", () => {
     expect(formatElapsed(-1500)).toBe("0:00");
     expect(formatElapsed(Number.NaN)).toBe("0:00");
   });
+
+  it("shows a dash for a date that is not valid", () => {
+    expect(formatTime("not a date")).toBe("—");
+    expect(formatDate("")).toBe("—");
+  });
 });

@@ -252,6 +252,8 @@
     "requested": "Criado em {{time}} por {{username}}",
     "keptUntil": "Disponível até {{date}}",
     "steps": "Progresso",
+    "stepDone": "Concluído",
+    "stepPending": "Não iniciado",
     "elapsed": "Tempo decorrido {{time}}",
     "closeable": "Você pode fechar esta página; o relatório continua sendo gerado.",
     "pdf": "PDF",

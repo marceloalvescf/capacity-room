@@ -1,12 +1,20 @@
 const pad = (value: number, width = 2): string => String(value).padStart(width, "0");
 
+const none = "—";
+
 export function formatDate(iso: string): string {
   const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return none;
+  }
   return `${String(date.getFullYear())}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 export function formatTime(iso: string): string {
   const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return none;
+  }
   return `${formatDate(iso)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 

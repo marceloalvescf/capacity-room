@@ -252,6 +252,8 @@
     "requested": "Requested {{time}} by {{username}}",
     "keptUntil": "Kept until {{date}}",
     "steps": "Progress",
+    "stepDone": "Done",
+    "stepPending": "Not started",
     "elapsed": "Elapsed {{time}}",
     "closeable": "You can close this page; the report keeps running.",
     "pdf": "PDF",

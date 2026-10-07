@@ -62,6 +62,9 @@ function Steps({ phase }: { phase: Report["phase"] }) {
             )}
           </svg>
           {t(`reportPhase.${name}`)}
+          {index === current ? null : (
+            <span className="sr-only">{t(index < current ? "progress.stepDone" : "progress.stepPending")}</span>
+          )}
         </li>
       ))}
     </ol>
@@ -94,6 +97,7 @@ function Gone({ message }: { message: string }) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col items-start gap-3">
+      <h1 className="text-xl font-semibold">{t("progress.screen")}</h1>
       <Alert tone="error">{message}</Alert>
       <Link to="/reports" className={buttonStyles()}>
         {t("progress.back")}

@@ -80,11 +80,13 @@ describe("progress screen", () => {
     await open();
     const steps = screen.getByRole("list", { name: t("progress.steps") });
     const current = () => within(steps).getByRole("listitem", { current: "step" }).textContent;
-    expect(within(steps).getAllByRole("listitem").map((item) => item.textContent)).toEqual(
-      ["waiting", "preflight", "collecting", "analyzing", "snapshotting", "rendering", "complete"].map((phase) =>
-        t(`reportPhase.${phase}`),
-      ),
-    );
+    const phases = ["waiting", "preflight", "collecting", "analyzing", "snapshotting", "rendering", "complete"];
+    // What a screen reader hears: the name, then the state of a step that is not the current one.
+    const heard = () => within(steps).getAllByRole("listitem").map((item) => item.textContent);
+    expect(heard()).toEqual([
+      t("reportPhase.waiting"),
+      ...phases.slice(1).map((phase) => `${t(`reportPhase.${phase}`)}${t("progress.stepPending")}`),
+    ]);
     expect(current()).toBe(t("reportPhase.waiting"));
 
     mock.reports = [report(running)];
@@ -92,6 +94,13 @@ describe("progress screen", () => {
     await waitFor(() => {
       expect(current()).toBe(t("reportPhase.collecting"));
     });
+    expect(heard()).toEqual(
+      phases.map((phase, index) =>
+        index === 2
+          ? t("reportPhase.collecting")
+          : `${t(`reportPhase.${phase}`)}${t(index < 2 ? "progress.stepDone" : "progress.stepPending")}`,
+      ),
+    );
 
     mock.reports = [report({ pdfs: [pdf("en", "pending")] })];
     await advance(1700);
@@ -100,31 +109,38 @@ describe("progress screen", () => {
     expect(screen.getByText(t("progress.keptUntil", { date: "2026-11-06" }))).toBeInTheDocument();
   });
 
-  it("checks after 1.5 s, then 3 s after 20 checks, then 6 s after 40", async () => {
+  it("checks 19 times after 1.5 s, 20 after 3 s, then every 6 s", async () => {
     mock.reports = [report(running)];
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    await open();
-    const step = 250;
-    const at: number[] = [];
-    let seen = 0;
-    let now = 0;
-    while (at.length < 44) {
-      const count = checks().length;
-      for (let n = seen; n < count; n++) {
-        at.push(now);
-      }
-      seen = count;
-      await advance(step);
-      now += step;
+    // The clock moves only when the test moves it; the real timer lets an answer settle.
+    const realTimeout = globalThis.setTimeout;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
+    // The query client hands its notices to React through a zero-delay timer, which runs when the clock is
+    // advanced by nothing.
+    const settle = async () => {
+      await act(async () => {
+        await new Promise((resolve) => realTimeout(resolve, 15));
+        await vi.advanceTimersByTimeAsync(0);
+        await new Promise((resolve) => realTimeout(resolve, 15));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+    };
+    await renderApp(`/jobs/${id}`);
+    for (let turn = 0; turn < 80 && checks().length === 0; turn++) {
+      await settle();
     }
-    const gaps = at.slice(1).map((time, n) => time - (at[n] ?? 0));
-    // gaps[n] follows the (n + 1)th check.
-    for (const [n, gap] of gaps.entries()) {
-      const wanted = n + 1 < 20 ? 1500 : n + 1 < 40 ? 3000 : 6000;
-      expect(gap, `after check ${String(n + 1)}`).toBeGreaterThanOrEqual(wanted - step);
-      expect(gap, `after check ${String(n + 1)}`).toBeLessThanOrEqual(wanted + 4 * step);
+    await settle();
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+    expect(checks()).toHaveLength(1);
+    for (let made = 1; made < 45; made++) {
+      const wait = made < 20 ? 1500 : made < 40 ? 3000 : 6000;
+      await advance(wait - 1);
+      await settle();
+      expect(checks(), `just before check ${String(made + 1)}`).toHaveLength(made);
+      await advance(1);
+      await settle();
+      expect(checks(), `at check ${String(made + 1)}`).toHaveLength(made + 1);
     }
-  }, 30_000);
+  }, 60_000);
 
   it("shows the elapsed time, and never a negative one", async () => {
     mock.reports = [report({ ...running, created_at: new Date(Date.now() - 42_000).toISOString() })];
@@ -251,6 +267,7 @@ describe("progress screen", () => {
     await open();
     mock.reports = [];
     await advance(1700);
+    expect(await screen.findByRole("heading", { level: 1, name: t("progress.screen") })).toBeInTheDocument();
     expect(await screen.findByText(t("progress.notFound"))).toBeInTheDocument();
     expect(screen.getByRole("link", { name: t("progress.back") })).toHaveAttribute("href", "/reports");
     mock.calls.length = 0;
@@ -262,6 +279,7 @@ describe("progress screen", () => {
     server.use(http.get(`${window.location.origin}/api/v1/reports/:id`, () => failure(410, "REPORT_EXPIRED")));
     vi.useFakeTimers({ shouldAdvanceTime: true });
     await renderApp(`/jobs/${id}`);
+    expect(await screen.findByRole("heading", { level: 1, name: t("progress.screen") })).toBeInTheDocument();
     expect(await screen.findByText(t("progress.expired"))).toBeInTheDocument();
     expect(screen.getByRole("link", { name: t("progress.back") })).toBeInTheDocument();
     mock.calls.length = 0;
