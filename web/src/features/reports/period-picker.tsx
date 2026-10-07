@@ -129,11 +129,12 @@ interface WallFieldProps {
   hintId: string | undefined;
   open: boolean;
   buttonRef: Ref<HTMLButtonElement>;
+  inputRef: Ref<HTMLInputElement>;
   onChange: (text: string) => void;
   onToggle: () => void;
 }
 
-function WallField({ label, pickLabel, value, problem, hintId, open, buttonRef, onChange, onToggle }: WallFieldProps) {
+function WallField({ label, pickLabel, value, problem, hintId, open, buttonRef, inputRef, onChange, onToggle }: WallFieldProps) {
   const id = useId();
   const errorId = `${id}-error`;
   const described = [hintId, problem === undefined ? undefined : errorId].filter((part) => part !== undefined).join(" ");
@@ -145,6 +146,7 @@ function WallField({ label, pickLabel, value, problem, hintId, open, buttonRef, 
       <div className="flex gap-2">
         <input
           id={id}
+          ref={inputRef}
           value={value}
           aria-invalid={problem === undefined ? undefined : true}
           aria-describedby={described === "" ? undefined : described}
@@ -179,6 +181,7 @@ function Range({ initial, zone, calendar, buttons, onCalendar, onApply }: RangeP
   const { t, i18n } = useTranslation();
   const hintId = useId();
   const [text, setText] = useState<Record<Side, string>>({ from: initial.start, to: initial.end });
+  const inputs = { from: useRef<HTMLInputElement>(null), to: useRef<HTMLInputElement>(null) };
   const [problems, setProblems] = useState<{ start?: RangeProblem; end?: RangeProblem }>({});
   const from = dayOf(text.from);
   const to = dayOf(text.to);
@@ -241,6 +244,7 @@ function Range({ initial, zone, calendar, buttons, onCalendar, onApply }: RangeP
         hintId={withHint ? hintId : undefined}
         open={calendar === which}
         buttonRef={buttons[which]}
+        inputRef={inputs[which]}
         onChange={(next) => {
           edit(which, next);
         }}
@@ -262,6 +266,7 @@ function Range({ initial, zone, calendar, buttons, onCalendar, onApply }: RangeP
         const found = checkRange(text.from, text.to, zone, new Date());
         if (found.start !== undefined || found.end !== undefined) {
           setProblems(found);
+          inputs[found.start === undefined ? "to" : "from"].current?.focus();
           return;
         }
         onApply(parseWallTime(text.from) as string, parseWallTime(text.to) as string);
@@ -389,7 +394,7 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
                 )}
               </div>
             )}
-            <div className="flex flex-col py-2 sm:border-l sm:border-border">
+            <div className="flex flex-col px-1 py-2 sm:border-l sm:border-border">
               {lengths.map((length) => (
                 <button
                   key={length}

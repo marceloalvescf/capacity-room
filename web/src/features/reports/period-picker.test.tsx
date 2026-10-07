@@ -190,8 +190,29 @@ describe("period picker", () => {
         expect(field).toHaveAttribute("aria-invalid", "true");
         expect(onChange).not.toHaveBeenCalled();
         expect(screen.getByRole("dialog")).toBeInTheDocument();
+        expect(field).toHaveFocus();
       });
     }
+
+    it("focuses the first field with a problem when both have one", async () => {
+      const user = userEvent.setup();
+      open([], range("2026-09-01 00:00", "2026-10-01 00:00"));
+      const dialog = await trigger(user);
+      await retype(user, from(dialog), "nope");
+      await retype(user, to(dialog), "nope");
+      await user.click(apply(dialog));
+      expect(from(dialog)).toHaveFocus();
+      expect(from(dialog)).toHaveAttribute("aria-invalid", "true");
+      expect(to(dialog)).toHaveAttribute("aria-invalid", "true");
+    });
+  });
+
+  it("keeps the focus ring of the right column inside the scroll container", async () => {
+    const user = userEvent.setup();
+    open([]);
+    const dialog = await trigger(user);
+    const column = within(dialog).getByRole("button", { name: "Last hour" }).parentElement;
+    expect(column).toHaveClass("px-1");
   });
 
   describe("calendar", () => {
