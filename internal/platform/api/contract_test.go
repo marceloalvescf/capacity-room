@@ -76,11 +76,34 @@ func TestContractNamesEveryCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
-	text := string(raw)
-	for c := range problems {
-		if !strings.Contains(text, string(c)) {
-			t.Errorf("code %s is not named in the contract", c)
+	var doc struct {
+		Components struct {
+			Schemas struct {
+				ErrorCode struct {
+					Enum []string `yaml:"enum"`
+				} `yaml:"ErrorCode"`
+			} `yaml:"schemas"`
+		} `yaml:"components"`
+	}
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parsing the contract: %v", err)
+	}
+	contract := map[string]bool{}
+	for _, c := range doc.Components.Schemas.ErrorCode.Enum {
+		if contract[c] {
+			t.Errorf("code %s is named twice in the ErrorCode enum", c)
 		}
+		contract[c] = true
+	}
+	program := map[string]bool{}
+	for c := range problems {
+		program[string(c)] = true
+	}
+	if missing := difference(program, contract); len(missing) > 0 {
+		t.Errorf("in the table and not in the ErrorCode enum: %v", missing)
+	}
+	if extra := difference(contract, program); len(extra) > 0 {
+		t.Errorf("in the ErrorCode enum and not in the table: %v", extra)
 	}
 }
 
