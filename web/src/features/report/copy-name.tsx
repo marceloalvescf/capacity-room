@@ -7,6 +7,15 @@ import { IconButton } from "@/components/ui/icon-button";
 export function CopyName({ name }: { name: string }) {
   const { t } = useTranslation();
   const announce = useAnnounce();
+  // A missing clipboard (a page that is not a secure context) fails like a refused write.
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(name);
+      announce(t("report.copied", { name }));
+    } catch {
+      announce(t("report.copyFailed"));
+    }
+  }
   return (
     <span className="inline-flex items-center gap-2">
       <span className="font-mono">{name}</span>
@@ -15,14 +24,7 @@ export function CopyName({ name }: { name: string }) {
         variant="secondary"
         className="h-7 min-h-7 w-7 border-transparent bg-transparent"
         onClick={() => {
-          navigator.clipboard.writeText(name).then(
-            () => {
-              announce(t("report.copied", { name }));
-            },
-            () => {
-              announce(t("report.copyFailed"));
-            },
-          );
+          void copy();
         }}
       >
         <CopyIcon aria-hidden="true" className="size-4" />

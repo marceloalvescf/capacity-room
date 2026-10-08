@@ -170,3 +170,15 @@ describe("nodes tab", () => {
     expect(counts[1]?.querySelector(".font-mono")).not.toBeNull();
   });
 });
+
+describe("copy without a clipboard", () => {
+  it("announces the failure and throws nothing", async () => {
+    const user = userEvent.setup();
+    await open("nodes", `?open=${firstNode}`);
+    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    await user.click(screen.getByRole("button", { name: `Copy ${firstNode}` }));
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("The name could not be copied.");
+    });
+  });
+});
