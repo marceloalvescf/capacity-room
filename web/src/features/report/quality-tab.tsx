@@ -36,10 +36,12 @@ function Messages({
   title,
   empty,
   messages,
+  marked,
 }: {
   title: string;
   empty: string;
   messages: ViewMessage[];
+  marked: boolean;
 }) {
   const heading = useId();
   return (
@@ -53,7 +55,7 @@ function Messages({
         <ul aria-labelledby={heading} className="flex flex-col gap-2 text-sm">
           {messages.map((message, index) => (
             <li key={index}>
-              <StatusMark status="attention" label={message.text} withStatus />
+              {marked ? <StatusMark status="attention" label={message.text} withStatus /> : message.text}
             </li>
           ))}
         </ul>
@@ -117,8 +119,8 @@ export function QualityTab() {
         defaultOrder="view"
       />
       <div className="grid gap-6 md:grid-cols-2">
-        <Messages title={t("report.quality.warnings")} empty={t("report.quality.noWarnings")} messages={quality.warnings} />
-        <Messages title={t("report.quality.notices")} empty={t("report.quality.noNotices")} messages={quality.notices} />
+        <Messages title={t("report.quality.warnings")} empty={t("report.quality.noWarnings")} messages={quality.warnings} marked />
+        <Messages title={t("report.quality.notices")} empty={t("report.quality.noNotices")} messages={quality.notices} marked={false} />
       </div>
     </div>
   );

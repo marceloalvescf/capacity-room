@@ -120,9 +120,11 @@ describe("data quality tab", () => {
     }
     const notices = within(screen.getByRole("list", { name: "Notices" })).getAllByRole("listitem");
     expect(notices.map((item) => item.textContent)).toEqual([
-      "Attention1 workload was left out of the coverage inventory because it is scaled to zero.",
+      "1 workload was left out of the coverage inventory because it is scaled to zero.",
     ]);
-    expect(notices[0]?.querySelector("span.inline-flex")).toHaveClass("text-attention");
+    for (const item of notices) {
+      expect(item.querySelector("svg")).toBeNull();
+    }
   });
 
   it("two messages of one code both show", async () => {
