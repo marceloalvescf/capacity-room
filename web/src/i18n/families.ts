@@ -9,10 +9,12 @@ import {
   reportProfileValues,
   reportStatusValues,
   roleValues,
+  viewAutoscalingStatusValues,
   viewConfidenceValues,
   viewEvidenceNameValues,
   viewHPACoverageValues,
   viewScopeTypeValues,
+  viewStrategyValues,
 } from "@/api/schema.gen";
 import { statusValues } from "@/components/status-mark";
 import { reportTabs } from "@/features/report/tabs";
@@ -38,5 +40,7 @@ export const families: Readonly<Record<string, readonly string[]>> = {
   scope: viewScopeTypeValues,
   evidence: viewEvidenceNameValues,
   hpaCoverage: viewHPACoverageValues,
+  autoscalingStatus: viewAutoscalingStatusValues,
+  strategy: viewStrategyValues,
   "period.calendar": calendarRanges,
 };

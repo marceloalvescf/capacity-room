@@ -93,6 +93,8 @@ describe("screens", () => {
   for (const tab of [
     { name: "namespaces", open: "payments" },
     { name: "workloads", open: "payments%2FDeployment%2Fpayments-web" },
+    { name: "autoscaling", open: "payments%2Fweb" },
+    { name: "nodes", open: "aks-agentpool-12345678-vmss000000" },
   ]) {
     for (const language of languages) {
       for (const theme of ["light", "dark"]) {

@@ -349,7 +349,9 @@
     },
     "search": {
       "namespaces": "Buscar namespaces",
-      "workloads": "Buscar workloads"
+      "workloads": "Buscar workloads",
+      "hpas": "Buscar HPAs",
+      "nodes": "Buscar nodes"
     },
     "column": {
       "namespace": "Namespace",
@@ -357,7 +359,16 @@
       "status": "Status",
       "pods": "Pods",
       "cpuPeak": "CPU · Pico",
-      "memoryPeak": "Memória · Pico"
+      "memoryPeak": "Memória · Pico",
+      "hpa": "HPA",
+      "situation": "Situação",
+      "replicaRange": "Mín. / Máx.",
+      "replicasPeak": "Replicas · Pico",
+      "node": "Node",
+      "state": "Estado",
+      "nodepool": "Node pool",
+      "confidence": "Confiança",
+      "nodes": "Nodes"
     },
     "share": {
       "request": "{{value}} do request",
@@ -374,14 +385,22 @@
       "request": "Request",
       "limit": "Limit",
       "requestPercent": "% Request",
-      "limitPercent": "% Limit"
+      "limitPercent": "% Limit",
+      "currentReplicas": "Replicas atuais",
+      "desiredReplicas": "Replicas desejadas",
+      "cpuPercent": "CPU %",
+      "memoryPercent": "Memória %"
     },
     "facts": {
       "pods": "Pods",
       "hpa": "HPA",
       "values": "Valores",
       "measured": "Medidos",
-      "approximate": "Aproximados"
+      "approximate": "Aproximados",
+      "cpuCapacity": "Capacidade de CPU",
+      "cpuAllocatable": "CPU alocável",
+      "memoryCapacity": "Capacidade de memória",
+      "memoryAllocatable": "Memória alocável"
     },
     "findings": {
       "search": "Buscar achados",
@@ -396,8 +415,32 @@
     },
     "confidence": "Confiança: {{value}}",
     "node": {
-      "unknownPool": "Node pool desconhecido"
-    }
+      "unknownPool": "Node pool desconhecido",
+      "ready": "Pronto",
+      "notReady": "Não pronto",
+      "schedulable": "Agendável",
+      "unschedulable": "Não agendável",
+      "unknownState": "Desconhecido"
+    },
+    "autoscaling": {
+      "title": "Autoscaling do cluster",
+      "source": "Fonte: {{value}}",
+      "currentNodes": "Nodes atuais",
+      "minNodes": "Mínimo de nodes",
+      "maxNodes": "Máximo de nodes",
+      "managedPools": "Node pools gerenciados",
+      "scaleEvents": "Eventos de escala",
+      "unschedulablePods": "Pods não agendáveis"
+    },
+    "hpas": {
+      "title": "HPAs"
+    },
+    "pools": {
+      "title": "Node pools"
+    },
+    "copy": "Copiar {{name}}",
+    "copied": "Copiado: {{name}}",
+    "copyFailed": "Não foi possível copiar o nome."
   },
   "confidence": {
     "exact": "Exata",
@@ -439,5 +482,16 @@
     "spec_max": "Máximo de replicas",
     "spec_min": "Mínimo de replicas",
     "spread_percent": "Dispersão"
+  },
+  "autoscalingStatus": {
+    "enabled": "Ativo",
+    "disabled": "Inativo",
+    "unknown": "Desconhecido"
+  },
+  "strategy": {
+    "recording_rule": "Recording rule",
+    "raw_metrics": "Raw metrics",
+    "configured": "Configuração",
+    "none": "Sem fonte"
   }
 }

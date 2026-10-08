@@ -1,0 +1,125 @@
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { StatusMark } from "@/components/status-mark";
+import type { ViewHPA } from "./api";
+import { DataTable, severityRank, type ReportColumn } from "./data-table";
+import { Counts, matchHPA, RowFindings, StatGrid } from "./pieces";
+import { useView } from "./report-page";
+
+const rowKey = (row: ViewHPA) => `${row.namespace}/${row.name}`;
+const rowName = (row: ViewHPA) => row.name;
+const searchText = (row: ViewHPA) => `${row.name} ${row.target_kind} ${row.target_name} ${row.namespace}`;
+const status = (row: ViewHPA) => row.situation_status ?? "";
+
+function Opened({ row }: { row: ViewHPA }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-4">
+      <StatGrid
+        rows={[
+          { label: t("report.stat.currentReplicas"), stat: row.current },
+          { label: t("report.stat.desiredReplicas"), stat: row.desired },
+        ]}
+      />
+      <RowFindings match={matchHPA(row)} />
+    </div>
+  );
+}
+
+const renderOpened = (row: ViewHPA) => <Opened row={row} />;
+
+export function AutoscalingTab() {
+  const { t } = useTranslation();
+  const { summary, hpas } = useView();
+  const { autoscaling } = summary;
+  const columns = useMemo<ReportColumn<ViewHPA>[]>(
+    () => [
+      {
+        id: "name",
+        header: t("report.column.hpa"),
+        cell: (row) => (
+          <div className="flex flex-col gap-0.5">
+            <span className="font-mono">{row.name}</span>
+            <span className="text-xs text-muted-fg">
+              {row.target_kind} <span className="font-mono">{row.target_name}</span> ·{" "}
+              <span className="font-mono">{row.namespace}</span>
+            </span>
+          </div>
+        ),
+        sortValue: (row) => row.name,
+      },
+      {
+        id: "situation",
+        header: t("report.column.situation"),
+        cell: (row) =>
+          row.situation_status === null ? (
+            row.situation
+          ) : (
+            <StatusMark status={row.situation_status} label={row.situation} />
+          ),
+        sortValue: (row) => severityRank[row.situation_status ?? ""] ?? 3,
+      },
+      {
+        id: "range",
+        header: t("report.column.replicaRange"),
+        cell: (row) => (
+          <span className="font-mono">
+            {row.spec_min.text} / {row.spec_max.text}
+          </span>
+        ),
+        sortValue: (row) => row.spec_min.raw,
+        align: "end",
+      },
+      {
+        id: "peak",
+        header: t("report.column.replicasPeak"),
+        cell: (row) => <span className="font-mono">{row.current.peak.text}</span>,
+        sortValue: (row) => row.current.peak.raw,
+        align: "end",
+      },
+    ],
+    [t],
+  );
+  return (
+    <div className="flex flex-col gap-6">
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h2 className="text-base font-semibold">{t("report.autoscaling.title")}</h2>
+          <span className="text-sm">{t(`autoscalingStatus.${autoscaling.status}`)}</span>
+          <span className="text-sm text-muted-fg">
+            {t("report.autoscaling.source", { value: t(`strategy.${autoscaling.source}`) })}
+          </span>
+          <span className="text-sm text-muted-fg">
+            {t("report.confidence", { value: t(`confidence.${autoscaling.confidence}`) })}
+          </span>
+        </div>
+        <Counts
+          label={t("report.autoscaling.title")}
+          items={[
+            { label: t("report.autoscaling.currentNodes"), value: autoscaling.current_nodes },
+            { label: t("report.autoscaling.minNodes"), value: autoscaling.min_nodes },
+            { label: t("report.autoscaling.maxNodes"), value: autoscaling.max_nodes },
+            { label: t("report.autoscaling.managedPools"), value: autoscaling.managed_node_groups },
+            { label: t("report.autoscaling.scaleEvents"), value: autoscaling.scale_events },
+            { label: t("report.autoscaling.unschedulablePods"), value: autoscaling.unschedulable_pods },
+            { label: t("report.inventory.workloadsWithoutHpa"), value: summary.workloads_without_hpa },
+          ]}
+        />
+      </section>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-base font-semibold">{t("report.hpas.title")}</h2>
+        <DataTable
+          label={t("report.hpas.title")}
+          searchLabel={t("report.search.hpas")}
+          rows={hpas}
+          rowKey={rowKey}
+          rowName={rowName}
+          columns={columns}
+          searchText={searchText}
+          renderOpened={renderOpened}
+          status={status}
+        />
+      </section>
+    </div>
+  );
+}

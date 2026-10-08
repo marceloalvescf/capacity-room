@@ -66,9 +66,13 @@ export function StatGrid({ title, rows }: { title?: string; rows: { label: strin
     <table aria-label={title} className="w-full text-sm">
       <thead className="border-b border-border text-muted-fg">
         <tr>
-          <th scope="col" className="px-3 py-1.5 text-left font-semibold text-fg">
-            {title}
-          </th>
+          {title === undefined ? (
+            <td />
+          ) : (
+            <th scope="col" className="px-3 py-1.5 text-left font-semibold text-fg">
+              {title}
+            </th>
+          )}
           <th scope="col" className="px-3 py-1.5 text-right font-medium">
             {t("report.stat.average")}
           </th>
