@@ -382,6 +382,21 @@
       "values": "Values",
       "measured": "Measured",
       "approximate": "Approximate"
+    },
+    "findings": {
+      "search": "Search findings",
+      "severity": "Severity",
+      "scope": "Scope",
+      "allScopes": "All scopes",
+      "none": "This report holds no findings.",
+      "noMatch": "No finding matches these filters.",
+      "observed": "Observed",
+      "action": "What to do",
+      "evidence": "Evidence"
+    },
+    "confidence": "Confidence: {{value}}",
+    "node": {
+      "unknownPool": "Unknown pool"
     }
   },
   "confidence": {
@@ -393,5 +408,36 @@
     "covered": "Covered by an HPA",
     "uncovered": "No HPA",
     "unknown": "Unknown"
+  },
+  "scope": {
+    "namespace": "Namespace",
+    "workload": "Workload",
+    "hpa": "HPA",
+    "node": "Node",
+    "nodepool": "Node pool",
+    "cluster": "Cluster"
+  },
+  "evidence": {
+    "affected_nodes": "Affected nodes",
+    "average": "Average",
+    "average_difference": "Average difference",
+    "average_percent": "Average",
+    "current_average": "Current replicas, average",
+    "current_nodes": "Current nodes",
+    "current_peak": "Current replicas, peak",
+    "gap_percent": "Gap between peak and average",
+    "max_nodes": "Maximum nodes",
+    "maximum_average_percent": "Highest average",
+    "maximum_peak_percent": "Highest peak",
+    "min_nodes": "Minimum nodes",
+    "minimum_peak_percent": "Lowest peak",
+    "node_pressure": "Node pressure",
+    "peak": "Peak",
+    "peak_percent": "Peak",
+    "percent": "Share",
+    "resources": "Resources",
+    "spec_max": "Maximum replicas",
+    "spec_min": "Minimum replicas",
+    "spread_percent": "Spread"
   }
 }

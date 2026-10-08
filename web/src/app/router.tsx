@@ -4,6 +4,7 @@ import { LoginPage } from "@/features/auth/login-page";
 import { NamespacesTab } from "@/features/report/namespaces-tab";
 import { OverviewTab } from "@/features/report/overview-tab";
 import { ReportPage } from "@/features/report/report-page";
+import { FindingsTab } from "@/features/report/findings-tab";
 import { WorkloadsTab } from "@/features/report/workloads-tab";
 import { GeneratePage } from "@/features/reports/generate-page";
 import { ProgressPage } from "@/features/reports/progress-page";
@@ -35,6 +36,7 @@ export const routes: RouteObject[] = [
             children: [
               { index: true, element: <Navigate to="overview" replace /> },
               { path: "overview", element: <OverviewTab /> },
+              { path: "findings", element: <FindingsTab /> },
               { path: "namespaces", element: <NamespacesTab /> },
               { path: "workloads", element: <WorkloadsTab /> },
               { path: "*", element: <NotFound /> },
