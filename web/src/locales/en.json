@@ -351,7 +351,8 @@
       "namespaces": "Search namespaces",
       "workloads": "Search workloads",
       "hpas": "Search HPAs",
-      "nodes": "Search nodes"
+      "nodes": "Search nodes",
+      "capabilities": "Search capabilities"
     },
     "column": {
       "namespace": "Namespace",
@@ -368,7 +369,10 @@
       "state": "State",
       "nodepool": "Node pool",
       "confidence": "Confidence",
-      "nodes": "Nodes"
+      "nodes": "Nodes",
+      "capability": "Capability",
+      "source": "Source",
+      "remark": "Remark"
     },
     "share": {
       "request": "{{value}} of request",
@@ -440,7 +444,15 @@
     },
     "copy": "Copy {{name}}",
     "copied": "Copied: {{name}}",
-    "copyFailed": "The name could not be copied."
+    "copyFailed": "The name could not be copied.",
+    "quality": {
+      "collected": "Collected from {{start}} to {{end}}, in {{elapsed}}",
+      "metrics": "Metrics read",
+      "warnings": "Warnings",
+      "notices": "Notices",
+      "noWarnings": "No warning.",
+      "noNotices": "No notice."
+    }
   },
   "confidence": {
     "exact": "Exact",
@@ -493,5 +505,21 @@
     "raw_metrics": "Raw metrics",
     "configured": "Configuration",
     "none": "No source"
+  },
+  "capability": {
+    "namespace_usage": "Usage by namespace",
+    "workload_usage": "Usage by workload",
+    "requests_limits": "Requests and limits",
+    "hpa_history": "HPA history",
+    "workloads_without_hpa": "Coverage of workloads without HPA",
+    "ip_node_mapping": "Mapping between address and node",
+    "nodepool_discovery": "Identification of node pools",
+    "node_utilization": "Node utilization",
+    "node_autoscaling": "Node autoscaling"
+  },
+  "capabilityState": {
+    "available": "Available",
+    "partial": "Partial",
+    "unavailable": "Unavailable"
   }
 }

@@ -4,6 +4,7 @@ import { LoginPage } from "@/features/auth/login-page";
 import { AutoscalingTab } from "@/features/report/autoscaling-tab";
 import { NamespacesTab } from "@/features/report/namespaces-tab";
 import { NodesTab } from "@/features/report/nodes-tab";
+import { QualityTab } from "@/features/report/quality-tab";
 import { OverviewTab } from "@/features/report/overview-tab";
 import { ReportPage } from "@/features/report/report-page";
 import { FindingsTab } from "@/features/report/findings-tab";
@@ -43,6 +44,7 @@ export const routes: RouteObject[] = [
               { path: "workloads", element: <WorkloadsTab /> },
               { path: "autoscaling", element: <AutoscalingTab /> },
               { path: "nodes", element: <NodesTab /> },
+              { path: "quality", element: <QualityTab /> },
               { path: "*", element: <NotFound /> },
             ],
           },

@@ -10,6 +10,8 @@ import {
   reportStatusValues,
   roleValues,
   viewAutoscalingStatusValues,
+  viewCapabilityNameValues,
+  viewCapabilityStateValues,
   viewConfidenceValues,
   viewEvidenceNameValues,
   viewHPACoverageValues,
@@ -42,5 +44,7 @@ export const families: Readonly<Record<string, readonly string[]>> = {
   hpaCoverage: viewHPACoverageValues,
   autoscalingStatus: viewAutoscalingStatusValues,
   strategy: viewStrategyValues,
+  capability: viewCapabilityNameValues,
+  capabilityState: viewCapabilityStateValues,
   "period.calendar": calendarRanges,
 };

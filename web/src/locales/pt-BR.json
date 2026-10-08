@@ -351,7 +351,8 @@
       "namespaces": "Buscar namespaces",
       "workloads": "Buscar workloads",
       "hpas": "Buscar HPAs",
-      "nodes": "Buscar nodes"
+      "nodes": "Buscar nodes",
+      "capabilities": "Buscar capacidades"
     },
     "column": {
       "namespace": "Namespace",
@@ -368,7 +369,10 @@
       "state": "Estado",
       "nodepool": "Node pool",
       "confidence": "Confiança",
-      "nodes": "Nodes"
+      "nodes": "Nodes",
+      "capability": "Capacidade",
+      "source": "Fonte",
+      "remark": "Observação"
     },
     "share": {
       "request": "{{value}} do request",
@@ -440,7 +444,15 @@
     },
     "copy": "Copiar {{name}}",
     "copied": "Copiado: {{name}}",
-    "copyFailed": "Não foi possível copiar o nome."
+    "copyFailed": "Não foi possível copiar o nome.",
+    "quality": {
+      "collected": "Coletado de {{start}} a {{end}}, em {{elapsed}}",
+      "metrics": "Métricas lidas",
+      "warnings": "Avisos",
+      "notices": "Notas",
+      "noWarnings": "Nenhum aviso.",
+      "noNotices": "Nenhuma nota."
+    }
   },
   "confidence": {
     "exact": "Exata",
@@ -493,5 +505,21 @@
     "raw_metrics": "Raw metrics",
     "configured": "Configuração",
     "none": "Sem fonte"
+  },
+  "capability": {
+    "namespace_usage": "Uso por namespace",
+    "workload_usage": "Uso por workload",
+    "requests_limits": "Requests e limits",
+    "hpa_history": "Histórico de HPA",
+    "workloads_without_hpa": "Cobertura de workloads sem HPA",
+    "ip_node_mapping": "Associação entre endereço e node",
+    "nodepool_discovery": "Identificação de node pools",
+    "node_utilization": "Utilização dos nodes",
+    "node_autoscaling": "Autoscaling de nodes"
+  },
+  "capabilityState": {
+    "available": "Disponível",
+    "partial": "Parcial",
+    "unavailable": "Indisponível"
   }
 }

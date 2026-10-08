@@ -95,6 +95,7 @@ describe("screens", () => {
     { name: "workloads", open: "payments%2FDeployment%2Fpayments-web" },
     { name: "autoscaling", open: "payments%2Fweb" },
     { name: "nodes", open: "aks-agentpool-12345678-vmss000000" },
+    { name: "quality", open: "hpa_history", ready: "report.quality.metrics" },
   ]) {
     for (const language of languages) {
       for (const theme of ["light", "dark"]) {
@@ -108,7 +109,11 @@ describe("screens", () => {
           mock.session = signedIn({ language });
           const { container } = await renderApp(`/reports/${id}/${tab.name}?open=${tab.open}`, language);
           await screen.findByRole("heading", { level: 1, name: i18next.t("progress.title", { profile: "Production" }) });
-          await screen.findByRole("heading", { level: 2, name: i18next.t("report.tab.findings") });
+          if (tab.ready === undefined) {
+            await screen.findByRole("heading", { level: 2, name: i18next.t("report.tab.findings") });
+          } else {
+            await screen.findByText(i18next.t(tab.ready));
+          }
           const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
           expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
           expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);
