@@ -160,11 +160,26 @@ it("the period picker on Range with a calendar open writes no style", async () =
   expect(stop()).toEqual([]);
 });
 
-// Elements with a style attribute, leaving out what Radix sets through the DOM itself: the popper wrapper, its focus guards, and the body it locks.
+// The properties an element's style attribute declares.
+function declared(node: Element): string[] {
+  const style = (node as HTMLElement).style;
+  return Array.from({ length: style.length }, (_, index) => style.item(index));
+}
+
+// Elements with a style attribute, leaving out what Radix sets through the DOM itself: the popper wrapper element, the
+// focus guard elements, a layer's own `--radix-` custom properties, and the body while its style holds only what the
+// scroll lock sets. A style on anything else inside a layer is reported.
 function styled(): Element[] {
-  return Array.from(document.querySelectorAll("[style]")).filter(
-    (node) => node !== document.body && node.closest("[data-radix-popper-content-wrapper], [data-radix-focus-guard]") === null,
-  );
+  return Array.from(document.querySelectorAll("[style]")).filter((node) => {
+    if (node.matches("[data-radix-popper-content-wrapper], [data-radix-focus-guard]")) {
+      return false;
+    }
+    const names = declared(node);
+    if (node === document.body) {
+      return names.some((name) => name !== "pointer-events");
+    }
+    return !(names.length > 0 && names.every((name) => name.startsWith("--radix-")));
+  });
 }
 
 it("the report writes no style", async () => {
