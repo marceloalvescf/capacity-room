@@ -1,7 +1,7 @@
 # Recipes use bash so that the gate can turn on `pipefail`. The flag is set
 # inside each recipe line, because the `make` shipped with macOS is 3.81 and
 # ignores `.SHELLFLAGS`.
-SHELL := /bin/bash
+SHELL := bash
 
 VERSION := $(shell tr -d '[:space:]' < VERSION)
 IMAGE := k8s-capacity-report:$(VERSION)
