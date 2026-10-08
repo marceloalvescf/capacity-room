@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { expect, it } from "vitest";
@@ -7,7 +7,16 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Menu, MenuContent, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/ui/menu";
 import { PeriodPicker } from "@/features/reports/period-picker";
+import { reportTabs } from "@/features/report/tabs";
 import { i18next } from "@/i18n/i18n";
+import { installMockApi, profileSummary, report, signedIn } from "../../tests/msw";
+import { renderApp } from "../../tests/render";
+import { mockColourScheme } from "../../tests/match-media";
+import viewEn from "../../tests/fixtures/view/edge-scaling.en.json";
+import type { components } from "@/api/schema.gen";
+
+const mock = installMockApi(signedIn());
+const reportId = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a01";
 
 // Watches the document for any style element added to it.
 function watchStyles() {
@@ -148,5 +157,51 @@ it("the period picker on Range with a calendar open writes no style", async () =
   expect([calendar, ...(calendar?.querySelectorAll("[style]") ?? [])].filter((node) => node?.hasAttribute("style"))).toEqual([]);
   expect(screen.getByRole("dialog").querySelector("form")?.querySelectorAll("[style]")).toHaveLength(0);
   expect(document.querySelectorAll("style")).toHaveLength(0);
+  expect(stop()).toEqual([]);
+});
+
+// Elements with a style attribute, leaving out what Radix sets through the DOM itself: the popper wrapper, its focus guards, and the body it locks.
+function styled(): Element[] {
+  return Array.from(document.querySelectorAll("[style]")).filter(
+    (node) => node !== document.body && node.closest("[data-radix-popper-content-wrapper], [data-radix-focus-guard]") === null,
+  );
+}
+
+it("the report writes no style", async () => {
+  window.localStorage.clear();
+  mockColourScheme(false);
+  mock.profiles = [profileSummary()];
+  mock.reports = [report()];
+  mock.views.set(`${reportId}:en`, viewEn as components["schemas"]["ReportView"]);
+  await i18next.changeLanguage("en");
+  const stop = watchStyles();
+  const user = userEvent.setup();
+
+  for (const tab of reportTabs) {
+    const { unmount } = await renderApp(`/reports/${reportId}/${tab}`, "en");
+    await screen.findByRole("navigation", { name: i18next.t("report.tabs") });
+    await screen.findByRole("heading", { level: 1, name: i18next.t("progress.title", { profile: "Production" }) });
+    if (tab === "findings") {
+      await screen.findByRole("searchbox");
+      const items = screen
+        .getAllByRole("list")
+        .flatMap((list) => within(list).queryAllByRole("button"))
+        .filter((button) => button.hasAttribute("aria-pressed"));
+      expect(items.length).toBeGreaterThan(1);
+      await user.click(items[1] as HTMLElement);
+      await screen.findByRole("article");
+    } else if (tab === "overview") {
+      await user.click(screen.getByRole("button", { name: i18next.t("progress.pdf") }));
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    } else {
+      await waitFor(() => { expect(document.querySelector("table button[aria-expanded='false']"), tab).not.toBeNull(); });
+      const opener = document.querySelector("table button[aria-expanded='false']");
+      await user.click(opener as Element);
+      expect(document.querySelector("table button[aria-expanded='true']"), tab).not.toBeNull();
+    }
+    expect(styled(), tab).toEqual([]);
+    expect(document.querySelectorAll("style"), tab).toHaveLength(0);
+    unmount();
+  }
   expect(stop()).toEqual([]);
 });
