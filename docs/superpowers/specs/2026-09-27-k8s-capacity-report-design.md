@@ -944,7 +944,7 @@ The interface is named "kcr - Kubernetes Capacity Report" in both languages.
 | `/login` | Sign in | Everyone |
 | `/` | Opens `/reports` | Signed in |
 | `/reports` | Report list | Signed in |
-| `/reports/:id/...` | Report, seven tabs | Signed in |
+| `/reports/:id/:tab` | Report, seven tabs | Signed in |
 | `/generate` | New report | Operator |
 | `/jobs/:id` | Progress, and the PDFs of the report | Signed in |
 | `/account` | Password and language | Signed in |
@@ -952,7 +952,7 @@ The interface is named "kcr - Kubernetes Capacity Report" in both languages.
 | `/users` | Users | Administrator |
 
 Report tabs: overview, findings, namespaces, workloads, autoscaling, nodes,
-data quality. The report header holds the PDF block of the progress screen.
+data quality. Section 12.2.1 describes the report.
 
 - Report list: newest first, by page, with "Load more"; no filter. Columns:
   requested, profile, status, the PDF of the interface language, kept until.
@@ -964,7 +964,8 @@ data quality. The report header holds the PDF block of the progress screen.
   phase and the elapsed time. Once collected, the PDF of the interface
   language first, then the other language: "not generated" with a button
   to generate it, its state while pending, and a retry when it failed; a
-  reader sees the downloads alone. When it failed, the reason and its code,
+  reader sees the downloads alone. A collected report has a link that opens
+  it, for every role. When it failed, the reason and its code,
   a link back to the list, and, for an operator, a link that opens the form
   with the values of this report.
 - Delete asks in one dialog, which says the selected report's data and PDFs
@@ -975,16 +976,70 @@ data quality. The report header holds the PDF block of the progress screen.
   filled circle; failed as the diamond; expired as the dash. A PDF never
   asked for has no mark.
 
-- Findings: list and detail pane, filters and selection kept in the address,
-  free-text search, critical first.
-- Tables: sortable and searchable, sticky header and first column, a detail
-  sheet per row.
-- Data quality is the only place metric names appear.
-- The unknown node pool is shown as plain text without the copy control.
 - The `:id` of `/jobs/:id` is the id of the report, whose progress
   `GET /reports/{id}` answers.
 - The navigation lists only the screens that exist and that the role may
   open.
+
+#### 12.2.1 Report
+
+- The route is `/reports/:id/:tab`, where the tab is `overview`,
+  `findings`, `namespaces`, `workloads`, `autoscaling`, `nodes`, or
+  `quality`. `/reports/:id` opens the overview, and an unknown tab is the
+  not-found screen. A report is reached from its progress screen; the list
+  keeps opening the progress screen.
+- The header holds the title of the progress screen and one line of facts:
+  the cluster, the period, the report profile, and who requested the report
+  and when. The time zone is not in the header; the overview holds it.
+- The tab bar ends with a PDF button. It opens the PDF block of the progress
+  screen in a popover, with the same states and the interface language
+  first.
+- The tabs read `GET /reports/{id}/view` in the interface language, and a
+  switch of language loads it again. A report not yet collected opens its
+  progress screen. A deleted, purged, or expired report shows the messages
+  of the progress screen. Any other failure shows the general error
+  sentence and a link to the list.
+- The address holds the state of every tab, so that a link opens the same
+  view: the severities, scope, search, and selected finding of the
+  findings, and the search, sort, and opened row of each table.
+- Overview: three tiles count the findings by severity, critical, attention,
+  and healthy, each with a link that opens the findings with that severity
+  alone. Then the inventory in one row, each count above its name:
+  namespaces, workloads, HPAs, workloads without HPA, nodes, node pools.
+  Then the PDF's prioritized action plan, in its order, with the columns
+  order, priority, action, scope, and confidence. Last, "About this
+  report", folded: the time zone, the namespaces, the minimum severity, the
+  emission time, and the generator version.
+- Findings: a search, the three severities as toggle chips with their
+  counts, and a scope select. The list is grouped under one heading per
+  severity, critical first, and shows the mark, scope type, scope name, and
+  sentence of each finding. Beside it, the selected finding is shown whole:
+  its severity, scope type, confidence, scope name, sentence, action, and
+  evidence, each piece of evidence named by the interface. The code is not
+  shown, and the search matches the scope name, the sentence, and the
+  action.
+- Tables: namespaces, workloads, HPAs, nodes, and capabilities. Each is
+  searchable and sortable. The page scrolls, not the table, and the header
+  stays in view. A table shows few columns: the name with what places it
+  (kind and namespace, target, or pool), the status, and for each resource
+  one cell with its peak and, under it, the peak's share of the request
+  with the PDF's mark. A row opens in place, across the whole width of the
+  table, and holds its facts, every statistic of the row at its average,
+  minimum, peak, and current value, and its own findings, each a link to
+  that finding.
+- The workloads table lists only the workloads with observed usage, as the
+  PDF does. The HPA table lists every HPA of the view.
+- Autoscaling: one line with the status, source, and confidence of the
+  cluster autoscaling; its counts in the style of the inventory: current,
+  minimum, and maximum nodes, managed node groups, scale events,
+  unschedulable pods, and workloads without HPA; then the HPAs.
+- Nodes: the nodes, then the node pools with their confidence and their
+  nodes. The name of a node and of a node pool carry a copy control; the
+  unknown node pool is plain text without one.
+- Data quality: when the collection ran and how long it took; the
+  capabilities, with name, state, source, and remark, each opening to the
+  metrics it read; then the warnings and the notices. It is the only place
+  metric names appear.
 
 ### 12.3 New report form
 
