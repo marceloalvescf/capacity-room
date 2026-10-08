@@ -79,7 +79,11 @@ function Detail({ finding }: { finding: ViewFinding }) {
       <header className="flex flex-col gap-1">
         <p className="flex flex-wrap items-center gap-x-3 text-sm">
           <StatusMark status={finding.severity} />
-          <span className="text-muted-fg">{t(`scope.${finding.scope_type}`)}</span>
+          <span className="text-muted-fg">
+            {finding.scope_kind === ""
+              ? t(`scope.${finding.scope_type}`)
+              : `${t(`scope.${finding.scope_type}`)} · ${finding.scope_kind}`}
+          </span>
           <span className="text-muted-fg">{t("report.confidence", { value: t(`confidence.${finding.confidence}`) })}</span>
         </p>
         {name === null ? null : <h3 className="font-mono text-lg font-semibold">{name}</h3>}
@@ -125,6 +129,7 @@ export function FindingsTab() {
   const scopeParam = params.get("scope");
   const scope = present.find((type): type is ScopeType => type === scopeParam) ?? null;
 
+  const unknownPool = t("report.node.unknownPool");
   const needle = query.toLowerCase();
   const shown: Entry[] = findings
     .map((finding, index) => ({ finding, index }))
@@ -132,7 +137,7 @@ export function FindingsTab() {
       ({ finding }) =>
         severities.has(finding.severity) &&
         (scope === null || finding.scope_type === scope) &&
-        `${finding.scope_name} ${finding.sentence} ${finding.action}`.toLowerCase().includes(needle),
+        `${scopeName(finding, unknownPool) ?? ""} ${finding.sentence} ${finding.action}`.toLowerCase().includes(needle),
     );
 
   const wanted = readIndex(params.get("finding"));

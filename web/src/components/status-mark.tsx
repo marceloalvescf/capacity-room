@@ -43,6 +43,7 @@ export function StatusMark({ status, label }: { status: Status; label?: string }
       <svg aria-hidden="true" viewBox="0 0 12 12" className="size-3 shrink-0">
         <Shape status={status} />
       </svg>
+      {label === undefined ? null : <span className="sr-only">{t(`status.${status}`)}</span>}
       <span className={cn(status === "critical" && "font-bold")}>{label ?? t(`status.${status}`)}</span>
     </span>
   );

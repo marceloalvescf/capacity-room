@@ -11,6 +11,8 @@ import viewPt from "../../../tests/fixtures/view/edge-scaling.pt-BR.json";
 
 const mock = installMockApi(signedIn());
 
+const t = (key: string): string => i18next.t(key);
+
 type View = components["schemas"]["ReportView"];
 
 const id = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a01";
@@ -112,6 +114,23 @@ describe("workloads tab", () => {
     expect(links.map((link) => link.textContent)).toEqual(
       [5, 6, 13, 20].map((index) => textHolding(english.findings[index]?.sentence ?? "")),
     );
+  });
+
+  it("a share with no number keeps its mark and status word", async () => {
+    mock.views.set(`${id}:en`, {
+      ...english,
+      workloads: english.workloads.map((w) => ({
+        ...w,
+        cpu_request_percent: { ...w.cpu_request_percent, peak: { raw: null, text: "Not defined", status: "undefined" } },
+      })),
+    });
+    await open("workloads");
+    const cpu = within(bodyRows()[0] as HTMLElement).getAllByRole("cell")[4] as HTMLElement;
+    const share = within(cpu).getByText("Not defined");
+    expect(share).toHaveClass("text-muted-fg");
+    expect(shapeOf(share)).toBe("text-neutral");
+    expect(share.parentElement).toHaveTextContent(`${t("status.undefined")}Not defined`);
+    expect(cpu).not.toHaveTextContent("of request");
   });
 
   it("language switch keeps the opened row", async () => {

@@ -394,7 +394,9 @@
       "currentReplicas": "Current replicas",
       "desiredReplicas": "Desired replicas",
       "cpuPercent": "CPU %",
-      "memoryPercent": "Memory %"
+      "memoryPercent": "Memory %",
+      "replicas": "Replicas",
+      "utilization": "Utilization"
     },
     "facts": {
       "pods": "Pods",

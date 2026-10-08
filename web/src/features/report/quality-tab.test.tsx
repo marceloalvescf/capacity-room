@@ -35,7 +35,29 @@ async function open(tab = "quality", search = "") {
 describe("data quality tab", () => {
   it("collection line", async () => {
     await open();
-    expect(await screen.findByText("Collected from 2026-07-15 17:30 to 2026-07-15 17:30, in 0:42")).toBeInTheDocument();
+    expect(await screen.findByText("Collected from 2026-07-15 14:30 to 2026-07-15 14:30, in 0:42")).toBeInTheDocument();
+  });
+
+  it("collection line in the zone of the report", async () => {
+    mock.views.set(`${id}:en`, { ...english, report: { ...english.report, timezone: "Asia/Tokyo" } });
+    await open();
+    expect(await screen.findByText("Collected from 2026-07-16 02:30 to 2026-07-16 02:30, in 0:42")).toBeInTheDocument();
+  });
+
+  it("an unavailable capability is critical", async () => {
+    mock.views.set(`${id}:en`, {
+      ...english,
+      quality: {
+        ...english.quality,
+        capabilities: english.quality.capabilities.map((c) => (c.name === "node_autoscaling" ? { ...c, state: "unavailable" as const } : c)),
+      },
+    });
+    await open();
+    const table = await screen.findByRole("table", { name: "Data quality" });
+    const row = within(table).getAllByRole("row").slice(1)[8] as HTMLElement;
+    const cell = within(row).getAllByRole("cell")[2] as HTMLElement;
+    expect(within(cell).getByText("Unavailable").closest("span.inline-flex")).toHaveClass("text-critical");
+    expect(cell.querySelector("svg polygon")).not.toBeNull();
   });
 
   it("capabilities in view order", async () => {
@@ -89,17 +111,29 @@ describe("data quality tab", () => {
     const warnings = await screen.findByRole("list", { name: "Warnings" });
     const items = within(warnings).getAllByRole("listitem");
     expect(items.map((item) => item.textContent)).toEqual([
-      "Ambiguous HPA configuration or target values were omitted.",
-      "The capacity evidence of the nodes is incomplete.",
+      "AttentionAmbiguous HPA configuration or target values were omitted.",
+      "AttentionThe capacity evidence of the nodes is incomplete.",
     ]);
     for (const item of items) {
       expect(item.querySelector("span.inline-flex")).toHaveClass("text-attention");
+      expect(within(item).getByText("Attention")).toHaveClass("sr-only");
     }
     const notices = within(screen.getByRole("list", { name: "Notices" })).getAllByRole("listitem");
     expect(notices.map((item) => item.textContent)).toEqual([
-      "1 workload was left out of the coverage inventory because it is scaled to zero.",
+      "Attention1 workload was left out of the coverage inventory because it is scaled to zero.",
     ]);
     expect(notices[0]?.querySelector("span.inline-flex")).toHaveClass("text-attention");
+  });
+
+  it("two messages of one code both show", async () => {
+    const [first] = english.quality.warnings;
+    mock.views.set(`${id}:en`, {
+      ...english,
+      quality: { ...english.quality, warnings: [first as (typeof english.quality.warnings)[number], { ...(first as (typeof english.quality.warnings)[number]), text: "A second warning." }] },
+    });
+    await open();
+    const warnings = await screen.findByRole("list", { name: "Warnings" });
+    expect(within(warnings).getAllByRole("listitem")).toHaveLength(2);
   });
 
   it("no warnings", async () => {

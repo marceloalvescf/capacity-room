@@ -1,4 +1,4 @@
-import { act, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { components } from "@/api/schema.gen";
@@ -146,6 +146,60 @@ describe("findings tab", () => {
     });
     expect(box).toHaveValue("consolidation");
     expect(items()).toHaveLength(1);
+  });
+
+  it("the search reads the shown scope name, the sentence and the action", async () => {
+    const quiet = english.findings.map((finding, index) =>
+      index === 10 ? { ...finding, action: "Review the headroom." } : finding,
+    );
+    mock.views.set(`${id}:en`, { ...english, findings: quiet });
+    const user = userEvent.setup();
+    await open();
+    await user.type(screen.getByRole("searchbox"), "cluster");
+    expect(items()).toHaveLength(0);
+    await user.clear(screen.getByRole("searchbox"));
+    await user.type(screen.getByRole("searchbox"), "Unknown pool");
+    expect(items()).toHaveLength(1);
+    expect(items()[0]).toHaveTextContent(sentenceOf(18));
+    await user.clear(screen.getByRole("searchbox"));
+    await user.type(screen.getByRole("searchbox"), "Review the headroom");
+    expect(items()).toHaveLength(1);
+  });
+
+  it("the detail shows the kind of a workload beside its scope", async () => {
+    await open("?finding=5");
+    expect(within(detail()).getByText("Workload · Deployment")).toBeInTheDocument();
+    cleanup();
+    await open("?finding=1");
+    expect(within(detail()).getByText("Namespace")).toBeInTheDocument();
+    expect(detail()).not.toHaveTextContent("·");
+  });
+
+  it("an empty severity shows no finding", async () => {
+    await open("?severity=");
+    expect(chips().map((c) => c.getAttribute("aria-pressed"))).toEqual(["false", "false", "false"]);
+    expect(items()).toHaveLength(0);
+    expect(screen.getByText("No finding matches these filters.")).toBeInTheDocument();
+  });
+
+  it("a severity list with a stranger presses the known one alone", async () => {
+    await open("?severity=critical,bogus");
+    expect(chips().map((c) => c.getAttribute("aria-pressed"))).toEqual(["true", "false", "false"]);
+    expect(items()).toHaveLength(9);
+  });
+
+  it("a stale scope is ignored", async () => {
+    await open("?scope=bogus");
+    expect(screen.getByRole("combobox", { name: "Scope" })).toHaveValue("");
+    expect(items()).toHaveLength(26);
+  });
+
+  it("a finding the filters hide gives way to the first one shown", async () => {
+    await open("?finding=19&severity=critical");
+    expect(items()).toHaveLength(9);
+    expect(items()[0]).toHaveAttribute("aria-pressed", "true");
+    expect(within(detail()).getByText(sentenceOf(0))).toBeInTheDocument();
+    expect(within(detail()).getByText(english.findings[0]?.action ?? "")).toBeInTheDocument();
   });
 
   it("default selection", async () => {

@@ -1,4 +1,4 @@
-import { act, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { components } from "@/api/schema.gen";
@@ -51,6 +51,30 @@ describe("overview tab", () => {
     expect(within(tiles[0] as HTMLElement).getByText("9")).toHaveClass("font-mono");
   });
 
+  it("a tile below the minimum severity keeps its count and no link", async () => {
+    mock.views.set(`${id}:en`, { ...english, min_severity: "attention" });
+    await open();
+    const links = screen.getAllByRole("link", { name: "See findings" });
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      expect.stringMatching(/findings\?severity=critical$/),
+      expect.stringMatching(/findings\?severity=attention$/),
+    ]);
+    const tiles = [...((links[0] as HTMLElement).parentElement?.parentElement?.children ?? [])] as HTMLElement[];
+    expect(tiles).toHaveLength(3);
+    const healthy = tiles[2] as HTMLElement;
+    expect(healthy).toHaveTextContent(/^Healthy.*7$/);
+    expect(within(healthy).getByText("7")).toHaveClass("font-mono");
+    expect(within(healthy).queryByRole("link")).toBeNull();
+
+    mock.views.set(`${id}:en`, { ...english, min_severity: "critical" });
+    cleanup();
+    await open();
+    const only = screen.getAllByRole("link", { name: "See findings" });
+    expect(only).toHaveLength(1);
+    const kept = [...((only[0] as HTMLElement).parentElement?.parentElement?.children ?? [])] as HTMLElement[];
+    expect(kept[1]).toHaveTextContent(/^Attention.*10$/);
+  });
+
   it("inventory", async () => {
     await open();
     const list = screen.getByLabelText("Inventory");
@@ -70,7 +94,7 @@ describe("overview tab", () => {
 
   it("action plan", async () => {
     await open();
-    const table = screen.getByRole("table");
+    const table = screen.getByRole("table", { name: "Prioritized action plan" });
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(english.recommendations.length);
     english.recommendations.forEach((recommendation, index) => {
@@ -101,6 +125,7 @@ describe("overview tab", () => {
     expect(details).toHaveTextContent(english.report.emitted_at_text);
     expect(details).toHaveTextContent("0.0.0-golden");
     expect(within(details).getByText("America/Sao_Paulo")).toHaveClass("font-mono");
+    expect(within(details).getByText(english.report.emitted_at_text)).toHaveClass("font-mono");
   });
 
   it("language switch keeps the place", async () => {

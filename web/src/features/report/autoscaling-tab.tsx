@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
 import type { ViewHPA } from "./api";
 import { DataTable, severityRank, type ReportColumn } from "./data-table";
-import { Counts, matchHPA, RowFindings, StatGrid } from "./pieces";
+import { Counts, matchHPA, RowFindings, StatGrid, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewHPA) => `${row.namespace}/${row.name}`;
@@ -16,6 +16,7 @@ function Opened({ row }: { row: ViewHPA }) {
   return (
     <div className="flex flex-col gap-4">
       <StatGrid
+        label={t("report.stat.replicas")}
         rows={[
           { label: t("report.stat.currentReplicas"), stat: row.current },
           { label: t("report.stat.desiredReplicas"), stat: row.desired },
@@ -64,7 +65,7 @@ export function AutoscalingTab() {
         header: t("report.column.replicaRange"),
         cell: (row) => (
           <span className="font-mono">
-            {row.spec_min.text} / {row.spec_max.text}
+            <ValueText value={row.spec_min} /> / <ValueText value={row.spec_max} />
           </span>
         ),
         sortValue: (row) => row.spec_min.raw,
@@ -73,7 +74,11 @@ export function AutoscalingTab() {
       {
         id: "peak",
         header: t("report.column.replicasPeak"),
-        cell: (row) => <span className="font-mono">{row.current.peak.text}</span>,
+        cell: (row) => (
+          <span className="font-mono">
+            <ValueText value={row.current.peak} />
+          </span>
+        ),
         sortValue: (row) => row.current.peak.raw,
         align: "end",
       },

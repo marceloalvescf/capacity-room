@@ -78,6 +78,7 @@ describe("autoscaling tab", () => {
     expect(web[4]).toHaveTextContent("4");
     const dup = within(rowOf("HPAs", "dup")).getAllByRole("cell");
     expect(dup[3]).toHaveTextContent("1 / Unavailable");
+    expect(within(dup[3] as HTMLElement).getByText("Unavailable")).toHaveClass("text-muted-fg");
   });
 
   it("hpa opened", async () => {
@@ -85,7 +86,7 @@ describe("autoscaling tab", () => {
     const { router } = await open("autoscaling");
     await user.click(screen.getByRole("button", { name: "Show the details of web" }));
     expect(location(router)).toBe(`/reports/${id}/autoscaling?open=payments%2Fweb`);
-    const grid = screen.getByRole("table", { name: "" });
+    const grid = screen.getByRole("table", { name: "Replicas" });
     expect(within(grid).getAllByRole("rowheader").map((cell) => cell.textContent)).toEqual([
       "Current replicas",
       "Desired replicas",
@@ -127,13 +128,57 @@ describe("nodes tab", () => {
       "Memory capacity",
       "Memory allocatable",
     ]);
-    const grids = screen.getAllByRole("table", { name: "" });
-    expect(within(grids[0] as HTMLElement).getAllByRole("rowheader").map((cell) => cell.textContent)).toEqual([
+    const grid = screen.getByRole("table", { name: "Utilization" });
+    expect(within(grid).getAllByRole("rowheader").map((cell) => cell.textContent)).toEqual([
       "CPU %",
       "Memory %",
     ]);
     const links = within(screen.getByRole("list", { name: "Findings" })).getAllByRole("link");
     expect(links.map((link) => link.getAttribute("href"))).toEqual([0, 9].map((n) => `/reports/${id}/findings?finding=${String(n)}`));
+  });
+
+  it("the facts of a node with no allocatable show the muted placeholder", async () => {
+    await open("nodes", "?open=orphan");
+    const facts = screen.getByText("CPU allocatable", { selector: "dt" }).closest("dl") as HTMLElement;
+    const placeholders = within(facts).getAllByText("Unavailable");
+    expect(placeholders.length).toBeGreaterThan(0);
+    for (const placeholder of placeholders) {
+      expect(placeholder).toHaveClass("text-muted-fg");
+    }
+  });
+
+  it("the state of a node", async () => {
+    const node = english.nodes[0] as View["nodes"][number];
+    const nodes = [
+      { ...node, name: "n-unknown", ready: null, schedulable: null },
+      { ...node, name: "n-ready", ready: true, schedulable: null },
+      { ...node, name: "n-down", ready: false, schedulable: null },
+      { ...node, name: "n-unknown-ready", ready: null, schedulable: true },
+    ];
+    mock.views.set(`${id}:en`, { ...english, nodes });
+    await open("nodes");
+    const state = (name: string) => within(rowOf("Nodes", name)).getAllByRole("cell")[3];
+    expect(state("n-unknown")).toHaveTextContent(/^Unknown$/);
+    expect(state("n-ready")).toHaveTextContent(/^Ready$/);
+    expect(state("n-down")).toHaveTextContent(/^Not ready$/);
+    expect(state("n-unknown-ready")).toHaveTextContent(/^Unknown$/);
+  });
+
+  it("the search of nodes finds the shown pool word", async () => {
+    const user = userEvent.setup();
+    await open("nodes");
+    await user.type(screen.getByRole("searchbox", { name: "Search nodes" }), "unknown pool");
+    const rows = within(screen.getByRole("table", { name: "Nodes" })).getAllByRole("row").slice(1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("orphan");
+  });
+
+  it("no pool leaves the empty word", async () => {
+    mock.views.set(`${id}:en`, { ...english, nodepools: [] });
+    await open("nodes");
+    const heading = screen.getByRole("heading", { name: "Node pools" });
+    expect(within(heading.parentElement as HTMLElement).getByText("No rows in this report.")).toBeInTheDocument();
+    expect(screen.queryByRole("table", { name: "Node pools" })).toBeNull();
   });
 
   it("copy", async () => {
@@ -161,13 +206,23 @@ describe("nodes tab", () => {
     expect(within(rows[1] as HTMLElement).getByRole("button", { name: "Copy pool-a" })).toBeInTheDocument();
     expect(within(rows[2] as HTMLElement).queryByRole("button")).not.toBeInTheDocument();
     expect(within(rows[2] as HTMLElement).getByText("Unknown pool")).toBeInTheDocument();
-    const counts = rows.map((row) => within(row).getAllByRole("cell")[2]);
-    expect(counts.map((cell) => cell?.textContent)).toEqual([
-      `1${firstNode}`,
-      "2pool-a-1, pool-a-2",
-      "1orphan",
+    const counts = rows.map((row) => within(row).getAllByRole("cell")[2] as HTMLElement);
+    expect(counts.map((cell) => cell.querySelector("span")?.textContent)).toEqual(["1", "2", "1"]);
+    expect(counts.map((cell) => within(cell).getAllByRole("listitem").map((item) => item.textContent))).toEqual([
+      [firstNode],
+      ["pool-a-1", "pool-a-2"],
+      ["orphan"],
     ]);
-    expect(counts[1]?.querySelector(".font-mono")).not.toBeNull();
+    expect(within(counts[1] as HTMLElement).getAllByRole("listitem")[0]).toHaveClass("font-mono");
+  });
+});
+
+describe("words of the autoscaling and nodes tabs in portuguese", () => {
+  it("name the replicas and the coverage in the masculine", () => {
+    expect(i18next.t("report.stat.desiredReplicas", { lng: "pt-BR" })).toBe("Replicas desejados");
+    expect(i18next.t("hpaCoverage.unknown", { lng: "pt-BR" })).toBe("Desconhecido");
+    expect(i18next.t("report.stat.replicas", { lng: "pt-BR" })).toBe("Replicas");
+    expect(i18next.t("report.stat.utilization", { lng: "pt-BR" })).toBe("Utilização");
   });
 });
 

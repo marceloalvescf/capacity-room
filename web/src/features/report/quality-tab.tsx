@@ -1,7 +1,7 @@
 import { useCallback, useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StatusMark, type Status } from "@/components/status-mark";
-import { formatElapsed, formatTime } from "@/lib/format";
+import { formatElapsed, formatTimeIn } from "@/lib/format";
 import type { ViewCapability, ViewMessage } from "./api";
 import { DataTable, type ReportColumn } from "./data-table";
 import { useView } from "./report-page";
@@ -9,7 +9,7 @@ import { useView } from "./report-page";
 const stateStatus: Record<ViewCapability["state"], Status> = {
   available: "healthy",
   partial: "attention",
-  unavailable: "unavailable",
+  unavailable: "critical",
 };
 
 const rowKey = (row: ViewCapability) => row.name;
@@ -51,8 +51,10 @@ function Messages({
         <p className="text-sm text-muted-fg">{empty}</p>
       ) : (
         <ul aria-labelledby={heading} className="flex flex-col gap-2 text-sm">
-          {messages.map((message) => (
-            <li key={message.code}><StatusMark status="attention" label={message.text} /></li>
+          {messages.map((message, index) => (
+            <li key={index}>
+              <StatusMark status="attention" label={message.text} />
+            </li>
           ))}
         </ul>
       )}
@@ -62,7 +64,7 @@ function Messages({
 
 export function QualityTab() {
   const { t } = useTranslation();
-  const { quality } = useView();
+  const { quality, report } = useView();
   const elapsed = new Date(quality.collection_completed_at).getTime() - new Date(quality.collection_started_at).getTime();
   const searchText = useCallback(
     (row: ViewCapability) => `${t(`capability.${row.name}`)} ${t(`capabilityState.${row.state}`)} ${t(`strategy.${row.strategy}`)} ${row.remark}`,
@@ -98,8 +100,8 @@ export function QualityTab() {
     <div className="flex flex-col gap-6">
       <p className="text-sm">
         {t("report.quality.collected", {
-          start: formatTime(quality.collection_started_at),
-          end: formatTime(quality.collection_completed_at),
+          start: formatTimeIn(quality.collection_started_at, report.timezone),
+          end: formatTimeIn(quality.collection_completed_at, report.timezone),
           elapsed: formatElapsed(elapsed),
         })}
       </p>

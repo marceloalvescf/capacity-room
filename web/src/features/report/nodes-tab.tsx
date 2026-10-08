@@ -1,17 +1,25 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
-import type { ViewNode } from "./api";
+import type { ViewNode, ViewNodepool, ViewValue } from "./api";
 import { CopyName } from "./copy-name";
 import { DataTable, severityRank, type ReportColumn } from "./data-table";
-import { Facts, matchNode, PeakCell, RowFindings, StatGrid } from "./pieces";
+import { Facts, matchNode, PeakCell, RowFindings, StatGrid, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewNode) => row.name;
 const rowName = (row: ViewNode) => row.name;
-const searchText = (row: ViewNode) => `${row.name} ${row.pool}`;
 const status = (row: ViewNode) => row.status;
+
+function FactValue({ value }: { value: ViewValue }) {
+  return (
+    <span className="font-mono">
+      <ValueText value={value} />
+    </span>
+  );
+}
 
 function Opened({ row }: { row: ViewNode }) {
   const { t } = useTranslation();
@@ -27,16 +35,14 @@ function Opened({ row }: { row: ViewNode }) {
       </p>
       <Facts
         items={[
-          { label: t("report.facts.cpuCapacity"), value: <span className="font-mono">{row.cpu_capacity.text}</span> },
-          { label: t("report.facts.cpuAllocatable"), value: <span className="font-mono">{row.cpu_allocatable.text}</span> },
-          { label: t("report.facts.memoryCapacity"), value: <span className="font-mono">{row.memory_capacity.text}</span> },
-          {
-            label: t("report.facts.memoryAllocatable"),
-            value: <span className="font-mono">{row.memory_allocatable.text}</span>,
-          },
+          { label: t("report.facts.cpuCapacity"), value: <FactValue value={row.cpu_capacity} /> },
+          { label: t("report.facts.cpuAllocatable"), value: <FactValue value={row.cpu_allocatable} /> },
+          { label: t("report.facts.memoryCapacity"), value: <FactValue value={row.memory_capacity} /> },
+          { label: t("report.facts.memoryAllocatable"), value: <FactValue value={row.memory_allocatable} /> },
         ]}
       />
       <StatGrid
+        label={t("report.stat.utilization")}
         rows={[
           { label: t("report.stat.cpuPercent"), stat: row.cpu_usage_percent },
           { label: t("report.stat.memoryPercent"), stat: row.memory_usage_percent },
@@ -49,9 +55,72 @@ function Opened({ row }: { row: ViewNode }) {
 
 const renderOpened = (row: ViewNode) => <Opened row={row} />;
 
+// The readiness of a node and, when it is known, whether it takes new pods.
+function stateText(row: ViewNode, t: TFunction): string {
+  if (row.ready === null) {
+    return t("report.node.unknownState");
+  }
+  const ready = t(row.ready ? "report.node.ready" : "report.node.notReady");
+  if (row.schedulable === null) {
+    return ready;
+  }
+  return `${ready} · ${t(row.schedulable ? "report.node.schedulable" : "report.node.unschedulable")}`;
+}
+
+function Pools({ pools }: { pools: ViewNodepool[] }) {
+  const { t } = useTranslation();
+  if (pools.length === 0) {
+    return <p className="text-sm text-muted-fg">{t("report.table.empty")}</p>;
+  }
+  return (
+    <div className="rounded-md border border-border bg-surface text-surface-fg">
+      <table aria-label={t("report.pools.title")} className="w-full text-sm">
+        <thead className="border-b border-border text-muted-fg">
+          <tr>
+            <th scope="col" className="px-3 py-2 text-left font-medium">
+              {t("report.column.nodepool")}
+            </th>
+            <th scope="col" className="px-3 py-2 text-left font-medium">
+              {t("report.column.confidence")}
+            </th>
+            <th scope="col" className="px-3 py-2 text-left font-medium">
+              {t("report.column.nodes")}
+            </th>
+          </tr>
+        </thead>
+        <tbody className="[&>tr:not(:last-child)>td]:border-b [&>tr>td]:border-border">
+          {pools.map((pool) => (
+            <tr key={pool.name}>
+              <td className="px-3 py-2 align-top">
+                {pool.name === "unknown" ? t("report.node.unknownPool") : <CopyName name={pool.name} />}
+              </td>
+              <td className="px-3 py-2 align-top">{t(`confidence.${pool.confidence}`)}</td>
+              <td className="px-3 py-2 align-top">
+                <span className="font-mono">{pool.nodes.length}</span>
+                <ul className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted-fg">
+                  {pool.nodes.map((name) => (
+                    <li key={name} className="font-mono">
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function NodesTab() {
   const { t } = useTranslation();
   const { nodes, nodepools } = useView();
+  const unknownPool = t("report.node.unknownPool");
+  const searchText = useCallback(
+    (row: ViewNode) => `${row.name} ${row.pool === "unknown" ? unknownPool : row.pool}`,
+    [unknownPool],
+  );
   const columns = useMemo<ReportColumn<ViewNode>[]>(
     () => [
       {
@@ -78,9 +147,7 @@ export function NodesTab() {
         header: t("report.column.state"),
         cell: (row) => (
           <span className={cn(row.ready === false && "text-attention")}>
-            {row.ready === null || row.schedulable === null
-              ? t("report.node.unknownState")
-              : `${t(row.ready ? "report.node.ready" : "report.node.notReady")} · ${t(row.schedulable ? "report.node.schedulable" : "report.node.unschedulable")}`}
+            {stateText(row, t)}
           </span>
         ),
       },
@@ -116,37 +183,7 @@ export function NodesTab() {
       />
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-semibold">{t("report.pools.title")}</h2>
-        <div className="rounded-md border border-border bg-surface text-surface-fg">
-          <table aria-label={t("report.pools.title")} className="w-full text-sm">
-            <thead className="border-b border-border text-muted-fg">
-              <tr>
-                <th scope="col" className="px-3 py-2 text-left font-medium">
-                  {t("report.column.nodepool")}
-                </th>
-                <th scope="col" className="px-3 py-2 text-left font-medium">
-                  {t("report.column.confidence")}
-                </th>
-                <th scope="col" className="px-3 py-2 text-left font-medium">
-                  {t("report.column.nodes")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="[&>tr:not(:last-child)>td]:border-b [&>tr>td]:border-border">
-              {nodepools.map((pool) => (
-                <tr key={pool.name}>
-                  <td className="px-3 py-2 align-top">
-                    {pool.name === "unknown" ? t("report.node.unknownPool") : <CopyName name={pool.name} />}
-                  </td>
-                  <td className="px-3 py-2 align-top">{t(`confidence.${pool.confidence}`)}</td>
-                  <td className="px-3 py-2 align-top">
-                    <span className="font-mono">{pool.nodes.length}</span>
-                    <span className="ml-2 font-mono text-xs text-muted-fg">{pool.nodes.join(", ")}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Pools pools={nodepools} />
       </section>
     </div>
   );

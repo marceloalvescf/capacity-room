@@ -42,16 +42,14 @@ export function Counts({ label, items }: { label: string; items: { label: string
 export function PeakCell({ peak, share, word }: { peak: ViewValue; share: ViewValue; word: "request" | "requested" }) {
   const { t } = useTranslation();
   const text =
-    word === "request"
-      ? t("report.share.request", { value: share.text })
-      : t("report.share.requested", { value: share.text });
+    share.raw === null ? share.text : t(word === "request" ? "report.share.request" : "report.share.requested", { value: share.text });
   return (
     <div className="flex flex-col gap-0.5">
       <span className="font-mono">
         <ValueText value={peak} />
       </span>
       <span className="font-mono text-xs text-muted-fg">
-        {share.raw === null ? share.text : <ValueText value={{ ...share, text }} />}
+        <ValueText value={{ ...share, text }} />
       </span>
     </div>
   );
@@ -59,11 +57,19 @@ export function PeakCell({ peak, share, word }: { peak: ViewValue; share: ViewVa
 
 const statistics = ["average", "minimum", "peak", "current"] as const;
 
-// The four statistics of each measure, one measure to a row.
-export function StatGrid({ title, rows }: { title?: string; rows: { label: string; stat: ViewStatistic }[] }) {
+// The four statistics of each measure, one measure to a row. A grid with no visible title is named by its label.
+export function StatGrid({
+  title,
+  label,
+  rows,
+}: {
+  title?: string;
+  label?: string;
+  rows: { label: string; stat: ViewStatistic }[];
+}) {
   const { t } = useTranslation();
   return (
-    <table aria-label={title} className="w-full text-sm">
+    <table aria-label={title ?? label} className="w-full text-sm">
       <thead className="border-b border-border text-muted-fg">
         <tr>
           {title === undefined ? (

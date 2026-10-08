@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { formatDate, formatElapsed, formatTime } from "./format";
+import { formatDate, formatElapsed, formatTime, formatTimeIn } from "./format";
 
 const zone = process.env.TZ;
 afterEach(() => {
@@ -17,6 +17,16 @@ describe("format", () => {
     expect(formatDate("2026-11-06T12:00:00Z")).toBe("2026-11-06");
     expect(formatElapsed(42_000)).toBe("0:42");
     expect(formatElapsed(3_725_000)).toBe("1:02:05");
+  });
+
+  it("shows the time in a named zone whatever the browser's zone is", () => {
+    for (const browser of ["UTC", "Asia/Tokyo"]) {
+      process.env.TZ = browser;
+      expect(formatTimeIn("2026-07-15T17:30:00Z", "America/Sao_Paulo")).toBe("2026-07-15 14:30");
+      expect(formatTimeIn("2026-07-15T17:30:00Z", "Asia/Tokyo")).toBe("2026-07-16 02:30");
+      expect(formatTimeIn("2026-07-15T00:05:00Z", "UTC")).toBe("2026-07-15 00:05");
+    }
+    expect(formatTimeIn("not a date", "UTC")).toBe("—");
   });
 
   it("clamps an elapsed time that is negative or not a number to 0:00", () => {
