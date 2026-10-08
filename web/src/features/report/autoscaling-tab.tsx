@@ -56,7 +56,7 @@ export function AutoscalingTab() {
           row.situation_status === null ? (
             row.situation
           ) : (
-            <StatusMark status={row.situation_status} label={row.situation} />
+            <StatusMark status={row.situation_status} label={row.situation} withStatus />
           ),
         sortValue: (row) => severityRank[row.situation_status ?? ""] ?? 3,
       },

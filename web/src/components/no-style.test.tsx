@@ -167,7 +167,7 @@ function declared(node: Element): string[] {
 }
 
 // Elements with a style attribute, leaving out what Radix sets through the DOM itself: the popper wrapper element, the
-// focus guard elements, a layer's own `--radix-` custom properties, and the body while its style holds only what the
+// focus guard elements, a `--radix-` custom property inside a popper wrapper, and the body while its style holds only what the
 // scroll lock sets. A style on anything else inside a layer is reported.
 function styled(): Element[] {
   return Array.from(document.querySelectorAll("[style]")).filter((node) => {
@@ -178,7 +178,7 @@ function styled(): Element[] {
     if (node === document.body) {
       return names.some((name) => name !== "pointer-events");
     }
-    return !(names.length > 0 && names.every((name) => name.startsWith("--radix-")));
+    return !(node.closest("[data-radix-popper-content-wrapper]") !== null && names.length > 0 && names.every((name) => name.startsWith("--radix-")));
   });
 }
 

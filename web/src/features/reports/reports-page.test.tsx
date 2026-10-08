@@ -78,6 +78,16 @@ describe("report list", () => {
     expect(screen.queryByRole("button", { name: t("reports.loadMore") })).not.toBeInTheDocument();
   });
 
+  it("a workflow mark reads its own word and no severity", async () => {
+    mock.reports = [report({ pdfs: [{ language: "en", status: "ready", failure_code: null }] })];
+    await renderApp("/reports");
+    await screen.findByRole("heading", { level: 1, name: t("reports.title") });
+    const row = await waitFor(() => rowOf(mock.reports[0]?.id ?? ""));
+    expect(row).toHaveTextContent(t("reportStatus.collected"));
+    expect(row).not.toHaveTextContent(t("status.healthy"));
+    expect(row).not.toHaveTextContent(t("status.attention"));
+  });
+
   it("polling keeps the loaded pages", async () => {
     mock.reports = many(60, (n) => (n === 3 ? { status: "running", phase: "collecting", completed_at: null } : {}));
     const user = userEvent.setup({

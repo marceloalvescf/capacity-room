@@ -49,8 +49,8 @@ export function ReportPage() {
   if (report.isPending || view.isPending) {
     return <h1 className="text-xl font-semibold">{t("progress.screen")}</h1>;
   }
-  // A view that failed to reload leaves the one already held in place.
-  const failed = (view.data === undefined ? view.error : null) ?? report.error;
+  // A view or a report that failed to reload leaves the one already held in place.
+  const failed = (view.data === undefined ? view.error : null) ?? (report.data === undefined ? report.error : null);
   if (failed !== null) {
     return (
       <div className="flex flex-col items-start gap-3">

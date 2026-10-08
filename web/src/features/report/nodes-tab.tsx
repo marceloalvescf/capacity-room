@@ -30,7 +30,7 @@ function Opened({ row }: { row: ViewNode }) {
         {row.reason_status === null ? (
           <span>{row.reason}</span>
         ) : (
-          <StatusMark status={row.reason_status} label={row.reason} />
+          <StatusMark status={row.reason_status} label={row.reason} withStatus />
         )}
       </p>
       <Facts

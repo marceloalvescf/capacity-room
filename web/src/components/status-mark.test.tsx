@@ -37,7 +37,7 @@ describe("status mark", () => {
 describe("status mark label", () => {
   it("status mark prints its label", async () => {
     await i18next.changeLanguage("en");
-    const { container } = render(<StatusMark status="undefined" label="Running" />);
+    const { container } = render(<StatusMark status="undefined" label="Running" withStatus />);
     expect(container.querySelector("svg + span")?.textContent).toBe("Undefined");
     expect(container.querySelector("svg + span")).toHaveClass("sr-only");
     expect(container.querySelector("span.inline-flex > span:last-child")?.textContent).toBe("Running");

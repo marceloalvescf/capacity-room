@@ -53,7 +53,7 @@ function Messages({
         <ul aria-labelledby={heading} className="flex flex-col gap-2 text-sm">
           {messages.map((message, index) => (
             <li key={index}>
-              <StatusMark status="attention" label={message.text} />
+              <StatusMark status="attention" label={message.text} withStatus />
             </li>
           ))}
         </ul>
@@ -81,7 +81,7 @@ export function QualityTab() {
       {
         id: "state",
         header: t("report.column.state"),
-        cell: (row) => <StatusMark status={stateStatus[row.state]} label={t(`capabilityState.${row.state}`)} />,
+        cell: (row) => <StatusMark status={stateStatus[row.state]} label={t(`capabilityState.${row.state}`)} withStatus />,
       },
       {
         id: "source",

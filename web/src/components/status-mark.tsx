@@ -36,14 +36,15 @@ export function StatusShape({ status }: { status: Status }) {
   );
 }
 
-export function StatusMark({ status, label }: { status: Status; label?: string }) {
+// With a label of its own, `withStatus` adds the status word for screen readers, as the values of the report view do.
+export function StatusMark({ status, label, withStatus = false }: { status: Status; label?: string; withStatus?: boolean }) {
   const { t } = useTranslation();
   return (
     <span className={cn("inline-flex items-center gap-1.5", colour[status])}>
       <svg aria-hidden="true" viewBox="0 0 12 12" className="size-3 shrink-0">
         <Shape status={status} />
       </svg>
-      {label === undefined ? null : <span className="sr-only">{t(`status.${status}`)}</span>}
+      {label === undefined || !withStatus ? null : <span className="sr-only">{t(`status.${status}`)}</span>}
       <span className={cn(status === "critical" && "font-bold")}>{label ?? t(`status.${status}`)}</span>
     </span>
   );

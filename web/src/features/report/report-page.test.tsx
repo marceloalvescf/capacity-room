@@ -237,4 +237,23 @@ describe("report screen", () => {
     await renderApp(`/reports/${id}/overview`);
     expect(await screen.findByText(t("progress.notFound"))).toBeInTheDocument();
   });
+
+  it("keeps the tabs when the report fails on a later fetch", async () => {
+    const { queryClient } = await open();
+    server.use(http.get(`${window.location.origin}/api/v1/reports/:id`, () => failure(500, "INTERNAL_ERROR")));
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+    expect(screen.getByRole("navigation", { name: t("report.tabs") })).toBeInTheDocument();
+    expect(screen.queryByText(t("error.INTERNAL_ERROR"))).not.toBeInTheDocument();
+  });
+
+  it("a report that goes missing on a later fetch takes its screen", async () => {
+    const { queryClient } = await open();
+    server.use(http.get(`${window.location.origin}/api/v1/reports/:id`, () => failure(404, "REPORT_NOT_FOUND")));
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+    expect(await screen.findByText(t("progress.notFound"))).toBeInTheDocument();
+  });
 });
