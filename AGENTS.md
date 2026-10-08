@@ -600,14 +600,16 @@ redactor the moment the settings are loaded, before the pool opens.
   stack runs one collection: the reports spec requests one report and
   Playwright never retries. The target stops the fake and fails unless its
   log holds `remaining: 1`, the one answer of `direct-complete` that no run
-  asks, pinned by `TestDirectCompleteLeavesTheRecordedAnswerUnused`. The spec fails on any CSP violation and on any
-  axe finding. The fixtures of `deploy/platform/` serve this stack alone.
+  asks, pinned by `TestDirectCompleteLeavesTheRecordedAnswerUnused`. The
+  spec fails on any CSP violation and on any axe finding. The fixtures of
+  `deploy/platform/` serve this stack alone.
 - **The report screen is `/reports/:id/:tab`,** with seven tabs: overview,
   findings, namespaces, workloads, autoscaling, nodes, and quality. Its frame
   reads `GET /reports/{id}` and `GET /reports/{id}/view?lang=`. The view has
   its own query key and stays on screen across a language switch for the same
   report only. A later failed fetch of either never replaces a screen that is
-  held, except a 404, a 410, or a 409.
+  held, except a 404 or a 410 of either, or a 409 of the view, which opens
+  the progress page.
 - **The closed sets of the view are contract enums.** The `View*` enums of
   `api/openapi.yaml` are excluded from the Go generation and held equal to
   the Go registries by `TestViewEnumsEqualTheRegistries`, so the frontend's
