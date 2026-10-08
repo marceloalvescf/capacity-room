@@ -1,4 +1,4 @@
-import { act, screen, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -146,5 +146,38 @@ describe("report screen", () => {
     const nav = await screen.findByRole("navigation", { name: "Seções do relatório" });
     expect(await within(nav).findByRole("link", { name: "Qualidade dos dados" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Plano de ação priorizado" })).toBeInTheDocument();
+    expect(screen.getByText(portuguese.report.period_text)).toBeInTheDocument();
+  });
+
+  it("does not keep the view of another report while one loads", async () => {
+    const other = "9c1c1f6a-7f0a-4c11-8d57-6f6f6c1f0a02";
+    const second = { ...english, report: { ...english.report, period_text: "the second period" } };
+    mock.reports = [report(), report({ id: other })];
+    const { router } = await open();
+    expect(screen.getByText(english.report.period_text)).toBeInTheDocument();
+    let release: () => void = () => undefined;
+    const late = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(`${window.location.origin}/api/v1/reports/:id/view`, async () => {
+        await late;
+        return HttpResponse.json(second);
+      }),
+    );
+    await act(async () => {
+      await router.navigate(`/reports/${other}/overview`);
+    });
+    // The report itself has answered; only its view is late.
+    await waitFor(() => {
+      expect(mock.calls.some((call) => call.path === `/reports/${other}`)).toBe(true);
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(screen.queryByText(english.report.period_text)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: t("progress.screen") })).toBeInTheDocument();
+    release();
+    expect(await screen.findByText("the second period")).toBeInTheDocument();
   });
 });
