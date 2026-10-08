@@ -339,11 +339,59 @@
       "minSeverity": "Minimum severity",
       "issued": "Issued",
       "version": "Generator version"
+    },
+    "table": {
+      "rows": "Rows: {{count}}",
+      "empty": "No rows in this report.",
+      "noMatch": "No row matches the search.",
+      "open": "Show the details of {{name}}",
+      "close": "Hide the details of {{name}}"
+    },
+    "search": {
+      "namespaces": "Search namespaces",
+      "workloads": "Search workloads"
+    },
+    "column": {
+      "namespace": "Namespace",
+      "workload": "Workload",
+      "status": "Status",
+      "pods": "Pods",
+      "cpuPeak": "CPU · Peak",
+      "memoryPeak": "Memory · Peak"
+    },
+    "share": {
+      "request": "{{value}} of request",
+      "requested": "{{value}} requested"
+    },
+    "stat": {
+      "average": "Average",
+      "minimum": "Minimum",
+      "peak": "Peak",
+      "current": "Current",
+      "cpu": "CPU",
+      "memory": "Memory",
+      "usage": "Usage",
+      "request": "Request",
+      "limit": "Limit",
+      "requestPercent": "% Request",
+      "limitPercent": "% Limit"
+    },
+    "facts": {
+      "pods": "Pods",
+      "hpa": "HPA",
+      "values": "Values",
+      "measured": "Measured",
+      "approximate": "Approximate"
     }
   },
   "confidence": {
     "exact": "Exact",
     "inferred": "Inferred",
+    "unknown": "Unknown"
+  },
+  "hpaCoverage": {
+    "covered": "Covered by an HPA",
+    "uncovered": "No HPA",
     "unknown": "Unknown"
   }
 }

@@ -1,0 +1,172 @@
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { RouterProvider, createMemoryRouter } from "react-router";
+import { describe, expect, it } from "vitest";
+import "@/i18n/i18n";
+import { DataTable, type ReportColumn } from "./data-table";
+
+interface Row {
+  key: string;
+  name: string;
+  status: string;
+  cpu: number | null;
+  pods: number;
+}
+
+const columns: ReportColumn<Row>[] = [
+  { id: "name", header: "Name", cell: (row) => row.name, sortValue: (row) => row.name },
+  { id: "cpu", header: "CPU", cell: (row) => (row.cpu === null ? "n/a" : String(row.cpu)), sortValue: (row) => row.cpu, align: "end" },
+  { id: "pods", header: "Pods", cell: (row) => String(row.pods), sortValue: (row) => row.pods, align: "end" },
+  { id: "plain", header: "Plain", cell: () => "x" },
+];
+
+const mixed: Row[] = [
+  { key: "healthy-b", name: "b", status: "healthy", cpu: 3, pods: 1 },
+  { key: "critical-c", name: "c", status: "critical", cpu: null, pods: 2 },
+  { key: "attention-a", name: "a", status: "attention", cpu: 1, pods: 3 },
+  { key: "critical-a", name: "a", status: "critical", cpu: 2, pods: 4 },
+];
+
+const named: Row[] = [
+  { key: "web-1", name: "payments-web", status: "healthy", cpu: 1, pods: 1 },
+  { key: "api-1", name: "api-gateway", status: "healthy", cpu: 2, pods: 2 },
+  { key: "db-1", name: "db", status: "healthy", cpu: 3, pods: 3 },
+];
+
+function mount(rows: Row[], path = "/", defaultOrder: "status" | "view" = "status") {
+  const router = createMemoryRouter(
+    [
+      {
+        path: "*",
+        element: (
+          <DataTable
+            label="Things"
+            searchLabel="Search things"
+            rows={rows}
+            rowKey={(row) => row.key}
+            rowName={(row) => row.name}
+            columns={columns}
+            searchText={(row) => row.name}
+            renderOpened={(row) => <p>{`details of ${row.key}`}</p>}
+            defaultOrder={defaultOrder}
+            status={(row) => row.status}
+          />
+        ),
+      },
+    ],
+    { initialEntries: [path] },
+  );
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
+function order(): string[] {
+  const rows = within(screen.getByRole("table", { name: "Things" })).getAllByRole("row").slice(1);
+  return rows.filter((row) => within(row).getAllByRole("cell").length > 1).map((row) => within(row).getAllByRole("cell")[1]?.textContent ?? "");
+}
+
+function search(router: ReturnType<typeof mount>): string {
+  return router.state.location.search;
+}
+
+describe("data table", () => {
+  it("default order", () => {
+    mount(mixed);
+    const rows = within(screen.getByRole("table", { name: "Things" })).getAllByRole("row").slice(1);
+    expect(rows.map((row) => within(row).getAllByRole("cell").slice(1, 3).map((cell) => cell.textContent).join("|"))).toEqual([
+      "a|2",
+      "c|n/a",
+      "a|1",
+      "b|3",
+    ]);
+  });
+
+  it("the view's order", () => {
+    mount(mixed, "/", "view");
+    expect(order()).toEqual(["b", "c", "a", "a"]);
+  });
+
+  it("sort by a column", async () => {
+    const router = mount(mixed);
+    const header = screen.getByRole("columnheader", { name: "CPU" });
+    expect(header).not.toHaveAttribute("aria-sort");
+    await userEvent.click(within(header).getByRole("button", { name: "CPU" }));
+    expect(header).toHaveAttribute("aria-sort", "ascending");
+    expect(search(router)).toBe("?sort=cpu.asc");
+    expect(order()).toEqual(["a", "a", "b", "c"]);
+    await userEvent.click(within(header).getByRole("button", { name: "CPU" }));
+    expect(header).toHaveAttribute("aria-sort", "descending");
+    expect(search(router)).toBe("?sort=cpu.desc");
+    expect(order()).toEqual(["b", "a", "a", "c"]);
+    expect(within(screen.getByRole("columnheader", { name: "Plain" })).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("nulls sort last", async () => {
+    mount(mixed, "/?sort=cpu.asc");
+    const cells = () =>
+      within(screen.getByRole("table", { name: "Things" }))
+        .getAllByRole("row")
+        .slice(1)
+        .map((row) => within(row).getAllByRole("cell")[2] as HTMLElement);
+    expect(cells().map((cell) => cell.textContent)).toEqual(["1", "2", "3", "n/a"]);
+    await userEvent.click(screen.getByRole("button", { name: "CPU" }));
+    expect(cells().map((cell) => cell.textContent)).toEqual(["3", "2", "1", "n/a"]);
+  });
+
+  it("search", async () => {
+    const router = mount(named);
+    await userEvent.type(screen.getByRole("searchbox", { name: "Search things" }), "WEB");
+    expect(order()).toEqual(["payments-web"]);
+    expect(screen.getByText("Rows: 1")).toBeInTheDocument();
+    expect(search(router)).toBe("?q=WEB");
+  });
+
+  it("no match and empty table", async () => {
+    mount(named);
+    expect(screen.getByText("Rows: 3")).toBeInTheDocument();
+    await userEvent.type(screen.getByRole("searchbox", { name: "Search things" }), "zzz");
+    expect(screen.getByText("No row matches the search.")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("empty table", () => {
+    mount([]);
+    expect(screen.getByText("No rows in this report.")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("open one row", async () => {
+    const router = mount(named, "/", "view");
+    const first = screen.getByRole("button", { name: "Show the details of payments-web" });
+    expect(first).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(first);
+    expect(screen.getByRole("button", { name: "Hide the details of payments-web" })).toHaveAttribute("aria-expanded", "true");
+    expect(search(router)).toBe("?open=web-1");
+    const opened = screen.getByText("details of web-1").closest("td") as HTMLElement;
+    expect(opened).toHaveAttribute("colspan", String(columns.length + 1));
+    expect(opened.closest("tr")).toHaveClass("bg-bg");
+    expect(screen.getByRole("button", { name: "Hide the details of payments-web" }).closest("tr")).toHaveClass("bg-info-surface");
+    await userEvent.click(screen.getByRole("button", { name: "Show the details of api-gateway" }));
+    expect(screen.getAllByText(/^details of /)).toHaveLength(1);
+    expect(screen.getByText("details of api-1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show the details of payments-web" })).toHaveAttribute("aria-expanded", "false");
+    expect(search(router)).toBe("?open=api-1");
+    await userEvent.click(screen.getByRole("button", { name: "Hide the details of api-gateway" }));
+    expect(search(router)).toBe("");
+  });
+
+  it("stale address", () => {
+    mount(mixed, "/?open=nope&sort=nope.up&q=");
+    expect(order()).toEqual(["a", "c", "a", "b"]);
+    expect(screen.queryByText(/^details of /)).not.toBeInTheDocument();
+    expect(screen.getByText("Rows: 4")).toBeInTheDocument();
+  });
+
+  it("address restores", () => {
+    mount(named, "/?q=a&sort=pods.desc&open=api-1");
+    expect(screen.getByRole("searchbox", { name: "Search things" })).toHaveValue("a");
+    expect(order()).toEqual(["api-gateway", "payments-web"]);
+    expect(screen.getByText("details of api-1")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Pods" })).toHaveAttribute("aria-sort", "descending");
+  });
+});

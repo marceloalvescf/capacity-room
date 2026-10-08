@@ -90,6 +90,31 @@ describe("screens", () => {
     }
   }
 
+  for (const tab of [
+    { name: "namespaces", open: "payments" },
+    { name: "workloads", open: "payments%2FDeployment%2Fpayments-web" },
+  ]) {
+    for (const language of languages) {
+      for (const theme of ["light", "dark"]) {
+        it(`axe and vocabulary: the report ${tab.name} with a row opened, ${language}, ${theme}`, async () => {
+          document.documentElement.setAttribute("data-theme", theme);
+          const id = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a01";
+          mock.reports = [report()];
+          mock.profiles = [profileSummary()];
+          mock.views.set(`${id}:en`, viewEn as components["schemas"]["ReportView"]);
+          mock.views.set(`${id}:pt-BR`, viewPt as components["schemas"]["ReportView"]);
+          mock.session = signedIn({ language });
+          const { container } = await renderApp(`/reports/${id}/${tab.name}?open=${tab.open}`, language);
+          await screen.findByRole("heading", { level: 1, name: i18next.t("progress.title", { profile: "Production" }) });
+          await screen.findByRole("heading", { level: 2, name: i18next.t("report.tab.findings") });
+          const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
+          expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+          expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);
+        });
+      }
+    }
+  }
+
   for (const language of languages) {
     for (const theme of ["light", "dark"]) {
       it(`axe and vocabulary: the period picker open on Range with a calendar, ${language}, ${theme}`, async () => {
