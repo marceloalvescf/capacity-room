@@ -1836,8 +1836,7 @@ components:
         language:
           $ref: "#/components/schemas/Language"
         min_severity:
-          type: string
-          description: The effective minimum, raised to attention for the executive profile.
+          $ref: "#/components/schemas/MinSeverity"
         report:
           $ref: "#/components/schemas/ViewReport"
         summary:
@@ -1873,6 +1872,66 @@ components:
             $ref: "#/components/schemas/ViewNodepool"
         quality:
           $ref: "#/components/schemas/ViewQuality"
+    ViewSeverity:
+      type: string
+      enum: [healthy, attention, critical]
+    ViewScopeType:
+      type: string
+      enum: [namespace, workload, hpa, node, nodepool, cluster]
+    ViewConfidence:
+      type: string
+      enum: [exact, inferred, unknown]
+    ViewHPACoverage:
+      type: string
+      enum: [covered, uncovered, unknown]
+    ViewAutoscalingStatus:
+      type: string
+      enum: [enabled, disabled, unknown]
+    ViewAutoscalingSource:
+      type: string
+      enum: [configured, raw_metrics, none]
+    ViewStrategy:
+      type: string
+      enum: [recording_rule, raw_metrics, configured, none]
+    ViewCapabilityName:
+      type: string
+      enum:
+        - namespace_usage
+        - workload_usage
+        - requests_limits
+        - hpa_history
+        - workloads_without_hpa
+        - ip_node_mapping
+        - nodepool_discovery
+        - node_utilization
+        - node_autoscaling
+    ViewCapabilityState:
+      type: string
+      enum: [available, partial, unavailable]
+    ViewEvidenceName:
+      type: string
+      enum:
+        - affected_nodes
+        - average
+        - average_difference
+        - average_percent
+        - current_average
+        - current_nodes
+        - current_peak
+        - gap_percent
+        - max_nodes
+        - maximum_average_percent
+        - maximum_peak_percent
+        - min_nodes
+        - minimum_peak_percent
+        - node_pressure
+        - peak
+        - peak_percent
+        - percent
+        - resources
+        - spec_max
+        - spec_min
+        - spread_percent
     ViewMark:
       type: string
       nullable: true
@@ -1930,8 +1989,7 @@ components:
         cluster_name:
           type: string
         profile:
-          type: string
-          description: detailed or executive.
+          $ref: "#/components/schemas/ReportProfile"
         timezone:
           type: string
         generator_version:
@@ -2005,14 +2063,11 @@ components:
         - unschedulable_pods
       properties:
         status:
-          type: string
-          description: A code.
+          $ref: "#/components/schemas/ViewAutoscalingStatus"
         source:
-          type: string
-          description: A code.
+          $ref: "#/components/schemas/ViewAutoscalingSource"
         confidence:
-          type: string
-          description: A code.
+          $ref: "#/components/schemas/ViewConfidence"
         managed_node_groups:
           $ref: "#/components/schemas/ViewValue"
         current_nodes:
@@ -2032,16 +2087,16 @@ components:
         code:
           type: string
         severity:
-          type: string
+          $ref: "#/components/schemas/ViewSeverity"
         scope_type:
-          type: string
+          $ref: "#/components/schemas/ViewScopeType"
         scope_kind:
           type: string
           description: The kind of a workload scope; empty for another scope.
         scope_name:
           type: string
         confidence:
-          type: string
+          $ref: "#/components/schemas/ViewConfidence"
         sentence:
           type: string
           description: What the finding observed, in the language of the view.
@@ -2057,7 +2112,7 @@ components:
       required: [name, raw, text]
       properties:
         name:
-          type: string
+          $ref: "#/components/schemas/ViewEvidenceName"
         raw:
           description: The value as the snapshot stores it, a number, a boolean, or a text.
           oneOf:
@@ -2074,11 +2129,11 @@ components:
         code:
           type: string
         severity:
-          type: string
+          $ref: "#/components/schemas/ViewSeverity"
         scope_type:
-          type: string
+          $ref: "#/components/schemas/ViewScopeType"
         confidence:
-          type: string
+          $ref: "#/components/schemas/ViewConfidence"
         action:
           type: string
           description: The action, without the qualifier the PDF adds when two rows share it.
@@ -2110,8 +2165,7 @@ components:
         name:
           type: string
         status:
-          type: string
-          description: The severity the PDF gives the namespace, healthy when it has no finding.
+          $ref: "#/components/schemas/ViewSeverity"
         pods:
           $ref: "#/components/schemas/ViewValue"
         approximate:
@@ -2166,14 +2220,12 @@ components:
         name:
           type: string
         status:
-          type: string
-          description: The severity the PDF gives the workload, healthy when it has no finding.
+          $ref: "#/components/schemas/ViewSeverity"
         observed_usage:
           type: boolean
           description: False for a workload with no usage observed, which the PDF's table leaves out.
         hpa_coverage:
-          type: string
-          description: A code.
+          $ref: "#/components/schemas/ViewHPACoverage"
         pods:
           $ref: "#/components/schemas/ViewValue"
         approximate:
@@ -2255,10 +2307,9 @@ components:
           type: string
           description: The name of the node's pool, or the code unknown, which a client words.
         pool_confidence:
-          type: string
+          $ref: "#/components/schemas/ViewConfidence"
         status:
-          type: string
-          description: The severity the PDF gives the node, healthy when it has no finding.
+          $ref: "#/components/schemas/ViewSeverity"
         cpu_capacity:
           $ref: "#/components/schemas/ViewValue"
         memory_capacity:
@@ -2293,7 +2344,7 @@ components:
         name:
           type: string
         confidence:
-          type: string
+          $ref: "#/components/schemas/ViewConfidence"
         nodes:
           type: array
           items:
@@ -2324,11 +2375,11 @@ components:
       required: [name, state, strategy, evidence, remark]
       properties:
         name:
-          type: string
+          $ref: "#/components/schemas/ViewCapabilityName"
         state:
-          type: string
+          $ref: "#/components/schemas/ViewCapabilityState"
         strategy:
-          type: string
+          $ref: "#/components/schemas/ViewStrategy"
         evidence:
           type: array
           items:

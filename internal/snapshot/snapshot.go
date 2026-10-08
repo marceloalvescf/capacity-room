@@ -148,8 +148,8 @@ const (
 	CoverageUnknown   = "unknown"   // the run could not tell
 )
 
-// validCoverages lists the values of Workload.HPACoverage.
-var validCoverages = []string{CoverageCovered, CoverageUncovered, CoverageUnknown}
+// Coverages lists the values of Workload.HPACoverage.
+var Coverages = []string{CoverageCovered, CoverageUncovered, CoverageUnknown}
 
 // Summary holds the counts of the run and its autoscaling, spec 8.
 type Summary struct {

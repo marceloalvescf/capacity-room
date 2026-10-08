@@ -314,3 +314,41 @@ func moduleRoot() (string, error) {
 		dir = parent
 	}
 }
+
+// ViewScenarios names the scenarios that have golden view files.
+var ViewScenarios = []string{"edge-scaling", "direct-complete"}
+
+// ViewFile decodes an encoded snapshot and returns the encoded report view in
+// one language.
+func ViewFile(snap []byte, lang catalog.Language) ([]byte, error) {
+	decoded, err := snapshot.Decode(snap)
+	if err != nil {
+		return nil, fmt.Errorf("decoding the snapshot: %w", err)
+	}
+
+	cat, err := catalog.Load(lang)
+	if err != nil {
+		return nil, fmt.Errorf("loading the %s catalog: %w", lang, err)
+	}
+
+	view, err := document.BuildView(decoded, cat)
+	if err != nil {
+		return nil, fmt.Errorf("building the view: %w", err)
+	}
+
+	data, err := document.EncodeView(view)
+	if err != nil {
+		return nil, fmt.Errorf("encoding the view: %w", err)
+	}
+	return data, nil
+}
+
+// ViewFilePath returns the place of a scenario's golden view file, in one
+// language.
+func ViewFilePath(scenario string, lang catalog.Language) (string, error) {
+	root, err := moduleRoot()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "web", "tests", "fixtures", "view", scenario+"."+string(lang)+".json"), nil
+}

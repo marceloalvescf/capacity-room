@@ -105,6 +105,34 @@ func TestGoldenDataFiles(t *testing.T) {
 	}
 }
 
+// TestGoldenViewFiles runs each scenario of ViewScenarios through Snapshot
+// and ViewFile, in each language, and compares the result with its golden
+// file.
+func TestGoldenViewFiles(t *testing.T) {
+	for _, name := range ViewScenarios {
+		scenario := scenarioByName(t, name)
+		snap, err := Snapshot(context.Background(), scenario)
+		if err != nil {
+			t.Fatalf("Snapshot(%s): %v", name, err)
+		}
+		for _, lang := range catalog.Languages() {
+			t.Run(name+"/"+string(lang), func(t *testing.T) {
+				got, err := ViewFile(snap, lang)
+				if err != nil {
+					t.Fatalf("ViewFile(%s, %s): %v", name, lang, err)
+				}
+				path, err := ViewFilePath(name, lang)
+				if err != nil {
+					t.Fatalf("ViewFilePath(%s, %s): %v", name, lang, err)
+				}
+				if err := compareGolden(path, got); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+	}
+}
+
 // fileStems reads dir and returns the stem of every file directly inside it
 // whose extension is ext, sorted. A file of another extension, or one in a
 // subfolder, fails the test: neither folder holds anything else.

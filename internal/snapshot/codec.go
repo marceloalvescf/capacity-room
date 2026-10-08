@@ -1348,11 +1348,11 @@ func describeRecommendation(code, severity, scopeType string, scopes []string, c
 	return fmt.Sprintf("%s %s %s %v %s", code, severity, scopeType, scopes, confidence)
 }
 
-// validAutoscalingStatuses and validAutoscalingSources are the values of
+// AutoscalingStatuses and AutoscalingSources are the values of
 // summary.autoscaling.status and summary.autoscaling.source.
 var (
-	validAutoscalingStatuses = []string{collect.AutoscalingEnabled, collect.AutoscalingDisabled, collect.AutoscalingUnknown}
-	validAutoscalingSources  = []string{discovery.StrategyConfigured, discovery.StrategyRawMetrics, discovery.StrategyNone}
+	AutoscalingStatuses = []string{collect.AutoscalingEnabled, collect.AutoscalingDisabled, collect.AutoscalingUnknown}
+	AutoscalingSources  = []string{discovery.StrategyConfigured, discovery.StrategyRawMetrics, discovery.StrategyNone}
 )
 
 // checkSummary refuses a count of the summary that differs from the number
@@ -1425,10 +1425,10 @@ var autoscalingShapes = []autoscalingShape{
 // are not numbers of the right kind: the four counts of nodes and groups
 // are whole numbers; the two others are finite numbers.
 func checkAutoscaling(a Autoscaling) error {
-	if err := checkEnum("summary.autoscaling.status", a.Status, validAutoscalingStatuses); err != nil {
+	if err := checkEnum("summary.autoscaling.status", a.Status, AutoscalingStatuses); err != nil {
 		return err
 	}
-	if err := checkEnum("summary.autoscaling.source", a.Source, validAutoscalingSources); err != nil {
+	if err := checkEnum("summary.autoscaling.source", a.Source, AutoscalingSources); err != nil {
 		return err
 	}
 	if err := checkEnum("summary.autoscaling.confidence", a.Confidence, validConfidences); err != nil {
@@ -1648,7 +1648,7 @@ func checkNodepoolRows(nodes []Node, pools []NodePool) error {
 // that is not unavailable.
 func checkWorkloadCoverage(workloads []Workload, hpas []HPA) error {
 	for i, wl := range workloads {
-		if err := checkEnum(fmt.Sprintf("workloads[%d].hpa_coverage", i), wl.HPACoverage, validCoverages); err != nil {
+		if err := checkEnum(fmt.Sprintf("workloads[%d].hpa_coverage", i), wl.HPACoverage, Coverages); err != nil {
 			return err
 		}
 		targeted := false

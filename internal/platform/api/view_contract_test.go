@@ -12,7 +12,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
@@ -295,4 +297,60 @@ func goldenView(t *testing.T, file string) document.View {
 		t.Fatal(err)
 	}
 	return view
+}
+
+// TestViewEnumsEqualTheRegistries compares each closed set of the view's
+// contract with the Go list that holds the same values, as sets.
+func TestViewEnumsEqualTheRegistries(t *testing.T) {
+	scopeTypes := map[string]bool{}
+	evidenceNames := map[string]bool{}
+	for _, definition := range analysis.Registry {
+		scopeTypes[definition.ScopeType] = true
+		for _, spec := range definition.Evidence {
+			evidenceNames[spec.Name] = true
+		}
+	}
+	keys := func(set map[string]bool) []string {
+		list := make([]string, 0, len(set))
+		for key := range set {
+			list = append(list, key)
+		}
+		return list
+	}
+	enums := map[string][]string{
+		"ViewSeverity":          analysis.Severities,
+		"ViewScopeType":         keys(scopeTypes),
+		"ViewConfidence":        {discovery.ConfidenceExact, discovery.ConfidenceInferred, discovery.ConfidenceUnknown},
+		"ViewHPACoverage":       snapshot.Coverages,
+		"ViewAutoscalingStatus": snapshot.AutoscalingStatuses,
+		"ViewAutoscalingSource": snapshot.AutoscalingSources,
+		"ViewStrategy":          discovery.Strategies,
+		"ViewCapabilityName":    discovery.Names,
+		"ViewCapabilityState":   discovery.States,
+		"ViewEvidenceName":      keys(evidenceNames),
+	}
+	schemas := loadSchemas(t)
+	for name, want := range enums {
+		schema := schemas[name]
+		if schema == nil {
+			t.Errorf("%s: the contract has no such schema", name)
+			continue
+		}
+		var got []string
+		listed, _ := schema["enum"].([]any)
+		for _, value := range listed {
+			text, _ := value.(string)
+			got = append(got, text)
+		}
+		for _, value := range want {
+			if !slices.Contains(got, value) {
+				t.Errorf("%s: the contract lacks %q, which the registry holds", name, value)
+			}
+		}
+		for _, value := range got {
+			if !slices.Contains(want, value) {
+				t.Errorf("%s: the contract holds %q, which the registry lacks", name, value)
+			}
+		}
+	}
 }

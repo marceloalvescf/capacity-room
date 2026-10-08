@@ -27,3 +27,13 @@ output-options:
     - ViewQuality
     - ViewCapability
     - ViewMessage
+    - ViewSeverity
+    - ViewScopeType
+    - ViewConfidence
+    - ViewHPACoverage
+    - ViewAutoscalingStatus
+    - ViewAutoscalingSource
+    - ViewStrategy
+    - ViewCapabilityName
+    - ViewCapabilityState
+    - ViewEvidenceName

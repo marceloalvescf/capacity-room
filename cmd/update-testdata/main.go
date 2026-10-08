@@ -1,6 +1,7 @@
 // Command update-testdata rewrites the golden snapshot files under
 // testdata/snapshot/ and the golden data files under
-// template/tests/capacity/fixtures/command/. It is never run by a test; run
+// template/tests/capacity/fixtures/command/, and the golden view files under
+// web/tests/fixtures/view/. It is never run by a test; run
 // it deliberately, read every file it changes, and review the change
 // before committing it.
 package main
@@ -146,6 +147,23 @@ func run(ctx context.Context) error {
 				if err := writeIfChanged(root, path, doc); err != nil {
 					return err
 				}
+			}
+		}
+	}
+
+	for _, name := range goldentest.ViewScenarios {
+		for _, lang := range catalog.Languages() {
+			view, err := goldentest.ViewFile(snapshots[name], lang)
+			if err != nil {
+				return fmt.Errorf("%s (%s) view: %w", name, lang, err)
+			}
+
+			path, err := goldentest.ViewFilePath(name, lang)
+			if err != nil {
+				return err
+			}
+			if err := writeIfChanged(root, path, view); err != nil {
+				return err
 			}
 		}
 	}

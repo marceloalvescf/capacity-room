@@ -662,8 +662,7 @@ export interface components {
         /** @description A report worded in one language for the web, narrowed as its PDF is: the findings, recommendations, and the namespace, workload, and node rows below the effective minimum are left out; the HPAs, node pools, summary counts, and quality are whole. Every text is the text the PDF prints for the same quantity. A closed set travels as its code, which a client words. */
         ReportView: {
             language: components["schemas"]["Language"];
-            /** @description The effective minimum, raised to attention for the executive profile. */
-            min_severity: string;
+            min_severity: components["schemas"]["MinSeverity"];
             report: components["schemas"]["ViewReport"];
             summary: components["schemas"]["ViewSummary"];
             findings: components["schemas"]["ViewFinding"][];
@@ -676,6 +675,26 @@ export interface components {
             nodepools: components["schemas"]["ViewNodepool"][];
             quality: components["schemas"]["ViewQuality"];
         };
+        /** @enum {string} */
+        ViewSeverity: "healthy" | "attention" | "critical";
+        /** @enum {string} */
+        ViewScopeType: "namespace" | "workload" | "hpa" | "node" | "nodepool" | "cluster";
+        /** @enum {string} */
+        ViewConfidence: "exact" | "inferred" | "unknown";
+        /** @enum {string} */
+        ViewHPACoverage: "covered" | "uncovered" | "unknown";
+        /** @enum {string} */
+        ViewAutoscalingStatus: "enabled" | "disabled" | "unknown";
+        /** @enum {string} */
+        ViewAutoscalingSource: "configured" | "raw_metrics" | "none";
+        /** @enum {string} */
+        ViewStrategy: "recording_rule" | "raw_metrics" | "configured" | "none";
+        /** @enum {string} */
+        ViewCapabilityName: "namespace_usage" | "workload_usage" | "requests_limits" | "hpa_history" | "workloads_without_hpa" | "ip_node_mapping" | "nodepool_discovery" | "node_utilization" | "node_autoscaling";
+        /** @enum {string} */
+        ViewCapabilityState: "available" | "partial" | "unavailable";
+        /** @enum {string} */
+        ViewEvidenceName: "affected_nodes" | "average" | "average_difference" | "average_percent" | "current_average" | "current_nodes" | "current_peak" | "gap_percent" | "max_nodes" | "maximum_average_percent" | "maximum_peak_percent" | "min_nodes" | "minimum_peak_percent" | "node_pressure" | "peak" | "peak_percent" | "percent" | "resources" | "spec_max" | "spec_min" | "spread_percent";
         /**
          * @description The status the PDF marks a text with, as the symbol beside a cell; null when the PDF prints the text without a mark.
          * @enum {string|null}
@@ -703,8 +722,7 @@ export interface components {
         ViewReport: {
             id: string;
             cluster_name: string;
-            /** @description detailed or executive. */
-            profile: string;
+            profile: components["schemas"]["ReportProfile"];
             timezone: string;
             generator_version: string;
             namespaces: string[];
@@ -730,12 +748,9 @@ export interface components {
             autoscaling: components["schemas"]["ViewAutoscaling"];
         };
         ViewAutoscaling: {
-            /** @description A code. */
-            status: string;
-            /** @description A code. */
-            source: string;
-            /** @description A code. */
-            confidence: string;
+            status: components["schemas"]["ViewAutoscalingStatus"];
+            source: components["schemas"]["ViewAutoscalingSource"];
+            confidence: components["schemas"]["ViewConfidence"];
             managed_node_groups: components["schemas"]["ViewValue"];
             current_nodes: components["schemas"]["ViewValue"];
             min_nodes: components["schemas"]["ViewValue"];
@@ -745,12 +760,12 @@ export interface components {
         };
         ViewFinding: {
             code: string;
-            severity: string;
-            scope_type: string;
+            severity: components["schemas"]["ViewSeverity"];
+            scope_type: components["schemas"]["ViewScopeType"];
             /** @description The kind of a workload scope; empty for another scope. */
             scope_kind: string;
             scope_name: string;
-            confidence: string;
+            confidence: components["schemas"]["ViewConfidence"];
             /** @description What the finding observed, in the language of the view. */
             sentence: string;
             /** @description What to do about it, in the language of the view. */
@@ -758,16 +773,16 @@ export interface components {
             evidence: components["schemas"]["ViewEvidence"][];
         };
         ViewEvidence: {
-            name: string;
+            name: components["schemas"]["ViewEvidenceName"];
             /** @description The value as the snapshot stores it, a number, a boolean, or a text. */
             raw: number | boolean | string;
             text: string;
         };
         ViewRecommendation: {
             code: string;
-            severity: string;
-            scope_type: string;
-            confidence: string;
+            severity: components["schemas"]["ViewSeverity"];
+            scope_type: components["schemas"]["ViewScopeType"];
+            confidence: components["schemas"]["ViewConfidence"];
             /** @description The action, without the qualifier the PDF adds when two rows share it. */
             action: string;
             scopes: string[];
@@ -776,8 +791,7 @@ export interface components {
         };
         ViewNamespace: {
             name: string;
-            /** @description The severity the PDF gives the namespace, healthy when it has no finding. */
-            status: string;
+            status: components["schemas"]["ViewSeverity"];
             pods: components["schemas"]["ViewValue"];
             approximate: boolean;
             cpu_usage: components["schemas"]["ViewStatistic"];
@@ -795,12 +809,10 @@ export interface components {
             namespace: string;
             kind: string;
             name: string;
-            /** @description The severity the PDF gives the workload, healthy when it has no finding. */
-            status: string;
+            status: components["schemas"]["ViewSeverity"];
             /** @description False for a workload with no usage observed, which the PDF's table leaves out. */
             observed_usage: boolean;
-            /** @description A code. */
-            hpa_coverage: string;
+            hpa_coverage: components["schemas"]["ViewHPACoverage"];
             pods: components["schemas"]["ViewValue"];
             approximate: boolean;
             cpu_usage: components["schemas"]["ViewStatistic"];
@@ -834,9 +846,8 @@ export interface components {
             name: string;
             /** @description The name of the node's pool, or the code unknown, which a client words. */
             pool: string;
-            pool_confidence: string;
-            /** @description The severity the PDF gives the node, healthy when it has no finding. */
-            status: string;
+            pool_confidence: components["schemas"]["ViewConfidence"];
+            status: components["schemas"]["ViewSeverity"];
             cpu_capacity: components["schemas"]["ViewValue"];
             memory_capacity: components["schemas"]["ViewValue"];
             cpu_allocatable: components["schemas"]["ViewValue"];
@@ -853,7 +864,7 @@ export interface components {
         };
         ViewNodepool: {
             name: string;
-            confidence: string;
+            confidence: components["schemas"]["ViewConfidence"];
             nodes: string[];
         };
         /** @description The quality of the collection, whole at every minimum. */
@@ -865,9 +876,9 @@ export interface components {
             collection_completed_at: string;
         };
         ViewCapability: {
-            name: string;
-            state: string;
-            strategy: string;
+            name: components["schemas"]["ViewCapabilityName"];
+            state: components["schemas"]["ViewCapabilityState"];
+            strategy: components["schemas"]["ViewStrategy"];
             evidence: string[];
             /** @description The remark of the PDF's appendix. */
             remark: string;
@@ -2022,3 +2033,13 @@ export const filterModeValues: ReadonlyArray<FlattenedDeepRequired<components>["
 export const nodeAutoscalingValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["NodeAutoscaling"]> = ["auto", "enabled", "disabled"];
 export const reportProfileValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportProfile"]> = ["detailed", "executive"];
 export const minSeverityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["MinSeverity"]> = ["all", "attention", "critical"];
+export const viewSeverityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewSeverity"]> = ["healthy", "attention", "critical"];
+export const viewScopeTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewScopeType"]> = ["namespace", "workload", "hpa", "node", "nodepool", "cluster"];
+export const viewConfidenceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewConfidence"]> = ["exact", "inferred", "unknown"];
+export const viewHPACoverageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewHPACoverage"]> = ["covered", "uncovered", "unknown"];
+export const viewAutoscalingStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewAutoscalingStatus"]> = ["enabled", "disabled", "unknown"];
+export const viewAutoscalingSourceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewAutoscalingSource"]> = ["configured", "raw_metrics", "none"];
+export const viewStrategyValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewStrategy"]> = ["recording_rule", "raw_metrics", "configured", "none"];
+export const viewCapabilityNameValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewCapabilityName"]> = ["namespace_usage", "workload_usage", "requests_limits", "hpa_history", "workloads_without_hpa", "ip_node_mapping", "nodepool_discovery", "node_utilization", "node_autoscaling"];
+export const viewCapabilityStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewCapabilityState"]> = ["available", "partial", "unavailable"];
+export const viewEvidenceNameValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewEvidenceName"]> = ["affected_nodes", "average", "average_difference", "average_percent", "current_average", "current_nodes", "current_peak", "gap_percent", "max_nodes", "maximum_average_percent", "maximum_peak_percent", "min_nodes", "minimum_peak_percent", "node_pressure", "peak", "peak_percent", "percent", "resources", "spec_max", "spec_min", "spread_percent"];
