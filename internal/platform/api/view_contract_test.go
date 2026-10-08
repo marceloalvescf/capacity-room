@@ -300,7 +300,9 @@ func goldenView(t *testing.T, file string) document.View {
 }
 
 // TestViewEnumsEqualTheRegistries compares each closed set of the view's
-// contract with the Go list that holds the same values, as sets.
+// contract with the Go list that holds the same values: as sets, except that
+// the capability names keep the order of discovery.Names and the evidence
+// names are sorted. A value that is not a text, or that appears twice, fails.
 func TestViewEnumsEqualTheRegistries(t *testing.T) {
 	scopeTypes := map[string]bool{}
 	evidenceNames := map[string]bool{}
@@ -315,22 +317,27 @@ func TestViewEnumsEqualTheRegistries(t *testing.T) {
 		for key := range set {
 			list = append(list, key)
 		}
+		slices.Sort(list)
 		return list
 	}
-	enums := map[string][]string{
-		"ViewSeverity":          analysis.Severities,
-		"ViewScopeType":         keys(scopeTypes),
-		"ViewConfidence":        {discovery.ConfidenceExact, discovery.ConfidenceInferred, discovery.ConfidenceUnknown},
-		"ViewHPACoverage":       snapshot.Coverages,
-		"ViewAutoscalingStatus": snapshot.AutoscalingStatuses,
-		"ViewAutoscalingSource": snapshot.AutoscalingSources,
-		"ViewStrategy":          discovery.Strategies,
-		"ViewCapabilityName":    discovery.Names,
-		"ViewCapabilityState":   discovery.States,
-		"ViewEvidenceName":      keys(evidenceNames),
+	type enum struct {
+		want    []string
+		ordered bool
+	}
+	enums := map[string]enum{
+		"ViewSeverity":          {want: analysis.Severities},
+		"ViewScopeType":         {want: keys(scopeTypes)},
+		"ViewConfidence":        {want: []string{discovery.ConfidenceExact, discovery.ConfidenceInferred, discovery.ConfidenceUnknown}},
+		"ViewHPACoverage":       {want: snapshot.Coverages},
+		"ViewAutoscalingStatus": {want: snapshot.AutoscalingStatuses},
+		"ViewAutoscalingSource": {want: snapshot.AutoscalingSources},
+		"ViewStrategy":          {want: discovery.Strategies},
+		"ViewCapabilityName":    {want: discovery.Names, ordered: true},
+		"ViewCapabilityState":   {want: discovery.States},
+		"ViewEvidenceName":      {want: keys(evidenceNames), ordered: true},
 	}
 	schemas := loadSchemas(t)
-	for name, want := range enums {
+	for name, kind := range enums {
 		schema := schemas[name]
 		if schema == nil {
 			t.Errorf("%s: the contract has no such schema", name)
@@ -339,17 +346,65 @@ func TestViewEnumsEqualTheRegistries(t *testing.T) {
 		var got []string
 		listed, _ := schema["enum"].([]any)
 		for _, value := range listed {
-			text, _ := value.(string)
+			text, ok := value.(string)
+			if !ok {
+				t.Errorf("%s: the contract holds %v, which is not a text", name, value)
+				continue
+			}
+			if slices.Contains(got, text) {
+				t.Errorf("%s: the contract holds %q twice", name, text)
+				continue
+			}
 			got = append(got, text)
 		}
-		for _, value := range want {
+		if kind.ordered {
+			if !slices.Equal(got, kind.want) {
+				t.Errorf("%s: the contract holds %v, the registry %v, in this order", name, got, kind.want)
+			}
+			continue
+		}
+		for _, value := range kind.want {
 			if !slices.Contains(got, value) {
 				t.Errorf("%s: the contract lacks %q, which the registry holds", name, value)
 			}
 		}
 		for _, value := range got {
-			if !slices.Contains(want, value) {
+			if !slices.Contains(kind.want, value) {
 				t.Errorf("%s: the contract holds %q, which the registry lacks", name, value)
+			}
+		}
+	}
+}
+
+// TestViewFieldsTakeTheirEnums pins the reference of every field that carries
+// one of the view's closed sets, so that a field cannot fall back to a bare
+// text without a test failing.
+func TestViewFieldsTakeTheirEnums(t *testing.T) {
+	refs := map[string]map[string]string{
+		"ViewFinding":        {"severity": "ViewSeverity", "scope_type": "ViewScopeType", "confidence": "ViewConfidence"},
+		"ViewEvidence":       {"name": "ViewEvidenceName"},
+		"ViewRecommendation": {"severity": "ViewSeverity", "scope_type": "ViewScopeType", "confidence": "ViewConfidence"},
+		"ViewNamespace":      {"status": "ViewSeverity"},
+		"ViewWorkload":       {"status": "ViewSeverity", "hpa_coverage": "ViewHPACoverage"},
+		"ViewNode":           {"status": "ViewSeverity", "pool_confidence": "ViewConfidence"},
+		"ViewNodepool":       {"confidence": "ViewConfidence"},
+		"ViewAutoscaling":    {"status": "ViewAutoscalingStatus", "source": "ViewAutoscalingSource", "confidence": "ViewConfidence"},
+		"ViewCapability":     {"name": "ViewCapabilityName", "state": "ViewCapabilityState", "strategy": "ViewStrategy"},
+		"ReportView":         {"min_severity": "MinSeverity"},
+		"ViewReport":         {"profile": "ReportProfile"},
+	}
+	schemas := loadSchemas(t)
+	for schemaName, fields := range refs {
+		properties, _ := schemas[schemaName]["properties"].(map[string]any)
+		if properties == nil {
+			t.Errorf("%s: the contract has no such schema, or it has no properties", schemaName)
+			continue
+		}
+		for field, target := range fields {
+			property, _ := properties[field].(map[string]any)
+			got, _ := property["$ref"].(string)
+			if want := "#/components/schemas/" + target; got != want {
+				t.Errorf("%s.%s: the reference is %q, want %q", schemaName, field, got, want)
 			}
 		}
 	}

@@ -426,6 +426,28 @@ func TestGoldenFoldersHoldNoStranger(t *testing.T) {
 		}
 	})
 
+	t.Run("view files", func(t *testing.T) {
+		anyPath, err := ViewFilePath("direct-complete", catalog.PortugueseBrazil)
+		if err != nil {
+			t.Fatalf("ViewFilePath: %v", err)
+		}
+		var want []string
+		for _, name := range ViewScenarios {
+			for _, lang := range catalog.Languages() {
+				want = append(want, name+"."+string(lang))
+			}
+		}
+		if len(want) != 4 {
+			t.Fatalf("the folder is expected to hold 4 files, the lists give %d", len(want))
+		}
+		sort.Strings(want)
+
+		got := jsonStems(t, filepath.Dir(anyPath))
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("web/tests/fixtures/view/ holds %v, want %v", got, want)
+		}
+	})
+
 	t.Run("queries", func(t *testing.T) {
 		anyPath, err := QueriesPath("direct-complete")
 		if err != nil {
