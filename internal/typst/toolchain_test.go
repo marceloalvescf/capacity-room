@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -14,12 +15,23 @@ import (
 // writeScript writes an executable shell script into a fresh temp directory
 // and returns its absolute path. Scripts start with #!/bin/sh and run with
 // an empty environment, so they use shell built-ins only and name any other
-// program (e.g. /bin/sleep) by absolute path.
+// program (see toolPath) by absolute path.
 func writeScript(t *testing.T, script string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "typst")
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatalf("WriteFile: %v", err)
+	}
+	return path
+}
+
+// toolPath returns the absolute path of the named program, found on the
+// test process's PATH, for a script that cannot search for it.
+func toolPath(t *testing.T, name string) string {
+	t.Helper()
+	path, err := exec.LookPath(name)
+	if err != nil {
+		t.Fatalf("finding %s on PATH: %v", name, err)
 	}
 	return path
 }
@@ -261,7 +273,7 @@ func TestVersionReportsWhyItCouldNotStart(t *testing.T) {
 }
 
 func TestVersionHonoursDeadline(t *testing.T) {
-	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\n/bin/sleep 5\n")}
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\n"+toolPath(t, "sleep")+" 5\n")}
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 

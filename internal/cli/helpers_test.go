@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -13,15 +14,58 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
 )
 
-// fakeTypstPath returns the absolute path of the fake typst compiler used by
-// every test that needs one.
+// toolPath returns the absolute path of the named program, found on the
+// test process's PATH. A script run with an empty environment cannot search
+// for it, so it names it in full.
+func toolPath(t *testing.T, name string) string {
+	t.Helper()
+	path, err := exec.LookPath(name)
+	if err != nil {
+		t.Fatalf("finding %s on PATH: %v", name, err)
+	}
+	return path
+}
+
+// fakeTypstPath writes the fake typst compiler used by every test that needs
+// one into a fresh temp directory and returns its absolute path. The
+// compiler is run with an empty environment (internal/typst always clears
+// it), so the script names cat by its full path.
+//
+// --version answers with the pinned version. Any "compile" invocation copies
+// the file named by "--input data=<path>" (interpreted relative to --root) to
+// its last argument, after writing the line "%PDF-fake" first.
 func fakeTypstPath(t *testing.T) string {
 	t.Helper()
-	abs, err := filepath.Abs(filepath.Join("testdata", "fake-typst.sh"))
-	if err != nil {
-		t.Fatalf("resolving fake-typst.sh: %v", err)
-	}
-	return abs
+	script := `#!/bin/sh
+if [ "$1" = "--version" ]; then
+	echo 'typst 0.15.1 (fake)'
+	exit 0
+fi
+
+root=""
+data_value=""
+prev=""
+last=""
+for arg in "$@"; do
+	if [ "$prev" = "--root" ]; then
+		root="$arg"
+	fi
+	if [ "$prev" = "--input" ]; then
+		case "$arg" in
+		data=*)
+			data_value="${arg#data=}"
+			;;
+		esac
+	fi
+	prev="$arg"
+	last="$arg"
+done
+
+output="$last"
+echo '%PDF-fake' >"$output"
+` + toolPath(t, "cat") + ` "$root$data_value" >>"$output"
+`
+	return writeScript(t, script)
 }
 
 // noTypstLookPath simulates a machine with no typst on PATH.

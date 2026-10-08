@@ -563,7 +563,7 @@ output_directory = %q
 				server, _, scenario := startScenario(t, "direct-complete")
 				defer server.Close()
 				cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
-				binary := writeScript(t, "#!/bin/sh\ncase \"$1\" in --version) /bin/echo 'typst 0.15.1 (x)'; exit 0;; esac\nexit 1\n")
+				binary := writeScript(t, "#!/bin/sh\ncase \"$1\" in --version) echo 'typst 0.15.1 (x)'; exit 0;; esac\nexit 1\n")
 				env := envWithTypst(testEnv(t), binary)
 				return runArgs(context.Background(), env, []string{"report", "--config", cfgPath})
 			},
@@ -576,8 +576,8 @@ output_directory = %q
 				defer server.Close()
 				cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
 				binary := writeScript(t, "#!/bin/sh\n"+
-					"case \"$1\" in --version) /bin/echo 'typst 0.15.1 (x)'; exit 0;; esac\n"+
-					"/bin/echo 'x.typ:1:1: warning: x' >&2\n"+
+					"case \"$1\" in --version) echo 'typst 0.15.1 (x)'; exit 0;; esac\n"+
+					"echo 'x.typ:1:1: warning: x' >&2\n"+
 					"exit 0\n")
 				env := envWithTypst(testEnv(t), binary)
 				return runArgs(context.Background(), env, []string{"report", "--config", cfgPath})
@@ -751,7 +751,7 @@ func TestFailedCompileKeepsTheOldFile(t *testing.T) {
 		t.Fatalf("writing old file: %v", err)
 	}
 
-	binary := writeScript(t, "#!/bin/sh\ncase \"$1\" in --version) /bin/echo 'typst 0.15.1 (x)'; exit 0;; esac\nexit 1\n")
+	binary := writeScript(t, "#!/bin/sh\ncase \"$1\" in --version) echo 'typst 0.15.1 (x)'; exit 0;; esac\nexit 1\n")
 	env := envWithTypst(testEnv(t), binary)
 	_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--output", outPath})
 	if code != 6 {
@@ -834,7 +834,7 @@ func TestTokenNeverReachesAStream(t *testing.T) {
 		defer server.Close()
 		cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
 		binary := writeScript(t, "#!/bin/sh\n"+
-			"case \"$1\" in --version) /bin/echo 'typst 0.15.1 (x)'; exit 0;; esac\n"+
+			"case \"$1\" in --version) echo 'typst 0.15.1 (x)'; exit 0;; esac\n"+
 			"/usr/bin/env\n\"$@\"\nexit 1\n")
 		env := envWithTypst(testEnv(t), binary)
 		stdout, stderr, _ := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--token", token, "--verbose"})
@@ -1057,7 +1057,7 @@ func TestWorkFolderIsRemoved(t *testing.T) {
 		outDir := t.TempDir()
 		cfgPath := writeConfig(t, scenarioConfig(server, scenario, outDir))
 		tempDir := t.TempDir()
-		binary := writeScript(t, "#!/bin/sh\ncase \"$1\" in --version) /bin/echo 'typst 0.15.1 (x)'; exit 0;; esac\nexit 1\n")
+		binary := writeScript(t, "#!/bin/sh\ncase \"$1\" in --version) echo 'typst 0.15.1 (x)'; exit 0;; esac\nexit 1\n")
 		env := envWithTypst(testEnv(t), binary)
 		env.TempDir = tempDir
 
@@ -1216,9 +1216,9 @@ func TestCompileRefusesANonPDFOutput(t *testing.T) {
 		name       string
 		writeBogus string
 	}{
-		{"plain text", `/bin/echo -n 'NOT A PDF' > "$last"` + "\n"},
+		{"plain text", `printf '%s' 'NOT A PDF' > "$last"` + "\n"},
 		{"empty file", `: > "$last"` + "\n"},
-		{"only the PDF prefix, cut short", `/bin/printf '%%PDF' > "$last"` + "\n"},
+		{"only the PDF prefix, cut short", `printf '%%PDF' > "$last"` + "\n"},
 	}
 
 	for _, tt := range tests {
@@ -1235,7 +1235,7 @@ func TestCompileRefusesANonPDFOutput(t *testing.T) {
 			}
 
 			script := "#!/bin/sh\n" +
-				"case \"$1\" in --version) /bin/echo 'typst 0.15.1 (x)'; exit 0;; esac\n" +
+				"case \"$1\" in --version) echo 'typst 0.15.1 (x)'; exit 0;; esac\n" +
 				"last=\"\"\n" +
 				"for a in \"$@\"; do last=\"$a\"; done\n" +
 				tt.writeBogus +
@@ -1283,22 +1283,23 @@ func TestReportJSONIsWrittenInsideTheWorkFolder(t *testing.T) {
 
 	argsPath := filepath.Join(t.TempDir(), "args.txt")
 	reportJSONCopy := filepath.Join(t.TempDir(), "report.json.copy")
+	cp := toolPath(t, "cp")
 	script := "#!/bin/sh\n" +
-		"case \"$1\" in --version) /bin/echo 'typst 0.15.1 (x)'; exit 0;; esac\n" +
+		"case \"$1\" in --version) echo 'typst 0.15.1 (x)'; exit 0;; esac\n" +
 		"root=\"\"\n" +
 		"prev=\"\"\n" +
 		"for a in \"$@\"; do\n" +
 		"  if [ \"$prev\" = \"--root\" ]; then root=\"$a\"; fi\n" +
-		"  /bin/echo \"$a\" >> \"" + argsPath + "\"\n" +
+		"  echo \"$a\" >> \"" + argsPath + "\"\n" +
 		"  prev=\"$a\"\n" +
 		"done\n" +
 		// Copy report.json out while the work folder still exists: the
 		// command removes it once the run finishes, so this is the only
 		// window the test can observe it in.
-		"/bin/cp \"$root/report.json\" \"" + reportJSONCopy + "\"\n" +
+		cp + " \"$root/report.json\" \"" + reportJSONCopy + "\"\n" +
 		"last=\"\"\n" +
 		"for a in \"$@\"; do last=\"$a\"; done\n" +
-		"/bin/echo '%PDF-fake' > \"$last\"\n" +
+		"echo '%PDF-fake' > \"$last\"\n" +
 		"exit 0\n"
 	binary := writeScript(t, script)
 	env := envWithTypst(testEnv(t), binary)

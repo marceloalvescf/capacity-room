@@ -51,6 +51,17 @@ func scriptToolchain(t *testing.T, body string) typst.Toolchain {
 	return typst.Toolchain{Binary: binary}
 }
 
+// toolPath returns the absolute path of the named program, found on the
+// test process's PATH, for a script that runs with an empty environment.
+func toolPath(t *testing.T, name string) string {
+	t.Helper()
+	path, err := exec.LookPath(name)
+	if err != nil {
+		t.Fatalf("finding %s on PATH: %v", name, err)
+	}
+	return path
+}
+
 func pdfToolchain(t *testing.T) typst.Toolchain {
 	return scriptToolchain(t, `printf '%%PDF-1.7 fake' > "$out"`)
 }
@@ -381,7 +392,7 @@ func TestRenderCompileFailure(t *testing.T) {
 func TestRenderTimeout(t *testing.T) {
 	e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.RenderTimeout = time.Second; s.JobMaxAttempts = 3 })
 	e.startRender(map[string]typst.Toolchain{
-		langPT: scriptToolchain(t, "exec /bin/sleep 60"),
+		langPT: scriptToolchain(t, "exec "+toolPath(t, "sleep")+" 60"),
 		langEN: pdfToolchain(t),
 	}, 2, renderHooks{}, langEN)
 	report := e.collected()

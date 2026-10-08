@@ -324,7 +324,7 @@ func TestCompileUsesEmptyEnvironment(t *testing.T) {
 }
 
 func TestCompileHonoursDeadline(t *testing.T) {
-	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\n/bin/sleep 5\n")}
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\n"+toolPath(t, "sleep")+" 5\n")}
 	job := validJob(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
@@ -352,7 +352,7 @@ func TestCompileHonoursDeadline(t *testing.T) {
 }
 
 func TestCompileReportsCancellation(t *testing.T) {
-	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\n/bin/sleep 5\n")}
+	tc := Toolchain{Binary: writeScript(t, "#!/bin/sh\n"+toolPath(t, "sleep")+" 5\n")}
 	job := validJob(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	time.AfterFunc(100*time.Millisecond, cancel)
