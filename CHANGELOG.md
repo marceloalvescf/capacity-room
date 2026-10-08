@@ -6,6 +6,16 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A collected report opens from its progress page and reads on the web in
+  seven tabs (overview, findings, namespaces, workloads, autoscaling, nodes,
+  and data quality), worded as its PDF, with its PDFs one click away.
+
+### Fixed
+
+- The development tools run on a NixOS host.
+
 ## [0.4.0] - 2026-10-07
 
 ### Added

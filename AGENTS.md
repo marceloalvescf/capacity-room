@@ -515,6 +515,10 @@ redactor the moment the settings are loaded, before the pool opens.
   `edge-scaling`, written by `make update-testdata` like the others. The
   snapshots `command-executive-pt` and `command-executive-en` take pages
   from them.
+- `web/tests/fixtures/view/<scenario>.<lang>.json` holds the golden views
+  for `edge-scaling` and `direct-complete`, in both languages, written by
+  `make update-testdata`. `TestGoldenViewFiles` compares them, a guard
+  refuses a stray file in the folder, and the frontend's tests read them.
 - A test that walks the scenarios or reads a list of queries counts what it
   means to count. A filter that matched one thing when it was written
   matches more when the program asks more.
@@ -594,8 +598,29 @@ redactor the moment the settings are loaded, before the pool opens.
   `make image`, with the one-shot `profiles` service that imports
   `deploy/platform/profiles.toml`. The fake serves its scenario once, so the
   stack runs one collection: the reports spec requests one report and
-  Playwright never retries. The spec fails on any CSP violation and on any
+  Playwright never retries. The target stops the fake and fails unless its
+  log holds `remaining: 1`, the one answer of `direct-complete` that no run
+  asks, pinned by `TestDirectCompleteLeavesTheRecordedAnswerUnused`. The spec fails on any CSP violation and on any
   axe finding. The fixtures of `deploy/platform/` serve this stack alone.
+- **The report screen is `/reports/:id/:tab`,** with seven tabs: overview,
+  findings, namespaces, workloads, autoscaling, nodes, and quality. Its frame
+  reads `GET /reports/{id}` and `GET /reports/{id}/view?lang=`. The view has
+  its own query key and stays on screen across a language switch for the same
+  report only. A later failed fetch of either never replaces a screen that is
+  held, except a 404, a 410, or a 409.
+- **The closed sets of the view are contract enums.** The `View*` enums of
+  `api/openapi.yaml` are excluded from the Go generation and held equal to
+  the Go registries by `TestViewEnumsEqualTheRegistries`, so the frontend's
+  families come from the generated lists.
+- **The state of a tab lives in the address.** `q`, `sort`, `open`,
+  `severity`, `scope`, and `finding` are written with replace, and an unknown
+  value is ignored.
+- **`DataTable` is the one table of the report,** on TanStack Table.
+- **A mark that the PDF prints beside a value is drawn with its shape,** and,
+  where its label is not the severity, with the status word for screen
+  readers (`StatusMark` with `withStatus`).
+- **The content of every Radix layer sits at `z-50`,** above the sticky
+  header of the table.
 - **The report screens check only while something moves.** The list
   refetches every loaded page every 5 seconds while a loaded row is queued,
   running, or has a pending PDF, and not otherwise. The progress page

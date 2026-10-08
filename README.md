@@ -28,8 +28,11 @@ full design is in
   changes their password and language; the list of reports, with bulk
   delete; the form that requests a report, with quick and typed periods;
   and the progress page of a report, where its PDFs are downloaded and the
-  PDF of the other language is generated. The tabs of a report and the
-  screens of profiles and users come later.
+  PDF of the other language is generated. A collected report opens from its
+  progress page on a screen of seven tabs: overview, findings, namespaces,
+  workloads, autoscaling, nodes, and data quality. It is worded as its PDF,
+  and the PDFs are one click away. The screens of profiles and users come
+  later.
 - The command `worker`, which runs the report jobs of the platform: it
   collects a requested report through the outbound policy, stores its
   snapshot, writes the PDF of the language it was requested in, writes the
