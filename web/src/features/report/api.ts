@@ -2,7 +2,6 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useApi } from "@/api/context";
 import type { components } from "@/api/schema.gen";
 import type { Language } from "@/i18n/language";
-import { reportsKey } from "@/features/reports/api";
 
 type Schemas = components["schemas"];
 export type ReportView = Schemas["ReportView"];
@@ -17,12 +16,13 @@ export type ViewNodepool = Schemas["ViewNodepool"];
 export type ViewCapability = Schemas["ViewCapability"];
 export type ViewMessage = Schemas["ViewMessage"];
 
-// The view of a report in one language. It is read once: the snapshot behind it never changes. The view of the
-// previous language of the same report stays on screen while the new one loads.
+// The view of a report in one language. It is read once: the snapshot behind it never changes, so no change of
+// the reports reloads it. The view of the previous language of the same report stays on screen while the new one
+// loads.
 export function useReportView(id: string, language: Language): UseQueryResult<ReportView> {
   const api = useApi();
   return useQuery({
-    queryKey: [...reportsKey, id, "view", language],
+    queryKey: ["report-view", id, language],
     placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[1] === id ? previous : undefined),
     queryFn: async () => {
       const { data } = await api.GET("/reports/{id}/view", { params: { path: { id }, query: { lang: language } } });

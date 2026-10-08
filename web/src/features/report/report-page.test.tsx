@@ -4,7 +4,7 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { components } from "@/api/schema.gen";
 import { i18next } from "@/i18n/i18n";
-import { installMockApi, profileSummary, report, server, signedIn } from "../../../tests/msw";
+import { failure, installMockApi, profileSummary, report, server, signedIn } from "../../../tests/msw";
 import { location, renderApp } from "../../../tests/render";
 import { mockColourScheme } from "../../../tests/match-media";
 import viewEn from "../../../tests/fixtures/view/edge-scaling.en.json";
@@ -179,5 +179,62 @@ describe("report screen", () => {
     expect(screen.getByRole("heading", { level: 1, name: t("progress.screen") })).toBeInTheDocument();
     release();
     expect(await screen.findByText("the second period")).toBeInTheDocument();
+  });
+
+  it("does not refetch the view when a PDF is requested", async () => {
+    await open();
+    const views = () => mock.calls.filter((call) => call.path === `/reports/${id}/view`).length;
+    expect(views()).toBe(1);
+    await userEvent.click(screen.getByRole("button", { name: t("progress.pdf") }));
+    const dialog = await screen.findByRole("dialog", { name: t("progress.pdf") });
+    await userEvent.click(within(dialog).getAllByRole("button", { name: t("progress.generatePdf") })[0] as HTMLElement);
+    await waitFor(() => {
+      expect(mock.calls.some((call) => call.method === "POST" && call.path === `/reports/${id}/pdfs`)).toBe(true);
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(views()).toBe(1);
+  });
+
+  it("keeps the tabs when the view fails on a later fetch", async () => {
+    const { queryClient } = await open();
+    server.use(http.get(`${window.location.origin}/api/v1/reports/:id/view`, () => failure(500, "INTERNAL_ERROR")));
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+    expect(screen.getByRole("navigation", { name: t("report.tabs") })).toBeInTheDocument();
+    expect(screen.queryByText(t("error.INTERNAL_ERROR"))).not.toBeInTheDocument();
+  });
+
+  it("shows the title alone until the report answers, then the failure of the view", async () => {
+    mock.viewFailure.set(`${id}:en`, { status: 500, code: "INTERNAL_ERROR" });
+    let release: () => void = () => undefined;
+    const late = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(`${window.location.origin}/api/v1/reports/:id`, async () => {
+        await late;
+        return HttpResponse.json(report());
+      }),
+    );
+    await renderApp(`/reports/${id}/overview`);
+    await waitFor(() => {
+      expect(mock.calls.some((call) => call.path === `/reports/${id}/view`)).toBe(true);
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(screen.getByRole("heading", { level: 1, name: t("progress.screen") })).toBeInTheDocument();
+    expect(screen.queryByText(t("error.INTERNAL_ERROR"))).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByText(t("error.INTERNAL_ERROR"))).toBeInTheDocument();
+  });
+
+  it("a gone report wins over a view that answered", async () => {
+    mock.reports = [];
+    await renderApp(`/reports/${id}/overview`);
+    expect(await screen.findByText(t("progress.notFound"))).toBeInTheDocument();
   });
 });

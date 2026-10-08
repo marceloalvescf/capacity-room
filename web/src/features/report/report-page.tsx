@@ -46,7 +46,11 @@ export function ReportPage() {
   if (view.error instanceof ApiFailure && view.error.status === 409) {
     return <Navigate to={`/jobs/${id}`} replace />;
   }
-  const failed = view.error ?? report.error;
+  if (report.isPending || view.isPending) {
+    return <h1 className="text-xl font-semibold">{t("progress.screen")}</h1>;
+  }
+  // A view that failed to reload leaves the one already held in place.
+  const failed = (view.data === undefined ? view.error : null) ?? report.error;
   if (failed !== null) {
     return (
       <div className="flex flex-col items-start gap-3">
