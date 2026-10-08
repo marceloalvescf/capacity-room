@@ -1,0 +1,1459 @@
+{
+  "language": "en",
+  "min_severity": "all",
+  "report": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "cluster_name": "prod",
+    "profile": "detailed",
+    "timezone": "America/Sao_Paulo",
+    "generator_version": "0.0.0-golden",
+    "namespaces": [
+      "payments"
+    ],
+    "emitted_at": "2026-07-15T14:30:00-03:00",
+    "emitted_at_text": "07/15/2026 14:30",
+    "period_start": "2026-07-14T14:30:00-03:00",
+    "period_end": "2026-07-15T14:30:00-03:00",
+    "period_text": "07/14/2026 14:30 to 07/15/2026 14:30"
+  },
+  "summary": {
+    "namespaces": {
+      "raw": 1,
+      "text": "1",
+      "status": null
+    },
+    "workloads": {
+      "raw": 1,
+      "text": "1",
+      "status": null
+    },
+    "hpas": {
+      "raw": 1,
+      "text": "1",
+      "status": null
+    },
+    "nodes": {
+      "raw": 1,
+      "text": "1",
+      "status": null
+    },
+    "nodepools": {
+      "raw": 1,
+      "text": "1",
+      "status": null
+    },
+    "findings": {
+      "raw": 13,
+      "text": "13",
+      "status": null
+    },
+    "recommendations": {
+      "raw": 8,
+      "text": "8",
+      "status": null
+    },
+    "healthy": {
+      "raw": 5,
+      "text": "5",
+      "status": null
+    },
+    "attention": {
+      "raw": 4,
+      "text": "4",
+      "status": null
+    },
+    "critical": {
+      "raw": 4,
+      "text": "4",
+      "status": null
+    },
+    "workloads_without_hpa": {
+      "raw": 1,
+      "text": "1",
+      "status": null
+    },
+    "autoscaling": {
+      "status": "enabled",
+      "source": "raw_metrics",
+      "confidence": "inferred",
+      "managed_node_groups": {
+        "raw": 2,
+        "text": "2",
+        "status": null
+      },
+      "current_nodes": {
+        "raw": 3,
+        "text": "3",
+        "status": null
+      },
+      "min_nodes": {
+        "raw": 1,
+        "text": "1",
+        "status": null
+      },
+      "max_nodes": {
+        "raw": 3,
+        "text": "3",
+        "status": null
+      },
+      "scale_events": {
+        "raw": 1,
+        "text": "1",
+        "status": null
+      },
+      "unschedulable_pods": {
+        "raw": 1,
+        "text": "1",
+        "status": null
+      }
+    }
+  },
+  "findings": [
+    {
+      "code": "NAMESPACE_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "confidence": "exact",
+      "sentence": "Memory usage against the limit indicates an increased risk of OOMKill.",
+      "action": "Review the memory limit and the observed consumption profile.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 11000,
+          "text": "11000%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 12000,
+          "text": "12000%"
+        }
+      ]
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "confidence": "exact",
+      "sentence": "Memory usage against the request.",
+      "action": "Review the memory request and the observed consumption.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 22000,
+          "text": "22000%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 24000,
+          "text": "24000%"
+        }
+      ]
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/payments-web",
+      "confidence": "exact",
+      "sentence": "Memory usage against the limit indicates an increased risk of OOMKill.",
+      "action": "Review the memory limit and the observed consumption profile.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 11000,
+          "text": "11000%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 12000,
+          "text": "12000%"
+        }
+      ]
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/payments-web",
+      "confidence": "exact",
+      "sentence": "Memory usage against the request.",
+      "action": "Review the memory request and the observed consumption.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 22000,
+          "text": "22000%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 24000,
+          "text": "24000%"
+        }
+      ]
+    },
+    {
+      "code": "NODE_AUTOSCALING_NEAR_MAX",
+      "severity": "attention",
+      "scope_type": "cluster",
+      "scope_kind": "",
+      "scope_name": "cluster",
+      "confidence": "inferred",
+      "sentence": "The number of nodes is close to the observed maximum.",
+      "action": "Review the configured maximum and the headroom of the cluster.",
+      "evidence": [
+        {
+          "name": "current_nodes",
+          "raw": 3,
+          "text": "3"
+        },
+        {
+          "name": "max_nodes",
+          "raw": 3,
+          "text": "3"
+        }
+      ]
+    },
+    {
+      "code": "NAMESPACE_CPU_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "confidence": "exact",
+      "sentence": "CPU usage against the request.",
+      "action": "Review the CPU request and the observed consumption.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 60,
+          "text": "60%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 80,
+          "text": "80%"
+        }
+      ]
+    },
+    {
+      "code": "HPA_REPLICA_DIVERGENCE",
+      "severity": "attention",
+      "scope_type": "hpa",
+      "scope_kind": "",
+      "scope_name": "payments/payments-web",
+      "confidence": "inferred",
+      "sentence": "There is a persistent average difference between current and desired replicas.",
+      "action": "Investigate the events, the scheduling constraints, and the stabilization time.",
+      "evidence": [
+        {
+          "name": "average_difference",
+          "raw": 1,
+          "text": "1"
+        }
+      ]
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/payments-web",
+      "confidence": "exact",
+      "sentence": "CPU usage against the request.",
+      "action": "Review the CPU request and the observed consumption.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 60,
+          "text": "60%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 80,
+          "text": "80%"
+        }
+      ]
+    },
+    {
+      "code": "NODE_CPU_USAGE_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "node-1",
+      "confidence": "exact",
+      "sentence": "Observed CPU usage on the node.",
+      "action": "Follow the pressure and the capacity of the node.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 57.5,
+          "text": "57.5%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 60,
+          "text": "60%"
+        }
+      ]
+    },
+    {
+      "code": "NODE_MEMORY_USAGE_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "node-1",
+      "confidence": "exact",
+      "sentence": "Observed memory usage on the node.",
+      "action": "Follow the pressure and the capacity of the node.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 62.5,
+          "text": "62.5%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 65,
+          "text": "65%"
+        }
+      ]
+    },
+    {
+      "code": "NAMESPACE_CPU_LIMIT_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "confidence": "exact",
+      "sentence": "CPU usage against the limit indicates an increased risk of CPU throttling.",
+      "action": "Review the CPU limit and the observed consumption profile.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 30,
+          "text": "30%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 40,
+          "text": "40%"
+        }
+      ]
+    },
+    {
+      "code": "WORKLOAD_CPU_LIMIT_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/payments-web",
+      "confidence": "exact",
+      "sentence": "CPU usage against the limit indicates an increased risk of CPU throttling.",
+      "action": "Review the CPU limit and the observed consumption profile.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 30,
+          "text": "30%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 40,
+          "text": "40%"
+        }
+      ]
+    },
+    {
+      "code": "STATEFULSET_WITHOUT_HPA_INFO",
+      "severity": "healthy",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/payments-worker",
+      "confidence": "exact",
+      "sentence": "StatefulSet observed without HPA; for information.",
+      "action": "Confirm the scaling strategy suited to the StatefulSet.",
+      "evidence": []
+    }
+  ],
+  "recommendations": [
+    {
+      "code": "NAMESPACE_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "confidence": "exact",
+      "action": "Review the memory limit and the observed consumption profile.",
+      "scopes": [
+        "payments"
+      ],
+      "scope_text": "payments"
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "confidence": "exact",
+      "action": "Review the memory request and the observed consumption.",
+      "scopes": [
+        "payments"
+      ],
+      "scope_text": "payments"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "confidence": "exact",
+      "action": "Review the memory limit and the observed consumption profile.",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "scope_text": "payments-web"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "confidence": "exact",
+      "action": "Review the memory request and the observed consumption.",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "scope_text": "payments-web"
+    },
+    {
+      "code": "HPA_REPLICA_DIVERGENCE",
+      "severity": "attention",
+      "scope_type": "hpa",
+      "confidence": "inferred",
+      "action": "Investigate the events, the scheduling constraints, and the stabilization time.",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "scope_text": "payments-web"
+    },
+    {
+      "code": "NAMESPACE_CPU_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "confidence": "exact",
+      "action": "Review the CPU request and the observed consumption.",
+      "scopes": [
+        "payments"
+      ],
+      "scope_text": "payments"
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "workload",
+      "confidence": "exact",
+      "action": "Review the CPU request and the observed consumption.",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "scope_text": "payments-web"
+    }
+  ],
+  "namespaces": [
+    {
+      "name": "payments",
+      "status": "critical",
+      "pods": {
+        "raw": 3,
+        "text": "3",
+        "status": null
+      },
+      "approximate": false,
+      "cpu_usage": {
+        "state": "value",
+        "average": {
+          "raw": 0.30000000000000004,
+          "text": "300 mCPU",
+          "status": null
+        },
+        "minimum": {
+          "raw": 0.2,
+          "text": "200 mCPU",
+          "status": null
+        },
+        "peak": {
+          "raw": 0.4,
+          "text": "400 mCPU",
+          "status": null
+        },
+        "current": {
+          "raw": 0.4,
+          "text": "400 mCPU",
+          "status": null
+        }
+      },
+      "memory_usage": {
+        "state": "value",
+        "average": {
+          "raw": 110,
+          "text": "110 B",
+          "status": null
+        },
+        "minimum": {
+          "raw": 100,
+          "text": "100 B",
+          "status": null
+        },
+        "peak": {
+          "raw": 120,
+          "text": "120 B",
+          "status": null
+        },
+        "current": {
+          "raw": 120,
+          "text": "120 B",
+          "status": null
+        }
+      },
+      "cpu_requests": {
+        "state": "value",
+        "average": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        },
+        "minimum": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        },
+        "peak": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        },
+        "current": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        }
+      },
+      "memory_requests": {
+        "state": "value",
+        "average": {
+          "raw": 0.5,
+          "text": "0.5 B",
+          "status": null
+        },
+        "minimum": {
+          "raw": 0.5,
+          "text": "0.5 B",
+          "status": null
+        },
+        "peak": {
+          "raw": 0.5,
+          "text": "0.5 B",
+          "status": null
+        },
+        "current": {
+          "raw": 0.5,
+          "text": "0.5 B",
+          "status": null
+        }
+      },
+      "cpu_limits": {
+        "state": "value",
+        "average": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        },
+        "minimum": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        },
+        "peak": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        },
+        "current": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        }
+      },
+      "memory_limits": {
+        "state": "value",
+        "average": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        },
+        "minimum": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        },
+        "peak": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        },
+        "current": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        }
+      },
+      "cpu_request_percent": {
+        "state": "value",
+        "average": {
+          "raw": 60,
+          "text": "60%",
+          "status": "healthy"
+        },
+        "minimum": {
+          "raw": 40,
+          "text": "40%",
+          "status": "healthy"
+        },
+        "peak": {
+          "raw": 80,
+          "text": "80%",
+          "status": "attention"
+        },
+        "current": {
+          "raw": 80,
+          "text": "80%",
+          "status": "attention"
+        }
+      },
+      "memory_request_percent": {
+        "state": "value",
+        "average": {
+          "raw": 22000,
+          "text": "22000%",
+          "status": "critical"
+        },
+        "minimum": {
+          "raw": 20000,
+          "text": "20000%",
+          "status": "critical"
+        },
+        "peak": {
+          "raw": 24000,
+          "text": "24000%",
+          "status": "critical"
+        },
+        "current": {
+          "raw": 24000,
+          "text": "24000%",
+          "status": "critical"
+        }
+      },
+      "cpu_limit_percent": {
+        "state": "value",
+        "average": {
+          "raw": 30,
+          "text": "30%",
+          "status": "healthy"
+        },
+        "minimum": {
+          "raw": 20,
+          "text": "20%",
+          "status": "healthy"
+        },
+        "peak": {
+          "raw": 40,
+          "text": "40%",
+          "status": "healthy"
+        },
+        "current": {
+          "raw": 40,
+          "text": "40%",
+          "status": "healthy"
+        }
+      },
+      "memory_limit_percent": {
+        "state": "value",
+        "average": {
+          "raw": 11000,
+          "text": "11000%",
+          "status": "critical"
+        },
+        "minimum": {
+          "raw": 10000,
+          "text": "10000%",
+          "status": "critical"
+        },
+        "peak": {
+          "raw": 12000,
+          "text": "12000%",
+          "status": "critical"
+        },
+        "current": {
+          "raw": 12000,
+          "text": "12000%",
+          "status": "critical"
+        }
+      }
+    }
+  ],
+  "workloads": [
+    {
+      "namespace": "payments",
+      "kind": "Deployment",
+      "name": "payments-web",
+      "status": "critical",
+      "observed_usage": true,
+      "hpa_coverage": "covered",
+      "pods": {
+        "raw": 1,
+        "text": "1",
+        "status": null
+      },
+      "approximate": false,
+      "cpu_usage": {
+        "state": "value",
+        "average": {
+          "raw": 0.30000000000000004,
+          "text": "300 mCPU",
+          "status": null
+        },
+        "minimum": {
+          "raw": 0.2,
+          "text": "200 mCPU",
+          "status": null
+        },
+        "peak": {
+          "raw": 0.4,
+          "text": "400 mCPU",
+          "status": null
+        },
+        "current": {
+          "raw": 0.4,
+          "text": "400 mCPU",
+          "status": null
+        }
+      },
+      "memory_usage": {
+        "state": "value",
+        "average": {
+          "raw": 110,
+          "text": "110 B",
+          "status": null
+        },
+        "minimum": {
+          "raw": 100,
+          "text": "100 B",
+          "status": null
+        },
+        "peak": {
+          "raw": 120,
+          "text": "120 B",
+          "status": null
+        },
+        "current": {
+          "raw": 120,
+          "text": "120 B",
+          "status": null
+        }
+      },
+      "cpu_requests": {
+        "state": "value",
+        "average": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        },
+        "minimum": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        },
+        "peak": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        },
+        "current": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        }
+      },
+      "memory_requests": {
+        "state": "value",
+        "average": {
+          "raw": 0.5,
+          "text": "0.5 B",
+          "status": null
+        },
+        "minimum": {
+          "raw": 0.5,
+          "text": "0.5 B",
+          "status": null
+        },
+        "peak": {
+          "raw": 0.5,
+          "text": "0.5 B",
+          "status": null
+        },
+        "current": {
+          "raw": 0.5,
+          "text": "0.5 B",
+          "status": null
+        }
+      },
+      "cpu_limits": {
+        "state": "value",
+        "average": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        },
+        "minimum": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        },
+        "peak": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        },
+        "current": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        }
+      },
+      "memory_limits": {
+        "state": "value",
+        "average": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        },
+        "minimum": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        },
+        "peak": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        },
+        "current": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        }
+      },
+      "cpu_request_percent": {
+        "state": "value",
+        "average": {
+          "raw": 60,
+          "text": "60%",
+          "status": "healthy"
+        },
+        "minimum": {
+          "raw": 40,
+          "text": "40%",
+          "status": "healthy"
+        },
+        "peak": {
+          "raw": 80,
+          "text": "80%",
+          "status": "attention"
+        },
+        "current": {
+          "raw": 80,
+          "text": "80%",
+          "status": "attention"
+        }
+      },
+      "memory_request_percent": {
+        "state": "value",
+        "average": {
+          "raw": 22000,
+          "text": "22000%",
+          "status": "critical"
+        },
+        "minimum": {
+          "raw": 20000,
+          "text": "20000%",
+          "status": "critical"
+        },
+        "peak": {
+          "raw": 24000,
+          "text": "24000%",
+          "status": "critical"
+        },
+        "current": {
+          "raw": 24000,
+          "text": "24000%",
+          "status": "critical"
+        }
+      },
+      "cpu_limit_percent": {
+        "state": "value",
+        "average": {
+          "raw": 30,
+          "text": "30%",
+          "status": "healthy"
+        },
+        "minimum": {
+          "raw": 20,
+          "text": "20%",
+          "status": "healthy"
+        },
+        "peak": {
+          "raw": 40,
+          "text": "40%",
+          "status": "healthy"
+        },
+        "current": {
+          "raw": 40,
+          "text": "40%",
+          "status": "healthy"
+        }
+      },
+      "memory_limit_percent": {
+        "state": "value",
+        "average": {
+          "raw": 11000,
+          "text": "11000%",
+          "status": "critical"
+        },
+        "minimum": {
+          "raw": 10000,
+          "text": "10000%",
+          "status": "critical"
+        },
+        "peak": {
+          "raw": 12000,
+          "text": "12000%",
+          "status": "critical"
+        },
+        "current": {
+          "raw": 12000,
+          "text": "12000%",
+          "status": "critical"
+        }
+      },
+      "reason": "Memory: peak of 12000% of the limit; Memory: peak of 24000% of the request; CPU: peak of 80% of the request"
+    },
+    {
+      "namespace": "payments",
+      "kind": "StatefulSet",
+      "name": "payments-worker",
+      "status": "healthy",
+      "observed_usage": false,
+      "hpa_coverage": "uncovered",
+      "pods": {
+        "raw": null,
+        "text": "Unavailable",
+        "status": null
+      },
+      "approximate": false,
+      "cpu_usage": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        }
+      },
+      "memory_usage": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        }
+      },
+      "cpu_requests": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        }
+      },
+      "memory_requests": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        }
+      },
+      "cpu_limits": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        }
+      },
+      "memory_limits": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": null
+        }
+      },
+      "cpu_request_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        }
+      },
+      "memory_request_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        }
+      },
+      "cpu_limit_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        }
+      },
+      "memory_limit_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Unavailable",
+          "status": "unavailable"
+        }
+      },
+      "reason": ""
+    }
+  ],
+  "hpas": [
+    {
+      "namespace": "payments",
+      "name": "payments-web",
+      "target_kind": "Deployment",
+      "target_name": "payments-web",
+      "spec_min": {
+        "raw": 1,
+        "text": "1",
+        "status": null
+      },
+      "spec_max": {
+        "raw": 4,
+        "text": "4",
+        "status": null
+      },
+      "current": {
+        "state": "value",
+        "average": {
+          "raw": 2.5,
+          "text": "2.5",
+          "status": null
+        },
+        "minimum": {
+          "raw": 2,
+          "text": "2",
+          "status": null
+        },
+        "peak": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        },
+        "current": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        }
+      },
+      "desired": {
+        "state": "value",
+        "average": {
+          "raw": 3.5,
+          "text": "3.5",
+          "status": null
+        },
+        "minimum": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        },
+        "peak": {
+          "raw": 4,
+          "text": "4",
+          "status": null
+        },
+        "current": {
+          "raw": 4,
+          "text": "4",
+          "status": null
+        }
+      },
+      "situation": "Below the maximum",
+      "situation_status": "healthy"
+    }
+  ],
+  "nodes": [
+    {
+      "name": "node-1",
+      "pool": "pool-a",
+      "pool_confidence": "exact",
+      "status": "healthy",
+      "cpu_capacity": {
+        "raw": 4,
+        "text": "4 cores",
+        "status": null
+      },
+      "memory_capacity": {
+        "raw": 8,
+        "text": "8 B",
+        "status": null
+      },
+      "cpu_allocatable": {
+        "raw": 4,
+        "text": "4 cores",
+        "status": null
+      },
+      "memory_allocatable": {
+        "raw": 8,
+        "text": "8 B",
+        "status": null
+      },
+      "cpu_request_percent": {
+        "raw": 25,
+        "text": "25%",
+        "status": null
+      },
+      "memory_request_percent": {
+        "raw": 25,
+        "text": "25%",
+        "status": null
+      },
+      "cpu_usage_percent": {
+        "state": "value",
+        "average": {
+          "raw": 57.5,
+          "text": "57.5%",
+          "status": "healthy"
+        },
+        "minimum": {
+          "raw": 55,
+          "text": "55%",
+          "status": "healthy"
+        },
+        "peak": {
+          "raw": 60,
+          "text": "60%",
+          "status": "healthy"
+        },
+        "current": {
+          "raw": 60,
+          "text": "60%",
+          "status": "healthy"
+        }
+      },
+      "memory_usage_percent": {
+        "state": "value",
+        "average": {
+          "raw": 62.5,
+          "text": "62.5%",
+          "status": "healthy"
+        },
+        "minimum": {
+          "raw": 60,
+          "text": "60%",
+          "status": "healthy"
+        },
+        "peak": {
+          "raw": 65,
+          "text": "65%",
+          "status": "healthy"
+        },
+        "current": {
+          "raw": 65,
+          "text": "65%",
+          "status": "healthy"
+        }
+      },
+      "ready": true,
+      "schedulable": true,
+      "reason": "CPU: peak of 60% utilization; Memory: peak of 65% utilization",
+      "reason_status": "healthy"
+    }
+  ],
+  "nodepools": [
+    {
+      "name": "pool-a",
+      "confidence": "exact",
+      "nodes": [
+        "node-1"
+      ]
+    }
+  ],
+  "quality": {
+    "capabilities": [
+      {
+        "name": "namespace_usage",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "container_cpu_usage_seconds_total",
+          "container_memory_working_set_bytes"
+        ],
+        "remark": "No remark"
+      },
+      {
+        "name": "workload_usage",
+        "state": "available",
+        "strategy": "recording_rule",
+        "evidence": [
+          "namespace_workload_pod:kube_pod_owner:relabel",
+          "container_cpu_usage_seconds_total",
+          "container_memory_working_set_bytes"
+        ],
+        "remark": "No remark"
+      },
+      {
+        "name": "requests_limits",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_pod_container_resource_requests",
+          "kube_pod_container_resource_limits"
+        ],
+        "remark": "No remark"
+      },
+      {
+        "name": "hpa_history",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_horizontalpodautoscaler_info",
+          "kube_horizontalpodautoscaler_spec_min_replicas",
+          "kube_horizontalpodautoscaler_spec_max_replicas",
+          "kube_horizontalpodautoscaler_status_current_replicas",
+          "kube_horizontalpodautoscaler_status_desired_replicas"
+        ],
+        "remark": "No remark"
+      },
+      {
+        "name": "workloads_without_hpa",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_deployment_labels",
+          "kube_statefulset_labels",
+          "kube_horizontalpodautoscaler_info"
+        ],
+        "remark": "No remark"
+      },
+      {
+        "name": "ip_node_mapping",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_node_info"
+        ],
+        "remark": "No remark"
+      },
+      {
+        "name": "nodepool_discovery",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_node_labels"
+        ],
+        "remark": "No remark"
+      },
+      {
+        "name": "node_utilization",
+        "state": "available",
+        "strategy": "recording_rule",
+        "evidence": [
+          "instance:node_cpu_utilisation:rate5m",
+          "instance:node_memory_utilisation:ratio"
+        ],
+        "remark": "No remark"
+      },
+      {
+        "name": "node_autoscaling",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "cluster_autoscaler_*"
+        ],
+        "remark": "No remark"
+      }
+    ],
+    "warnings": [],
+    "notices": [],
+    "collection_started_at": "2026-07-15T14:30:00-03:00",
+    "collection_completed_at": "2026-07-15T14:30:42-03:00"
+  }
+}

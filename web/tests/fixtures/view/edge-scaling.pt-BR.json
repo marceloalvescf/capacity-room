@@ -1,0 +1,2481 @@
+{
+  "language": "pt-BR",
+  "min_severity": "all",
+  "report": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "cluster_name": "prod",
+    "profile": "detailed",
+    "timezone": "America/Sao_Paulo",
+    "generator_version": "0.0.0-golden",
+    "namespaces": [
+      "payments"
+    ],
+    "emitted_at": "2026-07-15T14:30:00-03:00",
+    "emitted_at_text": "15/07/2026 14:30",
+    "period_start": "2026-07-14T14:30:00-03:00",
+    "period_end": "2026-07-15T14:30:00-03:00",
+    "period_text": "14/07/2026 14:30 a 15/07/2026 14:30"
+  },
+  "summary": {
+    "namespaces": {
+      "raw": 1,
+      "text": "1",
+      "status": null
+    },
+    "workloads": {
+      "raw": 1,
+      "text": "1",
+      "status": null
+    },
+    "hpas": {
+      "raw": 4,
+      "text": "4",
+      "status": null
+    },
+    "nodes": {
+      "raw": 4,
+      "text": "4",
+      "status": null
+    },
+    "nodepools": {
+      "raw": 3,
+      "text": "3",
+      "status": null
+    },
+    "findings": {
+      "raw": 26,
+      "text": "26",
+      "status": null
+    },
+    "recommendations": {
+      "raw": 19,
+      "text": "19",
+      "status": null
+    },
+    "healthy": {
+      "raw": 7,
+      "text": "7",
+      "status": null
+    },
+    "attention": {
+      "raw": 10,
+      "text": "10",
+      "status": null
+    },
+    "critical": {
+      "raw": 9,
+      "text": "9",
+      "status": null
+    },
+    "workloads_without_hpa": {
+      "raw": 2,
+      "text": "2",
+      "status": null
+    },
+    "autoscaling": {
+      "status": "enabled",
+      "source": "raw_metrics",
+      "confidence": "inferred",
+      "managed_node_groups": {
+        "raw": 2,
+        "text": "2",
+        "status": null
+      },
+      "current_nodes": {
+        "raw": 3,
+        "text": "3",
+        "status": null
+      },
+      "min_nodes": {
+        "raw": 2,
+        "text": "2",
+        "status": null
+      },
+      "max_nodes": {
+        "raw": 3,
+        "text": "3",
+        "status": null
+      },
+      "scale_events": {
+        "raw": 1,
+        "text": "1",
+        "status": null
+      },
+      "unschedulable_pods": {
+        "raw": 2,
+        "text": "2",
+        "status": null
+      }
+    }
+  },
+  "findings": [
+    {
+      "code": "NODE_CPU_USAGE_CRITICAL",
+      "severity": "critical",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "aks-agentpool-12345678-vmss000000",
+      "confidence": "exact",
+      "sentence": "Uso observado de CPU no node.",
+      "action": "Acompanhar pressão e capacidade do node.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 92.5,
+          "text": "92,5%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 95,
+          "text": "95%"
+        }
+      ]
+    },
+    {
+      "code": "NAMESPACE_CPU_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "confidence": "inferred",
+      "sentence": "O uso de CPU em relação ao limit indica risco aumentado de throttling de CPU.",
+      "action": "Revisar o limit de CPU e o perfil de consumo observado.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 220,
+          "text": "220%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 330,
+          "text": "330%"
+        }
+      ]
+    },
+    {
+      "code": "NAMESPACE_CPU_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "confidence": "inferred",
+      "sentence": "Uso de CPU em relação ao request.",
+      "action": "Revisar o request de CPU e o consumo observado.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 440,
+          "text": "440%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 660,
+          "text": "660%"
+        }
+      ]
+    },
+    {
+      "code": "NAMESPACE_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "confidence": "inferred",
+      "sentence": "O uso de memória em relação ao limit indica risco aumentado de OOMKill.",
+      "action": "Revisar o limit de memória e o perfil de consumo observado.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 11000,
+          "text": "11000%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 12000,
+          "text": "12000%"
+        }
+      ]
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "confidence": "inferred",
+      "sentence": "Uso de memória em relação ao request.",
+      "action": "Revisar o request de memória e o consumo observado.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 22000,
+          "text": "22000%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 24000,
+          "text": "24000%"
+        }
+      ]
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/payments-web",
+      "confidence": "exact",
+      "sentence": "O uso de memória em relação ao limit indica risco aumentado de OOMKill.",
+      "action": "Revisar o limit de memória e o perfil de consumo observado.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 11000,
+          "text": "11000%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 12000,
+          "text": "12000%"
+        }
+      ]
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/payments-web",
+      "confidence": "exact",
+      "sentence": "Uso de memória em relação ao request.",
+      "action": "Revisar o request de memória e o consumo observado.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 22000,
+          "text": "22000%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 24000,
+          "text": "24000%"
+        }
+      ]
+    },
+    {
+      "code": "HPA_MAX_REPLICAS_REACHED",
+      "severity": "critical",
+      "scope_type": "hpa",
+      "scope_kind": "",
+      "scope_name": "payments/web",
+      "confidence": "exact",
+      "sentence": "O HPA atingiu o máximo observado de replicas.",
+      "action": "Revisar o máximo configurado e a capacidade do workload.",
+      "evidence": [
+        {
+          "name": "current_peak",
+          "raw": 4,
+          "text": "4"
+        },
+        {
+          "name": "spec_max",
+          "raw": 4,
+          "text": "4"
+        }
+      ]
+    },
+    {
+      "code": "NODE_CPU_REQUEST_HIGH",
+      "severity": "critical",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "pool-a-1",
+      "confidence": "exact",
+      "sentence": "Requests de CPU ocupam parcela elevada do node.",
+      "action": "Revisar requests e margem de agendamento.",
+      "evidence": [
+        {
+          "name": "percent",
+          "raw": 90,
+          "text": "90%"
+        }
+      ]
+    },
+    {
+      "code": "NODE_MEMORY_USAGE_ATTENTION",
+      "severity": "attention",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "aks-agentpool-12345678-vmss000000",
+      "confidence": "exact",
+      "sentence": "Uso observado de memória no node.",
+      "action": "Acompanhar pressão e capacidade do node.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 71,
+          "text": "71%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 72,
+          "text": "72%"
+        }
+      ]
+    },
+    {
+      "code": "NODE_AUTOSCALING_NEAR_MAX",
+      "severity": "attention",
+      "scope_type": "cluster",
+      "scope_kind": "",
+      "scope_name": "cluster",
+      "confidence": "inferred",
+      "sentence": "O número de nodes está próximo ao máximo observado.",
+      "action": "Revisar o máximo configurado e a margem do cluster.",
+      "evidence": [
+        {
+          "name": "current_nodes",
+          "raw": 3,
+          "text": "3"
+        },
+        {
+          "name": "max_nodes",
+          "raw": 3,
+          "text": "3"
+        }
+      ]
+    },
+    {
+      "code": "DEPLOYMENT_WITHOUT_HPA",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/api",
+      "confidence": "exact",
+      "sentence": "Deployment sem HPA observado.",
+      "action": "Validar se o autoscaling horizontal é necessário para este Deployment.",
+      "evidence": []
+    },
+    {
+      "code": "HPA_REPLICA_DIVERGENCE",
+      "severity": "attention",
+      "scope_type": "hpa",
+      "scope_kind": "",
+      "scope_name": "payments/idle",
+      "confidence": "inferred",
+      "sentence": "Há diferença média persistente entre replicas atuais e desejados.",
+      "action": "Investigar eventos, restrições de agendamento e tempo de estabilização.",
+      "evidence": [
+        {
+          "name": "average_difference",
+          "raw": 1,
+          "text": "1"
+        }
+      ]
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/payments-web",
+      "confidence": "exact",
+      "sentence": "Uso de CPU em relação ao request.",
+      "action": "Revisar o request de CPU e o consumo observado.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 60,
+          "text": "60%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 80,
+          "text": "80%"
+        }
+      ]
+    },
+    {
+      "code": "NODEPOOL_CPU_UNEVEN",
+      "severity": "attention",
+      "scope_type": "nodepool",
+      "scope_kind": "",
+      "scope_name": "pool-a",
+      "confidence": "exact",
+      "sentence": "A pressão de pico de CPU variou entre nodes do pool.",
+      "action": "Investigar distribuição de carga e restrições de agendamento.",
+      "evidence": [
+        {
+          "name": "minimum_peak_percent",
+          "raw": 20,
+          "text": "20%"
+        },
+        {
+          "name": "maximum_peak_percent",
+          "raw": 60,
+          "text": "60%"
+        },
+        {
+          "name": "spread_percent",
+          "raw": 40,
+          "text": "40%"
+        }
+      ]
+    },
+    {
+      "code": "NODEPOOL_MEMORY_UNEVEN",
+      "severity": "attention",
+      "scope_type": "nodepool",
+      "scope_kind": "",
+      "scope_name": "pool-a",
+      "confidence": "exact",
+      "sentence": "A pressão de pico de memória variou entre nodes do pool.",
+      "action": "Investigar distribuição de carga e restrições de agendamento.",
+      "evidence": [
+        {
+          "name": "minimum_peak_percent",
+          "raw": 25,
+          "text": "25%"
+        },
+        {
+          "name": "maximum_peak_percent",
+          "raw": 55,
+          "text": "55%"
+        },
+        {
+          "name": "spread_percent",
+          "raw": 30,
+          "text": "30%"
+        }
+      ]
+    },
+    {
+      "code": "NODE_LOW_UTILIZATION",
+      "severity": "attention",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "pool-a-1",
+      "confidence": "exact",
+      "sentence": "O node apresentou baixa utilização real média.",
+      "action": "Avaliar consolidação e redução segura de capacidade.",
+      "evidence": [
+        {
+          "name": "maximum_average_percent",
+          "raw": 25,
+          "text": "25%"
+        }
+      ]
+    },
+    {
+      "code": "NODE_OVERREQUESTED",
+      "severity": "attention",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "pool-a-1",
+      "confidence": "inferred",
+      "sentence": "Requests elevados coexistem com baixa utilização real observada.",
+      "action": "Revisar o dimensionamento dos workloads agendados no node.",
+      "evidence": [
+        {
+          "name": "resources",
+          "raw": "cpu",
+          "text": "cpu"
+        }
+      ]
+    },
+    {
+      "code": "NODEPOOL_UNKNOWN",
+      "severity": "attention",
+      "scope_type": "nodepool",
+      "scope_kind": "",
+      "scope_name": "unknown",
+      "confidence": "unknown",
+      "sentence": "O node pool não pôde ser determinado.",
+      "action": "Confirmar o node pool sem inferir identidade do provedor.",
+      "evidence": [
+        {
+          "name": "affected_nodes",
+          "raw": 1,
+          "text": "1"
+        }
+      ]
+    },
+    {
+      "code": "HPA_PINNED_REPLICAS",
+      "severity": "healthy",
+      "scope_type": "hpa",
+      "scope_kind": "",
+      "scope_name": "payments/fixed",
+      "confidence": "exact",
+      "sentence": "O HPA está fixado em um número constante de replicas.",
+      "action": "Confirmar se o autoscaling é desejado para este workload.",
+      "evidence": [
+        {
+          "name": "spec_min",
+          "raw": 3,
+          "text": "3"
+        },
+        {
+          "name": "spec_max",
+          "raw": 3,
+          "text": "3"
+        }
+      ]
+    },
+    {
+      "code": "WORKLOAD_CPU_LIMIT_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/payments-web",
+      "confidence": "exact",
+      "sentence": "O uso de CPU em relação ao limit indica risco aumentado de throttling de CPU.",
+      "action": "Revisar o limit de CPU e o perfil de consumo observado.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 30,
+          "text": "30%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 40,
+          "text": "40%"
+        }
+      ]
+    },
+    {
+      "code": "STATEFULSET_WITHOUT_HPA_INFO",
+      "severity": "healthy",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/queue",
+      "confidence": "exact",
+      "sentence": "StatefulSet sem HPA observado; registro informativo.",
+      "action": "Confirmar a estratégia de escala adequada ao StatefulSet.",
+      "evidence": []
+    },
+    {
+      "code": "NODE_CPU_USAGE_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "pool-a-1",
+      "confidence": "exact",
+      "sentence": "Uso observado de CPU no node.",
+      "action": "Acompanhar pressão e capacidade do node.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 20,
+          "text": "20%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 20,
+          "text": "20%"
+        }
+      ]
+    },
+    {
+      "code": "NODE_MEMORY_USAGE_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "pool-a-1",
+      "confidence": "exact",
+      "sentence": "Uso observado de memória no node.",
+      "action": "Acompanhar pressão e capacidade do node.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 25,
+          "text": "25%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 25,
+          "text": "25%"
+        }
+      ]
+    },
+    {
+      "code": "NODE_CPU_USAGE_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "pool-a-2",
+      "confidence": "exact",
+      "sentence": "Uso observado de CPU no node.",
+      "action": "Acompanhar pressão e capacidade do node.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 57.5,
+          "text": "57,5%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 60,
+          "text": "60%"
+        }
+      ]
+    },
+    {
+      "code": "NODE_MEMORY_USAGE_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "pool-a-2",
+      "confidence": "exact",
+      "sentence": "Uso observado de memória no node.",
+      "action": "Acompanhar pressão e capacidade do node.",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "raw": 52.5,
+          "text": "52,5%"
+        },
+        {
+          "name": "peak_percent",
+          "raw": 55,
+          "text": "55%"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    {
+      "code": "HPA_MAX_REPLICAS_REACHED",
+      "severity": "critical",
+      "scope_type": "hpa",
+      "confidence": "exact",
+      "action": "Revisar o máximo configurado e a capacidade do workload.",
+      "scopes": [
+        "payments/web"
+      ],
+      "scope_text": "web"
+    },
+    {
+      "code": "NAMESPACE_CPU_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "confidence": "inferred",
+      "action": "Revisar o limit de CPU e o perfil de consumo observado.",
+      "scopes": [
+        "payments"
+      ],
+      "scope_text": "payments"
+    },
+    {
+      "code": "NAMESPACE_CPU_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "confidence": "inferred",
+      "action": "Revisar o request de CPU e o consumo observado.",
+      "scopes": [
+        "payments"
+      ],
+      "scope_text": "payments"
+    },
+    {
+      "code": "NAMESPACE_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "confidence": "inferred",
+      "action": "Revisar o limit de memória e o perfil de consumo observado.",
+      "scopes": [
+        "payments"
+      ],
+      "scope_text": "payments"
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "namespace",
+      "confidence": "inferred",
+      "action": "Revisar o request de memória e o consumo observado.",
+      "scopes": [
+        "payments"
+      ],
+      "scope_text": "payments"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "confidence": "exact",
+      "action": "Revisar o limit de memória e o perfil de consumo observado.",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "scope_text": "payments-web"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "confidence": "exact",
+      "action": "Revisar o request de memória e o consumo observado.",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "scope_text": "payments-web"
+    },
+    {
+      "code": "DEPLOYMENT_WITHOUT_HPA",
+      "severity": "attention",
+      "scope_type": "workload",
+      "confidence": "exact",
+      "action": "Validar se o autoscaling horizontal é necessário para este Deployment.",
+      "scopes": [
+        "payments/api"
+      ],
+      "scope_text": "api"
+    },
+    {
+      "code": "HPA_REPLICA_DIVERGENCE",
+      "severity": "attention",
+      "scope_type": "hpa",
+      "confidence": "inferred",
+      "action": "Investigar eventos, restrições de agendamento e tempo de estabilização.",
+      "scopes": [
+        "payments/idle"
+      ],
+      "scope_text": "idle"
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "workload",
+      "confidence": "exact",
+      "action": "Revisar o request de CPU e o consumo observado.",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "scope_text": "payments-web"
+    }
+  ],
+  "namespaces": [
+    {
+      "name": "payments",
+      "status": "critical",
+      "pods": {
+        "raw": 3,
+        "text": "3",
+        "status": null
+      },
+      "approximate": true,
+      "cpu_usage": {
+        "state": "value",
+        "average": {
+          "raw": 2.1999999999999997,
+          "text": "2,2 cores",
+          "status": null
+        },
+        "minimum": {
+          "raw": 1.1,
+          "text": "1,1 cores",
+          "status": null
+        },
+        "peak": {
+          "raw": 3.3,
+          "text": "3,3 cores",
+          "status": null
+        },
+        "current": {
+          "raw": 2.2,
+          "text": "2,2 cores",
+          "status": null
+        }
+      },
+      "memory_usage": {
+        "state": "value",
+        "average": {
+          "raw": 110,
+          "text": "110 B",
+          "status": null
+        },
+        "minimum": {
+          "raw": 100,
+          "text": "100 B",
+          "status": null
+        },
+        "peak": {
+          "raw": 120,
+          "text": "120 B",
+          "status": null
+        },
+        "current": {
+          "raw": 120,
+          "text": "120 B",
+          "status": null
+        }
+      },
+      "cpu_requests": {
+        "state": "value",
+        "average": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        },
+        "minimum": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        },
+        "peak": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        },
+        "current": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        }
+      },
+      "memory_requests": {
+        "state": "value",
+        "average": {
+          "raw": 0.5,
+          "text": "0,5 B",
+          "status": null
+        },
+        "minimum": {
+          "raw": 0.5,
+          "text": "0,5 B",
+          "status": null
+        },
+        "peak": {
+          "raw": 0.5,
+          "text": "0,5 B",
+          "status": null
+        },
+        "current": {
+          "raw": 0.5,
+          "text": "0,5 B",
+          "status": null
+        }
+      },
+      "cpu_limits": {
+        "state": "value",
+        "average": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        },
+        "minimum": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        },
+        "peak": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        },
+        "current": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        }
+      },
+      "memory_limits": {
+        "state": "value",
+        "average": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        },
+        "minimum": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        },
+        "peak": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        },
+        "current": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        }
+      },
+      "cpu_request_percent": {
+        "state": "value",
+        "average": {
+          "raw": 440,
+          "text": "440%",
+          "status": "critical"
+        },
+        "minimum": {
+          "raw": 220.00000000000003,
+          "text": "220%",
+          "status": "critical"
+        },
+        "peak": {
+          "raw": 660,
+          "text": "660%",
+          "status": "critical"
+        },
+        "current": {
+          "raw": 440.00000000000006,
+          "text": "440%",
+          "status": "critical"
+        }
+      },
+      "memory_request_percent": {
+        "state": "value",
+        "average": {
+          "raw": 22000,
+          "text": "22000%",
+          "status": "critical"
+        },
+        "minimum": {
+          "raw": 20000,
+          "text": "20000%",
+          "status": "critical"
+        },
+        "peak": {
+          "raw": 24000,
+          "text": "24000%",
+          "status": "critical"
+        },
+        "current": {
+          "raw": 24000,
+          "text": "24000%",
+          "status": "critical"
+        }
+      },
+      "cpu_limit_percent": {
+        "state": "value",
+        "average": {
+          "raw": 220,
+          "text": "220%",
+          "status": "critical"
+        },
+        "minimum": {
+          "raw": 110.00000000000001,
+          "text": "110%",
+          "status": "critical"
+        },
+        "peak": {
+          "raw": 330,
+          "text": "330%",
+          "status": "critical"
+        },
+        "current": {
+          "raw": 220.00000000000003,
+          "text": "220%",
+          "status": "critical"
+        }
+      },
+      "memory_limit_percent": {
+        "state": "value",
+        "average": {
+          "raw": 11000,
+          "text": "11000%",
+          "status": "critical"
+        },
+        "minimum": {
+          "raw": 10000,
+          "text": "10000%",
+          "status": "critical"
+        },
+        "peak": {
+          "raw": 12000,
+          "text": "12000%",
+          "status": "critical"
+        },
+        "current": {
+          "raw": 12000,
+          "text": "12000%",
+          "status": "critical"
+        }
+      }
+    }
+  ],
+  "workloads": [
+    {
+      "namespace": "payments",
+      "kind": "Deployment",
+      "name": "api",
+      "status": "attention",
+      "observed_usage": false,
+      "hpa_coverage": "uncovered",
+      "pods": {
+        "raw": null,
+        "text": "Indisponível",
+        "status": null
+      },
+      "approximate": false,
+      "cpu_usage": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        }
+      },
+      "memory_usage": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        }
+      },
+      "cpu_requests": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        }
+      },
+      "memory_requests": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        }
+      },
+      "cpu_limits": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        }
+      },
+      "memory_limits": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        }
+      },
+      "cpu_request_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        }
+      },
+      "memory_request_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        }
+      },
+      "cpu_limit_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        }
+      },
+      "memory_limit_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        }
+      },
+      "reason": ""
+    },
+    {
+      "namespace": "payments",
+      "kind": "Deployment",
+      "name": "payments-web",
+      "status": "critical",
+      "observed_usage": true,
+      "hpa_coverage": "covered",
+      "pods": {
+        "raw": 1,
+        "text": "1",
+        "status": null
+      },
+      "approximate": false,
+      "cpu_usage": {
+        "state": "value",
+        "average": {
+          "raw": 0.30000000000000004,
+          "text": "300 mCPU",
+          "status": null
+        },
+        "minimum": {
+          "raw": 0.2,
+          "text": "200 mCPU",
+          "status": null
+        },
+        "peak": {
+          "raw": 0.4,
+          "text": "400 mCPU",
+          "status": null
+        },
+        "current": {
+          "raw": 0.4,
+          "text": "400 mCPU",
+          "status": null
+        }
+      },
+      "memory_usage": {
+        "state": "value",
+        "average": {
+          "raw": 110,
+          "text": "110 B",
+          "status": null
+        },
+        "minimum": {
+          "raw": 100,
+          "text": "100 B",
+          "status": null
+        },
+        "peak": {
+          "raw": 120,
+          "text": "120 B",
+          "status": null
+        },
+        "current": {
+          "raw": 120,
+          "text": "120 B",
+          "status": null
+        }
+      },
+      "cpu_requests": {
+        "state": "value",
+        "average": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        },
+        "minimum": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        },
+        "peak": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        },
+        "current": {
+          "raw": 0.5,
+          "text": "500 mCPU",
+          "status": null
+        }
+      },
+      "memory_requests": {
+        "state": "value",
+        "average": {
+          "raw": 0.5,
+          "text": "0,5 B",
+          "status": null
+        },
+        "minimum": {
+          "raw": 0.5,
+          "text": "0,5 B",
+          "status": null
+        },
+        "peak": {
+          "raw": 0.5,
+          "text": "0,5 B",
+          "status": null
+        },
+        "current": {
+          "raw": 0.5,
+          "text": "0,5 B",
+          "status": null
+        }
+      },
+      "cpu_limits": {
+        "state": "value",
+        "average": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        },
+        "minimum": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        },
+        "peak": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        },
+        "current": {
+          "raw": 1,
+          "text": "1 cores",
+          "status": null
+        }
+      },
+      "memory_limits": {
+        "state": "value",
+        "average": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        },
+        "minimum": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        },
+        "peak": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        },
+        "current": {
+          "raw": 1,
+          "text": "1 B",
+          "status": null
+        }
+      },
+      "cpu_request_percent": {
+        "state": "value",
+        "average": {
+          "raw": 60,
+          "text": "60%",
+          "status": "healthy"
+        },
+        "minimum": {
+          "raw": 40,
+          "text": "40%",
+          "status": "healthy"
+        },
+        "peak": {
+          "raw": 80,
+          "text": "80%",
+          "status": "attention"
+        },
+        "current": {
+          "raw": 80,
+          "text": "80%",
+          "status": "attention"
+        }
+      },
+      "memory_request_percent": {
+        "state": "value",
+        "average": {
+          "raw": 22000,
+          "text": "22000%",
+          "status": "critical"
+        },
+        "minimum": {
+          "raw": 20000,
+          "text": "20000%",
+          "status": "critical"
+        },
+        "peak": {
+          "raw": 24000,
+          "text": "24000%",
+          "status": "critical"
+        },
+        "current": {
+          "raw": 24000,
+          "text": "24000%",
+          "status": "critical"
+        }
+      },
+      "cpu_limit_percent": {
+        "state": "value",
+        "average": {
+          "raw": 30,
+          "text": "30%",
+          "status": "healthy"
+        },
+        "minimum": {
+          "raw": 20,
+          "text": "20%",
+          "status": "healthy"
+        },
+        "peak": {
+          "raw": 40,
+          "text": "40%",
+          "status": "healthy"
+        },
+        "current": {
+          "raw": 40,
+          "text": "40%",
+          "status": "healthy"
+        }
+      },
+      "memory_limit_percent": {
+        "state": "value",
+        "average": {
+          "raw": 11000,
+          "text": "11000%",
+          "status": "critical"
+        },
+        "minimum": {
+          "raw": 10000,
+          "text": "10000%",
+          "status": "critical"
+        },
+        "peak": {
+          "raw": 12000,
+          "text": "12000%",
+          "status": "critical"
+        },
+        "current": {
+          "raw": 12000,
+          "text": "12000%",
+          "status": "critical"
+        }
+      },
+      "reason": "Memória: pico de 12000% do limit; Memória: pico de 24000% do request; CPU: pico de 80% do request"
+    },
+    {
+      "namespace": "payments",
+      "kind": "StatefulSet",
+      "name": "queue",
+      "status": "healthy",
+      "observed_usage": false,
+      "hpa_coverage": "uncovered",
+      "pods": {
+        "raw": null,
+        "text": "Indisponível",
+        "status": null
+      },
+      "approximate": false,
+      "cpu_usage": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        }
+      },
+      "memory_usage": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        }
+      },
+      "cpu_requests": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        }
+      },
+      "memory_requests": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        }
+      },
+      "cpu_limits": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        }
+      },
+      "memory_limits": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": null
+        }
+      },
+      "cpu_request_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        }
+      },
+      "memory_request_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        }
+      },
+      "cpu_limit_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        }
+      },
+      "memory_limit_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        }
+      },
+      "reason": ""
+    }
+  ],
+  "hpas": [
+    {
+      "namespace": "payments",
+      "name": "dup",
+      "target_kind": "Deployment",
+      "target_name": "dup",
+      "spec_min": {
+        "raw": 1,
+        "text": "1",
+        "status": null
+      },
+      "spec_max": {
+        "raw": null,
+        "text": "Indisponível",
+        "status": null
+      },
+      "current": {
+        "state": "value",
+        "average": {
+          "raw": 1.5,
+          "text": "1,5",
+          "status": null
+        },
+        "minimum": {
+          "raw": 1,
+          "text": "1",
+          "status": null
+        },
+        "peak": {
+          "raw": 2,
+          "text": "2",
+          "status": null
+        },
+        "current": {
+          "raw": 2,
+          "text": "2",
+          "status": null
+        }
+      },
+      "desired": {
+        "state": "value",
+        "average": {
+          "raw": 1.5,
+          "text": "1,5",
+          "status": null
+        },
+        "minimum": {
+          "raw": 1,
+          "text": "1",
+          "status": null
+        },
+        "peak": {
+          "raw": 2,
+          "text": "2",
+          "status": null
+        },
+        "current": {
+          "raw": 2,
+          "text": "2",
+          "status": null
+        }
+      },
+      "situation": "Indisponível",
+      "situation_status": "unavailable"
+    },
+    {
+      "namespace": "payments",
+      "name": "fixed",
+      "target_kind": "Deployment",
+      "target_name": "fixed",
+      "spec_min": {
+        "raw": 3,
+        "text": "3",
+        "status": null
+      },
+      "spec_max": {
+        "raw": 3,
+        "text": "3",
+        "status": null
+      },
+      "current": {
+        "state": "value",
+        "average": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        },
+        "minimum": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        },
+        "peak": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        },
+        "current": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        }
+      },
+      "desired": {
+        "state": "value",
+        "average": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        },
+        "minimum": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        },
+        "peak": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        },
+        "current": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        }
+      },
+      "situation": "Fixado",
+      "situation_status": "healthy"
+    },
+    {
+      "namespace": "payments",
+      "name": "idle",
+      "target_kind": "Deployment",
+      "target_name": "idle",
+      "spec_min": {
+        "raw": 1,
+        "text": "1",
+        "status": null
+      },
+      "spec_max": {
+        "raw": 5,
+        "text": "5",
+        "status": null
+      },
+      "current": {
+        "state": "value",
+        "average": {
+          "raw": 0,
+          "text": "0",
+          "status": null
+        },
+        "minimum": {
+          "raw": 0,
+          "text": "0",
+          "status": null
+        },
+        "peak": {
+          "raw": 0,
+          "text": "0",
+          "status": null
+        },
+        "current": {
+          "raw": 0,
+          "text": "0",
+          "status": null
+        }
+      },
+      "desired": {
+        "state": "value",
+        "average": {
+          "raw": 1,
+          "text": "1",
+          "status": null
+        },
+        "minimum": {
+          "raw": 1,
+          "text": "1",
+          "status": null
+        },
+        "peak": {
+          "raw": 1,
+          "text": "1",
+          "status": null
+        },
+        "current": {
+          "raw": 1,
+          "text": "1",
+          "status": null
+        }
+      },
+      "situation": "Abaixo do máximo",
+      "situation_status": "healthy"
+    },
+    {
+      "namespace": "payments",
+      "name": "web",
+      "target_kind": "Deployment",
+      "target_name": "payments-web",
+      "spec_min": {
+        "raw": 2,
+        "text": "2",
+        "status": null
+      },
+      "spec_max": {
+        "raw": 4,
+        "text": "4",
+        "status": null
+      },
+      "current": {
+        "state": "value",
+        "average": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        },
+        "minimum": {
+          "raw": 2,
+          "text": "2",
+          "status": null
+        },
+        "peak": {
+          "raw": 4,
+          "text": "4",
+          "status": null
+        },
+        "current": {
+          "raw": 4,
+          "text": "4",
+          "status": null
+        }
+      },
+      "desired": {
+        "state": "value",
+        "average": {
+          "raw": 3,
+          "text": "3",
+          "status": null
+        },
+        "minimum": {
+          "raw": 2,
+          "text": "2",
+          "status": null
+        },
+        "peak": {
+          "raw": 4,
+          "text": "4",
+          "status": null
+        },
+        "current": {
+          "raw": 4,
+          "text": "4",
+          "status": null
+        }
+      },
+      "situation": "Máximo atingido",
+      "situation_status": "critical"
+    }
+  ],
+  "nodes": [
+    {
+      "name": "aks-agentpool-12345678-vmss000000",
+      "pool": "agentpool",
+      "pool_confidence": "inferred",
+      "status": "critical",
+      "cpu_capacity": {
+        "raw": 8,
+        "text": "8 cores",
+        "status": null
+      },
+      "memory_capacity": {
+        "raw": 16000000000,
+        "text": "14,9 GiB",
+        "status": null
+      },
+      "cpu_allocatable": {
+        "raw": 8,
+        "text": "8 cores",
+        "status": null
+      },
+      "memory_allocatable": {
+        "raw": 15000000000,
+        "text": "13,97 GiB",
+        "status": null
+      },
+      "cpu_request_percent": {
+        "raw": 25,
+        "text": "25%",
+        "status": null
+      },
+      "memory_request_percent": {
+        "raw": 20,
+        "text": "20%",
+        "status": null
+      },
+      "cpu_usage_percent": {
+        "state": "value",
+        "average": {
+          "raw": 92.5,
+          "text": "92,5%",
+          "status": "critical"
+        },
+        "minimum": {
+          "raw": 90,
+          "text": "90%",
+          "status": "critical"
+        },
+        "peak": {
+          "raw": 95,
+          "text": "95%",
+          "status": "critical"
+        },
+        "current": {
+          "raw": 95,
+          "text": "95%",
+          "status": "critical"
+        }
+      },
+      "memory_usage_percent": {
+        "state": "value",
+        "average": {
+          "raw": 71,
+          "text": "71%",
+          "status": "attention"
+        },
+        "minimum": {
+          "raw": 70,
+          "text": "70%",
+          "status": "attention"
+        },
+        "peak": {
+          "raw": 72,
+          "text": "72%",
+          "status": "attention"
+        },
+        "current": {
+          "raw": 72,
+          "text": "72%",
+          "status": "attention"
+        }
+      },
+      "ready": true,
+      "schedulable": true,
+      "reason": "CPU: pico de 95% de utilização",
+      "reason_status": "critical"
+    },
+    {
+      "name": "orphan",
+      "pool": "unknown",
+      "pool_confidence": "unknown",
+      "status": "healthy",
+      "cpu_capacity": {
+        "raw": 2,
+        "text": "2 cores",
+        "status": null
+      },
+      "memory_capacity": {
+        "raw": 4000000000,
+        "text": "3,73 GiB",
+        "status": null
+      },
+      "cpu_allocatable": {
+        "raw": null,
+        "text": "Indisponível",
+        "status": null
+      },
+      "memory_allocatable": {
+        "raw": null,
+        "text": "Indisponível",
+        "status": null
+      },
+      "cpu_request_percent": {
+        "raw": null,
+        "text": "Indisponível",
+        "status": null
+      },
+      "memory_request_percent": {
+        "raw": null,
+        "text": "Indisponível",
+        "status": null
+      },
+      "cpu_usage_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        }
+      },
+      "memory_usage_percent": {
+        "state": "unavailable",
+        "average": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "minimum": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "peak": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        },
+        "current": {
+          "raw": null,
+          "text": "Indisponível",
+          "status": "unavailable"
+        }
+      },
+      "ready": null,
+      "schedulable": null,
+      "reason": "Sem achado",
+      "reason_status": null
+    },
+    {
+      "name": "pool-a-1",
+      "pool": "pool-a",
+      "pool_confidence": "exact",
+      "status": "critical",
+      "cpu_capacity": {
+        "raw": 4,
+        "text": "4 cores",
+        "status": null
+      },
+      "memory_capacity": {
+        "raw": 8000000000,
+        "text": "7,45 GiB",
+        "status": null
+      },
+      "cpu_allocatable": {
+        "raw": 4,
+        "text": "4 cores",
+        "status": null
+      },
+      "memory_allocatable": {
+        "raw": 7000000000,
+        "text": "6,52 GiB",
+        "status": null
+      },
+      "cpu_request_percent": {
+        "raw": 90,
+        "text": "90%",
+        "status": null
+      },
+      "memory_request_percent": {
+        "raw": 50,
+        "text": "50%",
+        "status": null
+      },
+      "cpu_usage_percent": {
+        "state": "value",
+        "average": {
+          "raw": 20,
+          "text": "20%",
+          "status": "healthy"
+        },
+        "minimum": {
+          "raw": 20,
+          "text": "20%",
+          "status": "healthy"
+        },
+        "peak": {
+          "raw": 20,
+          "text": "20%",
+          "status": "healthy"
+        },
+        "current": {
+          "raw": 20,
+          "text": "20%",
+          "status": "healthy"
+        }
+      },
+      "memory_usage_percent": {
+        "state": "value",
+        "average": {
+          "raw": 25,
+          "text": "25%",
+          "status": "healthy"
+        },
+        "minimum": {
+          "raw": 25,
+          "text": "25%",
+          "status": "healthy"
+        },
+        "peak": {
+          "raw": 25,
+          "text": "25%",
+          "status": "healthy"
+        },
+        "current": {
+          "raw": 25,
+          "text": "25%",
+          "status": "healthy"
+        }
+      },
+      "ready": true,
+      "schedulable": true,
+      "reason": "CPU: 90% solicitada do alocável",
+      "reason_status": "critical"
+    },
+    {
+      "name": "pool-a-2",
+      "pool": "pool-a",
+      "pool_confidence": "exact",
+      "status": "healthy",
+      "cpu_capacity": {
+        "raw": 4,
+        "text": "4 cores",
+        "status": null
+      },
+      "memory_capacity": {
+        "raw": 8000000000,
+        "text": "7,45 GiB",
+        "status": null
+      },
+      "cpu_allocatable": {
+        "raw": 4,
+        "text": "4 cores",
+        "status": null
+      },
+      "memory_allocatable": {
+        "raw": 7000000000,
+        "text": "6,52 GiB",
+        "status": null
+      },
+      "cpu_request_percent": {
+        "raw": 25,
+        "text": "25%",
+        "status": null
+      },
+      "memory_request_percent": {
+        "raw": 14.285714285714285,
+        "text": "14,3%",
+        "status": null
+      },
+      "cpu_usage_percent": {
+        "state": "value",
+        "average": {
+          "raw": 57.5,
+          "text": "57,5%",
+          "status": "healthy"
+        },
+        "minimum": {
+          "raw": 55,
+          "text": "55%",
+          "status": "healthy"
+        },
+        "peak": {
+          "raw": 60,
+          "text": "60%",
+          "status": "healthy"
+        },
+        "current": {
+          "raw": 60,
+          "text": "60%",
+          "status": "healthy"
+        }
+      },
+      "memory_usage_percent": {
+        "state": "value",
+        "average": {
+          "raw": 52.5,
+          "text": "52,5%",
+          "status": "healthy"
+        },
+        "minimum": {
+          "raw": 50,
+          "text": "50%",
+          "status": "healthy"
+        },
+        "peak": {
+          "raw": 55,
+          "text": "55%",
+          "status": "healthy"
+        },
+        "current": {
+          "raw": 55,
+          "text": "55%",
+          "status": "healthy"
+        }
+      },
+      "ready": false,
+      "schedulable": false,
+      "reason": "CPU: pico de 60% de utilização; Memória: pico de 55% de utilização",
+      "reason_status": "healthy"
+    }
+  ],
+  "nodepools": [
+    {
+      "name": "agentpool",
+      "confidence": "inferred",
+      "nodes": [
+        "aks-agentpool-12345678-vmss000000"
+      ]
+    },
+    {
+      "name": "pool-a",
+      "confidence": "exact",
+      "nodes": [
+        "pool-a-1",
+        "pool-a-2"
+      ]
+    },
+    {
+      "name": "unknown",
+      "confidence": "unknown",
+      "nodes": [
+        "orphan"
+      ]
+    }
+  ],
+  "quality": {
+    "capabilities": [
+      {
+        "name": "namespace_usage",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "container_cpu_usage_seconds_total",
+          "container_memory_working_set_bytes"
+        ],
+        "remark": "Sem observação"
+      },
+      {
+        "name": "workload_usage",
+        "state": "available",
+        "strategy": "recording_rule",
+        "evidence": [
+          "namespace_workload_pod:kube_pod_owner:relabel",
+          "container_cpu_usage_seconds_total",
+          "container_memory_working_set_bytes"
+        ],
+        "remark": "Sem observação"
+      },
+      {
+        "name": "requests_limits",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_pod_container_resource_requests",
+          "kube_pod_container_resource_limits"
+        ],
+        "remark": "Sem observação"
+      },
+      {
+        "name": "hpa_history",
+        "state": "partial",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_horizontalpodautoscaler_info",
+          "kube_horizontalpodautoscaler_spec_min_replicas",
+          "kube_horizontalpodautoscaler_spec_max_replicas",
+          "kube_horizontalpodautoscaler_status_current_replicas",
+          "kube_horizontalpodautoscaler_status_desired_replicas"
+        ],
+        "remark": "Valores ambíguos de configuração ou alvo de HPA foram omitidos."
+      },
+      {
+        "name": "workloads_without_hpa",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_deployment_spec_replicas",
+          "kube_statefulset_labels",
+          "kube_horizontalpodautoscaler_info"
+        ],
+        "remark": "Sem observação"
+      },
+      {
+        "name": "ip_node_mapping",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_node_info"
+        ],
+        "remark": "Sem observação"
+      },
+      {
+        "name": "nodepool_discovery",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_node_labels"
+        ],
+        "remark": "Sem observação"
+      },
+      {
+        "name": "node_utilization",
+        "state": "available",
+        "strategy": "recording_rule",
+        "evidence": [
+          "instance:node_cpu_utilisation:rate5m",
+          "instance:node_memory_utilisation:ratio"
+        ],
+        "remark": "Sem observação"
+      },
+      {
+        "name": "node_autoscaling",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "cluster_autoscaler_*"
+        ],
+        "remark": "Sem observação"
+      }
+    ],
+    "warnings": [
+      {
+        "code": "HPA_AMBIGUOUS_SPEC",
+        "text": "Valores ambíguos de configuração ou alvo de HPA foram omitidos."
+      },
+      {
+        "code": "NODE_CAPACITY_EVIDENCE_INCOMPLETE",
+        "text": "As evidências de capacidade dos nodes estão incompletas."
+      }
+    ],
+    "notices": [
+      {
+        "code": "WORKLOADS_OMITTED_SCALE_ZERO",
+        "text": "1 workload deixado de fora do inventário de cobertura por estar com escala zero."
+      }
+    ],
+    "collection_started_at": "2026-07-15T14:30:00-03:00",
+    "collection_completed_at": "2026-07-15T14:30:42-03:00"
+  }
+}
