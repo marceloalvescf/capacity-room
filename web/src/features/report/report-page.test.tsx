@@ -79,7 +79,7 @@ describe("report screen", () => {
       mock.reports = [report({ pdfs: [{ language: "pt-BR", status: "ready", failure_code: null }] })];
       const { unmount } = await open();
       await userEvent.click(screen.getByRole("button", { name: t("progress.pdf") }));
-      const groups = within(await screen.findByRole("dialog")).getAllByRole("group");
+      const groups = within(await screen.findByRole("dialog", { name: t("progress.pdf") })).getAllByRole("group");
       expect(groups.map((group) => group.getAttribute("aria-labelledby"))).toEqual(["pdf-en", "pdf-pt-BR"]);
       const [first, second] = groups as [HTMLElement, HTMLElement];
       expect(within(second).getByRole("link", { name: t("progress.download") })).toBeInTheDocument();

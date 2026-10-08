@@ -101,7 +101,7 @@ export function ReportPage() {
               <CaretDownIcon aria-hidden="true" className="size-4" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-104 max-w-[calc(100vw-2rem)]">
+          <PopoverContent align="end" aria-label={t("progress.pdf")} className="w-104 max-w-[calc(100vw-2rem)]">
             <PdfBlock report={data} canRequest={principal.role !== "reader"} />
           </PopoverContent>
         </Popover>
