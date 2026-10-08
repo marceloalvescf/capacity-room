@@ -409,7 +409,7 @@ func TestRenderTimeout(t *testing.T) {
 func TestRenderTooLarge(t *testing.T) {
 	e, _, _ := scenarioEnv(t, nil)
 	e.startRender(map[string]typst.Toolchain{
-		langPT: scriptToolchain(t, `{ printf '%%PDF-'; head -c 67108865 /dev/zero; } > "$out"`),
+		langPT: scriptToolchain(t, `{ printf '%%PDF-'; `+toolPath(t, "head")+` -c 67108865 /dev/zero; } > "$out"`),
 		langEN: pdfToolchain(t),
 	}, 2, renderHooks{}, langEN)
 	report := e.collected()
