@@ -1,0 +1,123 @@
+import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { components } from "@/api/schema.gen";
+import { i18next } from "@/i18n/i18n";
+import { installMockApi, profileSummary, report, signedIn } from "../../../tests/msw";
+import { location, renderApp } from "../../../tests/render";
+import { mockColourScheme } from "../../../tests/match-media";
+import viewEn from "../../../tests/fixtures/view/edge-scaling.en.json";
+import viewPt from "../../../tests/fixtures/view/edge-scaling.pt-BR.json";
+import { reportTabs } from "./tabs";
+
+const mock = installMockApi(signedIn());
+
+type Role = components["schemas"]["Role"];
+type View = components["schemas"]["ReportView"];
+
+const t = (key: string, options: Record<string, string | number> = {}): string => i18next.t(key, options);
+const id = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a01";
+const english = viewEn as View;
+const portuguese = viewPt as View;
+
+beforeEach(() => {
+  window.localStorage.clear();
+  mockColourScheme(false);
+  mock.profiles = [profileSummary()];
+  mock.reports = [report()];
+  mock.views.set(`${id}:en`, english);
+  mock.views.set(`${id}:pt-BR`, portuguese);
+});
+
+async function open(path = `/reports/${id}/overview`, language: "en" | "pt-BR" = "en") {
+  const view = await renderApp(path, language);
+  await screen.findByRole("heading", { level: 1, name: i18next.t("progress.title", { profile: "Production", lng: language }) });
+  return view;
+}
+
+describe("report screen", () => {
+  it("header facts", async () => {
+    await open();
+    const heading = screen.getByRole("heading", { level: 1 });
+    const facts = heading.nextElementSibling as HTMLElement;
+    expect(heading).toHaveTextContent("Report on Production");
+    expect(within(facts).getByText("prod")).toHaveClass("font-mono");
+    expect(facts).toHaveTextContent(t("report.cluster"));
+    expect(facts).toHaveTextContent(english.report.period_text);
+    expect(facts).toHaveTextContent(t("reportProfile.detailed"));
+    expect(facts).toHaveTextContent(/Requested \d{4}-\d{2}-\d{2} \d{2}:\d{2} by ana/);
+    expect(facts).not.toHaveTextContent("America/Sao_Paulo");
+  });
+
+  it("seven tabs", async () => {
+    await open();
+    const nav = screen.getByRole("navigation", { name: t("report.tabs") });
+    const links = within(nav).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual(reportTabs.map((tab) => t(`report.tab.${tab}`)));
+    links.forEach((link, index) => {
+      expect(link.getAttribute("href")).toMatch(new RegExp(`/${reportTabs[index] ?? ""}$`));
+    });
+    expect(links[0]).toHaveAttribute("aria-current", "page");
+    expect(links.slice(1).some((link) => link.hasAttribute("aria-current"))).toBe(false);
+    expect(screen.getByRole("heading", { level: 2, name: t("report.tab.overview") })).toBeInTheDocument();
+  });
+
+  it("index opens the overview", async () => {
+    const { router } = await open(`/reports/${id}`);
+    expect(location(router)).toBe(`/reports/${id}/overview`);
+  });
+
+  it("unknown tab", async () => {
+    await open(`/reports/${id}/nope`);
+    expect(screen.getByRole("heading", { level: 1, name: t("notFound.title") })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: t("report.tabs") })).toBeInTheDocument();
+  });
+
+  it("pdf button", async () => {
+    for (const role of ["operator", "reader"] as Role[]) {
+      mock.session = signedIn({ role });
+      mock.reports = [report({ pdfs: [{ language: "pt-BR", status: "ready", failure_code: null }] })];
+      const { unmount } = await open();
+      await userEvent.click(screen.getByRole("button", { name: t("progress.pdf") }));
+      const groups = await screen.findAllByRole("group");
+      expect(groups.map((group) => group.getAttribute("aria-labelledby"))).toEqual(["pdf-en", "pdf-pt-BR"]);
+      const [first, second] = groups as [HTMLElement, HTMLElement];
+      expect(within(second).getByRole("link", { name: t("progress.download") })).toBeInTheDocument();
+      expect(within(first).queryByRole("button", { name: t("progress.generatePdf") }) !== null).toBe(role === "operator");
+      unmount();
+    }
+  });
+
+  it("states", async () => {
+    mock.viewFailure.set(`${id}:en`, { status: 409, code: "SNAPSHOT_NOT_READY" });
+    mock.reports = [report({ status: "running", phase: "collecting", completed_at: null, collected_at: null })];
+    const { router, unmount } = await renderApp(`/reports/${id}/overview`);
+    await screen.findByRole("heading", { level: 1, name: t("progress.title", { profile: "Production" }) });
+    expect(location(router)).toBe(`/jobs/${id}`);
+    unmount();
+
+    mock.viewFailure.set(`${id}:en`, { status: 410, code: "REPORT_EXPIRED" });
+    const expired = await renderApp(`/reports/${id}/overview`);
+    await screen.findByText(t("progress.expired"));
+    expired.unmount();
+
+    mock.viewFailure.set(`${id}:en`, { status: 404, code: "REPORT_NOT_FOUND" });
+    const missing = await renderApp(`/reports/${id}/overview`);
+    await screen.findByText(t("progress.notFound"));
+    missing.unmount();
+
+    mock.viewFailure.set(`${id}:en`, { status: 500, code: "INTERNAL_ERROR" });
+    await renderApp(`/reports/${id}/overview`);
+    await screen.findByText(t("error.INTERNAL_ERROR"));
+    expect(screen.getByRole("link", { name: t("progress.back") })).toHaveAttribute("href", "/reports");
+  });
+
+  it("language", async () => {
+    mock.session = signedIn({ language: "pt-BR" });
+    await open(`/reports/${id}/overview`, "pt-BR");
+    expect(mock.calls.some((call) => call.path === `/reports/${id}/view` && call.search === "?lang=pt-BR")).toBe(true);
+    const nav = screen.getByRole("navigation", { name: t("report.tabs") });
+    expect(within(nav).getByRole("link", { name: "Visão geral" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Qualidade dos dados" })).toBeInTheDocument();
+  });
+});

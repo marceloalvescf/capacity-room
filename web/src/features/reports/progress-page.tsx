@@ -94,7 +94,7 @@ function useAnnouncements(data: Report | undefined) {
   }, [data, announce, t]);
 }
 
-function Gone({ message }: { message: string }) {
+export function Gone({ message }: { message: string }) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col items-start gap-3">
@@ -168,6 +168,11 @@ export function ProgressPage() {
           <StatusMark status={reportMark(data)} label={t(`reportStatus.${data.status}`)} />
           {data.status === "collected" ? (
             <span>{t("progress.keptUntil", { date: formatDate(data.expires_at) })}</span>
+          ) : null}
+          {data.status === "collected" && !data.expired ? (
+            <Link to={`/reports/${data.id}/overview`} className={buttonStyles("primary")}>
+              {t("report.open")}
+            </Link>
           ) : null}
         </p>
       </div>

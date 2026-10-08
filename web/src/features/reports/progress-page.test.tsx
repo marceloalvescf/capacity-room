@@ -347,4 +347,22 @@ describe("progress screen", () => {
     await advance(20_000);
     expect(heard).toEqual([]);
   });
+
+  it("links a collected report to its view", async () => {
+    mock.reports = [report()];
+    await open();
+    expect(screen.getByRole("link", { name: t("report.open") })).toHaveAttribute("href", `/reports/${id}/overview`);
+  });
+
+  it("offers no link to a running report", async () => {
+    mock.reports = [report(running)];
+    await open();
+    expect(screen.queryByRole("link", { name: t("report.open") })).not.toBeInTheDocument();
+  });
+
+  it("offers no link to an expired report", async () => {
+    mock.reports = [report({ expired: true })];
+    await open();
+    expect(screen.queryByRole("link", { name: t("report.open") })).not.toBeInTheDocument();
+  });
 });

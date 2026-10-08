@@ -11,6 +11,7 @@ import {
   roleValues,
 } from "@/api/schema.gen";
 import { statusValues } from "@/components/status-mark";
+import { reportTabs } from "@/features/report/tabs";
 import { calendarRanges } from "@/features/reports/period";
 import { themeChoices } from "@/theme/theme";
 
@@ -28,5 +29,6 @@ export const families: Readonly<Record<string, readonly string[]>> = {
   minSeverity: minSeverityValues,
   pdfFailure: pDFFailureCodeValues,
   reportFailure: reportFailureCodeValues,
+  "report.tab": reportTabs,
   "period.calendar": calendarRanges,
 };

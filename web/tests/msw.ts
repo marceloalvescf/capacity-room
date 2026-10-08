@@ -10,6 +10,7 @@ type Principal = Schemas["Principal"];
 export interface Call {
   method: string;
   path: string;
+  search: string;
   csrf: string | null;
   key: string | null;
   body: unknown;
@@ -50,6 +51,8 @@ export function failure(
 }
 
 type Report = Schemas["Report"];
+type ReportView = Schemas["ReportView"];
+type ErrorCode = Schemas["ErrorCode"];
 type ProfileSummary = Schemas["ProfileSummary"];
 
 export function report(overrides: Partial<Report> = {}): Report {
@@ -110,6 +113,9 @@ export interface Mock {
   profiles: ProfileSummary[];
   // The reports requested by key, so that a key sent again answers the same report.
   requested: Map<string, { body: string; id: string }>;
+  // The views of the reports, keyed `${id}:${lang}`, and the failures that replace them.
+  views: Map<string, ReportView>;
+  viewFailure: Map<string, { status: number; code: ErrorCode }>;
 }
 
 const api = (path: string): string => `${window.location.origin}/api/v1${path}`;
@@ -119,7 +125,10 @@ export const server = setupServer();
 // Installs the handlers of the contract, held by one mutable state, and the
 // hooks that start and stop the server around a test file.
 export function installMockApi(initial: Session): Mock {
-  const mock: Mock = { session: initial, calls: [], reports: [], profiles: [], requested: new Map() };
+  const mock: Mock = { session: initial, calls: [], reports: [], profiles: [], requested: new Map(),
+    views: new Map(),
+    viewFailure: new Map(),
+  };
 
   async function record(request: Request): Promise<unknown> {
     const text = await request.clone().text();
@@ -127,6 +136,7 @@ export function installMockApi(initial: Session): Mock {
     mock.calls.push({
       method: request.method,
       path: new URL(request.url).pathname.replace("/api/v1", ""),
+      search: new URL(request.url).search,
       csrf: request.headers.get("X-CSRF-Token"),
       key: request.headers.get("Idempotency-Key"),
       body,
@@ -236,6 +246,16 @@ export function installMockApi(initial: Session): Mock {
         { status: 202 },
       );
     }),
+    http.get(api("/reports/:id/view"), async ({ request, params }) => {
+      await record(request);
+      const key = `${String(params["id"])}:${new URL(request.url).searchParams.get("lang") ?? ""}`;
+      const refused = mock.viewFailure.get(key);
+      if (refused !== undefined) {
+        return failure(refused.status, refused.code);
+      }
+      const view = mock.views.get(key);
+      return view === undefined ? failure(404, "REPORT_NOT_FOUND") : HttpResponse.json(view);
+    }),
     http.get(api("/reports/:id"), async ({ request, params }) => {
       await record(request);
       const found = mock.reports.find((r) => r.id === params["id"]);
@@ -264,6 +284,8 @@ export function installMockApi(initial: Session): Mock {
     mock.reports = [];
     mock.profiles = [];
     mock.requested = new Map();
+    mock.views = new Map();
+    mock.viewFailure = new Map();
     server.resetHandlers(...handlers);
   });
   afterAll(() => {

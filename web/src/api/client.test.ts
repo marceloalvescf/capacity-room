@@ -46,6 +46,7 @@ describe("client", () => {
         mock.calls.push({
           method: "PATCH",
           path: "/account",
+          search: "",
           csrf: request.headers.get("X-CSRF-Token"),
           key: null,
           body: null,
@@ -69,6 +70,7 @@ describe("client", () => {
         mock.calls.push({
           method: "PATCH",
           path: "/account",
+          search: "",
           csrf: request.headers.get("X-CSRF-Token"),
           key: null,
           body: null,

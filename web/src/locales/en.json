@@ -297,5 +297,19 @@
       "collected": "The report was collected.",
       "pdfReady": "The PDF in {{language}} is ready."
     }
+  },
+  "report": {
+    "tabs": "Report sections",
+    "tab": {
+      "overview": "Overview",
+      "findings": "Findings",
+      "namespaces": "Namespaces",
+      "workloads": "Workloads",
+      "autoscaling": "Autoscaling",
+      "nodes": "Nodes",
+      "quality": "Data quality"
+    },
+    "cluster": "Cluster",
+    "open": "Open report"
   }
 }
