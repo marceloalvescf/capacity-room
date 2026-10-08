@@ -1,9 +1,10 @@
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { components } from "@/api/schema.gen";
 import { i18next } from "@/i18n/i18n";
-import { installMockApi, profileSummary, report, signedIn } from "../../../tests/msw";
+import { installMockApi, profileSummary, report, server, signedIn } from "../../../tests/msw";
 import { location, renderApp } from "../../../tests/render";
 import { mockColourScheme } from "../../../tests/match-media";
 import viewEn from "../../../tests/fixtures/view/edge-scaling.en.json";
@@ -91,9 +92,13 @@ describe("report screen", () => {
   it("states", async () => {
     mock.viewFailure.set(`${id}:en`, { status: 409, code: "SNAPSHOT_NOT_READY" });
     mock.reports = [report({ status: "running", phase: "collecting", completed_at: null, collected_at: null })];
-    const { router, unmount } = await renderApp(`/reports/${id}/overview`);
+    const { router, unmount } = await renderApp("/reports");
+    await router.navigate(`/reports/${id}/overview`);
     await screen.findByRole("heading", { level: 1, name: t("progress.title", { profile: "Production" }) });
     expect(location(router)).toBe(`/jobs/${id}`);
+    // The redirect replaced the entry of the view, so going back reaches the list.
+    await router.navigate(-1);
+    expect(location(router)).toBe("/reports");
     unmount();
 
     mock.viewFailure.set(`${id}:en`, { status: 410, code: "REPORT_EXPIRED" });
@@ -119,5 +124,28 @@ describe("report screen", () => {
     const nav = screen.getByRole("navigation", { name: t("report.tabs") });
     expect(within(nav).getByRole("link", { name: "Visão geral" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Qualidade dos dados" })).toBeInTheDocument();
+  });
+
+  it("keeps the frame while the view of a new language loads", async () => {
+    await open();
+    let release: () => void = () => undefined;
+    const late = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(`${window.location.origin}/api/v1/reports/:id/view`, async () => {
+        await late;
+        return HttpResponse.json(portuguese);
+      }),
+    );
+    await act(async () => {
+      await i18next.changeLanguage("pt-BR");
+    });
+    expect(screen.getByRole("navigation", { name: "Seções do relatório" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2 })).toBeInTheDocument();
+    release();
+    const nav = await screen.findByRole("navigation", { name: "Seções do relatório" });
+    expect(await within(nav).findByRole("link", { name: "Qualidade dos dados" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Visão geral" })).toBeInTheDocument();
   });
 });
