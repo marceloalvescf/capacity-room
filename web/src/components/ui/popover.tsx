@@ -10,7 +10,7 @@ export function PopoverContent({ className, ...rest }: ComponentProps<typeof Rad
     <RadixPopover.Portal>
       <RadixPopover.Content
         sideOffset={4}
-        className={cn("rounded-md border border-border bg-surface p-3 text-surface-fg shadow-md", className)}
+        className={cn("z-50 rounded-md border border-border bg-surface p-3 text-surface-fg shadow-md", className)}
         {...rest}
       />
     </RadixPopover.Portal>

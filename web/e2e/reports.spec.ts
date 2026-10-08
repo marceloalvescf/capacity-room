@@ -165,6 +165,8 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
 
     await page.getByRole("button", { name: en.progress.pdf, exact: true }).click();
     await expect(pdfGroup(page, en.language.en).getByText(en.pdfStatus.ready, { exact: true })).toBeVisible();
+    // The table's sticky header must not cover the popover's link.
+    await page.getByRole("dialog").getByRole("group", { name: en.language.en, exact: true }).getByRole("link", { name: en.progress.download, exact: true }).click({ trial: true });
     await expectNoViolations(page);
     await page.keyboard.press("Escape");
 

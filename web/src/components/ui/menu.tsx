@@ -13,7 +13,7 @@ export function MenuContent({ className, ...rest }: ComponentProps<typeof Dropdo
       <DropdownMenu.Content
         align="end"
         sideOffset={4}
-        className={cn("min-w-40 rounded-md border border-border bg-surface p-1 text-surface-fg shadow-md", className)}
+        className={cn("z-50 min-w-40 rounded-md border border-border bg-surface p-1 text-surface-fg shadow-md", className)}
         {...rest}
       />
     </DropdownMenu.Portal>
