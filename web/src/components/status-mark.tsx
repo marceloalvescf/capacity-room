@@ -27,6 +27,15 @@ function Shape({ status }: { status: Status }) {
   }
 }
 
+// The shape of a status alone, for a place where the word is given separately.
+export function StatusShape({ status }: { status: Status }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 12 12" className={cn("size-3 shrink-0", colour[status])}>
+      <Shape status={status} />
+    </svg>
+  );
+}
+
 export function StatusMark({ status, label }: { status: Status; label?: string }) {
   const { t } = useTranslation();
   return (

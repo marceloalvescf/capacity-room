@@ -60,7 +60,6 @@ describe("report screen", () => {
     });
     expect(links[0]).toHaveAttribute("aria-current", "page");
     expect(links.slice(1).some((link) => link.hasAttribute("aria-current"))).toBe(false);
-    expect(screen.getByRole("heading", { level: 2, name: t("report.tab.overview") })).toBeInTheDocument();
   });
 
   it("index opens the overview", async () => {
@@ -80,7 +79,7 @@ describe("report screen", () => {
       mock.reports = [report({ pdfs: [{ language: "pt-BR", status: "ready", failure_code: null }] })];
       const { unmount } = await open();
       await userEvent.click(screen.getByRole("button", { name: t("progress.pdf") }));
-      const groups = await screen.findAllByRole("group");
+      const groups = within(await screen.findByRole("dialog")).getAllByRole("group");
       expect(groups.map((group) => group.getAttribute("aria-labelledby"))).toEqual(["pdf-en", "pdf-pt-BR"]);
       const [first, second] = groups as [HTMLElement, HTMLElement];
       expect(within(second).getByRole("link", { name: t("progress.download") })).toBeInTheDocument();
@@ -146,6 +145,6 @@ describe("report screen", () => {
     release();
     const nav = await screen.findByRole("navigation", { name: "Seções do relatório" });
     expect(await within(nav).findByRole("link", { name: "Qualidade dos dados" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2, name: "Visão geral" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Plano de ação priorizado" })).toBeInTheDocument();
   });
 });

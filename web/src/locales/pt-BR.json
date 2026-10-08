@@ -310,6 +310,40 @@
       "quality": "Qualidade dos dados"
     },
     "cluster": "Cluster",
-    "open": "Abrir relatório"
+    "open": "Abrir relatório",
+    "overview": {
+      "seeFindings": "Ver achados",
+      "inventory": "Inventário"
+    },
+    "inventory": {
+      "namespaces": "Namespaces",
+      "workloads": "Workloads",
+      "hpas": "HPAs",
+      "workloadsWithoutHpa": "Workloads sem HPA",
+      "nodes": "Nodes",
+      "nodepools": "Node pools"
+    },
+    "plan": {
+      "title": "Plano de ação priorizado",
+      "order": "#",
+      "priority": "Prioridade",
+      "action": "Ação",
+      "scope": "Escopo",
+      "confidence": "Confiança",
+      "empty": "Nenhuma ação priorizada foi identificada."
+    },
+    "about": {
+      "title": "Sobre este relatório",
+      "timezone": "Fuso horário",
+      "namespaces": "Namespaces",
+      "minSeverity": "Severidade mínima",
+      "issued": "Emitido em",
+      "version": "Versão do gerador"
+    }
+  },
+  "confidence": {
+    "exact": "Exata",
+    "inferred": "Inferida",
+    "unknown": "Desconhecida"
   }
 }

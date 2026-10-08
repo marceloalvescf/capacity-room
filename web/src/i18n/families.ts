@@ -9,6 +9,7 @@ import {
   reportProfileValues,
   reportStatusValues,
   roleValues,
+  viewConfidenceValues,
 } from "@/api/schema.gen";
 import { statusValues } from "@/components/status-mark";
 import { reportTabs } from "@/features/report/tabs";
@@ -30,5 +31,6 @@ export const families: Readonly<Record<string, readonly string[]>> = {
   pdfFailure: pDFFailureCodeValues,
   reportFailure: reportFailureCodeValues,
   "report.tab": reportTabs,
+  confidence: viewConfidenceValues,
   "period.calendar": calendarRanges,
 };

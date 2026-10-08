@@ -8,6 +8,9 @@ import type { Language } from "@/i18n/language";
 import { anonymous, installMockApi, profileSummary, report, signedIn } from "./msw";
 import { location, renderApp } from "./render";
 import { mockColourScheme } from "./match-media";
+import viewEn from "./fixtures/view/edge-scaling.en.json";
+import viewPt from "./fixtures/view/edge-scaling.pt-BR.json";
+import type { components } from "@/api/schema.gen";
 
 const mock = installMockApi(signedIn());
 
@@ -64,6 +67,26 @@ describe("screens", () => {
           expect(document.title).toBe(i18next.t("app.title", { screen: i18next.t(title) }));
         });
       }
+    }
+  }
+
+  for (const language of languages) {
+    for (const theme of ["light", "dark"]) {
+      it(`axe and vocabulary: the report overview, ${language}, ${theme}`, async () => {
+        document.documentElement.setAttribute("data-theme", theme);
+        const id = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a01";
+        mock.reports = [report()];
+        mock.profiles = [profileSummary()];
+        mock.views.set(`${id}:en`, viewEn as components["schemas"]["ReportView"]);
+        mock.views.set(`${id}:pt-BR`, viewPt as components["schemas"]["ReportView"]);
+        mock.session = signedIn({ language });
+        const { container } = await renderApp(`/reports/${id}/overview`, language);
+        await screen.findByRole("heading", { level: 1, name: i18next.t("progress.title", { profile: "Production" }) });
+        await screen.findByRole("table");
+        const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
+        expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+        expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);
+      });
     }
   }
 

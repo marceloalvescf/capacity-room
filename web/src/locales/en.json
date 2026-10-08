@@ -310,6 +310,40 @@
       "quality": "Data quality"
     },
     "cluster": "Cluster",
-    "open": "Open report"
+    "open": "Open report",
+    "overview": {
+      "seeFindings": "See findings",
+      "inventory": "Inventory"
+    },
+    "inventory": {
+      "namespaces": "Namespaces",
+      "workloads": "Workloads",
+      "hpas": "HPAs",
+      "workloadsWithoutHpa": "Workloads without HPA",
+      "nodes": "Nodes",
+      "nodepools": "Node pools"
+    },
+    "plan": {
+      "title": "Prioritized action plan",
+      "order": "#",
+      "priority": "Priority",
+      "action": "Action",
+      "scope": "Scope",
+      "confidence": "Confidence",
+      "empty": "No prioritized action was identified."
+    },
+    "about": {
+      "title": "About this report",
+      "timezone": "Time zone",
+      "namespaces": "Namespaces",
+      "minSeverity": "Minimum severity",
+      "issued": "Issued",
+      "version": "Generator version"
+    }
+  },
+  "confidence": {
+    "exact": "Exact",
+    "inferred": "Inferred",
+    "unknown": "Unknown"
   }
 }
