@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RouterProvider, createMemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
@@ -33,11 +33,14 @@ const named: Row[] = [
   { key: "db-1", name: "db", status: "healthy", cpu: 3, pods: 3 },
 ];
 
-function mount(rows: Row[], path = "/", defaultOrder: "status" | "view" = "status") {
+// A latency makes every change of the address land late, as a router that works in a transition does.
+function mount(rows: Row[], path = "/", defaultOrder: "status" | "view" = "status", latency = 0) {
   const router = createMemoryRouter(
     [
       {
         path: "*",
+        ...(latency === 0 ? {} : { loader: () => new Promise((resolve) => setTimeout(resolve, latency)) }),
+        hydrateFallbackElement: <div aria-busy="true" />,
         element: (
           <DataTable
             label="Things"
@@ -168,5 +171,53 @@ describe("data table", () => {
     expect(order()).toEqual(["api-gateway", "payments-web"]);
     expect(screen.getByText("details of api-1")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Pods" })).toHaveAttribute("aria-sort", "descending");
+  });
+
+  it("keeps the typed text when a sort follows at once", async () => {
+    const router = mount(named, "/", "status", 40);
+    const box = await screen.findByRole("searchbox", { name: "Search things" });
+    fireEvent.change(box, { target: { value: "p" } });
+    fireEvent.change(box, { target: { value: "pay" } });
+    fireEvent.click(screen.getByRole("button", { name: "Name" }));
+    await waitFor(() => {
+      expect(search(router)).toBe("?q=pay&sort=name.asc");
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+    expect(box).toHaveValue("pay");
+    expect(order()).toEqual(["payments-web"]);
+  });
+
+  it("follows a change of the address from outside", async () => {
+    const router = mount(named, "/?q=api");
+    const box = screen.getByRole("searchbox", { name: "Search things" });
+    expect(box).toHaveValue("api");
+    await act(async () => {
+      await router.navigate("/?q=db");
+    });
+    expect(box).toHaveValue("db");
+    expect(order()).toEqual(["db"]);
+    await act(async () => {
+      await router.navigate("/");
+    });
+    expect(box).toHaveValue("");
+    expect(order()).toHaveLength(3);
+  });
+
+  it("names the column of the expanders", () => {
+    mount(named);
+    const header = screen.getByRole("columnheader", { name: "Details" });
+    expect(header).toHaveClass("w-12");
+    expect(within(header).getByText("Details")).toHaveClass("sr-only");
+  });
+
+  it("sorts by one column at a time", async () => {
+    const router = mount(mixed);
+    await userEvent.click(screen.getByRole("button", { name: "CPU" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pods" }), { shiftKey: true });
+    await waitFor(() => {
+      expect(search(router)).toBe("?sort=pods.asc");
+    });
   });
 });

@@ -345,7 +345,8 @@
       "empty": "No rows in this report.",
       "noMatch": "No row matches the search.",
       "open": "Show the details of {{name}}",
-      "close": "Hide the details of {{name}}"
+      "close": "Hide the details of {{name}}",
+      "details": "Details"
     },
     "search": {
       "namespaces": "Search namespaces",

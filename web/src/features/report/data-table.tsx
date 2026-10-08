@@ -1,4 +1,4 @@
-import { CaretDownIcon, CaretRightIcon, CaretUpIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, CaretRightIcon, CaretUpIcon } from "@phosphor-icons/react";
 import {
   createSortedRowModel,
   rowSortingFeature,
@@ -11,10 +11,10 @@ import {
 } from "@tanstack/react-table";
 import { Fragment, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router";
 import { IconButton } from "@/components/ui/icon-button";
-import { Field } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
+import { useAddress } from "./address";
+import { SearchField, useSearchText } from "./search-field";
 
 export interface ReportColumn<Row> {
   id: string;
@@ -84,8 +84,10 @@ export function DataTable<Row extends RowData>({
   status?: (row: Row) => string;
 }) {
   const { t } = useTranslation();
-  const [params, setParams] = useSearchParams();
-  const query = params.get("q") ?? "";
+  const address = useAddress();
+  const { params } = address;
+  const search = useSearchText(address);
+  const query = search.text;
   const sortable = useMemo(
     () => new Set(columns.filter((column) => column.sortValue !== undefined).map((column) => column.id)),
     [columns],
@@ -116,15 +118,9 @@ export function DataTable<Row extends RowData>({
     [columns],
   );
 
-  function write(change: (next: URLSearchParams) => void) {
-    const next = new URLSearchParams(params);
-    change(next);
-    setParams(next, { replace: true });
-  }
-
   function onSortingChange(updater: Updater<SortingState>) {
     const [entry] = typeof updater === "function" ? updater(sorting) : updater;
-    write((next) => {
+    address.write((next) => {
       if (entry === undefined) {
         next.delete("sort");
       } else {
@@ -138,30 +134,14 @@ export function DataTable<Row extends RowData>({
     columns: defs,
     data,
     state: { sorting },
+    enableMultiSort: false,
     onSortingChange,
     getRowId: rowKey,
   });
 
-  const search = (
+  const searchBar = (
     <div className="flex flex-wrap items-end justify-between gap-3">
-      <div className="relative">
-        <Field
-          label={searchLabel}
-          type="search"
-          value={query}
-          className="w-72 max-w-full pl-9"
-          onChange={(event) => {
-            write((next) => {
-              if (event.target.value === "") {
-                next.delete("q");
-              } else {
-                next.set("q", event.target.value);
-              }
-            });
-          }}
-        />
-        <MagnifyingGlassIcon aria-hidden="true" className="pointer-events-none absolute bottom-2.5 left-3 size-4 text-muted-fg" />
-      </div>
+      <SearchField label={searchLabel} text={search.text} onChange={search.change} />
       <p className="text-sm text-muted-fg">{t("report.table.rows", { count: data.length })}</p>
     </div>
   );
@@ -176,7 +156,7 @@ export function DataTable<Row extends RowData>({
 
   return (
     <div className="flex flex-col gap-3">
-      {search}
+      {searchBar}
       {data.length === 0 ? (
         <p className="text-sm text-muted-fg">{t("report.table.noMatch")}</p>
       ) : (
@@ -185,7 +165,9 @@ export function DataTable<Row extends RowData>({
             <thead className="sticky top-0 z-10 bg-surface text-muted-fg [&>tr>th]:border-b [&>tr>th]:border-border">
               {table.getHeaderGroups().map((group) => (
                 <tr key={group.id}>
-                  <td className="w-12 px-3 py-2" />
+                  <th scope="col" className="w-12 px-3 py-2">
+                    <span className="sr-only">{t("report.table.details")}</span>
+                  </th>
                   {group.headers.map((header) => {
                     const column = byId.get(header.column.id);
                     const direction = header.column.getIsSorted();
@@ -227,7 +209,7 @@ export function DataTable<Row extends RowData>({
                           aria-expanded={opened}
                           className="border-transparent bg-transparent"
                           onClick={() => {
-                            write((next) => {
+                            address.write((next) => {
                               if (opened) {
                                 next.delete("open");
                               } else {

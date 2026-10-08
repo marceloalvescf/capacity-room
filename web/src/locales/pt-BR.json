@@ -345,7 +345,8 @@
       "empty": "Nenhuma linha neste relatório.",
       "noMatch": "Nenhuma linha corresponde à busca.",
       "open": "Mostrar os detalhes de {{name}}",
-      "close": "Ocultar os detalhes de {{name}}"
+      "close": "Ocultar os detalhes de {{name}}",
+      "details": "Detalhes"
     },
     "search": {
       "namespaces": "Buscar namespaces",

@@ -1,14 +1,13 @@
-import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router";
 import { viewScopeTypeValues, viewSeverityValues } from "@/api/schema.gen";
 import { StatusMark } from "@/components/status-mark";
-import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/cn";
+import { useAddress } from "./address";
 import type { ViewFinding } from "./api";
 import { useView } from "./report-page";
+import { SearchField, useSearchText } from "./search-field";
 
 type Severity = (typeof viewSeverityValues)[number];
 type ScopeType = (typeof viewScopeTypeValues)[number];
@@ -113,9 +112,11 @@ function Detail({ finding }: { finding: ViewFinding }) {
 export function FindingsTab() {
   const { t } = useTranslation();
   const { findings } = useView();
-  const [params, setParams] = useSearchParams();
+  const address = useAddress();
+  const { params, write } = address;
+  const search = useSearchText(address);
   const groupId = useId();
-  const query = params.get("q") ?? "";
+  const query = search.text;
   const severities = readSeverities(params.get("severity"));
   const present = useMemo(
     () => viewScopeTypeValues.filter((type) => findings.some((finding) => finding.scope_type === type)),
@@ -126,22 +127,16 @@ export function FindingsTab() {
 
   const needle = query.toLowerCase();
   const shown: Entry[] = findings
-      .map((finding, index) => ({ finding, index }))
-      .filter(
-        ({ finding }) =>
-          severities.has(finding.severity) &&
-          (scope === null || finding.scope_type === scope) &&
-          `${finding.scope_name} ${finding.sentence} ${finding.action}`.toLowerCase().includes(needle),
-      );;
+    .map((finding, index) => ({ finding, index }))
+    .filter(
+      ({ finding }) =>
+        severities.has(finding.severity) &&
+        (scope === null || finding.scope_type === scope) &&
+        `${finding.scope_name} ${finding.sentence} ${finding.action}`.toLowerCase().includes(needle),
+    );
 
   const wanted = readIndex(params.get("finding"));
   const selected = shown.find((entry) => entry.index === wanted) ?? shown[0];
-
-  function write(change: (next: URLSearchParams) => void) {
-    const next = new URLSearchParams(params);
-    change(next);
-    setParams(next, { replace: true });
-  }
 
   function toggle(severity: Severity) {
     const kept = severityOrder.filter((name) => severities.has(name) !== (name === severity));
@@ -161,24 +156,7 @@ export function FindingsTab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-4">
-        <div className="relative">
-          <Field
-            label={t("report.findings.search")}
-            type="search"
-            value={query}
-            className="w-72 max-w-full pl-9"
-            onChange={(event) => {
-              write((next) => {
-                if (event.target.value === "") {
-                  next.delete("q");
-                } else {
-                  next.set("q", event.target.value);
-                }
-              });
-            }}
-          />
-          <MagnifyingGlassIcon aria-hidden="true" className="pointer-events-none absolute bottom-2.5 left-3 size-4 text-muted-fg" />
-        </div>
+        <SearchField label={t("report.findings.search")} text={search.text} onChange={search.change} />
         <div className="flex flex-col gap-1">
           <span id={groupId} className="text-sm font-medium">
             {t("report.findings.severity")}

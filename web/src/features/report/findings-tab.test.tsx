@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { components } from "@/api/schema.gen";
@@ -130,6 +130,22 @@ describe("findings tab", () => {
     await user.clear(screen.getByRole("searchbox"));
     await user.type(screen.getByRole("searchbox"), "increased risk");
     expect(items()).toHaveLength(4);
+  });
+
+  it("keeps the typed search through another change and follows the address", async () => {
+    const user = userEvent.setup();
+    const { router } = await open();
+    const box = screen.getByRole("searchbox");
+    await user.type(box, "increased");
+    await user.click(chip("Healthy"));
+    expect(box).toHaveValue("increased");
+    expect(params(router).get("q")).toBe("increased");
+    expect(params(router).get("severity")).toBe("critical,attention");
+    await act(async () => {
+      await router.navigate(`/reports/${id}/findings?q=consolidation`);
+    });
+    expect(box).toHaveValue("consolidation");
+    expect(items()).toHaveLength(1);
   });
 
   it("default selection", async () => {

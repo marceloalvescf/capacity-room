@@ -145,7 +145,21 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
 
     await tabs.getByRole("link", { name: en.report.tab.workloads, exact: true }).click();
     const workloads = page.getByRole("table", { name: en.report.tab.workloads, exact: true });
-    await workloads.getByRole("button", { name: /^Show the details of / }).first().click();
+    const search = page.getByRole("searchbox", { name: en.report.search.workloads, exact: true });
+    const closed = workloads.getByRole("button", { name: /^Show the details of / });
+    const name = await workloads.getByRole("row").nth(1).locator("span.font-mono").first().innerText();
+    // Typed at full speed, with no delay between keys, the field keeps every character and the rows follow it.
+    await search.pressSequentially(name);
+    await expect(search).toHaveValue(name);
+    const rowCount = page.getByText(new RegExp(`^${en.report.table.rows.replace("{{count}}", "(\\d+)")}$`));
+    await expect(rowCount).toBeVisible();
+    const kept = Number((await rowCount.innerText()).replace(/\D/g, ""));
+    expect(kept).toBeGreaterThan(0);
+    await expect(closed).toHaveCount(kept);
+    await search.fill("");
+    await expect(search).toHaveValue("");
+    await expect(page).not.toHaveURL(/[?&]q=/);
+    await closed.first().click();
     await expect(workloads.getByRole("button", { name: /^Hide the details of / })).toHaveCount(1);
     await expectNoViolations(page);
 
