@@ -54,7 +54,7 @@ reference. That folder is never tracked by Git.
 | Database | PostgreSQL holds data, job queue, snapshots, and PDFs |
 | Queue | River, on PostgreSQL |
 | Packaging | Docker Compose |
-| Development | macOS with native Go; exact-output checks run in the Linux image |
+| Development | NixOS, with the tools of the repository's flake; exact-output checks run in the Linux image |
 | Documents | `README.md`, `AGENTS.md`, `CHANGELOG.md`, `ROADMAP.md` in English |
 
 ## 3. Deliberate differences from the originals

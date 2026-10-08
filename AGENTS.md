@@ -9,14 +9,18 @@ the authority when this file and the code disagree with it.
 
 ## Environment
 
-- Development happens on macOS with native Go 1.27 and Node 26.
-- `typst` 0.15.1 and `pdftotext` are installed natively for fast feedback.
+- Development happens on NixOS (x86_64). Go 1.27, Node 26, `typst` 0.15.1,
+  `pdftotext`, and GNU make come from the devShell of `flake.nix`, whose
+  `flake.lock` pins them; every command runs inside `nix develop`. No tool
+  is taken from the host profile.
 - Anything whose result must be exact runs in the Linux test image, through
   Docker. A native result never closes a gate.
-- Docker is OrbStack's engine, never Docker Desktop. Before a Docker step,
-  `orb start` starts it and `docker context show` prints `orbstack`; any other
-  context is the wrong engine.
-- There are no Nix files in this repository.
+- Docker is the host's system daemon (NixOS `virtualisation.docker`, the
+  systemd unit `docker`), reached through the `docker` group. Before a Docker
+  step, `systemctl is-active docker` prints `active`, `docker context show`
+  prints `default`, and `docker info --format '{{.OperatingSystem}}'` starts
+  with `NixOS`; anything else is the wrong engine. An agent never starts the
+  daemon; when it is down, the owner starts it.
 - Scratch files go under `.cache/`, never under `/tmp` on the host.
 - `older/` holds the two original projects as read-only reference. It is
   never tracked and never edited.
