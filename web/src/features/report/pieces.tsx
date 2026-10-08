@@ -24,11 +24,11 @@ export function Counts({ label, items }: { label: string; items: { label: string
   return (
     <dl aria-label={label} className="flex flex-wrap gap-x-8 gap-y-3 sm:flex-nowrap">
       {items.map((item) => (
-        <div key={item.label} className="flex flex-col gap-0.5">
+        <div key={item.label} className="flex flex-col-reverse justify-end gap-0.5">
+          <dt className="text-sm leading-snug text-muted-fg">{item.label}</dt>
           <dd className="font-mono text-xl font-semibold leading-tight">
             <ValueText value={item.value} />
           </dd>
-          <dt className="text-sm leading-snug text-muted-fg">{item.label}</dt>
         </div>
       ))}
     </dl>

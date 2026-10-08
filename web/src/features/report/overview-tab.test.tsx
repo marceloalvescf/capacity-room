@@ -63,7 +63,8 @@ describe("overview tab", () => {
       const name = item.querySelector("dt") as HTMLElement;
       expect(number).toHaveTextContent(numbers[index] ?? "");
       expect(name).toHaveTextContent(names[index] ?? "");
-      expect(number.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(name.compareDocumentPosition(number) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(item).toHaveClass("flex-col-reverse");
     });
   });
 
