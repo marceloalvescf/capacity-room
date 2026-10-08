@@ -173,7 +173,8 @@ check-runtime: $(IMAGE_DEP)
 # The end-to-end stack: PostgreSQL, the schema, the first administrator, the
 # profile of the fake Prometheus, then serve, worker, and the Playwright
 # container, whose exit status is the target's. The stack is removed with its
-# volumes first and last.
+# volumes first and last. The fake Prometheus stops with one answer unasked,
+# as a whole run of direct-complete does in internal/goldentest.
 E2E_COMPOSE := docker compose -f deploy/compose.yaml -f deploy/compose.integration.yaml
 
 e2e: $(IMAGE_DEP)
@@ -188,8 +189,8 @@ e2e: $(IMAGE_DEP)
 		&& $(E2E_COMPOSE) up --abort-on-container-exit --exit-code-from playwright serve worker playwright; \
 	status=$$?; \
 	$(E2E_COMPOSE) stop fake-prometheus; \
-	$(E2E_COMPOSE) logs --no-log-prefix fake-prometheus | grep -qx 'remaining: 0' \
-		|| { echo 'e2e: the fake Prometheus did not serve its whole scenario; its last lines:'; \
+	$(E2E_COMPOSE) logs --no-log-prefix fake-prometheus | grep -qx 'remaining: 1' \
+		|| { echo 'e2e: the fake Prometheus did not leave exactly the one unasked answer; its last lines:'; \
 		$(E2E_COMPOSE) logs --no-log-prefix --tail 5 fake-prometheus; [ $$status -ne 0 ] || status=1; }; \
 	$(E2E_COMPOSE) down --volumes; exit $$status
 

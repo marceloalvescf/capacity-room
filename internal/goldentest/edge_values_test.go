@@ -88,3 +88,21 @@ func TestEdgeScenariosLeaveNoAnswerUnused(t *testing.T) {
 		})
 	}
 }
+
+// TestDirectCompleteLeavesTheRecordedAnswerUnused pins the number of scripted
+// answers the server holds once a whole run of direct-complete is over: one.
+// The recording holds three plain kube_horizontalpodautoscaler_info answers
+// and the program sends two requests naming that metric, the count of the
+// probe and the query of the autoscalers; the history of the autoscalers and
+// their coverage share that second answer, so the third is never asked. The
+// e2e target of the Makefile runs the same scenario against the fake
+// Prometheus of the stack and expects the same number.
+func TestDirectCompleteLeavesTheRecordedAnswerUnused(t *testing.T) {
+	_, fake, err := run(context.Background(), scenarioByName(t, "direct-complete"))
+	if err != nil {
+		t.Fatalf("run(direct-complete): %v", err)
+	}
+	if got := fake.Remaining(); got != 1 {
+		t.Errorf("Remaining() = %d, want 1", got)
+	}
+}
