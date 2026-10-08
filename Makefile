@@ -186,7 +186,10 @@ e2e: $(IMAGE_DEP)
 		&& $(E2E_COMPOSE) run --rm -T bootstrap < deploy/platform/e2e-admin-password \
 		&& $(E2E_COMPOSE) run --rm -T profiles \
 		&& $(E2E_COMPOSE) up --abort-on-container-exit --exit-code-from playwright serve worker playwright; \
-	status=$$?; $(E2E_COMPOSE) down --volumes; exit $$status
+	status=$$?; \
+	$(E2E_COMPOSE) logs --no-log-prefix fake-prometheus | grep -qx 'remaining: 0' \
+		|| { echo 'e2e: the fake Prometheus did not serve its whole scenario'; [ $$status -ne 0 ] || status=1; }; \
+	$(E2E_COMPOSE) down --volumes; exit $$status
 
 # Runs every check from freshly built images and keeps one log per step.
 # Each step is piped into `tee`, so each line turns on `pipefail`; without it

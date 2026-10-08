@@ -121,43 +121,80 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
   });
 
+  await test.step("the operator reads the report", async () => {
+    await page.getByRole("link", { name: en.report.open, exact: true }).click();
+    await expect(page).toHaveURL(/\/reports\/[0-9a-f-]{36}\/overview$/);
+    await expect(page.getByRole("heading", { name: en.report.plan.title, level: 2 })).toBeVisible();
+
+    const tabs = page.getByRole("navigation", { name: en.report.tabs });
+    const shown = {
+      overview: page.getByRole("heading", { name: en.report.plan.title, level: 2 }),
+      findings: page.getByLabel(en.report.findings.search, { exact: true }).or(page.getByText(en.report.findings.none, { exact: true })),
+      namespaces: page.getByRole("table", { name: en.report.tab.namespaces, exact: true }),
+      workloads: page.getByRole("table", { name: en.report.tab.workloads, exact: true }),
+      autoscaling: page.getByRole("heading", { name: en.report.autoscaling.title, level: 2 }),
+      nodes: page.getByRole("table", { name: en.report.tab.nodes, exact: true }),
+      quality: page.getByRole("heading", { name: en.report.quality.warnings, level: 2 }),
+    };
+    for (const tab of ["overview", "findings", "namespaces", "workloads", "autoscaling", "nodes", "quality"] as const) {
+      await tabs.getByRole("link", { name: en.report.tab[tab], exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`/${tab}$`));
+      await expect(shown[tab]).toBeVisible();
+      await expectNoViolations(page);
+    }
+
+    await tabs.getByRole("link", { name: en.report.tab.workloads, exact: true }).click();
+    const workloads = page.getByRole("table", { name: en.report.tab.workloads, exact: true });
+    await workloads.getByRole("button", { name: /^Show the details of / }).first().click();
+    await expect(workloads.getByRole("button", { name: /^Hide the details of / })).toHaveCount(1);
+    await expectNoViolations(page);
+
+    await page.getByRole("button", { name: en.progress.pdf, exact: true }).click();
+    await expect(pdfGroup(page, en.language.en).getByText(en.pdfStatus.ready, { exact: true })).toBeVisible();
+    await expectNoViolations(page);
+    await page.keyboard.press("Escape");
+
+    await page.goto(jobUrl);
+    await expect(page.getByText(en.reportStatus.collected, { exact: true })).toBeVisible();
+  });
+
   // The reader looks at the progress page while the Portuguese PDF is not
   // generated, the one moment an operator is offered Generate PDF.
   const context = await browser.newContext(baseURL === undefined ? {} : { baseURL });
-  const other = await context.newPage();
-  const violations = await watchPolicy(other);
+  try {
+    const other = await context.newPage();
+    const violations = await watchPolicy(other);
 
-  await test.step("the reader sees no control on the progress page", async () => {
-    await expect(pdfGroup(page, en.language["pt-BR"]).getByRole("button", { name: en.progress.generatePdf, exact: true })).toBeVisible();
-    await signIn(other, reader, new URL(jobUrl).pathname);
-    const english = pdfGroup(other, en.language.en);
-    await expect(english.getByText(en.pdfStatus.ready, { exact: true })).toBeVisible();
-    await expect(pdfGroup(other, en.language["pt-BR"]).getByText(en.reports.notGenerated)).toBeVisible();
-    const section = other.locator("section").filter({ has: other.getByRole("heading", { name: en.progress.pdf, exact: true }) });
-    await expect(section.getByRole("link", { name: en.progress.download, exact: true })).toHaveCount(1);
-    await expect(section.getByRole("button")).toHaveCount(0);
-    await expect(other.getByRole("button", { name: en.progress.deleteReport, exact: true })).toHaveCount(0);
-    await expectNoViolations(other);
-  });
+    await test.step("the reader sees no control on the progress page", async () => {
+      await expect(pdfGroup(page, en.language["pt-BR"]).getByRole("button", { name: en.progress.generatePdf, exact: true })).toBeVisible();
+      await signIn(other, reader, new URL(jobUrl).pathname);
+      const english = pdfGroup(other, en.language.en);
+      await expect(english.getByText(en.pdfStatus.ready, { exact: true })).toBeVisible();
+      await expect(pdfGroup(other, en.language["pt-BR"]).getByText(en.reports.notGenerated)).toBeVisible();
+      const section = other.locator("section").filter({ has: other.getByRole("heading", { name: en.progress.pdf, exact: true }) });
+      await expect(section.getByRole("link", { name: en.progress.download, exact: true })).toHaveCount(1);
+      await expect(section.getByRole("button")).toHaveCount(0);
+      await expect(other.getByRole("button", { name: en.progress.deleteReport, exact: true })).toHaveCount(0);
+      await expectNoViolations(other);
+    });
 
-  await test.step("the operator generates the Portuguese PDF", async () => {
-    const portuguese = pdfGroup(page, en.language["pt-BR"]);
-    await portuguese.getByRole("button", { name: en.progress.generatePdf, exact: true }).click();
-    await expect(portuguese.getByText(en.pdfStatus.ready, { exact: true })).toBeVisible({ timeout: collectTimeout });
-    await expectNoViolations(page);
-  });
+    await test.step("the operator generates the Portuguese PDF", async () => {
+      const portuguese = pdfGroup(page, en.language["pt-BR"]);
+      await portuguese.getByRole("button", { name: en.progress.generatePdf, exact: true }).click();
+      await expect(portuguese.getByText(en.pdfStatus.ready, { exact: true })).toBeVisible({ timeout: collectTimeout });
+      await expectNoViolations(page);
+    });
 
-  await test.step("the list shows the report without a reload", async () => {
-    await page.getByRole("navigation", { name: en.nav.label }).getByRole("link", { name: en.nav.reports, exact: true }).click();
-    const row = page.getByRole("row").filter({ hasText: en.reportStatus.collected });
-    await expect(row).toHaveCount(1);
-    await expect(row.getByText(en.reportStatus.collected, { exact: true })).toBeVisible();
-    await expect(row.getByText(en.pdfStatus.ready, { exact: true })).toBeVisible();
-    await expectNoViolations(page);
-  });
+    await test.step("the list shows the report without a reload", async () => {
+      await page.getByRole("navigation", { name: en.nav.label }).getByRole("link", { name: en.nav.reports, exact: true }).click();
+      const row = page.getByRole("row").filter({ hasText: en.reportStatus.collected });
+      await expect(row).toHaveCount(1);
+      await expect(row.getByText(en.reportStatus.collected, { exact: true })).toBeVisible();
+      await expect(row.getByText(en.pdfStatus.ready, { exact: true })).toBeVisible();
+      await expectNoViolations(page);
+    });
 
-  await test.step("the reader sees no control that changes anything", async () => {
-    try {
+    await test.step("the reader sees no control that changes anything", async () => {
       await other.goto("/reports");
       await expect(other.getByRole("heading", { name: en.reports.title, level: 1 })).toBeVisible();
       await expect(other.getByRole("row").filter({ hasText: en.reportStatus.collected })).toHaveCount(1);
@@ -176,10 +213,10 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
       await expectNoViolations(other);
 
       expect(violations).toEqual([]);
-    } finally {
-      await context.close();
-    }
-  });
+    });
+  } finally {
+    await context.close();
+  }
 
   await test.step("the operator deletes the report", async () => {
     await page.getByRole("button", { name: en.reports.delete, exact: true }).click();
