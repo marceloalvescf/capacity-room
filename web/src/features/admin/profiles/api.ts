@@ -6,8 +6,8 @@ import { profilesKey } from "@/features/reports/api";
 type Schemas = components["schemas"];
 // The contract requires every field of a profile as the administration reads it; the generated type loses that
 // across `allOf`, so it is restored here once.
-export type Profile = Schemas["Profile"] &
-  Required<Schemas["ProfileDocument"]> & { thresholds: Required<Schemas["ProfileThresholds"]> };
+export type ProfileDocument = Required<Schemas["ProfileDocument"]> & { thresholds: Required<Schemas["ProfileThresholds"]> };
+export type Profile = Schemas["Profile"] & ProfileDocument;
 export type ProfileTestResult = Schemas["ProfileTestResult"];
 
 export const adminProfilesKey = ["admin", "profiles"] as const;
@@ -66,5 +66,43 @@ export function useTestProfile(id: string) {
       }
       return data;
     },
+  });
+}
+
+export function useCreateProfile() {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Schemas["ProfileCreate"]) => {
+      const { data } = await api.POST("/admin/profiles", { body });
+      if (data === undefined) {
+        throw new Error("the profile answer is empty");
+      }
+      return data as Profile;
+    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminProfilesKey }),
+        queryClient.invalidateQueries({ queryKey: profilesKey }),
+      ]),
+  });
+}
+
+export function useReviseProfile(id: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Schemas["ProfileChange"]) => {
+      const { data } = await api.PATCH("/admin/profiles/{id}", { params: { path: { id } }, body });
+      if (data === undefined) {
+        throw new Error("the profile answer is empty");
+      }
+      return data as Profile;
+    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminProfilesKey }),
+        queryClient.invalidateQueries({ queryKey: profilesKey }),
+      ]),
   });
 }

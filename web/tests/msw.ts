@@ -201,7 +201,7 @@ export interface Mock {
   // The outcome of a test, keyed by profile id or "draft"; a profile without one is ok.
   profileTests: Map<string, ProfileTestResult>;
   // Answers that replace the next call of a route, keyed `METHOD /path`; each is used once.
-  failures: Map<string, { status: number; code: ErrorCode }>;
+  failures: Map<string, { status: number; code: ErrorCode; fields?: Record<string, string> }>;
 }
 
 const api = (path: string): string => `${window.location.origin}/api/v1${path}`;
@@ -256,7 +256,7 @@ export function installMockApi(initial: Session): Mock {
       return null;
     }
     mock.failures.delete(key);
-    return failure(refused.status, refused.code);
+    return failure(refused.status, refused.code, refused.fields === undefined ? {} : { fields: refused.fields });
   }
 
   // The outcome a test set for this profile, or a successful one.

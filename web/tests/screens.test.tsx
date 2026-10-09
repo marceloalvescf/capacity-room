@@ -110,6 +110,32 @@ describe("screens", () => {
 
   for (const language of languages) {
     for (const theme of ["light", "dark"]) {
+      for (const path of ["/profiles/new", "/profiles/production/edit"]) {
+        it(`axe and vocabulary: ${path} with both folded sections open, ${language}, ${theme}`, async () => {
+          document.documentElement.setAttribute("data-theme", theme);
+          mock.adminProfiles = [adminProfile({ credential_file: "production-token", allowed_namespaces: ["payments"] })];
+          mock.session = signedIn({ language });
+          const { container } = await renderApp(path, language);
+          const user = userEvent.setup();
+          for (const button of await screen.findAllByRole("button", { name: i18next.t("admin.profile.change") })) {
+            await user.click(button);
+          }
+          await screen.findAllByRole("button", { name: i18next.t("admin.profile.fold") });
+          const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
+          expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+          expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);
+          expect(document.title).toBe(
+            i18next.t("app.title", {
+              screen: i18next.t(path === "/profiles/new" ? "admin.profile.newTitle" : "admin.profile.editScreen"),
+            }),
+          );
+        });
+      }
+    }
+  }
+
+  for (const language of languages) {
+    for (const theme of ["light", "dark"]) {
       it(`axe and vocabulary: the users with a row opened, ${language}, ${theme}`, async () => {
         document.documentElement.setAttribute("data-theme", theme);
         const other = adminUser();

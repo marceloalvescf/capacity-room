@@ -81,7 +81,14 @@
     "passwordsDiffer": "The two passwords differ.",
     "namespaces": "Choose at least one namespace.",
     "notPermitted": "The profile does not permit this value.",
-    "invalid": "This value is not valid."
+    "invalid": "This value is not valid.",
+    "identifier": "Use lowercase letters, digits, dots, hyphens, and underscores, starting and ending with a letter or a digit.",
+    "namespaceList": "Give at least one namespace.",
+    "timeout": "Use a number over 0 and up to 600.",
+    "caWithoutTls": "A CA bundle needs the TLS certificate verified.",
+    "defaultNotPermitted": "Use one of the permitted values.",
+    "notNegative": "Use a number of 0 or more.",
+    "warningBelowCritical": "Use a value below the critical one."
   },
   "notFound": {
     "title": "Page not found",
@@ -628,7 +635,72 @@
         "bursty_gap_percent": "Variation {{value}} %",
         "hpa_replica_divergence": "Divergence {{value}}"
       },
-      "testRefused": "Correct the marked fields, then test again."
+      "testRefused": "Correct the marked fields, then test again.",
+      "newTitle": "New profile",
+      "editScreen": "Edit profile",
+      "eyebrow": "Profile",
+      "revision": "Revision {{revision}}, saved {{time}}",
+      "back": "Back to the profiles",
+      "section": {
+        "identity": "Identity",
+        "source": "Metric source",
+        "cluster": "Cluster",
+        "namespaces": "Namespaces",
+        "choices": "Report form choices",
+        "thresholds": "Thresholds"
+      },
+      "change": "Change",
+      "fold": "Fold",
+      "id": "Identifier",
+      "idHint": "Lowercase letters, digits, dots, hyphens, and underscores. It cannot change once the profile is created.",
+      "name": "Display name",
+      "active": "Active",
+      "activeHint": "An active profile is offered in the new report form.",
+      "url": "Endpoint URL",
+      "type": "Type",
+      "timeout": "Timeout (seconds)",
+      "tls": "Verify the TLS certificate",
+      "credential": "Credential file",
+      "credentialHint": "A file name in the credential folder of the installation. Empty: no credential.",
+      "ca": "CA bundle file",
+      "caHint": "A file name in the CA folder of the installation. Empty: the system's.",
+      "clusterName": "Cluster name",
+      "clusterLabel": "Cluster label",
+      "filter": "Filter by cluster",
+      "autoscaling": "Node autoscaling",
+      "poolLabel": "Node pool label",
+      "poolHint": "Empty: the node pool is detected.",
+      "allowed": "Allowed namespaces",
+      "excluded": "Excluded containers",
+      "onePerLine": "One per line.",
+      "periods": "Permitted periods",
+      "periodsHint": "One length per line, such as 24h or 7d. Empty: any length and any calendar range.",
+      "defaultPeriod": "Default period",
+      "zones": "Permitted time zones",
+      "zonesHint": "One per line. Empty: any.",
+      "defaultZone": "Default time zone",
+      "profiles": "Permitted report profiles",
+      "defaultProfile": "Default report profile",
+      "severities": "Permitted minimum severities",
+      "defaultSeverity": "Default minimum severity",
+      "noneTickedHint": "None ticked: any.",
+      "fallback": "Default ({{value}})",
+      "threshold": {
+        "warning_percent": "Attention from (%)",
+        "critical_percent": "Critical from (%)",
+        "low_utilization_percent": "Low utilization below (%)",
+        "autoscaler_near_max_percent": "Autoscaler near its maximum from (%)",
+        "nodepool_spread_points": "Node pool spread (points)",
+        "bursty_gap_percent": "Variation between average and peak (%)",
+        "hpa_replica_divergence": "HPA replica divergence (replicas)"
+      },
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "saveHintNew": "Saving creates revision 1.",
+      "saveHintEdit": "Saving writes revision {{next}}. Reports already requested keep the revision they were requested with.",
+      "created": "The profile {{name}} was created.",
+      "saved": "The profile {{name}} was saved."
     }
   },
   "endpointType": {
@@ -651,5 +723,23 @@
     "ENDPOINT_UNREACHABLE": "The source could not be reached.",
     "CLUSTER_SCOPE_NOT_FOUND": "No series of this cluster was found at the source.",
     "CAPABILITIES_INSUFFICIENT": "The source lacks metrics the report needs."
+  },
+  "filterMode": {
+    "required": "Required",
+    "auto": "Detect",
+    "none": "None"
+  },
+  "nodeAutoscaling": {
+    "auto": "Detect",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  },
+  "fieldProblem": {
+    "missing": "Fill in this field.",
+    "invalid": "This value is not valid.",
+    "repeated": "A value appears twice.",
+    "empty": "Give at least one value.",
+    "not_permitted": "This value is not among the permitted ones.",
+    "incoherent": "This value does not agree with another field."
   }
 }

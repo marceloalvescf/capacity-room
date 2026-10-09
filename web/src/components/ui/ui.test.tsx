@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
+import { TextArea } from "@/components/ui/textarea";
 import { Menu, MenuContent, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/ui/menu";
 import { i18next } from "@/i18n/i18n";
 
@@ -58,6 +59,21 @@ describe("ui", () => {
       expect(await violations(document.body)).toEqual([]);
     });
   }
+
+  it("a text box is labelled, described, and marked invalid", async () => {
+    const { container } = render(
+      <main>
+        <TextArea label="Names" hint="One per line." error="Fill in this field." rows={3} />
+      </main>,
+    );
+    const box = screen.getByLabelText("Names");
+    expect(box.tagName).toBe("TEXTAREA");
+    expect(box).toHaveAttribute("rows", "3");
+    expect(box).toHaveAttribute("aria-invalid", "true");
+    expect(box).toHaveAccessibleDescription("One per line. Fill in this field.");
+    expect(box).toHaveClass("font-mono", "py-2");
+    expect(await violations(container)).toEqual([]);
+  });
 
   it("a menu holds radio items", async () => {
     const user = userEvent.setup();

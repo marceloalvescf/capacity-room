@@ -81,7 +81,14 @@
     "passwordsDiffer": "As duas senhas são diferentes.",
     "namespaces": "Escolha pelo menos um namespace.",
     "notPermitted": "O perfil não permite este valor.",
-    "invalid": "Este valor não é válido."
+    "invalid": "Este valor não é válido.",
+    "identifier": "Use letras minúsculas, dígitos, pontos, hífens e sublinhados, começando e terminando com uma letra ou um dígito.",
+    "namespaceList": "Informe pelo menos um namespace.",
+    "timeout": "Use um número acima de 0 e até 600.",
+    "caWithoutTls": "Um CA bundle exige verificar o certificado TLS.",
+    "defaultNotPermitted": "Use um dos valores permitidos.",
+    "notNegative": "Use um número igual ou maior que 0.",
+    "warningBelowCritical": "Use um valor abaixo do crítico."
   },
   "notFound": {
     "title": "Página não encontrada",
@@ -628,7 +635,72 @@
         "bursty_gap_percent": "Variação {{value}} %",
         "hpa_replica_divergence": "Divergência {{value}}"
       },
-      "testRefused": "Corrija os campos marcados e teste de novo."
+      "testRefused": "Corrija os campos marcados e teste de novo.",
+      "newTitle": "Novo perfil",
+      "editScreen": "Editar perfil",
+      "eyebrow": "Perfil",
+      "revision": "Revisão {{revision}}, salva em {{time}}",
+      "back": "Voltar aos perfis",
+      "section": {
+        "identity": "Identificação",
+        "source": "Fonte de métricas",
+        "cluster": "Cluster",
+        "namespaces": "Namespaces",
+        "choices": "Opções do formulário de relatório",
+        "thresholds": "Limiares"
+      },
+      "change": "Alterar",
+      "fold": "Recolher",
+      "id": "Identificador",
+      "idHint": "Letras minúsculas, dígitos, pontos, hífens e sublinhados. Não muda depois que o perfil é criado.",
+      "name": "Nome de exibição",
+      "active": "Ativo",
+      "activeHint": "Um perfil ativo aparece no formulário de novo relatório.",
+      "url": "URL do endpoint",
+      "type": "Tipo",
+      "timeout": "Timeout (segundos)",
+      "tls": "Verificar o certificado TLS",
+      "credential": "Arquivo de credencial",
+      "credentialHint": "Nome de um arquivo na pasta de credenciais da instalação. Vazio: sem credencial.",
+      "ca": "Arquivo do CA bundle",
+      "caHint": "Nome de um arquivo na pasta de CA da instalação. Vazio: o do sistema.",
+      "clusterName": "Nome do cluster",
+      "clusterLabel": "Label do cluster",
+      "filter": "Filtro por cluster",
+      "autoscaling": "Autoscaling de nodes",
+      "poolLabel": "Label do node pool",
+      "poolHint": "Vazio: o node pool é detectado.",
+      "allowed": "Namespaces permitidos",
+      "excluded": "Containers excluídos",
+      "onePerLine": "Um por linha.",
+      "periods": "Períodos permitidos",
+      "periodsHint": "Uma duração por linha, como 24h ou 7d. Vazio: qualquer duração e qualquer intervalo de calendário.",
+      "defaultPeriod": "Período padrão",
+      "zones": "Fusos horários permitidos",
+      "zonesHint": "Um por linha. Vazio: qualquer um.",
+      "defaultZone": "Fuso horário padrão",
+      "profiles": "Perfis de relatório permitidos",
+      "defaultProfile": "Perfil de relatório padrão",
+      "severities": "Severidades mínimas permitidas",
+      "defaultSeverity": "Severidade mínima padrão",
+      "noneTickedHint": "Nenhum marcado: qualquer um.",
+      "fallback": "Padrão ({{value}})",
+      "threshold": {
+        "warning_percent": "Atenção a partir de (%)",
+        "critical_percent": "Crítico a partir de (%)",
+        "low_utilization_percent": "Baixa utilização abaixo de (%)",
+        "autoscaler_near_max_percent": "Autoscaler perto do máximo a partir de (%)",
+        "nodepool_spread_points": "Diferença entre node pools (pontos)",
+        "bursty_gap_percent": "Variação entre média e pico (%)",
+        "hpa_replica_divergence": "Divergência de replicas do HPA (replicas)"
+      },
+      "save": "Salvar",
+      "saving": "Salvando…",
+      "cancel": "Cancelar",
+      "saveHintNew": "Salvar cria a revisão 1.",
+      "saveHintEdit": "Salvar grava a revisão {{next}}. Relatórios já pedidos mantêm a revisão com que foram pedidos.",
+      "created": "O perfil {{name}} foi criado.",
+      "saved": "O perfil {{name}} foi salvo."
     }
   },
   "endpointType": {
@@ -651,5 +723,23 @@
     "ENDPOINT_UNREACHABLE": "Não foi possível alcançar a fonte.",
     "CLUSTER_SCOPE_NOT_FOUND": "Nenhuma série deste cluster foi encontrada na fonte.",
     "CAPABILITIES_INSUFFICIENT": "A fonte não tem métricas de que o relatório precisa."
+  },
+  "filterMode": {
+    "required": "Obrigatório",
+    "auto": "Detectar",
+    "none": "Nenhum"
+  },
+  "nodeAutoscaling": {
+    "auto": "Detectar",
+    "enabled": "Ativado",
+    "disabled": "Desativado"
+  },
+  "fieldProblem": {
+    "missing": "Preencha este campo.",
+    "invalid": "Este valor não é válido.",
+    "repeated": "Um valor aparece duas vezes.",
+    "empty": "Informe pelo menos um valor.",
+    "not_permitted": "Este valor não está entre os permitidos.",
+    "incoherent": "Este valor não combina com outro campo."
   }
 }
