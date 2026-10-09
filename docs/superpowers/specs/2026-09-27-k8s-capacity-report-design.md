@@ -782,6 +782,11 @@ A profile describes one metric source.
   root.
 - `admin import-profiles` creates or revises profiles from a TOML file and is
   repeatable.
+- A profile is tested as saved, or as a draft before it is saved. A draft
+  is checked as a create checks it, outbound policy included, then runs the
+  same preflight; it writes nothing but its audit row. Either test answers
+  a code, never a URL, a host, an address, a file name, or the text of a
+  failure.
 - A permitted or default period is a length. A profile with permitted periods
   permits those alone and refuses a calendar range; a profile with none
   permits any length and any range.
@@ -870,7 +875,8 @@ All routes are under `/api/v1` and are described in `api/openapi.yaml`.
 | `GET /profiles` | Any | Active profiles, summary only |
 | `GET`, `POST /admin/profiles` | Administrator | List, create |
 | `GET`, `PATCH`, `DELETE /admin/profiles/{id}` | Administrator | Read, revise, deactivate |
-| `POST /admin/profiles/{id}/test` | Administrator | Preflight against the source |
+| `POST /admin/profiles/test` | Administrator | Preflight of a draft, before it is saved |
+| `POST /admin/profiles/{id}/test` | Administrator | Preflight of the saved revision |
 | `GET`, `POST /admin/users` | Administrator | List, create |
 | `GET`, `PATCH`, `DELETE /admin/users/{id}` | Administrator | Read, change, deactivate |
 | `POST /reports` | Operator | Request a report |
@@ -952,7 +958,8 @@ The interface is named "kcr - Kubernetes Capacity Report" in both languages.
 | `/users` | Users | Administrator |
 
 Report tabs: overview, findings, namespaces, workloads, autoscaling, nodes,
-data quality. Section 12.2.1 describes the report.
+data quality. Section 12.2.1 describes the report, and section 12.2.2
+the administration.
 
 - Report list: newest first, by page, with "Load more"; no filter. Columns:
   requested, profile, status, the PDF of the interface language, kept until.
@@ -1026,7 +1033,7 @@ data quality. Section 12.2.1 describes the report.
   with the PDF's mark. A row opens in place, across the whole width of the
   table, and holds its facts, every statistic of the row at its average,
   minimum, peak, and current value, and its own findings, each a link to
-  that finding.
+  that finding. An opened row fits the window, as section 12.2.2 says.
 - The workloads table lists only the workloads with observed usage, as the
   PDF does. The HPA table lists every HPA of the view.
 - Autoscaling: one line with the status, source, and confidence of the
@@ -1040,6 +1047,58 @@ data quality. Section 12.2.1 describes the report.
   capabilities, with name, state, source, and remark, each opening to the
   metrics it read; then the warnings and the notices. It is the only place
   metric names appear.
+
+#### 12.2.2 Administration
+
+- `/profiles`, `/profiles/new`, `/profiles/:id/edit`, and `/users` are
+  open to an administrator alone; anyone else gets the not-found screen.
+  The navigation lists Profiles and Users after New report.
+- Profiles: every profile with a current revision, active or not, in
+  identifier order, with no search. The columns are the profile (display
+  name, and the identifier under it), the cluster, and the state, active or
+  inactive. A row opens in place and holds the endpoint, the type, the
+  credential and CA bundle file names, the revision and when it was saved,
+  the allowed namespaces, and the report form choices on one line; then a
+  test of the saved revision with its result, and Edit and Delete. A test
+  result stays until the page is left. Delete asks in one dialog, which
+  says the profile leaves the list and the new report form, the reports
+  already requested keep it, and the identifier can be used again. An
+  empty list says so, with New profile.
+- The profile form, new and edit, holds every field of a profile. Identity,
+  metric source, cluster, and namespaces are open; the identifier is typed
+  only on a new profile and shown under the title afterwards. The report
+  form choices and the thresholds are folded, each showing its values on
+  one line with a button that opens it; a folded group with an error opens
+  by itself. A list is a text box with one item per line. A default left
+  empty is sent as null, and its placeholder shows the fallback. A new
+  profile starts inactive unless Active is ticked.
+- The metric source section tests the values of the form, before they are
+  saved, with the result on its line. A refusal of the document is shown
+  on the fields it names.
+- The form checks what the API checks before it sends, and shows any
+  refusal of the API on the field it names; a taken identifier on the
+  identifier. An edit sends the whole document with the revision it was
+  read at. When another revision was saved in the meantime, the form says
+  so above the save bar, keeps its values, and offers to load the latest
+  revision.
+- Leaving the form with changes not saved asks first, inside the
+  interface and when the page is closed or reloaded. Saving and cancelling
+  never ask.
+- Users: every user in name order, inactive ones included. The columns
+  are the user name, with "you" on the administrator's own row, the role,
+  and the state. A row opens in place and holds the creation date and
+  three parts, each saved on its own: the role and the language; a new
+  password, of 12 to 1024 characters; and Deactivate, which asks first, or
+  Reactivate for an inactive user. A role change, a new password, and a
+  deactivation sign the user out, and the row says so. The administrator's
+  own row holds its facts and a link to the account screen alone. A
+  refusal to leave no active administrator is shown in the row. New user
+  opens a dialog with the user name, a password, the role (reader by
+  default), and the language (the administrator's by default); a taken
+  name is shown on the name.
+- An opened row fits the window, in every table that opens rows: opening
+  scrolls the row and all it holds into view, long values wrap, the grid
+  of its facts narrows with the window, and nothing scrolls sideways.
 
 ### 12.3 New report form
 
