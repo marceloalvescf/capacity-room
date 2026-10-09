@@ -5,7 +5,7 @@ import { StatusMark } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
 import type { ViewNode, ViewNodepool, ViewValue } from "./api";
 import { CopyName } from "./copy-name";
-import { DataTable, severityRank, type ReportColumn } from "./data-table";
+import { DataTable, severityRank, type Column } from "@/components/data-table";
 import { Facts, matchNode, PeakCell, RowFindings, StatGrid, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
@@ -121,7 +121,7 @@ export function NodesTab() {
     (row: ViewNode) => `${row.name} ${row.pool === "unknown" ? unknownPool : row.pool}`,
     [unknownPool],
   );
-  const columns = useMemo<ReportColumn<ViewNode>[]>(
+  const columns = useMemo<Column<ViewNode>[]>(
     () => [
       {
         id: "name",
@@ -172,12 +172,12 @@ export function NodesTab() {
     <div className="flex flex-col gap-6">
       <DataTable
         label={t("report.tab.nodes")}
-        searchLabel={t("report.search.nodes")}
+        empty={t("report.table.empty")}
+        search={{ label: t("report.search.nodes"), text: searchText }}
         rows={nodes}
         rowKey={rowKey}
         rowName={rowName}
         columns={columns}
-        searchText={searchText}
         renderOpened={renderOpened}
         status={status}
       />

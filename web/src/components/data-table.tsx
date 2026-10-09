@@ -9,14 +9,16 @@ import {
   type SortingState,
   type Updater,
 } from "@tanstack/react-table";
-import { Fragment, useMemo, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { useAnnounce } from "@/app/live-region";
 import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/cn";
-import { useAddress } from "./address";
+import { useAddress } from "@/lib/address";
 import { SearchField, useSearchText } from "./search-field";
+import { revealRows } from "./reveal";
 
-export interface ReportColumn<Row> {
+export interface Column<Row> {
   id: string;
   header: string;
   cell: (row: Row) => ReactNode;
@@ -24,6 +26,9 @@ export interface ReportColumn<Row> {
   sortValue?: (row: Row) => number | string | null;
   align?: "start" | "end";
 }
+
+// The layout of a set of facts inside an opened row: as many columns of at least 14rem as the row holds.
+export const factGrid = "grid gap-4 grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]";
 
 const features = tableFeatures({ rowSortingFeature, sortedRowModel: createSortedRowModel() });
 
@@ -62,32 +67,33 @@ function Sorted({ direction }: { direction: false | "asc" | "desc" }) {
 
 export function DataTable<Row extends RowData>({
   label,
-  searchLabel,
   rows,
   rowKey,
   rowName,
   columns,
-  searchText,
   renderOpened,
+  empty,
+  search,
   defaultOrder = "status",
   status,
 }: {
   label: string;
-  searchLabel: string;
   rows: readonly Row[];
   rowKey: (row: Row) => string;
   rowName: (row: Row) => string;
-  columns: ReportColumn<Row>[];
-  searchText: (row: Row) => string;
+  columns: Column<Row>[];
   renderOpened: (row: Row) => ReactNode;
+  empty: string;
+  search?: { label: string; text: (row: Row) => string };
   defaultOrder?: "status" | "view";
   status?: (row: Row) => string;
 }) {
   const { t } = useTranslation();
   const address = useAddress();
   const { params } = address;
-  const search = useSearchText(address);
-  const query = search.text;
+  const searchState = useSearchText(address);
+  const announce = useAnnounce();
+  const query = search === undefined ? "" : searchState.text;
   const sortable = useMemo(
     () => new Set(columns.filter((column) => column.sortValue !== undefined).map((column) => column.id)),
     [columns],
@@ -97,13 +103,13 @@ export function DataTable<Row extends RowData>({
 
   const data = useMemo(() => {
     const needle = query.toLowerCase();
-    const kept = rows.filter((row) => searchText(row).toLowerCase().includes(needle));
+    const kept = search === undefined ? rows : rows.filter((row) => search.text(row).toLowerCase().includes(needle));
     if (defaultOrder === "view") {
       return kept;
     }
     const rank = (row: Row) => severityRank[status?.(row) ?? ""] ?? 3;
     return kept.toSorted((a, b) => rank(a) - rank(b) || compare(rowName(a), rowName(b)));
-  }, [rows, query, searchText, defaultOrder, status, rowName]);
+  }, [rows, query, search, defaultOrder, status, rowName]);
 
   const defs = useMemo<ColumnDef<typeof features, Row>[]>(
     () =>
@@ -139,34 +145,54 @@ export function DataTable<Row extends RowData>({
     getRowId: rowKey,
   });
 
-  const searchBar = (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <SearchField label={searchLabel} text={search.text} onChange={search.change} />
-      <p className="text-sm text-muted-fg">{t("report.table.rows", { count: data.length })}</p>
-    </div>
-  );
+  const announced = useRef(query);
+  useEffect(() => {
+    if (announced.current !== query) {
+      announced.current = query;
+      announce(t("table.rows", { count: data.length }));
+    }
+  }, [query, data.length, announce, t]);
+
+  const head = useRef<HTMLTableSectionElement>(null);
+  const openedRow = useRef<HTMLTableRowElement>(null);
+  const openedPair = useRef<HTMLTableRowElement>(null);
+  const revealed = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (openKey !== revealed.current && openKey !== null && openedRow.current && openedPair.current && head.current) {
+      revealRows(openedRow.current, openedPair.current, head.current.getBoundingClientRect().height);
+    }
+    revealed.current = openKey;
+  }, [openKey]);
+
+  const searchBar =
+    search === undefined ? null : (
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <SearchField label={search.label} text={searchState.text} onChange={searchState.change} />
+        <p className="text-sm text-muted-fg">{t("table.rows", { count: data.length })}</p>
+      </div>
+    );
 
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-fg">{t("report.table.empty")}</p>;
+    return <p className="text-sm text-muted-fg">{empty}</p>;
   }
 
   const byId = new Map(columns.map((column) => [column.id, column]));
-  const cellClass = (column: ReportColumn<Row> | undefined) =>
-    cn("px-3 py-2 align-top", column?.align === "end" ? "text-right" : "text-left");
+  const cellClass = (column: Column<Row> | undefined) =>
+    cn("px-3 py-2 align-top [overflow-wrap:anywhere]", column?.align === "end" ? "text-right" : "text-left");
 
   return (
     <div className="flex flex-col gap-3">
       {searchBar}
       {data.length === 0 ? (
-        <p className="text-sm text-muted-fg">{t("report.table.noMatch")}</p>
+        <p className="text-sm text-muted-fg">{t("table.noMatch")}</p>
       ) : (
         <div className="rounded-md border border-border bg-surface text-surface-fg">
           <table aria-label={label} className="w-full border-separate border-spacing-0 text-sm">
-            <thead className="sticky top-0 z-10 bg-surface text-muted-fg [&>tr>th]:border-b [&>tr>th]:border-border">
+            <thead ref={head} className="sticky top-0 z-10 bg-surface text-muted-fg [&>tr>th]:border-b [&>tr>th]:border-border">
               {table.getHeaderGroups().map((group) => (
                 <tr key={group.id}>
                   <th scope="col" className="w-12 px-3 py-2">
-                    <span className="sr-only">{t("report.table.details")}</span>
+                    <span className="sr-only">{t("table.details")}</span>
                   </th>
                   {group.headers.map((header) => {
                     const column = byId.get(header.column.id);
@@ -201,10 +227,10 @@ export function DataTable<Row extends RowData>({
                 const name = rowName(row.original);
                 return (
                   <Fragment key={row.id}>
-                    <tr className={cn(opened && "bg-info-surface")}>
-                      <td className="px-3 py-1 align-top">
+                    <tr ref={opened ? openedRow : undefined} className={cn(opened && "bg-info-surface")}>
+                      <td className="px-3 py-1 align-top [overflow-wrap:anywhere]">
                         <IconButton
-                          label={t(opened ? "report.table.close" : "report.table.open", { name })}
+                          label={t(opened ? "table.close" : "table.open", { name })}
                           variant="secondary"
                           aria-expanded={opened}
                           className="border-transparent bg-transparent"
@@ -235,9 +261,9 @@ export function DataTable<Row extends RowData>({
                       })}
                     </tr>
                     {opened ? (
-                      <tr className="bg-bg">
-                        <td colSpan={columns.length + 1} className="px-6 py-4">
-                          {renderOpened(row.original)}
+                      <tr ref={openedPair} className="bg-bg">
+                        <td colSpan={columns.length + 1} className="px-6 py-4 [overflow-wrap:anywhere]">
+                          <div className="min-w-0">{renderOpened(row.original)}</div>
                         </td>
                       </tr>
                     ) : null}

@@ -18,6 +18,13 @@
     "theme": "Theme: {{theme}}",
     "signOut": "Sign out"
   },
+  "table": {
+    "rows": "Rows: {{count}}",
+    "noMatch": "No row matches the search.",
+    "open": "Show the details of {{name}}",
+    "close": "Hide the details of {{name}}",
+    "details": "Details"
+  },
   "language": {
     "en": "English",
     "pt-BR": "Português (Brasil)"
@@ -341,12 +348,7 @@
       "version": "Generator version"
     },
     "table": {
-      "rows": "Rows: {{count}}",
-      "empty": "No rows in this report.",
-      "noMatch": "No row matches the search.",
-      "open": "Show the details of {{name}}",
-      "close": "Hide the details of {{name}}",
-      "details": "Details"
+      "empty": "No rows in this report."
     },
     "search": {
       "namespaces": "Search namespaces",

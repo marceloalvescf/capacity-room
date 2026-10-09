@@ -1,9 +1,11 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RouterProvider, createMemoryRouter } from "react-router";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { LiveRegion } from "@/app/live-region";
 import "@/i18n/i18n";
-import { DataTable, type ReportColumn } from "./data-table";
+import { DataTable, type Column } from "./data-table";
+import * as reveal from "./reveal";
 
 interface Row {
   key: string;
@@ -13,7 +15,7 @@ interface Row {
   pods: number;
 }
 
-const columns: ReportColumn<Row>[] = [
+const columns: Column<Row>[] = [
   { id: "name", header: "Name", cell: (row) => row.name, sortValue: (row) => row.name },
   { id: "cpu", header: "CPU", cell: (row) => (row.cpu === null ? "n/a" : String(row.cpu)), sortValue: (row) => row.cpu, align: "end" },
   { id: "pods", header: "Pods", cell: (row) => String(row.pods), sortValue: (row) => row.pods, align: "end" },
@@ -34,7 +36,7 @@ const named: Row[] = [
 ];
 
 // A latency makes every change of the address land late, as a router that works in a transition does.
-function mount(rows: Row[], path = "/", defaultOrder: "status" | "view" = "status", latency = 0) {
+function mount(rows: Row[], path = "/", defaultOrder: "status" | "view" = "status", latency = 0, withSearch = true) {
   const router = createMemoryRouter(
     [
       {
@@ -44,12 +46,12 @@ function mount(rows: Row[], path = "/", defaultOrder: "status" | "view" = "statu
         element: (
           <DataTable
             label="Things"
-            searchLabel="Search things"
             rows={rows}
             rowKey={(row) => row.key}
             rowName={(row) => row.name}
             columns={columns}
-            searchText={(row) => row.name}
+            empty="No rows in this report."
+            {...(withSearch ? { search: { label: "Search things", text: (row: Row) => row.name } } : {})}
             renderOpened={(row) => <p>{`details of ${row.key}`}</p>}
             defaultOrder={defaultOrder}
             status={(row) => row.status}
@@ -59,7 +61,11 @@ function mount(rows: Row[], path = "/", defaultOrder: "status" | "view" = "statu
     ],
     { initialEntries: [path] },
   );
-  render(<RouterProvider router={router} />);
+  render(
+    <LiveRegion>
+      <RouterProvider router={router} />
+    </LiveRegion>,
+  );
   return router;
 }
 
@@ -71,6 +77,10 @@ function order(): string[] {
 function search(router: ReturnType<typeof mount>): string {
   return router.state.location.search;
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("data table", () => {
   it("default order", () => {
@@ -120,7 +130,7 @@ describe("data table", () => {
     const router = mount(named);
     await userEvent.type(screen.getByRole("searchbox", { name: "Search things" }), "WEB");
     expect(order()).toEqual(["payments-web"]);
-    expect(screen.getByText("Rows: 1")).toBeInTheDocument();
+    expect(screen.getByText("Rows: 1", { selector: "p" })).toBeInTheDocument();
     expect(search(router)).toBe("?q=WEB");
   });
 
@@ -219,5 +229,60 @@ describe("data table", () => {
     await waitFor(() => {
       expect(search(router)).toBe("?sort=pods.asc");
     });
+  });
+
+  it("no search", () => {
+    mount(named, "/?q=web", "status", 0, false);
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Rows: /)).not.toBeInTheDocument();
+    expect(order()).toHaveLength(3);
+  });
+
+  it("third click removes the sort", async () => {
+    const router = mount(mixed);
+    const header = screen.getByRole("columnheader", { name: "CPU" });
+    const button = within(header).getByRole("button", { name: "CPU" });
+    await userEvent.click(button);
+    await userEvent.click(button);
+    expect(search(router)).toBe("?sort=cpu.desc");
+    await userEvent.click(button);
+    expect(search(router)).toBe("");
+    expect(header).not.toHaveAttribute("aria-sort");
+    expect(order()).toEqual(["a", "c", "a", "b"]);
+  });
+
+  it("announces the count of a search", async () => {
+    mount(named);
+    const region = screen.getByRole("status");
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(region).toBeEmptyDOMElement();
+    await userEvent.type(screen.getByRole("searchbox", { name: "Search things" }), "web");
+    await waitFor(() => {
+      expect(region).toHaveTextContent("Rows: 1");
+    });
+  });
+
+  it("opening reveals the row", async () => {
+    const spy = vi.spyOn(reveal, "revealRows").mockImplementation(() => undefined);
+    mount(named, "/", "view");
+    await userEvent.click(screen.getByRole("button", { name: "Show the details of payments-web" }));
+    expect(spy).toHaveBeenCalledTimes(1);
+    const [row, opened, head] = spy.mock.calls[0] as [HTMLElement, HTMLElement, number];
+    expect(row).toBe(screen.getByRole("button", { name: "Hide the details of payments-web" }).closest("tr"));
+    expect(opened).toBe(screen.getByText("details of web-1").closest("tr"));
+    expect(head).toBe(document.querySelector("thead")?.getBoundingClientRect().height);
+    await userEvent.click(screen.getByRole("button", { name: "Hide the details of payments-web" }));
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("cells wrap", () => {
+    mount(named);
+    const cells = screen.getAllByRole("cell");
+    expect(cells.length).toBeGreaterThan(0);
+    for (const cell of cells) {
+      expect(cell).toHaveClass("[overflow-wrap:anywhere]");
+    }
   });
 });

@@ -151,7 +151,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     // Typed at full speed, with no delay between keys, the field keeps every character and the rows follow it.
     await search.pressSequentially(name);
     await expect(search).toHaveValue(name);
-    const rowCount = page.getByText(new RegExp(`^${en.report.table.rows.replace("{{count}}", "(\\d+)")}$`));
+    const rowCount = page.locator("p").filter({ hasText: new RegExp(`^${en.table.rows.replace("{{count}}", "(\\d+)")}$`) });
     await expect(rowCount).toBeVisible();
     const kept = Number((await rowCount.innerText()).replace(/\D/g, ""));
     expect(kept).toBeGreaterThan(0);

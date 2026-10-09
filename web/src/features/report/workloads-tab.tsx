@@ -2,7 +2,7 @@ import { useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
 import type { ViewWorkload } from "./api";
-import { DataTable, severityRank, type ReportColumn } from "./data-table";
+import { DataTable, severityRank, type Column } from "@/components/data-table";
 import { Facts, matchWorkload, PeakCell, RowFindings, UsageGrids, ValueText, WorkloadName } from "./pieces";
 import { useView } from "./report-page";
 
@@ -92,7 +92,7 @@ export function WorkloadsTab() {
   const { t } = useTranslation();
   const view = useView();
   const workloads = useMemo(() => view.workloads.filter((workload) => workload.observed_usage), [view.workloads]);
-  const columns = useMemo<ReportColumn<ViewWorkload>[]>(
+  const columns = useMemo<Column<ViewWorkload>[]>(
     () => [
       {
         id: "name",
@@ -136,12 +136,12 @@ export function WorkloadsTab() {
     <div className="flex flex-col gap-6">
       <DataTable
       label={t("report.tab.workloads")}
-      searchLabel={t("report.search.workloads")}
+      empty={t("report.table.empty")}
+      search={{ label: t("report.search.workloads"), text: searchText }}
       rows={workloads}
       rowKey={rowKey}
       rowName={rowName}
       columns={columns}
-      searchText={searchText}
       renderOpened={renderOpened}
       status={status}
       />

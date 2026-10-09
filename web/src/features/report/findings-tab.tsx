@@ -4,10 +4,10 @@ import { viewScopeTypeValues, viewSeverityValues } from "@/api/schema.gen";
 import { StatusMark } from "@/components/status-mark";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/cn";
-import { useAddress } from "./address";
+import { useAddress } from "@/lib/address";
 import type { ViewFinding } from "./api";
 import { useView } from "./report-page";
-import { SearchField, useSearchText } from "./search-field";
+import { SearchField, useSearchText } from "@/components/search-field";
 
 type Severity = (typeof viewSeverityValues)[number];
 type ScopeType = (typeof viewScopeTypeValues)[number];

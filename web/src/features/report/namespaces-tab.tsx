@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
 import type { ViewNamespace } from "./api";
-import { DataTable, severityRank, type ReportColumn } from "./data-table";
+import { DataTable, severityRank, type Column } from "@/components/data-table";
 import { matchNamespace, PeakCell, RowFindings, UsageGrids, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
@@ -24,7 +24,7 @@ const renderOpened = (row: ViewNamespace) => <Opened row={row} />;
 export function NamespacesTab() {
   const { t } = useTranslation();
   const { namespaces } = useView();
-  const columns = useMemo<ReportColumn<ViewNamespace>[]>(
+  const columns = useMemo<Column<ViewNamespace>[]>(
     () => [
       {
         id: "name",
@@ -67,12 +67,12 @@ export function NamespacesTab() {
   return (
     <DataTable
       label={t("report.tab.namespaces")}
-      searchLabel={t("report.search.namespaces")}
+      empty={t("report.table.empty")}
+      search={{ label: t("report.search.namespaces"), text: searchText }}
       rows={namespaces}
       rowKey={rowKey}
       rowName={rowKey}
       columns={columns}
-      searchText={searchText}
       renderOpened={renderOpened}
       status={status}
     />

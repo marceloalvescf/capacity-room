@@ -1,7 +1,7 @@
 import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Field } from "@/components/ui/field";
-import type { Address } from "./address";
+import type { Address } from "@/lib/address";
 
 // The text of a search field, kept apart from the address so that a keystroke never waits for the router. It follows
 // the address when the address changes from outside, and writes `q` as it is typed.

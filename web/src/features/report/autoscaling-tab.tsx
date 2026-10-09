@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
 import type { ViewHPA } from "./api";
-import { DataTable, severityRank, type ReportColumn } from "./data-table";
+import { DataTable, severityRank, type Column } from "@/components/data-table";
 import { Counts, matchHPA, RowFindings, StatGrid, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
@@ -33,7 +33,7 @@ export function AutoscalingTab() {
   const { t } = useTranslation();
   const { summary, hpas } = useView();
   const { autoscaling } = summary;
-  const columns = useMemo<ReportColumn<ViewHPA>[]>(
+  const columns = useMemo<Column<ViewHPA>[]>(
     () => [
       {
         id: "name",
@@ -115,12 +115,12 @@ export function AutoscalingTab() {
         <h2 className="text-base font-semibold">{t("report.hpas.title")}</h2>
         <DataTable
           label={t("report.hpas.title")}
-          searchLabel={t("report.search.hpas")}
+          empty={t("report.table.empty")}
+          search={{ label: t("report.search.hpas"), text: searchText }}
           rows={hpas}
           rowKey={rowKey}
           rowName={rowName}
           columns={columns}
-          searchText={searchText}
           renderOpened={renderOpened}
           status={status}
         />

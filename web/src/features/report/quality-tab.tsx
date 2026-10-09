@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { StatusMark, type Status } from "@/components/status-mark";
 import { formatElapsed, formatTimeIn } from "@/lib/format";
 import type { ViewCapability, ViewMessage } from "./api";
-import { DataTable, type ReportColumn } from "./data-table";
+import { DataTable, type Column } from "@/components/data-table";
 import { useView } from "./report-page";
 
 const stateStatus: Record<ViewCapability["state"], Status> = {
@@ -73,7 +73,7 @@ export function QualityTab() {
     [t],
   );
   const rowName = useCallback((row: ViewCapability) => t(`capability.${row.name}`), [t]);
-  const columns = useMemo<ReportColumn<ViewCapability>[]>(
+  const columns = useMemo<Column<ViewCapability>[]>(
     () => [
       {
         id: "capability",
@@ -109,12 +109,12 @@ export function QualityTab() {
       </p>
       <DataTable
         label={t("report.tab.quality")}
-        searchLabel={t("report.search.capabilities")}
+        empty={t("report.table.empty")}
+        search={{ label: t("report.search.capabilities"), text: searchText }}
         rows={quality.capabilities}
         rowKey={rowKey}
         rowName={rowName}
         columns={columns}
-        searchText={searchText}
         renderOpened={renderOpened}
         defaultOrder="view"
       />

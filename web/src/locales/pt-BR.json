@@ -18,6 +18,13 @@
     "theme": "Tema: {{theme}}",
     "signOut": "Sair"
   },
+  "table": {
+    "rows": "Linhas: {{count}}",
+    "noMatch": "Nenhuma linha corresponde à busca.",
+    "open": "Mostrar os detalhes de {{name}}",
+    "close": "Ocultar os detalhes de {{name}}",
+    "details": "Detalhes"
+  },
   "language": {
     "en": "English",
     "pt-BR": "Português (Brasil)"
@@ -341,12 +348,7 @@
       "version": "Versão do gerador"
     },
     "table": {
-      "rows": "Linhas: {{count}}",
-      "empty": "Nenhuma linha neste relatório.",
-      "noMatch": "Nenhuma linha corresponde à busca.",
-      "open": "Mostrar os detalhes de {{name}}",
-      "close": "Ocultar os detalhes de {{name}}",
-      "details": "Detalhes"
+      "empty": "Nenhuma linha neste relatório."
     },
     "search": {
       "namespaces": "Buscar namespaces",
