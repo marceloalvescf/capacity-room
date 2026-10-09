@@ -31,8 +31,10 @@ full design is in
   PDF of the other language is generated. A collected report opens from its
   progress page on a screen of seven tabs: overview, findings, namespaces,
   workloads, autoscaling, nodes, and data quality. It is worded as its PDF,
-  and the PDFs are one click away. The screens of profiles and users come
-  later.
+  and the PDFs are one click away. An administrator manages the users
+  (create, change the role, the language, or the password, deactivate,
+  reactivate) and the metric-source profiles (list, create, edit, delete,
+  and test a profile's connection, saved or before saving it).
 - The command `worker`, which runs the report jobs of the platform: it
   collects a requested report through the outbound policy, stores its
   snapshot, writes the PDF of the language it was requested in, writes the
@@ -329,7 +331,9 @@ answers `PROFILE_REVISION_STALE` when another change came first, and a
 delete keeps every revision. `POST /api/v1/admin/profiles/{id}/test` runs
 the preflight of a report against the source through the outbound policy
 and answers `{"ok","code","capabilities"}`, never a URL, a name, an
-address, or the text of a failure.
+address, or the text of a failure. `POST /api/v1/admin/profiles/test` runs
+the same preflight on a profile that is not saved yet, from the document
+the form holds.
 
 `admin import-profiles` creates or revises profiles from a TOML file and is
 repeatable: a profile the file names and the database does not is created,

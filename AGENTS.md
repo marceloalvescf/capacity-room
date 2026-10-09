@@ -404,9 +404,17 @@ redactor the moment the settings are loaded, before the pool opens.
   file is read under its folder after symbolic links are followed, as a
   regular file of at most 1 MiB; a resolution error carries a code and
   never a path, a name, or content. A file is resolved only by the profile
-  test and, from part 3.3 on, by the worker at execution; never at create,
+  tests (saved and draft) and by the worker at execution; never at create,
   revise, or import. A credential is UTF-8 with one trailing line break
   removed and at least 8 characters, as on the command line.
+- **A draft profile is tested before it is saved.** `POST
+  /admin/profiles/test` takes a document (and the id, when it has one),
+  checks it as a create does (422 for the document or a statically refused
+  endpoint), and runs the saved test's preflight through the outbound
+  policy; it reads and writes no profile row. It writes one audit row
+  `profile.test` with `{"code","draft":true}`, targeting the id when one is
+  given. `ProfileTestCode` is a contract enum held equal to
+  `profiles.TestCodes` in order.
 - **Every revision of a profile is immutable** (a trigger refuses an update,
   a delete, and a truncate), and `profiles.current_revision_id` pins the
   current one, with a deferred constraint that it names a revision of the
@@ -548,7 +556,8 @@ redactor the moment the settings are loaded, before the pool opens.
   its surface, in both themes. A new pair on the screen enters the list.
 - **No inline style.** No `style` prop, no `dangerouslySetInnerHTML`, and no
   `<style>` element added at run time; a test opens the menu, the
-  tooltip, the popover, and the alert dialog, the four Radix layers in use,
+  tooltip, the popover, the alert dialog, and the dialog, the five Radix
+  layers in use,
   and finds none. A new layer joins
   that test. The CSP stays `script-src 'self'` and `style-src 'self'`
   until a style hash enters with its test. Zod runs with its JIT off,
@@ -598,7 +607,9 @@ redactor the moment the settings are loaded, before the pool opens.
   `make image`, with the one-shot `profiles` service that imports
   `deploy/platform/profiles.toml`. The fake serves its scenario once, so the
   stack runs one collection: the reports spec requests one report and
-  Playwright never retries. The target stops the fake and fails unless its
+  Playwright never retries. The administration spec's draft tests use a
+  refused address and `fake-prometheus:9091`, where nothing listens, so the
+  fake receives none of their requests. The target stops the fake and fails unless its
   log holds `remaining: 1`, the one answer of `direct-complete` that no run
   asks, pinned by `TestDirectCompleteLeavesTheRecordedAnswerUnused`. The
   spec fails on any CSP violation and on any axe finding. The fixtures of
@@ -617,7 +628,28 @@ redactor the moment the settings are loaded, before the pool opens.
 - **The state of a tab lives in the address.** `q`, `sort`, `open`,
   `severity`, `scope`, and `finding` are written with replace, and an unknown
   value is ignored.
-- **`DataTable` is the one table of the report,** on TanStack Table.
+- **`DataTable` is the one table of the app,** in `web/src/components/`, on
+  TanStack Table: the report's tabs, the users, and the profiles. Opening a
+  row (by a click or by `open` in the address) reveals it through
+  `revealRows`: the row and its opened row scroll between the sticky header
+  and the bottom of the window, or, when the pair is taller than the window,
+  the row's top settles under the header; closing never scrolls. Cells wrap
+  and nothing scrolls sideways. The e2e checks the fit with `expectFits` at
+  1366×768, 1200×1000, and 1024×768, on a users table made longer than the
+  window.
+- **The administration is for administrators alone.** `/users`,
+  `/profiles`, `/profiles/new`, and `/profiles/:id/edit` sit behind
+  `RequireAdministrator` and answer the not-found screen to anyone else;
+  their navigation entries show only to an administrator. Rows open in
+  place; New user is a `Dialog`.
+- **The profile form guards its changes.** While it has changes, a
+  navigation in the app asks first (`useBlocker`) and `beforeunload` warns;
+  save and cancel release the guard, and a navigation to sign-in (sign-out,
+  an ended session) always passes. A refusal of the API lands on its field,
+  opening a folded section, and a field the form lacks shows in the form's
+  alert; a mark the API set leaves its field when the field changes, and a
+  new test or save clears every earlier one. A test result is cleared by
+  the first change after it.
 - **A mark that the PDF prints beside a value is drawn with its shape,** and,
   where its label is not the severity, with the status word for screen
   readers (`StatusMark` with `withStatus`).

@@ -6,6 +6,21 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- An administrator manages the metric-source profiles on the web: lists
+  them, opens one in place, creates, edits, and deletes a profile, and tests
+  its connection, saved or before saving it.
+- An administrator manages the users on the web: creates a user, changes a
+  user's role, language, or password, and deactivates or reactivates a user.
+
+### Changed
+
+- An opened row of a table scrolls into view and fits the window, with no
+  sideways scrolling.
+- A third click on a sorted column heading returns a table to its default
+  order, and a search of a table announces the number of rows shown.
+
 ## [0.5.0] - 2026-10-08
 
 ### Added
