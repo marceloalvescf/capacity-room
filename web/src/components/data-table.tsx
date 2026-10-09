@@ -94,6 +94,7 @@ export function DataTable<Row extends RowData>({
   const searchState = useSearchText(address);
   const announce = useAnnounce();
   const query = search === undefined ? "" : searchState.text;
+  const searchText = search?.text;
   const sortable = useMemo(
     () => new Set(columns.filter((column) => column.sortValue !== undefined).map((column) => column.id)),
     [columns],
@@ -103,13 +104,13 @@ export function DataTable<Row extends RowData>({
 
   const data = useMemo(() => {
     const needle = query.toLowerCase();
-    const kept = search === undefined ? rows : rows.filter((row) => search.text(row).toLowerCase().includes(needle));
+    const kept = searchText === undefined ? rows : rows.filter((row) => searchText(row).toLowerCase().includes(needle));
     if (defaultOrder === "view") {
       return kept;
     }
     const rank = (row: Row) => severityRank[status?.(row) ?? ""] ?? 3;
     return kept.toSorted((a, b) => rank(a) - rank(b) || compare(rowName(a), rowName(b)));
-  }, [rows, query, search, defaultOrder, status, rowName]);
+  }, [rows, query, searchText, defaultOrder, status, rowName]);
 
   const defs = useMemo<ColumnDef<typeof features, Row>[]>(
     () =>

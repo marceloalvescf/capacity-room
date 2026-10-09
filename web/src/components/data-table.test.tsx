@@ -277,6 +277,13 @@ describe("data table", () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
+  it("reveals a row opened by the address on load", () => {
+    const spy = vi.spyOn(reveal, "revealRows").mockImplementation(() => undefined);
+    mount(named, "/?open=api-1", "view");
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0]?.[1]).toBe(screen.getByText("details of api-1").closest("tr"));
+  });
+
   it("cells wrap", () => {
     mount(named);
     const cells = screen.getAllByRole("cell");
