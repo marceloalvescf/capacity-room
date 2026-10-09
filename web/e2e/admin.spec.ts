@@ -73,7 +73,7 @@ test("an administrator manages users and profiles", async ({ page, browser, base
     await page.getByLabel(en.admin.profile.clusterName, { exact: true }).fill(profile.cluster);
     await page.getByLabel(en.admin.profile.allowed, { exact: true }).fill(profile.namespace);
     await page.getByRole("button", { name: en.admin.profiles.test, exact: true }).click();
-    await expect(page.getByText(en.admin.profile.testRefused, { exact: true })).toBeVisible();
+    await expect(page.locator("#main").getByText(en.admin.profile.testRefused, { exact: true })).toBeVisible();
     await expect(page.getByLabel(en.admin.profile.url, { exact: true })).toHaveAccessibleDescription(
       en.error.ENDPOINT_ADDRESS_REJECTED,
     );
@@ -81,9 +81,9 @@ test("an administrator manages users and profiles", async ({ page, browser, base
 
   await test.step("an address nothing listens at is unreachable", async () => {
     await page.getByLabel(en.admin.profile.url, { exact: true }).fill(profile.unreachable);
-    await expect(page.getByText(en.admin.profile.testRefused, { exact: true })).toHaveCount(0);
+    await expect(page.locator("#main").getByText(en.admin.profile.testRefused, { exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: en.admin.profiles.test, exact: true }).click();
-    await expect(page.getByText(en.profileTest.ENDPOINT_UNREACHABLE, { exact: true })).toBeVisible();
+    await expect(page.locator("#main").getByText(en.profileTest.ENDPOINT_UNREACHABLE, { exact: true })).toBeVisible();
     await expect(page.getByLabel(en.admin.profile.url, { exact: true })).not.toHaveAccessibleDescription(
       en.error.ENDPOINT_ADDRESS_REJECTED,
     );
