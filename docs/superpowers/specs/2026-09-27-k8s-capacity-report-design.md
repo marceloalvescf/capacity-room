@@ -1271,6 +1271,62 @@ security, concurrency, and PDF recovery.
 - Every end-to-end page is checked with axe, and a violation of the
   Content-Security-Policy fails the test.
 
+#### 13.4.1 End-to-end
+
+`make e2e` runs four specs in one browser, one at a time, with no retry.
+Each spec creates the users and profiles it needs under names of its own,
+and depends on no other spec and on no order between them.
+
+- Main path: an administrator manages users and profiles; an operator
+  requests a report, reads it, generates the PDF of the other language, and
+  deletes it; a reader reads it with no control that changes anything; a
+  user signs in, changes language and password, and signs out.
+- Security:
+  - A session ended in another tab sends the open page to sign-in, which
+    says the session ended; signing in again returns to that page.
+  - A user deactivated by an administrator is signed out at their next
+    request and cannot sign in again.
+  - A role changed by an administrator ends the user's sessions, as
+    section 11.4 says: the open page is sent to sign-in at its next
+    request, and after signing in the user sees the controls of the new
+    role alone.
+  - A write without the CSRF token is refused. A token rotated by another
+    tab is renewed and the write repeated once, unseen by the user.
+  - An inline script injected into a page is blocked and reported as a
+    violation. A page, an API answer, and an asset carry the headers of
+    section 11.12, and the session cookie carries the attributes of
+    section 11.4.
+  - Five wrong passwords block a user's sign-in, and the sixth attempt is
+    refused with the throttle's message, even with the right password.
+- Concurrency:
+  - A request whose answer is lost and that is sent again, and a double
+    click on the request, make one report.
+  - A request beyond the admission limit of a profile is refused, and the
+    form says when to try again.
+  - When two tabs edit one profile, the second save is refused as stale.
+  - When two administrators lower each other's role at the same instant,
+    at least one active administrator remains and the other request is
+    refused.
+- PDF recovery:
+  - A compile made to fail leaves the report collected and its PDF failed.
+    Once the cause is gone, Try again makes the PDF, and it downloads.
+  - A failed PDF of the second language leaves the first one ready and
+    downloadable.
+  - Two requests for one PDF at the same instant make one PDF.
+  - The report list, left open while a report is collected, shows it
+    collected with no reload and no navigation.
+- After the stack stops, no log of `serve`, `worker`, or the one-shot
+  services holds a known secret: a password, the database password, or
+  the credential of a profile.
+- Each fake Prometheus stops with exactly the one recorded answer of
+  `direct-complete` that no run asks.
+- Each check is seen failing once before it counts.
+
+Session expiry by time, the role check of every route, the outbound policy
+beyond the profile tests, a worker stopped in the middle of a job, and the
+reconciliation of lost jobs are proven by the platform tests of 13.2, not
+in a browser.
+
 ### 13.5 Commands
 
 ```bash
@@ -1308,6 +1364,19 @@ make gate            # all of the above from a freshly built image
   profiles, and a way to make a compile fail on purpose, and the Playwright
   service, which shares the network of `serve` and reaches it at
   `localhost:8080`.
+  - One fake Prometheus serves each spec that collects, each serving
+    `direct-complete` once. A fake is healthy once it listens, and `serve`
+    and `worker` wait for it. A spec that needs a report in flight and no
+    data uses a profile whose address nothing listens at.
+  - One fixture profile reads its credential from a file, so the worker
+    loads a real secret.
+  - The worker of this stack runs a test image: the runtime image plus a
+    test program that passes every call to `typst` unchanged, unless a
+    switch file exists, which makes a compile fail. The Playwright service
+    writes the switch, and the worker reads it.
+  - `make e2e` builds the fakes and the test worker image, and `make image`
+    never does. `make gate` builds them with no cache, the test worker on
+    the runtime image the gate built.
 
 `serve` speaks plain HTTP. The session cookie is `Secure`, so a browser
 reaches `serve` through the operator's TLS proxy, or at localhost. The
