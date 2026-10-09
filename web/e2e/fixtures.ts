@@ -52,10 +52,11 @@ export const buttonName = (word: string, name: string) => word.replace("{{name}}
 
 // The last row of a table: its open button and its name, read from the button.
 export async function lastRow(table: Locator): Promise<{ button: Locator; name: string }> {
-  const button = table.locator(":scope > tbody > tr > td:first-child").getByRole("button", { name: openPattern }).last();
-  const label = (await button.getAttribute("aria-label")) ?? "";
+  const last = table.locator(":scope > tbody > tr > td:first-child").getByRole("button", { name: openPattern }).last();
+  const label = (await last.getAttribute("aria-label")) ?? "";
   const [before = "", after = ""] = en.table.open.split("{{name}}");
-  return { button, name: label.slice(before.length, label.length - after.length) };
+  const name = label.slice(before.length, label.length - after.length);
+  return { button: table.getByRole("button", { name: buttonName(en.table.open, name), exact: true }), name };
 }
 
 // Waits until the row named `name` is open, then until it and its opened row lie inside the viewport, below the
@@ -122,16 +123,33 @@ export async function expectFits(page: Page, table: Locator, name: string) {
     .toEqual({ outside: [], sideways: false });
 }
 
-// Creates a user through the API, with the session and the CSRF token of the signed-in page.
-export async function createUser(page: Page, user: { username: string; password: string }, role: "operator" | "reader") {
+// The session and the CSRF token of the signed-in page, for a change made through the API.
+async function csrfHeaders(page: Page): Promise<{ "X-CSRF-Token": string }> {
   const session = await page.request.get("/api/v1/auth/session");
   expect(session.ok()).toBe(true);
   const { csrf_token: csrf } = (await session.json()) as { csrf_token: string };
+  return { "X-CSRF-Token": csrf };
+}
+
+// Creates a user through the API, with the session and the CSRF token of the signed-in page.
+export async function createUser(page: Page, user: { username: string; password: string }, role: "operator" | "reader") {
   const created = await page.request.post("/api/v1/admin/users", {
-    headers: { "X-CSRF-Token": csrf },
+    headers: await csrfHeaders(page),
     data: { username: user.username, password: user.password, role, language: "en" },
   });
   expect(created.status()).toBe(201);
+}
+
+// Creates a profile through the API.
+export async function createProfile(page: Page, document: Record<string, unknown>) {
+  const created = await page.request.post("/api/v1/admin/profiles", { headers: await csrfHeaders(page), data: document });
+  expect(created.status()).toBe(201);
+}
+
+// Deletes a profile through the API.
+export async function deleteProfile(page: Page, id: string) {
+  const deleted = await page.request.delete(`/api/v1/admin/profiles/${id}`, { headers: await csrfHeaders(page) });
+  expect(deleted.ok()).toBe(true);
 }
 
 export const admin = { username: "e2e-admin", password: "e2e-Fixture-Pass-01!" };

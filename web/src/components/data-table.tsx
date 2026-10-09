@@ -158,12 +158,15 @@ export function DataTable<Row extends RowData>({
   const openedRow = useRef<HTMLTableRowElement>(null);
   const openedPair = useRef<HTMLTableRowElement>(null);
   const revealed = useRef<string | null>(null);
+  // A row is revealed once its elements exist: one filtered out when the address named it is revealed when shown.
   useLayoutEffect(() => {
-    if (openKey !== revealed.current && openKey !== null && openedRow.current && openedPair.current && head.current) {
+    if (openKey === null) {
+      revealed.current = null;
+    } else if (openKey !== revealed.current && openedRow.current && openedPair.current && head.current) {
       revealRows(openedRow.current, openedPair.current, head.current.getBoundingClientRect().height);
+      revealed.current = openKey;
     }
-    revealed.current = openKey;
-  }, [openKey]);
+  }, [openKey, data]);
 
   const searchBar =
     search === undefined ? null : (

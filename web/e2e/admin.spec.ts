@@ -1,5 +1,5 @@
 import en from "../src/locales/en.json" with { type: "json" };
-import { admin, buttonName, createUser, expect, expectFits, expectNoViolations, fitSizes, lastRow, signIn, test, watchPolicy } from "./fixtures";
+import { admin, buttonName, createProfile, createUser, deleteProfile, expect, expectFits, expectNoViolations, fitSizes, lastRow, signIn, test, watchPolicy } from "./fixtures";
 
 const newUser = { username: "e2e-admin-reader", password: "e2e-Admin-Reader-Pass-05!" };
 const profile = {
@@ -9,6 +9,14 @@ const profile = {
   namespace: "payments",
   refused: "http://169.254.169.254/api/v1",
   unreachable: "http://fake-prometheus:9091/api/v1",
+};
+
+// A profile whose endpoint and namespaces are as long as a profile gets in practice, so that its opened row is the
+// tallest and the widest of the list. It is inactive and goes at the end of the test.
+const wide = {
+  id: "e2e-wide",
+  endpoint: `http://fake-prometheus:9090/${Array.from({ length: 12 }, (_, n) => `long-path-segment-${String(n).padStart(2, "0")}`).join("/")}/api/v1`,
+  namespaces: Array.from({ length: 40 }, (_, n) => `wide-namespace-${String(n).padStart(2, "0")}-abcdefghij`),
 };
 
 const fill = buttonName;
@@ -143,27 +151,45 @@ test("an administrator manages users and profiles", async ({ page, browser, base
       const username = `e2e-fit-${String(n).padStart(2, "0")}`;
       await createUser(page, { username, password: `${username}-Pass-06!` }, "reader");
     }
-    const lists = [
-      { path: "/users", title: en.admin.users.title, tall: true },
-      { path: "/profiles", title: en.admin.profiles.title, tall: false },
-    ];
-    for (const list of lists) {
-      for (const size of fitSizes) {
-        await page.setViewportSize(size);
-        await page.goto(list.path);
-        const table = page.getByRole("table", { name: list.title, exact: true });
-        const last = await lastRow(table);
-        if (list.tall) {
-          await page.evaluate(() => {
-            window.scrollTo(0, 0);
-          });
-          const box = await last.button.boundingBox();
-          expect(box?.y ?? 0).toBeGreaterThan(size.height);
+    await createProfile(page, {
+      id: wide.id,
+      display_name: "Wide",
+      endpoint_url: wide.endpoint,
+      cluster_name: "wide",
+      allowed_namespaces: wide.namespaces,
+      active: false,
+    });
+    try {
+      const lists = [
+        { path: "/users", title: en.admin.users.title, tall: true },
+        { path: "/profiles", title: en.admin.profiles.title, tall: false },
+      ];
+      for (const list of lists) {
+        for (const size of fitSizes) {
+          await page.setViewportSize(size);
+          await page.goto(list.path);
+          const table = page.getByRole("table", { name: list.title, exact: true });
+          const last = await lastRow(table);
+          if (list.tall) {
+            await page.evaluate(() => {
+              window.scrollTo(0, 0);
+            });
+            const box = await last.button.boundingBox();
+            expect(box?.y ?? 0).toBeGreaterThan(size.height);
+          } else {
+            expect(last.name).toBe(wide.id);
+          }
+          await last.button.click();
+          await expectFits(page, table, last.name);
+          if (!list.tall) {
+            await expect(table.getByText(wide.endpoint, { exact: true })).toBeVisible();
+            await expect(table.getByText(wide.namespaces.join(", "), { exact: true })).toBeVisible();
+          }
         }
-        await last.button.click();
-        await expectFits(page, table, last.name);
       }
+      await expectNoViolations(page);
+    } finally {
+      await deleteProfile(page, wide.id);
     }
-    await expectNoViolations(page);
   });
 });

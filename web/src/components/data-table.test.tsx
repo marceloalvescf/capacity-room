@@ -284,6 +284,17 @@ describe("data table", () => {
     expect(spy.mock.calls[0]?.[1]).toBe(screen.getByText("details of api-1").closest("tr"));
   });
 
+  it("reveals a row opened by the address when a search stops hiding it", async () => {
+    const spy = vi.spyOn(reveal, "revealRows").mockImplementation(() => undefined);
+    mount(named, "/?open=api-1&q=zzz", "view");
+    expect(spy).not.toHaveBeenCalled();
+    await userEvent.clear(screen.getByRole("searchbox", { name: "Search things" }));
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+    expect(spy.mock.calls[0]?.[1]).toBe(screen.getByText("details of api-1").closest("tr"));
+  });
+
   it("cells wrap", () => {
     mount(named);
     const cells = screen.getAllByRole("cell");
