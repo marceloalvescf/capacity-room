@@ -10,7 +10,7 @@ import { Menu, MenuContent, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@
 import { PeriodPicker } from "@/features/reports/period-picker";
 import { reportTabs } from "@/features/report/tabs";
 import { i18next } from "@/i18n/i18n";
-import { installMockApi, profileSummary, report, signedIn } from "../../tests/msw";
+import { adminProfile, installMockApi, profileSummary, report, signedIn } from "../../tests/msw";
 import { renderApp } from "../../tests/render";
 import { mockColourScheme } from "../../tests/match-media";
 import viewEn from "../../tests/fixtures/view/edge-scaling.en.json";
@@ -266,5 +266,23 @@ it("the report writes no style", async () => {
     expect(document.querySelectorAll("style"), tab).toHaveLength(0);
     unmount();
   }
+  expect(stop()).toEqual([]);
+});
+
+it("the leave dialog over the profile form writes no style", async () => {
+  window.localStorage.clear();
+  mock.adminProfiles = [adminProfile()];
+  await i18next.changeLanguage("en");
+  const stop = watchStyles();
+  const user = userEvent.setup();
+  await renderApp("/profiles/production/edit", "en");
+  await user.type(await screen.findByLabelText(i18next.t("admin.profile.name")), "x");
+  await user.click(screen.getByRole("link", { name: i18next.t("nav.reports") }));
+  expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
+  expect(unexpectedStyles()).toEqual([]);
+  expect(document.querySelectorAll("style")).toHaveLength(0);
+  await user.click(screen.getByRole("button", { name: i18next.t("admin.profile.stay") }));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(unexpectedStyles()).toEqual([]);
   expect(stop()).toEqual([]);
 });

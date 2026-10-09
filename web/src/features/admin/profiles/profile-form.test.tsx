@@ -324,6 +324,166 @@ describe("the profile form", () => {
     expect(changes()).toEqual([]);
   });
 
+  it("tests the draft", async () => {
+    await renderApp("/profiles/new");
+    const user = await fillNew();
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+    const line = await screen.findByText("Connected. The source answers every query the report needs.");
+    expect(line.parentElement).toHaveClass("text-healthy");
+    expect(line.parentElement?.querySelector("circle")).not.toBeNull();
+    const tests = mock.calls.filter((call) => call.path === "/admin/profiles/test");
+    expect(tests).toHaveLength(1);
+    expect(tests[0]).toMatchObject({ method: "POST" });
+    expect(tests[0]?.body).toMatchObject({
+      id: "lab",
+      display_name: "Lab",
+      endpoint_url: "https://lab.example.com",
+      cluster_name: "lab-1",
+      allowed_namespaces: ["payments"],
+    });
+    expect(changes().filter((call) => call.path === "/admin/profiles")).toEqual([]);
+  });
+
+  it("tests without the browser's checks", async () => {
+    await renderApp("/profiles/new");
+    const user = userEvent.setup();
+    mock.profileTests.set("draft", { ok: false, code: "ENDPOINT_UNREACHABLE", capabilities: [] });
+    await user.click(await screen.findByRole("button", { name: "Test connection" }));
+    expect(await screen.findByText("The source could not be reached.")).toBeInTheDocument();
+    expect(mock.calls.filter((call) => call.path === "/admin/profiles/test")).toHaveLength(1);
+    expect(screen.queryByText("Fill in this field.")).not.toBeInTheDocument();
+  });
+
+  it("refuses a draft", async () => {
+    await renderApp("/profiles/new");
+    const user = await fillNew();
+    mock.failures.set("POST /admin/profiles/test", { status: 422, code: "ENDPOINT_ADDRESS_REJECTED" });
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+    expect(await screen.findByText("Correct the marked fields, then test again.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Endpoint URL")).toHaveAccessibleDescription(
+      "The metric source resolves to an address that is not allowed.",
+    );
+  });
+
+  it("shows the failure of a draft in a 200", async () => {
+    await renderApp("/profiles/new");
+    const user = await fillNew();
+    mock.profileTests.set("draft", { ok: false, code: "ENDPOINT_UNREACHABLE", capabilities: [] });
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+    const line = await screen.findByText("The source could not be reached.");
+    expect(line.parentElement).toHaveClass("text-critical");
+    expect(line.parentElement?.querySelector("polygon")).not.toBeNull();
+  });
+
+  it("clears the result on a change", async () => {
+    await renderApp("/profiles/new");
+    const user = await fillNew();
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+    await screen.findByText("Connected. The source answers every query the report needs.");
+    await user.type(screen.getByLabelText("Cluster name"), "x");
+    expect(screen.queryByText("Connected. The source answers every query the report needs.")).not.toBeInTheDocument();
+  });
+
+  async function staleSave() {
+    const view = await renderApp("/profiles/production/edit");
+    const user = userEvent.setup();
+    const name = await screen.findByLabelText("Display name");
+    await user.clear(name);
+    await user.type(name, "Mine");
+    mock.failures.set("PATCH /admin/profiles/production", { status: 409, code: "PROFILE_REVISION_STALE" });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByText(/Someone saved this profile after you opened it\./);
+    return { ...view, user };
+  }
+
+  it("keeps the values on a stale revision", async () => {
+    await staleSave();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Someone saved this profile after you opened it. Your values are kept here.",
+    );
+    expect(screen.getByRole("button", { name: "Load the latest revision" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Display name")).toHaveValue("Mine");
+  });
+
+  it("asks before loading the latest", async () => {
+    const { user } = await staleSave();
+    mock.adminProfiles = [
+      { ...production, revision: 4, revision_id: "7b1e5c0a-0000-4000-8000-000000000004", display_name: "Theirs" },
+    ];
+    mock.calls.length = 0;
+    await user.click(screen.getByRole("button", { name: "Load the latest revision" }));
+    expect(await screen.findByRole("alertdialog", { name: "Leave without saving?" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Stay" }));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(mock.calls).toEqual([]);
+    expect(screen.getByLabelText("Display name")).toHaveValue("Mine");
+    await user.click(screen.getByRole("button", { name: "Load the latest revision" }));
+    await user.click(await screen.findByRole("button", { name: "Leave" }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Display name")).toHaveValue("Theirs");
+    });
+    expect(mock.calls.map((call) => `${call.method} ${call.path}`)).toEqual(["GET /admin/profiles/production"]);
+    expect(screen.getByText(/Revision 4, saved /)).toBeInTheDocument();
+    expect(screen.getByText(/Saving writes revision 5\./)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("guards a leave inside the app", async () => {
+    const { router } = await renderApp("/profiles/production/edit");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Display name"), "x");
+    await user.click(screen.getByRole("link", { name: "Reports" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Leave without saving?" });
+    expect(within(dialog).getByText("The changes to this profile will be lost.")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Stay" })).toHaveFocus();
+    await user.click(within(dialog).getByRole("button", { name: "Stay" }));
+    expect(location(router)).toBe("/profiles/production/edit");
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: "Reports" }));
+    await user.click(await screen.findByRole("button", { name: "Leave" }));
+    await waitFor(() => {
+      expect(location(router)).toBe("/reports");
+    });
+  });
+
+  it("does not guard a clean or a saving form", async () => {
+    const { router } = await renderApp("/profiles/production/edit");
+    const user = userEvent.setup();
+    await screen.findByLabelText("Display name");
+    await user.click(screen.getByRole("link", { name: "Reports" }));
+    await waitFor(() => {
+      expect(location(router)).toBe("/reports");
+    });
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    await router.navigate("/profiles/production/edit");
+    await user.type(await screen.findByLabelText("Display name"), "x");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(location(router)).toBe("/profiles?open=production");
+    });
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("stops the browser's unload while changed", async () => {
+    await renderApp("/profiles/production/edit");
+    const user = userEvent.setup();
+    const name = await screen.findByLabelText("Display name");
+    const clean = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(clean);
+    expect(clean.defaultPrevented).toBe(false);
+    await user.type(name, "x");
+    const changed = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(changed);
+    expect(changed.defaultPrevented).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Display name")).not.toBeInTheDocument();
+    });
+    const saved = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(saved);
+    expect(saved.defaultPrevented).toBe(false);
+  });
+
   it("says when the profile is not found", async () => {
     await renderApp("/profiles/nope/edit");
     expect(await screen.findByText("No such profile was found.")).toBeInTheDocument();

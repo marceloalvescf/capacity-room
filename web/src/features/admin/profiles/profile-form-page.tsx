@@ -21,7 +21,7 @@ import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { TextArea } from "@/components/ui/textarea";
 import { formatTime } from "@/lib/format";
-import { useAdminProfile, useCreateProfile, useReviseProfile, type Profile } from "./api";
+import { useAdminProfile, useCreateProfile, useReviseProfile, useTestDraft, type Profile } from "./api";
 import { Folded } from "./folded";
 import {
   applyRefusal,
@@ -34,6 +34,8 @@ import {
   valuesOf,
   type ProfileValues,
 } from "./form";
+import { LeaveDialog, useLeaveGuard } from "./leave-guard";
+import { TestResultLine, type TestOutcome } from "./test-result";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -96,13 +98,20 @@ function errorPaths(errors: FieldErrors<ProfileValues>): string[] {
   );
 }
 
-function ProfileForm({ profile }: { profile: Profile | undefined }) {
+// The form of a new profile, or of a saved one; `reload` fetches the latest revision of the saved one again.
+function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload?: () => Promise<unknown> }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const announce = useAnnounce();
   const create = useCreateProfile();
   const revise = useReviseProfile(profile?.id ?? "");
+  const testDraft = useTestDraft();
   const [failure, setFailure] = useState<string | null>(null);
+  const [stale, setStale] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [outcome, setOutcome] = useState<TestOutcome | null>(null);
+  // Counts the changes of the form, so a test that answers after one does not describe the form any more.
+  const changes = useRef(0);
   const [choicesOpen, setChoicesOpen] = useState(false);
   const [thresholdsOpen, setThresholdsOpen] = useState(false);
   // Counts the attempts that left a field in error; each one moves the focus to the first such field once it is drawn.
@@ -115,7 +124,8 @@ function ProfileForm({ profile }: { profile: Profile | undefined }) {
     handleSubmit,
     setError,
     control,
-    formState: { errors },
+    getValues,
+    formState: { errors, isDirty },
   } = useForm<ProfileValues>({
     resolver: zodResolver(schema),
     defaultValues: isNew ? newProfileValues() : valuesOf(profile),
@@ -125,6 +135,7 @@ function ProfileForm({ profile }: { profile: Profile | undefined }) {
   const values = useWatch({ control }) as ProfileValues;
   const summary = summaries(values, t);
   const pending = create.isPending || revise.isPending;
+  const guard = useLeaveGuard(isDirty);
 
   useEffect(() => {
     if (marks > 0) {
@@ -150,18 +161,60 @@ function ProfileForm({ profile }: { profile: Profile | undefined }) {
     setMarks((count) => count + 1);
   }
 
+  async function runTest() {
+    const values = getValues();
+    const seen = changes.current;
+    setFailure(null);
+    const result = async (): Promise<TestOutcome> => {
+      try {
+        const id = values.id.trim();
+        const tested = await testDraft.mutateAsync({ ...documentOf(values), ...(id === "" ? {} : { id }) });
+        return { kind: "result", result: tested };
+      } catch (thrown) {
+        const error = toError(thrown);
+        if (error instanceof ApiFailure && error.status === 422) {
+          if (!applyRefusal(error, setError, open, isNew)) {
+            setFailure(errorText(t, error));
+          }
+          setMarks((count) => count + 1);
+          return { kind: "refused" };
+        }
+        return { kind: "failed", error };
+      }
+    };
+    const found = await result();
+    if (changes.current === seen) {
+      setOutcome(found);
+    }
+  }
+
+  async function loadLatest() {
+    setAsking(false);
+    setFailure(null);
+    try {
+      await reload?.();
+      setStale(false);
+    } catch (thrown) {
+      setFailure(errorText(t, toError(thrown)));
+    }
+  }
+
   async function submit(submitted: ProfileValues) {
     setFailure(null);
+    setStale(false);
     try {
       const document = documentOf(submitted);
       const saved = isNew
         ? await create.mutateAsync({ id: submitted.id, ...document })
         : await revise.mutateAsync({ base_revision_id: profile.revision_id, ...document });
       announce(t(isNew ? "admin.profile.created" : "admin.profile.saved", { name: saved.display_name }));
+      guard.release();
       void navigate(`/profiles?open=${saved.id}`);
     } catch (thrown) {
       const error = toError(thrown);
-      if (!(error instanceof ApiFailure && applyRefusal(error, setError, open, isNew))) {
+      if (error instanceof ApiFailure && error.code === "PROFILE_REVISION_STALE") {
+        setStale(true);
+      } else if (!(error instanceof ApiFailure && applyRefusal(error, setError, open, isNew))) {
         setFailure(errorText(t, error));
       }
       setMarks((count) => count + 1);
@@ -176,6 +229,10 @@ function ProfileForm({ profile }: { profile: Profile | undefined }) {
       ref={form}
       noValidate
       className="flex flex-col gap-8"
+      onChange={() => {
+        changes.current += 1;
+        setOutcome(null);
+      }}
       onSubmit={(event) => {
         void handleSubmit(submit, invalid)(event);
       }}
@@ -403,20 +460,57 @@ function ProfileForm({ profile }: { profile: Profile | undefined }) {
           ))}
         </div>
       </Folded>
+      {stale ? (
+        <Alert tone="error">
+          <div className="flex flex-wrap items-center gap-3">
+            <p>{t("admin.profile.stale")}</p>
+            <Button
+              onClick={() => {
+                if (isDirty) {
+                  setAsking(true);
+                } else {
+                  void loadLatest();
+                }
+              }}
+            >
+              {t("admin.profile.loadLatest")}
+            </Button>
+          </div>
+        </Alert>
+      ) : null}
       {failure === null ? null : <Alert tone="error">{failure}</Alert>}
       <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t border-border bg-bg py-3">
         <Button type="submit" variant="primary" disabled={pending}>
           {pending ? t("admin.profile.saving") : t("admin.profile.save")}
         </Button>
-        <Link to="/profiles" className={buttonStyles()}>
+        <Button
+          disabled={testDraft.isPending}
+          onClick={() => {
+            void runTest();
+          }}
+        >
+          {testDraft.isPending ? t("admin.profiles.testing") : t("admin.profiles.test")}
+        </Button>
+        <Link to="/profiles" className={buttonStyles()} onClick={guard.release}>
           {t("admin.profile.cancel")}
         </Link>
+        <TestResultLine outcome={outcome} />
         <p className="text-sm text-muted-fg">
           {isNew
             ? t("admin.profile.saveHintNew")
             : t("admin.profile.saveHintEdit", { next: profile.revision + 1 })}
         </p>
       </div>
+      {guard.dialog}
+      <LeaveDialog
+        open={asking}
+        onLeave={() => {
+          void loadLatest();
+        }}
+        onStay={() => {
+          setAsking(false);
+        }}
+      />
     </form>
   );
 }
@@ -442,7 +536,7 @@ function Header({ profile }: { profile: Profile | undefined }) {
 function EditProfile({ id }: { id: string }) {
   const { t } = useTranslation();
   const profile = useAdminProfile(id);
-  if (profile.isError) {
+  if (profile.data === undefined && profile.isError) {
     return (
       <div className="flex flex-col items-start gap-4">
         <Alert tone="error">{errorText(t, profile.error)}</Alert>
@@ -458,7 +552,11 @@ function EditProfile({ id }: { id: string }) {
   return (
     <>
       <Header profile={profile.data} />
-      <ProfileForm key={profile.data.revision_id} profile={profile.data} />
+      <ProfileForm
+        key={profile.data.revision_id}
+        profile={profile.data}
+        reload={() => profile.refetch({ throwOnError: true })}
+      />
     </>
   );
 }

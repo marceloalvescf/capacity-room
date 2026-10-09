@@ -636,6 +636,12 @@
         "hpa_replica_divergence": "Divergência {{value}}"
       },
       "testRefused": "Corrija os campos marcados e teste de novo.",
+      "stale": "Alguém salvou este perfil depois que você o abriu. Seus valores continuam aqui.",
+      "loadLatest": "Carregar a revisão mais recente",
+      "leaveTitle": "Sair sem salvar?",
+      "leaveBody": "As alterações deste perfil serão perdidas.",
+      "leave": "Sair",
+      "stay": "Ficar",
       "newTitle": "Novo perfil",
       "editScreen": "Editar perfil",
       "eyebrow": "Perfil",

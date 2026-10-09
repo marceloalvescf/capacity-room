@@ -106,3 +106,17 @@ export function useReviseProfile(id: string) {
       ]),
   });
 }
+
+// Runs the preflight against a draft that is not saved.
+export function useTestDraft() {
+  const api = useApi();
+  return useMutation({
+    mutationFn: async (body: Schemas["ProfileDraft"]) => {
+      const { data } = await api.POST("/admin/profiles/test", { body });
+      if (data === undefined) {
+        throw new Error("the test answer is empty");
+      }
+      return data;
+    },
+  });
+}
