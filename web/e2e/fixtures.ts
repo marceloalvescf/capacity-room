@@ -73,22 +73,49 @@ export async function expectFits(page: Page, table: Locator, name: string) {
     .poll(
       async () => {
         const size = page.viewportSize();
-        const head = await table.locator(":scope > thead").boundingBox();
-        const boxes = { row: await row.boundingBox(), opened: await opened.boundingBox() };
+        const headBox = await table.locator(":scope > thead").boundingBox();
+        const rowBox = await row.boundingBox();
+        const openedBox = await opened.boundingBox();
         const sideways = await page.evaluate(
           () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
         );
-        const floor = head === null ? 0 : head.y + head.height;
-        const outside = Object.entries(boxes).filter(
-          ([, box]) =>
-            size === null ||
-            box === null ||
-            box.y < floor - 1 ||
-            box.x < 0 ||
-            box.y + box.height > size.height ||
-            box.x + box.width > size.width,
-        );
-        return { outside: outside.map(([which]) => which), sideways };
+        if (size === null || rowBox === null || openedBox === null) {
+          return { outside: ["not measured"], sideways };
+        }
+        const head = headBox === null ? 0 : Math.max(0, headBox.y + headBox.height);
+        const numbers = (label: string, top: number, bottom: number) =>
+          `${label} top=${top.toFixed(1)} bottom=${bottom.toFixed(1)} head=${head.toFixed(1)} innerHeight=${String(size.height)}`;
+        const rowTop = rowBox.y;
+        const openedTop = openedBox.y;
+        const openedBottom = openedBox.y + openedBox.height;
+        const pair = openedBottom - rowTop;
+        const room = size.height - head - 16;
+        const outside: string[] = [];
+        const wholly = (label: string, top: number, bottom: number) => {
+          if (top < head - 1 || bottom > size.height) {
+            outside.push(numbers(label, top, bottom));
+          }
+        };
+        if (pair <= room) {
+          wholly("row", rowTop, rowBox.y + rowBox.height);
+          wholly("opened", openedTop, openedBottom);
+        } else {
+          // The pair is taller than the window: the row is wholly inside, just under the header, and the opened row
+          // starts inside the window.
+          wholly("row", rowTop, rowBox.y + rowBox.height);
+          if (Math.abs(rowTop - (head + 8)) > 12) {
+            outside.push(`${numbers("row", rowTop, rowBox.y + rowBox.height)} expected top near ${(head + 8).toFixed(1)}`);
+          }
+          if (openedTop < head - 1 || openedTop >= size.height) {
+            outside.push(numbers("opened", openedTop, openedBottom));
+          }
+        }
+        for (const [label, box] of [["row", rowBox], ["opened", openedBox]] as const) {
+          if (box.x < 0 || box.x + box.width > size.width) {
+            outside.push(`${label} left=${box.x.toFixed(1)} right=${(box.x + box.width).toFixed(1)} innerWidth=${String(size.width)}`);
+          }
+        }
+        return { outside, sideways };
       },
       { timeout: 10_000 },
     )
