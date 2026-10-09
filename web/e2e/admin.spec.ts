@@ -76,8 +76,7 @@ test("an administrator manages users and profiles", async ({ page, browser, base
     await expect(page.getByText(en.admin.profile.testRefused, { exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: en.admin.profiles.test, exact: true }).click();
     await expect(page.getByText(en.profileTest.ENDPOINT_UNREACHABLE, { exact: true })).toBeVisible();
-    // The form keeps the refusal under the endpoint until the next save judges the field again.
-    await expect(page.getByLabel(en.admin.profile.url, { exact: true })).toHaveAccessibleDescription(
+    await expect(page.getByLabel(en.admin.profile.url, { exact: true })).not.toHaveAccessibleDescription(
       en.error.ENDPOINT_ADDRESS_REJECTED,
     );
   });

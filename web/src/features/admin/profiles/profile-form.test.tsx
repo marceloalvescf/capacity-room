@@ -365,6 +365,33 @@ describe("the profile form", () => {
     );
   });
 
+  it("takes a refusal off a field when its value changes", async () => {
+    await renderApp("/profiles/new");
+    const user = await fillNew();
+    mock.failures.set("POST /admin/profiles/test", { status: 422, code: "ENDPOINT_ADDRESS_REJECTED" });
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Endpoint URL")).toHaveAttribute("aria-invalid", "true");
+    });
+    await user.type(screen.getByLabelText("Endpoint URL"), "/x");
+    expect(screen.getByLabelText("Endpoint URL")).not.toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText("The metric source resolves to an address that is not allowed.")).not.toBeInTheDocument();
+  });
+
+  it("takes every earlier refusal off when a new test answers", async () => {
+    await renderApp("/profiles/new");
+    const user = await fillNew();
+    mock.failures.set("POST /admin/profiles/test", { status: 422, code: "ENDPOINT_ADDRESS_REJECTED" });
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Endpoint URL")).toHaveAttribute("aria-invalid", "true");
+    });
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+    await screen.findByText("Connected. The source answers every query the report needs.");
+    expect(screen.getByLabelText("Endpoint URL")).not.toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText("The metric source resolves to an address that is not allowed.")).not.toBeInTheDocument();
+  });
+
   it("shows the failure of a draft in a 200", async () => {
     await renderApp("/profiles/new");
     const user = await fillNew();

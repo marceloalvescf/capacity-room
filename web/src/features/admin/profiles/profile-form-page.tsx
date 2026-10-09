@@ -1,6 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { useForm, useWatch, type FieldErrors, type UseFormRegisterReturn } from "react-hook-form";
+import {
+  useForm,
+  useWatch,
+  type FieldErrors,
+  type UseFormRegisterReturn,
+  type UseFormSetError,
+} from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 import { ApiFailure } from "@/api/client";
@@ -123,6 +129,7 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
     register,
     handleSubmit,
     setError,
+    clearErrors,
     control,
     getValues,
     reset,
@@ -162,7 +169,22 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
     setMarks((count) => count + 1);
   }
 
+  // The fields the API marked, which keep the mark until their value changes or the next answer.
+  const marked = useRef(new Set<string>());
+  const markField: UseFormSetError<ProfileValues> = (name, error, options) => {
+    marked.current.add(name);
+    setError(name, error, options);
+  };
+
+  function clearMarks() {
+    for (const name of marked.current) {
+      clearErrors(name as keyof ProfileValues);
+    }
+    marked.current.clear();
+  }
+
   async function runTest() {
+    clearMarks();
     const values = getValues();
     const seen = changes.current;
     setFailure(null);
@@ -185,7 +207,7 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
       return;
     }
     if (refusal !== null) {
-      if (!applyRefusal(refusal, setError, open, isNew)) {
+      if (!applyRefusal(refusal, markField, open, isNew)) {
         setFailure(errorText(t, refusal));
       }
       setMarks((count) => count + 1);
@@ -208,6 +230,7 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
   }
 
   async function submit(submitted: ProfileValues) {
+    clearMarks();
     setFailure(null);
     setStale(false);
     try {
@@ -222,7 +245,7 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
       const error = toError(thrown);
       if (error instanceof ApiFailure && error.code === "PROFILE_REVISION_STALE") {
         setStale(true);
-      } else if (!(error instanceof ApiFailure && applyRefusal(error, setError, open, isNew))) {
+      } else if (!(error instanceof ApiFailure && applyRefusal(error, markField, open, isNew))) {
         setFailure(errorText(t, error));
       }
       setMarks((count) => count + 1);
@@ -237,7 +260,11 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
       ref={form}
       noValidate
       className="flex flex-col gap-8"
-      onChange={() => {
+      onChange={(event) => {
+        const name = (event.nativeEvent.target as HTMLInputElement).name;
+        if (marked.current.delete(name)) {
+          clearErrors(name as keyof ProfileValues);
+        }
         changes.current += 1;
         setOutcome(null);
       }}
