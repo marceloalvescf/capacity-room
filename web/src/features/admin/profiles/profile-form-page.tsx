@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useForm, useWatch, type FieldErrors } from "react-hook-form";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useForm, useWatch, type FieldErrors, type UseFormRegisterReturn } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 import { ApiFailure } from "@/api/client";
@@ -44,12 +44,45 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Choices({ legend, hint, children }: { legend: string; hint: string; children: ReactNode }) {
+// A group of checkboxes that share one field: the legend names the group, and the hint and the error describe each box.
+function CheckGroup({
+  legend,
+  hint,
+  error,
+  options,
+  registration,
+}: {
+  legend: string;
+  hint: string;
+  error: string | undefined;
+  options: readonly { value: string; label: string }[];
+  registration: UseFormRegisterReturn;
+}) {
+  const id = useId();
+  const described = [`${id}-hint`, ...(error === undefined ? [] : [`${id}-error`])].join(" ");
   return (
     <fieldset className="flex flex-col gap-1">
       <legend className="text-sm font-medium">{legend}</legend>
-      <div className="flex flex-wrap gap-x-4">{children}</div>
-      <p className="text-sm text-muted-fg">{hint}</p>
+      <div className="flex flex-wrap gap-x-4">
+        {options.map((option) => (
+          <Checkbox
+            key={option.value}
+            label={option.label}
+            value={option.value}
+            aria-invalid={error === undefined ? undefined : true}
+            aria-describedby={described}
+            {...registration}
+          />
+        ))}
+      </div>
+      <p id={`${id}-hint`} className="text-sm text-muted-fg">
+        {hint}
+      </p>
+      {error === undefined ? null : (
+        <p id={`${id}-error`} className="text-sm text-critical">
+          {error}
+        </p>
+      )}
     </fieldset>
   );
 }
@@ -128,11 +161,10 @@ function ProfileForm({ profile }: { profile: Profile | undefined }) {
       void navigate(`/profiles?open=${saved.id}`);
     } catch (thrown) {
       const error = toError(thrown);
-      if (error instanceof ApiFailure && applyRefusal(error, setError, open)) {
-        setMarks((count) => count + 1);
-      } else {
+      if (!(error instanceof ApiFailure && applyRefusal(error, setError, open, isNew))) {
         setFailure(errorText(t, error));
       }
+      setMarks((count) => count + 1);
     }
   }
 
@@ -164,10 +196,12 @@ function ProfileForm({ profile }: { profile: Profile | undefined }) {
           error={fieldError(errors.display_name?.message)}
           {...register("display_name")}
         />
-        <div>
-          <Checkbox label={t("admin.profile.active")} {...register("active")} />
-          <p className="text-sm text-muted-fg">{t("admin.profile.activeHint")}</p>
-        </div>
+        <Checkbox
+          label={t("admin.profile.active")}
+          hint={t("admin.profile.activeHint")}
+          error={fieldError(errors.active?.message)}
+          {...register("active")}
+        />
       </Section>
       <Section title={t("admin.profile.section.source")}>
         <Field
@@ -176,7 +210,11 @@ function ProfileForm({ profile }: { profile: Profile | undefined }) {
           error={fieldError(errors.endpoint_url?.message)}
           {...register("endpoint_url")}
         />
-        <Select label={t("admin.profile.type")} {...register("endpoint_type")}>
+        <Select
+          label={t("admin.profile.type")}
+          error={fieldError(errors.endpoint_type?.message)}
+          {...register("endpoint_type")}
+        >
           {endpointTypeValues.map((value) => (
             <option key={value} value={value}>
               {t(`endpointType.${value}`)}
@@ -190,7 +228,11 @@ function ProfileForm({ profile }: { profile: Profile | undefined }) {
           error={fieldError(errors.timeout_seconds?.message)}
           {...register("timeout_seconds")}
         />
-        <Checkbox label={t("admin.profile.tls")} {...register("tls_verify")} />
+        <Checkbox
+          label={t("admin.profile.tls")}
+          error={fieldError(errors.tls_verify?.message)}
+          {...register("tls_verify")}
+        />
         <Field
           label={t("admin.profile.credential")}
           hint={t("admin.profile.credentialHint")}
@@ -219,14 +261,22 @@ function ProfileForm({ profile }: { profile: Profile | undefined }) {
           error={fieldError(errors.cluster_label?.message)}
           {...register("cluster_label")}
         />
-        <Select label={t("admin.profile.filter")} {...register("filter_mode")}>
+        <Select
+          label={t("admin.profile.filter")}
+          error={fieldError(errors.filter_mode?.message)}
+          {...register("filter_mode")}
+        >
           {filterModeValues.map((value) => (
             <option key={value} value={value}>
               {t(`filterMode.${value}`)}
             </option>
           ))}
         </Select>
-        <Select label={t("admin.profile.autoscaling")} {...register("node_autoscaling")}>
+        <Select
+          label={t("admin.profile.autoscaling")}
+          error={fieldError(errors.node_autoscaling?.message)}
+          {...register("node_autoscaling")}
+        >
           {nodeAutoscalingValues.map((value) => (
             <option key={value} value={value}>
               {t(`nodeAutoscaling.${value}`)}
@@ -293,16 +343,13 @@ function ProfileForm({ profile }: { profile: Profile | undefined }) {
           error={fieldError(errors.default_timezone?.message)}
           {...register("default_timezone")}
         />
-        <Choices legend={t("admin.profile.profiles")} hint={t("admin.profile.noneTickedHint")}>
-          {reportProfileValues.map((value) => (
-            <Checkbox
-              key={value}
-              label={t(`reportProfile.${value}`)}
-              value={value}
-              {...register("permitted_report_profiles")}
-            />
-          ))}
-        </Choices>
+        <CheckGroup
+          legend={t("admin.profile.profiles")}
+          hint={t("admin.profile.noneTickedHint")}
+          error={fieldError(errors.permitted_report_profiles?.message)}
+          options={reportProfileValues.map((value) => ({ value, label: t(`reportProfile.${value}`) }))}
+          registration={register("permitted_report_profiles")}
+        />
         <Select
           label={t("admin.profile.defaultProfile")}
           error={fieldError(errors.default_report_profile?.message)}
@@ -315,16 +362,13 @@ function ProfileForm({ profile }: { profile: Profile | undefined }) {
             </option>
           ))}
         </Select>
-        <Choices legend={t("admin.profile.severities")} hint={t("admin.profile.noneTickedHint")}>
-          {minSeverityValues.map((value) => (
-            <Checkbox
-              key={value}
-              label={t(`minSeverity.${value}`)}
-              value={value}
-              {...register("permitted_min_severities")}
-            />
-          ))}
-        </Choices>
+        <CheckGroup
+          legend={t("admin.profile.severities")}
+          hint={t("admin.profile.noneTickedHint")}
+          error={fieldError(errors.permitted_min_severities?.message)}
+          options={minSeverityValues.map((value) => ({ value, label: t(`minSeverity.${value}`) }))}
+          registration={register("permitted_min_severities")}
+        />
         <Select
           label={t("admin.profile.defaultSeverity")}
           error={fieldError(errors.default_min_severity?.message)}

@@ -19,14 +19,22 @@ export function Folded({
 }) {
   const { t } = useTranslation();
   const body = useId();
+  const titleId = `${body}-title`;
+  const buttonId = `${body}-button`;
   return (
     <section className="rounded-md border border-border bg-surface p-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-semibold">{title}</h2>
+          <h2 id={titleId} className="font-semibold">{title}</h2>
           <p className="font-mono text-sm break-words text-muted-fg">{summary}</p>
         </div>
-        <Button aria-expanded={open} aria-controls={body} onClick={onToggle}>
+        <Button
+          id={buttonId}
+          aria-labelledby={`${buttonId} ${titleId}`}
+          aria-expanded={open}
+          aria-controls={body}
+          onClick={onToggle}
+        >
           {open ? t("admin.profile.fold") : t("admin.profile.change")}
         </Button>
       </div>

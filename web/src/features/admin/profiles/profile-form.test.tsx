@@ -40,8 +40,11 @@ describe("the profile form", () => {
     const headings = screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
     expect(headings).toEqual(["Identity", "Metric source", "Cluster", "Namespaces", "Report form choices", "Thresholds"]);
     expect(screen.getByLabelText("Identifier")).toHaveClass("font-mono");
-    const change = screen.getAllByRole("button", { name: "Change" });
-    expect(change.map((button) => button.getAttribute("aria-expanded"))).toEqual(["false", "false"]);
+    for (const name of ["Change Report form choices", "Change Thresholds"]) {
+      expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "false");
+      expect(screen.getByRole("button", { name })).toHaveTextContent(/^Change$/);
+    }
+    expect(screen.getByLabelText("Active")).toHaveAccessibleDescription("An active profile is offered in the new report form.");
     expect(screen.getByText("Any period · 24h · America/Sao_Paulo · Detailed · All")).toHaveClass("font-mono");
     expect(
       screen.getByText(
@@ -56,12 +59,12 @@ describe("the profile form", () => {
   it("opens and folds a section", async () => {
     await renderApp("/profiles/new");
     const user = userEvent.setup();
-    const [first] = await screen.findAllByRole("button", { name: "Change" });
-    await user.click(first as HTMLElement);
-    expect(first).toHaveAccessibleName("Fold");
+    const first = await screen.findByRole("button", { name: "Change Report form choices" });
+    await user.click(first);
+    expect(first).toHaveAccessibleName("Fold Report form choices");
     expect(first).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByLabelText("Permitted periods")).toBeVisible();
-    await user.click(first as HTMLElement);
+    await user.click(first);
     expect(screen.getByLabelText("Permitted periods")).not.toBeVisible();
   });
 
@@ -115,7 +118,7 @@ describe("the profile form", () => {
   it("sends the ticked choices", async () => {
     await renderApp("/profiles/new");
     const user = await fillNew();
-    await user.click(screen.getAllByRole("button", { name: "Change" })[0] as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Change Report form choices" }));
     await user.click(screen.getByLabelText("Executive"));
     await user.type(screen.getByLabelText("Permitted periods"), "24h{enter}7d");
     await user.selectOptions(screen.getByLabelText("Default report profile"), "Executive");
@@ -144,11 +147,11 @@ describe("the profile form", () => {
   it("opens the folded section that holds a failed check", async () => {
     await renderApp("/profiles/new");
     const user = await fillNew();
-    const [choices] = screen.getAllByRole("button", { name: "Change" });
-    await user.click(choices as HTMLElement);
+    const choices = screen.getByRole("button", { name: "Change Report form choices" });
+    await user.click(choices);
     await user.type(screen.getByLabelText("Permitted periods"), "24h");
     await user.type(screen.getByLabelText("Default period"), "7d");
-    await user.click(choices as HTMLElement);
+    await user.click(screen.getByRole("button", { name: "Fold Report form choices" }));
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByText("Use one of the permitted values.")).toBeVisible();
     expect(screen.getByLabelText("Default period")).toHaveFocus();
@@ -203,8 +206,9 @@ describe("the profile form", () => {
       fields: { default_timezone: "invalid", thresholds: "invalid" },
     });
     await user.click(screen.getByRole("button", { name: "Save" }));
-    const fold = await screen.findAllByRole("button", { name: "Fold" });
-    expect(fold.map((button) => button.getAttribute("aria-expanded"))).toEqual(["true", "true"]);
+    for (const name of ["Fold Report form choices", "Fold Thresholds"]) {
+      expect(await screen.findByRole("button", { name })).toHaveAttribute("aria-expanded", "true");
+    }
     expect(screen.getAllByText("This value is not valid.")).toHaveLength(2);
     expect(screen.getByLabelText("Default time zone")).toHaveFocus();
     expect(screen.getByLabelText("Default time zone")).toHaveAccessibleDescription("This value is not valid.");
@@ -219,6 +223,58 @@ describe("the profile form", () => {
       status: 422,
       code: "PROFILE_DOCUMENT_INVALID",
       fields: { nope: "invalid" },
+    });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("The profile is not valid.");
+  });
+
+  it("words a key the form lacks beside a key that landed", async () => {
+    await renderApp("/profiles/production/edit");
+    const user = userEvent.setup();
+    await screen.findByRole("heading", { level: 1, name: "Production" });
+    mock.failures.set("PATCH /admin/profiles/production", {
+      status: 422,
+      code: "PROFILE_DOCUMENT_INVALID",
+      fields: { default_timezone: "invalid", nope: "invalid" },
+    });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("The profile is not valid.");
+    expect(screen.getByLabelText("Default time zone")).toHaveAccessibleDescription("This value is not valid.");
+  });
+
+  it("shows a refusal on a checkbox, a select, and a list of checkboxes", async () => {
+    await renderApp("/profiles/new");
+    const user = await fillNew();
+    mock.failures.set("POST /admin/profiles", {
+      status: 422,
+      code: "PROFILE_DOCUMENT_INVALID",
+      fields: { permitted_report_profiles: "empty", filter_mode: "invalid", active: "incoherent", tls_verify: "invalid" },
+    });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Active")).toHaveFocus();
+    });
+    expect(screen.getByLabelText("Active")).toHaveAccessibleDescription(
+      "An active profile is offered in the new report form. This value does not agree with another field.",
+    );
+    expect(screen.getByLabelText("Verify the TLS certificate")).toHaveAccessibleDescription("This value is not valid.");
+    expect(screen.getByLabelText("Filter by cluster")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Filter by cluster")).toHaveAccessibleDescription("This value is not valid.");
+    expect(screen.getByLabelText("Executive")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Executive")).toHaveAccessibleDescription(
+      "None ticked: any. Give at least one value.",
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("words a refused identifier on an edit in the alert", async () => {
+    await renderApp("/profiles/production/edit");
+    const user = userEvent.setup();
+    await screen.findByRole("heading", { level: 1, name: "Production" });
+    mock.failures.set("PATCH /admin/profiles/production", {
+      status: 422,
+      code: "PROFILE_DOCUMENT_INVALID",
+      fields: { id: "invalid" },
     });
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("The profile is not valid.");

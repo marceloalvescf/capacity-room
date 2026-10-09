@@ -203,6 +203,14 @@ describe("checks of the form", () => {
     return parsed.success ? [] : parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
   }
 
+  it("refuses a number that is not finite", () => {
+    expect(problems({ ...valid, thresholds: { ...valid.thresholds, critical_percent: "Infinity" } })).toEqual([
+      "thresholds.critical_percent: validation.notNegative",
+    ]);
+    expect(problems({ ...valid, timeout_seconds: "Infinity" })).toEqual(["timeout_seconds: validation.timeout"]);
+    expect(problems({ ...valid, timeout_seconds: "abc" })).toEqual(["timeout_seconds: validation.timeout"]);
+  });
+
   it("accepts a complete profile", () => {
     expect(problems(valid)).toEqual([]);
   });
@@ -245,7 +253,7 @@ describe("checks of the form", () => {
 });
 
 describe("refusal of the API", () => {
-  function refuse(failure: ApiFailure) {
+  function refuse(failure: ApiFailure, isNew = true) {
     const set: [string, string | undefined][] = [];
     const opened: string[] = [];
     const landed = applyRefusal(
@@ -256,6 +264,7 @@ describe("refusal of the API", () => {
       (section) => {
         opened.push(section);
       },
+      isNew,
     );
     return { landed, set, opened };
   }
@@ -284,6 +293,21 @@ describe("refusal of the API", () => {
   it("lands nowhere on a field the form lacks", () => {
     const result = refuse(new ApiFailure(422, "PROFILE_DOCUMENT_INVALID", null, { nope: "invalid" }));
     expect(result).toEqual({ landed: false, set: [], opened: [] });
+  });
+
+  it("is not whole when a key the form lacks comes beside one that landed", () => {
+    const result = refuse(
+      new ApiFailure(422, "PROFILE_DOCUMENT_INVALID", null, { default_timezone: "invalid", nope: "invalid" }),
+    );
+    expect(result.landed).toBe(false);
+    expect(result.set).toEqual([["default_timezone", "fieldProblem.invalid"]]);
+    expect(result.opened).toEqual(["choices"]);
+  });
+
+  it("holds no identifier field on an edit", () => {
+    const failure = new ApiFailure(422, "PROFILE_DOCUMENT_INVALID", null, { id: "invalid" });
+    expect(refuse(failure, true).landed).toBe(true);
+    expect(refuse(failure, false)).toEqual({ landed: false, set: [], opened: [] });
   });
 
   it("places the refusals of the address and of the identifier", () => {

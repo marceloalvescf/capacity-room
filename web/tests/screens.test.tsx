@@ -117,10 +117,11 @@ describe("screens", () => {
           mock.session = signedIn({ language });
           const { container } = await renderApp(path, language);
           const user = userEvent.setup();
-          for (const button of await screen.findAllByRole("button", { name: i18next.t("admin.profile.change") })) {
-            await user.click(button);
+          for (const section of ["choices", "thresholds"]) {
+            const title = i18next.t(`admin.profile.section.${section}`);
+            await user.click(await screen.findByRole("button", { name: `${i18next.t("admin.profile.change")} ${title}` }));
+            await screen.findByRole("button", { name: `${i18next.t("admin.profile.fold")} ${title}` });
           }
-          await screen.findAllByRole("button", { name: i18next.t("admin.profile.fold") });
           const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
           expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
           expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);

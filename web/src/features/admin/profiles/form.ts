@@ -193,9 +193,10 @@ export function documentOf(values: ProfileValues): ProfileDocument {
 
 const identifier = /^[a-z0-9](?:[a-z0-9._-]{0,61}[a-z0-9])?$/;
 
-// A typed number, or NaN when the text is empty or not a number.
+// A typed number, or NaN when the text is empty, not a number, or not finite.
 function numberOf(text: string): number {
-  return text.trim() === "" ? Number.NaN : Number(text);
+  const number = text.trim() === "" ? Number.NaN : Number(text);
+  return Number.isFinite(number) ? number : Number.NaN;
 }
 
 // The fields of the form that sit in the folded section of the choices of the report form.
@@ -299,14 +300,16 @@ const documentFields: readonly string[] = [
   ...choiceFields,
 ];
 
-// Puts the refusal of the API on the fields of the form and opens the folded section that holds one. The
-// refusal of the document names a field the form lacks: nothing lands, and the caller words it. Returns false
-// when nothing landed on a field.
+// Puts the refusal of the API on the fields of the form and opens the folded section that holds one. Returns
+// true when every key of the refusal landed on a field; otherwise the caller words the refusal in the alert.
+// An edit holds no identifier field.
 export function applyRefusal(
   failure: ApiFailure,
   setError: UseFormSetError<ProfileValues>,
   open: (section: "choices" | "thresholds") => void,
+  isNew: boolean,
 ): boolean {
+  let whole = true;
   const landed: string[] = [];
   function place(field: Parameters<UseFormSetError<ProfileValues>>[0], message: string) {
     setError(field, { message });
@@ -321,8 +324,10 @@ export function applyRefusal(
       const message = `fieldProblem.${isFieldProblem(word) ? word : "invalid"}`;
       if (field === "thresholds") {
         place("thresholds.warning_percent", message);
-      } else if (documentFields.includes(field)) {
+      } else if (documentFields.includes(field) && (isNew || field !== "id")) {
         place(field as keyof ProfileValues, message);
+      } else {
+        whole = false;
       }
     }
   } else if (failure.code === "ENDPOINT_URL_REJECTED" || failure.code === "ENDPOINT_ADDRESS_REJECTED") {
@@ -330,5 +335,5 @@ export function applyRefusal(
   } else if (failure.code === "PROFILE_ID_TAKEN") {
     place("id", `error.${failure.code}`);
   }
-  return landed.length > 0;
+  return landed.length > 0 && whole;
 }
