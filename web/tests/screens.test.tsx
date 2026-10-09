@@ -8,6 +8,7 @@ import type { Language } from "@/i18n/language";
 import { adminProfile, adminUser, anonymous, installMockApi, profileSummary, report, signedIn } from "./msw";
 import { location, renderApp } from "./render";
 import { mockColourScheme } from "./match-media";
+import { findShown } from "./shown";
 import viewEn from "./fixtures/view/edge-scaling.en.json";
 import viewPt from "./fixtures/view/edge-scaling.pt-BR.json";
 import type { components } from "@/api/schema.gen";
@@ -99,7 +100,7 @@ describe("screens", () => {
         const { container } = await renderApp("/profiles?open=production", language);
         await screen.findByRole("heading", { level: 1, name: i18next.t("admin.profiles.title") });
         await userEvent.setup().click(await screen.findByRole("button", { name: i18next.t("admin.profiles.test") }));
-        await screen.findByText(i18next.t("profileTest.PROFILE_OK"));
+        await findShown(i18next.t("profileTest.PROFILE_OK"));
         const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
         expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
         expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);
@@ -222,6 +223,89 @@ describe("screens", () => {
         expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
         expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);
       });
+    }
+  }
+
+  async function expectClean(language: Language) {
+    const result = await axe.run(document.body, { rules: { "color-contrast": { enabled: false } } });
+    expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+    expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);
+  }
+
+  const states: { name: string; run: (language: Language) => Promise<void> }[] = [
+    {
+      name: "the profile form after a refusal on a field",
+      run: async (language) => {
+        mock.adminProfiles = [adminProfile({ credential_file: "production-token", allowed_namespaces: ["payments"] })];
+        mock.failures.set("PATCH /admin/profiles/production", {
+          status: 422,
+          code: "PROFILE_DOCUMENT_INVALID",
+          fields: { default_timezone: "invalid", nope: "invalid" },
+        });
+        await renderApp("/profiles/production/edit", language);
+        const user = userEvent.setup();
+        await user.click(await screen.findByRole("button", { name: i18next.t("admin.profile.save") }));
+        await screen.findByRole("alert");
+        await waitFor(() => {
+          expect(document.querySelector("[aria-invalid=true]")).not.toBeNull();
+        });
+      },
+    },
+    {
+      name: "the profile form with the stale alert",
+      run: async (language) => {
+        mock.adminProfiles = [adminProfile({ credential_file: "production-token", allowed_namespaces: ["payments"] })];
+        mock.failures.set("PATCH /admin/profiles/production", { status: 409, code: "PROFILE_REVISION_STALE" });
+        await renderApp("/profiles/production/edit", language);
+        const user = userEvent.setup();
+        await user.type(await screen.findByLabelText(i18next.t("admin.profile.name")), "x");
+        await user.click(screen.getByRole("button", { name: i18next.t("admin.profile.save") }));
+        await screen.findByRole("button", { name: i18next.t("admin.profile.loadLatest") });
+      },
+    },
+    {
+      name: "the deactivate dialog",
+      run: async (language) => {
+        const other = adminUser();
+        mock.adminUsers = [adminUser({ id: signedIn().principal.id, username: "ana", role: "administrator" }), other];
+        await renderApp(`/users?open=${other.id}`, language);
+        await userEvent.setup().click(await screen.findByRole("button", { name: i18next.t("admin.users.deactivate") }));
+        await screen.findByRole("alertdialog");
+      },
+    },
+    {
+      name: "the profile delete dialog",
+      run: async (language) => {
+        mock.adminProfiles = [adminProfile({ credential_file: "production-token", allowed_namespaces: ["payments"] })];
+        await renderApp("/profiles?open=production", language);
+        await userEvent.setup().click(await screen.findByRole("button", { name: i18next.t("admin.profiles.delete") }));
+        await screen.findByRole("alertdialog");
+      },
+    },
+    {
+      name: "the new user dialog with field errors",
+      run: async (language) => {
+        mock.adminUsers = [adminUser()];
+        await renderApp("/users", language);
+        const user = userEvent.setup();
+        await user.click(await screen.findByRole("button", { name: i18next.t("admin.users.new") }));
+        await user.click(await screen.findByRole("button", { name: i18next.t("admin.users.create") }));
+        await waitFor(() => {
+          expect(document.querySelectorAll("[aria-invalid=true]").length).toBeGreaterThan(0);
+        });
+      },
+    },
+  ];
+  for (const state of states) {
+    for (const language of languages) {
+      for (const theme of ["light", "dark"]) {
+        it(`axe and vocabulary: ${state.name}, ${language}, ${theme}`, async () => {
+          document.documentElement.setAttribute("data-theme", theme);
+          mock.session = signedIn({ language });
+          await state.run(language);
+          await expectClean(language);
+        });
+      }
     }
   }
 

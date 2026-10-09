@@ -6,6 +6,7 @@ import { newUserSchema } from "./new-user-dialog";
 import { i18next } from "@/i18n/i18n";
 import { adminUser, installMockApi, principal, signedIn } from "../../../../tests/msw";
 import { location, renderApp } from "../../../../tests/render";
+import { findShown, shown } from "../../../../tests/shown";
 
 const mock = installMockApi(signedIn({ username: "admin" }));
 
@@ -48,17 +49,6 @@ function rowOf(name: string): HTMLElement {
     throw new Error("no row");
   }
   return row;
-}
-
-// The notices of a row that sit in the page, not the copy the live region holds.
-function shown(text: string): HTMLElement[] {
-  return screen.queryAllByText(text).filter((element) => element.closest("[role=status]") === null);
-}
-
-async function findShown(text: string): Promise<void> {
-  await waitFor(() => {
-    expect(shown(text)).toHaveLength(1);
-  });
 }
 
 function changes() {
