@@ -5,21 +5,24 @@ import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { ApiFailure } from "@/api/client";
 import { errorText, toError } from "@/api/errors";
-import { languageValues, roleValues } from "@/api/schema.gen";
+import { languageValues, roleValues, type components } from "@/api/schema.gen";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
-import { newPassword } from "@/features/account/account-page";
+import { newPassword } from "@/lib/password";
 import { usePrincipal } from "@/session/session";
 import { useCreateUser, type User } from "./api";
+
+type Role = components["schemas"]["Role"];
+type Language = components["schemas"]["Language"];
 
 const schema = z.object({
   username: z.string().min(1, "validation.required"),
   password: newPassword,
-  role: z.enum(["administrator", "operator", "reader"]),
-  language: z.enum(["pt-BR", "en"]),
+  role: z.custom<Role>((value) => roleValues.some((role) => role === value)),
+  language: z.custom<Language>((value) => languageValues.some((language) => language === value)),
 });
 type Values = z.infer<typeof schema>;
 

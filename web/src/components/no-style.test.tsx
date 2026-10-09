@@ -157,12 +157,11 @@ it("opening and closing the dialog writes no style", async () => {
   render(<Form />);
   await user.click(screen.getByRole("button", { name: "Open" }));
   expect(await screen.findByRole("dialog", { name: "Title" })).toBeInTheDocument();
-  // Radix writes pointer-events on its layers through the DOM; the dialog declares nothing else.
-  expect(styled().flatMap(declared).filter((name) => name !== "pointer-events")).toEqual([]);
+  expect(unexpectedStyles()).toEqual([]);
   expect(document.querySelectorAll("style")).toHaveLength(0);
   await user.keyboard("{Escape}");
   expect(screen.queryByRole("dialog")).toBeNull();
-  expect(styled().flatMap(declared).filter((name) => name !== "pointer-events")).toEqual([]);
+  expect(unexpectedStyles()).toEqual([]);
   expect(document.querySelectorAll("style")).toHaveLength(0);
   expect(stop()).toEqual([]);
 });
@@ -211,6 +210,24 @@ function styled(): Element[] {
     }
     return !(node.closest("[data-radix-popper-content-wrapper]") !== null && names.length > 0 && names.every((name) => name.startsWith("--radix-")));
   });
+}
+
+// The styles Radix sets on a modal layer through the DOM: the body without pointer events while a layer is open, and
+// pointer events restored on the layer itself; the focus guards are left out, as in the report test. Any other declaration, or the same one elsewhere, is reported.
+function unexpectedStyles(): string[] {
+  return Array.from(document.querySelectorAll<HTMLElement>("[style]:not([data-radix-focus-guard])"))
+    .filter((node) => {
+      const names = declared(node);
+      if (names.length === 0) {
+        return false;
+      }
+      if (names.length !== 1 || names[0] !== "pointer-events") {
+        return true;
+      }
+      const value = node.style.getPropertyValue("pointer-events");
+      return node === document.body ? value !== "none" : !(value === "auto" && node.hasAttribute("data-state"));
+    })
+    .map((node) => node.outerHTML);
 }
 
 it("the report writes no style", async () => {

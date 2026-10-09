@@ -14,14 +14,9 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
+import { newPassword } from "@/lib/password";
 import { usePrincipal } from "@/session/session";
 import { useChangeLanguage } from "@/session/use-change-language";
-
-export const newPassword = z
-  .string()
-  .min(1, "validation.required")
-  .min(12, "validation.passwordShort")
-  .max(1024, "validation.passwordLong");
 
 export const schema = z
   .object({

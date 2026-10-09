@@ -54,14 +54,15 @@ function changes() {
 
 describe("the users screen", () => {
   it("lists the users", async () => {
+    mock.adminUsers = [diego, carla, self, ana];
     await renderApp("/users");
     await screen.findByRole("table", { name: "Users" });
     const rows = within(screen.getByRole("table")).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell")[1]?.textContent)).toEqual([
+      "diego",
+      "carla.lima",
       "admin (you)",
       "ana.souza",
-      "carla.lima",
-      "diego",
     ]);
     expect(screen.getByText("(you)")).toHaveClass("text-muted-fg");
     expect(screen.getByText("Inactive")).toHaveClass("text-muted-fg");
@@ -175,10 +176,49 @@ describe("the users screen", () => {
     expect(alert.closest("section")).toContainElement(screen.getByRole("button", { name: "Save changes" }));
   });
 
+  it("last administrator on deactivate", async () => {
+    mock.failures.set(`DELETE /admin/users/${diego.id}`, { status: 409, code: "LAST_ADMIN" });
+    await renderApp("/users");
+    const user = await openRow("diego");
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Deactivate" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(i18next.t("error.LAST_ADMIN"));
+    expect(alert.closest("section")).toContainElement(screen.getByRole("button", { name: "Deactivate" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("a notice goes when a value of its part changes", async () => {
+    await renderApp("/users");
+    const user = await openRow("ana.souza");
+    await user.selectOptions(screen.getByLabelText("Language"), "en");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await screen.findByText("Saved.");
+    await user.selectOptions(screen.getByLabelText("Language"), "pt-BR");
+    expect(screen.queryByText("Saved.")).toBeNull();
+    await user.type(screen.getByLabelText("New password"), "123456789012");
+    await user.click(screen.getByRole("button", { name: "Set password" }));
+    await screen.findByText("Password set. The user was signed out everywhere.");
+    await user.type(screen.getByLabelText("New password"), "x");
+    expect(screen.queryByText("Password set. The user was signed out everywhere.")).toBeNull();
+  });
+
+  it("says when the users cannot be loaded", async () => {
+    mock.failures.set("GET /admin/users", { status: 500, code: "INTERNAL_ERROR" });
+    await renderApp("/users");
+    expect(await screen.findByRole("alert")).toHaveTextContent("The users could not be loaded.");
+  });
+
+  it("says when there is no user", async () => {
+    mock.adminUsers = [];
+    await renderApp("/users");
+    expect(await screen.findByText("No user yet.")).toBeInTheDocument();
+  });
+
   it("own row", async () => {
     await renderApp("/users");
     await openRow("admin");
-    expect(await screen.findByText("2026-09-01")).toHaveClass("font-mono");
+    expect(await screen.findByText("Created 2026-09-01")).toBeInTheDocument();
     expect(screen.getByText(i18next.t("admin.users.own"))).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open the account page" })).toHaveAttribute("href", "/account");
     expect(screen.queryByRole("combobox")).toBeNull();
@@ -211,6 +251,22 @@ describe("the users screen", () => {
     expect(screen.getByRole("status")).toHaveTextContent("bruno was created.");
   });
 
+  it("leaves role and language at their defaults", async () => {
+    await renderApp("/users");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "New user" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText("User name"), "bruno");
+    await user.type(within(dialog).getByLabelText("Password"), "a-long-secret");
+    await user.click(within(dialog).getByRole("button", { name: "Create user" }));
+    await waitFor(() => {
+      expect(changes()).toHaveLength(1);
+    });
+    expect(changes().map((call) => call.body)).toEqual([
+      { username: "bruno", password: "a-long-secret", role: "reader", language: "en" },
+    ]);
+  });
+
   it("taken name", async () => {
     mock.failures.set("POST /admin/users", { status: 409, code: "USERNAME_TAKEN" });
     await renderApp("/users");
@@ -220,7 +276,10 @@ describe("the users screen", () => {
     await user.type(within(dialog).getByLabelText("User name"), "ana.souza");
     await user.type(within(dialog).getByLabelText("Password"), "a-long-secret");
     await user.click(within(dialog).getByRole("button", { name: "Create user" }));
-    expect(await within(dialog).findByText(i18next.t("error.USERNAME_TAKEN"))).toBeInTheDocument();
+    const sentence = await within(dialog).findByText(i18next.t("error.USERNAME_TAKEN"));
+    const name = within(dialog).getByLabelText("User name");
+    expect(name).toHaveAttribute("aria-invalid", "true");
+    expect(name.getAttribute("aria-describedby")?.split(" ")).toContain(sentence.id);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 

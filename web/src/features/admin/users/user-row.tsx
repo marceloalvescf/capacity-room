@@ -12,24 +12,10 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
-import { newPassword } from "@/features/account/account-page";
 import { formatDate } from "@/lib/format";
+import { newPassword } from "@/lib/password";
 import { usePrincipal } from "@/session/session";
 import { useChangeUser, useDeactivateUser, type User } from "./api";
-
-const dateMarker = "\u0001";
-
-function Created({ iso }: { iso: string }) {
-  const { t } = useTranslation();
-  const [before = "", after = ""] = t("admin.users.created", { date: dateMarker }).split(dateMarker);
-  return (
-    <p className="text-sm">
-      {before}
-      <span className="font-mono">{formatDate(iso)}</span>
-      {after}
-    </p>
-  );
-}
 
 function Part({ children }: { children: ReactNode }) {
   return <section className="flex flex-col gap-3 border-t border-border pt-4">{children}</section>;
@@ -44,6 +30,11 @@ function RolePart({ user }: { user: User }) {
   const [failure, setFailure] = useState<string | null>(null);
   const roleChanged = role !== user.role;
   const languageChanged = language !== user.language;
+
+  function clear() {
+    setNotice(null);
+    setFailure(null);
+  }
 
   async function save() {
     setNotice(null);
@@ -66,6 +57,7 @@ function RolePart({ user }: { user: User }) {
           label={t("admin.users.roleLabel")}
           value={role}
           onChange={(event) => {
+            clear();
             setRole(roleValues.find((value) => value === event.target.value) ?? user.role);
           }}
         >
@@ -79,6 +71,7 @@ function RolePart({ user }: { user: User }) {
           label={t("admin.users.languageLabel")}
           value={language}
           onChange={(event) => {
+            clear();
             setLanguage(languageValues.find((value) => value === event.target.value) ?? user.language);
           }}
         >
@@ -150,7 +143,12 @@ function PasswordPart({ user }: { user: User }) {
           autoComplete="new-password"
           hint={t("admin.users.password.hint")}
           error={problem === undefined ? undefined : t(problem)}
-          {...register("password")}
+          {...register("password", {
+            onChange: () => {
+              setNotice(null);
+              setFailure(null);
+            },
+          })}
         />
         {failure === null ? null : <Alert tone="error">{failure}</Alert>}
         {notice === null ? null : <Alert tone="notice">{notice}</Alert>}
@@ -245,7 +243,7 @@ export function UserRow({ user }: { user: User }) {
   const own = principal?.id === user.id;
   return (
     <div className="flex max-w-2xl flex-col gap-4">
-      <Created iso={user.created_at} />
+      <p className="text-sm">{t("admin.users.created", { date: formatDate(user.created_at) })}</p>
       {own ? (
         <>
           <p className="text-sm">{t("admin.users.own")}</p>
