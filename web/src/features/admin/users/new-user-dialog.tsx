@@ -18,18 +18,25 @@ import { useCreateUser, type User } from "./api";
 type Role = components["schemas"]["Role"];
 type Language = components["schemas"]["Language"];
 
-const schema = z.object({
+export const newUserSchema = z.object({
   username: z.string().min(1, "validation.required"),
   password: newPassword,
-  role: z.custom<Role>((value) => roleValues.some((role) => role === value)),
-  language: z.custom<Language>((value) => languageValues.some((language) => language === value)),
+  role: z.custom<Role>((value) => roleValues.some((role) => role === value), "validation.invalid"),
+  language: z.custom<Language>((value) => languageValues.some((language) => language === value), "validation.invalid"),
 });
-type Values = z.infer<typeof schema>;
+type Values = z.infer<typeof newUserSchema>;
 
-function NewUserForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (user: User) => void }) {
+function NewUserForm({
+  create,
+  onCancel,
+  onCreated,
+}: {
+  create: ReturnType<typeof useCreateUser>;
+  onCancel: () => void;
+  onCreated: (user: User) => void;
+}) {
   const { t } = useTranslation();
   const principal = usePrincipal();
-  const create = useCreateUser();
   const [failure, setFailure] = useState<string | null>(null);
   const {
     register,
@@ -37,7 +44,7 @@ function NewUserForm({ onCancel, onCreated }: { onCancel: () => void; onCreated:
     setError,
     formState: { errors },
   } = useForm<Values>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(newUserSchema),
     defaultValues: { username: "", password: "", role: "reader", language: principal?.language ?? "en" },
   });
 
@@ -99,7 +106,7 @@ function NewUserForm({ onCancel, onCreated }: { onCancel: () => void; onCreated:
         ))}
       </Select>
       <div className="flex justify-end gap-2">
-        <Button onClick={onCancel}>{t("admin.users.cancel")}</Button>
+        <Button disabled={create.isPending} onClick={onCancel}>{t("admin.users.cancel")}</Button>
         <Button type="submit" variant="primary" disabled={create.isPending}>
           {create.isPending ? t("admin.users.creating") : t("admin.users.create")}
         </Button>
@@ -120,9 +127,21 @@ export function NewUserDialog({
   onCreated: (user: User) => void;
 }) {
   const { t } = useTranslation();
+  const create = useCreateUser();
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title={t("admin.users.new")} onCloseAutoFocus={onCloseAutoFocus}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // A create at work cannot be dismissed.
+        if (!create.isPending) {
+          onOpenChange(next);
+        }
+      }}
+      title={t("admin.users.new")}
+      onCloseAutoFocus={onCloseAutoFocus}
+    >
       <NewUserForm
+        create={create}
         onCancel={() => {
           onOpenChange(false);
         }}

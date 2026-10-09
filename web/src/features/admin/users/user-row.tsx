@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -23,11 +23,19 @@ function Part({ children }: { children: ReactNode }) {
 
 function RolePart({ user }: { user: User }) {
   const { t } = useTranslation();
+  const announce = useAnnounce();
   const change = useChangeUser(user.id);
   const [role, setRole] = useState(user.role);
   const [language, setLanguage] = useState(user.language);
+  const [seen, setSeen] = useState({ role: user.role, language: user.language });
   const [notice, setNotice] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  if (seen.role !== user.role || seen.language !== user.language) {
+    // The user changed elsewhere: the selects follow it and a pending edit goes.
+    setSeen({ role: user.role, language: user.language });
+    setRole(user.role);
+    setLanguage(user.language);
+  }
   const roleChanged = role !== user.role;
   const languageChanged = language !== user.language;
 
@@ -44,7 +52,9 @@ function RolePart({ user }: { user: User }) {
         ...(roleChanged ? { role } : {}),
         ...(languageChanged ? { language } : {}),
       });
-      setNotice(t(roleChanged ? "admin.users.savedSignedOut" : "admin.users.saved"));
+      const saved = t(roleChanged ? "admin.users.savedSignedOut" : "admin.users.saved");
+      setNotice(saved);
+      announce(saved);
     } catch (thrown) {
       setFailure(errorText(t, toError(thrown)));
     }
@@ -105,6 +115,7 @@ type PasswordValues = z.infer<typeof passwordSchema>;
 
 function PasswordPart({ user }: { user: User }) {
   const { t } = useTranslation();
+  const announce = useAnnounce();
   const change = useChangeUser(user.id);
   const [notice, setNotice] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -121,7 +132,9 @@ function PasswordPart({ user }: { user: User }) {
     try {
       await change.mutateAsync({ password: values.password });
       reset();
-      setNotice(t("admin.users.password.done"));
+      const done = t("admin.users.password.done");
+      setNotice(done);
+      announce(done);
     } catch (thrown) {
       setFailure(errorText(t, toError(thrown)));
     }
@@ -168,6 +181,8 @@ function StatePart({ user }: { user: User }) {
   const change = useChangeUser(user.id);
   const deactivate = useDeactivateUser(user.id);
   const [asking, setAsking] = useState(false);
+  const deactivateButton = useRef<HTMLButtonElement>(null);
+  const reactivateButton = useRef<HTMLButtonElement>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
   async function confirmDeactivate() {
@@ -199,6 +214,7 @@ function StatePart({ user }: { user: User }) {
           <p className="text-sm text-muted-fg">{t("admin.users.deactivateHint")}</p>
           <div>
             <Button
+              ref={deactivateButton}
               variant="danger"
               onClick={() => {
                 setAsking(true);
@@ -207,22 +223,11 @@ function StatePart({ user }: { user: User }) {
               {t("admin.users.deactivate")}
             </Button>
           </div>
-          <ConfirmDialog
-            open={asking}
-            title={t("admin.users.deactivateTitle", { name: user.username })}
-            body={t("admin.users.deactivateBody", { name: user.username })}
-            confirm={t("admin.users.deactivateConfirm")}
-            cancel={t("admin.users.cancel")}
-            busy={deactivate.isPending}
-            onConfirm={() => {
-              void confirmDeactivate();
-            }}
-            onOpenChange={setAsking}
-          />
         </>
       ) : (
         <div>
           <Button
+            ref={reactivateButton}
             disabled={change.isPending}
             onClick={() => {
               void reactivate();
@@ -232,6 +237,22 @@ function StatePart({ user }: { user: User }) {
           </Button>
         </div>
       )}
+      <ConfirmDialog
+        open={asking}
+        title={t("admin.users.deactivateTitle", { name: user.username })}
+        body={t("admin.users.deactivateBody", { name: user.username })}
+        confirm={t("admin.users.deactivateConfirm")}
+        cancel={t("admin.users.cancel")}
+        busy={deactivate.isPending}
+        onConfirm={() => {
+          void confirmDeactivate();
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          (reactivateButton.current ?? deactivateButton.current)?.focus();
+        }}
+        onOpenChange={setAsking}
+      />
     </Part>
   );
 }

@@ -1,6 +1,8 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
+import { adminUsersKey } from "./api";
+import { newUserSchema } from "./new-user-dialog";
 import { i18next } from "@/i18n/i18n";
 import { adminUser, installMockApi, principal, signedIn } from "../../../../tests/msw";
 import { location, renderApp } from "../../../../tests/render";
@@ -46,6 +48,17 @@ function rowOf(name: string): HTMLElement {
     throw new Error("no row");
   }
   return row;
+}
+
+// The notices of a row that sit in the page, not the copy the live region holds.
+function shown(text: string): HTMLElement[] {
+  return screen.queryAllByText(text).filter((element) => element.closest("[role=status]") === null);
+}
+
+async function findShown(text: string): Promise<void> {
+  await waitFor(() => {
+    expect(shown(text)).toHaveLength(1);
+  });
 }
 
 function changes() {
@@ -104,7 +117,7 @@ describe("the users screen", () => {
     await user.selectOptions(screen.getByLabelText("Role"), "reader");
     await user.selectOptions(screen.getByLabelText("Language"), "en");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
-    expect(await screen.findByText("Saved. The user was signed out everywhere.")).toBeInTheDocument();
+    await findShown("Saved. The user was signed out everywhere.");
     expect(changes().map((call) => [call.method, call.path, call.body])).toEqual([
       ["PATCH", `/admin/users/${ana.id}`, { role: "reader", language: "en" }],
     ]);
@@ -118,7 +131,7 @@ describe("the users screen", () => {
     const user = await openRow("ana.souza");
     await user.selectOptions(screen.getByLabelText("Language"), "en");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
-    expect(await screen.findByText("Saved.")).toBeInTheDocument();
+    await findShown("Saved.");
     expect(changes().map((call) => call.body)).toEqual([{ language: "en" }]);
   });
 
@@ -134,7 +147,7 @@ describe("the users screen", () => {
     expect(changes()).toEqual([]);
     await user.type(field, "2");
     await user.click(screen.getByRole("button", { name: "Set password" }));
-    expect(await screen.findByText("Password set. The user was signed out everywhere.")).toBeInTheDocument();
+    await findShown("Password set. The user was signed out everywhere.");
     expect(changes().map((call) => call.body)).toEqual([{ password: "123456789012" }]);
     expect(field).toHaveValue("");
   });
@@ -194,14 +207,14 @@ describe("the users screen", () => {
     const user = await openRow("ana.souza");
     await user.selectOptions(screen.getByLabelText("Language"), "en");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
-    await screen.findByText("Saved.");
+    await findShown("Saved.");
     await user.selectOptions(screen.getByLabelText("Language"), "pt-BR");
-    expect(screen.queryByText("Saved.")).toBeNull();
+    expect(shown("Saved.")).toEqual([]);
     await user.type(screen.getByLabelText("New password"), "123456789012");
     await user.click(screen.getByRole("button", { name: "Set password" }));
-    await screen.findByText("Password set. The user was signed out everywhere.");
+    await findShown("Password set. The user was signed out everywhere.");
     await user.type(screen.getByLabelText("New password"), "x");
-    expect(screen.queryByText("Password set. The user was signed out everywhere.")).toBeNull();
+    expect(shown("Password set. The user was signed out everywhere.")).toEqual([]);
   });
 
   it("says when the users cannot be loaded", async () => {
@@ -297,5 +310,87 @@ describe("the users screen", () => {
     await waitFor(() => {
       expect(opener).toHaveFocus();
     });
+  });
+
+  it("the selects follow a change made elsewhere", async () => {
+    const { queryClient } = await renderApp("/users");
+    const user = await openRow("ana.souza");
+    await user.selectOptions(screen.getByLabelText("Role"), "reader");
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled();
+    mock.adminUsers = mock.adminUsers.map((candidate) =>
+      candidate.id === ana.id ? { ...candidate, role: "administrator" } : candidate,
+    );
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: adminUsersKey });
+    });
+    await waitFor(() => {
+      expect(screen.getByLabelText("Role")).toHaveValue("administrator");
+    });
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+  });
+
+  it("announces the notices of the role and the password", async () => {
+    await renderApp("/users");
+    const user = await openRow("ana.souza");
+    await user.selectOptions(screen.getByLabelText("Language"), "en");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    });
+    await user.selectOptions(screen.getByLabelText("Role"), "reader");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Saved. The user was signed out everywhere.");
+    });
+    await user.type(screen.getByLabelText("New password"), "123456789012");
+    await user.click(screen.getByRole("button", { name: "Set password" }));
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Password set. The user was signed out everywhere.");
+    });
+  });
+
+  it("focus goes to Reactivate after a deactivate", async () => {
+    await renderApp("/users");
+    const user = await openRow("ana.souza");
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Deactivate" }));
+    const reactivate = await screen.findByRole("button", { name: "Reactivate" });
+    await waitFor(() => {
+      expect(reactivate).toHaveFocus();
+    });
+  });
+
+  it("a create at work cannot be dismissed", async () => {
+    let release = () => {};
+    mock.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await renderApp("/users");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "New user" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText("User name"), "bruno");
+    await user.type(within(dialog).getByLabelText("Password"), "a-long-secret");
+    await user.click(within(dialog).getByRole("button", { name: "Create user" }));
+    await waitFor(() => {
+      expect(changes()).toHaveLength(1);
+    });
+    await user.keyboard("{Escape}");
+    expect(within(dialog).getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    release();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+  });
+});
+
+describe("the new user schema", () => {
+  it("words a role or a language that is not a value", () => {
+    const parsed = newUserSchema.safeParse({ username: "a", password: "a-long-secret", role: "x", language: "y" });
+    expect(parsed.success ? [] : parsed.error.issues.map((issue) => issue.message)).toEqual([
+      "validation.invalid",
+      "validation.invalid",
+    ]);
   });
 });

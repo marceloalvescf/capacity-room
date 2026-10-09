@@ -202,6 +202,8 @@ export interface Mock {
   profileTests: Map<string, ProfileTestResult>;
   // Answers that replace the next call of a route, keyed `METHOD /path`; each is used once.
   failures: Map<string, { status: number; code: ErrorCode; fields?: Record<string, string> }>;
+  // When set, the creation of a user waits for it before it answers.
+  hold: Promise<void> | null;
 }
 
 const api = (path: string): string => `${window.location.origin}/api/v1${path}`;
@@ -218,6 +220,7 @@ export function installMockApi(initial: Session): Mock {
     adminProfiles: [],
     profileTests: new Map(),
     failures: new Map(),
+    hold: null,
   };
 
   async function record(request: Request): Promise<unknown> {
@@ -300,6 +303,7 @@ export function installMockApi(initial: Session): Mock {
     }),
     http.post(api("/admin/users"), async ({ request }) => {
       const body = (await record(request)) as Schemas["NewUser"];
+      await mock.hold;
       const refused = refusal("POST", "/admin/users");
       if (refused !== null) {
         return refused;
@@ -533,6 +537,7 @@ export function installMockApi(initial: Session): Mock {
     mock.adminProfiles = [];
     mock.profileTests = new Map();
     mock.failures = new Map();
+    mock.hold = null;
     server.resetHandlers(...handlers);
   });
   afterAll(() => {
