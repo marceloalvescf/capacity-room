@@ -1,7 +1,7 @@
 # The platform: PostgreSQL, the web server, and the worker. The image is the
 # runtime image of the version in KCR_VERSION. The postgres image is pinned by
 # tag and by index digest, as the Containerfile pins its bases.
-name: kcr
+name: k8s-capacity-report
 
 x-app: &app
   image: k8s-capacity-report:${KCR_VERSION:?set KCR_VERSION}

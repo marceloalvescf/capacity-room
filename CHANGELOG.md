@@ -12,6 +12,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven tabs (overview, findings, namespaces, workloads, autoscaling, nodes,
   and data quality), worded as its PDF, with its PDFs one click away.
 
+### Changed
+
+- The Compose stack runs as the project `k8s-capacity-report`, so it no
+  longer shares its name with another stack on the same host.
+
 ### Fixed
 
 - The development tools run on a NixOS host.

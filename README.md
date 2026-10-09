@@ -446,7 +446,7 @@ arguments or the settings file.
 ### The Compose stack
 
 `deploy/compose.yaml` runs PostgreSQL, `serve`, and `worker` from the
-runtime image. It refuses to start without three variables: `KCR_VERSION`,
+runtime image, as the Compose project `k8s-capacity-report`. It refuses to start without three variables: `KCR_VERSION`,
 the image version; `KCR_CONFIG_DIR`, a folder that holds `platform.toml`
 and `server-secret`; and `KCR_POSTGRES_PASSWORD`. The schema and the first
 administrator are created with `admin migrate` and `admin bootstrap-admin`,
