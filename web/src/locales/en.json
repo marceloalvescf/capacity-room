@@ -12,6 +12,7 @@
     "reports": "Reports",
     "generate": "New report",
     "account": "Account",
+    "profiles": "Profiles",
     "users": "Users"
   },
   "header": {
@@ -584,6 +585,70 @@
       "create": "Create user",
       "creating": "Creating…",
       "createdNotice": "{{name}} was created."
+    },
+    "profiles": {
+      "title": "Profiles",
+      "new": "New profile",
+      "empty": "No profile yet.",
+      "loadFailed": "The profiles could not be loaded.",
+      "column": {
+        "profile": "Profile",
+        "cluster": "Cluster",
+        "state": "State"
+      },
+      "fact": {
+        "endpoint": "Endpoint",
+        "type": "Type",
+        "credential": "Credential file",
+        "ca": "CA bundle file",
+        "revision": "Revision",
+        "namespaces": "Namespaces",
+        "choices": "Report form choices"
+      },
+      "revisionValue": "{{revision}}, saved {{time}}",
+      "none": "None",
+      "test": "Test connection",
+      "testing": "Testing…",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteTitle": "Delete the profile {{name}}?",
+      "deleteBody": "It leaves this list and the new report form. Reports already requested keep it, and its identifier can be used again.",
+      "deleteConfirm": "Delete",
+      "cancel": "Cancel",
+      "deleted": "The profile {{name}} was deleted."
+    },
+    "profile": {
+      "anyPeriod": "Any period",
+      "short": {
+        "warning_percent": "Attention {{value}} %",
+        "critical_percent": "Critical {{value}} %",
+        "low_utilization_percent": "Low utilization {{value}} %",
+        "autoscaler_near_max_percent": "Near maximum {{value}} %",
+        "nodepool_spread_points": "Node pool spread {{value}}",
+        "bursty_gap_percent": "Variation {{value}} %",
+        "hpa_replica_divergence": "Divergence {{value}}"
+      }
     }
+  },
+  "endpointType": {
+    "auto": "Detect",
+    "prometheus": "Prometheus",
+    "grafana": "Grafana"
+  },
+  "profileTest": {
+    "PROFILE_OK": "Connected. The source answers every query the report needs.",
+    "ENDPOINT_URL_REJECTED": "The endpoint URL is not allowed.",
+    "ENDPOINT_ADDRESS_REJECTED": "The address of the endpoint is not allowed by this installation.",
+    "ENDPOINT_RESOLUTION_FAILED": "The host name of the endpoint could not be resolved.",
+    "ENDPOINT_CONNECTION_REJECTED": "The connection reached an address that is not allowed.",
+    "ENDPOINT_REDIRECT_REJECTED": "The endpoint answered with a redirect, which is not followed.",
+    "PROFILE_CREDENTIAL_UNAVAILABLE": "The credential file could not be read.",
+    "PROFILE_CA_BUNDLE_UNAVAILABLE": "The CA bundle file could not be read.",
+    "ENDPOINT_TLS_FAILED": "The TLS connection failed.",
+    "ENDPOINT_AUTH_REJECTED": "The source refused the credential.",
+    "ENDPOINT_API_NOT_FOUND": "No Prometheus API answers at this URL.",
+    "ENDPOINT_UNREACHABLE": "The source could not be reached.",
+    "CLUSTER_SCOPE_NOT_FOUND": "No series of this cluster was found at the source.",
+    "CAPABILITIES_INSUFFICIENT": "The source lacks metrics the report needs."
   }
 }

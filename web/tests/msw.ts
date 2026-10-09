@@ -55,6 +55,8 @@ type ReportView = Schemas["ReportView"];
 type ErrorCode = Schemas["ErrorCode"];
 type ProfileSummary = Schemas["ProfileSummary"];
 type AdminUser = Schemas["User"];
+type AdminProfile = Schemas["Profile"];
+type ProfileTestResult = Schemas["ProfileTestResult"];
 
 export function report(overrides: Partial<Report> = {}): Report {
   return {
@@ -118,6 +120,49 @@ export function adminUser(overrides: Partial<AdminUser> = {}): AdminUser {
   };
 }
 
+// A profile as the administration reads it: the API's defaults, an empty list for every list, revision 1.
+export function adminProfile(overrides: Partial<AdminProfile> = {}): AdminProfile {
+  return {
+    id: "production",
+    revision_id: "5d1f3f0e-1b7d-4a53-8f55-0c9c5d0a0001",
+    revision: 1,
+    created_at: "2026-09-01T12:00:00Z",
+    display_name: "Production",
+    active: true,
+    endpoint_url: "https://prometheus.example.com",
+    endpoint_type: "auto",
+    timeout_seconds: 90,
+    tls_verify: true,
+    credential_file: "",
+    ca_bundle_file: "",
+    cluster_name: "prod-1",
+    cluster_label: "cluster",
+    filter_mode: "required",
+    nodepool_label: "",
+    node_autoscaling: "auto",
+    allowed_namespaces: [],
+    excluded_containers: [],
+    permitted_periods: [],
+    default_period: null,
+    permitted_timezones: [],
+    default_timezone: null,
+    permitted_report_profiles: [],
+    default_report_profile: null,
+    permitted_min_severities: [],
+    default_min_severity: null,
+    thresholds: {
+      warning_percent: 70,
+      critical_percent: 85,
+      low_utilization_percent: 30,
+      autoscaler_near_max_percent: 80,
+      nodepool_spread_points: 30,
+      bursty_gap_percent: 100,
+      hpa_replica_divergence: 1,
+    },
+    ...overrides,
+  };
+}
+
 // The data the report and profile handlers serve; a test sets it, and it is
 // emptied after each test.
 export interface Mock {
@@ -132,6 +177,10 @@ export interface Mock {
   viewFailure: Map<string, { status: number; code: ErrorCode }>;
   // The users the administration routes serve, in name order.
   adminUsers: AdminUser[];
+  // The profiles the administration routes serve, in id order.
+  adminProfiles: AdminProfile[];
+  // The outcome of a test, keyed by profile id or "draft"; a profile without one is ok.
+  profileTests: Map<string, ProfileTestResult>;
   // Answers that replace the next call of a route, keyed `METHOD /path`; each is used once.
   failures: Map<string, { status: number; code: ErrorCode }>;
 }
@@ -147,6 +196,8 @@ export function installMockApi(initial: Session): Mock {
     views: new Map(),
     viewFailure: new Map(),
     adminUsers: [],
+    adminProfiles: [],
+    profileTests: new Map(),
     failures: new Map(),
   };
 
@@ -187,6 +238,11 @@ export function installMockApi(initial: Session): Mock {
     }
     mock.failures.delete(key);
     return failure(refused.status, refused.code);
+  }
+
+  // The outcome a test set for this profile, or a successful one.
+  function testOutcome(key: string): ProfileTestResult {
+    return mock.profileTests.get(key) ?? { ok: true, code: "PROFILE_OK", capabilities: [] };
   }
 
   const handlers = [
@@ -272,6 +328,82 @@ export function installMockApi(initial: Session): Mock {
         return failure(404, "USER_NOT_FOUND");
       }
       mock.adminUsers = mock.adminUsers.map((user) => (user.id === id ? { ...user, active: false } : user));
+      return new HttpResponse(null, { status: 204 });
+    }),
+    http.get(api("/admin/profiles"), async ({ request }) => {
+      await record(request);
+      return (
+        refusal("GET", "/admin/profiles") ??
+        HttpResponse.json({ profiles: mock.adminProfiles } satisfies Schemas["ProfileList"])
+      );
+    }),
+    http.post(api("/admin/profiles/test"), async ({ request }) => {
+      await record(request);
+      return refusal("POST", "/admin/profiles/test") ?? HttpResponse.json(testOutcome("draft"));
+    }),
+    http.post(api("/admin/profiles/:id/test"), async ({ request, params }) => {
+      await record(request);
+      const id = String(params["id"]);
+      const refused = refusal("POST", `/admin/profiles/${id}/test`);
+      if (refused !== null) {
+        return refused;
+      }
+      return mock.adminProfiles.some((profile) => profile.id === id)
+        ? HttpResponse.json(testOutcome(id))
+        : failure(404, "PROFILE_NOT_FOUND");
+    }),
+    http.post(api("/admin/profiles"), async ({ request }) => {
+      const body = (await record(request)) as Schemas["ProfileCreate"];
+      const refused = refusal("POST", "/admin/profiles");
+      if (refused !== null) {
+        return refused;
+      }
+      if (mock.adminProfiles.some((profile) => profile.id === body.id)) {
+        return failure(409, "PROFILE_ID_TAKEN");
+      }
+      const created = adminProfile({ ...body, revision_id: crypto.randomUUID(), revision: 1 });
+      mock.adminProfiles = [...mock.adminProfiles, created].sort((a, b) => a.id.localeCompare(b.id));
+      return HttpResponse.json(created, { status: 201 });
+    }),
+    http.get(api("/admin/profiles/:id"), async ({ request, params }) => {
+      await record(request);
+      const id = String(params["id"]);
+      const refused = refusal("GET", `/admin/profiles/${id}`);
+      if (refused !== null) {
+        return refused;
+      }
+      const found = mock.adminProfiles.find((profile) => profile.id === id);
+      return found === undefined ? failure(404, "PROFILE_NOT_FOUND") : HttpResponse.json(found);
+    }),
+    http.patch(api("/admin/profiles/:id"), async ({ request, params }) => {
+      const { base_revision_id: base, ...fields } = (await record(request)) as Schemas["ProfileChange"];
+      const id = String(params["id"]);
+      const refused = refusal("PATCH", `/admin/profiles/${id}`);
+      if (refused !== null) {
+        return refused;
+      }
+      const found = mock.adminProfiles.find((profile) => profile.id === id);
+      if (found === undefined) {
+        return failure(404, "PROFILE_NOT_FOUND");
+      }
+      if (base !== found.revision_id) {
+        return failure(409, "PROFILE_REVISION_STALE");
+      }
+      const revised = { ...found, ...fields, revision_id: crypto.randomUUID(), revision: found.revision + 1 };
+      mock.adminProfiles = mock.adminProfiles.map((profile) => (profile.id === id ? revised : profile));
+      return HttpResponse.json(revised);
+    }),
+    http.delete(api("/admin/profiles/:id"), async ({ request, params }) => {
+      await record(request);
+      const id = String(params["id"]);
+      const refused = refusal("DELETE", `/admin/profiles/${id}`);
+      if (refused !== null) {
+        return refused;
+      }
+      if (!mock.adminProfiles.some((profile) => profile.id === id)) {
+        return failure(404, "PROFILE_NOT_FOUND");
+      }
+      mock.adminProfiles = mock.adminProfiles.filter((profile) => profile.id !== id);
       return new HttpResponse(null, { status: 204 });
     }),
     http.get(api("/profiles"), async ({ request }) => {
@@ -373,6 +505,8 @@ export function installMockApi(initial: Session): Mock {
     mock.views = new Map();
     mock.viewFailure = new Map();
     mock.adminUsers = [];
+    mock.adminProfiles = [];
+    mock.profileTests = new Map();
     mock.failures = new Map();
     server.resetHandlers(...handlers);
   });

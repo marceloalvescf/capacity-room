@@ -21,7 +21,7 @@ export type ReportPDFState = Schemas["ReportPDFState"];
 export type ProfileSummary = Schemas["ProfileSummary"];
 
 export const reportsKey = ["reports"] as const;
-const profilesKey = ["profiles"] as const;
+export const profilesKey = ["profiles"] as const;
 
 export function isActive(report: { status: Schemas["ReportStatus"]; pdfs: ReportPDFState[] }): boolean {
   return (

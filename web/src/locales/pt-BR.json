@@ -12,6 +12,7 @@
     "reports": "Relatórios",
     "generate": "Novo relatório",
     "account": "Conta",
+    "profiles": "Perfis",
     "users": "Usuários"
   },
   "header": {
@@ -584,6 +585,70 @@
       "create": "Criar usuário",
       "creating": "Criando…",
       "createdNotice": "{{name}} foi criado."
+    },
+    "profiles": {
+      "title": "Perfis",
+      "new": "Novo perfil",
+      "empty": "Nenhum perfil ainda.",
+      "loadFailed": "Não foi possível carregar os perfis.",
+      "column": {
+        "profile": "Perfil",
+        "cluster": "Cluster",
+        "state": "Estado"
+      },
+      "fact": {
+        "endpoint": "Endpoint",
+        "type": "Tipo",
+        "credential": "Arquivo de credencial",
+        "ca": "Arquivo do CA bundle",
+        "revision": "Revisão",
+        "namespaces": "Namespaces",
+        "choices": "Opções do formulário de relatório"
+      },
+      "revisionValue": "{{revision}}, salva em {{time}}",
+      "none": "Nenhum",
+      "test": "Testar conexão",
+      "testing": "Testando…",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "deleteTitle": "Excluir o perfil {{name}}?",
+      "deleteBody": "Ele sai desta lista e do formulário de novo relatório. Os relatórios já pedidos o mantêm, e o identificador pode ser usado de novo.",
+      "deleteConfirm": "Excluir",
+      "cancel": "Cancelar",
+      "deleted": "O perfil {{name}} foi excluído."
+    },
+    "profile": {
+      "anyPeriod": "Qualquer período",
+      "short": {
+        "warning_percent": "Atenção {{value}} %",
+        "critical_percent": "Crítico {{value}} %",
+        "low_utilization_percent": "Baixa utilização {{value}} %",
+        "autoscaler_near_max_percent": "Perto do máximo {{value}} %",
+        "nodepool_spread_points": "Diferença entre node pools {{value}}",
+        "bursty_gap_percent": "Variação {{value}} %",
+        "hpa_replica_divergence": "Divergência {{value}}"
+      }
     }
+  },
+  "endpointType": {
+    "auto": "Detectar",
+    "prometheus": "Prometheus",
+    "grafana": "Grafana"
+  },
+  "profileTest": {
+    "PROFILE_OK": "Conectado. A fonte responde a todas as consultas que o relatório usa.",
+    "ENDPOINT_URL_REJECTED": "A URL do endpoint não é permitida.",
+    "ENDPOINT_ADDRESS_REJECTED": "O endereço do endpoint não é permitido por esta instalação.",
+    "ENDPOINT_RESOLUTION_FAILED": "Não foi possível resolver o nome do host do endpoint.",
+    "ENDPOINT_CONNECTION_REJECTED": "A conexão chegou a um endereço que não é permitido.",
+    "ENDPOINT_REDIRECT_REJECTED": "O endpoint respondeu com um redirect, que não é seguido.",
+    "PROFILE_CREDENTIAL_UNAVAILABLE": "Não foi possível ler o arquivo de credencial.",
+    "PROFILE_CA_BUNDLE_UNAVAILABLE": "Não foi possível ler o arquivo do CA bundle.",
+    "ENDPOINT_TLS_FAILED": "A conexão TLS falhou.",
+    "ENDPOINT_AUTH_REJECTED": "A fonte recusou a credencial.",
+    "ENDPOINT_API_NOT_FOUND": "Nenhuma API do Prometheus responde nesta URL.",
+    "ENDPOINT_UNREACHABLE": "Não foi possível alcançar a fonte.",
+    "CLUSTER_SCOPE_NOT_FOUND": "Nenhuma série deste cluster foi encontrada na fonte.",
+    "CAPABILITIES_INSUFFICIENT": "A fonte não tem métricas de que o relatório precisa."
   }
 }

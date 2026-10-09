@@ -1,9 +1,11 @@
 import {
+  endpointTypeValues,
   errorCodeValues,
   languageValues,
   minSeverityValues,
   pDFFailureCodeValues,
   pDFStatusValues,
+  profileTestCodeValues,
   reportFailureCodeValues,
   reportPhaseValues,
   reportProfileValues,
@@ -20,6 +22,7 @@ import {
 } from "@/api/schema.gen";
 import { statusValues } from "@/components/status-mark";
 import { reportTabs } from "@/features/report/tabs";
+import { thresholdKeys } from "@/features/admin/profiles/form";
 import { calendarRanges } from "@/features/reports/period";
 import { themeChoices } from "@/theme/theme";
 
@@ -47,5 +50,8 @@ export const families: Readonly<Record<string, readonly string[]>> = {
   capability: viewCapabilityNameValues,
   capabilityState: viewCapabilityStateValues,
   "period.calendar": calendarRanges,
+  profileTest: profileTestCodeValues,
+  endpointType: endpointTypeValues,
+  "admin.profile.short": thresholdKeys,
   "admin.users.role": roleValues,
 };

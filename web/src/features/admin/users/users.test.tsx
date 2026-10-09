@@ -83,6 +83,7 @@ describe("the users screen", () => {
     expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual([
       "Reports",
       "New report",
+      "Profiles",
       "Users",
       "Account",
     ]);

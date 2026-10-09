@@ -12,6 +12,7 @@ import { WorkloadsTab } from "@/features/report/workloads-tab";
 import { GeneratePage } from "@/features/reports/generate-page";
 import { ProgressPage } from "@/features/reports/progress-page";
 import { ReportsPage } from "@/features/reports/reports-page";
+import { ProfilesPage } from "@/features/admin/profiles/profiles-page";
 import { UsersPage } from "@/features/admin/users/users-page";
 import { RequireAdministrator } from "@/session/require-administrator";
 import { RequireOperator } from "@/session/require-operator";
@@ -36,7 +37,10 @@ export const routes: RouteObject[] = [
           },
           {
             element: <RequireAdministrator />,
-            children: [{ path: "users", element: <UsersPage /> }],
+            children: [
+              { path: "profiles", element: <ProfilesPage /> },
+              { path: "users", element: <UsersPage /> },
+            ],
           },
           { path: "jobs/:id", element: <ProgressPage /> },
           {
