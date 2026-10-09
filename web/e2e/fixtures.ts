@@ -52,7 +52,7 @@ export const buttonName = (word: string, name: string) => word.replace("{{name}}
 
 // The last row of a table: its open button and its name, read from the button.
 export async function lastRow(table: Locator): Promise<{ button: Locator; name: string }> {
-  const button = table.getByRole("button", { name: openPattern }).last();
+  const button = table.locator(":scope > tbody > tr > td:first-child").getByRole("button", { name: openPattern }).last();
   const label = (await button.getAttribute("aria-label")) ?? "";
   const [before = "", after = ""] = en.table.open.split("{{name}}");
   return { button, name: label.slice(before.length, label.length - after.length) };
@@ -62,17 +62,18 @@ export async function lastRow(table: Locator): Promise<{ button: Locator; name: 
 // sticky header of the table, and the page does not scroll sideways. The scroll that reveals a row is smooth, so
 // the check polls until it settles.
 export async function expectFits(page: Page, table: Locator, name: string) {
-  await expect(table.getByRole("button", { name: buttonName(en.table.close, name), exact: true })).toBeVisible();
-  const row = table
-    .locator("tbody tr")
-    .filter({ has: page.getByRole("button", { name: buttonName(en.table.close, name), exact: true }) });
+  const closeButton = (scope: Locator) => scope.getByRole("button", { name: buttonName(en.table.close, name), exact: true });
+  // Only the rows of the table itself: an opened row may hold tables of its own.
+  const rows = table.locator(":scope > tbody > tr");
+  await expect(closeButton(rows.locator(":scope > td:first-child"))).toBeVisible();
+  const row = rows.filter({ has: closeButton(page.locator("td:first-child")) });
   const opened = row.locator("xpath=following-sibling::tr[1]");
   await expect(opened).toBeVisible();
   await expect
     .poll(
       async () => {
         const size = page.viewportSize();
-        const head = await table.locator("thead").boundingBox();
+        const head = await table.locator(":scope > thead").boundingBox();
         const boxes = { row: await row.boundingBox(), opened: await opened.boundingBox() };
         const sideways = await page.evaluate(
           () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
