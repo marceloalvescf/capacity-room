@@ -120,6 +120,8 @@ export function ProfilesPage() {
   const [outcomes, setOutcomes] = useState<ReadonlyMap<string, TestOutcome>>(new Map());
   const [failure, setFailure] = useState<Error | null>(null);
   const [target, setTarget] = useState<Profile | null>(null);
+  // The name stays after the dialog closes, so its title does not go blank while it fades.
+  const [askedName, setAskedName] = useState("");
   const remove = useDeleteProfile();
   const announce = useAnnounce();
   const address = useAddress();
@@ -206,6 +208,7 @@ export function ProfilesPage() {
             onOutcome={onOutcome}
             onDelete={(profile, button) => {
               opener.current = button;
+              setAskedName(profile.display_name);
               setTarget(profile);
             }}
           />
@@ -232,7 +235,7 @@ export function ProfilesPage() {
       {content}
       <ConfirmDialog
         open={target !== null}
-        title={t("admin.profiles.deleteTitle", { name: target?.display_name ?? "" })}
+        title={t("admin.profiles.deleteTitle", { name: askedName })}
         body={t("admin.profiles.deleteBody")}
         confirm={t("admin.profiles.deleteConfirm")}
         cancel={t("admin.profiles.cancel")}
