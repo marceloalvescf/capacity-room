@@ -1,5 +1,5 @@
 import en from "../src/locales/en.json" with { type: "json" };
-import { admin, expect, expectFits, expectNoViolations, fitSizes, signIn, test, watchPolicy } from "./fixtures";
+import { admin, buttonName, createUser, expect, expectFits, expectNoViolations, fitSizes, lastRow, signIn, test, watchPolicy } from "./fixtures";
 
 const newUser = { username: "e2e-admin-reader", password: "e2e-Admin-Reader-Pass-05!" };
 const profile = {
@@ -11,7 +11,7 @@ const profile = {
   unreachable: "http://fake-prometheus:9091/api/v1",
 };
 
-const fill = (text: string, name: string) => text.replace("{{name}}", name);
+const fill = buttonName;
 
 test("an administrator manages users and profiles", async ({ page, browser, baseURL }) => {
   const navigation = page.getByRole("navigation", { name: en.nav.label });
@@ -76,6 +76,10 @@ test("an administrator manages users and profiles", async ({ page, browser, base
     await expect(page.getByText(en.admin.profile.testRefused, { exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: en.admin.profiles.test, exact: true }).click();
     await expect(page.getByText(en.profileTest.ENDPOINT_UNREACHABLE, { exact: true })).toBeVisible();
+    // The form keeps the refusal under the endpoint until the next save judges the field again.
+    await expect(page.getByLabel(en.admin.profile.url, { exact: true })).toHaveAccessibleDescription(
+      en.error.ENDPOINT_ADDRESS_REJECTED,
+    );
   });
 
   await test.step("the profile is saved active and offered by the report form", async () => {
@@ -135,17 +139,30 @@ test("an administrator manages users and profiles", async ({ page, browser, base
   });
 
   await test.step("the last row of each list fits the window when opened", async () => {
+    // Twenty more users make the users table taller than the window, so opening its last row needs the scroll.
+    for (let n = 1; n <= 20; n += 1) {
+      const username = `e2e-fit-${String(n).padStart(2, "0")}`;
+      await createUser(page, { username, password: `${username}-Pass-06!` }, "reader");
+    }
     const lists = [
-      { path: "/users", title: en.admin.users.title },
-      { path: "/profiles", title: en.admin.profiles.title },
+      { path: "/users", title: en.admin.users.title, tall: true },
+      { path: "/profiles", title: en.admin.profiles.title, tall: false },
     ];
     for (const list of lists) {
       for (const size of fitSizes) {
         await page.setViewportSize(size);
         await page.goto(list.path);
         const table = page.getByRole("table", { name: list.title, exact: true });
-        await table.getByRole("button", { name: /^Show the details of / }).last().click();
-        await expectFits(page, table.locator("tbody tr").last());
+        const last = await lastRow(table);
+        if (list.tall) {
+          await page.evaluate(() => {
+            window.scrollTo(0, 0);
+          });
+          const box = await last.button.boundingBox();
+          expect(box?.y ?? 0).toBeGreaterThan(size.height);
+        }
+        await last.button.click();
+        await expectFits(page, table, last.name);
       }
     }
     await expectNoViolations(page);

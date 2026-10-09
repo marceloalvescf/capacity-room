@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import en from "../src/locales/en.json" with { type: "json" };
-import { admin, expect, expectFits, expectNoViolations, fitSizes, signIn, test, watchPolicy } from "./fixtures";
+import { admin, createUser, expect, expectFits, expectNoViolations, fitSizes, lastRow, openPattern, signIn, test, watchPolicy } from "./fixtures";
 
 const operator = { username: "e2e-operator", password: "e2e-Operator-Pass-03!" };
 const reader = { username: "e2e-reader", password: "e2e-Reader-Pass-04!" };
@@ -21,19 +21,6 @@ function mondayText(now: Date, zone: string, weeks: number): string {
   const sinceMonday = (today.getUTCDay() + 6) % 7;
   const monday = new Date(today.getTime() + (weeks * 7 - sinceMonday) * 86_400_000);
   return `${monday.toISOString().slice(0, 10)} 00:00`;
-}
-
-// Creates a user through the API, with the session and the CSRF token of the
-// signed-in page.
-async function createUser(page: Page, user: { username: string; password: string }, role: "operator" | "reader") {
-  const session = await page.request.get("/api/v1/auth/session");
-  expect(session.ok()).toBe(true);
-  const { csrf_token: csrf } = (await session.json()) as { csrf_token: string };
-  const created = await page.request.post("/api/v1/admin/users", {
-    headers: { "X-CSRF-Token": csrf },
-    data: { username: user.username, password: user.password, role, language: "en" },
-  });
-  expect(created.status()).toBe(201);
 }
 
 const pdfGroup = (page: Page, language: string) => page.getByRole("group", { name: language, exact: true });
@@ -137,7 +124,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await tabs.getByRole("link", { name: en.report.tab.workloads, exact: true }).click();
     const workloads = page.getByRole("table", { name: en.report.tab.workloads, exact: true });
     const search = page.getByRole("searchbox", { name: en.report.search.workloads, exact: true });
-    const closed = workloads.getByRole("button", { name: /^Show the details of / });
+    const closed = workloads.getByRole("button", { name: openPattern });
     const name = await workloads.getByRole("row").nth(1).locator("span.font-mono").first().innerText();
     // Typed at full speed, with no delay between keys, the field keeps every character and the rows follow it.
     await search.pressSequentially(name);
@@ -172,8 +159,9 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
       await page.setViewportSize(size);
       await page.goto(`/reports/${id}/workloads`);
       const workloads = page.getByRole("table", { name: en.report.tab.workloads, exact: true });
-      await workloads.getByRole("button", { name: /^Show the details of / }).last().click();
-      await expectFits(page, workloads.locator("tbody tr").last());
+      const last = await lastRow(workloads);
+      await last.button.click();
+      await expectFits(page, workloads, last.name);
     }
     if (original !== null) {
       await page.setViewportSize(original);

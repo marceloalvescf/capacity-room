@@ -42,32 +42,68 @@ export const fitSizes = [
   { width: 1024, height: 768 },
 ] as const;
 
-// Waits until the opened row of a table and the row above it lie inside the viewport and the page does not
-// scroll sideways. The scroll that reveals a row is smooth, so the check polls until it settles.
-export async function expectFits(page: Page, opened: Locator) {
-  const above = opened.locator("xpath=preceding-sibling::tr[1]");
+// Matches the open button of any row of a table.
+export const openPattern = new RegExp(
+  `^${en.table.open.split("{{name}}").map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*")}$`,
+);
+
+// The words of a row's button, with the row's name.
+export const buttonName = (word: string, name: string) => word.replace("{{name}}", name);
+
+// The last row of a table: its open button and its name, read from the button.
+export async function lastRow(table: Locator): Promise<{ button: Locator; name: string }> {
+  const button = table.getByRole("button", { name: openPattern }).last();
+  const label = (await button.getAttribute("aria-label")) ?? "";
+  const [before = "", after = ""] = en.table.open.split("{{name}}");
+  return { button, name: label.slice(before.length, label.length - after.length) };
+}
+
+// Waits until the row named `name` is open, then until it and its opened row lie inside the viewport, below the
+// sticky header of the table, and the page does not scroll sideways. The scroll that reveals a row is smooth, so
+// the check polls until it settles.
+export async function expectFits(page: Page, table: Locator, name: string) {
+  await expect(table.getByRole("button", { name: buttonName(en.table.close, name), exact: true })).toBeVisible();
+  const row = table
+    .locator("tbody tr")
+    .filter({ has: page.getByRole("button", { name: buttonName(en.table.close, name), exact: true }) });
+  const opened = row.locator("xpath=following-sibling::tr[1]");
+  await expect(opened).toBeVisible();
   await expect
     .poll(
       async () => {
         const size = page.viewportSize();
-        const rows = { opened: await opened.boundingBox(), above: await above.boundingBox() };
+        const head = await table.locator("thead").boundingBox();
+        const boxes = { row: await row.boundingBox(), opened: await opened.boundingBox() };
         const sideways = await page.evaluate(
           () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
         );
-        const outside = Object.entries(rows).filter(
+        const floor = head === null ? 0 : head.y + head.height;
+        const outside = Object.entries(boxes).filter(
           ([, box]) =>
             size === null ||
             box === null ||
-            box.y < 0 ||
+            box.y < floor - 1 ||
             box.x < 0 ||
             box.y + box.height > size.height ||
             box.x + box.width > size.width,
         );
-        return { outside: outside.map(([name]) => name), sideways };
+        return { outside: outside.map(([which]) => which), sideways };
       },
       { timeout: 10_000 },
     )
     .toEqual({ outside: [], sideways: false });
+}
+
+// Creates a user through the API, with the session and the CSRF token of the signed-in page.
+export async function createUser(page: Page, user: { username: string; password: string }, role: "operator" | "reader") {
+  const session = await page.request.get("/api/v1/auth/session");
+  expect(session.ok()).toBe(true);
+  const { csrf_token: csrf } = (await session.json()) as { csrf_token: string };
+  const created = await page.request.post("/api/v1/admin/users", {
+    headers: { "X-CSRF-Token": csrf },
+    data: { username: user.username, password: user.password, role, language: "en" },
+  });
+  expect(created.status()).toBe(201);
 }
 
 export const admin = { username: "e2e-admin", password: "e2e-Fixture-Pass-01!" };
