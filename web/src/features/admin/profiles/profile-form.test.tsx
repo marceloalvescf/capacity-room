@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { adminProfile, installMockApi, signedIn } from "../../../../tests/msw";
@@ -384,6 +384,34 @@ describe("the profile form", () => {
     expect(screen.queryByText("Connected. The source answers every query the report needs.")).not.toBeInTheDocument();
   });
 
+  it("clears the result on a select and a checkbox", async () => {
+    await renderApp("/profiles/new");
+    const user = await fillNew();
+    const connected = "Connected. The source answers every query the report needs.";
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+    await screen.findByText(connected);
+    await user.selectOptions(screen.getByLabelText("Type"), "Prometheus");
+    expect(screen.queryByText(connected)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Test connection" }));
+    await screen.findByText(connected);
+    await user.click(screen.getByLabelText("Active"));
+    expect(screen.queryByText(connected)).not.toBeInTheDocument();
+  });
+
+  it("ignores a refusal that arrives after a change", async () => {
+    await renderApp("/profiles/new");
+    await fillNew();
+    mock.failures.set("POST /admin/profiles/test", { status: 422, code: "ENDPOINT_ADDRESS_REJECTED" });
+    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
+    fireEvent.change(screen.getByLabelText("Cluster name"), { target: { value: "other" } });
+    await waitFor(() => {
+      expect(mock.calls.some((call) => call.path === "/admin/profiles/test")).toBe(true);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(screen.getByLabelText("Endpoint URL")).not.toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText("Correct the marked fields, then test again.")).not.toBeInTheDocument();
+  });
+
   async function staleSave() {
     const view = await renderApp("/profiles/production/edit");
     const user = userEvent.setup();
@@ -426,6 +454,32 @@ describe("the profile form", () => {
     expect(screen.getByText(/Revision 4, saved /)).toBeInTheDocument();
     expect(screen.getByText(/Saving writes revision 5\./)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("resets the form when the latest revision is the one held", async () => {
+    const { user } = await staleSave();
+    await user.click(screen.getByRole("button", { name: "Load the latest revision" }));
+    await user.click(await screen.findByRole("button", { name: "Leave" }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Display name")).toHaveValue("Production");
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("keeps the guard after a Cancel click that opens another tab", async () => {
+    await renderApp("/profiles/production/edit");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Display name"), "x");
+    await user.keyboard("{Control>}");
+    await user.click(screen.getByRole("link", { name: "Cancel" }));
+    await user.keyboard("{/Control}");
+    await user.click(screen.getByRole("link", { name: "Reports" }));
+    expect(await screen.findByRole("alertdialog", { name: "Leave without saving?" })).toBeInTheDocument();
+    const unload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(true);
   });
 
   it("guards a leave inside the app", async () => {

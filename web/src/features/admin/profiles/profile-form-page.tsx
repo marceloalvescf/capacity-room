@@ -99,7 +99,7 @@ function errorPaths(errors: FieldErrors<ProfileValues>): string[] {
 }
 
 // The form of a new profile, or of a saved one; `reload` fetches the latest revision of the saved one again.
-function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload?: () => Promise<unknown> }) {
+function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload?: () => Promise<Profile> }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const announce = useAnnounce();
@@ -125,6 +125,7 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
     setError,
     control,
     getValues,
+    reset,
     formState: { errors, isDirty },
   } = useForm<ProfileValues>({
     resolver: zodResolver(schema),
@@ -165,34 +166,41 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
     const values = getValues();
     const seen = changes.current;
     setFailure(null);
-    const result = async (): Promise<TestOutcome> => {
-      try {
-        const id = values.id.trim();
-        const tested = await testDraft.mutateAsync({ ...documentOf(values), ...(id === "" ? {} : { id }) });
-        return { kind: "result", result: tested };
-      } catch (thrown) {
-        const error = toError(thrown);
-        if (error instanceof ApiFailure && error.status === 422) {
-          if (!applyRefusal(error, setError, open, isNew)) {
-            setFailure(errorText(t, error));
-          }
-          setMarks((count) => count + 1);
-          return { kind: "refused" };
-        }
-        return { kind: "failed", error };
+    let found: TestOutcome;
+    let refusal: ApiFailure | null = null;
+    try {
+      const id = values.id.trim();
+      found = { kind: "result", result: await testDraft.mutateAsync({ ...documentOf(values), ...(id === "" ? {} : { id }) }) };
+    } catch (thrown) {
+      const error = toError(thrown);
+      if (error instanceof ApiFailure && error.status === 422) {
+        refusal = error;
+        found = { kind: "refused" };
+      } else {
+        found = { kind: "failed", error };
       }
-    };
-    const found = await result();
-    if (changes.current === seen) {
-      setOutcome(found);
     }
+    // An answer for values that have changed since describes a form that is gone.
+    if (changes.current !== seen) {
+      return;
+    }
+    if (refusal !== null) {
+      if (!applyRefusal(refusal, setError, open, isNew)) {
+        setFailure(errorText(t, refusal));
+      }
+      setMarks((count) => count + 1);
+    }
+    setOutcome(found);
   }
 
   async function loadLatest() {
     setAsking(false);
     setFailure(null);
     try {
-      await reload?.();
+      const latest = await reload?.();
+      if (latest !== undefined) {
+        reset(valuesOf(latest));
+      }
       setStale(false);
     } catch (thrown) {
       setFailure(errorText(t, toError(thrown)));
@@ -491,7 +499,12 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
         >
           {testDraft.isPending ? t("admin.profiles.testing") : t("admin.profiles.test")}
         </Button>
-        <Link to="/profiles" className={buttonStyles()} onClick={guard.release}>
+        <Link to="/profiles" className={buttonStyles()} onClick={(event) => {
+            if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+              guard.release();
+            }
+          }}
+        >
           {t("admin.profile.cancel")}
         </Link>
         <TestResultLine outcome={outcome} />
@@ -555,7 +568,7 @@ function EditProfile({ id }: { id: string }) {
       <ProfileForm
         key={profile.data.revision_id}
         profile={profile.data}
-        reload={() => profile.refetch({ throwOnError: true })}
+        reload={async () => (await profile.refetch({ throwOnError: true })).data as Profile}
       />
     </>
   );
