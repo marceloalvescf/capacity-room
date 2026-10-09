@@ -445,6 +445,10 @@
     "pools": {
       "title": "Node pools"
     },
+    "unobserved": {
+      "title": "Workloads sem uso observado",
+      "hint": "Nenhum uso foi observado para estes workloads no período, por isso eles não têm números. Os achados deles estão na aba Achados."
+    },
     "copy": "Copiar {{name}}",
     "copied": "Copiado: {{name}}",
     "copyFailed": "Não foi possível copiar o nome.",

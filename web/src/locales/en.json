@@ -445,6 +445,10 @@
     "pools": {
       "title": "Node pools"
     },
+    "unobserved": {
+      "title": "Workloads without observed usage",
+      "hint": "No usage was observed for these workloads in the period, so they have no numbers. Their findings are on the Findings tab."
+    },
     "copy": "Copy {{name}}",
     "copied": "Copied: {{name}}",
     "copyFailed": "The name could not be copied.",

@@ -6,6 +6,19 @@ import { cn } from "@/lib/cn";
 import type { ViewFinding, ViewHPA, ViewNamespace, ViewNode, ViewStatistic, ViewValue, ViewWorkload } from "./api";
 import { useView } from "./report-page";
 
+// A workload's name, with its kind and namespace beneath.
+export function WorkloadName({ row }: { row: ViewWorkload }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="font-mono">{row.name}</span>
+      <span className="flex flex-wrap gap-x-2 text-xs text-muted-fg">
+        <span className="font-mono">{row.kind}</span>
+        <span className="font-mono">{row.namespace}</span>
+      </span>
+    </div>
+  );
+}
+
 // A value of the view: the shape of its status, the status word for screen readers, then its text.
 export function ValueText({ value }: { value: ViewValue }) {
   const { t } = useTranslation();

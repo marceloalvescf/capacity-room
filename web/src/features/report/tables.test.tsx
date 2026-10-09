@@ -36,7 +36,7 @@ async function open(tab: "namespaces" | "workloads", search = "", language: "en"
 }
 
 function bodyRows(): HTMLElement[] {
-  return within(screen.getByRole("table", { name: /^(Namespaces|Workloads|Namespace|Workload)/ }))
+  return within(screen.getByRole("table", { name: /^(Namespaces|Workloads|Namespace|Workload)$/ }))
     .getAllByRole("row")
     .slice(1);
 }
@@ -151,6 +151,34 @@ describe("workloads tab", () => {
     mock.views.set(`${id}:en`, { ...english, workloads: english.workloads.map((w) => ({ ...w, observed_usage: false })) });
     await renderApp(`/reports/${id}/workloads`, "en");
     expect(await screen.findByText("No rows in this report.")).toBeInTheDocument();
+  });
+
+  it("workloads with no observed usage are listed under the table", async () => {
+    await open("workloads");
+    const main = screen.getByRole("table", { name: "Workloads" });
+    expect(within(main).getAllByRole("row").slice(1)).toHaveLength(1);
+    expect(within(main).getByText("payments-web")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Workloads without observed usage" })).toBeInTheDocument();
+    expect(screen.getByText(/^No usage was observed for these workloads/)).toBeInTheDocument();
+    const rows = within(screen.getByRole("table", { name: "Workloads without observed usage" })).getAllByRole("row");
+    expect(rows).toHaveLength(3);
+    expect(rows[1]).toHaveTextContent("apiDeploymentpaymentsAttentionNo HPA");
+    expect(rows[2]).toHaveTextContent("queueStatefulSetpaymentsHealthyNo HPA");
+  });
+
+  it("every workload observed leaves no such section", async () => {
+    mock.views.set(`${id}:en`, { ...english, workloads: english.workloads.map((w) => ({ ...w, observed_usage: true })) });
+    await renderApp(`/reports/${id}/workloads`, "en");
+    await screen.findByRole("searchbox", { name: t("report.search.workloads") });
+    expect(screen.queryByRole("heading", { name: "Workloads without observed usage" })).not.toBeInTheDocument();
+  });
+
+  it("the section is worded in Portuguese", async () => {
+    await open("workloads");
+    await act(async () => {
+      await i18next.changeLanguage("pt-BR");
+    });
+    expect(await screen.findByRole("heading", { level: 2, name: "Workloads sem uso observado" })).toBeInTheDocument();
   });
 });
 
