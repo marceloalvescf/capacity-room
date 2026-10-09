@@ -376,6 +376,15 @@ describe("the profile form", () => {
     expect(changes().filter((call) => call.path === "/admin/profiles")).toEqual([]);
   });
 
+  it("puts the test in the metric source section, not the save bar", async () => {
+    await renderApp("/profiles/new");
+    const test = await screen.findByRole("button", { name: "Test connection" });
+    const section = screen.getByRole("heading", { level: 2, name: "Metric source" }).closest("section");
+    expect(section).toContainElement(test);
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save.parentElement).not.toContainElement(test);
+  });
+
   it("tests without the browser's checks", async () => {
     await renderApp("/profiles/new");
     const user = userEvent.setup();

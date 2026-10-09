@@ -344,6 +344,17 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
           error={fieldError(errors.ca_bundle_file?.message)}
           {...register("ca_bundle_file")}
         />
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            disabled={testDraft.isPending}
+            onClick={() => {
+              void runTest();
+            }}
+          >
+            {testDraft.isPending ? t("admin.profiles.testing") : t("admin.profiles.test")}
+          </Button>
+          <TestResultLine outcome={outcome} />
+        </div>
       </Section>
       <Section title={t("admin.profile.section.cluster")}>
         <Field
@@ -523,14 +534,6 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
         <Button type="submit" variant="primary" disabled={pending}>
           {pending ? t("admin.profile.saving") : t("admin.profile.save")}
         </Button>
-        <Button
-          disabled={testDraft.isPending}
-          onClick={() => {
-            void runTest();
-          }}
-        >
-          {testDraft.isPending ? t("admin.profiles.testing") : t("admin.profiles.test")}
-        </Button>
         <Link to="/profiles" className={buttonStyles()} onClick={(event) => {
             if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
               guard.release();
@@ -539,7 +542,6 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
         >
           {t("admin.profile.cancel")}
         </Link>
-        <TestResultLine outcome={outcome} />
         <p className="text-sm text-muted-fg">
           {isNew
             ? t("admin.profile.saveHintNew")
