@@ -425,6 +425,41 @@ paths:
           $ref: "#/components/responses/ProfileNotFound"
         default:
           $ref: "#/components/responses/Unexpected"
+  /admin/profiles/test:
+    post:
+      operationId: testProfileDraft
+      summary: >-
+        Run the preflight of a report against the source of a draft profile,
+        through the outbound policy, before it is saved; answer the outcome as
+        a code.
+      parameters:
+        - $ref: "#/components/parameters/CSRFHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileDraft"
+      responses:
+        "200":
+          description: >-
+            The outcome, whatever it is: ok with PROFILE_OK, or not ok with
+            one of the codes of ProfileTestResult. Never a URL, a name, an
+            address, or the text of a failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileTestResult"
+        "400":
+          $ref: "#/components/responses/RequestInvalid"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/ForbiddenOrCSRF"
+        "422":
+          $ref: "#/components/responses/ProfileRefused"
+        default:
+          $ref: "#/components/responses/Unexpected"
   /reports:
     get:
       operationId: listReports
@@ -1659,6 +1694,21 @@ components:
               type: string
               maxLength: 63
               description: A reference name of 1 to 63 characters, never changed.
+    ProfileDraft:
+      description: >-
+        The body of POST /admin/profiles/test: the document of a profile that
+        is not saved yet.
+      allOf:
+        - $ref: "#/components/schemas/ProfileDocument"
+        - type: object
+          required: [display_name, endpoint_url, cluster_name, allowed_namespaces]
+          properties:
+            id:
+              type: string
+              maxLength: 63
+              description: >-
+                The identifier of the profile the draft belongs to, when it has
+                one; it names the target of the audit row.
     ProfileChange:
       description: >-
         The body of PATCH /admin/profiles/{id}: the revision it was read at and
@@ -1789,6 +1839,23 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ProfileSummary"
+    ProfileTestCode:
+      type: string
+      enum:
+        - PROFILE_OK
+        - ENDPOINT_URL_REJECTED
+        - ENDPOINT_ADDRESS_REJECTED
+        - ENDPOINT_RESOLUTION_FAILED
+        - ENDPOINT_CONNECTION_REJECTED
+        - ENDPOINT_REDIRECT_REJECTED
+        - PROFILE_CREDENTIAL_UNAVAILABLE
+        - PROFILE_CA_BUNDLE_UNAVAILABLE
+        - ENDPOINT_TLS_FAILED
+        - ENDPOINT_AUTH_REJECTED
+        - ENDPOINT_API_NOT_FOUND
+        - ENDPOINT_UNREACHABLE
+        - CLUSTER_SCOPE_NOT_FOUND
+        - CAPABILITIES_INSUFFICIENT
     ProfileTestResult:
       type: object
       required: [ok, code, capabilities]
@@ -1796,15 +1863,7 @@ components:
         ok:
           type: boolean
         code:
-          type: string
-          description: >-
-            PROFILE_OK; or ENDPOINT_URL_REJECTED, ENDPOINT_ADDRESS_REJECTED,
-            ENDPOINT_RESOLUTION_FAILED, ENDPOINT_CONNECTION_REJECTED,
-            ENDPOINT_REDIRECT_REJECTED, PROFILE_CREDENTIAL_UNAVAILABLE,
-            PROFILE_CA_BUNDLE_UNAVAILABLE, ENDPOINT_TLS_FAILED,
-            ENDPOINT_AUTH_REJECTED, ENDPOINT_API_NOT_FOUND,
-            ENDPOINT_UNREACHABLE, CLUSTER_SCOPE_NOT_FOUND,
-            CAPABILITIES_INSUFFICIENT.
+          $ref: "#/components/schemas/ProfileTestCode"
         capabilities:
           type: array
           description: The names of the capabilities the source offers, in their order; empty when not ok.

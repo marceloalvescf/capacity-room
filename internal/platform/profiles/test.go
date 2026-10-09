@@ -7,6 +7,7 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/audit"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 )
 
@@ -22,6 +23,24 @@ const (
 	CodeScopeNotFound         = "CLUSTER_SCOPE_NOT_FOUND"
 	CodeCapabilities          = "CAPABILITIES_INSUFFICIENT"
 )
+
+// TestCodes lists every code of a profile test, in the order of the contract.
+var TestCodes = []string{
+	CodeOK,
+	string(netpolicy.CodeURLRejected),
+	string(netpolicy.CodeAddressRejected),
+	string(netpolicy.CodeResolutionFailed),
+	string(netpolicy.CodeConnectionRejected),
+	string(netpolicy.CodeRedirectRejected),
+	CodeCredentialUnavailable,
+	CodeCABundleUnavailable,
+	CodeTLSFailed,
+	CodeAuthRejected,
+	CodeAPINotFound,
+	CodeUnreachable,
+	CodeScopeNotFound,
+	CodeCapabilities,
+}
 
 // TestResult is the answer of a profile test.
 type TestResult struct {
@@ -62,6 +81,41 @@ func (s *Service) Test(ctx context.Context, actor auth.Principal, id string) (Te
 		Metadata: audit.Metadata{"code": result.Code, "revision_id": rev.ID.String()},
 	})
 	if err != nil {
+		return TestResult{}, err
+	}
+	return result, nil
+}
+
+// TestDraft runs the same preflight against a document that is not stored. A
+// non-empty id names the profile the draft belongs to in the audit row. It
+// reads and writes no profile row.
+func (s *Service) TestDraft(ctx context.Context, actor auth.Principal, id string, d Document) (TestResult, error) {
+	if err := requireAdministrator(actor); err != nil {
+		return TestResult{}, err
+	}
+	if id != "" && !ValidReferenceName(id) {
+		return TestResult{}, &DocumentError{Problems: []Problem{{Field: "id", Word: "invalid"}}}
+	}
+	if err := s.checkDocument(&d); err != nil {
+		return TestResult{}, err
+	}
+	result, err := s.runTest(ctx, d)
+	if err != nil {
+		return TestResult{}, err
+	}
+	outcome := audit.OutcomeSucceeded
+	if !result.OK {
+		outcome = audit.OutcomeFailed
+	}
+	event := audit.Event{
+		ActorID: &actor.ID, Action: ActionProfileTest, Outcome: outcome,
+		Metadata: audit.Metadata{"code": result.Code, "draft": true},
+	}
+	if id != "" {
+		event.TargetType, event.TargetID = targetProfile, id
+	}
+	// The requests have left the host whatever the caller does now.
+	if err := audit.Append(context.WithoutCancel(ctx), s.Pool, s.now(), event); err != nil {
 		return TestResult{}, err
 	}
 	return result, nil

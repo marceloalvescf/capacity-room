@@ -291,3 +291,82 @@ func TestProfilesRoutesRequireCSRF(t *testing.T) {
 		wantProblem(t, ts.call(t, c.method, c.path, c.body, nil, cookie), http.StatusForbidden, CodeCSRFRejected, nil)
 	}
 }
+
+const draftPath = profilesPath + "/test"
+
+// draftBody is the create body without its id.
+func draftBody(endpoint, credential, extra string) string {
+	return strings.Replace(createBody(endpoint, credential, extra), `"id":"prod",`, "", 1)
+}
+
+func TestAdminProfilesTestDraft(t *testing.T) {
+	ts := newTestServer(t)
+	cookie, csrf := ts.signIn(t, "root")
+	endpoint, credential := ts.fakeEndpoint(t)
+	w := ts.send(t, "POST", draftPath, draftBody(endpoint, credential, ""), cookie, csrf)
+	var got map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]any{"ok": true, "code": "PROFILE_OK", "capabilities": []any{
+		"namespace_usage", "workload_usage", "requests_limits", "hpa_history", "workloads_without_hpa",
+		"ip_node_mapping", "nodepool_discovery", "node_utilization", "node_autoscaling",
+	}}
+	if w.Code != 200 || !reflect.DeepEqual(got, want) {
+		t.Fatalf("%d %s", w.Code, w.Body.String())
+	}
+	list := ts.call(t, "GET", profilesPath, "", nil, cookie)
+	if list.Code != 200 || !strings.Contains(list.Body.String(), `"profiles":[]`) {
+		t.Fatalf("list %d %s", list.Code, list.Body.String())
+	}
+}
+
+func TestAdminProfilesTestDraftOrder(t *testing.T) {
+	ts := newTestServer(t)
+	endpoint, credential := ts.fakeEndpoint(t)
+	good := draftBody(endpoint, credential, "")
+	wantProblem(t, ts.call(t, "POST", draftPath, good, nil), 401, CodeUnauthenticated, nil)
+
+	reader, readerCSRF := ts.signIn(t, "eve")
+	wantProblem(t, ts.send(t, "POST", draftPath, good, reader, readerCSRF), 403, CodeForbidden, nil)
+
+	cookie, csrf := ts.signIn(t, "root")
+	wantProblem(t, ts.call(t, "POST", draftPath, good, nil, cookie), 403, CodeCSRFRejected, nil)
+
+	huge := draftBody(endpoint, credential, `,"display_name_pad":"`+strings.Repeat("x", 65*1024)+`"`)
+	wantProblem(t, ts.send(t, "POST", draftPath, huge, cookie, csrf), 400, CodeRequestInvalid, map[string]string{"": "too_long"})
+	wantProblem(t, ts.send(t, "POST", draftPath, draftBody(endpoint, credential, `,"x":1`), cookie, csrf), 400, CodeRequestInvalid, map[string]string{"x": "unknown"})
+	noName := strings.Replace(good, `"display_name":"Production",`, "", 1)
+	wantProblem(t, ts.send(t, "POST", draftPath, noName, cookie, csrf), 400, CodeRequestInvalid, map[string]string{"display_name": "missing"})
+}
+
+func TestAdminProfilesTestDraftRefused(t *testing.T) {
+	ts := newTestServer(t)
+	cookie, csrf := ts.signIn(t, "root")
+	endpoint, credential := ts.fakeEndpoint(t)
+	body := strings.Replace(draftBody(endpoint, credential, ""), `"cluster_name":"prod"`, `"cluster_name":" "`, 1)
+	wantProblem(t, ts.send(t, "POST", draftPath, body, cookie, csrf), 422, CodeProfileDocumentInvalid, map[string]string{"cluster_name": "empty"})
+	wantProblem(t, ts.send(t, "POST", draftPath, draftBody("http://169.254.169.254/api/v1", "", ""), cookie, csrf), 422, CodeEndpointAddressRejected, map[string]string{"endpoint_url": "invalid"})
+}
+
+func TestAdminProfilesNamedTest(t *testing.T) {
+	ts := newTestServer(t)
+	cookie, csrf := ts.signIn(t, "root")
+	endpoint, credential := ts.fakeEndpoint(t)
+	body := strings.Replace(createBody(endpoint, credential, ""), `"id":"prod"`, `"id":"test"`, 1)
+	if w := ts.send(t, "POST", profilesPath, body, cookie, csrf); w.Code != 201 {
+		t.Fatalf("create %d %s", w.Code, w.Body.String())
+	}
+	if w := ts.call(t, "GET", profilesPath+"/test", "", nil, cookie); w.Code != 200 {
+		t.Fatalf("get %d %s", w.Code, w.Body.String())
+	}
+	got := decodeProfile(t, ts.call(t, "GET", profilesPath+"/test", "", nil, cookie))
+	patch := `{"base_revision_id":"` + got["revision_id"].(string) + `","display_name":"Renamed"}`
+	w := ts.send(t, "PATCH", profilesPath+"/test", patch, cookie, csrf)
+	if w.Code != 200 || decodeProfile(t, w)["display_name"] != "Renamed" {
+		t.Fatalf("patch %d %s", w.Code, w.Body.String())
+	}
+	if w := ts.send(t, "DELETE", profilesPath+"/test", "", cookie, csrf); w.Code != 204 {
+		t.Fatalf("delete %d %s", w.Code, w.Body.String())
+	}
+}

@@ -188,6 +188,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/profiles/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run the preflight of a report against the source of a draft profile, through the outbound policy, before it is saved; answer the outcome as a code. */
+        post: operations["testProfileDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reports": {
         parameters: {
             query?: never;
@@ -614,6 +631,11 @@ export interface components {
             /** @description A reference name of 1 to 63 characters, never changed. */
             id: string;
         };
+        /** @description The body of POST /admin/profiles/test: the document of a profile that is not saved yet. */
+        ProfileDraft: components["schemas"]["ProfileDocument"] & {
+            /** @description The identifier of the profile the draft belongs to, when it has one; it names the target of the audit row. */
+            id?: string;
+        };
         /** @description The body of PATCH /admin/profiles/{id}: the revision it was read at and the fields that change. A field left out keeps its value; a nullable default set to null is cleared. */
         ProfileChange: components["schemas"]["ProfileDocument"] & {
             /** Format: uuid */
@@ -652,10 +674,11 @@ export interface components {
         ProfileSummaryList: {
             profiles: components["schemas"]["ProfileSummary"][];
         };
+        /** @enum {string} */
+        ProfileTestCode: "PROFILE_OK" | "ENDPOINT_URL_REJECTED" | "ENDPOINT_ADDRESS_REJECTED" | "ENDPOINT_RESOLUTION_FAILED" | "ENDPOINT_CONNECTION_REJECTED" | "ENDPOINT_REDIRECT_REJECTED" | "PROFILE_CREDENTIAL_UNAVAILABLE" | "PROFILE_CA_BUNDLE_UNAVAILABLE" | "ENDPOINT_TLS_FAILED" | "ENDPOINT_AUTH_REJECTED" | "ENDPOINT_API_NOT_FOUND" | "ENDPOINT_UNREACHABLE" | "CLUSTER_SCOPE_NOT_FOUND" | "CAPABILITIES_INSUFFICIENT";
         ProfileTestResult: {
             ok: boolean;
-            /** @description PROFILE_OK; or ENDPOINT_URL_REJECTED, ENDPOINT_ADDRESS_REJECTED, ENDPOINT_RESOLUTION_FAILED, ENDPOINT_CONNECTION_REJECTED, ENDPOINT_REDIRECT_REJECTED, PROFILE_CREDENTIAL_UNAVAILABLE, PROFILE_CA_BUNDLE_UNAVAILABLE, ENDPOINT_TLS_FAILED, ENDPOINT_AUTH_REJECTED, ENDPOINT_API_NOT_FOUND, ENDPOINT_UNREACHABLE, CLUSTER_SCOPE_NOT_FOUND, CAPABILITIES_INSUFFICIENT. */
-            code: string;
+            code: components["schemas"]["ProfileTestCode"];
             /** @description The names of the capabilities the source offers, in their order; empty when not ok. */
             capabilities: string[];
         };
@@ -1620,6 +1643,38 @@ export interface operations {
             default: components["responses"]["Unexpected"];
         };
     };
+    testProfileDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                "X-CSRF-Token": components["parameters"]["CSRFHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileDraft"];
+            };
+        };
+        responses: {
+            /** @description The outcome, whatever it is: ok with PROFILE_OK, or not ok with one of the codes of ProfileTestResult. Never a URL, a name, an address, or the text of a failure. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileTestResult"];
+                };
+            };
+            400: components["responses"]["RequestInvalid"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["ForbiddenOrCSRF"];
+            422: components["responses"]["ProfileRefused"];
+            default: components["responses"]["Unexpected"];
+        };
+    };
     listReports: {
         parameters: {
             query?: {
@@ -2033,6 +2088,7 @@ export const filterModeValues: ReadonlyArray<FlattenedDeepRequired<components>["
 export const nodeAutoscalingValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["NodeAutoscaling"]> = ["auto", "enabled", "disabled"];
 export const reportProfileValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportProfile"]> = ["detailed", "executive"];
 export const minSeverityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["MinSeverity"]> = ["all", "attention", "critical"];
+export const profileTestCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ProfileTestCode"]> = ["PROFILE_OK", "ENDPOINT_URL_REJECTED", "ENDPOINT_ADDRESS_REJECTED", "ENDPOINT_RESOLUTION_FAILED", "ENDPOINT_CONNECTION_REJECTED", "ENDPOINT_REDIRECT_REJECTED", "PROFILE_CREDENTIAL_UNAVAILABLE", "PROFILE_CA_BUNDLE_UNAVAILABLE", "ENDPOINT_TLS_FAILED", "ENDPOINT_AUTH_REJECTED", "ENDPOINT_API_NOT_FOUND", "ENDPOINT_UNREACHABLE", "CLUSTER_SCOPE_NOT_FOUND", "CAPABILITIES_INSUFFICIENT"];
 export const viewSeverityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewSeverity"]> = ["healthy", "attention", "critical"];
 export const viewScopeTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewScopeType"]> = ["namespace", "workload", "hpa", "node", "nodepool", "cluster"];
 export const viewConfidenceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewConfidence"]> = ["exact", "inferred", "unknown"];

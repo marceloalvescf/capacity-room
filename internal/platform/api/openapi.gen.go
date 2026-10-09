@@ -156,6 +156,60 @@ func (e PDFStatus) Valid() bool {
 	}
 }
 
+// Defines values for ProfileTestCode.
+const (
+	ProfileTestCodeCAPABILITIESINSUFFICIENT     ProfileTestCode = "CAPABILITIES_INSUFFICIENT"
+	ProfileTestCodeCLUSTERSCOPENOTFOUND         ProfileTestCode = "CLUSTER_SCOPE_NOT_FOUND"
+	ProfileTestCodeENDPOINTADDRESSREJECTED      ProfileTestCode = "ENDPOINT_ADDRESS_REJECTED"
+	ProfileTestCodeENDPOINTAPINOTFOUND          ProfileTestCode = "ENDPOINT_API_NOT_FOUND"
+	ProfileTestCodeENDPOINTAUTHREJECTED         ProfileTestCode = "ENDPOINT_AUTH_REJECTED"
+	ProfileTestCodeENDPOINTCONNECTIONREJECTED   ProfileTestCode = "ENDPOINT_CONNECTION_REJECTED"
+	ProfileTestCodeENDPOINTREDIRECTREJECTED     ProfileTestCode = "ENDPOINT_REDIRECT_REJECTED"
+	ProfileTestCodeENDPOINTRESOLUTIONFAILED     ProfileTestCode = "ENDPOINT_RESOLUTION_FAILED"
+	ProfileTestCodeENDPOINTTLSFAILED            ProfileTestCode = "ENDPOINT_TLS_FAILED"
+	ProfileTestCodeENDPOINTUNREACHABLE          ProfileTestCode = "ENDPOINT_UNREACHABLE"
+	ProfileTestCodeENDPOINTURLREJECTED          ProfileTestCode = "ENDPOINT_URL_REJECTED"
+	ProfileTestCodePROFILECABUNDLEUNAVAILABLE   ProfileTestCode = "PROFILE_CA_BUNDLE_UNAVAILABLE"
+	ProfileTestCodePROFILECREDENTIALUNAVAILABLE ProfileTestCode = "PROFILE_CREDENTIAL_UNAVAILABLE"
+	ProfileTestCodePROFILEOK                    ProfileTestCode = "PROFILE_OK"
+)
+
+// Valid indicates whether the value is a known member of the ProfileTestCode enum.
+func (e ProfileTestCode) Valid() bool {
+	switch e {
+	case ProfileTestCodeCAPABILITIESINSUFFICIENT:
+		return true
+	case ProfileTestCodeCLUSTERSCOPENOTFOUND:
+		return true
+	case ProfileTestCodeENDPOINTADDRESSREJECTED:
+		return true
+	case ProfileTestCodeENDPOINTAPINOTFOUND:
+		return true
+	case ProfileTestCodeENDPOINTAUTHREJECTED:
+		return true
+	case ProfileTestCodeENDPOINTCONNECTIONREJECTED:
+		return true
+	case ProfileTestCodeENDPOINTREDIRECTREJECTED:
+		return true
+	case ProfileTestCodeENDPOINTRESOLUTIONFAILED:
+		return true
+	case ProfileTestCodeENDPOINTTLSFAILED:
+		return true
+	case ProfileTestCodeENDPOINTUNREACHABLE:
+		return true
+	case ProfileTestCodeENDPOINTURLREJECTED:
+		return true
+	case ProfileTestCodePROFILECABUNDLEUNAVAILABLE:
+		return true
+	case ProfileTestCodePROFILECREDENTIALUNAVAILABLE:
+		return true
+	case ProfileTestCodePROFILEOK:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportDeleteOutcome.
 const (
 	ReportDeleteOutcomeDeleted   ReportDeleteOutcome = "deleted"
@@ -687,14 +741,15 @@ type ProfileSummaryList struct {
 	Profiles []ProfileSummary `json:"profiles"`
 }
 
+// ProfileTestCode defines model for ProfileTestCode.
+type ProfileTestCode string
+
 // ProfileTestResult defines model for ProfileTestResult.
 type ProfileTestResult struct {
 	// Capabilities The names of the capabilities the source offers, in their order; empty when not ok.
-	Capabilities []string `json:"capabilities"`
-
-	// Code PROFILE_OK; or ENDPOINT_URL_REJECTED, ENDPOINT_ADDRESS_REJECTED, ENDPOINT_RESOLUTION_FAILED, ENDPOINT_CONNECTION_REJECTED, ENDPOINT_REDIRECT_REJECTED, PROFILE_CREDENTIAL_UNAVAILABLE, PROFILE_CA_BUNDLE_UNAVAILABLE, ENDPOINT_TLS_FAILED, ENDPOINT_AUTH_REJECTED, ENDPOINT_API_NOT_FOUND, ENDPOINT_UNREACHABLE, CLUSTER_SCOPE_NOT_FOUND, CAPABILITIES_INSUFFICIENT.
-	Code string `json:"code"`
-	Ok   bool   `json:"ok"`
+	Capabilities []string        `json:"capabilities"`
+	Code         ProfileTestCode `json:"code"`
+	Ok           bool            `json:"ok"`
 }
 
 // ProfileThresholds The seven thresholds of a report; a key left out keeps its value.
@@ -992,6 +1047,12 @@ type CreateProfileParams struct {
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
+// TestProfileDraftParams defines parameters for TestProfileDraft.
+type TestProfileDraftParams struct {
+	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
+}
+
 // DeleteProfileParams defines parameters for DeleteProfile.
 type DeleteProfileParams struct {
 	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
@@ -1103,6 +1164,9 @@ type ChangeAccountJSONRequestBody = AccountChange
 
 // CreateProfileJSONRequestBody defines body for CreateProfile for application/json ContentType.
 type CreateProfileJSONRequestBody = ProfileCreate
+
+// TestProfileDraftJSONRequestBody defines body for TestProfileDraft for application/json ContentType.
+type TestProfileDraftJSONRequestBody = ProfileDraft
 
 // ReviseProfileJSONRequestBody defines body for ReviseProfile for application/json ContentType.
 type ReviseProfileJSONRequestBody = ProfileChange

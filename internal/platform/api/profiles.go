@@ -271,5 +271,28 @@ func (s *Server) testProfile(w http.ResponseWriter, r *http.Request, a auth.Auth
 	if capabilities == nil {
 		capabilities = []string{}
 	}
-	writeJSON(w, http.StatusOK, ProfileTestResult{Ok: result.OK, Code: result.Code, Capabilities: capabilities})
+	writeJSON(w, http.StatusOK, ProfileTestResult{Ok: result.OK, Code: ProfileTestCode(result.Code), Capabilities: capabilities})
 }
+
+func (s *Server) testProfileDraft(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
+	var body ProfileCreate
+	required := []string{"display_name", "endpoint_url", "cluster_name", "allowed_namespaces"}
+	if p := DecodeBody(r, &body, required, profileLimits); p != nil {
+		WriteProblem(w, p)
+		return
+	}
+	result, err := s.Profiles.TestDraft(r.Context(), a.Principal, body.Id, documentOf(body))
+	if err != nil {
+		s.failProfile(w, r, err)
+		return
+	}
+	capabilities := result.Capabilities
+	if capabilities == nil {
+		capabilities = []string{}
+	}
+	writeJSON(w, http.StatusOK, ProfileTestResult{Ok: result.OK, Code: ProfileTestCode(result.Code), Capabilities: capabilities})
+}
+
+// ProfileDraft is the body of the draft test: a ProfileCreate whose id may be
+// empty. The generated request body type names it.
+type ProfileDraft = ProfileCreate

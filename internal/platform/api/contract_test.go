@@ -3,9 +3,12 @@ package api
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
 
 	"gopkg.in/yaml.v3"
 )
@@ -141,5 +144,19 @@ func TestContractOperationsHaveADefault(t *testing.T) {
 	}
 	if operations != len((&Server{}).Routes()) {
 		t.Errorf("%d operations in the contract, %d routes", operations, len((&Server{}).Routes()))
+	}
+}
+
+func TestProfileTestCodesEqualTheService(t *testing.T) {
+	var got []string
+	enum, ok := loadSchemas(t)["ProfileTestCode"]["enum"].([]any)
+	if !ok {
+		t.Fatal("the contract has no ProfileTestCode enum")
+	}
+	for _, v := range enum {
+		got = append(got, v.(string))
+	}
+	if !slices.Equal(got, profiles.TestCodes) {
+		t.Fatalf("contract %v, service %v", got, profiles.TestCodes)
 	}
 }

@@ -5,15 +5,20 @@ package profiles
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
 )
 
 const secretToken = "s3cr3t-token-value"
@@ -284,4 +289,162 @@ func TestTestDeadlineIsAudited(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.assertFailed(t, got, "ENDPOINT_UNREACHABLE")
+}
+
+func (f *fixture) draftEvents(t *testing.T) (total, untargeted int) {
+	t.Helper()
+	err := f.pool.QueryRow(context.Background(),
+		`SELECT count(*), count(*) FILTER (WHERE target_type IS NULL AND target_id IS NULL) FROM audit_events WHERE action = 'profile.test'`,
+	).Scan(&total, &untargeted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return total, untargeted
+}
+
+func (f *fixture) profileCount(t *testing.T) int {
+	t.Helper()
+	var n int
+	if err := f.pool.QueryRow(context.Background(), `SELECT count(*) FROM profiles`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func TestTestDraftOK(t *testing.T) {
+	f := newFixture(t)
+	_, endpoint, _ := fakePrometheus(t)
+	d := baseDocument()
+	d.EndpointURL = endpoint
+	got, err := f.svc.TestDraft(context.Background(), f.root, "", d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := TestResult{OK: true, Code: "PROFILE_OK", Capabilities: []string{
+		"namespace_usage", "workload_usage", "requests_limits", "hpa_history", "workloads_without_hpa",
+		"ip_node_mapping", "nodepool_discovery", "node_utilization", "node_autoscaling",
+	}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %+v", got)
+	}
+	if n := f.profileCount(t); n != 0 {
+		t.Fatalf("%d profiles", n)
+	}
+	audits := f.audits(t, "profile.test")
+	if len(audits) != 1 || audits[0].Outcome != "succeeded" || audits[0].TargetID != "" ||
+		!reflect.DeepEqual(audits[0].Meta, map[string]any{"code": "PROFILE_OK", "draft": true}) {
+		t.Fatalf("audit %+v", audits)
+	}
+	if total, untargeted := f.draftEvents(t); total != 1 || untargeted != 1 {
+		t.Fatalf("events %d, untargeted %d", total, untargeted)
+	}
+}
+
+func TestTestDraftNamesItsTarget(t *testing.T) {
+	f := newFixture(t)
+	_, endpoint, _ := fakePrometheus(t)
+	d := baseDocument()
+	d.EndpointURL = endpoint
+	if _, err := f.svc.TestDraft(context.Background(), f.root, "prod", d); err != nil {
+		t.Fatal(err)
+	}
+	var targetType, targetID string
+	err := f.pool.QueryRow(context.Background(), `SELECT target_type, target_id FROM audit_events WHERE action = 'profile.test'`).Scan(&targetType, &targetID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if targetType != "profile" || targetID != "prod" {
+		t.Fatalf("target %q/%q", targetType, targetID)
+	}
+	if n := f.profileCount(t); n != 0 {
+		t.Fatalf("%d profiles", n)
+	}
+}
+
+func TestTestDraftRefusesTheDocument(t *testing.T) {
+	f := newFixture(t)
+	d := baseDocument()
+	d.ClusterName = ""
+	d.TimeoutSeconds = 0
+	_, err := f.svc.TestDraft(context.Background(), f.root, "", d)
+	got := problemsOf(t, err)
+	sort.Slice(got, func(i, j int) bool { return got[i].Field < got[j].Field })
+	want := []Problem{{Field: "cluster_name", Word: "empty"}, {Field: "timeout_seconds", Word: "invalid"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("problems %+v", got)
+	}
+	if total, _ := f.draftEvents(t); total != 0 {
+		t.Fatalf("%d audit rows", total)
+	}
+}
+
+func TestTestDraftRefusesTheID(t *testing.T) {
+	f := newFixture(t)
+	server, endpoint, _ := fakePrometheus(t)
+	d := baseDocument()
+	d.EndpointURL = endpoint
+	_, err := f.svc.TestDraft(context.Background(), f.root, "Bad..Name", d)
+	if got := problemsOf(t, err); !reflect.DeepEqual(got, []Problem{{Field: "id", Word: "invalid"}}) {
+		t.Fatalf("problems %+v", got)
+	}
+	if n := len(server.Seen()); n != 0 {
+		t.Fatalf("the server saw %d requests", n)
+	}
+}
+
+func TestTestDraftRefusedByPolicy(t *testing.T) {
+	f := newFixture(t)
+	server, endpoint, _ := fakePrometheus(t)
+	d := baseDocument()
+	d.EndpointURL = endpoint
+	f.svc.Policy.Networks = []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}
+	got, err := f.svc.TestDraft(context.Background(), f.root, "", d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.assertFailed(t, got, "ENDPOINT_ADDRESS_REJECTED")
+	if n := len(server.Seen()); n != 0 {
+		t.Fatalf("the server saw %d requests", n)
+	}
+}
+
+func TestTestDraftRefusesTheEndpoint(t *testing.T) {
+	f := newFixture(t)
+	d := baseDocument()
+	d.EndpointURL = "http://169.254.169.254/"
+	_, err := f.svc.TestDraft(context.Background(), f.root, "", d)
+	if code := policyCode(t, err); code != netpolicy.CodeAddressRejected {
+		t.Fatalf("code %s", code)
+	}
+	if total, _ := f.draftEvents(t); total != 0 {
+		t.Fatalf("%d audit rows", total)
+	}
+}
+
+func TestTestDraftUnreachable(t *testing.T) {
+	f := newFixture(t)
+	d := baseDocument()
+	d.EndpointURL = "http://metrics.test:1/api/v1"
+	d.TimeoutSeconds = 1
+	start := time.Now()
+	got, err := f.svc.TestDraft(context.Background(), f.root, "", d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.assertFailed(t, got, "ENDPOINT_UNREACHABLE")
+	if took := time.Since(start); took >= 6*time.Second {
+		t.Fatalf("took %s", took)
+	}
+}
+
+func TestTestDraftAsOperator(t *testing.T) {
+	f := newFixture(t)
+	op := newPrincipal(t, f.pool, "oscar", auth.RoleOperator)
+	_, err := f.svc.TestDraft(context.Background(), op, "", baseDocument())
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("err = %v", err)
+	}
+	if total, _ := f.draftEvents(t); total != 0 {
+		t.Fatalf("%d audit rows", total)
+	}
 }
