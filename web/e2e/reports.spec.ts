@@ -1,9 +1,8 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import en from "../src/locales/en.json" with { type: "json" };
-import { expect, expectNoViolations, test, watchPolicy } from "./fixtures";
+import { admin, expect, expectFits, expectNoViolations, fitSizes, signIn, test, watchPolicy } from "./fixtures";
 
-const admin = { username: "e2e-admin", password: "e2e-Fixture-Pass-01!" };
 const operator = { username: "e2e-operator", password: "e2e-Operator-Pass-03!" };
 const reader = { username: "e2e-reader", password: "e2e-Reader-Pass-04!" };
 
@@ -22,14 +21,6 @@ function mondayText(now: Date, zone: string, weeks: number): string {
   const sinceMonday = (today.getUTCDay() + 6) % 7;
   const monday = new Date(today.getTime() + (weeks * 7 - sinceMonday) * 86_400_000);
   return `${monday.toISOString().slice(0, 10)} 00:00`;
-}
-
-async function signIn(page: Page, user: { username: string; password: string }, path: string) {
-  await page.goto(path);
-  await expect(page.getByRole("heading", { name: en.login.title })).toBeVisible({ timeout: 10_000 });
-  await page.getByLabel(en.login.username, { exact: true }).fill(user.username);
-  await page.getByLabel(en.login.password, { exact: true }).fill(user.password);
-  await page.getByRole("button", { name: en.login.submit, exact: true }).click();
 }
 
 // Creates a user through the API, with the session and the CSRF token of the
@@ -170,6 +161,23 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await expectNoViolations(page);
     await page.keyboard.press("Escape");
 
+    await page.goto(jobUrl);
+    await expect(page.getByText(en.reportStatus.collected, { exact: true })).toBeVisible();
+  });
+
+  await test.step("the last workloads row fits the window when opened", async () => {
+    const original = page.viewportSize();
+    const id = /[0-9a-f-]{36}$/.exec(jobUrl)?.[0] ?? "";
+    for (const size of fitSizes) {
+      await page.setViewportSize(size);
+      await page.goto(`/reports/${id}/workloads`);
+      const workloads = page.getByRole("table", { name: en.report.tab.workloads, exact: true });
+      await workloads.getByRole("button", { name: /^Show the details of / }).last().click();
+      await expectFits(page, workloads.locator("tbody tr").last());
+    }
+    if (original !== null) {
+      await page.setViewportSize(original);
+    }
     await page.goto(jobUrl);
     await expect(page.getByText(en.reportStatus.collected, { exact: true })).toBeVisible();
   });
