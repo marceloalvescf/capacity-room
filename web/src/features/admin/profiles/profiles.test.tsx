@@ -212,3 +212,53 @@ describe("the profiles screen", () => {
     expect(within(screen.getByRole("navigation", { name: "Main navigation" })).queryByRole("link", { name: "Profiles" })).toBeNull();
   });
 });
+
+describe("the mock of the profile routes", () => {
+  const send = async (method: string, path: string, body: unknown) => {
+    const response = await fetch(`${window.location.origin}/api/v1${path}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return (await response.json()) as ReturnType<typeof adminProfile>;
+  };
+
+  it("fills what a create leaves out and keeps the thresholds left out", async () => {
+    mock.adminProfiles = [];
+    const created = await send("POST", "/admin/profiles", { id: "new", thresholds: { warning_percent: 60 } });
+    expect(created).toMatchObject({
+      id: "new",
+      active: false,
+      timeout_seconds: 90,
+      tls_verify: true,
+      cluster_label: "cluster",
+      default_period: null,
+      revision: 1,
+    });
+    expect(created.thresholds).toEqual({ ...adminProfile().thresholds, warning_percent: 60 });
+  });
+
+  it("raises the revision only when a revise changes something", async () => {
+    mock.adminProfiles = [production];
+    const same = await send("PATCH", "/admin/profiles/production", {
+      base_revision_id: production.revision_id,
+      display_name: "Production",
+      thresholds: { warning_percent: 70 },
+    });
+    expect(same.revision).toBe(3);
+    expect(same.revision_id).toBe(production.revision_id);
+    const changed = await send("PATCH", "/admin/profiles/production", {
+      base_revision_id: production.revision_id,
+      thresholds: { critical_percent: 90 },
+    });
+    expect(changed.revision).toBe(4);
+    expect(changed.thresholds).toEqual({ ...production.thresholds, critical_percent: 90 });
+  });
+
+  it("lists in identifier order", async () => {
+    mock.adminProfiles = [staging, production, dr];
+    const response = await fetch(`${window.location.origin}/api/v1/admin/profiles`);
+    const body = (await response.json()) as { profiles: { id: string }[] };
+    expect(body.profiles.map((profile) => profile.id)).toEqual(["dr", "production", "staging"]);
+  });
+});

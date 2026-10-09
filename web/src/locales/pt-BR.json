@@ -627,7 +627,8 @@
         "nodepool_spread_points": "Diferença entre node pools {{value}}",
         "bursty_gap_percent": "Variação {{value}} %",
         "hpa_replica_divergence": "Divergência {{value}}"
-      }
+      },
+      "testRefused": "Corrija os campos marcados e teste de novo."
     }
   },
   "endpointType": {

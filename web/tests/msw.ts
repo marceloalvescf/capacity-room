@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll } from "vitest";
 import type { components } from "@/api/schema.gen";
+import type { Profile } from "@/features/admin/profiles/api";
 
 type Schemas = components["schemas"];
 type Session = Schemas["Session"];
@@ -55,7 +56,7 @@ type ReportView = Schemas["ReportView"];
 type ErrorCode = Schemas["ErrorCode"];
 type ProfileSummary = Schemas["ProfileSummary"];
 type AdminUser = Schemas["User"];
-type AdminProfile = Schemas["Profile"];
+type AdminProfile = Profile;
 type ProfileTestResult = Schemas["ProfileTestResult"];
 
 export function report(overrides: Partial<Report> = {}): Report {
@@ -161,6 +162,24 @@ export function adminProfile(overrides: Partial<AdminProfile> = {}): AdminProfil
     },
     ...overrides,
   };
+}
+
+// A profile as the API stores it when a document leaves every field out.
+function emptyProfile(id: string): AdminProfile {
+  return adminProfile({
+    id,
+    revision_id: crypto.randomUUID(),
+    revision: 1,
+    display_name: "",
+    active: false,
+    endpoint_url: "",
+    cluster_name: "",
+  });
+}
+
+// A document laid over a profile: a field left out keeps its value, and a partial thresholds object keeps the keys left out.
+function overlay(base: AdminProfile, document: Schemas["ProfileDocument"]): AdminProfile {
+  return { ...base, ...document, thresholds: { ...base.thresholds, ...document.thresholds } };
 }
 
 // The data the report and profile handlers serve; a test sets it, and it is
@@ -334,7 +353,9 @@ export function installMockApi(initial: Session): Mock {
       await record(request);
       return (
         refusal("GET", "/admin/profiles") ??
-        HttpResponse.json({ profiles: mock.adminProfiles } satisfies Schemas["ProfileList"])
+        HttpResponse.json({
+          profiles: mock.adminProfiles.toSorted((a, b) => a.id.localeCompare(b.id)),
+        } satisfies Schemas["ProfileList"])
       );
     }),
     http.post(api("/admin/profiles/test"), async ({ request }) => {
@@ -361,7 +382,7 @@ export function installMockApi(initial: Session): Mock {
       if (mock.adminProfiles.some((profile) => profile.id === body.id)) {
         return failure(409, "PROFILE_ID_TAKEN");
       }
-      const created = adminProfile({ ...body, revision_id: crypto.randomUUID(), revision: 1 });
+      const created = overlay(emptyProfile(body.id), body);
       mock.adminProfiles = [...mock.adminProfiles, created].sort((a, b) => a.id.localeCompare(b.id));
       return HttpResponse.json(created, { status: 201 });
     }),
@@ -389,7 +410,11 @@ export function installMockApi(initial: Session): Mock {
       if (base !== found.revision_id) {
         return failure(409, "PROFILE_REVISION_STALE");
       }
-      const revised = { ...found, ...fields, revision_id: crypto.randomUUID(), revision: found.revision + 1 };
+      const changed = overlay(found, fields);
+      if (JSON.stringify(changed) === JSON.stringify(found)) {
+        return HttpResponse.json(found);
+      }
+      const revised = { ...changed, revision_id: crypto.randomUUID(), revision: found.revision + 1 };
       mock.adminProfiles = mock.adminProfiles.map((profile) => (profile.id === id ? revised : profile));
       return HttpResponse.json(revised);
     }),

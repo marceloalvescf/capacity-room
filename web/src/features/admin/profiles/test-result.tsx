@@ -1,11 +1,12 @@
 import { useTranslation } from "react-i18next";
+import { errorText } from "@/api/errors";
 import { StatusMark } from "@/components/status-mark";
 import type { ProfileTestResult } from "./api";
 
 export type TestOutcome =
   | { kind: "result"; result: ProfileTestResult }
   | { kind: "refused" }
-  | { kind: "failed"; text: string };
+  | { kind: "failed"; error: Error };
 
 // What a test of a profile found: the outcome as a mark and a sentence, the draft the API refused to judge, or
 // the failure of the call itself.
@@ -29,7 +30,7 @@ export function TestResultLine({ outcome }: { outcome: TestOutcome | null }) {
     case "failed":
       return (
         <p className="text-sm">
-          <StatusMark status="critical" label={outcome.text} />
+          <StatusMark status="critical" label={errorText(t, outcome.error)} />
         </p>
       );
   }

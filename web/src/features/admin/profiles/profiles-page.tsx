@@ -44,8 +44,8 @@ function ProfileRow({
 }: {
   profile: Profile;
   outcome: TestOutcome | null;
-  onOutcome: (id: string, outcome: TestOutcome) => void;
-  onFailure: (text: string | null) => void;
+  onOutcome: (id: string, outcome: TestOutcome | null) => void;
+  onFailure: (error: Error | null) => void;
 }) {
   const { t } = useTranslation();
   const announce = useAnnounce();
@@ -59,7 +59,7 @@ function ProfileRow({
     try {
       onOutcome(profile.id, { kind: "result", result: await test.mutateAsync() });
     } catch (thrown) {
-      onOutcome(profile.id, { kind: "failed", text: errorText(t, toError(thrown)) });
+      onOutcome(profile.id, { kind: "failed", error: toError(thrown) });
     }
   }
 
@@ -67,12 +67,13 @@ function ProfileRow({
     onFailure(null);
     try {
       await remove.mutateAsync();
+      onOutcome(profile.id, null);
       address.write((next) => {
         next.delete("open");
       });
       announce(t("admin.profiles.deleted", { name: profile.display_name }));
     } catch (thrown) {
-      onFailure(errorText(t, toError(thrown)));
+      onFailure(toError(thrown));
     }
     setAsking(false);
   }
@@ -83,7 +84,7 @@ function ProfileRow({
         <Fact label={t("admin.profiles.fact.endpoint")} wide>
           <span className="font-mono">{profile.endpoint_url}</span>
         </Fact>
-        <Fact label={t("admin.profiles.fact.type")}>{t(`endpointType.${profile.endpoint_type ?? "auto"}`)}</Fact>
+        <Fact label={t("admin.profiles.fact.type")}>{t(`endpointType.${profile.endpoint_type}`)}</Fact>
         <Fact label={t("admin.profiles.fact.credential")}>
           <FileName name={profile.credential_file} />
         </Fact>
@@ -94,7 +95,7 @@ function ProfileRow({
           {t("admin.profiles.revisionValue", { revision: profile.revision, time: formatTime(profile.created_at) })}
         </Fact>
         <Fact label={t("admin.profiles.fact.namespaces")} wide>
-          <span className="font-mono">{(profile.allowed_namespaces ?? []).join(", ")}</span>
+          <span className="font-mono">{profile.allowed_namespaces.join(", ")}</span>
         </Fact>
         <Fact label={t("admin.profiles.fact.choices")} wide>
           <span className="font-mono">{choices}</span>
@@ -144,11 +145,19 @@ export function ProfilesPage() {
   const { t } = useTranslation();
   const profiles = useAdminProfiles();
   const [outcomes, setOutcomes] = useState<ReadonlyMap<string, TestOutcome>>(new Map());
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<Error | null>(null);
   useScreenTitle(t("admin.profiles.title"));
 
-  const onOutcome = useCallback((id: string, outcome: TestOutcome) => {
-    setOutcomes((earlier) => new Map(earlier).set(id, outcome));
+  const onOutcome = useCallback((id: string, outcome: TestOutcome | null) => {
+    setOutcomes((earlier) => {
+      const next = new Map(earlier);
+      if (outcome === null) {
+        next.delete(id);
+      } else {
+        next.set(id, outcome);
+      }
+      return next;
+    });
   }, []);
 
   const columns = useMemo<Column<Profile>[]>(
@@ -215,7 +224,7 @@ export function ProfilesPage() {
           {t("admin.profiles.new")}
         </Link>
       </div>
-      {failure === null ? null : <Alert tone="error">{failure}</Alert>}
+      {failure === null ? null : <Alert tone="error">{errorText(t, failure)}</Alert>}
       {content}
     </div>
   );

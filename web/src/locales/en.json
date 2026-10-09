@@ -627,7 +627,8 @@
         "nodepool_spread_points": "Node pool spread {{value}}",
         "bursty_gap_percent": "Variation {{value}} %",
         "hpa_replica_divergence": "Divergence {{value}}"
-      }
+      },
+      "testRefused": "Correct the marked fields, then test again."
     }
   },
   "endpointType": {

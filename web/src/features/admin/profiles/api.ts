@@ -4,7 +4,10 @@ import type { components } from "@/api/schema.gen";
 import { profilesKey } from "@/features/reports/api";
 
 type Schemas = components["schemas"];
-export type Profile = Schemas["Profile"];
+// The contract requires every field of a profile as the administration reads it; the generated type loses that
+// across `allOf`, so it is restored here once.
+export type Profile = Schemas["Profile"] &
+  Required<Schemas["ProfileDocument"]> & { thresholds: Required<Schemas["ProfileThresholds"]> };
 export type ProfileTestResult = Schemas["ProfileTestResult"];
 
 export const adminProfilesKey = ["admin", "profiles"] as const;
@@ -18,7 +21,7 @@ export function useAdminProfiles(): UseQueryResult<Profile[]> {
       if (data === undefined) {
         throw new Error("the profiles answer is empty");
       }
-      return data.profiles;
+      return data.profiles as Profile[];
     },
   });
 }
@@ -32,7 +35,7 @@ export function useAdminProfile(id: string): UseQueryResult<Profile> {
       if (data === undefined) {
         throw new Error("the profile answer is empty");
       }
-      return data;
+      return data as Profile;
     },
   });
 }
