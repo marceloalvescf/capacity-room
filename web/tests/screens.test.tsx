@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { findBannedTerms } from "@/i18n/vocabulary";
 import { i18next } from "@/i18n/i18n";
 import type { Language } from "@/i18n/language";
-import { anonymous, installMockApi, profileSummary, report, signedIn } from "./msw";
+import { adminUser, anonymous, installMockApi, profileSummary, report, signedIn } from "./msw";
 import { location, renderApp } from "./render";
 import { mockColourScheme } from "./match-media";
 import viewEn from "./fixtures/view/edge-scaling.en.json";
@@ -86,6 +86,24 @@ describe("screens", () => {
         const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
         expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
         expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);
+      });
+    }
+  }
+
+  for (const language of languages) {
+    for (const theme of ["light", "dark"]) {
+      it(`axe and vocabulary: the users with a row opened, ${language}, ${theme}`, async () => {
+        document.documentElement.setAttribute("data-theme", theme);
+        const other = adminUser();
+        mock.adminUsers = [adminUser({ id: signedIn().principal.id, username: "ana", role: "administrator" }), other];
+        mock.session = signedIn({ language });
+        const { container } = await renderApp(`/users?open=${other.id}`, language);
+        await screen.findByRole("heading", { level: 1, name: i18next.t("admin.users.title") });
+        await screen.findByRole("button", { name: i18next.t("admin.users.save") });
+        const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
+        expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+        expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);
+        expect(document.title).toBe(i18next.t("app.title", { screen: i18next.t("admin.users.title") }));
       });
     }
   }

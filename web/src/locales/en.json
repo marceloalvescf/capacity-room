@@ -11,7 +11,8 @@
     "label": "Main navigation",
     "reports": "Reports",
     "generate": "New report",
-    "account": "Account"
+    "account": "Account",
+    "users": "Users"
   },
   "header": {
     "language": "Language: {{language}}",
@@ -530,5 +531,59 @@
     "available": "Available",
     "partial": "Partial",
     "unavailable": "Unavailable"
+  },
+  "admin": {
+    "state": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "users": {
+      "title": "Users",
+      "new": "New user",
+      "empty": "No user yet.",
+      "loadFailed": "The users could not be loaded.",
+      "column": {
+        "user": "User",
+        "role": "Role",
+        "state": "State"
+      },
+      "you": "(you)",
+      "role": {
+        "administrator": "Administrator",
+        "operator": "Operator",
+        "reader": "Reader"
+      },
+      "created": "Created {{date}}",
+      "roleLabel": "Role",
+      "languageLabel": "Language",
+      "roleHint": "Changing the role signs the user out everywhere.",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "savedSignedOut": "Saved. The user was signed out everywhere.",
+      "password": {
+        "label": "New password",
+        "hint": "12 to 1024 characters. Setting it signs the user out everywhere.",
+        "submit": "Set password",
+        "done": "Password set. The user was signed out everywhere."
+      },
+      "deactivate": "Deactivate",
+      "deactivateHint": "Signs the user out and blocks sign-in. Their reports stay.",
+      "deactivateTitle": "Deactivate {{name}}?",
+      "deactivateBody": "{{name}} is signed out and can no longer sign in. Their reports stay, and the account can be reactivated.",
+      "deactivateConfirm": "Deactivate",
+      "cancel": "Cancel",
+      "deactivated": "{{name}} was deactivated.",
+      "reactivate": "Reactivate",
+      "reactivated": "{{name}} can sign in again.",
+      "own": "This is your account. Change your password and language on the account page.",
+      "ownLink": "Open the account page",
+      "username": "User name",
+      "passwordLabel": "Password",
+      "passwordHint": "12 to 1024 characters. The user can change it on their account page.",
+      "create": "Create user",
+      "creating": "Creating…",
+      "createdNotice": "{{name}} was created."
+    }
   }
 }

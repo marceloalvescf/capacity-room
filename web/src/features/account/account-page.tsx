@@ -17,7 +17,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { usePrincipal } from "@/session/session";
 import { useChangeLanguage } from "@/session/use-change-language";
 
-const newPassword = z
+export const newPassword = z
   .string()
   .min(1, "validation.required")
   .min(12, "validation.passwordShort")

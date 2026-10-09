@@ -67,6 +67,13 @@ export function Shell() {
                 </NavLink>
               </li>
             )}
+            {principal.role === "administrator" ? (
+              <li>
+                <NavLink to="/users" className={navLink}>
+                  {t("nav.users")}
+                </NavLink>
+              </li>
+            ) : null}
             <li>
               <NavLink to="/account" className={navLink}>
                 {t("nav.account")}

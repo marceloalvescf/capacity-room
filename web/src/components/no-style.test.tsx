@@ -4,6 +4,7 @@ import { useState } from "react";
 import { expect, it } from "vitest";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Menu, MenuContent, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/ui/menu";
 import { PeriodPicker } from "@/features/reports/period-picker";
@@ -132,6 +133,36 @@ it("no style from the popover and the dialog", async () => {
   expect(document.querySelectorAll("style")).toHaveLength(0);
   await user.keyboard("{Escape}");
   expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(document.querySelectorAll("style")).toHaveLength(0);
+  expect(stop()).toEqual([]);
+});
+
+it("opening and closing the dialog writes no style", async () => {
+  await i18next.changeLanguage("en");
+  const stop = watchStyles();
+  const user = userEvent.setup();
+  function Form() {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <button type="button" onClick={() => { setOpen(true); }}>
+          {"Open"}
+        </button>
+        <Dialog open={open} onOpenChange={setOpen} title="Title">
+          <input aria-label="Name" />
+        </Dialog>
+      </>
+    );
+  }
+  render(<Form />);
+  await user.click(screen.getByRole("button", { name: "Open" }));
+  expect(await screen.findByRole("dialog", { name: "Title" })).toBeInTheDocument();
+  // Radix writes pointer-events on its layers through the DOM; the dialog declares nothing else.
+  expect(styled().flatMap(declared).filter((name) => name !== "pointer-events")).toEqual([]);
+  expect(document.querySelectorAll("style")).toHaveLength(0);
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(styled().flatMap(declared).filter((name) => name !== "pointer-events")).toEqual([]);
   expect(document.querySelectorAll("style")).toHaveLength(0);
   expect(stop()).toEqual([]);
 });

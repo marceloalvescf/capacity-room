@@ -47,4 +47,5 @@ export const families: Readonly<Record<string, readonly string[]>> = {
   capability: viewCapabilityNameValues,
   capabilityState: viewCapabilityStateValues,
   "period.calendar": calendarRanges,
+  "admin.users.role": roleValues,
 };

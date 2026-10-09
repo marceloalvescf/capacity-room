@@ -54,6 +54,7 @@ type Report = Schemas["Report"];
 type ReportView = Schemas["ReportView"];
 type ErrorCode = Schemas["ErrorCode"];
 type ProfileSummary = Schemas["ProfileSummary"];
+type AdminUser = Schemas["User"];
 
 export function report(overrides: Partial<Report> = {}): Report {
   return {
@@ -104,6 +105,19 @@ export function profileSummary(overrides: Partial<ProfileSummary> = {}): Profile
   };
 }
 
+export function adminUser(overrides: Partial<AdminUser> = {}): AdminUser {
+  return {
+    id: "a1b2c3d4-0000-4000-8000-000000000001",
+    username: "ana.souza",
+    role: "operator",
+    language: "pt-BR",
+    active: true,
+    created_at: "2026-09-01T12:00:00Z",
+    updated_at: "2026-09-01T12:00:00Z",
+    ...overrides,
+  };
+}
+
 // The data the report and profile handlers serve; a test sets it, and it is
 // emptied after each test.
 export interface Mock {
@@ -116,6 +130,10 @@ export interface Mock {
   // The views of the reports, keyed `${id}:${lang}`, and the failures that replace them.
   views: Map<string, ReportView>;
   viewFailure: Map<string, { status: number; code: ErrorCode }>;
+  // The users the administration routes serve, in name order.
+  adminUsers: AdminUser[];
+  // Answers that replace the next call of a route, keyed `METHOD /path`; each is used once.
+  failures: Map<string, { status: number; code: ErrorCode }>;
 }
 
 const api = (path: string): string => `${window.location.origin}/api/v1${path}`;
@@ -128,6 +146,8 @@ export function installMockApi(initial: Session): Mock {
   const mock: Mock = { session: initial, calls: [], reports: [], profiles: [], requested: new Map(),
     views: new Map(),
     viewFailure: new Map(),
+    adminUsers: [],
+    failures: new Map(),
   };
 
   async function record(request: Request): Promise<unknown> {
@@ -156,6 +176,17 @@ export function installMockApi(initial: Session): Mock {
     }
     mock.reports = mock.reports.filter((r) => r.id !== id);
     return "deleted";
+  }
+
+  // The answer a test set for this call, once.
+  function refusal(method: string, path: string): Response | null {
+    const key = `${method} ${path}`;
+    const refused = mock.failures.get(key);
+    if (refused === undefined) {
+      return null;
+    }
+    mock.failures.delete(key);
+    return failure(refused.status, refused.code);
   }
 
   const handlers = [
@@ -187,6 +218,61 @@ export function installMockApi(initial: Session): Mock {
         return HttpResponse.json(mock.session.principal);
       }
       return HttpResponse.json(errorBody("UNAUTHENTICATED"), { status: 401 });
+    }),
+    http.get(api("/admin/users"), async ({ request }) => {
+      await record(request);
+      return refusal("GET", "/admin/users") ?? HttpResponse.json({ users: mock.adminUsers } satisfies Schemas["UserList"]);
+    }),
+    http.post(api("/admin/users"), async ({ request }) => {
+      const body = (await record(request)) as Schemas["NewUser"];
+      const refused = refusal("POST", "/admin/users");
+      if (refused !== null) {
+        return refused;
+      }
+      if (mock.adminUsers.some((user) => user.username === body.username)) {
+        return failure(409, "USERNAME_TAKEN");
+      }
+      const created = adminUser({
+        id: crypto.randomUUID(),
+        username: body.username,
+        role: body.role,
+        language: body.language,
+      });
+      mock.adminUsers = [...mock.adminUsers, created].sort((a, b) => a.username.localeCompare(b.username));
+      return HttpResponse.json(created, { status: 201 });
+    }),
+    http.patch(api("/admin/users/:id"), async ({ request, params }) => {
+      const body = (await record(request)) as Schemas["UserChange"];
+      const id = String(params["id"]);
+      const refused = refusal("PATCH", `/admin/users/${id}`);
+      if (refused !== null) {
+        return refused;
+      }
+      const found = mock.adminUsers.find((user) => user.id === id);
+      if (found === undefined) {
+        return failure(404, "USER_NOT_FOUND");
+      }
+      const changed = {
+        ...found,
+        ...(body.role === undefined ? {} : { role: body.role }),
+        ...(body.language === undefined ? {} : { language: body.language }),
+        ...(body.active === undefined ? {} : { active: body.active }),
+      };
+      mock.adminUsers = mock.adminUsers.map((user) => (user.id === id ? changed : user));
+      return HttpResponse.json(changed);
+    }),
+    http.delete(api("/admin/users/:id"), async ({ request, params }) => {
+      await record(request);
+      const id = String(params["id"]);
+      const refused = refusal("DELETE", `/admin/users/${id}`);
+      if (refused !== null) {
+        return refused;
+      }
+      if (!mock.adminUsers.some((user) => user.id === id)) {
+        return failure(404, "USER_NOT_FOUND");
+      }
+      mock.adminUsers = mock.adminUsers.map((user) => (user.id === id ? { ...user, active: false } : user));
+      return new HttpResponse(null, { status: 204 });
     }),
     http.get(api("/profiles"), async ({ request }) => {
       await record(request);
@@ -286,6 +372,8 @@ export function installMockApi(initial: Session): Mock {
     mock.requested = new Map();
     mock.views = new Map();
     mock.viewFailure = new Map();
+    mock.adminUsers = [];
+    mock.failures = new Map();
     server.resetHandlers(...handlers);
   });
   afterAll(() => {

@@ -11,7 +11,8 @@
     "label": "Navegação principal",
     "reports": "Relatórios",
     "generate": "Novo relatório",
-    "account": "Conta"
+    "account": "Conta",
+    "users": "Usuários"
   },
   "header": {
     "language": "Idioma: {{language}}",
@@ -530,5 +531,59 @@
     "available": "Disponível",
     "partial": "Parcial",
     "unavailable": "Indisponível"
+  },
+  "admin": {
+    "state": {
+      "active": "Ativo",
+      "inactive": "Inativo"
+    },
+    "users": {
+      "title": "Usuários",
+      "new": "Novo usuário",
+      "empty": "Nenhum usuário ainda.",
+      "loadFailed": "Não foi possível carregar os usuários.",
+      "column": {
+        "user": "Usuário",
+        "role": "Papel",
+        "state": "Estado"
+      },
+      "you": "(você)",
+      "role": {
+        "administrator": "Administrador",
+        "operator": "Operador",
+        "reader": "Leitor"
+      },
+      "created": "Criado em {{date}}",
+      "roleLabel": "Papel",
+      "languageLabel": "Idioma",
+      "roleHint": "Mudar o papel encerra todas as sessões do usuário.",
+      "save": "Salvar alterações",
+      "saving": "Salvando…",
+      "saved": "Salvo.",
+      "savedSignedOut": "Salvo. Todas as sessões do usuário foram encerradas.",
+      "password": {
+        "label": "Nova senha",
+        "hint": "De 12 a 1024 caracteres. Defini-la encerra todas as sessões do usuário.",
+        "submit": "Definir senha",
+        "done": "Senha definida. Todas as sessões do usuário foram encerradas."
+      },
+      "deactivate": "Desativar",
+      "deactivateHint": "Encerra as sessões e bloqueia a entrada. Os relatórios do usuário ficam.",
+      "deactivateTitle": "Desativar {{name}}?",
+      "deactivateBody": "{{name}} tem as sessões encerradas e não pode mais entrar. Os relatórios ficam, e a conta pode ser reativada.",
+      "deactivateConfirm": "Desativar",
+      "cancel": "Cancelar",
+      "deactivated": "{{name}} foi desativado.",
+      "reactivate": "Reativar",
+      "reactivated": "{{name}} pode entrar de novo.",
+      "own": "Esta é a sua conta. Altere a senha e o idioma na página da conta.",
+      "ownLink": "Abrir a página da conta",
+      "username": "Nome de usuário",
+      "passwordLabel": "Senha",
+      "passwordHint": "De 12 a 1024 caracteres. O usuário pode alterá-la na página da conta.",
+      "create": "Criar usuário",
+      "creating": "Criando…",
+      "createdNotice": "{{name}} foi criado."
+    }
   }
 }

@@ -12,6 +12,8 @@ import { WorkloadsTab } from "@/features/report/workloads-tab";
 import { GeneratePage } from "@/features/reports/generate-page";
 import { ProgressPage } from "@/features/reports/progress-page";
 import { ReportsPage } from "@/features/reports/reports-page";
+import { UsersPage } from "@/features/admin/users/users-page";
+import { RequireAdministrator } from "@/session/require-administrator";
 import { RequireOperator } from "@/session/require-operator";
 import { RequireSession } from "@/session/require-session";
 import { NotFound } from "./not-found";
@@ -31,6 +33,10 @@ export const routes: RouteObject[] = [
             path: "generate",
             element: <RequireOperator />,
             children: [{ index: true, element: <GeneratePage /> }],
+          },
+          {
+            element: <RequireAdministrator />,
+            children: [{ path: "users", element: <UsersPage /> }],
           },
           { path: "jobs/:id", element: <ProgressPage /> },
           {
