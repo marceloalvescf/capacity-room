@@ -40,11 +40,11 @@ export function useAdminProfile(id: string): UseQueryResult<Profile> {
   });
 }
 
-export function useDeleteProfile(id: string) {
+export function useDeleteProfile() {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (id: string) => {
       await api.DELETE("/admin/profiles/{id}", { params: { path: { id } } });
     },
     onSuccess: () =>

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { i18next } from "@/i18n/i18n";
 import { adminProfile, installMockApi, profileSummary, server, signedIn } from "../../../../tests/msw";
 import { location, renderApp } from "../../../../tests/render";
+import { findShown, shown } from "../../../../tests/shown";
 
 const mock = installMockApi(signedIn());
 
@@ -94,19 +95,20 @@ describe("the profiles screen", () => {
     await renderApp("/profiles");
     const user = await openRow("production");
     await user.click(screen.getByRole("button", { name: "Test connection" }));
-    const connected = await screen.findByText("Connected. The source answers every query the report needs.");
+    const connected = await findShown("Connected. The source answers every query the report needs.");
     expect(connected.parentElement?.querySelector("circle")).not.toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("Connected. The source answers every query the report needs.");
     expect(changes().map((call) => [call.method, call.path])).toEqual([["POST", "/admin/profiles/production/test"]]);
 
     await user.click(screen.getByRole("button", { name: "Hide the details of production" }));
     await user.click(screen.getByRole("button", { name: "Show the details of staging" }));
     await user.click(screen.getByRole("button", { name: "Test connection" }));
-    const refused = await screen.findByText("The source refused the credential.");
+    const refused = await findShown("The source refused the credential.");
     expect(refused.parentElement?.querySelector("polygon")).not.toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Hide the details of staging" }));
     await user.click(screen.getByRole("button", { name: "Show the details of production" }));
-    expect(screen.getByText("Connected. The source answers every query the report needs.")).toBeInTheDocument();
+    expect(shown("Connected. The source answers every query the report needs.")).toHaveLength(1);
   });
 
   it("the test button waits for the answer", async () => {
@@ -133,8 +135,9 @@ describe("the profiles screen", () => {
     await renderApp("/profiles");
     const user = await openRow("production");
     await user.click(screen.getByRole("button", { name: "Test connection" }));
-    const sentence = await screen.findByText(i18next.t("error.INTERNAL_ERROR"));
+    const sentence = await findShown(i18next.t("error.INTERNAL_ERROR"));
     expect(sentence.parentElement?.querySelector("polygon")).not.toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent(i18next.t("error.INTERNAL_ERROR"));
   });
 
   it("deletes after asking", async () => {
@@ -151,6 +154,9 @@ describe("the profiles screen", () => {
     );
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
     expect(changes()).toEqual([]);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Delete" })).toHaveFocus();
+    });
     const summaryFetches = () => mock.calls.filter((call) => call.method === "GET" && call.path === "/profiles").length;
     expect(summaryFetches()).toBe(1);
     await user.click(screen.getByRole("button", { name: "Delete" }));
@@ -161,6 +167,10 @@ describe("the profiles screen", () => {
     expect(changes().map((call) => [call.method, call.path])).toEqual([["DELETE", "/admin/profiles/lab"]]);
     expect(location(router)).toBe("/profiles");
     expect(screen.getByRole("status")).toHaveTextContent("The profile Lab was deleted.");
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 1, name: "Profiles" })).toHaveFocus();
+    });
+    expect(screen.getByRole("heading", { level: 1, name: "Profiles" })).toHaveAttribute("tabindex", "-1");
     expect(mock.adminProfiles.map((profile) => profile.id)).toEqual(["dr", "production", "staging"]);
     await user.click(screen.getByRole("link", { name: "New report" }));
     await waitFor(() => {

@@ -22,13 +22,17 @@ export function LeaveDialog({ open, onLeave, onStay }: { open: boolean; onLeave:
 }
 
 // Asks before a navigation inside the app, and warns the browser before it unloads the page, while the form has
-// changes. `release` lets the navigations of the form itself through.
+// changes. `release` lets the navigations of the form itself through, and so does a navigation to sign-in: the
+// session has ended or the reader signed out.
 export function useLeaveGuard(dirty: boolean): { release: () => void; dialog: ReactElement } {
   const releasing = useRef(false);
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      dirty && !releasing.current && currentLocation.pathname !== nextLocation.pathname,
-  );
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    if (nextLocation.pathname === "/login") {
+      releasing.current = true;
+      return false;
+    }
+    return dirty && !releasing.current && currentLocation.pathname !== nextLocation.pathname;
+  });
 
   useEffect(() => {
     if (!dirty) {

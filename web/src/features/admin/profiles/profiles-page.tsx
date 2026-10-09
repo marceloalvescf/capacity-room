@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { errorText, toError } from "@/api/errors";
@@ -12,7 +12,7 @@ import { useAddress } from "@/lib/address";
 import { formatTime } from "@/lib/format";
 import { useAdminProfiles, useDeleteProfile, useTestProfile, type Profile } from "./api";
 import { summaries, valuesOf } from "./form";
-import { TestResultLine, type TestOutcome } from "./test-result";
+import { outcomeText, TestResultLine, type TestOutcome } from "./test-result";
 
 const rowKey = (profile: Profile) => profile.id;
 const rowName = (profile: Profile) => profile.id;
@@ -40,42 +40,27 @@ function ProfileRow({
   profile,
   outcome,
   onOutcome,
-  onFailure,
+  onDelete,
 }: {
   profile: Profile;
   outcome: TestOutcome | null;
   onOutcome: (id: string, outcome: TestOutcome | null) => void;
-  onFailure: (error: Error | null) => void;
+  onDelete: (profile: Profile, opener: HTMLElement) => void;
 }) {
   const { t } = useTranslation();
   const announce = useAnnounce();
-  const address = useAddress();
   const test = useTestProfile(profile.id);
-  const remove = useDeleteProfile(profile.id);
-  const [asking, setAsking] = useState(false);
   const { choices } = summaries(valuesOf(profile), t);
 
   async function runTest() {
+    let found: TestOutcome;
     try {
-      onOutcome(profile.id, { kind: "result", result: await test.mutateAsync() });
+      found = { kind: "result", result: await test.mutateAsync() };
     } catch (thrown) {
-      onOutcome(profile.id, { kind: "failed", error: toError(thrown) });
+      found = { kind: "failed", error: toError(thrown) };
     }
-  }
-
-  async function confirmDelete() {
-    onFailure(null);
-    try {
-      await remove.mutateAsync();
-      onOutcome(profile.id, null);
-      address.write((next) => {
-        next.delete("open");
-      });
-      announce(t("admin.profiles.deleted", { name: profile.display_name }));
-    } catch (thrown) {
-      onFailure(toError(thrown));
-    }
-    setAsking(false);
+    onOutcome(profile.id, found);
+    announce(outcomeText(t, found));
   }
 
   return (
@@ -117,26 +102,14 @@ function ProfileRow({
           </Link>
           <Button
             variant="danger"
-            onClick={() => {
-              setAsking(true);
+            onClick={(event) => {
+              onDelete(profile, event.currentTarget);
             }}
           >
             {t("admin.profiles.delete")}
           </Button>
         </div>
       </div>
-      <ConfirmDialog
-        open={asking}
-        title={t("admin.profiles.deleteTitle", { name: profile.display_name })}
-        body={t("admin.profiles.deleteBody")}
-        confirm={t("admin.profiles.deleteConfirm")}
-        cancel={t("admin.profiles.cancel")}
-        busy={remove.isPending}
-        onConfirm={() => {
-          void confirmDelete();
-        }}
-        onOpenChange={setAsking}
-      />
     </div>
   );
 }
@@ -146,6 +119,13 @@ export function ProfilesPage() {
   const profiles = useAdminProfiles();
   const [outcomes, setOutcomes] = useState<ReadonlyMap<string, TestOutcome>>(new Map());
   const [failure, setFailure] = useState<Error | null>(null);
+  const [target, setTarget] = useState<Profile | null>(null);
+  const remove = useDeleteProfile();
+  const announce = useAnnounce();
+  const address = useAddress();
+  const heading = useRef<HTMLHeadingElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const focusHeading = useRef(false);
   useScreenTitle(t("admin.profiles.title"));
 
   const onOutcome = useCallback((id: string, outcome: TestOutcome | null) => {
@@ -159,6 +139,25 @@ export function ProfilesPage() {
       return next;
     });
   }, []);
+
+  async function confirmDelete() {
+    if (target === null) {
+      return;
+    }
+    setFailure(null);
+    try {
+      await remove.mutateAsync(target.id);
+      onOutcome(target.id, null);
+      address.write((next) => {
+        next.delete("open");
+      });
+      announce(t("admin.profiles.deleted", { name: target.display_name }));
+      focusHeading.current = true;
+    } catch (thrown) {
+      setFailure(toError(thrown));
+    }
+    setTarget(null);
+  }
 
   const columns = useMemo<Column<Profile>[]>(
     () => [
@@ -205,7 +204,10 @@ export function ProfilesPage() {
             profile={profile}
             outcome={outcomes.get(profile.id) ?? null}
             onOutcome={onOutcome}
-            onFailure={setFailure}
+            onDelete={(profile, button) => {
+              opener.current = button;
+              setTarget(profile);
+            }}
           />
         )}
         empty={t("admin.profiles.empty")}
@@ -219,13 +221,42 @@ export function ProfilesPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">{t("admin.profiles.title")}</h1>
+        <h1 ref={heading} tabIndex={-1} className="text-xl font-semibold outline-none">
+          {t("admin.profiles.title")}
+        </h1>
         <Link to="/profiles/new" className={buttonStyles("primary")}>
           {t("admin.profiles.new")}
         </Link>
       </div>
       {failure === null ? null : <Alert tone="error">{errorText(t, failure)}</Alert>}
       {content}
+      <ConfirmDialog
+        open={target !== null}
+        title={t("admin.profiles.deleteTitle", { name: target?.display_name ?? "" })}
+        body={t("admin.profiles.deleteBody")}
+        confirm={t("admin.profiles.deleteConfirm")}
+        cancel={t("admin.profiles.cancel")}
+        busy={remove.isPending}
+        onConfirm={() => {
+          void confirmDelete();
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          const back = opener.current;
+          if (!focusHeading.current && back?.isConnected === true) {
+            back.focus();
+          } else {
+            heading.current?.focus();
+          }
+          focusHeading.current = false;
+          opener.current = null;
+        }}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTarget(null);
+          }
+        }}
+      />
     </div>
   );
 }

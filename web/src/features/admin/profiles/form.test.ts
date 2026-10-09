@@ -211,6 +211,25 @@ describe("checks of the form", () => {
     expect(problems({ ...valid, timeout_seconds: "abc" })).toEqual(["timeout_seconds: validation.timeout"]);
   });
 
+  it("bounds five thresholds to 0..100 and two to 0 or more", () => {
+    const capped = [
+      "warning_percent",
+      "critical_percent",
+      "low_utilization_percent",
+      "autoscaler_near_max_percent",
+      "nodepool_spread_points",
+    ] as const;
+    for (const key of capped) {
+      const over = problems({ ...valid, thresholds: { ...valid.thresholds, [key]: "101" } });
+      expect(over).toContain(`thresholds.${key}: validation.range`);
+      expect(problems({ ...valid, thresholds: { ...valid.thresholds, [key]: "-1" } })).toContain(
+        `thresholds.${key}: validation.notNegative`,
+      );
+    }
+    expect(problems({ ...valid, thresholds: { ...valid.thresholds, critical_percent: "100", warning_percent: "99" } })).toEqual([]);
+    expect(problems({ ...valid, thresholds: { ...valid.thresholds, bursty_gap_percent: "250", hpa_replica_divergence: "5" } })).toEqual([]);
+  });
+
   it("accepts a complete profile", () => {
     expect(problems(valid)).toEqual([]);
   });

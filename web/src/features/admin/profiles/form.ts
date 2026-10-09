@@ -8,6 +8,15 @@ import { fromLines, toLines } from "./lines";
 
 type Schemas = components["schemas"];
 
+// The thresholds the API bounds to 0..100.
+const cappedThresholds: readonly string[] = [
+  "warning_percent",
+  "critical_percent",
+  "low_utilization_percent",
+  "autoscaler_near_max_percent",
+  "nodepool_spread_points",
+];
+
 // The seven thresholds of a profile, in the order the summary words them.
 export const thresholdKeys = [
   "warning_percent",
@@ -259,8 +268,11 @@ export function profileSchema(isNew: boolean): z.ZodType<ProfileValues, ProfileV
       }
     }
     for (const key of thresholdKeys) {
-      if (!(numberOf(values.thresholds[key]) >= 0)) {
+      const value = numberOf(values.thresholds[key]);
+      if (!(value >= 0)) {
         refuse(`thresholds.${key}`, "validation.notNegative");
+      } else if (value > 100 && cappedThresholds.includes(key)) {
+        refuse(`thresholds.${key}`, "validation.range");
       }
     }
     const warning = numberOf(values.thresholds.warning_percent);

@@ -88,6 +88,7 @@
     "caWithoutTls": "A CA bundle needs the TLS certificate verified.",
     "defaultNotPermitted": "Use one of the permitted values.",
     "notNegative": "Use a number of 0 or more.",
+    "range": "Use a number from 0 to 100.",
     "warningBelowCritical": "Use a value below the critical one."
   },
   "notFound": {

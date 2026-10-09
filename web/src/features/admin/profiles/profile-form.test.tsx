@@ -1,8 +1,9 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
-import { adminProfile, installMockApi, signedIn } from "../../../../tests/msw";
+import { adminProfile, anonymous, installMockApi, signedIn } from "../../../../tests/msw";
 import { location, renderApp } from "../../../../tests/render";
+import { findShown, shown } from "../../../../tests/shown";
 
 const mock = installMockApi(signedIn());
 
@@ -215,6 +216,36 @@ describe("the profile form", () => {
     expect(screen.getByLabelText("Attention from (%)")).toHaveAccessibleDescription("This value is not valid.");
   });
 
+  it("takes the thresholds mark off when any threshold changes", async () => {
+    await renderApp("/profiles/production/edit");
+    const user = userEvent.setup();
+    await screen.findByRole("heading", { level: 1, name: "Production" });
+    mock.failures.set("PATCH /admin/profiles/production", {
+      status: 422,
+      code: "PROFILE_DOCUMENT_INVALID",
+      fields: { thresholds: "incoherent" },
+    });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    const warning = await screen.findByLabelText("Attention from (%)");
+    await waitFor(() => {
+      expect(warning).toHaveAttribute("aria-invalid", "true");
+    });
+    await user.type(screen.getByLabelText("Critical from (%)"), "1");
+    expect(warning).not.toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("refuses a threshold above 100 in the browser", async () => {
+    await renderApp("/profiles/production/edit");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Change Thresholds" }));
+    const field = screen.getByLabelText("Critical from (%)");
+    await user.clear(field);
+    await user.type(field, "101");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Use a number from 0 to 100.")).toBeInTheDocument();
+    expect(changes()).toEqual([]);
+  });
+
   it("shows a refusal of a field the form lacks in the alert", async () => {
     await renderApp("/profiles/production/edit");
     const user = userEvent.setup();
@@ -328,9 +359,10 @@ describe("the profile form", () => {
     await renderApp("/profiles/new");
     const user = await fillNew();
     await user.click(screen.getByRole("button", { name: "Test connection" }));
-    const line = await screen.findByText("Connected. The source answers every query the report needs.");
+    const line = await findShown("Connected. The source answers every query the report needs.");
     expect(line.parentElement).toHaveClass("text-healthy");
     expect(line.parentElement?.querySelector("circle")).not.toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("Connected. The source answers every query the report needs.");
     const tests = mock.calls.filter((call) => call.path === "/admin/profiles/test");
     expect(tests).toHaveLength(1);
     expect(tests[0]).toMatchObject({ method: "POST" });
@@ -349,7 +381,7 @@ describe("the profile form", () => {
     const user = userEvent.setup();
     mock.profileTests.set("draft", { ok: false, code: "ENDPOINT_UNREACHABLE", capabilities: [] });
     await user.click(await screen.findByRole("button", { name: "Test connection" }));
-    expect(await screen.findByText("The source could not be reached.")).toBeInTheDocument();
+    expect(await findShown("The source could not be reached.")).toBeInTheDocument();
     expect(mock.calls.filter((call) => call.path === "/admin/profiles/test")).toHaveLength(1);
     expect(screen.queryByText("Fill in this field.")).not.toBeInTheDocument();
   });
@@ -359,7 +391,8 @@ describe("the profile form", () => {
     const user = await fillNew();
     mock.failures.set("POST /admin/profiles/test", { status: 422, code: "ENDPOINT_ADDRESS_REJECTED" });
     await user.click(screen.getByRole("button", { name: "Test connection" }));
-    expect(await screen.findByText("Correct the marked fields, then test again.")).toBeInTheDocument();
+    expect(await findShown("Correct the marked fields, then test again.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Correct the marked fields, then test again.");
     expect(screen.getByLabelText("Endpoint URL")).toHaveAccessibleDescription(
       "The metric source resolves to an address that is not allowed.",
     );
@@ -387,7 +420,7 @@ describe("the profile form", () => {
       expect(screen.getByLabelText("Endpoint URL")).toHaveAttribute("aria-invalid", "true");
     });
     await user.click(screen.getByRole("button", { name: "Test connection" }));
-    await screen.findByText("Connected. The source answers every query the report needs.");
+    await findShown("Connected. The source answers every query the report needs.");
     expect(screen.getByLabelText("Endpoint URL")).not.toHaveAttribute("aria-invalid", "true");
     expect(screen.queryByText("The metric source resolves to an address that is not allowed.")).not.toBeInTheDocument();
   });
@@ -397,7 +430,7 @@ describe("the profile form", () => {
     const user = await fillNew();
     mock.profileTests.set("draft", { ok: false, code: "ENDPOINT_UNREACHABLE", capabilities: [] });
     await user.click(screen.getByRole("button", { name: "Test connection" }));
-    const line = await screen.findByText("The source could not be reached.");
+    const line = await findShown("The source could not be reached.");
     expect(line.parentElement).toHaveClass("text-critical");
     expect(line.parentElement?.querySelector("polygon")).not.toBeNull();
   });
@@ -406,9 +439,9 @@ describe("the profile form", () => {
     await renderApp("/profiles/new");
     const user = await fillNew();
     await user.click(screen.getByRole("button", { name: "Test connection" }));
-    await screen.findByText("Connected. The source answers every query the report needs.");
+    await findShown("Connected. The source answers every query the report needs.");
     await user.type(screen.getByLabelText("Cluster name"), "x");
-    expect(screen.queryByText("Connected. The source answers every query the report needs.")).not.toBeInTheDocument();
+    expect(shown("Connected. The source answers every query the report needs.")).toEqual([]);
   });
 
   it("clears the result on a select and a checkbox", async () => {
@@ -416,13 +449,13 @@ describe("the profile form", () => {
     const user = await fillNew();
     const connected = "Connected. The source answers every query the report needs.";
     await user.click(screen.getByRole("button", { name: "Test connection" }));
-    await screen.findByText(connected);
+    await findShown(connected);
     await user.selectOptions(screen.getByLabelText("Type"), "Prometheus");
-    expect(screen.queryByText(connected)).not.toBeInTheDocument();
+    expect(shown(connected)).toEqual([]);
     await user.click(screen.getByRole("button", { name: "Test connection" }));
-    await screen.findByText(connected);
+    await findShown(connected);
     await user.click(screen.getByLabelText("Active"));
-    expect(screen.queryByText(connected)).not.toBeInTheDocument();
+    expect(shown(connected)).toEqual([]);
   });
 
   it("ignores a refusal that arrives after a change", async () => {
@@ -436,7 +469,7 @@ describe("the profile form", () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(screen.getByLabelText("Endpoint URL")).not.toHaveAttribute("aria-invalid", "true");
-    expect(screen.queryByText("Correct the marked fields, then test again.")).not.toBeInTheDocument();
+    expect(shown("Correct the marked fields, then test again.")).toEqual([]);
   });
 
   async function staleSave() {
@@ -525,6 +558,34 @@ describe("the profile form", () => {
     await waitFor(() => {
       expect(location(router)).toBe("/reports");
     });
+  });
+
+  it("lets a session that ended through", async () => {
+    const { router } = await renderApp("/profiles/production/edit");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Display name"), "x");
+    mock.failures.set("PATCH /admin/profiles/production", { status: 401, code: "UNAUTHENTICATED" });
+    mock.session = anonymous();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(location(router)).toContain("/login?next=");
+    });
+    expect(location(router)).toContain("ended=1");
+    expect(screen.queryByRole("alertdialog", { name: "Leave without saving?" })).not.toBeInTheDocument();
+    const unload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(false);
+  });
+
+  it("lets a sign-out through", async () => {
+    const { router } = await renderApp("/profiles/production/edit");
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Display name"), "x");
+    await user.click(within(screen.getByRole("banner")).getByRole("button", { name: "Sign out" }));
+    await waitFor(() => {
+      expect(location(router)).toBe("/login");
+    });
+    expect(screen.queryByRole("alertdialog", { name: "Leave without saving?" })).not.toBeInTheDocument();
   });
 
   it("does not guard a clean or a saving form", async () => {

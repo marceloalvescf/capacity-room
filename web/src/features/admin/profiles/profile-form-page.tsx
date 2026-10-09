@@ -41,7 +41,7 @@ import {
   type ProfileValues,
 } from "./form";
 import { LeaveDialog, useLeaveGuard } from "./leave-guard";
-import { TestResultLine, type TestOutcome } from "./test-result";
+import { outcomeText, TestResultLine, type TestOutcome } from "./test-result";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -213,6 +213,7 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
       setMarks((count) => count + 1);
     }
     setOutcome(found);
+    announce(outcomeText(t, found));
   }
 
   async function loadLatest() {
@@ -262,8 +263,12 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
       className="flex flex-col gap-8"
       onChange={(event) => {
         const name = (event.nativeEvent.target as HTMLInputElement).name;
-        if (marked.current.delete(name)) {
-          clearErrors(name as keyof ProfileValues);
+        // The API marks the key `thresholds` on the first threshold; any threshold field takes the mark off.
+        const names = name.startsWith("thresholds.") ? [name, "thresholds.warning_percent"] : [name];
+        for (const marker of names) {
+          if (marked.current.delete(marker)) {
+            clearErrors(marker as keyof ProfileValues);
+          }
         }
         changes.current += 1;
         setOutcome(null);
