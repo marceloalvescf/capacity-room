@@ -24,6 +24,7 @@ const (
 	ActionUserCreate             = "user.create"
 	ActionUserUpdate             = "user.update"
 	ActionUserPasswordChanged    = "user.password_changed"
+	ActionUserPasswordReset      = "user.password_reset"
 	ActionUserDelete             = "user.delete"
 	ActionAccountPasswordChanged = "account.password_changed"
 	ActionAccountLanguageChanged = "account.language_changed"

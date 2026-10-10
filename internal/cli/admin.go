@@ -53,6 +53,7 @@ func newAdminCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra
 		newImportProfilesCmd(ctx, env, redactor),
 		newMigrateCmd(ctx, env, redactor),
 		newProbeCmd(ctx),
+		newResetPasswordCmd(ctx, env, redactor),
 	)
 	return cmd
 }
@@ -179,23 +180,9 @@ func bootstrapAdmin(ctx context.Context, env Env, redactor *redact.Redactor, in 
 		return "", &exitError{2, errors.New("the administrator password is read from standard input; pass --password-stdin and write it there")}
 	}
 
-	line, err := bufio.NewReader(env.Stdin).ReadString('\n')
-	if err != nil && !errors.Is(err, io.EOF) {
-		return "", &exitError{1, errors.New("cannot read the password from standard input")}
-	}
-	password := strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
-
-	name, err := auth.ValidateUsername(in.username)
+	name, password, err := readCredentials(env, in.username)
 	if err != nil {
-		return "", &exitError{1, errors.New("the username is not valid")}
-	}
-	switch err := auth.CheckPassword(password); {
-	case errors.Is(err, auth.ErrPasswordTooShort):
-		return "", &exitError{1, errors.New("the password is too short")}
-	case errors.Is(err, auth.ErrPasswordTooLong):
-		return "", &exitError{1, errors.New("the password is too long")}
-	case err != nil:
-		return "", &exitError{1, errors.New("the password is not valid")}
+		return "", err
 	}
 	if in.language != "pt-BR" && in.language != "en" {
 		return "", &exitError{2, errors.New("--language must be pt-BR or en")}
@@ -249,6 +236,97 @@ func bootstrapAdmin(ctx context.Context, env Env, redactor *redact.Redactor, in 
 		return "", &exitError{1, err}
 	}
 	return name, nil
+}
+
+func newResetPasswordCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.Command {
+	var username, config string
+	var passwordStdin bool
+	cmd := &cobra.Command{
+		Use:           "reset-password",
+		Short:         "Set a new password for an active user.",
+		Args:          noArgument("reset-password"),
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			name, err := resetPassword(ctx, env, redactor, resetInput{
+				username: username, config: config, passwordStdin: passwordStdin,
+			})
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "reset the password of %s\n", name)
+			return nil
+		},
+	}
+	flags := cmd.Flags()
+	flags.StringVar(&username, "username", "", "Username of the user.")
+	flags.BoolVar(&passwordStdin, "password-stdin", false, "Read the new password from one line of standard input.")
+	flags.StringVar(&config, "config", platformConfigDefault, "Path of the TOML settings file.")
+	_ = cmd.MarkFlagRequired("username")
+	return cmd
+}
+
+type resetInput struct {
+	username, config string
+	passwordStdin    bool
+}
+
+// resetPassword sets the password of an active user and returns its
+// normalised username. Everything that needs no database is checked before
+// the database is opened.
+func resetPassword(ctx context.Context, env Env, redactor *redact.Redactor, in resetInput) (string, error) {
+	if env.Getenv("KCR_BOOTSTRAP_MODE") != "1" {
+		return "", &exitError{1, errors.New("reset-password is off; set KCR_BOOTSTRAP_MODE=1 to run it")}
+	}
+	if !in.passwordStdin {
+		return "", &exitError{2, errors.New("the new password is read from standard input; pass --password-stdin and write it there")}
+	}
+	name, password, err := readCredentials(env, in.username)
+	if err != nil {
+		return "", err
+	}
+
+	_, pool, err := openPlatform(ctx, env, redactor, in.config)
+	if err != nil {
+		return "", err
+	}
+	defer pool.Close()
+	if _, err := store.Migrate(ctx, pool); err != nil {
+		return "", &exitError{1, err}
+	}
+	if _, err := auth.ResetPassword(ctx, pool, name, password, env.Now()); err != nil {
+		switch {
+		case errors.Is(err, auth.ErrPasswordRaced):
+			return "", &exitError{1, errors.New("the password changed during the reset; run the command again")}
+		default:
+			return "", &exitError{1, err}
+		}
+	}
+	return name, nil
+}
+
+// readCredentials reads one line of standard input as a password and checks
+// it, and the username, against their policies.
+func readCredentials(env Env, username string) (name, password string, err error) {
+	line, err := bufio.NewReader(env.Stdin).ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", "", &exitError{1, errors.New("cannot read the password from standard input")}
+	}
+	password = strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
+
+	name, err = auth.ValidateUsername(username)
+	if err != nil {
+		return "", "", &exitError{1, errors.New("the username is not valid")}
+	}
+	switch err := auth.CheckPassword(password); {
+	case errors.Is(err, auth.ErrPasswordTooShort):
+		return "", "", &exitError{1, errors.New("the password is too short")}
+	case errors.Is(err, auth.ErrPasswordTooLong):
+		return "", "", &exitError{1, errors.New("the password is too long")}
+	case err != nil:
+		return "", "", &exitError{1, errors.New("the password is not valid")}
+	}
+	return name, password, nil
 }
 
 func newProbeCmd(ctx context.Context) *cobra.Command {

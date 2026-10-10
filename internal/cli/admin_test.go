@@ -206,3 +206,66 @@ func TestAdminImportProfilesCommand(t *testing.T) {
 		t.Fatalf("b = %+v, err %v", cur, err)
 	}
 }
+
+// resetPasswordRun runs reset-password against pool with stdin.
+func resetPasswordRun(t *testing.T, pool *pgxpool.Pool, config, username, stdin string) (int, string, string) {
+	t.Helper()
+	env := platformEnv(map[string]string{
+		"KCR_BOOTSTRAP_MODE": "1",
+		"KCR_DATABASE_DSN":   pool.Config().ConnString(),
+	}, stdin)
+	return runCommand(context.Background(), env,
+		"admin", "reset-password", "--username", username, "--password-stdin", "--config", config)
+}
+
+func TestResetPasswordCommand(t *testing.T) {
+	pool := storetest.New(t)
+	config := writePlatformFiles(t)
+	if code, _, stderr := bootstrap(t, pool, config, bootstrapPassword+"\n"); code != 0 {
+		t.Fatalf("bootstrap: code = %d, stderr = %q", code, stderr)
+	}
+	code, stdout, stderr := resetPasswordRun(t, pool, config, "Root", "new-password-12\n")
+	if code != 0 || stdout != "reset the password of root\n" || stderr != "" {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+	}
+	sessions := &auth.Sessions{
+		Pool:     pool,
+		Throttle: auth.Throttle{Secret: bytes.Repeat([]byte("s"), 32)},
+		TTL:      time.Hour,
+		Idle:     time.Hour,
+		Now:      time.Now,
+	}
+	if _, err := sessions.Login(context.Background(), "root", "new-password-12", "", ""); err != nil {
+		t.Fatalf("sign-in with the new password: %v", err)
+	}
+	if _, err := sessions.Login(context.Background(), "root", bootstrapPassword, "", ""); err == nil {
+		t.Fatal("sign-in with the old password succeeded")
+	}
+}
+
+func TestResetPasswordCommandRefusesAnUnknownUser(t *testing.T) {
+	pool := storetest.New(t)
+	code, stdout, stderr := resetPasswordRun(t, pool, writePlatformFiles(t), "nobody", "new-password-12\n")
+	if code != 1 || stdout != "" || stderr != "error: no active user has that username\n" {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+	}
+}
+
+func TestResetPasswordReadsOneLine(t *testing.T) {
+	pool := storetest.New(t)
+	config := writePlatformFiles(t)
+	if code, _, stderr := bootstrap(t, pool, config, bootstrapPassword+"\n"); code != 0 {
+		t.Fatalf("bootstrap: code = %d, stderr = %q", code, stderr)
+	}
+	code, _, stderr := resetPasswordRun(t, pool, config, "root", "new-password-12\r\nmore\n")
+	if code != 0 {
+		t.Fatalf("code = %d, stderr = %q", code, stderr)
+	}
+	user, err := store.FindActiveUserByUsername(context.Background(), pool, "root")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if match, _ := auth.VerifyPassword("new-password-12", user.PasswordHash); !match {
+		t.Fatal("the stored password is not the first line without its line ending")
+	}
+}

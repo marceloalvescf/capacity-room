@@ -65,19 +65,19 @@ func runCommand(ctx context.Context, env Env, args ...string) (int, string, stri
 
 const closedPortDSN = "postgres://u:hunter2secret@127.0.0.1:1/x?sslmode=disable&connect_timeout=1"
 
-func TestAdminListsFourCommands(t *testing.T) {
+func TestAdminListsFiveCommands(t *testing.T) {
 	code, stdout, stderr := runCommand(context.Background(), Env{}, "admin")
 	if code != 0 {
 		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
 	}
-	for _, name := range []string{"bootstrap-admin", "import-profiles", "migrate", "probe"} {
+	for _, name := range []string{"bootstrap-admin", "import-profiles", "migrate", "probe", "reset-password"} {
 		if !strings.Contains(stdout, name) {
 			t.Errorf("help does not name %q: %q", name, stdout)
 		}
 	}
 
 	code, stdout, stderr = runCommand(context.Background(), Env{}, "admin", "hunter2")
-	const want = "error: unknown command; the commands are: bootstrap-admin, import-profiles, migrate, probe\n"
+	const want = "error: unknown command; the commands are: bootstrap-admin, import-profiles, migrate, probe, reset-password\n"
 	if code != 2 || stderr != want || stdout != "" {
 		t.Fatalf("code = %d, stdout = %q, stderr = %q, want 2, empty, %q", code, stdout, stderr, want)
 	}
@@ -224,6 +224,65 @@ func TestBootstrapRefusesBadPasswordAndLanguage(t *testing.T) {
 				t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
 			}
 		})
+	}
+}
+
+func TestResetPasswordIsOffWithoutTheMode(t *testing.T) {
+	env := platformEnv(nil, "")
+	env.Stdin = failingReader{t}
+	code, stdout, stderr := runCommand(context.Background(), env,
+		"admin", "reset-password", "--username", "root", "--password-stdin")
+	const want = "error: reset-password is off; set KCR_BOOTSTRAP_MODE=1 to run it\n"
+	if code != 1 || stderr != want || stdout != "" {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+	}
+}
+
+func TestResetPasswordNeedsPasswordStdin(t *testing.T) {
+	env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1"}, "")
+	env.Stdin = failingReader{t}
+	code, stdout, stderr := runCommand(context.Background(), env, "admin", "reset-password", "--username", "root")
+	const want = "error: the new password is read from standard input; pass --password-stdin and write it there\n"
+	if code != 2 || stderr != want || stdout != "" {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+	}
+}
+
+func TestResetPasswordRefusesAnInvalidUsername(t *testing.T) {
+	env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1", "KCR_DATABASE_DSN": closedPortDSN},
+		"correct horse battery staple\n")
+	code, stdout, stderr := runCommand(context.Background(), env,
+		"admin", "reset-password", "--username", "a b", "--password-stdin", "--config", writePlatformFiles(t))
+	if code != 1 || stdout != "" || stderr != "error: the username is not valid\n" {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+	}
+}
+
+func TestResetPasswordAppliesThePolicy(t *testing.T) {
+	tests := []struct {
+		name, stdin, want string
+	}{
+		{"short", strings.Repeat("a", 11) + "\n", "error: the password is too short\n"},
+		{"long", strings.Repeat("a", 1025) + "\n", "error: the password is too long\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1", "KCR_DATABASE_DSN": closedPortDSN}, tt.stdin)
+			code, stdout, stderr := runCommand(context.Background(), env,
+				"admin", "reset-password", "--username", "root", "--password-stdin", "--config", writePlatformFiles(t))
+			if code != 1 || stdout != "" || stderr != tt.want {
+				t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+			}
+		})
+	}
+}
+
+func TestResetPasswordRefusesAPasswordFlag(t *testing.T) {
+	env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1"}, "")
+	code, stdout, stderr := runCommand(context.Background(), env,
+		"admin", "reset-password", "--username", "root", "--password", "xsecretvalue")
+	if code != 2 || stdout != "" || stderr != "error: unknown flag: --password\n" {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
 	}
 }
 
