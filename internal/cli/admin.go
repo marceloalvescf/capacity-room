@@ -313,7 +313,6 @@ func readCredentials(env Env, redactor *redact.Redactor, username string) (name,
 		return "", "", &exitError{1, errors.New("cannot read the password from standard input")}
 	}
 	password = strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
-	redactor.Add(password)
 
 	name, err = auth.ValidateUsername(username)
 	if err != nil {
@@ -327,6 +326,7 @@ func readCredentials(env Env, redactor *redact.Redactor, username string) (name,
 	case err != nil:
 		return "", "", &exitError{1, errors.New("the password is not valid")}
 	}
+	redactor.Add(password)
 	return name, password, nil
 }
 

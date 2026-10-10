@@ -10,16 +10,28 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
 )
 
-func TestReadCredentialsAddsThePasswordToTheRedactor(t *testing.T) {
-	// The first password is too short and the second is valid: both enter
-	// the redactor, since it is added before any check.
-	for _, password := range []string{"short", "Correct-Horse-9"} {
-		redactor := redact.New()
-		env := Env{Stdin: strings.NewReader(password + "\n")}
-		_, _, _ = readCredentials(env, redactor, "root")
-		if got := redactor.Text("the password is " + password); strings.Contains(got, password) {
-			t.Fatalf("Text() = %q, want the password removed", got)
-		}
+func TestReadCredentialsAddsAValidPasswordToTheRedactor(t *testing.T) {
+	password := "Correct-Horse-9-Battery"
+	redactor := redact.New()
+	env := Env{Stdin: strings.NewReader(password + "\n")}
+	if _, _, err := readCredentials(env, redactor, "root"); err != nil {
+		t.Fatal(err)
+	}
+	if got := redactor.Text("the password is " + password); strings.Contains(got, password) {
+		t.Fatalf("Text() = %q, want the password removed", got)
+	}
+}
+
+func TestReadCredentialsLeavesARefusalWhole(t *testing.T) {
+	redactor := redact.New()
+	env := Env{Stdin: strings.NewReader("short\n")}
+	_, _, err := readCredentials(env, redactor, "root")
+	if err == nil {
+		t.Fatal("want a refusal")
+	}
+	const message = "the password is too short"
+	if got := redactor.Text(message); got != message {
+		t.Fatalf("Text() = %q, want %q", got, message)
 	}
 }
 

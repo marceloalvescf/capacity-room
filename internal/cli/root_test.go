@@ -387,7 +387,7 @@ func TestNoFlagErrorRepeatsTheInput(t *testing.T) {
 		}
 	}
 
-	for _, path := range commandPaths(root, nil) {
+	for _, path := range append([][]string{nil}, commandPaths(root, nil)...) {
 		cmd, _, err := root.Find(path)
 		if err != nil {
 			t.Fatal(err)
@@ -395,6 +395,15 @@ func TestNoFlagErrorRepeatsTheInput(t *testing.T) {
 		t.Run(strings.Join(path, " "), func(t *testing.T) {
 			check(t, append(append([]string{}, path...), "--"+marker), "unknown flag; run the command with --help")
 			check(t, append(append([]string{}, path...), "-Q"+marker), "unknown flag; run the command with --help")
+			check(t, append(append([]string{}, path...), "-h"+marker), "")
+			for _, name := range []string{"help", "version"} {
+				if len(path) == 0 || path[0] == "serve" {
+					if name == "version" && len(path) != 0 {
+						continue
+					}
+					check(t, append(append([]string{}, path...), "--"+name+"="+marker), "invalid value for --"+name)
+				}
+			}
 			cmd.Flags().VisitAll(func(f *pflag.Flag) {
 				switch {
 				case f.Value.Type() == "bool":

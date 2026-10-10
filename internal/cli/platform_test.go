@@ -210,7 +210,7 @@ func TestBootstrapRefusesBadPasswordAndLanguage(t *testing.T) {
 		code  int
 		want  string
 	}{
-		{"short", "abc123\n", nil, 1, "error: the password is too short\n"},
+		{"short", "short\n", nil, 1, "error: the password is too short\n"},
 		{"long", strings.Repeat("a", 5000) + "\n", nil, 1, "error: the password is too long\n"},
 		{"language", "correct horse battery staple\n", []string{"--language", "fr"}, 2, "error: --language must be pt-BR or en\n"},
 	}
