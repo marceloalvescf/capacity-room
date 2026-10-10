@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import type { Locator, Page } from "@playwright/test";
+import type { Frame, Locator, Page } from "@playwright/test";
 import en from "../src/locales/en.json" with { type: "json" };
 import { admin, createUser, expect, expectNoViolations, previousWeek, reportRow, requestReport, secret, signIn, switchCompiles, test } from "./fixtures";
 
@@ -50,14 +50,17 @@ test("a failed PDF is made again once the cause is gone", async ({ page }) => {
       await expect(row.getByText(new RegExp(`^(${en.reportStatus.queued}|${en.reportStatus.running})$`))).toBeVisible();
 
       let navigations = 0;
-      page.on("framenavigated", (frame) => {
+      const count = (frame: Frame) => {
         if (frame === page.mainFrame()) {
           navigations += 1;
         }
-      });
+      };
+      page.on("framenavigated", count);
       await expect(row.getByText(en.reportStatus.collected, { exact: true })).toBeVisible(wait);
       await expect(row.getByText(en.pdfStatus.failed, { exact: true })).toBeVisible(wait);
       expect(navigations).toBe(0);
+      page.off("framenavigated", count);
+      await expectNoViolations(page);
     });
 
     await test.step("a failed PDF is made again once the cause is gone", async () => {
