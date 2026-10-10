@@ -84,11 +84,11 @@ func collectedReport(t *testing.T, pool *pgxpool.Pool, f reportFixture, expires 
 		}
 		switch status {
 		case "ready":
-			if err := store.FinishPDF(ctx, pool, r.ID, lang, []byte("%PDF-"), now); err != nil {
+			if err := store.FinishPDF(ctx, pool, r.ID, lang, jobs[lang], 0, []byte("%PDF-"), now); err != nil {
 				t.Fatal(err)
 			}
 		case "failed":
-			if err := store.FailPDF(ctx, pool, r.ID, lang, "PDF_COMPILE_FAILED", now); err != nil {
+			if err := store.FailPDF(ctx, pool, r.ID, lang, jobs[lang], 0, "PDF_COMPILE_FAILED", now); err != nil {
 				t.Fatal(err)
 			}
 		}

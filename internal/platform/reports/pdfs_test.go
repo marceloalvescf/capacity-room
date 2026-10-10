@@ -47,12 +47,12 @@ func (f *fixture) seedReport(t *testing.T, status, phase string, expiresAt time.
 		}
 		switch pdfState {
 		case "ready":
-			err := store.FinishPDF(ctx, f.pool, r.ID, lang, []byte("%PDF-1.7 body"), fixedNow)
+			err := store.FinishPDF(ctx, f.pool, r.ID, lang, 1, 0, []byte("%PDF-1.7 body"), fixedNow)
 			if err != nil {
 				t.Fatal(err)
 			}
 		case "failed":
-			if err := store.FailPDF(ctx, f.pool, r.ID, lang, "PDF_COMPILE_FAILED", fixedNow); err != nil {
+			if err := store.FailPDF(ctx, f.pool, r.ID, lang, 1, 0, "PDF_COMPILE_FAILED", fixedNow); err != nil {
 				t.Fatal(err)
 			}
 		}

@@ -145,6 +145,7 @@ func needsRender(ctx context.Context, tx pgx.Tx, report store.Report, language s
 // the report needs nothing: the job is then completed.
 func (w *RenderWorker) load(ctx context.Context, job *river.Job[reports.RenderArgs]) (body []byte, done bool, err error) {
 	id, lang := job.Args.ReportID, job.Args.Language
+	var mismatch bool
 	err = store.Transact(ctx, w.Deps.Pool, func(tx pgx.Tx) error {
 		report, err := store.GetReportForUpdate(ctx, tx, id)
 		if errors.Is(err, store.ErrNotFound) {
@@ -166,16 +167,22 @@ func (w *RenderWorker) load(ctx context.Context, job *river.Job[reports.RenderAr
 			_, err := river.JobCompleteTx[*riverpgxv5.Driver](ctx, tx, job)
 			return err
 		}
+		if err := store.ClaimPDF(ctx, tx, id, lang, job.ID, job.Attempt, w.Deps.Now().UTC()); err != nil {
+			return err
+		}
 		_, snap, sum, err := store.GetSnapshot(ctx, tx, id)
 		if err != nil {
 			return err
 		}
-		if digestHex(snap) != sum {
-			return errDigest
-		}
+		// A mismatch is returned after the commit, so the claim of the row stands
+		// and the failure can be written under it.
+		mismatch = digestHex(snap) != sum
 		body = snap
 		return nil
 	})
+	if err == nil && mismatch {
+		err = errDigest
+	}
 	return body, done, err
 }
 
@@ -236,9 +243,9 @@ func (w *RenderWorker) store(ctx context.Context, job *river.Job[reports.RenderA
 			if w.hooks.successError != nil {
 				return w.hooks.successError
 			}
-			err = store.FinishPDF(ctx, tx, id, lang, pdf, now)
+			err = store.FinishPDF(ctx, tx, id, lang, job.ID, job.Attempt, pdf, now)
 		} else {
-			err = store.FailPDF(ctx, tx, id, lang, code, now)
+			err = store.FailPDF(ctx, tx, id, lang, job.ID, job.Attempt, code, now)
 			event.Outcome = audit.OutcomeFailed
 			event.Metadata["code"] = code
 		}

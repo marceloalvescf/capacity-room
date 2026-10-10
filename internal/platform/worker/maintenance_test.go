@@ -348,7 +348,7 @@ func TestSweepStepRemovesDeleted(t *testing.T) {
 		if err := store.InsertPendingPDF(ctx, e.pool, collected.ID, lang, absentJob, fixedNow); err != nil {
 			t.Fatal(err)
 		}
-		if err := store.FinishPDF(ctx, e.pool, collected.ID, lang, []byte("%PDF-"+lang), fixedNow); err != nil {
+		if err := store.FinishPDF(ctx, e.pool, collected.ID, lang, absentJob, 0, []byte("%PDF-"+lang), fixedNow); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -217,9 +217,9 @@ func (ts *testServer) seedReport(t *testing.T, o stored) uuid.UUID {
 		var err error
 		switch o.pdfs {
 		case "ready":
-			err = store.FinishPDF(ctx, ts.pool, r.ID, lang, o.pdfBody, ts.now)
+			err = store.FinishPDF(ctx, ts.pool, r.ID, lang, 1, 0, o.pdfBody, ts.now)
 		case "failed":
-			err = store.FailPDF(ctx, ts.pool, r.ID, lang, "PDF_COMPILE_FAILED", ts.now)
+			err = store.FailPDF(ctx, ts.pool, r.ID, lang, 1, 0, "PDF_COMPILE_FAILED", ts.now)
 		}
 		if err != nil {
 			t.Fatal(err)

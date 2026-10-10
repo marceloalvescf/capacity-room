@@ -31,7 +31,7 @@ func TestDownloadPoolKeepsNoIdleConnection(t *testing.T) {
 	f := newReportFixture(t, pool)
 	r := collectedReport(t, pool, f, now.Add(time.Hour), map[string]string{"en": "pending"}, map[string]int64{"en": 1})
 	body := append([]byte("%PDF-"), bytes.Repeat([]byte("x"), 8<<20)...)
-	if err := store.FinishPDF(ctx, pool, r.ID, "en", body, now); err != nil {
+	if err := store.FinishPDF(ctx, pool, r.ID, "en", 1, 0, body, now); err != nil {
 		t.Fatal(err)
 	}
 

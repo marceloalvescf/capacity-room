@@ -789,3 +789,94 @@ func TestNeedsRenderNamesEachSkip(t *testing.T) {
 		})
 	}
 }
+
+// bumpPDFRow runs sql against the en row from the hook of an attempt, once.
+func bumpPDFRow(t *testing.T, e *env, sql string) renderHooks {
+	var once sync.Once
+	return renderHooks{beforeStore: func(ctx context.Context, lang string) {
+		if lang != langEN {
+			return
+		}
+		once.Do(func() {
+			if _, err := e.pool.Exec(ctx, sql); err != nil {
+				t.Error(err)
+			}
+		})
+	}}
+}
+
+// assertRenderRefused checks that the en job ended with the stale error and
+// that the row, the audit trail, and the report phase are as the attempt found
+// them.
+func (e *env) assertRenderRefused(report store.Report) {
+	e.t.Helper()
+	e.waitJob(e.pdfJob(report.ID, langEN), rivertype.JobStateDiscarded)
+	var stale bool
+	for _, err := range e.errs.all() {
+		if err.Error() == "render: STALE_ATTEMPT" && errors.Is(err, ErrStaleAttempt) {
+			stale = true
+		}
+	}
+	if !stale {
+		e.t.Fatalf("river recorded %v", e.errs.all())
+	}
+	row := e.pdf(report.ID, langEN)
+	if row.Status != "pending" || row.FailureCode != nil || row.SHA256 != nil || e.pdfBody(report.ID, langEN) != nil {
+		e.t.Fatalf("row %+v", row)
+	}
+	if n := len(e.audits(reports.ActionReportRender)); n != 0 {
+		e.t.Fatalf("%d render audit rows", n)
+	}
+	if got := e.report(report.ID); got.Phase != "rendering" {
+		e.t.Fatalf("report %+v", got)
+	}
+}
+
+func TestRenderRescuedAttemptWritesNothing(t *testing.T) {
+	e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 1 })
+	hooks := bumpPDFRow(t, e, `UPDATE report_pdfs SET attempt = attempt + 1 WHERE language = 'en'`)
+	e.startRender(both(pdfToolchain(t)), 2, hooks, langPT)
+	e.assertRenderRefused(e.collectedBoth())
+}
+
+func TestRenderRescuedFailureWritesNothing(t *testing.T) {
+	e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 1 })
+	flag := filepath.Join(t.TempDir(), "go")
+	e.startRender(map[string]typst.Toolchain{
+		langPT: pdfToolchain(t),
+		langEN: scriptToolchain(t, `while [ ! -e `+flag+` ]; do `+toolPath(t, "sleep")+` 0.05; done; exit 1`),
+	}, 2, renderHooks{}, langPT)
+	report := e.collectedBoth()
+	// The compile of the first attempt waits until a newer attempt has taken the row.
+	deadline := time.Now().Add(waitLimit)
+	for e.pdf(report.ID, langEN).Attempt != 1 {
+		if time.Now().After(deadline) {
+			t.Fatal("the en render never claimed its row")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if _, err := e.pool.Exec(context.Background(), `UPDATE report_pdfs SET attempt = attempt + 1 WHERE language = 'en'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(flag, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	e.assertRenderRefused(report)
+}
+
+func TestRenderOfAReplacedJobWritesNothing(t *testing.T) {
+	e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 1 })
+	hooks := bumpPDFRow(t, e, `UPDATE report_pdfs SET job_id = job_id + 1000 WHERE language = 'en'`)
+	e.startRender(both(pdfToolchain(t)), 2, hooks, langPT)
+	e.assertRenderRefused(e.collectedBoth())
+}
+
+func TestRenderClaimsItsRow(t *testing.T) {
+	e, _, _ := scenarioEnv(t, nil)
+	e.startRender(both(pdfToolchain(t)), 2, renderHooks{})
+	report := e.collectedBoth()
+	row := e.waitPDF(report.ID, langEN, "ready")
+	if row.Attempt != 1 {
+		t.Fatalf("row %+v", row)
+	}
+}

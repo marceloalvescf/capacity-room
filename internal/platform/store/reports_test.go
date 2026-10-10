@@ -4,12 +4,16 @@ package store_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
 )
 
@@ -142,4 +146,107 @@ func TestReportForeignKeysRestrict(t *testing.T) {
 	}
 	_, err := pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, f.owner)
 	wantSQLState(t, "delete of an owner", err, "23001")
+}
+
+// pendingEnPDF returns a pool and a collected report whose en row is pending
+// under job 7.
+func pendingEnPDF(t *testing.T) (*pgxpool.Pool, store.Report) {
+	t.Helper()
+	pool := storetest.New(t)
+	f := newReportFixture(t, pool)
+	r := collectedReport(t, pool, f, now.Add(time.Hour), map[string]string{"en": "pending"}, map[string]int64{"en": 7})
+	return pool, r
+}
+
+func claimPDF(pool *pgxpool.Pool, id uuid.UUID, jobID int64, attempt int) error {
+	return store.Transact(context.Background(), pool, func(tx pgx.Tx) error {
+		return store.ClaimPDF(context.Background(), tx, id, "en", jobID, attempt, now)
+	})
+}
+
+func wantPDFRow(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, status string, attempt int) store.ReportPDF {
+	t.Helper()
+	row, err := store.GetPDF(context.Background(), pool, id, "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row.Status != status || row.Attempt != attempt {
+		t.Fatalf("row %+v, want status %s attempt %d", row, status, attempt)
+	}
+	return row
+}
+
+func TestClaimPDFTakesThePendingRow(t *testing.T) {
+	pool, r := pendingEnPDF(t)
+	for range 2 {
+		if err := claimPDF(pool, r.ID, 7, 1); err != nil {
+			t.Fatal(err)
+		}
+	}
+	wantPDFRow(t, pool, r.ID, "pending", 1)
+}
+
+func TestClaimPDFRefusesAnOlderAttempt(t *testing.T) {
+	pool, r := pendingEnPDF(t)
+	if err := claimPDF(pool, r.ID, 7, 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := claimPDF(pool, r.ID, 7, 1); !errors.Is(err, store.ErrStaleAttempt) {
+		t.Fatalf("older attempt: %v", err)
+	}
+	wantPDFRow(t, pool, r.ID, "pending", 2)
+}
+
+func TestClaimPDFRefusesAnotherJob(t *testing.T) {
+	pool, r := pendingEnPDF(t)
+	if err := claimPDF(pool, r.ID, 8, 1); !errors.Is(err, store.ErrStaleAttempt) {
+		t.Fatalf("another job: %v", err)
+	}
+	wantPDFRow(t, pool, r.ID, "pending", 0)
+}
+
+func TestFinishPDFNamesItsAttempt(t *testing.T) {
+	ctx := context.Background()
+	pool, r := pendingEnPDF(t)
+	if err := claimPDF(pool, r.ID, 7, 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.FinishPDF(ctx, pool, r.ID, "en", 7, 1, []byte("%PDF-1.7\n"), now); !errors.Is(err, store.ErrStaleAttempt) {
+		t.Fatalf("older attempt: %v", err)
+	}
+	wantPDFRow(t, pool, r.ID, "pending", 2)
+	if err := store.FinishPDF(ctx, pool, r.ID, "en", 7, 2, []byte("%PDF-1.7\n"), now); err != nil {
+		t.Fatal(err)
+	}
+	wantPDFRow(t, pool, r.ID, "ready", 2)
+}
+
+func TestFailPDFNamesItsJob(t *testing.T) {
+	pool, r := pendingEnPDF(t)
+	if err := claimPDF(pool, r.ID, 7, 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.FailPDF(context.Background(), pool, r.ID, "en", 8, 1, "PDF_COMPILE_FAILED", now); !errors.Is(err, store.ErrStaleAttempt) {
+		t.Fatalf("another job: %v", err)
+	}
+	if row := wantPDFRow(t, pool, r.ID, "pending", 1); row.FailureCode != nil {
+		t.Fatalf("failure code %q", *row.FailureCode)
+	}
+}
+
+func TestRetryPDFResetsTheAttempt(t *testing.T) {
+	ctx := context.Background()
+	pool, r := pendingEnPDF(t)
+	if err := claimPDF(pool, r.ID, 7, 3); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.FailPDF(ctx, pool, r.ID, "en", 7, 3, "PDF_COMPILE_FAILED", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.RetryPDF(ctx, pool, r.ID, "en", 9, now); err != nil {
+		t.Fatal(err)
+	}
+	if row := wantPDFRow(t, pool, r.ID, "pending", 0); row.JobID != 9 {
+		t.Fatalf("job %d", row.JobID)
+	}
 }

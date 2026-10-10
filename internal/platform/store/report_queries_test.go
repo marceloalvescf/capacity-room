@@ -369,7 +369,7 @@ func TestFinishPDFAndInsertSnapshotRefuseANilBody(t *testing.T) {
 	if err := store.InsertPendingPDF(ctx, pool, r.ID, "en", 1, now); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.FinishPDF(ctx, pool, r.ID, "en", nil, now); err == nil || errors.Is(err, store.ErrStaleAttempt) {
+	if err := store.FinishPDF(ctx, pool, r.ID, "en", 1, 0, nil, now); err == nil || errors.Is(err, store.ErrStaleAttempt) {
 		t.Fatalf("FinishPDF nil: %v", err)
 	}
 	if err := store.InsertSnapshot(ctx, pool, r.ID, "1.0", nil, now); err == nil {
@@ -459,7 +459,7 @@ func TestPDFTransitions(t *testing.T) {
 		t.Fatalf("pending = %d, %v", n, err)
 	}
 
-	if err := store.FinishPDF(ctx, pool, r.ID, "en", []byte("%PDF-1.7\n"), now.Add(time.Minute)); err != nil {
+	if err := store.FinishPDF(ctx, pool, r.ID, "en", 11, 0, []byte("%PDF-1.7\n"), now.Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 	got, err := store.GetPDF(ctx, pool, r.ID, "en")
@@ -470,17 +470,17 @@ func TestPDFTransitions(t *testing.T) {
 		*got.SizeBytes != 9 || len(*got.SHA256) != 64 || !got.UpdatedAt.Equal(now.Add(time.Minute)) {
 		t.Fatalf("ready: %+v", got)
 	}
-	if err := store.FinishPDF(ctx, pool, r.ID, "en", []byte("%PDF-1.7\n"), now); !errors.Is(err, store.ErrStaleAttempt) {
+	if err := store.FinishPDF(ctx, pool, r.ID, "en", 11, 0, []byte("%PDF-1.7\n"), now); !errors.Is(err, store.ErrStaleAttempt) {
 		t.Fatalf("finish twice: %v", err)
 	}
-	if err := store.FailPDF(ctx, pool, r.ID, "en", "PDF_COMPILE_FAILED", now); !errors.Is(err, store.ErrStaleAttempt) {
+	if err := store.FailPDF(ctx, pool, r.ID, "en", 11, 0, "PDF_COMPILE_FAILED", now); !errors.Is(err, store.ErrStaleAttempt) {
 		t.Fatalf("fail a ready row: %v", err)
 	}
 	if n, _ := store.CountPendingPDFs(ctx, pool, r.ID); n != 1 {
 		t.Fatalf("pending = %d, want 1", n)
 	}
 
-	if err := store.FailPDF(ctx, pool, r.ID, "pt-BR", "PDF_COMPILE_FAILED", now); err != nil {
+	if err := store.FailPDF(ctx, pool, r.ID, "pt-BR", 12, 0, "PDF_COMPILE_FAILED", now); err != nil {
 		t.Fatal(err)
 	}
 	got, _ = store.GetPDF(ctx, pool, r.ID, "pt-BR")

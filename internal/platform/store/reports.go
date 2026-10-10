@@ -39,6 +39,7 @@ type ReportPDF struct {
 	Status      string
 	FailureCode *string
 	JobID       int64
+	Attempt     int
 	SHA256      *string
 	SizeBytes   *int64
 	UpdatedAt   time.Time
@@ -277,9 +278,9 @@ VALUES ($1, $2, 'pending', $3, $4)`, reportID, language, jobID, now)
 func GetPDF(ctx context.Context, q Querier, reportID uuid.UUID, language string) (ReportPDF, error) {
 	var p ReportPDF
 	err := q.QueryRow(ctx, `
-SELECT report_id, language, status, failure_code, job_id, sha256, size_bytes, updated_at
+SELECT report_id, language, status, failure_code, job_id, attempt, sha256, size_bytes, updated_at
 FROM report_pdfs WHERE report_id = $1 AND language = $2`, reportID, language).
-		Scan(&p.ReportID, &p.Language, &p.Status, &p.FailureCode, &p.JobID, &p.SHA256, &p.SizeBytes, &p.UpdatedAt)
+		Scan(&p.ReportID, &p.Language, &p.Status, &p.FailureCode, &p.JobID, &p.Attempt, &p.SHA256, &p.SizeBytes, &p.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ReportPDF{}, ErrNotFound
 	}
@@ -290,31 +291,43 @@ FROM report_pdfs WHERE report_id = $1 AND language = $2`, reportID, language).
 	return p, nil
 }
 
+// ClaimPDF gives the pending PDF row of a report's language to one attempt of
+// its render job. It refuses another job and an older attempt with
+// ErrStaleAttempt.
+func ClaimPDF(ctx context.Context, tx pgx.Tx, reportID uuid.UUID, language string, jobID int64, attempt int, now time.Time) error {
+	return execGuarded(ctx, tx, `
+UPDATE report_pdfs SET attempt = $4, updated_at = $5
+WHERE report_id = $1 AND language = $2 AND status = 'pending' AND job_id = $3 AND attempt <= $4`,
+		reportID, language, jobID, attempt, now)
+}
+
 // FinishPDF stores the PDF bytes with their SHA-256 and size and marks the row
-// ready. It returns ErrStaleAttempt when the row is not pending.
-func FinishPDF(ctx context.Context, q Querier, reportID uuid.UUID, language string, body []byte, now time.Time) error {
+// ready. It returns ErrStaleAttempt when the row is not pending under jobID
+// and attempt.
+func FinishPDF(ctx context.Context, q Querier, reportID uuid.UUID, language string, jobID int64, attempt int, body []byte, now time.Time) error {
 	if body == nil {
 		return errors.New("finish pdf: nil body")
 	}
 	return execGuarded(ctx, q, `
-UPDATE report_pdfs SET status = 'ready', body = $3, sha256 = $4, size_bytes = $5, updated_at = $6
-WHERE report_id = $1 AND language = $2 AND status = 'pending'`,
-		reportID, language, body, digest(body), int64(len(body)), now)
+UPDATE report_pdfs SET status = 'ready', body = $5, sha256 = $6, size_bytes = $7, updated_at = $8
+WHERE report_id = $1 AND language = $2 AND status = 'pending' AND job_id = $3 AND attempt = $4`,
+		reportID, language, jobID, attempt, body, digest(body), int64(len(body)), now)
 }
 
 // FailPDF marks a pending row failed with code. It returns ErrStaleAttempt
-// when the row is not pending.
-func FailPDF(ctx context.Context, q Querier, reportID uuid.UUID, language string, code string, now time.Time) error {
+// when the row is not pending under jobID and attempt.
+func FailPDF(ctx context.Context, q Querier, reportID uuid.UUID, language string, jobID int64, attempt int, code string, now time.Time) error {
 	return execGuarded(ctx, q, `
-UPDATE report_pdfs SET status = 'failed', failure_code = $3, updated_at = $4
-WHERE report_id = $1 AND language = $2 AND status = 'pending'`, reportID, language, code, now)
+UPDATE report_pdfs SET status = 'failed', failure_code = $5, updated_at = $6
+WHERE report_id = $1 AND language = $2 AND status = 'pending' AND job_id = $3 AND attempt = $4`,
+		reportID, language, jobID, attempt, code, now)
 }
 
-// RetryPDF returns a failed row to pending under a new job. It returns
-// ErrStaleAttempt when the row is not failed.
+// RetryPDF returns a failed row to pending under a new job and attempt zero.
+// It returns ErrStaleAttempt when the row is not failed.
 func RetryPDF(ctx context.Context, q Querier, reportID uuid.UUID, language string, jobID int64, now time.Time) error {
 	return execGuarded(ctx, q, `
-UPDATE report_pdfs SET status = 'pending', failure_code = NULL, job_id = $3, updated_at = $4
+UPDATE report_pdfs SET status = 'pending', failure_code = NULL, job_id = $3, attempt = 0, updated_at = $4
 WHERE report_id = $1 AND language = $2 AND status = 'failed'`, reportID, language, jobID, now)
 }
 
