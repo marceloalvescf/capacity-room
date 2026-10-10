@@ -718,6 +718,13 @@ that the throttle table never lists attempted user names in readable form.
 - The first administrator is created by `admin bootstrap-admin`. The password
   is read from standard input only. The command needs `KCR_BOOTSTRAP_MODE=1`
   and refuses when any user exists.
+- A lost password of the last administrator is reset by
+  `admin reset-password --username <name>`. It needs `KCR_BOOTSTRAP_MODE=1`,
+  reads the new password from standard input only, applies the password
+  policy of 11.4, revokes every session of the user, and writes the audit
+  row `user.password_reset` with no actor. It changes neither the role nor
+  the active flag, and refuses an unknown user. Whoever can run it already
+  holds the database password and a shell on the host.
 - Deleting a user deactivates the account.
 - The role is read from the database on every request.
 
@@ -822,6 +829,10 @@ pdf      at most one row per language: pending -> ready | failed
   snapshot; collection runs once per report. It is not a report request,
   so the admission limits do not count it.
 - A failed compile never changes the report status or the other language.
+- A render attempt claims its PDF row with its River job and attempt, as a
+  collect attempt claims its report. Every later write of the row names
+  both and writes nothing when either differs, so an attempt that wakes
+  after River rescued its job cannot overwrite the newer attempt's outcome.
 - River runs the jobs. It keeps its own tables, picks up jobs abandoned by a
   crashed worker, and retries with backoff up to a limit.
 - The report row holds the state the interface shows. The job handler updates
@@ -1409,6 +1420,33 @@ checks use `admin probe`.
 - Interface design, API design, and catalog wording stay on the main thread.
 - Commits follow the conventional format.
 
+### 15.1 From 1.0.0 on
+
+Until 1.0.0 every stored row is test data, and a change may break it. From
+1.0.0 on, an upgrade never loses or breaks stored data silently.
+
+The public surface is:
+
+1. the API under `/api/v1`, as `api/openapi.yaml` describes it: routes,
+   fields, codes, and status answers;
+2. the command line: commands, flags, environment variables, and exit codes;
+3. the keys of `report.toml` and of `platform.toml`;
+4. the snapshot file, `schema_version` 2.0, which `--from-snapshot` reads
+   and the API serves.
+
+- A change that breaks the public surface is a major version. Adding to it
+  is a minor version.
+- The migrations released with 1.0.0 are never edited. A test pins the
+  SHA-256 of each released file. A schema change adds a new file that
+  carries the existing rows forward.
+- The code keeps one path. Stored data is converted forward by a migration;
+  no reader of an earlier shape is kept beside the current one.
+- A change that cannot carry stored data forward drops it on purpose: the
+  changelog names what is dropped under `Removed`, and the version is
+  major.
+- The wording, the layout, and the findings of the report stay under the
+  rule of section 15: a minor version.
+
 ## 16. Build order
 
 | Phase | Delivers | Proof |
@@ -1418,10 +1456,106 @@ checks use `admin probe`.
 | 2. Standalone command | Configuration, collection, analysis, snapshot, catalog, document | A PDF from each scenario, then from a real cluster |
 | 3. Platform backend | Database, accounts, policy, profiles, queue, worker, API | A report requested and downloaded through the API |
 | 4. Frontend | Every screen in both languages | End-to-end tests pass |
-| 5. Release 1.0.0 | Security review, operations guide | Tag after the gate |
+| 5. Release 1.0.0 | Security review, operations guide, the freeze of 15.1 | The guide walked on a fresh deployment; tag after the gate |
 
 Each phase gets its own implementation plan, written when the phase before it
 has closed.
+
+### 16.1 Release 1.0.0
+
+Phase 5 runs on the branch `release/1.0.0`, in this order: the fixes taken
+up before the review, the security review and its fixes, the two documents,
+the walk through the guide, the freeze, and the release.
+
+#### Taken up before the review
+
+- The PDF attempt guard of 11.7 (F-123). It edits the released schema
+  before it freezes.
+- `admin reset-password` of 11.3.
+
+Every other deferred finding stays deferred after 1.0.0, each a later patch
+or minor version.
+
+#### Security review
+
+The review reads the whole program at one commit, after the fixes above,
+as an attacker would.
+
+- A threat model names the attackers and what each wants: a visitor with
+  no account, a signed-in reader, an operator, an administrator who uses a
+  profile to reach an internal address, and a metric source that answers
+  with hostile data. An attacker who already holds the host or the database
+  is outside it.
+- One reviewer takes each of eight areas: sign-in and sessions; CSRF and
+  roles; the outbound policy; secrets and the redactor; the reads of
+  credential and CA files; hostile metric data up to the compile; the
+  container and Compose hardening; the frontend and the CSP.
+- Three scanners look for known vulnerabilities: `govulncheck` over the Go
+  modules, `npm audit` over the production dependencies of `web/`, and an
+  image scanner over the runtime image. They run at the review and at the
+  release, not in `make gate`, whose result must not change with a public
+  database.
+- Every finding is proven before it is ruled: by a request against the
+  running stack, or by a test that fails.
+- A finding blocks the release when it lets someone with no account act;
+  lets a role exceed the rights of 11.3; leaks a secret to a log, an answer,
+  or a stored row; reaches an address the policy of 11.5 refuses; or is a
+  known vulnerability whose code the program calls. Every other finding is
+  fixed or deferred with its reason.
+- The fixes are reviewed again, area by area.
+
+`docs/security.md` holds the threat model, each control and where it is
+enforced, and the record of the review: the commit, the date, the areas,
+the scanners and their versions, and every finding with its ruling.
+
+#### Operations guide
+
+`docs/operations.md` is the one guide for an operator, in English. The
+section of the README on running the platform moves into it, and the
+README points to it. It holds:
+
+1. what runs: `serve`, `worker`, PostgreSQL, and their ports;
+2. the install with Compose behind a TLS proxy, with a tested Caddy example,
+   and how `trusted_proxies` matches it; the image is built from the tag
+   with `make image`, and nothing is published to a registry;
+3. every key of `platform.toml`, with its default, bounds, and meaning, in
+   one table;
+4. the secrets and files: the server secret, the database password, the
+   credential and CA folders, and their permissions;
+5. the first start: migrate, bootstrap the administrator, import profiles,
+   the allowlists, and the profile test;
+6. the day to day: the health answers, the logs and a redacted line, every
+   failure code a report or a PDF can store and what it means, and the
+   stop of `serve` and `worker` with their grace periods;
+7. the backup and restore of PostgreSQL, and what is lost without one;
+8. an upgrade: stop, back up, build the new version, start; the schema
+   migrates under its lock; what to check after;
+9. the sizing: growth of the database per report and PDF, the retention,
+   and the size limits of 11.8;
+10. the limits: no outbound proxy, one `serve`, and plain HTTP behind the
+    operator's proxy;
+11. `admin reset-password` for a lost administrator password.
+
+Two tests keep it equal to the code. Every key the settings know is in the
+table of item 3, and the table holds no other key. Every code a report or a
+PDF can store is in the table of item 6, and the table holds no other code.
+
+The guide is proven by following it word for word on a fresh folder, with
+the images of the branch, a Caddy proxy with a certificate of its own, and
+a fake Prometheus: sign-in over HTTPS, a report and its PDF, a backup, a
+database wiped and restored, and the report read again. A step that does
+not work as written is a defect of the guide.
+
+#### Release
+
+- `CHANGELOG.md` `[1.0.0]` holds what an operator or a user perceives: the
+  guide, the security document, `admin reset-password`, the fixes, and the
+  promise of 15.1.
+- `make gate` passes on the version commit, the three scanners run on it
+  again, and an adversarial review reads the whole branch before it is
+  merged.
+- Merging, pushing, and tagging each wait for the owner's word naming the
+  target.
 
 ## 17. Risks
 
