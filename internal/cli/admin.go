@@ -180,7 +180,7 @@ func bootstrapAdmin(ctx context.Context, env Env, redactor *redact.Redactor, in 
 		return "", &exitError{2, errors.New("the administrator password is read from standard input; pass --password-stdin and write it there")}
 	}
 
-	name, password, err := readCredentials(env, in.username)
+	name, password, err := readCredentials(env, redactor, in.username)
 	if err != nil {
 		return "", err
 	}
@@ -281,7 +281,7 @@ func resetPassword(ctx context.Context, env Env, redactor *redact.Redactor, in r
 	if !in.passwordStdin {
 		return "", &exitError{2, errors.New("the new password is read from standard input; pass --password-stdin and write it there")}
 	}
-	name, password, err := readCredentials(env, in.username)
+	name, password, err := readCredentials(env, redactor, in.username)
 	if err != nil {
 		return "", err
 	}
@@ -307,12 +307,13 @@ func resetPassword(ctx context.Context, env Env, redactor *redact.Redactor, in r
 
 // readCredentials reads one line of standard input as a password and checks
 // it, and the username, against their policies.
-func readCredentials(env Env, username string) (name, password string, err error) {
+func readCredentials(env Env, redactor *redact.Redactor, username string) (name, password string, err error) {
 	line, err := bufio.NewReader(env.Stdin).ReadString('\n')
 	if err != nil && !errors.Is(err, io.EOF) {
 		return "", "", &exitError{1, errors.New("cannot read the password from standard input")}
 	}
 	password = strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
+	redactor.Add(password)
 
 	name, err = auth.ValidateUsername(username)
 	if err != nil {

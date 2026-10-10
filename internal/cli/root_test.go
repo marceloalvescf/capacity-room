@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
 )
@@ -354,7 +355,54 @@ func TestRunUnknownFlag(t *testing.T) {
 	if code != 2 {
 		t.Fatalf("Run() code = %d, want 2", code)
 	}
-	if want := "unknown flag"; !strings.Contains(stderr.String(), want) {
+	if want := "unknown flag; run the command with --help"; !strings.Contains(stderr.String(), want) {
 		t.Fatalf("stderr = %q, want it to contain %q", stderr.String(), want)
+	}
+}
+
+// TestNoFlagErrorRepeatsTheInput runs every command with an unknown flag,
+// an unknown shorthand, a bool flag given a value that is no bool, and a
+// value flag with no value, and requires one fixed line on standard error
+// that never holds what was typed.
+func TestNoFlagErrorRepeatsTheInput(t *testing.T) {
+	const marker = "Marker-Secret-1234"
+	root := newRootCmd(context.Background(), Env{}, redact.New())
+
+	check := func(t *testing.T, args []string, want string) {
+		t.Helper()
+		var stdout, stderr bytes.Buffer
+		code := Run(context.Background(), Env{}, args, &stdout, &stderr)
+		if code != 2 || stdout.Len() != 0 {
+			t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout.String(), stderr.String())
+		}
+		line := stderr.String()
+		if strings.Count(line, "\n") != 1 || !strings.HasSuffix(line, "\n") {
+			t.Fatalf("stderr = %q, want exactly one line", line)
+		}
+		if strings.Contains(line, marker) {
+			t.Fatalf("stderr repeats the input: %q", line)
+		}
+		if want != "" && !strings.HasPrefix(line, "error: "+want) {
+			t.Fatalf("stderr = %q, want it to start with %q", line, "error: "+want)
+		}
+	}
+
+	for _, path := range commandPaths(root, nil) {
+		cmd, _, err := root.Find(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run(strings.Join(path, " "), func(t *testing.T) {
+			check(t, append(append([]string{}, path...), "--"+marker), "unknown flag; run the command with --help")
+			check(t, append(append([]string{}, path...), "-Q"+marker), "unknown flag; run the command with --help")
+			cmd.Flags().VisitAll(func(f *pflag.Flag) {
+				switch {
+				case f.Value.Type() == "bool":
+					check(t, append(append([]string{}, path...), "--"+f.Name+"="+marker), "invalid value for --"+f.Name)
+				case f.NoOptDefVal == "":
+					check(t, append(append([]string{}, path...), "--"+f.Name), "--"+f.Name+" needs a value")
+				}
+			})
+		})
 	}
 }

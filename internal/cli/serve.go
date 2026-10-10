@@ -56,7 +56,7 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 	}
 	defer pool.Close()
 
-	secret, err := loaded.ReadServerSecret()
+	secret, err := readServerSecret(loaded, redactor)
 	if err != nil {
 		return &exitError{2, err}
 	}
@@ -233,4 +233,15 @@ func newHTTPServer(handler http.Handler, logger *slog.Logger) *http.Server {
 		ReadTimeout:       30 * time.Second,
 		IdleTimeout:       2 * time.Minute,
 	}
+}
+
+// readServerSecret reads the server secret and adds it to the redactor the
+// moment it is known, before any other step uses it.
+func readServerSecret(loaded settings.Settings, redactor *redact.Redactor) ([]byte, error) {
+	secret, err := loaded.ReadServerSecret()
+	if err != nil {
+		return nil, err
+	}
+	redactor.Add(string(secret))
+	return secret, nil
 }

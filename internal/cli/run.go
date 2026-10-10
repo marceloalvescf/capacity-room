@@ -18,6 +18,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	kcr "github.com/marceloalvescf/k8s-capacity-report"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
@@ -219,6 +220,7 @@ func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.
 		},
 	}
 	cmd.SetVersionTemplate("{{.Name}} {{.Version}}\n")
+	cmd.SetFlagErrorFunc(flagError)
 	cmd.AddCommand(newAdminCmd(ctx, env, redactor))
 	cmd.AddCommand(newReportCmd(ctx, env, redactor))
 	cmd.AddCommand(newServeCmd(ctx, env, redactor))
@@ -232,6 +234,29 @@ func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.
 	// one: calling it twice is harmless.
 	cmd.InitDefaultHelpCmd()
 	return cmd
+}
+
+// flagError is the flag-error function of every command (children inherit
+// the root's). pflag's own messages repeat what the user typed, which may be
+// a secret at the wrong place; these are fixed sentences built only from the
+// names of flags the program defines.
+func flagError(_ *cobra.Command, err error) error {
+	var invalid *pflag.InvalidValueError
+	var required *pflag.ValueRequiredError
+	var notExist *pflag.NotExistError
+	var syntax *pflag.InvalidSyntaxError
+	switch {
+	case errors.As(err, &notExist):
+		return errors.New("unknown flag; run the command with --help to see its flags")
+	case errors.As(err, &invalid):
+		return fmt.Errorf("invalid value for --%s", invalid.GetFlag().Name)
+	case errors.As(err, &required):
+		return fmt.Errorf("--%s needs a value", required.GetFlag().Name)
+	case errors.As(err, &syntax):
+		return errors.New("a flag is written wrongly; run the command with --help to see its flags")
+	default:
+		return errors.New("the flags could not be read; run the command with --help to see its flags")
+	}
 }
 
 // commandNames walks cmd's own subcommands once and returns two lists: all

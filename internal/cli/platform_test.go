@@ -179,7 +179,7 @@ func TestBootstrapNoPasswordFlag(t *testing.T) {
 	env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1"}, "")
 	code, stdout, stderr := runCommand(context.Background(), env,
 		"admin", "bootstrap-admin", "--username", "root", "--password", "xsecretvalue")
-	if code != 2 || stdout != "" || stderr != "error: unknown flag: --password\n" {
+	if code != 2 || stdout != "" || stderr != "error: unknown flag; run the command with --help to see its flags\n" {
 		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
 	}
 	if strings.Contains(stdout+stderr, "xsecretvalue") {
@@ -210,7 +210,7 @@ func TestBootstrapRefusesBadPasswordAndLanguage(t *testing.T) {
 		code  int
 		want  string
 	}{
-		{"short", "short\n", nil, 1, "error: the password is too short\n"},
+		{"short", "abc123\n", nil, 1, "error: the password is too short\n"},
 		{"long", strings.Repeat("a", 5000) + "\n", nil, 1, "error: the password is too long\n"},
 		{"language", "correct horse battery staple\n", []string{"--language", "fr"}, 2, "error: --language must be pt-BR or en\n"},
 	}
@@ -281,7 +281,7 @@ func TestResetPasswordRefusesAPasswordFlag(t *testing.T) {
 	env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1"}, "")
 	code, stdout, stderr := runCommand(context.Background(), env,
 		"admin", "reset-password", "--username", "root", "--password", "xsecretvalue")
-	if code != 2 || stdout != "" || stderr != "error: unknown flag: --password\n" {
+	if code != 2 || stdout != "" || stderr != "error: unknown flag; run the command with --help to see its flags\n" {
 		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
 	}
 }
