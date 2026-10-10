@@ -200,7 +200,10 @@ e2e: $(IMAGE_DEP)
 			|| { echo "e2e: $$fake did not leave exactly the one unasked answer; its last lines:"; \
 			$(E2E_COMPOSE) logs --no-log-prefix --tail 5 $$fake; [ $$status -ne 0 ] || status=1; }; \
 	done; \
-	$(E2E_COMPOSE) logs --no-log-prefix serve worker > .cache/e2e/platform.log; \
+	$(E2E_COMPOSE) logs --no-log-prefix serve worker > .cache/e2e/platform.log \
+		&& grep -qF 'msg="serve: stopping"' .cache/e2e/platform.log \
+		&& grep -qF 'msg="worker: stopped"' .cache/e2e/platform.log \
+		|| { echo 'e2e: the logs of the stack could not be read'; [ $$status -ne 0 ] || status=1; }; \
 	cat .cache/e2e/one-shot.log >> .cache/e2e/platform.log; \
 	if [ ! -s .cache/e2e/secrets.txt ]; then \
 		echo 'e2e: the specs recorded no secret'; [ $$status -ne 0 ] || status=1; \
