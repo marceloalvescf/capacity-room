@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, Page } from "@playwright/test";
+import type { Browser, BrowserContext, Page, Response } from "@playwright/test";
 import en from "../src/locales/en.json" with { type: "json" };
 import ptBR from "../src/locales/pt-BR.json" with { type: "json" };
 import { admin, createUser, csrfHeaders, expect, expectNoViolations, secret, signIn, test, watchPolicy } from "./fixtures";
@@ -154,16 +154,11 @@ test("a write without the CSRF token is refused, and a rotated token heals", asy
     const session = await tabA.request.get("/api/v1/auth/session");
     expect(((await session.json()) as { authenticated: boolean }).authenticated).toBe(true);
 
-    const answers: { status: number; url: string; code: string | null }[] = [];
+    const answers: Response[] = [];
     tabA.on("response", (response) => {
-      const url = new URL(response.url());
-      if (response.request().method() !== "PATCH" || !url.pathname.startsWith("/api/v1/account")) {
-        return;
+      if (response.request().method() === "PATCH" && new URL(response.url()).pathname.startsWith("/api/v1/account")) {
+        answers.push(response);
       }
-      void response
-        .json()
-        .then((body: { error?: { code?: string } }) => body.error?.code ?? null, () => null)
-        .then((code) => answers.push({ status: response.status(), url: url.pathname, code }));
     });
 
     // Loading the app in a second tab reads the session, which rotates the token; nothing runs between this load
@@ -176,8 +171,12 @@ test("a write without the CSRF token is refused, and a rotated token heals", asy
     await tabA.getByRole("menuitemradio", { name: ptBR.language["pt-BR"] }).click();
     await expect(tabA.getByRole("heading", { name: ptBR.account.title, level: 1 })).toBeVisible();
     await expect.poll(() => answers.length).toBe(2);
-    expect(answers[0]).toEqual({ status: 403, url: "/api/v1/account", code: "CSRF_REJECTED" });
-    expect(answers[1]).toEqual({ status: 200, url: "/api/v1/account", code: null });
+    const [first, second] = answers;
+    expect(first?.status()).toBe(403);
+    expect(new URL(first?.url() ?? "").pathname).toBe("/api/v1/account");
+    expect(((await first?.json()) as { error?: { code?: string } }).error?.code).toBe("CSRF_REJECTED");
+    expect(second?.status()).toBe(200);
+    expect(new URL(second?.url() ?? "").pathname).toBe("/api/v1/account");
 
     await tabA.getByRole("button", { name: languageButton(ptBR) }).click();
     await tabA.getByRole("menuitemradio", { name: en.language.en }).click();
@@ -195,6 +194,7 @@ test("an injected inline script is blocked, and the headers and the cookie hold"
     await signIn(page, users.policy, "/account");
     await expect(page.getByRole("heading", { name: en.account.title, level: 1 })).toBeVisible();
 
+    expect(violations).toEqual([]);
     await page.evaluate(() => {
       const script = document.createElement("script");
       script.textContent = "window.kcrInjected = true";
