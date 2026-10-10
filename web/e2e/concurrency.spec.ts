@@ -33,6 +33,7 @@ async function signedIn(browser: Browser, baseURL: string | undefined, user: { u
   const page = await context.newPage();
   await signIn(page, user, "/reports");
   await expect(page.getByRole("heading", { name: en.reports.title, level: 1 })).toBeVisible();
+  await expectNoViolations(page);
   return { context, page };
 }
 
@@ -114,12 +115,14 @@ test("a lost answer and a double click make one report each", async ({ page }) =
   await page.unroute("**/api/v1/reports", lose);
   await page.getByRole("button", { name: en.generate.submit, exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/jobs/${recorded}$`));
+  await expectNoViolations(page);
 
   await page.goto("/generate");
   await fillForm(page, replay.name);
   await page.getByRole("button", { name: en.generate.submit, exact: true }).dblclick();
   await expect(page).toHaveURL(/\/jobs\/[0-9a-f-]{36}$/);
   expect(page.url()).not.toContain(recorded);
+  await expectNoViolations(page);
 
   const made = (await allReports(page)).filter((report) => report.profile_id === replay.id);
   expect(made).toHaveLength(2);
@@ -158,6 +161,7 @@ test("a second save of one profile is refused as stale", async ({ page }) => {
   await nameOf(page).fill("Replay A");
   await page.getByRole("button", { name: en.admin.profile.save, exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/profiles\\?open=${replay.id}$`));
+  await expectNoViolations(page);
 
   await nameOf(tabB).fill("Replay B");
   await tabB.getByRole("button", { name: en.admin.profile.save, exact: true }).click();
@@ -169,6 +173,7 @@ test("a second save of one profile is refused as stale", async ({ page }) => {
 
 test("two administrators lowering each other leave one", async ({ browser, baseURL }) => {
   const contexts: BrowserContext[] = [];
+  let failure: Error | undefined;
   try {
     const first = await signedIn(browser, baseURL, admin);
     contexts.push(first.context);
@@ -197,6 +202,10 @@ test("two administrators lowering each other leave one", async ({ browser, baseU
     expect(winners).toHaveLength(1);
     const winner = winners[0];
     const loser = winner?.answer === lowersSecond ? lowersFirst : lowersSecond;
+    test.info().annotations.push({
+      type: "race",
+      description: `${winner?.by === first.page ? admin.username : secondAdmin.username} won, the other answered ${String(loser.status())}`,
+    });
     const refusal = (await loser.json()) as { error?: { code?: string } };
     if (loser.status() === 409) {
       expect(refusal.error?.code).toBe("LAST_ADMIN");
@@ -206,9 +215,18 @@ test("two administrators lowering each other leave one", async ({ browser, baseU
 
     const remaining = activeAdministrators(await accounts(winner?.by ?? first.page));
     expect(remaining).toHaveLength(1);
-  } finally {
-    await Promise.all(contexts.map((context) => context.close()));
+  } catch (thrown) {
+    failure = thrown instanceof Error ? thrown : new Error(String(thrown));
+  }
+  await Promise.all(contexts.map((context) => context.close()));
+  // The restore always runs; the first failure is the one reported.
+  try {
     await restoreAdministrator(browser, baseURL);
+  } catch (thrown) {
+    failure ??= thrown instanceof Error ? thrown : new Error(String(thrown));
+  }
+  if (failure !== undefined) {
+    throw failure;
   }
 });
 
