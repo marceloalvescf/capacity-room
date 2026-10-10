@@ -21,6 +21,8 @@
             pkgs.typst
             pkgs.poppler-utils
             pkgs.gnumake
+            pkgs.govulncheck
+            pkgs.trivy
           ];
         };
       });

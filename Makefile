@@ -49,7 +49,7 @@ WEB_STAMP := web/node_modules/.package-lock.json
 
 .PHONY: web build test lint image test-toolchain test-template test-golden \
 	update-golden update-testdata check-runtime gate postgres-up postgres-down \
-	test-postgres generate generate-check e2e
+	test-postgres generate generate-check e2e audit
 
 $(WEB_STAMP): web/package-lock.json
 	cd web && npm ci
@@ -242,3 +242,14 @@ gate:
 	@set -o pipefail; $(MAKE) check-runtime IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/check-runtime.log
 	@set -o pipefail; $(MAKE) e2e IMAGE_DEP= BUILD_FLAGS="--no-cache --pull" 2>&1 | tee $(GATE_LOGS)/e2e.log
 	@echo "gate passed for version $(VERSION)"
+
+# audit runs the three scanners of spec 16.1 over the Go modules, the
+# production dependencies of web/, and the runtime image. It needs the network
+# and Docker, so make gate never runs it.
+audit:
+	@mkdir -p .cache/audit; status=0; \
+	( govulncheck -version && govulncheck ./... ) > .cache/audit/govulncheck.log 2>&1 || status=1; \
+	( npm --version && cd web && npm audit --omit=dev ) > .cache/audit/npm-audit.log 2>&1 || status=1; \
+	( trivy --version && trivy image --scanners vuln --exit-code 1 $(IMAGE) ) > .cache/audit/trivy.log 2>&1 || status=1; \
+	for log in govulncheck npm-audit trivy; do echo "audit: .cache/audit/$$log.log"; done; \
+	exit $$status
