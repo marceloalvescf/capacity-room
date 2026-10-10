@@ -10,7 +10,7 @@ COPY VERSION /src/VERSION
 COPY web/ ./
 RUN npm run build
 
-FROM golang:1.27@sha256:3680233e3204827fbdc66088528ae6d4b3d034f51d03a99d454f6de034888244 AS build
+FROM golang:1.27.2@sha256:5bc7f572bbaa98885a3a1fd9c0aa76b59e3e14e8628bfc316bbfd0c701e4818c AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -22,7 +22,7 @@ RUN CGO_ENABLED=0 go build -trimpath -o /out/k8s-capacity-report ./cmd/k8s-capac
 # image. It needs only its own package and promtest, so a build with no cache
 # rebuilds neither the frontend nor the product. `make e2e` builds it;
 # `make image` never does.
-FROM golang:1.27@sha256:3680233e3204827fbdc66088528ae6d4b3d034f51d03a99d454f6de034888244 AS fake-prometheus-build
+FROM golang:1.27.2@sha256:5bc7f572bbaa98885a3a1fd9c0aa76b59e3e14e8628bfc316bbfd0c701e4818c AS fake-prometheus-build
 WORKDIR /src
 COPY go.mod go.sum ./
 COPY internal/promtest/ ./internal/promtest/
@@ -33,7 +33,7 @@ RUN CGO_ENABLED=0 go build -trimpath -o /out/fake-prometheus ./cmd/fake-promethe
 # runs unchanged on the Debian and distroless stages below.
 FROM ghcr.io/typst/typst:0.15.1@sha256:032e292249bcd378480cc7c142cfa324b63ef8aadeb88d7e7230320c4c9c422f AS typst
 
-FROM golang:1.27@sha256:3680233e3204827fbdc66088528ae6d4b3d034f51d03a99d454f6de034888244 AS test
+FROM golang:1.27.2@sha256:5bc7f572bbaa98885a3a1fd9c0aa76b59e3e14e8628bfc316bbfd0c701e4818c AS test
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends poppler-utils \
     && rm -rf /var/lib/apt/lists/*

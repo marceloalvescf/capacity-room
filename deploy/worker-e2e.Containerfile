@@ -4,7 +4,7 @@
 # deploy/Containerfile, which a guard test checks.
 ARG RUNTIME_IMAGE
 
-FROM golang:1.27@sha256:3680233e3204827fbdc66088528ae6d4b3d034f51d03a99d454f6de034888244 AS switch
+FROM golang:1.27.2@sha256:5bc7f572bbaa98885a3a1fd9c0aa76b59e3e14e8628bfc316bbfd0c701e4818c AS switch
 WORKDIR /src
 COPY go.mod go.sum ./
 COPY cmd/typst-switch/ ./cmd/typst-switch/
