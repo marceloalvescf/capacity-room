@@ -91,7 +91,11 @@ attacker would read it, in eight areas, each by its own reviewer:
 8. the frontend and the response headers.
 
 The scanners were govulncheck 1.8.0, npm 11.20.0 (`npm audit --omit=dev`),
-and trivy 0.74.0. A claim was ruled only once it was proven: by a request
+and trivy 0.74.0. govulncheck judges the Go code: it reports only a
+vulnerability whose code the program calls. trivy reads the image and leaves
+out an advisory with no fixed version, which no change could act on, and
+those named in `deploy/trivy-ignore.yaml`, each with its reason and a date
+after which it returns to the audit. A claim was ruled only once it was proven: by a request
 against a running stack, by a test that failed on the reviewed commit, or by
 a run of the built program.
 
