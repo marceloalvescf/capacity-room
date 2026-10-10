@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -165,4 +166,50 @@ func TestRefErrorCarriesOnlyTheCode(t *testing.T) {
 	wantRef(t, err, CodeCredentialInvalid, dir)
 	_, err = ResolveCABundle(dir, "missing")
 	wantRef(t, err, CodeCABundleInvalid, dir)
+}
+
+func TestResolveReferenceFIFOIsNotRegular(t *testing.T) {
+	dir := t.TempDir()
+	if err := syscall.Mkfifo(filepath.Join(dir, "pipe"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() {
+		_, err := ResolveCredential(dir, "pipe")
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		wantRef(t, err, CodeCredentialInvalid, dir)
+	case <-time.After(time.Second):
+		t.Fatal("the read of a FIFO did not return within 1s")
+	}
+}
+
+func TestResolveReferenceFollowsRelativeLinkInsideFolder(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "..2026_data"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(dir, "..2026_data"), "token", []byte("token-one\n"))
+	if err := os.Symlink("..2026_data", filepath.Join(dir, "..data")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("..data/token", filepath.Join(dir, "token")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ResolveCredential(dir, "token")
+	if err != nil || got != "token-one" {
+		t.Fatalf("got %q, %v", got, err)
+	}
+}
+
+func TestResolveReferenceRefusesLinkOutsideFolder(t *testing.T) {
+	dir, other := t.TempDir(), t.TempDir()
+	write(t, other, "outside", []byte("token-two\n"))
+	if err := os.Symlink(filepath.Join("..", filepath.Base(other), "outside"), filepath.Join(dir, "up")); err != nil {
+		t.Fatal(err)
+	}
+	_, err := ResolveCredential(dir, "up")
+	wantRef(t, err, CodeCredentialInvalid, dir)
 }

@@ -7,8 +7,8 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"strings"
+	"syscall"
 	"unicode"
 	"unicode/utf8"
 
@@ -36,40 +36,43 @@ func (e *RefError) Error() string { return string(e.Code) }
 // MaxReferenceBytes bounds a referenced file.
 const MaxReferenceBytes = 1 << 20
 
-// locate returns the resolved path of the regular file name under dir, after
-// every link is followed, refusing a name or a link that leaves dir.
-func locate(dir, name string, invalid, unreadable RefCode) (string, error) {
+// openReference opens the file name inside dir once, through a root that
+// refuses a name or a link leaving dir, and checks on the open file that it
+// is a regular file. The open does not block on a FIFO.
+func openReference(dir, name string, invalid, unreadable RefCode) (*os.File, error) {
 	if !ValidReferenceName(name) {
-		return "", &RefError{Code: invalid}
+		return nil, &RefError{Code: invalid}
 	}
-	base, err := filepath.EvalSymlinks(dir)
-	if err != nil {
-		return "", &RefError{Code: unreadable}
-	}
-	full, err := filepath.EvalSymlinks(filepath.Join(base, name))
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return "", &RefError{Code: invalid}
-		}
-		return "", &RefError{Code: unreadable}
-	}
-	if full == base || !strings.HasPrefix(full, base+string(filepath.Separator)) {
-		return "", &RefError{Code: invalid}
-	}
-	info, err := os.Stat(full)
-	if err != nil {
-		return "", &RefError{Code: unreadable}
-	}
-	if !info.Mode().IsRegular() {
-		return "", &RefError{Code: invalid}
-	}
-	return full, nil
-}
-
-func readReference(path string, unreadable, tooLarge RefCode) ([]byte, error) {
-	f, err := os.Open(path)
+	root, err := os.OpenRoot(dir)
 	if err != nil {
 		return nil, &RefError{Code: unreadable}
+	}
+	defer func() { _ = root.Close() }()
+	f, err := root.OpenFile(name, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		if errors.Is(err, fs.ErrPermission) {
+			return nil, &RefError{Code: unreadable}
+		}
+		return nil, &RefError{Code: invalid}
+	}
+	info, err := f.Stat()
+	if err != nil {
+		_ = f.Close()
+		return nil, &RefError{Code: unreadable}
+	}
+	if !info.Mode().IsRegular() {
+		_ = f.Close()
+		return nil, &RefError{Code: invalid}
+	}
+	return f, nil
+}
+
+// readReference reads the regular file name inside dir, at most
+// MaxReferenceBytes.
+func readReference(dir, name string, invalid, unreadable, tooLarge RefCode) ([]byte, error) {
+	f, err := openReference(dir, name, invalid, unreadable)
+	if err != nil {
+		return nil, err
 	}
 	defer func() { _ = f.Close() }()
 	data, err := io.ReadAll(io.LimitReader(f, MaxReferenceBytes+1))
@@ -86,11 +89,7 @@ func readReference(path string, unreadable, tooLarge RefCode) ([]byte, error) {
 // token: UTF-8, one trailing CRLF or LF removed, at least 8 characters, with
 // no control character, no white space, and no leading byte order mark.
 func ResolveCredential(dir, name string) (string, error) {
-	path, err := locate(dir, name, CodeCredentialInvalid, CodeCredentialUnreadable)
-	if err != nil {
-		return "", err
-	}
-	data, err := readReference(path, CodeCredentialUnreadable, CodeCredentialTooLarge)
+	data, err := readReference(dir, name, CodeCredentialInvalid, CodeCredentialUnreadable, CodeCredentialTooLarge)
 	if err != nil {
 		return "", err
 	}
@@ -124,11 +123,7 @@ func cleanToken(token string) bool {
 // PEM certificate and returns the bytes it checked, for the TLS
 // configuration.
 func ResolveCABundle(dir, name string) ([]byte, error) {
-	path, err := locate(dir, name, CodeCABundleInvalid, CodeCABundleUnreadable)
-	if err != nil {
-		return nil, err
-	}
-	data, err := readReference(path, CodeCABundleUnreadable, CodeCABundleTooLarge)
+	data, err := readReference(dir, name, CodeCABundleInvalid, CodeCABundleUnreadable, CodeCABundleTooLarge)
 	if err != nil {
 		return nil, err
 	}
