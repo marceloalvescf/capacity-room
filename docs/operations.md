@@ -61,7 +61,10 @@ set -a; . "$KCR_HOME/kcr.env"; set +a
 ```
 
 The database password is written in hexadecimal on purpose: it is placed in
-a connection URL, where `@ / : ? # %` would break it.
+a connection URL, where `@ / : ? # %` would break it. PostgreSQL takes it
+when its volume is first created; a password changed in `kcr.env` later
+does not reach the database, and `serve` then fails to connect. Keep
+`kcr.env` with your backups.
 
 `COMPOSE_FILE` adds a second file of your own to the shipped one, holding
 the limits of section 10. Create it now, and adjust the numbers to the host:
