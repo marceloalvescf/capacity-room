@@ -103,3 +103,10 @@ services:
 volumes:
   web-node-modules:
   switch:
+
+networks:
+  # The e2e project takes a range of its own, so it runs beside a deployment.
+  default:
+    ipam:
+      config:
+        - subnet: 172.31.214.0/24

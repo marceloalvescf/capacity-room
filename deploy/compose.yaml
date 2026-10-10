@@ -63,3 +63,13 @@ services:
 
 volumes:
   postgres-data:
+
+networks:
+  # A fixed subnet, so that a TLS proxy on the host reaches serve from the
+  # known gateway 172.31.213.1, which trusted_proxies names. An operator whose
+  # networks already use this range changes it in an override file, with
+  # trusted_proxies.
+  default:
+    ipam:
+      config:
+        - subnet: 172.31.213.0/24
