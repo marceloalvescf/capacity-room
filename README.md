@@ -272,207 +272,14 @@ kill %1
 
 ## Running the platform
 
-`serve` needs a deployment file and the database DSN in the environment.
-The file holds no secret: the server secret, which keys the sign-in
-throttle, is a file of at least 32 random bytes that the file names.
-
-```toml
-session_ttl_seconds = 43200
-session_idle_seconds = 3600
-server_secret_path = "/etc/kcr/server-secret"
-trusted_proxies = []
-allowed_endpoint_hostnames = ["prometheus.example.invalid"]
-allowed_endpoint_cidrs = ["10.0.0.0/8"]
-credential_dir = "/run/secrets/metrics"
-ca_bundle_dir = "/run/config/ca"
-```
-
-The two allowlists are the outbound policy: every address a metric source
-resolves to must be allowed by host name or by range, and both lists are
-empty by default, so nothing is reachable until one entry names it. The
-loopback, link-local, multicast, and metadata addresses are refused unless
-an entry names that single address. The two folders hold the credential
-files and the CA bundles a profile names by file name; they are read when a
-profile is tested or a report runs, never when a profile is written.
-
-```bash
-head -c 32 /dev/urandom > /etc/kcr/server-secret
-export KCR_DATABASE_DSN='postgres://kcr:...@db:5432/kcr'
-
-# The first administrator, once; the password is one line on standard input.
-printf '%s\n' 'a password of twelve or more' | KCR_BOOTSTRAP_MODE=1 \
-  bin/k8s-capacity-report admin bootstrap-admin --username admin --password-stdin --config platform.toml
-
-# The schema, applied under a database lock. serve does the same before it listens.
-bin/k8s-capacity-report admin migrate --config platform.toml
-
-bin/k8s-capacity-report serve --config platform.toml --listen :8080
-
-# A health check without curl, for a container.
-bin/k8s-capacity-report admin probe http://127.0.0.1:8080/health/ready
-```
-
-Sign-in is a cookie session: `GET /api/v1/auth/session` gives an anonymous
-caller a sign-in CSRF token, `POST /api/v1/auth/login` with that token in
-`X-CSRF-Token` signs in and sets `kcr_session`, and every state-changing
-request after it carries the session's `csrf_token` in the same header. Five
-failed sign-ins in five minutes block the account and address pair for five
-minutes. An administrator manages users under `/api/v1/admin/users`; every
-signed-in reader changes their own password and language at
-`/api/v1/account`. Every failure answers one JSON shape,
-`{"error":{"code","message","fields"}}`.
-
-A profile describes one metric source. Every signed-in reader lists the
-active ones at `GET /api/v1/profiles`, as summaries. An administrator
-lists, creates, reads, revises, and deletes them under
-`/api/v1/admin/profiles` and `/api/v1/admin/profiles/{id}`; every change is
-a new immutable revision, a revise names the revision it was read at and
-answers `PROFILE_REVISION_STALE` when another change came first, and a
-delete keeps every revision. `POST /api/v1/admin/profiles/{id}/test` runs
-the preflight of a report against the source through the outbound policy
-and answers `{"ok","code","capabilities"}`, never a URL, a name, an
-address, or the text of a failure. `POST /api/v1/admin/profiles/test` runs
-the same preflight on a profile that is not saved yet, from the document
-the form holds.
-
-`admin import-profiles` creates or revises profiles from a TOML file and is
-repeatable: a profile the file names and the database does not is created,
-one whose document differs is revised, one that is equal is left as it is,
-and one the file does not name is left alone. The whole file is validated
-before anything is written, and an unknown key, an inline credential, or a
-repeated id refuses it.
-
-```toml
-[[profiles]]
-id = "prod"
-display_name = "Production"
-endpoint_url = "https://prometheus.example.invalid/api/v1"
-cluster_name = "prod"
-allowed_namespaces = ["payments", "checkout"]
-credential_file = "prometheus-bearer"
-active = true
-
-[[profiles]]
-id = "stage"
-display_name = "Staging"
-endpoint_url = "https://prometheus.example.invalid/api/v1"
-cluster_name = "stage"
-allowed_namespaces = ["payments"]
-timeout_seconds = 30
-permitted_periods = ["24h", "7d"]
-default_period = "7d"
-
-[profiles.thresholds]
-warning_percent = 60
-```
-
-```bash
-bin/k8s-capacity-report admin import-profiles --file profiles.toml --config platform.toml
-```
-
-`worker` reads the same deployment file and DSN. It applies the schema
-under the same lock as `serve`, so the two start in any order, answers
-`GET /health/live` and `GET /health/ready` on `--health-listen` (default
-`:8091`), and runs the report jobs through River, the job queue that lives
-in the same database. On a stop signal it takes no new job, waits
-`worker_drain_seconds` for the running ones, then cancels them; a cancelled
-job returns to the queue and runs again from the start. A stop takes at most
-twice `worker_drain_seconds` plus ten seconds, so the supervisor's grace
-period must be longer: a worker killed before it stops leaves its jobs to
-River's rescue, which waits for the longer job timeout plus one minute.
-
-```bash
-bin/k8s-capacity-report worker --config platform.toml --health-listen :8091
-```
-
-These keys of the deployment file govern the reports; each shows its
-default and its bounds.
-
-| Key | Default | Bounds | Meaning |
-|---|---|---|---|
-| `worker_slots` | 2 | 1 to 16 | Report jobs one worker runs at once |
-| `worker_drain_seconds` | 30 | 1 to 3600 | Wait for running jobs at a stop, before they are cancelled |
-| `collect_timeout_seconds` | 900 | 60 to 3600 | Longest collection |
-| `render_timeout_seconds` | 300 | 10 to 3600 | Longest compilation of one PDF |
-| `job_max_attempts` | 3 | 1 to 10 | Attempts of a job whose source was unreachable or that failed inside |
-| `report_retention_days` | 7 | 1 to 365 | Days a report keeps its snapshot and PDFs |
-| `expired_report_days` | 30 | 1 to 365 | Days an expired report is kept as a record before it is removed |
-| `admission_limit` | 20 | 1 to 1000 | Reports queued or running at once |
-| `admission_profile_limit` | 5, or `admission_limit` when smaller | 1 to `admission_limit` | Reports queued or running at once for one profile |
-| `admission_retry_seconds` | 5 | 1 to 300 | The wait a refused request is told to keep |
-
-A report is collected once, stored as a snapshot, and compiled into the
-PDF of the language its request names; the PDF of the other language is
-compiled when an operator or an administrator asks for it. A collection whose source cannot be reached is tried
-again, up to `job_max_attempts`; any other failure is final and stored as a
-code. After `report_retention_days` the snapshot and the PDFs are deleted
-and the report is kept as expired; after `expired_report_days` more it is
-removed. Once a minute the worker also removes the rows of deleted reports,
-sign-in records whose block is over, and sessions that ended longer than a
-session lifetime ago.
-
-A report is requested, read, and removed under `/api/v1/reports`:
-
-| Route | Who | Answer |
-|---|---|---|
-| `POST /reports` | operator, administrator | 202 with the report's id, status, and phase; the body names the report's `language` |
-| `GET /reports?limit=&cursor=` | every signed-in reader | a page of reports, newest first, with `next_cursor` |
-| `GET /reports/{id}` | every signed-in reader | the report, its request, its progress, its PDFs |
-| `GET /reports/{id}/view?lang=` | every signed-in reader | the report worded in `pt-BR` or `en` for the web |
-| `GET /reports/{id}/snapshot` | every signed-in reader | the stored snapshot, the input of `--from-snapshot` |
-| `GET /reports/{id}/pdf?lang=` | every signed-in reader | the PDF of one language |
-| `POST /reports/{id}/pdfs` | operator, administrator | 202; makes the PDF of a language, or compiles a failed one again; 409 `PDF_ALREADY_READY` once it is ready |
-| `DELETE /reports/{id}` | administrator; an operator for its own | 204 |
-| `POST /reports/delete` | administrator; an operator for its own | one outcome per id, up to 200 |
-
-The body of `POST /reports` names a length, `period` such as `"7d"`, or a
-calendar range, `start` and `end` such as `"2026-09-01 00:00"`, read in the
-request's time zone, never both. A range must end at or before the moment of
-the request. A profile with `permitted_periods` refuses a range.
-
-A request carries an `Idempotency-Key` header of the client's choosing: the
-same key with the same body answers the report it created, and the same key
-with another body is refused. A request over `admission_limit`, or over
-`admission_profile_limit` for its profile, answers 429 with `Retry-After` in
-seconds. The view, the snapshot, and the PDFs carry an `ETag`; a request
-with `If-None-Match` answers 304 when nothing changed, and only once the
-reader is known to be allowed to read the report. From the end of
-`report_retention_days` a report answers 410 `REPORT_EXPIRED` until it is
-removed `expired_report_days` later, and 404 after; a deleted report answers
-404 at once. An expired report can still be deleted, by whoever may delete
-it.
-
-`serve`, `worker`, and `admin` exit with 0, with 1 for a failure at run time
-(the database, the listener, Typst for `worker`, jobs that did not stop
-after the drain, a refusal of `bootstrap-admin`), and with 2 for the
-arguments or the settings file.
-
-### The Compose stack
-
-`deploy/compose.yaml` runs PostgreSQL, `serve`, and `worker` from the
-runtime image, as the Compose project `k8s-capacity-report`. It refuses to start without three variables: `KCR_VERSION`,
-the image version; `KCR_CONFIG_DIR`, a folder that holds `platform.toml`
-and `server-secret`; and `KCR_POSTGRES_PASSWORD`. The schema and the first
-administrator are created with `admin migrate` and `admin bootstrap-admin`,
-as above.
-
-```bash
-export KCR_VERSION=$(cat VERSION) KCR_CONFIG_DIR=/etc/kcr KCR_POSTGRES_PASSWORD='...'
-docker compose -f deploy/compose.yaml up -d
-```
-
-`serve` listens on `127.0.0.1:8080` and speaks plain HTTP. On a stop
-signal it waits up to 30 seconds for the requests in flight, closes the
-connections still open after that with one warning, and exits 0. The Compose
-file gives `serve` 45 seconds and `worker` 75 seconds to stop before Docker
-kills them; a deployment that raises `worker_drain_seconds` raises the
-worker's `stop_grace_period` with it. The session
-cookie is `Secure`, so a browser reaches `serve` at localhost or through a
-TLS proxy that the operator provides. The Compose files hold no proxy and no
-certificate. `deploy/compose.integration.yaml` and the files of
-`deploy/platform/` serve `make e2e` alone, and never a deployment: they add
-a fake Prometheus, built from its own stage of `deploy/Containerfile`, and
-one profile that points at it.
+The platform puts the reports on the web: `serve` holds the interface and the
+API, `worker` collects the reports and compiles their PDFs, and PostgreSQL
+keeps everything, run together by `deploy/compose.yaml` behind a TLS proxy
+of your own. [`docs/operations.md`](docs/operations.md) is the guide to
+install, configure, back up, upgrade, and troubleshoot it, and
+[`docs/security.md`](docs/security.md) describes what it defends against.
+`deploy/compose.integration.yaml` and the files of `deploy/platform/` serve
+`make e2e` alone, and never a deployment.
 
 ### Working on the interface
 
@@ -504,6 +311,7 @@ make postgres-down    # removes it, with its volume
 make test-postgres    # postgres-up, the tests tagged postgres (and the worker's with typst), postgres-down
 make e2e              # the Compose stack and the browser test of the interface
 make gate             # everything above, from freshly built images
+make audit            # the scanners of the Go modules, the interface's dependencies, and the image
 make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files
 ```
@@ -514,6 +322,8 @@ make update-testdata  # rewrites the golden snapshots and data files
 |---|---|
 | [AGENTS.md](AGENTS.md) | Working agreement: environment, gates, phases, versioning |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each version |
+| [docs/operations.md](docs/operations.md) | The operations guide of the platform |
+| [docs/security.md](docs/security.md) | The threat model, the controls, and the security review |
 | [docs/superpowers/specs/](docs/superpowers/specs/) | Design |
 | [docs/superpowers/plans/](docs/superpowers/plans/) | Implementation plans, one per phase |
 | [docs/decisions/](docs/decisions/) | Decisions taken from measurements |
