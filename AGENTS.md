@@ -41,7 +41,7 @@ make generate-check   # fails when the committed generated file is stale
 make postgres-up      # starts PostgreSQL 18 for the platform tests, through Compose
 make postgres-down    # removes it, with its volume
 make test-postgres    # postgres-up, the tests tagged postgres (worker and cli with typst), postgres-down
-make e2e              # the Compose stack and the Playwright spec in a real browser
+make e2e              # the Compose stack and the Playwright specs in a real browser
 make gate             # everything above, from freshly built images
 make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files
@@ -95,8 +95,10 @@ image build enforce.
   the one template form `{{.Name}}`. No entry holds a banned term, and none
   holds an em-dash unless it is the em-dash alone.
 - **The production binary holds no test support.** `internal/promtest`,
-  `internal/goldentest`, `cmd/fake-prometheus`, and `cmd/update-testdata` are
-  not among its dependencies, and `time/tzdata` is.
+  `internal/goldentest`, `cmd/fake-prometheus`, `cmd/typst-switch`, and
+  `cmd/update-testdata` are not among its dependencies, and `time/tzdata` is.
+- **The Containerfiles share one Go base.** Every `FROM golang:` line of
+  `deploy/Containerfile` and `deploy/worker-e2e.Containerfile` is equal.
 - **Typst is pinned at exactly 0.15.1.** The toolchain probe refuses any other
   version, and the image build asserts it.
 - **One version.** `VERSION` holds it, and the newest changelog heading must
@@ -605,15 +607,43 @@ redactor the moment the settings are loaded, before the pool opens.
   of `serve`, and the fake Prometheus, built by `make e2e` from the
   `fake-prometheus` stage of `deploy/Containerfile` and never by
   `make image`, with the one-shot `profiles` service that imports
-  `deploy/platform/profiles.toml`. The fake serves its scenario once, so the
-  stack runs one collection: the reports spec requests one report and
-  Playwright never retries. The administration spec's draft tests use a
-  refused address and `fake-prometheus:9091`, where nothing listens, so the
-  fake receives none of their requests. The target stops the fake and fails unless its
-  log holds `remaining: 1`, the one answer of `direct-complete` that no run
-  asks, pinned by `TestDirectCompleteLeavesTheRecordedAnswerUnused`. The
-  spec fails on any CSP violation and on any axe finding. The fixtures of
-  `deploy/platform/` serve this stack alone.
+  `deploy/platform/profiles.toml`. Each fake serves its scenario once, so
+  each spec that collects has a fake of its own and runs one collection,
+  and Playwright never retries: `fake-prometheus` serves the reports spec,
+  and `fake-recovery`, which waits 150 ms before each answer so a
+  collection lasts about 10 s, serves the recovery spec through the profile
+  `e2e-recovery`, whose credential is the file
+  `deploy/platform/credentials/e2e-recovery`. A fake is healthy once it
+  answers `/-/ready`, which spends no recorded answer, and `serve` and
+  `worker` wait for both. A spec that needs a report in flight and no data
+  uses a profile at `fake-prometheus:9091`, where nothing listens, as the
+  concurrency spec and the administration spec's draft tests do. The target
+  stops the fakes and fails unless each log holds `remaining: 1`, the one
+  answer of `direct-complete` that no run asks, pinned by
+  `TestDirectCompleteLeavesTheRecordedAnswerUnused`.
+- **The test worker's typst is a switch.** `make e2e` builds
+  `deploy/worker-e2e.Containerfile` on the runtime image as
+  `k8s-capacity-report-worker-e2e`, whose worker runs `cmd/typst-switch`
+  through `KCR_TYPST`: it passes every call to typst, unless
+  `/switch/fail` exists, which makes every compile fail. The Playwright
+  service writes the volume `switch`, and the worker reads it.
+  `make gate` builds the fakes and the test worker with no cache.
+- **No secret reaches the stack's logs.** Every password under `web/e2e/`
+  is declared through `secret()`, which records it in `/results/secrets.txt`.
+  After the stack stops, the target fails when no secret was recorded, when
+  the list of secrets cannot be built, or when a recorded secret, the
+  administrator's password, the credential, or the database password
+  appears in the logs of `serve`, `worker`, or the one-shot services. It
+  never prints a secret.
+- **The specs are independent of order.** Playwright runs them in name
+  order: admin, concurrency, recovery, reports, security, sign-in. Each
+  names its users and profiles with its own prefix (`e2e-s-`, `e2e-c-`,
+  `e2e-r-`), finds its reports by id, and undoes in a `finally` what it
+  changes for everyone: the recovery spec turns the switch off, and the
+  concurrency spec leaves `e2e-admin` the one active administrator. Every
+  spec fails on any CSP violation and on any axe finding, except the
+  security check that injects one. The fixtures of `deploy/platform/` serve
+  this stack alone.
 - **The report screen is `/reports/:id/:tab`,** with seven tabs: overview,
   findings, namespaces, workloads, autoscaling, nodes, and quality. Its frame
   reads `GET /reports/{id}` and `GET /reports/{id}/view?lang=`. The view has
