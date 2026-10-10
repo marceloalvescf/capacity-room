@@ -6,6 +6,51 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-10
+
+### Added
+
+- An operations guide explains how to install the platform behind a TLS
+  proxy, configure it, back it up and restore it, upgrade it, size it, and
+  read its failures.
+- A security document describes whom the platform defends against, its
+  controls, and the security review of this release.
+- An operator who lost the last administrator's password resets it on the
+  host with `admin reset-password`.
+
+### Changed
+
+- From this version on, an upgrade keeps the stored reports, and a change
+  that would break the API, the command line, the settings files, or the
+  snapshot file waits for a major version.
+- The Compose stack runs on the fixed network `172.31.213.0/24`, so a TLS
+  proxy on the host can be named in `trusted_proxies`.
+- A credential or CA folder that holds the settings file or the server
+  secret is refused at start.
+- A flag written wrongly is refused with a message that names the flag,
+  never the text that was typed.
+
+### Fixed
+
+- A PDF attempt that resumes after it was replaced no longer overwrites the
+  outcome of the attempt that replaced it.
+- A profile test against an address that answers something other than HTTP
+  reports the source as unreachable instead of failing with an error.
+
+### Security
+
+- The program is built with Go 1.27.2, which fixes ten vulnerabilities of
+  the standard library in code the program calls.
+- A password typed on the host and the server secret are hidden from the
+  logs, as the other secrets are.
+- The sign-in throttle tells clients apart by a canonical address, and an
+  IPv6 client by its network, and a sign-in whose client has left no longer
+  waits for its turn.
+- The server secret must be a regular file of at most 64 KiB, and a
+  credential or CA file is opened once inside its folder, so a file swapped
+  while it is read cannot hold the worker.
+- PostgreSQL runs without the right to gain privileges.
+
 ## [0.6.0] - 2026-10-09
 
 ### Added
