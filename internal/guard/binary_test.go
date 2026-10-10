@@ -43,6 +43,7 @@ func TestProductionBinaryHoldsNoTestSupport(t *testing.T) {
 		module + "/internal/platform/storetest",
 		module + "/cmd/fake-prometheus",
 		module + "/cmd/update-testdata",
+		module + "/cmd/typst-switch",
 	}
 
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
