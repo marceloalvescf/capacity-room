@@ -250,3 +250,23 @@ func TestRetryPDFResetsTheAttempt(t *testing.T) {
 		t.Fatalf("job %d", row.JobID)
 	}
 }
+
+func TestClaimPDFRefusesASettledRow(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	f := newReportFixture(t, pool)
+	r := collectedReport(t, pool, f, now.Add(time.Hour),
+		map[string]string{"en": "ready", "pt-BR": "failed"}, map[string]int64{"en": 7, "pt-BR": 7})
+	for lang, status := range map[string]string{"en": "ready", "pt-BR": "failed"} {
+		err := store.Transact(ctx, pool, func(tx pgx.Tx) error {
+			return store.ClaimPDF(ctx, tx, r.ID, lang, 7, 1, now)
+		})
+		if !errors.Is(err, store.ErrStaleAttempt) {
+			t.Fatalf("%s: %v", lang, err)
+		}
+		row, err := store.GetPDF(ctx, pool, r.ID, lang)
+		if err != nil || row.Status != status || row.Attempt != 0 {
+			t.Fatalf("%s row %+v, %v", lang, row, err)
+		}
+	}
+}

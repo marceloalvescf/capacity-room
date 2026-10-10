@@ -54,6 +54,7 @@ type RenderWorker struct {
 // transaction that stores a PDF, or shorten the outcome timeout; the zero
 // value of a field does nothing.
 type renderHooks struct {
+	afterClaim     func(ctx context.Context, language string) // after the row is claimed, before the snapshot is read
 	beforeStore    func(ctx context.Context, language string) // after the compile, before the outcome's transaction
 	insideStore    func(language string)                      // inside the transaction that stores a PDF
 	successError   error                                      // returned from inside that transaction, after insideStore
@@ -141,11 +142,12 @@ func needsRender(ctx context.Context, tx pgx.Tx, report store.Report, language s
 	return "", nil
 }
 
-// load reads the snapshot under the lock of the report. It reports done when
-// the report needs nothing: the job is then completed.
+// load claims the PDF row under the lock of the report, in a transaction of
+// its own, and then reads the snapshot, so a failure of the read is written
+// under the claim. It reports done when the report needs nothing: the job is
+// then completed.
 func (w *RenderWorker) load(ctx context.Context, job *river.Job[reports.RenderArgs]) (body []byte, done bool, err error) {
 	id, lang := job.Args.ReportID, job.Args.Language
-	var mismatch bool
 	err = store.Transact(ctx, w.Deps.Pool, func(tx pgx.Tx) error {
 		report, err := store.GetReportForUpdate(ctx, tx, id)
 		if errors.Is(err, store.ErrNotFound) {
@@ -157,7 +159,8 @@ func (w *RenderWorker) load(ctx context.Context, job *river.Job[reports.RenderAr
 		if err != nil {
 			return err
 		}
-		skip, err := needsRender(ctx, tx, report, lang, w.Deps.Now().UTC())
+		now := w.Deps.Now().UTC()
+		skip, err := needsRender(ctx, tx, report, lang, now)
 		if err != nil {
 			return err
 		}
@@ -167,23 +170,22 @@ func (w *RenderWorker) load(ctx context.Context, job *river.Job[reports.RenderAr
 			_, err := river.JobCompleteTx[*riverpgxv5.Driver](ctx, tx, job)
 			return err
 		}
-		if err := store.ClaimPDF(ctx, tx, id, lang, job.ID, job.Attempt, w.Deps.Now().UTC()); err != nil {
-			return err
-		}
-		_, snap, sum, err := store.GetSnapshot(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		// A mismatch is returned after the commit, so the claim of the row stands
-		// and the failure can be written under it.
-		mismatch = digestHex(snap) != sum
-		body = snap
-		return nil
+		return store.ClaimPDF(ctx, tx, id, lang, job.ID, job.Attempt, now)
 	})
-	if err == nil && mismatch {
-		err = errDigest
+	if err != nil || done {
+		return nil, done, err
 	}
-	return body, done, err
+	if h := w.hooks.afterClaim; h != nil {
+		h(ctx, lang)
+	}
+	_, snap, sum, err := store.GetSnapshot(ctx, w.Deps.Pool, id)
+	if err != nil {
+		return nil, false, err
+	}
+	if digestHex(snap) != sum {
+		return nil, false, errDigest
+	}
+	return snap, false, nil
 }
 
 // compile makes the PDF of one language from the stored snapshot bytes.

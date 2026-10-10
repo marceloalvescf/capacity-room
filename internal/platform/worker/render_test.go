@@ -880,3 +880,22 @@ func TestRenderClaimsItsRow(t *testing.T) {
 		t.Fatalf("row %+v", row)
 	}
 }
+
+func TestRenderLoadErrorAfterTheClaimStoresItsCode(t *testing.T) {
+	e, _, _ := scenarioEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 1 })
+	var once sync.Once
+	hooks := renderHooks{afterClaim: func(ctx context.Context, lang string) {
+		if lang != langEN {
+			return
+		}
+		once.Do(func() {
+			// The snapshot vanishes after the attempt claimed its row.
+			if _, err := e.pool.Exec(ctx, `DELETE FROM report_snapshots`); err != nil {
+				t.Error(err)
+			}
+		})
+	}}
+	e.startRender(both(pdfToolchain(t)), 2, hooks, langPT)
+	report := e.collectedBoth()
+	e.assertFailedPDF(report.ID, langEN, "INTERNAL_FAILURE")
+}
