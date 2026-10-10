@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -446,5 +447,59 @@ func TestTestDraftAsOperator(t *testing.T) {
 	}
 	if total, _ := f.draftEvents(t); total != 0 {
 		t.Fatalf("%d audit rows", total)
+	}
+}
+
+// garbageEndpoint listens on 127.0.0.1, answers every connection with text
+// that is not HTTP, and closes it.
+func garbageEndpoint(t *testing.T) string {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = l.Close() })
+	go func() {
+		for {
+			c, err := l.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				_, _ = c.Read(make([]byte, 4096))
+				_, _ = c.Write([]byte("garbage\r\n\r\n"))
+				_ = c.Close()
+			}()
+		}
+	}()
+	addr := l.Addr().String()
+	return "http://metrics.test:" + addr[strings.LastIndex(addr, ":")+1:] + "/api/v1"
+}
+
+func TestTestNonHTTPAnswerIsUnreachable(t *testing.T) {
+	f := newFixture(t)
+	d := baseDocument()
+	d.EndpointURL = garbageEndpoint(t)
+	d.TimeoutSeconds = 5
+	f.create(t, "prod", d)
+	got := f.runTest(t, "prod")
+	f.assertFailed(t, got, "ENDPOINT_UNREACHABLE")
+	if n := len(f.audits(t, "profile.test")); n != 1 {
+		t.Fatalf("%d audit rows", n)
+	}
+}
+
+func TestTestDraftNonHTTPAnswerIsUnreachable(t *testing.T) {
+	f := newFixture(t)
+	d := baseDocument()
+	d.EndpointURL = garbageEndpoint(t)
+	d.TimeoutSeconds = 5
+	got, err := f.svc.TestDraft(context.Background(), f.root, "", d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.assertFailed(t, got, "ENDPOINT_UNREACHABLE")
+	if n := len(f.audits(t, "profile.test")); n != 1 {
+		t.Fatalf("%d audit rows", n)
 	}
 }

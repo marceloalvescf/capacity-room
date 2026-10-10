@@ -1244,3 +1244,24 @@ func TestErrorsNeverRepeatTheAddressOrToken(t *testing.T) {
 		}
 	})
 }
+
+// PolicyRefusal marks foreignTransportErr as a refusal the caller's
+// transport wants returned as it is.
+func (foreignTransportErr) PolicyRefusal() {}
+
+// TestNonHTTPAnswerOfForeignTransportIsAConnectionFailure checks that an
+// error of a caller-supplied transport that is neither a refusal nor a
+// network error, such as an answer that is not HTTP, is a connection
+// failure, while a refusal keeps its own class.
+func TestNonHTTPAnswerOfForeignTransportIsAConnectionFailure(t *testing.T) {
+	garbage := errors.New(`malformed HTTP status code "garbage"`)
+	class, _ := classifyAttemptFailure(context.Background(), &url.Error{Op: "Get", URL: "http://x", Err: garbage}, true)
+	if class != failureConnection {
+		t.Errorf("garbage: class = %v, want failureConnection", class)
+	}
+	refusal := foreignTransportErr{reason: "denied"}
+	class, cause := classifyAttemptFailure(context.Background(), &url.Error{Op: "Get", URL: "http://x", Err: refusal}, true)
+	if class != failureForeign || !errors.Is(cause, refusal) {
+		t.Errorf("refusal: class = %v, cause = %v, want failureForeign with the refusal", class, cause)
+	}
+}

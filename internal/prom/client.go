@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -518,9 +517,9 @@ const (
 	// failureTLS means a TLS handshake or certificate failure. Not
 	// retried.
 	failureTLS
-	// failureForeign means the caller's own Options.Transport failed with
-	// something this package does not recognise as an ordinary network
-	// problem. Returned as it is, after one call.
+	// failureForeign means the caller's own Options.Transport refused the
+	// request with an error that carries the PolicyRefusal marker. Returned
+	// as it is, after one call.
 	failureForeign
 )
 
@@ -528,10 +527,10 @@ const (
 // reading its body — into one of four classes, by exclusion rather than by
 // an ever-growing list of known errors: has the caller's own context
 // ended; is the cause a TLS failure; if the caller supplied its own
-// transport, is the cause something other than a plain network error; and
-// failing all of those, an ordinary connection failure, the same whether
-// its exact shape is a timeout, a refused connection, a DNS failure, or
-// anything else net/http might produce, known or not.
+// transport, is the cause a refusal that carries the PolicyRefusal marker;
+// and failing all of those, an ordinary connection failure, the same
+// whether its exact shape is a timeout, a refused connection, a DNS failure,
+// an answer that is not HTTP, or anything else net/http might produce.
 //
 // http.Client.Do wraps every transport error in a *url.Error, whose text
 // holds the request's address; the cause inside it is unwrapped first, and
@@ -544,8 +543,7 @@ const (
 //
 // foreignTransport is true only when the caller supplied its own
 // Options.Transport: the built-in transport's own errors are never treated
-// as foreign, whatever shape they take, so this package's own connection
-// failures need no list of known network error types at all.
+// as foreign, whatever shape they take.
 func classifyAttemptFailure(ctx context.Context, err error, foreignTransport bool) (failureClass, error) {
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		return failureStopped, fmt.Errorf("metrics request stopped: %w", ctxErr)
@@ -557,7 +555,7 @@ func classifyAttemptFailure(ctx context.Context, err error, foreignTransport boo
 		return failureTLS, nil
 	}
 
-	if foreignTransport && !isNetworkFailure(cause) {
+	if foreignTransport && isRefusal(cause) {
 		return failureForeign, cause
 	}
 
@@ -576,19 +574,13 @@ func unwrapURLError(err error) error {
 	return err
 }
 
-// isNetworkFailure reports whether cause is a plain network problem: a
-// net.Error (a timeout, a refused connection, a DNS failure, and so on) or
-// a peer that closed the connection without finishing its answer (io.EOF
-// or io.ErrUnexpectedEOF, which net.Error does not always cover). It is
-// consulted only for a caller-supplied Options.Transport, to decide
-// whether that transport's error is an ordinary network failure or
-// something foreign this package must return untouched.
-func isNetworkFailure(cause error) bool {
-	var netErr net.Error
-	if errors.As(cause, &netErr) {
-		return true
-	}
-	return errors.Is(cause, io.EOF) || errors.Is(cause, io.ErrUnexpectedEOF)
+// isRefusal reports whether cause is a refusal of the caller-supplied
+// transport, an error that carries the PolicyRefusal marker. Any other error
+// of a transport, a network problem or an answer that is not HTTP, is a
+// failure to reach the source.
+func isRefusal(cause error) bool {
+	var refusal interface{ PolicyRefusal() }
+	return errors.As(cause, &refusal)
 }
 
 // isTLSFailure reports whether err is a TLS handshake or certificate
