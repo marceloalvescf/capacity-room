@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -383,4 +384,77 @@ func TestLoadWorkerWrongType(t *testing.T) {
 	path := write(t, secretLine+"worker_slots = \"two\"\n")
 	_, err := Load(path, env(goodDSN))
 	wantError(t, err, path+" has a value of the wrong type")
+}
+
+func TestLoadRefusesFoldersThatHoldTheFileOrTheSecret(t *testing.T) {
+	root := t.TempDir()
+	etc := filepath.Join(root, "kcr")
+	if err := os.MkdirAll(etc, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	load := func(extra string) error {
+		path := filepath.Join(etc, "platform.toml")
+		text := "server_secret_path = \"" + filepath.Join(etc, "server-secret") + "\"\n" + extra
+		if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := Load(path, env(goodDSN))
+		return err
+	}
+	const credentialMessage = "credential_dir must not hold the deployment file or the server secret"
+	const caMessage = "ca_bundle_dir must not hold the deployment file or the server secret"
+
+	wantError(t, load("credential_dir = \""+etc+"\"\n"), credentialMessage)
+	wantError(t, load("ca_bundle_dir = \""+root+"\"\n"), caMessage)
+	wantError(t, load("credential_dir = \""+etc+"/\"\n"), credentialMessage)
+	for _, extra := range []string{
+		"credential_dir = \"" + filepath.Join(etc, "credentials") + "\"\n",
+		"ca_bundle_dir = \"" + filepath.Join(root, "kcr-ca") + "\"\n",
+		"credential_dir = \"" + filepath.Join(root, "kcr-credentials") + "\"\n",
+	} {
+		if err := load(extra); err != nil {
+			t.Fatalf("%s: %v", extra, err)
+		}
+	}
+}
+
+func TestLoadRefusesFoldersThatHoldARelativeDeploymentFile(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	text := "server_secret_path = \"/run/secret\"\ncredential_dir = \"" + dir + "\"\n"
+	if err := os.WriteFile("platform.toml", []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Load("platform.toml", env(goodDSN))
+	wantError(t, err, "credential_dir must not hold the deployment file or the server secret")
+}
+
+func TestReadServerSecretRefusesWhatIsNotARegularFile(t *testing.T) {
+	dir := t.TempDir()
+	fifo := filepath.Join(dir, "fifo")
+	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{dir, fifo} {
+		_, err := Settings{ServerSecretPath: path}.ReadServerSecret()
+		wantError(t, err, "the server secret at "+path+" is not a regular file")
+	}
+}
+
+func TestReadServerSecretCapsTheSize(t *testing.T) {
+	dir := t.TempDir()
+	exact := filepath.Join(dir, "exact")
+	over := filepath.Join(dir, "over")
+	if err := os.WriteFile(exact, bytes.Repeat([]byte{1}, 64<<10), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(over, bytes.Repeat([]byte{1}, 64<<10+1), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Settings{ServerSecretPath: exact}.ReadServerSecret()
+	if err != nil || len(got) != 64<<10 {
+		t.Fatalf("got %d bytes, %v", len(got), err)
+	}
+	_, err = Settings{ServerSecretPath: over}.ReadServerSecret()
+	wantError(t, err, "the server secret at "+over+" is larger than 64 KiB")
 }

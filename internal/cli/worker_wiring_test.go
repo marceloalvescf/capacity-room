@@ -122,7 +122,7 @@ func newRig(t *testing.T, slots, drain int) *rig {
 	config := filepath.Join(dir, "platform.toml")
 	toml := fmt.Sprintf("server_secret_path = %q\ncredential_dir = %q\nca_bundle_dir = %q\n"+
 		"allowed_endpoint_cidrs = [\"127.0.0.1/32\"]\nworker_slots = %d\nworker_drain_seconds = %d\n",
-		secret, credentials, dir, slots, drain)
+		secret, credentials, filepath.Join(dir, "ca"), slots, drain)
 	if err := os.WriteFile(config, []byte(toml), 0o600); err != nil {
 		t.Fatal(err)
 	}

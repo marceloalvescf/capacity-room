@@ -89,6 +89,11 @@ func TestReportThroughTheAPI(t *testing.T) {
 	pool := storetest.New(t)
 
 	dir := t.TempDir()
+	for _, sub := range []string{"credentials", "ca"} {
+		if err := os.Mkdir(filepath.Join(dir, sub), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
 	secret := filepath.Join(dir, "secret")
 	if err := os.WriteFile(secret, []byte(strings.Repeat("s", 32)), 0o600); err != nil {
 		t.Fatal(err)
@@ -96,7 +101,7 @@ func TestReportThroughTheAPI(t *testing.T) {
 	config := filepath.Join(dir, "platform.toml")
 	toml := fmt.Sprintf("server_secret_path = %q\ncredential_dir = %q\nca_bundle_dir = %q\n"+
 		"allowed_endpoint_cidrs = [\"127.0.0.1/32\"]\nworker_slots = 2\nworker_drain_seconds = 1\n",
-		secret, dir, dir)
+		secret, filepath.Join(dir, "credentials"), filepath.Join(dir, "ca"))
 	if err := os.WriteFile(config, []byte(toml), 0o600); err != nil {
 		t.Fatal(err)
 	}

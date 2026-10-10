@@ -3,6 +3,7 @@ package settings
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/netip"
 	"os"
@@ -19,6 +20,7 @@ const (
 	minSessionSeconds = 60
 	maxSessionSeconds = 2592000
 	minSecretBytes    = 32
+	maxSecretBytes    = 64 << 10
 	dsnVariable       = "KCR_DATABASE_DSN"
 
 	defaultCredentialDir = "/run/secrets/metrics"
@@ -132,7 +134,7 @@ func Load(path string, getenv func(string) string) (Settings, error) {
 	if !md.IsDefined("admission_profile_limit") {
 		file.AdmissionProfileLimit = min(defaultAdmissionProfileLimit, file.AdmissionLimit)
 	}
-	return build(file, getenv(dsnVariable))
+	return build(file, path, getenv(dsnVariable))
 }
 
 // decodeError words a failure of toml.DecodeFile without repeating any value
@@ -151,7 +153,7 @@ func decodeError(path string, err error) error {
 
 // build validates the decoded file and the DSN, reporting the first failure,
 // and returns the Settings.
-func build(file tomlSettings, dsn string) (Settings, error) {
+func build(file tomlSettings, configPath, dsn string) (Settings, error) {
 	if file.SessionTTLSeconds < minSessionSeconds || file.SessionTTLSeconds > maxSessionSeconds {
 		return Settings{}, errTTLRange
 	}
@@ -202,6 +204,9 @@ func build(file tomlSettings, dsn string) (Settings, error) {
 		return Settings{}, err
 	}
 	if err := checkFolder("ca_bundle_dir", file.CABundleDir); err != nil {
+		return Settings{}, err
+	}
+	if err := checkFoldersApart(file, configPath); err != nil {
 		return Settings{}, err
 	}
 	hostnames, err := parseHostnames(file.AllowedEndpointHostnames)
@@ -257,6 +262,29 @@ func checkFolder(key, dir string) error {
 	return nil
 }
 
+// checkFoldersApart refuses a credential or CA folder that is, or lies above,
+// the deployment file or the server secret, since a reference file could then
+// name either. The comparison is lexical, on cleaned absolute paths.
+func checkFoldersApart(file tomlSettings, configPath string) error {
+	configAbs, err := filepath.Abs(configPath)
+	if err != nil {
+		return fmt.Errorf("cannot resolve %s: %w", configPath, err)
+	}
+	protected := []string{configAbs, filepath.Clean(file.ServerSecretPath)}
+	for _, folder := range []struct{ key, dir string }{
+		{"credential_dir", file.CredentialDir},
+		{"ca_bundle_dir", file.CABundleDir},
+	} {
+		dir := filepath.Clean(folder.dir)
+		for _, path := range protected {
+			if path == dir || strings.HasPrefix(path, strings.TrimSuffix(dir, "/")+"/") {
+				return fmt.Errorf("%s must not hold the deployment file or the server secret", folder.key)
+			}
+		}
+	}
+	return nil
+}
+
 // parseHostnames normalises each entry and refuses a malformed or repeated
 // one, naming its 1-based position and never its value.
 func parseHostnames(entries []string) ([]string, error) {
@@ -305,20 +333,42 @@ func parseEndpointCIDRs(entries []string) ([]netip.Prefix, error) {
 	return prefixes, nil
 }
 
-// ReadServerSecret reads the file named by ServerSecretPath whole and
-// returns its bytes. A file shorter than 32 bytes is refused.
+// ReadServerSecret reads the regular file named by ServerSecretPath whole,
+// at most 64 KiB, and returns its bytes. A file shorter than 32 bytes is
+// refused.
 func (s Settings) ReadServerSecret() ([]byte, error) {
-	data, err := os.ReadFile(s.ServerSecretPath)
+	info, err := os.Stat(s.ServerSecretPath)
 	if err != nil {
-		cause := err.Error()
-		var pathErr *fs.PathError
-		if errors.As(err, &pathErr) {
-			cause = pathErr.Err.Error()
-		}
-		return nil, fmt.Errorf("cannot read the server secret at %s: %s", s.ServerSecretPath, cause)
+		return nil, secretReadError(s.ServerSecretPath, err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("the server secret at %s is not a regular file", s.ServerSecretPath)
+	}
+	opened, err := os.Open(s.ServerSecretPath)
+	if err != nil {
+		return nil, secretReadError(s.ServerSecretPath, err)
+	}
+	defer func() { _ = opened.Close() }()
+	data, err := io.ReadAll(io.LimitReader(opened, maxSecretBytes+1))
+	if err != nil {
+		return nil, secretReadError(s.ServerSecretPath, err)
+	}
+	if len(data) > maxSecretBytes {
+		return nil, fmt.Errorf("the server secret at %s is larger than 64 KiB", s.ServerSecretPath)
 	}
 	if len(data) < minSecretBytes {
 		return nil, errSecretShort
 	}
 	return data, nil
+}
+
+// secretReadError words a failure to read the server secret with the
+// operator's own path and the system's cause.
+func secretReadError(path string, err error) error {
+	cause := err.Error()
+	var pathErr *fs.PathError
+	if errors.As(err, &pathErr) {
+		cause = pathErr.Err.Error()
+	}
+	return fmt.Errorf("cannot read the server secret at %s: %s", path, cause)
 }
