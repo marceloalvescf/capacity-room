@@ -218,8 +218,12 @@ test("two administrators lowering each other leave one", async ({ browser, baseU
   } catch (thrown) {
     failure = thrown instanceof Error ? thrown : new Error(String(thrown));
   }
-  await Promise.all(contexts.map((context) => context.close()));
-  // The restore always runs; the first failure is the one reported.
+  // The restore runs whatever a close does; the first failure is the one reported.
+  for (const closed of await Promise.allSettled(contexts.map((context) => context.close()))) {
+    if (closed.status === "rejected") {
+      failure ??= closed.reason instanceof Error ? closed.reason : new Error(String(closed.reason));
+    }
+  }
   try {
     await restoreAdministrator(browser, baseURL);
   } catch (thrown) {

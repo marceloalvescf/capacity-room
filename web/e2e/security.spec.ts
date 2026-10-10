@@ -65,6 +65,7 @@ test("a session ended in another tab sends the page to sign-in and back", async 
   try {
     await signIn(tabA, users.ended, "/account");
     await expect(tabA.getByRole("heading", { name: en.account.title, level: 1 })).toBeVisible();
+    await expectNoViolations(tabA);
 
     const tabB = await context.newPage();
     await tabB.goto("/reports");
@@ -84,6 +85,7 @@ test("a session ended in another tab sends the page to sign-in and back", async 
     await fillSignIn(tabA, users.ended);
     await expect(tabA).toHaveURL(/\/reports$/);
     await expect(tabA.getByRole("heading", { name: en.reports.title, level: 1 })).toBeVisible();
+    await expectNoViolations(tabA);
     expect(violations).toEqual([]);
   } finally {
     await closeAll(context, maker.context);
@@ -96,6 +98,7 @@ test("a deactivated user is signed out and cannot sign in", async ({ browser, ba
   try {
     await signIn(page, users.deactivated, "/account");
     await expect(page.getByRole("heading", { name: en.account.title, level: 1 })).toBeVisible();
+    await expectNoViolations(page);
 
     await patchUser(maker.page, maker.id, { active: false });
 
@@ -119,6 +122,7 @@ test("a role change ends the session and the new role holds", async ({ browser, 
   try {
     await signIn(page, users.role, "/account");
     await expect(page.getByRole("heading", { name: en.account.title, level: 1 })).toBeVisible();
+    await expectNoViolations(page);
     await expect(navigation(page).getByRole("link", { name: en.nav.generate, exact: true })).toBeVisible();
 
     await patchUser(maker.page, maker.id, { role: "reader" });
@@ -130,11 +134,13 @@ test("a role change ends the session and the new role holds", async ({ browser, 
     await fillSignIn(page, users.role);
     await expect(page).toHaveURL(/\/reports$/);
     await expect(page.getByRole("heading", { name: en.reports.title, level: 1 })).toBeVisible();
+    await expectNoViolations(page);
     await expect(navigation(page).getByRole("link", { name: en.nav.account, exact: true })).toBeVisible();
     await expect(navigation(page).getByRole("link", { name: en.nav.generate, exact: true })).toHaveCount(0);
 
     await page.goto("/generate");
     await expect(page.getByRole("heading", { name: en.notFound.title, level: 1 })).toBeVisible();
+    await expectNoViolations(page);
     expect(violations).toEqual([]);
   } finally {
     await closeAll(context, maker.context);
@@ -147,6 +153,7 @@ test("a write without the CSRF token is refused, and a rotated token heals", asy
   try {
     await signIn(tabA, users.csrf, "/account");
     await expect(tabA.getByRole("heading", { name: en.account.title, level: 1 })).toBeVisible();
+    await expectNoViolations(tabA);
 
     const refused = await tabA.request.post("/api/v1/auth/logout");
     expect(refused.status()).toBe(403);
@@ -170,6 +177,7 @@ test("a write without the CSRF token is refused, and a rotated token heals", asy
     await tabA.getByRole("button", { name: languageButton(en) }).click();
     await tabA.getByRole("menuitemradio", { name: ptBR.language["pt-BR"] }).click();
     await expect(tabA.getByRole("heading", { name: ptBR.account.title, level: 1 })).toBeVisible();
+    await expectNoViolations(tabA);
     await expect.poll(() => answers.length).toBe(2);
     const [first, second] = answers;
     expect(first?.status()).toBe(403);
@@ -181,6 +189,7 @@ test("a write without the CSRF token is refused, and a rotated token heals", asy
     await tabA.getByRole("button", { name: languageButton(ptBR) }).click();
     await tabA.getByRole("menuitemradio", { name: en.language.en }).click();
     await expect(tabA.getByRole("heading", { name: en.account.title, level: 1 })).toBeVisible();
+    await expectNoViolations(tabA);
     expect(violations).toEqual([]);
   } finally {
     await closeAll(context, maker.context);
@@ -193,6 +202,7 @@ test("an injected inline script is blocked, and the headers and the cookie hold"
   try {
     await signIn(page, users.policy, "/account");
     await expect(page.getByRole("heading", { name: en.account.title, level: 1 })).toBeVisible();
+    await expectNoViolations(page);
 
     expect(violations).toEqual([]);
     await page.evaluate(() => {
@@ -217,10 +227,15 @@ test("an injected inline script is blocked, and the headers and the cookie hold"
     const root = await page.request.get("/");
     const asset = /src="(\/assets\/[^"]+\.js)"/.exec(await root.text())?.[1];
     expect(asset).toBeDefined();
-    for (const path of ["/", "/api/v1/auth/session", asset ?? ""]) {
+    const caching = [
+      ["/", "no-cache"],
+      ["/api/v1/auth/session", "no-store"],
+      [asset ?? "", "public, max-age=31536000, immutable"],
+    ] as const;
+    for (const [path, cacheControl] of caching) {
       const response = await page.request.get(path);
       expect(response.status(), path).toBe(200);
-      expect(response.headers(), path).toMatchObject(headers);
+      expect(response.headers(), path).toMatchObject({ ...headers, "cache-control": cacheControl });
     }
 
     const cookie = (await context.cookies()).find((candidate) => candidate.name === "kcr_session");
