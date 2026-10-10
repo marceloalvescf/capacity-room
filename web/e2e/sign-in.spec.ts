@@ -1,18 +1,18 @@
 import type { Page } from "@playwright/test";
 import en from "../src/locales/en.json" with { type: "json" };
 import ptBR from "../src/locales/pt-BR.json" with { type: "json" };
-import { expect, expectNoViolations, test } from "./fixtures";
+import { expect, expectNoViolations, secret, test } from "./fixtures";
 
 const username = "e2e-admin";
-const password = "e2e-Fixture-Pass-01!";
-const newPassword = "e2e-Changed-Pass-02!";
+const password = secret("e2e-Fixture-Pass-01!");
+const newPassword = secret("e2e-Changed-Pass-02!");
 
 // The words of a name that come before its first parameter.
 const before = (text: string) => text.split("{{")[0] ?? text;
 
-async function signIn(page: Page, secret: string) {
+async function signIn(page: Page, value: string) {
   await page.getByLabel(en.login.username, { exact: true }).fill(username);
-  await page.getByLabel(en.login.password, { exact: true }).fill(secret);
+  await page.getByLabel(en.login.password, { exact: true }).fill(value);
   await page.getByRole("button", { name: en.login.submit, exact: true }).click();
 }
 

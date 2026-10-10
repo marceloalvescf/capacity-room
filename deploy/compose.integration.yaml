@@ -19,27 +19,48 @@ x-one-shot: &one-shot
     postgres:
       condition: service_healthy
 
+x-fake: &fake
+  image: k8s-capacity-report-fake-prometheus:${KCR_VERSION:?set KCR_VERSION}
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  volumes:
+    - ../testdata/prometheus:/fixtures:ro
+  healthcheck:
+    test: ["CMD", "/usr/local/bin/fake-prometheus", "--probe", "http://127.0.0.1:9090/-/ready"]
+    interval: 1s
+    timeout: 3s
+    retries: 30
+
 services:
   fake-prometheus:
-    image: k8s-capacity-report-fake-prometheus:${KCR_VERSION:?set KCR_VERSION}
-    read_only: true
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    volumes:
-      - ../testdata/prometheus:/fixtures:ro
+    <<: *fake
     command: ["--fixture", "/fixtures/direct-complete.json", "--listen", ":9090"]
+
+  fake-recovery:
+    <<: *fake
+    command: ["--fixture", "/fixtures/direct-complete.json", "--listen", ":9090", "--delay", "150ms"]
 
   serve:
     depends_on:
       fake-prometheus:
-        condition: service_started
+        condition: service_healthy
+      fake-recovery:
+        condition: service_healthy
 
   worker:
+    image: k8s-capacity-report-worker-e2e:${KCR_VERSION:?set KCR_VERSION}
+    environment:
+      KCR_TYPST: /usr/local/bin/typst-switch
+    volumes:
+      - switch:/switch:ro
     depends_on:
       fake-prometheus:
-        condition: service_started
+        condition: service_healthy
+      fake-recovery:
+        condition: service_healthy
 
   migrate:
     <<: *one-shot
@@ -76,7 +97,9 @@ services:
       - ../web:/web:ro
       - web-node-modules:/web/node_modules
       - ../.cache/e2e:/results
-    command: ["sh", "-c", "npm ci && npx playwright test"]
+      - switch:/switch
+    command: ["sh", "-c", ": > /results/secrets.txt && npm ci && npx playwright test"]
 
 volumes:
   web-node-modules:
+  switch:

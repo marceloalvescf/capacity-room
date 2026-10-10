@@ -1,27 +1,16 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import en from "../src/locales/en.json" with { type: "json" };
-import { admin, createUser, expect, expectFits, expectNoViolations, fitSizes, lastRow, openPattern, signIn, test, watchPolicy } from "./fixtures";
+import { admin, createUser, expect, expectFits, expectNoViolations, fitSizes, lastRow, openPattern, previousWeek, reportRow, secret, signIn, test, watchPolicy } from "./fixtures";
 
-const operator = { username: "e2e-operator", password: "e2e-Operator-Pass-03!" };
-const reader = { username: "e2e-reader", password: "e2e-Reader-Pass-04!" };
+const operator = { username: "e2e-operator", password: secret("e2e-Operator-Pass-03!") };
+const reader = { username: "e2e-reader", password: secret("e2e-Reader-Pass-04!") };
 
 const collectTimeout = 60_000;
 
 // The profile e2e-prod names no time zone, so the report takes the fallback
 // zone of the profiles.
 const reportZone = "America/Sao_Paulo";
-
-// The wall text, at 00:00 in the zone, of the Monday of the week that holds
-// now, moved by whole weeks.
-function mondayText(now: Date, zone: string, weeks: number): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
-  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
-  const today = new Date(Date.UTC(get("year"), get("month") - 1, get("day")));
-  const sinceMonday = (today.getUTCDay() + 6) % 7;
-  const monday = new Date(today.getTime() + (weeks * 7 - sinceMonday) * 86_400_000);
-  return `${monday.toISOString().slice(0, 10)} 00:00`;
-}
 
 const pdfGroup = (page: Page, language: string) => page.getByRole("group", { name: language, exact: true });
 
@@ -41,7 +30,6 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
   await test.step("the operator requests a report", async () => {
     await signIn(page, operator, "/reports");
     await expect(page.getByRole("heading", { name: en.reports.title, level: 1 })).toBeVisible();
-    await expect(page.getByText(en.reports.empty)).toBeVisible();
     await expectNoViolations(page);
 
     await page.getByRole("link", { name: en.nav.generate, exact: true }).first().click();
@@ -70,6 +58,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
   });
 
   const jobUrl = page.url();
+  const reportId = /[0-9a-f-]{36}$/.exec(jobUrl)?.[0] ?? "";
 
   await test.step("the stored selection is the previous calendar week", async () => {
     const id = /[0-9a-f-]{36}$/.exec(jobUrl)?.[0] ?? "";
@@ -81,8 +70,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     expect(selection).toMatchObject({
       period: null,
       timezone: reportZone,
-      start: mondayText(requestedAt, reportZone, -1),
-      end: mondayText(requestedAt, reportZone, 0),
+      ...previousWeek(requestedAt, reportZone),
     });
   });
 
@@ -199,7 +187,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
 
     await test.step("the list shows the report without a reload", async () => {
       await page.getByRole("navigation", { name: en.nav.label }).getByRole("link", { name: en.nav.reports, exact: true }).click();
-      const row = page.getByRole("row").filter({ hasText: en.reportStatus.collected });
+      const row = reportRow(page, reportId);
       await expect(row).toHaveCount(1);
       await expect(row.getByText(en.reportStatus.collected, { exact: true })).toBeVisible();
       await expect(row.getByText(en.pdfStatus.ready, { exact: true })).toBeVisible();
@@ -209,7 +197,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await test.step("the reader sees no control that changes anything", async () => {
       await other.goto("/reports");
       await expect(other.getByRole("heading", { name: en.reports.title, level: 1 })).toBeVisible();
-      await expect(other.getByRole("row").filter({ hasText: en.reportStatus.collected })).toHaveCount(1);
+      await expect(reportRow(other, reportId)).toHaveCount(1);
       await expect(other.getByRole("link", { name: en.nav.generate, exact: true })).toHaveCount(0);
       await expect(other.getByRole("checkbox")).toHaveCount(0);
       await expect(other.getByRole("button", { name: en.reports.delete, exact: true })).toHaveCount(0);
@@ -237,7 +225,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await expect(dialog).toContainText(en.delete.oneBody);
     await expectNoViolations(page);
     await dialog.getByRole("button", { name: en.delete.confirm, exact: true }).click();
-    await expect(page.getByText(en.reports.empty)).toBeVisible();
+    await expect(reportRow(page, reportId)).toHaveCount(0);
     await expectNoViolations(page);
   });
 });

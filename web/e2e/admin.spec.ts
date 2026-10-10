@@ -1,7 +1,7 @@
 import en from "../src/locales/en.json" with { type: "json" };
-import { admin, buttonName, createProfile, createUser, deleteProfile, expect, expectFits, expectNoViolations, fitSizes, lastRow, signIn, test, watchPolicy } from "./fixtures";
+import { admin, buttonName, createProfile, createUser, deleteProfile, expect, expectFits, expectNoViolations, fitSizes, lastRow, secret, signIn, test, watchPolicy } from "./fixtures";
 
-const newUser = { username: "e2e-admin-reader", password: "e2e-Admin-Reader-Pass-05!" };
+const newUser = { username: "e2e-admin-reader", password: secret("e2e-Admin-Reader-Pass-05!") };
 const profile = {
   id: "e2e-lab",
   name: "Lab",
@@ -149,7 +149,7 @@ test("an administrator manages users and profiles", async ({ page, browser, base
     // Twenty more users make the users table taller than the window, so opening its last row needs the scroll.
     for (let n = 1; n <= 20; n += 1) {
       const username = `e2e-fit-${String(n).padStart(2, "0")}`;
-      await createUser(page, { username, password: `${username}-Pass-06!` }, "reader");
+      await createUser(page, { username, password: secret(`${username}-Pass-06!`) }, "reader");
     }
     await createProfile(page, {
       id: wide.id,

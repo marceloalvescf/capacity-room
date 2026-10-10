@@ -19,8 +19,14 @@ COPY --from=frontend /src/web/dist /src/web/dist
 RUN CGO_ENABLED=0 go build -trimpath -o /out/k8s-capacity-report ./cmd/k8s-capacity-report
 
 # The fake Prometheus of the end-to-end stack, on the same base as the runtime
-# image. `make e2e` builds it; `make image` never does.
-FROM build AS fake-prometheus-build
+# image. It needs only its own package and promtest, so a build with no cache
+# rebuilds neither the frontend nor the product. `make e2e` builds it;
+# `make image` never does.
+FROM golang:1.27@sha256:3680233e3204827fbdc66088528ae6d4b3d034f51d03a99d454f6de034888244 AS fake-prometheus-build
+WORKDIR /src
+COPY go.mod go.sum ./
+COPY internal/promtest/ ./internal/promtest/
+COPY cmd/fake-prometheus/ ./cmd/fake-prometheus/
 RUN CGO_ENABLED=0 go build -trimpath -o /out/fake-prometheus ./cmd/fake-prometheus
 
 # Source of the typst binary only. The binary is statically linked, so it

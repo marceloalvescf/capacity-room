@@ -1,6 +1,24 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test as base, type Locator, type Page } from "@playwright/test";
+import { expect, test as base, type APIResponse, type Locator, type Page } from "@playwright/test";
+import { appendFileSync } from "node:fs";
+import { rm, writeFile } from "node:fs/promises";
 import en from "../src/locales/en.json" with { type: "json" };
+
+// Records a password the run uses, one per line, so that the make target can check that none reaches a log of the
+// stack. A value declared twice is recorded twice, which the check does not mind.
+export function secret(value: string): string {
+  appendFileSync("/results/secrets.txt", `${value}\n`);
+  return value;
+}
+
+// Makes the worker's typst fail (true) or compile (false); the switch is a file the worker's typst reads.
+export async function switchCompiles(failing: boolean): Promise<void> {
+  if (failing) {
+    await writeFile("/switch/fail", "");
+  } else {
+    await rm("/switch/fail", { force: true });
+  }
+}
 
 const policyMessage = /Content[- ]Security[- ]Policy|securitypolicyviolation/i;
 
@@ -124,20 +142,54 @@ export async function expectFits(page: Page, table: Locator, name: string) {
 }
 
 // The session and the CSRF token of the signed-in page, for a change made through the API.
-async function csrfHeaders(page: Page): Promise<{ "X-CSRF-Token": string }> {
+export async function csrfHeaders(page: Page): Promise<{ "X-CSRF-Token": string }> {
   const session = await page.request.get("/api/v1/auth/session");
   expect(session.ok()).toBe(true);
   const { csrf_token: csrf } = (await session.json()) as { csrf_token: string };
   return { "X-CSRF-Token": csrf };
 }
 
-// Creates a user through the API, with the session and the CSRF token of the signed-in page.
-export async function createUser(page: Page, user: { username: string; password: string }, role: "operator" | "reader") {
+// Creates a user through the API, with the session and the CSRF token of the signed-in page, and returns its id.
+export async function createUser(
+  page: Page,
+  user: { username: string; password: string },
+  role: "administrator" | "operator" | "reader",
+): Promise<string> {
   const created = await page.request.post("/api/v1/admin/users", {
     headers: await csrfHeaders(page),
     data: { username: user.username, password: user.password, role, language: "en" },
   });
   expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  return id;
+}
+
+// Requests a report through the API; the key defaults to a fresh one.
+export async function requestReport(page: Page, body: Record<string, unknown>, key?: string): Promise<APIResponse> {
+  return page.request.post("/api/v1/reports", {
+    headers: { ...(await csrfHeaders(page)), "Idempotency-Key": key ?? crypto.randomUUID() },
+    data: body,
+  });
+}
+
+// The row of the report list whose link targets the report's progress page.
+export function reportRow(page: Page, id: string): Locator {
+  return page.getByRole("row").filter({ has: page.locator(`a[href="/jobs/${id}"]`) });
+}
+
+// The wall text, at 00:00 in the zone, of the Monday of the week that holds now, moved by whole weeks.
+function mondayText(now: Date, zone: string, weeks: number): string {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+  const today = new Date(Date.UTC(get("year"), get("month") - 1, get("day")));
+  const sinceMonday = (today.getUTCDay() + 6) % 7;
+  const monday = new Date(today.getTime() + (weeks * 7 - sinceMonday) * 86_400_000);
+  return `${monday.toISOString().slice(0, 10)} 00:00`;
+}
+
+// The previous calendar week in the zone, as the wall times a report request takes.
+export function previousWeek(now: Date, zone: string): { start: string; end: string } {
+  return { start: mondayText(now, zone, -1), end: mondayText(now, zone, 0) };
 }
 
 // Creates a profile through the API.
@@ -152,7 +204,7 @@ export async function deleteProfile(page: Page, id: string) {
   expect(deleted.ok()).toBe(true);
 }
 
-export const admin = { username: "e2e-admin", password: "e2e-Fixture-Pass-01!" };
+export const admin = { username: "e2e-admin", password: secret("e2e-Fixture-Pass-01!") };
 
 // Opens the path, which asks for sign-in, and signs the user in.
 export async function signIn(page: Page, user: { username: string; password: string }, path: string) {

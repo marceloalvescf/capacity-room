@@ -171,27 +171,44 @@ check-runtime: $(IMAGE_DEP)
 	test "$$(head -c 5 $(CHECK_RUNTIME_OUT)/report.pdf)" = "%PDF-"
 
 # The end-to-end stack: PostgreSQL, the schema, the first administrator, the
-# profile of the fake Prometheus, then serve, worker, and the Playwright
-# container, whose exit status is the target's. The stack is removed with its
-# volumes first and last. The fake Prometheus stops with one answer unasked,
-# as a whole run of direct-complete does in internal/goldentest.
+# profiles, then serve, worker, two fake Prometheus servers, and the Playwright
+# container, whose exit status is the target's. The worker runs the test image
+# whose typst the specs can make fail. Each fake stops with one answer unasked,
+# as a whole run of direct-complete does in internal/goldentest, and no log of
+# the stack holds a secret the run used. The stack is removed with its volumes
+# first and last.
 E2E_COMPOSE := docker compose -f deploy/compose.yaml -f deploy/compose.integration.yaml
+E2E_FAKES := fake-prometheus fake-recovery
 
 e2e: $(IMAGE_DEP)
 	docker build $(BUILD_FLAGS) --file deploy/Containerfile --target fake-prometheus --tag k8s-capacity-report-fake-prometheus:$(VERSION) .
-	@export KCR_VERSION=$(VERSION) KCR_CONFIG_DIR=$(CURDIR)/deploy/platform KCR_POSTGRES_PASSWORD=kcr_e2e_only; \
-	mkdir -p .cache/e2e; \
+	docker build $(filter-out --pull,$(BUILD_FLAGS)) --file deploy/worker-e2e.Containerfile --build-arg RUNTIME_IMAGE=$(IMAGE) --tag k8s-capacity-report-worker-e2e:$(VERSION) .
+	@set -o pipefail; \
+	export KCR_VERSION=$(VERSION) KCR_CONFIG_DIR=$(CURDIR)/deploy/platform KCR_POSTGRES_PASSWORD=kcr_e2e_only; \
+	mkdir -p .cache/e2e; : > .cache/e2e/one-shot.log; \
 	$(E2E_COMPOSE) down --volumes; \
 	$(E2E_COMPOSE) up -d --wait postgres \
-		&& $(E2E_COMPOSE) run --rm -T migrate \
-		&& $(E2E_COMPOSE) run --rm -T bootstrap < deploy/platform/e2e-admin-password \
-		&& $(E2E_COMPOSE) run --rm -T profiles \
+		&& $(E2E_COMPOSE) run --rm -T migrate 2>&1 | tee -a .cache/e2e/one-shot.log \
+		&& $(E2E_COMPOSE) run --rm -T bootstrap < deploy/platform/e2e-admin-password 2>&1 | tee -a .cache/e2e/one-shot.log \
+		&& $(E2E_COMPOSE) run --rm -T profiles 2>&1 | tee -a .cache/e2e/one-shot.log \
 		&& $(E2E_COMPOSE) up --abort-on-container-exit --exit-code-from playwright serve worker playwright; \
 	status=$$?; \
-	$(E2E_COMPOSE) stop fake-prometheus; \
-	$(E2E_COMPOSE) logs --no-log-prefix fake-prometheus | grep -qx 'remaining: 1' \
-		|| { echo 'e2e: the fake Prometheus did not leave exactly the one unasked answer; its last lines:'; \
-		$(E2E_COMPOSE) logs --no-log-prefix --tail 5 fake-prometheus; [ $$status -ne 0 ] || status=1; }; \
+	$(E2E_COMPOSE) stop $(E2E_FAKES); \
+	for fake in $(E2E_FAKES); do \
+		$(E2E_COMPOSE) logs --no-log-prefix $$fake | grep -qx 'remaining: 1' \
+			|| { echo "e2e: $$fake did not leave exactly the one unasked answer; its last lines:"; \
+			$(E2E_COMPOSE) logs --no-log-prefix --tail 5 $$fake; [ $$status -ne 0 ] || status=1; }; \
+	done; \
+	$(E2E_COMPOSE) logs --no-log-prefix serve worker > .cache/e2e/platform.log; \
+	cat .cache/e2e/one-shot.log >> .cache/e2e/platform.log; \
+	if [ ! -s .cache/e2e/secrets.txt ]; then \
+		echo 'e2e: the specs recorded no secret'; [ $$status -ne 0 ] || status=1; \
+	fi; \
+	cat .cache/e2e/secrets.txt deploy/platform/e2e-admin-password deploy/platform/credentials/e2e-recovery 2>/dev/null \
+		| { cat; echo kcr_e2e_only; } | grep -v '^$$' > .cache/e2e/secret-patterns; \
+	if grep -qF -f .cache/e2e/secret-patterns .cache/e2e/platform.log; then \
+		echo 'e2e: a secret reached the logs of the stack'; [ $$status -ne 0 ] || status=1; \
+	fi; \
 	$(E2E_COMPOSE) down --volumes; exit $$status
 
 # Runs every check from freshly built images and keeps one log per step.
@@ -215,5 +232,5 @@ gate:
 	@set -o pipefail; $(MAKE) test-template IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-template.log
 	@set -o pipefail; $(MAKE) test-golden IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-golden.log
 	@set -o pipefail; $(MAKE) check-runtime IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/check-runtime.log
-	@set -o pipefail; $(MAKE) e2e IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/e2e.log
+	@set -o pipefail; $(MAKE) e2e IMAGE_DEP= BUILD_FLAGS="--no-cache --pull" 2>&1 | tee $(GATE_LOGS)/e2e.log
 	@echo "gate passed for version $(VERSION)"

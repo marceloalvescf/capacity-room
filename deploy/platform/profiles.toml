@@ -6,3 +6,13 @@ endpoint_type = "prometheus"
 cluster_name = "prod"
 allowed_namespaces = ["payments"]
 active = true
+
+[[profiles]]
+id = "e2e-recovery"
+display_name = "Recovery"
+endpoint_url = "http://fake-recovery:9090/api/v1"
+endpoint_type = "prometheus"
+cluster_name = "prod"
+allowed_namespaces = ["payments"]
+credential_file = "e2e-recovery"
+active = true
