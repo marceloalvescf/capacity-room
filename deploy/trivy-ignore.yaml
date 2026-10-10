@@ -1,0 +1,9 @@
+# Advisories that make audit ignores on purpose, each with its reason and an
+# expiry, after which the advisory returns to the audit.
+vulnerabilities:
+  - id: DLA-4792-1
+    statement: >-
+      tzdata 2026b of the distroless static-debian12 base; the newest base
+      digest still ships it. The program reads time zones from the copy built
+      into its binary (time/tzdata), never from the image.
+    expired_at: 2026-11-10

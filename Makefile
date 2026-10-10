@@ -244,12 +244,13 @@ gate:
 	@echo "gate passed for version $(VERSION)"
 
 # audit runs the three scanners of spec 16.1 over the Go modules, the
-# production dependencies of web/, and the runtime image. It needs the network
-# and Docker, so make gate never runs it.
+# production dependencies of web/, and the runtime image. trivy leaves out
+# advisories with no fixed version, and those named in deploy/trivy-ignore.yaml,
+# each with a reason and an expiry. It needs the network and Docker, so make gate never runs it.
 audit:
 	@mkdir -p .cache/audit; status=0; \
 	( govulncheck -version && govulncheck ./... ) > .cache/audit/govulncheck.log 2>&1 || status=1; \
 	( npm --version && cd web && npm audit --omit=dev ) > .cache/audit/npm-audit.log 2>&1 || status=1; \
-	( trivy --version && trivy image --scanners vuln --no-progress --exit-code 1 $(IMAGE) ) > .cache/audit/trivy.log 2>&1 || status=1; \
+	( trivy --version && trivy image --scanners vuln --no-progress --ignore-unfixed --ignorefile deploy/trivy-ignore.yaml --exit-code 1 $(IMAGE) ) > .cache/audit/trivy.log 2>&1 || status=1; \
 	for log in govulncheck npm-audit trivy; do echo "audit: .cache/audit/$$log.log"; done; \
 	exit $$status
