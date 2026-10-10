@@ -51,6 +51,12 @@ async function patchUser(page: Page, id: string, data: Record<string, unknown>) 
   expect(changed.status()).toBe(200);
 }
 
+// Closes the tooltip that opens when focus returns to a button, so that axe judges the page alone.
+async function closeLayers(page: Page) {
+  await page.keyboard.press("Escape");
+  await expect(page.locator("[data-radix-popper-content-wrapper]")).toHaveCount(0);
+}
+
 const navigation = (page: Page) => page.getByRole("navigation", { name: en.nav.label });
 
 async function closeAll(...contexts: BrowserContext[]) {
@@ -177,6 +183,7 @@ test("a write without the CSRF token is refused, and a rotated token heals", asy
     await tabA.getByRole("button", { name: languageButton(en) }).click();
     await tabA.getByRole("menuitemradio", { name: ptBR.language["pt-BR"] }).click();
     await expect(tabA.getByRole("heading", { name: ptBR.account.title, level: 1 })).toBeVisible();
+    await closeLayers(tabA);
     await expectNoViolations(tabA);
     await expect.poll(() => answers.length).toBe(2);
     const [first, second] = answers;
@@ -189,6 +196,7 @@ test("a write without the CSRF token is refused, and a rotated token heals", asy
     await tabA.getByRole("button", { name: languageButton(ptBR) }).click();
     await tabA.getByRole("menuitemradio", { name: en.language.en }).click();
     await expect(tabA.getByRole("heading", { name: en.account.title, level: 1 })).toBeVisible();
+    await closeLayers(tabA);
     await expectNoViolations(tabA);
     expect(violations).toEqual([]);
   } finally {
