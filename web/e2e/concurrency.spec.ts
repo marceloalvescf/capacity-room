@@ -1,6 +1,6 @@
 import type { Browser, BrowserContext, Page, Route } from "@playwright/test";
 import en from "../src/locales/en.json" with { type: "json" };
-import { admin, createProfile, createUser, csrfHeaders, expect, expectNoViolations, requestReport, secret, signIn, test } from "./fixtures";
+import { admin, csrfHeaders, expect, expectNoViolations, requestReport, secret, signIn, test } from "./fixtures";
 
 const operator = { username: "e2e-c-operator", password: secret("e2e-C-Operator-Pass-13!") };
 const secondAdmin = { username: "e2e-c-admin", password: secret("e2e-C-Admin-Pass-14!") };
@@ -68,14 +68,45 @@ async function fillForm(page: Page, profileName: string) {
   await page.getByRole("radio", { name: en.language.en, exact: true }).check();
 }
 
+// Creates the user, or, when a restarted worker finds it already made, brings it back to the role, active.
+async function ensureUser(page: Page, user: { username: string; password: string }, role: "administrator" | "operator") {
+  const created = await page.request.post("/api/v1/admin/users", {
+    headers: await csrfHeaders(page),
+    data: { username: user.username, password: user.password, role, language: "en" },
+  });
+  if (created.status() === 201) {
+    return;
+  }
+  expect(created.status()).toBe(409);
+  expect(((await created.json()) as { error?: { code?: string } }).error?.code).toBe("USERNAME_TAKEN");
+  const existing = (await accounts(page)).find((account) => account.username === user.username);
+  expect(existing).toBeDefined();
+  if (existing !== undefined && (existing.role !== role || !existing.active)) {
+    const changed = await page.request.patch(`/api/v1/admin/users/${existing.id}`, {
+      headers: await csrfHeaders(page),
+      data: { role, active: true },
+    });
+    expect(changed.status()).toBe(200);
+  }
+}
+
+// Creates the profile, or accepts the one a restarted worker already made.
+async function ensureProfile(page: Page, document: { id: string } & Record<string, unknown>) {
+  const created = await page.request.post("/api/v1/admin/profiles", { headers: await csrfHeaders(page), data: document });
+  if (created.status() !== 201) {
+    expect(created.status()).toBe(409);
+    expect(((await created.json()) as { error?: { code?: string } }).error?.code).toBe("PROFILE_ID_TAKEN");
+  }
+}
+
 test.beforeAll(async ({ browser }, testInfo) => {
   const baseURL = testInfo.project.use.baseURL;
   const { context, page } = await signedIn(browser, baseURL, admin);
   try {
-    await createUser(page, operator, "operator");
-    await createUser(page, secondAdmin, "administrator");
+    await ensureUser(page, operator, "operator");
+    await ensureUser(page, secondAdmin, "administrator");
     for (const profile of [replay, admission]) {
-      await createProfile(page, {
+      await ensureProfile(page, {
         id: profile.id,
         display_name: profile.name,
         endpoint_url: "http://fake-prometheus:9091/api/v1",
