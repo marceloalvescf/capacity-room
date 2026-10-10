@@ -250,6 +250,6 @@ audit:
 	@mkdir -p .cache/audit; status=0; \
 	( govulncheck -version && govulncheck ./... ) > .cache/audit/govulncheck.log 2>&1 || status=1; \
 	( npm --version && cd web && npm audit --omit=dev ) > .cache/audit/npm-audit.log 2>&1 || status=1; \
-	( trivy --version && trivy image --scanners vuln --exit-code 1 $(IMAGE) ) > .cache/audit/trivy.log 2>&1 || status=1; \
+	( trivy --version && trivy image --scanners vuln --no-progress --exit-code 1 $(IMAGE) ) > .cache/audit/trivy.log 2>&1 || status=1; \
 	for log in govulncheck npm-audit trivy; do echo "audit: .cache/audit/$$log.log"; done; \
 	exit $$status

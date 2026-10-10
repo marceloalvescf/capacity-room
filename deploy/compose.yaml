@@ -27,6 +27,8 @@ services:
       POSTGRES_DB: kcr
       POSTGRES_USER: kcr
       POSTGRES_PASSWORD: ${KCR_POSTGRES_PASSWORD:?set KCR_POSTGRES_PASSWORD to the database password}
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:
