@@ -10,7 +10,7 @@ the authority when this file and the code disagree with it.
 ## Environment
 
 - Development happens on NixOS (x86_64). Go 1.27, Node 26, `typst` 0.15.1,
-  `pdftotext`, and GNU make come from the devShell of `flake.nix`, whose
+  `pdftotext`, GNU make, `govulncheck`, and `trivy` come from the devShell of `flake.nix`, whose
   `flake.lock` pins them; every command runs inside `nix develop`. No tool
   is taken from the host profile.
 - Anything whose result must be exact runs in the Linux test image, through
@@ -45,7 +45,13 @@ make e2e              # the Compose stack and the Playwright specs in a real bro
 make gate             # everything above, from freshly built images
 make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files
+make audit            # govulncheck, npm audit, and trivy over the image; needs the network and Docker
 ```
+
+`make audit` is not part of `make gate`, whose result must not change with a
+public database. It runs at the review of a release and on its version
+commit. trivy leaves out an advisory with no fixed version, and those named
+in `deploy/trivy-ignore.yaml`, each with a statement and an expiry.
 
 `make gate` writes one log per step under `.cache/gate/`. It builds the images
 without cache and runs the tests without cached results.
@@ -101,6 +107,12 @@ image build enforce.
   `deploy/Containerfile` and `deploy/worker-e2e.Containerfile` is equal.
 - **Typst is pinned at exactly 0.15.1.** The toolchain probe refuses any other
   version, and the image build asserts it.
+- **The released migrations are never edited.** A test pins the SHA-256 of
+  each migration released with 1.0.0; a schema change adds a new file that
+  carries the stored rows forward.
+- **The operations guide equals the code.** Two tests compare the tables of
+  `docs/operations.md`: every key of `platform.toml` both ways, and every
+  failure code of a report or a PDF in the contract both ways.
 - **One version.** `VERSION` holds it, and the newest changelog heading must
   equal it. The only level-two headings the changelog may hold are
   `## [Unreleased]` and `## [X.Y.Z] - YYYY-MM-DD`, and it holds no heading
@@ -109,6 +121,21 @@ image build enforce.
 ## Rules kept by review
 
 No guard checks these. The reviewer of each task does.
+
+- **From 1.0.0 on, an upgrade never loses or breaks stored data silently**
+  (spec 15.1). The public surface is the API under `/api/v1` as
+  `api/openapi.yaml` describes it, the commands with their flags,
+  environment variables, and exit codes, the keys of `report.toml` and
+  `platform.toml`, and the snapshot file (`schema_version` 2.0). Breaking it
+  is a major version; adding to it is a minor one. Stored data is converted
+  forward by a migration, and the code keeps one path, never a reader of an
+  earlier shape; data that cannot be carried forward is dropped on purpose,
+  named under `Removed`, with a major version.
+- **`docs/operations.md` is the operator's one document, and
+  `docs/security.md` records the threat model, the controls, and each
+  review.** A change to a setting, a failure code, a command, or the Compose
+  file updates the guide in the same commit; a new control or a new
+  attacker updates the security document.
 
 - **Diagnostics are in English.** This covers errors, logs, and help text.
 - **Technical terms are English in both languages.** A Portuguese sentence
@@ -226,7 +253,12 @@ below the command; the core never imports `internal/platform/`.
   the rest.
 - **No message repeats an argument that was not understood.** It may be a
   secret typed at the wrong place. A path that the user gave is repeated on
-  purpose, and so is a value read from a file that the user named.
+  purpose, and so is a value read from a file that the user named. A flag
+  error names only a flag the program defines, through one flag-error
+  function on the root command, never the text the user typed.
+- **A password typed on the host enters the redactor once it passes the
+  password policy,** and the server secret as soon as `serve` reads it. A
+  value shorter than the policy cannot be told from ordinary text.
 - **The program has the commands the design names, and no other.** The
   completion command that the command-line library adds is turned off. A
   test names the commands it expects and runs each with a stray argument.
@@ -283,7 +315,8 @@ redactor the moment the settings are loaded, before the pool opens.
   a CIDR that covers a metadata address with more than that one address is
   refused), and `credential_dir` and `ca_bundle_dir` (the folders the
   reference files are read from, absolute, defaults `/run/secrets/metrics`
-  and `/run/config/ca`, not read at load), and the ten keys of the worker
+  and `/run/config/ca`, not read at load, and refused when they hold the
+  deployment file or the server secret), and the ten keys of the worker
   and the reports: `worker_slots`, `worker_drain_seconds`,
   `collect_timeout_seconds`, `render_timeout_seconds`, `job_max_attempts`,
   `report_retention_days`, `expired_report_days`, `admission_limit`,
@@ -386,6 +419,20 @@ redactor the moment the settings are loaded, before the pool opens.
   arguments or the settings file.
 - **`admin bootstrap-admin` runs only with `KCR_BOOTSTRAP_MODE=1`,** reads
   the password from standard input alone, and refuses when any user exists.
+- **`admin reset-password` runs only with `KCR_BOOTSTRAP_MODE=1`,** reads
+  the new password from standard input alone, refuses an unknown or
+  deactivated user, revokes every session of the user, writes
+  `user.password_reset` with no actor, and changes neither the role nor the
+  active flag.
+- **The Compose network has a fixed subnet,** `172.31.213.0/24`, so a TLS
+  proxy on the host reaches `serve` from `172.31.213.1`, which
+  `trusted_proxies` names; the e2e project takes `172.31.214.0/24`. The
+  sign-in throttle keys a client by its canonical address, and an IPv6
+  client by its /64.
+- **A reference file is opened once, inside its folder** (`os.Root`,
+  non-blocking), and checked on the open file. A render attempt claims its
+  PDF row with its job and attempt, in a transaction of its own, as a
+  collect attempt claims its report.
 - **Every request to a metric source passes the outbound policy** of
   design 11.5, in `internal/platform/netpolicy`: only `http` and `https`,
   with no user info, query, fragment, control character, or dot segment; the
