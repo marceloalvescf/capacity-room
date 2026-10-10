@@ -32,7 +32,7 @@ import (
 func TestServeWiresTheProfiles(t *testing.T) {
 	pool := storetest.New(t)
 	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
-	hash, err := auth.HashPassword("reader password one")
+	hash, err := auth.HashPassword(context.Background(), "reader password one")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestServeRevealsACredential(t *testing.T) {
 	pool := storetest.New(t)
 	ctx := context.Background()
 	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
-	hash, err := auth.HashPassword("admin password one")
+	hash, err := auth.HashPassword(context.Background(), "admin password one")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestServeBuildsTheReportRoutes(t *testing.T) {
 	pool := storetest.New(t)
 	ctx := context.Background()
 	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
-	hash, err := auth.HashPassword("operator password one")
+	hash, err := auth.HashPassword(context.Background(), "operator password one")
 	if err != nil {
 		t.Fatal(err)
 	}

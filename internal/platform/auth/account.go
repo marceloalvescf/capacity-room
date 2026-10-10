@@ -63,7 +63,11 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 		if err := a.Sessions.Throttle.Take(ctx, a.Pool, key, now); err != nil {
 			return store.User{}, err
 		}
-		if match, _ := VerifyPassword(*c.CurrentPassword, user.PasswordHash); !match {
+		match, _, err := VerifyPassword(ctx, *c.CurrentPassword, user.PasswordHash)
+		if err != nil {
+			return store.User{}, fmt.Errorf("verify password: %w", err)
+		}
+		if !match {
 			return store.User{}, ErrInvalidCredentials
 		}
 		if err := a.Sessions.Throttle.RecordSuccess(ctx, a.Pool, key, now); err != nil {
@@ -72,7 +76,7 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 		if err := CheckPassword(*c.Password); err != nil {
 			return store.User{}, err
 		}
-		hash, err := HashPassword(*c.Password)
+		hash, err := HashPassword(ctx, *c.Password)
 		if err != nil {
 			return store.User{}, fmt.Errorf("hash password: %w", err)
 		}

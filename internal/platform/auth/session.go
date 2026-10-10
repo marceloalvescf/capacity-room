@@ -106,12 +106,14 @@ func (s *Sessions) Login(ctx context.Context, username, password, clientAddress,
 	if found {
 		stored = user.PasswordHash
 	}
-	match, rehash := VerifyPassword(password, stored)
+	match, rehash, err := VerifyPassword(ctx, password, stored)
+	if err != nil {
+		return Issued{}, fmt.Errorf("verify password: %w", err)
+	}
 	matched := found && match
 	var fresh string
 	if matched && rehash {
-		var err error
-		if fresh, err = HashPassword(password); err != nil {
+		if fresh, err = HashPassword(ctx, password); err != nil {
 			return Issued{}, fmt.Errorf("hash password: %w", err)
 		}
 	}
@@ -119,7 +121,7 @@ func (s *Sessions) Login(ctx context.Context, username, password, clientAddress,
 	// or the fresh one once the rehash wrote it. A rehash refused because
 	// the hash moved meanwhile is not an error; the session check refuses.
 	verified := user.PasswordHash
-	err := store.Transact(ctx, s.Pool, func(tx pgx.Tx) error {
+	err = store.Transact(ctx, s.Pool, func(tx pgx.Tx) error {
 		if matched {
 			if fresh == "" {
 				return nil
@@ -325,4 +327,12 @@ func (s *Sessions) Logout(ctx context.Context, token string) error {
 			TargetID:   session.ID.String(),
 		})
 	})
+}
+
+// NewSessions makes the sign-in service. It makes the dummy hash now, so
+// the first sign-in of an unknown user costs one verification like any
+// other.
+func NewSessions(pool *pgxpool.Pool, throttle Throttle, ttl, idle time.Duration, now func() time.Time) *Sessions {
+	DummyHash()
+	return &Sessions{Pool: pool, Throttle: throttle, TTL: ttl, Idle: idle, Now: now}
 }

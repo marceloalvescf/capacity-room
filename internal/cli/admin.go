@@ -188,7 +188,7 @@ func bootstrapAdmin(ctx context.Context, env Env, redactor *redact.Redactor, in 
 		return "", &exitError{2, errors.New("--language must be pt-BR or en")}
 	}
 
-	hash, err := auth.HashPassword(password)
+	hash, err := auth.HashPassword(ctx, password)
 	if err != nil {
 		return "", &exitError{1, err}
 	}

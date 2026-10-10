@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"math"
+	"net/netip"
 	"time"
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
@@ -24,12 +25,14 @@ const (
 )
 
 // Key is HMAC-SHA256 of normalised username, a NUL byte, and the client
-// address, under the secret.
+// address, under the secret. An IPv6 address counts by its /64 prefix, since
+// one client holds a whole /64; an address that does not parse is used as
+// given.
 func (t Throttle) Key(username, clientAddress string) []byte {
 	m := hmac.New(sha256.New, t.Secret)
 	m.Write([]byte(NormalizeUsername(username)))
 	m.Write([]byte{0})
-	m.Write([]byte(clientAddress))
+	m.Write([]byte(clientKey(clientAddress)))
 	return m.Sum(nil)
 }
 
@@ -78,4 +81,14 @@ func (t Throttle) RecordSuccess(ctx context.Context, q store.Querier, key []byte
 		return err
 	}
 	return store.UpsertThrottle(ctx, q, store.Throttle{KeyHash: key, WindowStartedAt: now, UpdatedAt: now})
+}
+
+// clientKey is the part of the key that names the client: the /64 prefix of
+// an IPv6 address, an IPv4 address as it is, and any other text as given.
+func clientKey(clientAddress string) string {
+	addr, err := netip.ParseAddr(clientAddress)
+	if err != nil || addr.Is4() {
+		return clientAddress
+	}
+	return netip.PrefixFrom(addr, 64).Masked().String()
 }

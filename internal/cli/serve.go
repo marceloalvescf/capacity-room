@@ -165,13 +165,7 @@ func buildServer(pool, downloads *pgxpool.Pool, loaded settings.Settings, secret
 	if err != nil {
 		return nil, fmt.Errorf("cannot build the report queue: %w", err)
 	}
-	sessions := &auth.Sessions{
-		Pool:     pool,
-		Throttle: auth.Throttle{Secret: secret},
-		TTL:      loaded.SessionTTL,
-		Idle:     loaded.SessionIdle,
-		Now:      now,
-	}
+	sessions := auth.NewSessions(pool, auth.Throttle{Secret: secret}, loaded.SessionTTL, loaded.SessionIdle, now)
 	return &api.Server{
 		Pool:     pool,
 		Settings: loaded,

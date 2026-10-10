@@ -47,3 +47,16 @@ func TestDecide(t *testing.T) {
 		}
 	}
 }
+
+func TestThrottleKeyGroupsAnIPv6ClientByItsSlash64(t *testing.T) {
+	th := Throttle{Secret: []byte("k")}
+	if !hmac.Equal(th.Key("admin", "2001:db8:1:2::1"), th.Key("admin", "2001:db8:1:2:ffff::9")) {
+		t.Fatal("two addresses of one /64 have two keys")
+	}
+	if hmac.Equal(th.Key("admin", "2001:db8:1:2::1"), th.Key("admin", "2001:db8:1:3::1")) {
+		t.Fatal("two /64 prefixes share a key")
+	}
+	if hmac.Equal(th.Key("admin", "192.0.2.1"), th.Key("admin", "192.0.2.2")) {
+		t.Fatal("two IPv4 addresses share a key")
+	}
+}

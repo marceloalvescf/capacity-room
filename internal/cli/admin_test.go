@@ -47,7 +47,7 @@ func TestBootstrapReadsOneLine(t *testing.T) {
 	if user.Role != auth.RoleAdministrator || user.Language != "pt-BR" {
 		t.Fatalf("user = %+v", user)
 	}
-	if match, _ := auth.VerifyPassword(bootstrapPassword, user.PasswordHash); !match {
+	if match, _, _ := auth.VerifyPassword(context.Background(), bootstrapPassword, user.PasswordHash); !match {
 		t.Fatal("the stored password is not the first line without its line ending")
 	}
 }
@@ -265,7 +265,7 @@ func TestResetPasswordReadsOneLine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if match, _ := auth.VerifyPassword("new-password-12", user.PasswordHash); !match {
+	if match, _, _ := auth.VerifyPassword(context.Background(), "new-password-12", user.PasswordHash); !match {
 		t.Fatal("the stored password is not the first line without its line ending")
 	}
 }

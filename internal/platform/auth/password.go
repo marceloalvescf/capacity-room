@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"errors"
 	"runtime"
@@ -40,35 +41,48 @@ func CheckPassword(password string) error {
 // bounded by the processors, never by the number of requests.
 var hashSlots = make(chan struct{}, runtime.GOMAXPROCS(0))
 
-// withHashSlot runs fn while holding one of hashSlots.
-func withHashSlot(fn func()) {
-	hashSlots <- struct{}{}
+// withHashSlot runs fn while holding one of hashSlots. A wait that ctx
+// ends returns its error and runs nothing.
+func withHashSlot(ctx context.Context, fn func()) error {
+	select {
+	case hashSlots <- struct{}{}:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 	defer func() { <-hashSlots }()
 	fn()
+	return nil
 }
 
-// HashPassword returns the PHC string of password under HashParams.
-func HashPassword(password string) (hash string, err error) {
-	withHashSlot(func() { hash, err = argon2id.CreateHash(password, HashParams) })
-	return hash, err
+// HashPassword returns the PHC string of password under HashParams. It
+// fails with the error of ctx when ctx ends while it waits for a slot.
+func HashPassword(ctx context.Context, password string) (hash string, err error) {
+	var hashErr error
+	if err := withHashSlot(ctx, func() { hash, hashErr = argon2id.CreateHash(password, HashParams) }); err != nil {
+		return "", err
+	}
+	return hash, hashErr
 }
 
 // VerifyPassword reports whether password matches hash and whether the
 // hash was made with other parameters than HashParams and should be
 // written again. A hash that cannot be parsed matches nothing and needs
-// a rehash.
-func VerifyPassword(password, hash string) (match, needsRehash bool) {
+// a rehash. It fails with the error of ctx when ctx ends while it waits
+// for a slot.
+func VerifyPassword(ctx context.Context, password, hash string) (match, needsRehash bool, err error) {
 	var ok bool
 	var params *argon2id.Params
-	var err error
-	withHashSlot(func() { ok, params, err = argon2id.CheckHash(password, hash) })
-	if err != nil {
-		return false, true
+	var checkErr error
+	if err := withHashSlot(ctx, func() { ok, params, checkErr = argon2id.CheckHash(password, hash) }); err != nil {
+		return false, false, err
+	}
+	if checkErr != nil {
+		return false, true, nil
 	}
 	outdated := params.Memory != HashParams.Memory ||
 		params.Iterations != HashParams.Iterations ||
 		params.Parallelism != HashParams.Parallelism
-	return ok, ok && outdated
+	return ok, ok && outdated, nil
 }
 
 var (
@@ -84,7 +98,7 @@ func DummyHash() string {
 		if _, err := rand.Read(secret); err != nil {
 			panic("auth: read random bytes: " + err.Error())
 		}
-		h, err := HashPassword(string(secret))
+		h, err := HashPassword(context.Background(), string(secret))
 		if err != nil {
 			panic("auth: hash dummy password: " + err.Error())
 		}

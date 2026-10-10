@@ -76,7 +76,7 @@ func TestAccountChangePassword(t *testing.T) {
 	if row.PasswordHash == f.eve.PasswordHash || got.PasswordHash != row.PasswordHash {
 		t.Fatal("hash not replaced")
 	}
-	if match, _ := VerifyPassword(newPassword, row.PasswordHash); !match {
+	if match, _, _ := VerifyPassword(context.Background(), newPassword, row.PasswordHash); !match {
 		t.Fatal("new hash does not match")
 	}
 	requireRevoked(t, f.session(t, s1), "password_changed")
@@ -203,7 +203,7 @@ func TestAccountPasswordChangeDoesNotRevertDeactivation(t *testing.T) {
 	if row.Active || row.Role != RoleReader {
 		t.Fatalf("deactivation reverted: active=%v role=%s", row.Active, row.Role)
 	}
-	newMatch, _ := VerifyPassword(newPassword, row.PasswordHash)
+	newMatch, _, _ := VerifyPassword(context.Background(), newPassword, row.PasswordHash)
 	if row.PasswordHash != f.ops.PasswordHash && !newMatch {
 		t.Fatal("hash is neither the old one nor the new one")
 	}
@@ -219,7 +219,7 @@ func TestAccountPasswordChangeDoesNotRevertDeactivation(t *testing.T) {
 func TestAccountPasswordChangeRefusedWhenHashMoved(t *testing.T) {
 	f := newAccountFixture(t)
 	ctx := context.Background()
-	moved, err := HashPassword("a password set meanwhile")
+	moved, err := HashPassword(context.Background(), "a password set meanwhile")
 	if err != nil {
 		t.Fatal(err)
 	}

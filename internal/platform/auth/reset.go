@@ -28,7 +28,7 @@ const revokedPasswordReset = "password_reset"
 // every session of that user, and records the reset with no actor. It is the
 // way back in for an administrator who lost the password, run on the host.
 func ResetPassword(ctx context.Context, pool *pgxpool.Pool, username, password string, now time.Time) (store.User, error) {
-	hash, err := HashPassword(password)
+	hash, err := HashPassword(ctx, password)
 	if err != nil {
 		return store.User{}, fmt.Errorf("hash password: %w", err)
 	}

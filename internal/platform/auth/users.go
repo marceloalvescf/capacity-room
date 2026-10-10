@@ -87,7 +87,7 @@ func (u *Users) Create(ctx context.Context, actor Principal, n NewUser) (store.U
 	if !validLanguage(n.Language) {
 		return store.User{}, ErrInvalidLanguage
 	}
-	hash, err := HashPassword(n.Password)
+	hash, err := HashPassword(ctx, n.Password)
 	if err != nil {
 		return store.User{}, fmt.Errorf("hash password: %w", err)
 	}
@@ -174,7 +174,7 @@ func (u *Users) Update(ctx context.Context, actor Principal, id uuid.UUID, c Use
 		if err := CheckPassword(*c.Password); err != nil {
 			return store.User{}, err
 		}
-		if hash, err = HashPassword(*c.Password); err != nil {
+		if hash, err = HashPassword(ctx, *c.Password); err != nil {
 			return store.User{}, fmt.Errorf("hash password: %w", err)
 		}
 	}

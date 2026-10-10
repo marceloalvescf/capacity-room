@@ -130,7 +130,7 @@ func TestCreateUser(t *testing.T) {
 	if !strings.HasPrefix(row.PasswordHash, "$argon2id$") {
 		t.Fatalf("hash %q", row.PasswordHash)
 	}
-	if match, _ := VerifyPassword("twelve letters", row.PasswordHash); !match {
+	if match, _, _ := VerifyPassword(context.Background(), "twelve letters", row.PasswordHash); !match {
 		t.Fatal("hash does not match the password")
 	}
 	if !row.CreatedAt.Equal(base.Add(time.Minute)) || !row.UpdatedAt.Equal(base.Add(time.Minute)) {
@@ -250,7 +250,7 @@ func TestUpdatePasswordRevokes(t *testing.T) {
 	if row.PasswordHash == f.eve.PasswordHash || got.PasswordHash != row.PasswordHash {
 		t.Fatal("hash not replaced")
 	}
-	if match, _ := VerifyPassword(newPassword, row.PasswordHash); !match {
+	if match, _, _ := VerifyPassword(context.Background(), newPassword, row.PasswordHash); !match {
 		t.Fatal("new hash does not match")
 	}
 	requireRevoked(t, f.session(t, s), "password_changed")
@@ -504,7 +504,7 @@ func TestUpdateKeepsAConcurrentPasswordChange(t *testing.T) {
 	if row.Role != RoleOperator {
 		t.Fatalf("role %q", row.Role)
 	}
-	if match, _ := VerifyPassword(newPassword, row.PasswordHash); !match {
+	if match, _, _ := VerifyPassword(context.Background(), newPassword, row.PasswordHash); !match {
 		t.Fatal("the password change was reverted")
 	}
 }

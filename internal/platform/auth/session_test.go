@@ -37,7 +37,7 @@ func (f *sessionFixture) at(d time.Duration) { f.now = base.Add(d) }
 
 func newUser(t *testing.T, pool *pgxpool.Pool, name, password, role, language string) store.User {
 	t.Helper()
-	hash, err := HashPassword(password)
+	hash, err := HashPassword(context.Background(), password)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,7 +306,7 @@ func TestLoginRehashKeepsTheSession(t *testing.T) {
 func TestLoginRefusesWhenPasswordChangedMidFlight(t *testing.T) {
 	f := newSessionFixture(t)
 	f.sessions.beforeSession = func() {
-		hash, err := HashPassword("a password set meanwhile")
+		hash, err := HashPassword(context.Background(), "a password set meanwhile")
 		if err != nil {
 			t.Error(err)
 			return

@@ -98,7 +98,7 @@ func newTestServer(t *testing.T) *testServer {
 
 func seed(t *testing.T, pool *pgxpool.Pool, now time.Time, name, password, role string) store.User {
 	t.Helper()
-	hash, err := auth.HashPassword(password)
+	hash, err := auth.HashPassword(context.Background(), password)
 	if err != nil {
 		t.Fatal(err)
 	}

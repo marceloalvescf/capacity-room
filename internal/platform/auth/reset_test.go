@@ -19,10 +19,10 @@ func TestResetPasswordSetsTheHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := f.user(t, f.root.ID)
-	if match, _ := VerifyPassword(resetPassword, row.PasswordHash); !match {
+	if match, _, _ := VerifyPassword(context.Background(), resetPassword, row.PasswordHash); !match {
 		t.Fatal("the new password does not match")
 	}
-	if match, _ := VerifyPassword(adminPassword, row.PasswordHash); match {
+	if match, _, _ := VerifyPassword(context.Background(), adminPassword, row.PasswordHash); match {
 		t.Fatal("the old password still matches")
 	}
 }

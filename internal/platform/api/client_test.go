@@ -45,3 +45,15 @@ func TestClientAddressIPv6(t *testing.T) {
 func TestClientAddressNoPort(t *testing.T) {
 	expect(t, address(nil, "unix"), "unix")
 }
+
+func TestClientAddressIsCanonical(t *testing.T) {
+	expect(t, address(nil, "[::ffff:192.0.2.7]:80"), address(nil, "192.0.2.7:80"))
+	expect(t, address(nil, "[::ffff:192.0.2.7]:80"), "192.0.2.7")
+	expect(t, address(nil, "[2001:0db8:0:0::1]:80"), address(nil, "[2001:db8::1]:80"))
+	expect(t, address(proxies, "10.1.1.1:80", "::ffff:192.0.2.7"), "192.0.2.7")
+	expect(t, address(proxies, "10.1.1.1:80", "2001:0db8:0:0::1"), "2001:db8::1")
+}
+
+func TestClientAddressGarbageFromTrustedProxyGivesThePeer(t *testing.T) {
+	expect(t, address(proxies, "10.1.1.1:80", "not-an-address"), "10.1.1.1")
+}
