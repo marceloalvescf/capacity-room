@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"io/fs"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -212,4 +213,25 @@ func TestResolveReferenceRefusesLinkOutsideFolder(t *testing.T) {
 	}
 	_, err := ResolveCredential(dir, "up")
 	wantRef(t, err, CodeCredentialInvalid, dir)
+}
+
+func TestOpenErrorCode(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+		want RefCode
+	}{
+		{"permission", fs.ErrPermission, CodeCredentialUnreadable},
+		{"emfile", &fs.PathError{Err: syscall.EMFILE}, CodeCredentialUnreadable},
+		{"enfile", &fs.PathError{Err: syscall.ENFILE}, CodeCredentialUnreadable},
+		{"eio", &fs.PathError{Err: syscall.EIO}, CodeCredentialUnreadable},
+		{"enomem", &fs.PathError{Err: syscall.ENOMEM}, CodeCredentialUnreadable},
+		{"not exist", fs.ErrNotExist, CodeCredentialInvalid},
+		{"loop", &fs.PathError{Err: syscall.ELOOP}, CodeCredentialInvalid},
+	}
+	for _, c := range cases {
+		if got := openErrorCode(c.err, CodeCredentialInvalid, CodeCredentialUnreadable); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
 }

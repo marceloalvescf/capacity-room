@@ -436,8 +436,17 @@ func TestReadServerSecretRefusesWhatIsNotARegularFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, path := range []string{dir, fifo} {
-		_, err := Settings{ServerSecretPath: path}.ReadServerSecret()
-		wantError(t, err, "the server secret at "+path+" is not a regular file")
+		done := make(chan error, 1)
+		go func() {
+			_, err := Settings{ServerSecretPath: path}.ReadServerSecret()
+			done <- err
+		}()
+		select {
+		case err := <-done:
+			wantError(t, err, "the server secret at "+path+" is not a regular file")
+		case <-time.After(time.Second):
+			t.Fatalf("the read of %s did not return within 1s", path)
+		}
 	}
 }
 

@@ -60,3 +60,18 @@ func TestThrottleKeyGroupsAnIPv6ClientByItsSlash64(t *testing.T) {
 		t.Fatal("two IPv4 addresses share a key")
 	}
 }
+
+func TestClientKeyUnmapsIPv4MappedAddresses(t *testing.T) {
+	if got := clientKey("::ffff:192.0.2.7"); got != "192.0.2.7" {
+		t.Fatalf("mapped = %q", got)
+	}
+	if clientKey("::ffff:192.0.2.7") == clientKey("::ffff:192.0.2.8") {
+		t.Fatal("two mapped addresses share a key")
+	}
+	if clientKey("::ffff:192.0.2.7") != clientKey("192.0.2.7") {
+		t.Fatal("the two forms of one address differ")
+	}
+	if got := clientKey("2001:db8:1:2:3:4:5:6"); got != "2001:db8:1:2::/64" {
+		t.Fatalf("ipv6 = %q", got)
+	}
+}

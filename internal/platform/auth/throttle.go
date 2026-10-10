@@ -84,11 +84,15 @@ func (t Throttle) RecordSuccess(ctx context.Context, q store.Querier, key []byte
 }
 
 // clientKey is the part of the key that names the client: the /64 prefix of
-// an IPv6 address, an IPv4 address as it is, and any other text as given.
+// an IPv6 address, an IPv4 address (a mapped one unmapped), and any other text as given.
 func clientKey(clientAddress string) string {
 	addr, err := netip.ParseAddr(clientAddress)
-	if err != nil || addr.Is4() {
+	if err != nil {
 		return clientAddress
+	}
+	addr = addr.Unmap()
+	if addr.Is4() {
+		return addr.String()
 	}
 	return netip.PrefixFrom(addr, 64).Masked().String()
 }

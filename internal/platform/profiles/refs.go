@@ -50,10 +50,7 @@ func openReference(dir, name string, invalid, unreadable RefCode) (*os.File, err
 	defer func() { _ = root.Close() }()
 	f, err := root.OpenFile(name, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
-		if errors.Is(err, fs.ErrPermission) {
-			return nil, &RefError{Code: unreadable}
-		}
-		return nil, &RefError{Code: invalid}
+		return nil, &RefError{Code: openErrorCode(err, invalid, unreadable)}
 	}
 	info, err := f.Stat()
 	if err != nil {
@@ -140,4 +137,16 @@ func ResolveCABundle(dir, name string) ([]byte, error) {
 			return data, nil
 		}
 	}
+}
+
+// openErrorCode maps the error of opening a reference file: a refused
+// permission and a transient resource or I/O failure are unreadable, every
+// other error is invalid.
+func openErrorCode(err error, invalid, unreadable RefCode) RefCode {
+	for _, transient := range []error{fs.ErrPermission, syscall.EMFILE, syscall.ENFILE, syscall.EIO, syscall.ENOMEM} {
+		if errors.Is(err, transient) {
+			return unreadable
+		}
+	}
+	return invalid
 }

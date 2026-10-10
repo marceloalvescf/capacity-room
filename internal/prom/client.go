@@ -85,9 +85,9 @@ type Client struct {
 	sleep      func(ctx context.Context, d time.Duration) error
 	answered   bool
 	// foreignTransport is true when the caller supplied Options.Transport.
-	// The built-in transport's own errors are never treated as foreign,
-	// whatever shape they take; only a transport the caller controls gets
-	// its errors passed through.
+	// Only an error of that transport which carries the PolicyRefusal marker
+	// stops at once and is returned as it is; any other transport error is
+	// a connection failure and is tried again.
 	foreignTransport bool
 	// maxResponseBytes is the largest answer this client reads. It is
 	// MaxResponseBytes, and only a test of this package sets it smaller.
@@ -208,7 +208,8 @@ func secondsToDuration(seconds float64) time.Duration {
 
 // runQuery runs one query to completion, retrying a plain connection or
 // timeout failure up to 3 attempts with a growing backoff, while a TLS
-// failure, a foreign-transport error, or a cancelled context stops at once.
+// failure, an error that carries the PolicyRefusal marker, or a cancelled
+// context stops at once.
 // answered tracks whether this client (or this candidate, during Connect)
 // has ever parsed a full, successful answer; it is set to true the moment
 // that happens, which turns a later 404, 405, or unparsable body from a

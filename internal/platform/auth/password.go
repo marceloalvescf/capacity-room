@@ -36,10 +36,13 @@ func CheckPassword(password string) error {
 	return nil
 }
 
-// hashSlots bounds the hashes in flight. Argon2id under HashParams takes
-// 64 MiB and four threads per call, so the number running at once is
-// bounded by the processors, never by the number of requests.
-var hashSlots = make(chan struct{}, runtime.GOMAXPROCS(0))
+// maxHashSlots caps the hashes in flight: each Argon2id hash takes 64 MiB,
+// so the memory held by hashes stays at or below maxHashSlots times that.
+const maxHashSlots = 4
+
+// hashSlots bounds the hashes in flight by the processors and by
+// maxHashSlots, never by the number of requests.
+var hashSlots = make(chan struct{}, min(runtime.GOMAXPROCS(0), maxHashSlots))
 
 // withHashSlot runs fn while holding one of hashSlots. A wait that ctx
 // ends returns its error and runs nothing.

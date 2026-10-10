@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -137,5 +138,12 @@ func TestHashSlotRunsWhenFree(t *testing.T) {
 	m, r, err := VerifyPassword(context.Background(), testPassword, h)
 	if err != nil || !m || r {
 		t.Fatalf("got %v, %v, %v", m, r, err)
+	}
+}
+
+func TestHashSlotsAreCappedAtFour(t *testing.T) {
+	want := min(runtime.GOMAXPROCS(0), maxHashSlots)
+	if cap(hashSlots) > maxHashSlots || cap(hashSlots) != want {
+		t.Fatalf("cap(hashSlots) = %d, want %d", cap(hashSlots), want)
 	}
 }

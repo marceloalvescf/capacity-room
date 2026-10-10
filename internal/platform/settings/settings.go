@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -337,18 +338,18 @@ func parseEndpointCIDRs(entries []string) ([]netip.Prefix, error) {
 // at most 64 KiB, and returns its bytes. A file shorter than 32 bytes is
 // refused.
 func (s Settings) ReadServerSecret() ([]byte, error) {
-	info, err := os.Stat(s.ServerSecretPath)
+	opened, err := os.OpenFile(s.ServerSecretPath, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, secretReadError(s.ServerSecretPath, err)
+	}
+	defer func() { _ = opened.Close() }()
+	info, err := opened.Stat()
 	if err != nil {
 		return nil, secretReadError(s.ServerSecretPath, err)
 	}
 	if !info.Mode().IsRegular() {
 		return nil, fmt.Errorf("the server secret at %s is not a regular file", s.ServerSecretPath)
 	}
-	opened, err := os.Open(s.ServerSecretPath)
-	if err != nil {
-		return nil, secretReadError(s.ServerSecretPath, err)
-	}
-	defer func() { _ = opened.Close() }()
 	data, err := io.ReadAll(io.LimitReader(opened, maxSecretBytes+1))
 	if err != nil {
 		return nil, secretReadError(s.ServerSecretPath, err)

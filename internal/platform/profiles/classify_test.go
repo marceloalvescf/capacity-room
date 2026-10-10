@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
@@ -49,5 +51,21 @@ func TestClassify(t *testing.T) {
 func TestSourceErrorCarriesOnlyTheCode(t *testing.T) {
 	if got := (&SourceError{Code: CodeCredentialUnavailable}).Error(); got != "PROFILE_CREDENTIAL_UNAVAILABLE" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestPolicyRefusalReachesClassifyThroughTheClient(t *testing.T) {
+	transport := &netpolicy.Transport{}
+	_, err := prom.Connect(context.Background(), prom.Options{
+		Metrics:   config.Metrics{URL: "http://127.0.0.1:9/api/v1", EndpointType: "prometheus", TimeoutSeconds: 5},
+		Transport: transport,
+		Sleep:     func(context.Context, time.Duration) error { return nil },
+	})
+	var policyErr *netpolicy.Error
+	if !errors.As(err, &policyErr) {
+		t.Fatalf("error %v holds no policy error", err)
+	}
+	if code, ok := Classify(err); !ok || code != "ENDPOINT_ADDRESS_REJECTED" {
+		t.Fatalf("Classify = %q, %v", code, ok)
 	}
 }
