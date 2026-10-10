@@ -61,8 +61,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
   const reportId = /[0-9a-f-]{36}$/.exec(jobUrl)?.[0] ?? "";
 
   await test.step("the stored selection is the previous calendar week", async () => {
-    const id = /[0-9a-f-]{36}$/.exec(jobUrl)?.[0] ?? "";
-    const response = await page.request.get(`/api/v1/reports/${id}`);
+    const response = await page.request.get(`/api/v1/reports/${reportId}`);
     expect(response.ok()).toBe(true);
     const { selection } = (await response.json()) as {
       selection: { period: string | null; start: string | null; end: string | null; timezone: string };

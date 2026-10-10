@@ -195,7 +195,8 @@ e2e: $(IMAGE_DEP)
 	status=$$?; \
 	$(E2E_COMPOSE) stop $(E2E_FAKES); \
 	for fake in $(E2E_FAKES); do \
-		$(E2E_COMPOSE) logs --no-log-prefix $$fake | grep -qx 'remaining: 1' \
+		$(E2E_COMPOSE) logs --no-log-prefix $$fake > .cache/e2e/$$fake.log; \
+		grep -qx 'remaining: 1' .cache/e2e/$$fake.log \
 			|| { echo "e2e: $$fake did not leave exactly the one unasked answer; its last lines:"; \
 			$(E2E_COMPOSE) logs --no-log-prefix --tail 5 $$fake; [ $$status -ne 0 ] || status=1; }; \
 	done; \
@@ -204,10 +205,14 @@ e2e: $(IMAGE_DEP)
 	if [ ! -s .cache/e2e/secrets.txt ]; then \
 		echo 'e2e: the specs recorded no secret'; [ $$status -ne 0 ] || status=1; \
 	fi; \
-	cat .cache/e2e/secrets.txt deploy/platform/e2e-admin-password deploy/platform/credentials/e2e-recovery 2>/dev/null \
-		| { cat; echo kcr_e2e_only; } | grep -v '^$$' > .cache/e2e/secret-patterns; \
-	if grep -qF -f .cache/e2e/secret-patterns .cache/e2e/platform.log; then \
+	cat .cache/e2e/secrets.txt deploy/platform/e2e-admin-password deploy/platform/credentials/e2e-recovery \
+		| { cat; echo kcr_e2e_only; } | grep -v '^$$' > .cache/e2e/secret-patterns \
+		|| { echo 'e2e: the list of secrets could not be built'; [ $$status -ne 0 ] || status=1; }; \
+	grep -qF -f .cache/e2e/secret-patterns .cache/e2e/platform.log; found=$$?; \
+	if [ $$found -eq 0 ]; then \
 		echo 'e2e: a secret reached the logs of the stack'; [ $$status -ne 0 ] || status=1; \
+	elif [ $$found -ne 1 ]; then \
+		echo 'e2e: the secret check could not run'; [ $$status -ne 0 ] || status=1; \
 	fi; \
 	$(E2E_COMPOSE) down --volumes; exit $$status
 
