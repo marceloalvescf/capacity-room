@@ -111,8 +111,9 @@ change `trusted_proxies` to its first address.
 ## 3. Settings
 
 `$KCR_HOME/config/platform.toml` is the one settings file of `serve` and
-`worker`. A key it does not know is refused, and so is a value out of its
-bounds; the service then exits with code 2 and names the key. The database
+`worker`. A key it does not know is refused, and so is a value of the wrong
+type or out of its bounds; the service then exits with code 2 and says what
+it refused. The database
 connection is not in this file: it comes from the environment
 (`KCR_DATABASE_DSN`), which `deploy/compose.yaml` builds from
 `KCR_POSTGRES_PASSWORD`.
@@ -135,7 +136,7 @@ Every key, with its default and its bounds:
 |---|---|---|---|
 | `session_ttl_seconds` | 43200 | 60 to 2592000 | The longest a session lives, from sign-in |
 | `session_idle_seconds` | 3600 | 60 to 2592000, at most `session_ttl_seconds` | A session ends after this long without a request |
-| `server_secret_path` | none, required | an absolute path | The file of at least 32 random bytes that keys the sign-in throttle |
+| `server_secret_path` | none, required | an absolute path to a regular file of 32 bytes to 64 KiB | The file of random bytes that keys the sign-in throttle |
 | `trusted_proxies` | `[]` | CIDR ranges | The peers whose `X-Forwarded-For` is believed; name the proxy's address alone |
 | `allowed_endpoint_hostnames` | `[]` | host names | Metric sources reachable by name; nothing is reachable until a name or a range is listed |
 | `allowed_endpoint_cidrs` | `[]` | CIDR ranges | Metric sources reachable by address range |
@@ -325,7 +326,7 @@ takes no new job, waits `worker_drain_seconds` for the running ones, cancels
 them, and waits as long again; a cancelled job runs again from the start
 later. Compose gives `serve` 45 seconds and `worker` 75 seconds before it
 kills them. If you raise `worker_drain_seconds`, raise the worker's
-`stop_grace_period` in your limits file to more than twice that plus 15
+`stop_grace_period` in your limits file to at least twice that plus 15
 seconds. A worker killed before it stops leaves its jobs to be picked up
 again once the longer of the two job timeouts and one more minute have
 passed.
@@ -370,7 +371,8 @@ docker compose up -d --wait
 ```
 
 `serve` and `worker` apply the new schema under a database lock when they
-start, whichever comes first. Then sign in, open a report stored before the
+start, whichever comes first. A database written by a version before 1.0.0
+is not carried forward: start 1.0.0 with an empty database. Then sign in, open a report stored before the
 upgrade, and check the version at the bottom of the sidebar. From 1.0.0 on,
 an upgrade keeps the stored reports, and a change that would break the API,
 the command line, the settings files, or the snapshot file waits for a major

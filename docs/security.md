@@ -33,7 +33,7 @@ including running the two commands that need `KCR_BOOTSTRAP_MODE=1`.
 | Control | What it stops | Where it is enforced |
 |---|---|---|
 | Argon2id password hashes (64 MiB, 3 passes), rehashed at sign-in when the parameters change; 12 to 1024 characters | Offline guessing of a stolen hash | `internal/platform/auth/password.go` |
-| A bounded number of hashes at once; a waiting sign-in leaves the queue when its client leaves | Memory exhaustion by sign-in attempts | `internal/platform/auth/password.go` |
+| At most four hashes at once, 64 MiB each; a waiting sign-in leaves the queue when its client leaves | Memory exhaustion by sign-in attempts | `internal/platform/auth/password.go` |
 | An unknown user costs one hash against a dummy hash made at start | Learning which accounts exist by timing | `internal/platform/auth/` |
 | Five failures in five minutes block a user name and client address pair for five minutes; IPv6 clients count by /64 | Password guessing | `internal/platform/auth/throttle.go`, `internal/platform/api/client.go` |
 | `X-Forwarded-For` believed only from `trusted_proxies`, last address only | A client choosing its own address | `internal/platform/api/client.go`, `deploy/compose.yaml` (fixed subnet) |

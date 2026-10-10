@@ -27,8 +27,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   proxy on the host can be named in `trusted_proxies`.
 - A credential or CA folder that holds the settings file or the server
   secret is refused at start.
-- A flag written wrongly is refused with a message that names the flag,
-  never the text that was typed.
+- A flag written wrongly is refused with a fixed message that never repeats
+  the text that was typed.
+
+### Removed
+
+- A database written by a version before 1.0.0 is not carried to this
+  one: 1.0.0 starts from an empty database.
 
 ### Fixed
 
