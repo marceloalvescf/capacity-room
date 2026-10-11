@@ -233,6 +233,13 @@ export function UsageGrids({ row }: { row: ViewNamespace | ViewWorkload }) {
   );
 }
 
+// The worst severity among the findings that match, or null when none does.
+export function worstSeverity(findings: ViewFinding[], match: (finding: ViewFinding) => boolean): Status | null {
+  const order: ViewFinding["severity"][] = ["critical", "attention", "healthy"];
+  const kept = findings.filter(match).map((finding) => finding.severity);
+  return order.find((severity) => kept.includes(severity)) ?? null;
+}
+
 // The status of a row that has a finding is drawn as a mark; a row with none says so in plain text.
 export function FindingStatus({ status, hasFinding }: { status: Status; hasFinding: boolean }) {
   const { t } = useTranslation();

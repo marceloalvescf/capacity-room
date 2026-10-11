@@ -70,15 +70,37 @@ describe("autoscaling tab", () => {
     expect(within(table).getAllByRole("row")).toHaveLength(5);
     const web = within(rowOf("HPAs", "web")).getAllByRole("cell");
     expect(web[1]).toHaveTextContent("Deployment payments-web · payments");
-    expect(web[2]).toHaveTextContent("Maximum reached");
-    expect(within(web[2] as HTMLElement).getByText("Maximum reached").closest("span.inline-flex")).toHaveClass("text-critical");
-    expect(web[3]).toHaveTextContent("2 / 4");
-    expect(web[3]?.querySelector(".font-mono")).not.toBeNull();
-    expect(web[3]).toHaveClass("text-right");
-    expect(web[4]).toHaveTextContent("4");
+    expect(web[3]).toHaveTextContent("Maximum reached");
+    expect(within(web[3] as HTMLElement).getByText("Maximum reached").closest("span.inline-flex")).toHaveClass("text-critical");
+    expect(web[4]).toHaveTextContent("2 / 4");
+    expect(web[4]?.querySelector(".font-mono")).not.toBeNull();
+    expect(web[4]).toHaveClass("text-right");
+    expect(web[5]).toHaveTextContent("4");
     const dup = within(rowOf("HPAs", "dup")).getAllByRole("cell");
-    expect(dup[3]).toHaveTextContent("1 / Unavailable");
-    expect(within(dup[3] as HTMLElement).getByText("Unavailable")).toHaveClass("text-muted-fg");
+    expect(dup[4]).toHaveTextContent("1 / Unavailable");
+    expect(within(dup[4] as HTMLElement).getByText("Unavailable")).toHaveClass("text-muted-fg");
+  });
+
+  it("hpa status column", async () => {
+    await open("autoscaling");
+    const headers = within(screen.getByRole("table", { name: "HPAs" })).getAllByRole("columnheader");
+    expect(headers[2]).toHaveTextContent("Status");
+    const status = (name: string) => within(rowOf("HPAs", name)).getAllByRole("cell")[2] as HTMLElement;
+    expect(status("web")).toHaveTextContent("Critical");
+    expect(status("idle")).toHaveTextContent("Attention");
+    expect(status("fixed")).toHaveTextContent("Healthy");
+    expect(status("dup")).toHaveTextContent("No finding");
+    expect(status("dup").querySelector("svg")).toBeNull();
+    expect(status("web").querySelector("svg")).not.toBeNull();
+  });
+
+  it("hpa default order", async () => {
+    await open("autoscaling");
+    const names = within(screen.getByRole("table", { name: "HPAs" }))
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getAllByRole("cell")[1]?.querySelector(".font-mono")?.textContent);
+    expect(names).toEqual(["web", "idle", "fixed", "dup"]);
   });
 
   it("hpa opened", async () => {

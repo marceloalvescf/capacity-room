@@ -17,6 +17,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   against the autoscaler's maximum, and on the pressure of each scope with
   its leading finding; the severity totals follow on one line, and the
   inventory counts left the page.
+- The HPAs on the autoscaling tab show the status of their findings, as the
+  namespaces, workloads, and nodes do.
 
 ### Fixed
 

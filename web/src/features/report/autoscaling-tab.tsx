@@ -1,15 +1,14 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
 import type { ViewHPA } from "./api";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
-import { Counts, matchHPA, RowFindings, StatGrid, ValueText } from "./pieces";
+import { Counts, FindingStatus, matchHPA, RowFindings, StatGrid, ValueText, worstSeverity } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewHPA) => `${row.namespace}/${row.name}`;
 const rowName = (row: ViewHPA) => row.name;
 const searchText = (row: ViewHPA) => `${row.name} ${row.target_kind} ${row.target_name} ${row.namespace}`;
-const status = (row: ViewHPA) => row.situation_status ?? "";
 
 function Opened({ row }: { row: ViewHPA }) {
   const { t } = useTranslation();
@@ -31,7 +30,8 @@ const renderOpened = (row: ViewHPA) => <Opened row={row} />;
 
 export function AutoscalingTab() {
   const { t } = useTranslation();
-  const { summary, hpas } = useView();
+  const { summary, hpas, findings } = useView();
+  const status = useCallback((row: ViewHPA) => worstSeverity(findings, matchHPA(row)) ?? "", [findings]);
   const { autoscaling } = summary;
   const columns = useMemo<Column<ViewHPA>[]>(
     () => [
@@ -48,6 +48,15 @@ export function AutoscalingTab() {
           </div>
         ),
         sortValue: (row) => row.name,
+      },
+      {
+        id: "status",
+        header: t("report.column.status"),
+        cell: (row) => {
+          const worst = status(row);
+          return <FindingStatus status={worst === "" ? "healthy" : worst} hasFinding={worst !== ""} />;
+        },
+        sortValue: (row) => severityRank[status(row)] ?? 3,
       },
       {
         id: "situation",
@@ -83,7 +92,7 @@ export function AutoscalingTab() {
         align: "end",
       },
     ],
-    [t],
+    [t, status],
   );
   return (
     <div className="flex flex-col gap-6">
