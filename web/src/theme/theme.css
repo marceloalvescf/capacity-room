@@ -29,7 +29,7 @@
   --depth-1: #c5deea;
   --depth-2: #aacee0;
   --depth-3: #8bbcd5;
-  --hatch: 12%;
+  --hazard-stripe: #c1cadc;
   color-scheme: light;
 }
 
@@ -62,7 +62,7 @@
   --depth-1: #17324a;
   --depth-2: #1b3f5e;
   --depth-3: #1f4b70;
-  --hatch: 20%;
+  --hazard-stripe: #2f3d57;
   color-scheme: dark;
 }
 
@@ -154,14 +154,11 @@
   }
 }
 
-/* A critical value: the deepest tint that still carries text, hatched in the critical colour. */
+/* A critical value: Depth 1 hatched in the critical colour. The stripe is the critical colour laid over Depth 1
+   at 10% (light) or 12% (dark), written out as a token so every text on it is a tested pair. */
 @utility hazard {
-  background-color: var(--depth-2);
-  background-image: repeating-linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--critical) var(--hatch), transparent) 0 1.5px,
-      transparent 1.5px 6px
-    );
+  background-color: var(--depth-1);
+  background-image: repeating-linear-gradient(135deg, var(--hazard-stripe) 0 1.5px, transparent 1.5px 6px);
 }
 
 :root {

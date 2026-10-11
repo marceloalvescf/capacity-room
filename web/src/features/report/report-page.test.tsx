@@ -55,7 +55,7 @@ describe("report screen", () => {
     const nav = screen.getByRole("navigation", { name: t("report.tabs") });
     const links = within(nav).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual(
-      reportTabs.map((tab) => `${t(`report.tab.${tab}`)}${tab === "quality" ? "2" : ""}`),
+      reportTabs.map((tab) => `${t(`report.tab.${tab}`)}${tab === "quality" ? "2, warnings: 2" : ""}`),
     );
     links.forEach((link, index) => {
       expect(link.getAttribute("href")).toMatch(new RegExp(`/${reportTabs[index] ?? ""}$`));
@@ -131,7 +131,11 @@ describe("report screen", () => {
     await open();
     const nav = screen.getByRole("navigation", { name: t("report.tabs") });
     const tab = within(nav).getByRole("link", { name: "Data quality, warnings: 2" });
-    expect(within(tab).getByText("2")).toHaveClass("font-mono", "italic");
+    expect(tab).toHaveTextContent(/^Data quality/);
+    const count = within(tab).getByText("2");
+    expect(count).toHaveClass("font-mono", "italic");
+    expect(count).toHaveAttribute("aria-hidden", "true");
+    expect(tab).not.toHaveAttribute("aria-label");
     expect(tab.querySelector("svg.text-attention")).not.toBeNull();
   });
 

@@ -55,8 +55,28 @@ describe("contrast", () => {
     expect(failures).toEqual([]);
   });
 
+  it("the hazard stripe is the critical colour laid lightly over Depth 1", () => {
+    const mix = (fg: string, bg: string, alpha: number) =>
+      `#${[1, 3, 5]
+        .map((at) =>
+          Math.round(parseInt(fg.slice(at, at + 2), 16) * alpha + parseInt(bg.slice(at, at + 2), 16) * (1 - alpha))
+            .toString(16)
+            .padStart(2, "0"),
+        )
+        .join("")}`;
+    const alphas: Record<string, number> = {};
+    for (const [theme, map] of Object.entries(themes)) {
+      const stripe = map.get("hazard-stripe");
+      const found = [...Array(21).keys()].map((step) => step / 100).find(
+        (alpha) => mix(map.get("critical") ?? "", map.get("depth-1") ?? "", alpha) === stripe,
+      );
+      alphas[theme] = found ?? -1;
+    }
+    expect(alphas).toEqual({ light: 0.1, dark: 0.12 });
+  });
+
   it("every token has a dark twin", () => {
-    expect(themes.light.size).toBe(27);
+    expect(themes.light.size).toBe(28);
     expect([...themes.dark.keys()].sort()).toEqual([...themes.light.keys()].sort());
   });
 });

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
 import type { ViewHPA, ViewValue } from "./api";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
-import { Counts, FindingStatus, matchHPA, RowFindings, StatGrid, ValueText, worstSeverity } from "./pieces";
+import { Counts, FindingStatus, hpaKey, matchHPA, RowFindings, StatGrid, useFindingIndex, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewHPA) => `${row.namespace}/${row.name}`;
@@ -35,8 +35,9 @@ const renderOpened = (row: ViewHPA) => <Opened row={row} />;
 
 export function AutoscalingTab() {
   const { t } = useTranslation();
-  const { summary, hpas, findings } = useView();
-  const status = useCallback((row: ViewHPA) => worstSeverity(findings, matchHPA(row)) ?? "", [findings]);
+  const { summary, hpas } = useView();
+  const index = useFindingIndex();
+  const status = useCallback((row: ViewHPA) => index.get(hpaKey(row)) ?? "", [index]);
   const { autoscaling } = summary;
   const columns = useMemo<Column<ViewHPA>[]>(
     () => [

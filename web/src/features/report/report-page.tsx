@@ -100,13 +100,12 @@ export function ReportPage() {
       <div className="border-b border-neatline">
         <nav aria-label={t("report.tabs")} className="-mb-px flex flex-wrap">
           {reportTabs.map((tab) => {
-            // The data quality tab carries the count of warnings, in its name too.
+            // The data quality tab carries the count of warnings; its name keeps the visible word and adds the count.
             const counted = tab === "quality" && warnings > 0;
             return (
               <NavLink
                 key={tab}
                 to={tab}
-                aria-label={counted ? t("report.quality.tabWarnings", { count: warnings }) : undefined}
                 className={({ isActive }) =>
                   cn(
                     "inline-flex items-center gap-1.5 border-b-2 px-2.5 py-2 text-sm focus-visible:outline-2 focus-visible:outline-accent",
@@ -116,10 +115,13 @@ export function ReportPage() {
               >
                 {t(`report.tab.${tab}`)}
                 {counted ? (
-                  <span className="inline-flex items-center gap-1 font-mono text-xs text-attention italic">
-                    <StatusShape status="attention" className="size-2.5" />
-                    {warnings}
-                  </span>
+                  <>
+                    <span aria-hidden="true" className="inline-flex items-center gap-1 font-mono text-xs text-attention italic">
+                      <StatusShape status="attention" className="size-2.5" />
+                      {warnings}
+                    </span>
+                    <span className="sr-only">{t("report.quality.tabCount", { count: warnings })}</span>
+                  </>
                 ) : null}
               </NavLink>
             );

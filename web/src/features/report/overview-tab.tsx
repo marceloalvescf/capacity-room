@@ -6,7 +6,7 @@ import { StatusMark, StatusShape } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
 import type { ViewFinding, ViewRecommendation } from "./api";
 import { DepthGauge, type GaugeSeverity } from "./depth-gauge";
-import { isUnknownPool, matchRecommendation, scopeName, ValueText } from "./pieces";
+import { findingKey, isUnknownPool, matchRecommendation, scopeName, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const severities = ["critical", "attention", "healthy"] as const;
@@ -98,11 +98,13 @@ function PressureLine({ type }: { type: (typeof scopeTypes)[number] }) {
   const { t } = useTranslation();
   const { findings } = useView();
   const indexed = findings.map((finding, index) => ({ finding, index })).filter(({ finding }) => finding.scope_type === type);
-  const byName = new Map<string, Severity[]>();
+  // Rows are told apart as the tabs tell them: a workload by its kind too.
+  const byScope = new Map<string, Severity[]>();
   for (const { finding } of indexed) {
-    byName.set(finding.scope_name, [...(byName.get(finding.scope_name) ?? []), finding.severity]);
+    const key = findingKey(finding);
+    byScope.set(key, [...(byScope.get(key) ?? []), finding.severity]);
   }
-  const worstByName = [...byName.values()].map(worstOf);
+  const worstByName = [...byScope.values()].map(worstOf);
   const worst = worstOf(worstByName);
   const lead = indexed.find(({ finding }) => finding.severity === worst);
   if (worst === "healthy" || lead === undefined) {

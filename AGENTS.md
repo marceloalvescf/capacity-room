@@ -619,10 +619,15 @@ redactor the moment the settings are loaded, before the pool opens.
   change of a token, a face, or a component rule updates it in the same
   commit. The web app is named CapacityRoom; nothing outside `web/` and the
   documents takes that name.
-- **A tint follows a status the view gives.** A depth tint or the hazard
-  hatch marks a value by its own status from the view, never by a threshold
-  of the web app. Filled actions use the `action` tokens; `accent` is for
-  links, focus, and the current-level line. Nothing casts a shadow: a
+- **A tint follows a status the view gives.** The depth tint of a value (a
+  peak cell, by the worse of its peak and its share) and the hazard of the
+  depth gauge (by the worst cluster finding) follow a status the view gives,
+  never a threshold of the web app. The tints of the gauge's bands mark only
+  position on its own scale. The one exception is the State column of the
+  nodes, which marks Not ready as attention and Unknown as unavailable
+  though the view gives no status for readiness, an owner decision of
+  2026-10-11 (option 1A). Filled actions use the `action` tokens; `accent`
+  is for links, focus, and the current-level line. Nothing casts a shadow: a
   floating layer is closed by a neat-line, and a modal dims the page through
   the `scrim` token.
 - **An icon button keeps its name.** `IconButton` puts the name in
@@ -708,12 +713,14 @@ redactor the moment the settings are loaded, before the pool opens.
   report only. A later failed fetch of either never replaces a screen that is
   held, except a 404 or a 410 of either, or a 409 of the view, which opens
   the progress page.
-- **The overview opens on a verdict, built from the view alone.** Whether the
-  cluster can grow (its nodes against the autoscaler's maximum, and the worst
-  cluster finding), then the pressure of each scope (its worst severity, the
-  first finding of that severity, linked to the findings tab), then the
-  severity totals. It shows no number the view does not hold; a count it
-  shows is a count of rows or findings.
+- **The overview opens on its answer, built from the view alone.** First the
+  answer strip: the severity totals and any data-quality warnings. Then the
+  verdict band: whether the cluster can grow (its nodes against the
+  autoscaler's maximum, and the worst cluster finding) and the pressure of
+  each scope (its worst severity, the first finding of that severity, linked
+  to the findings tab). Then the action plan, whose rows open their finding.
+  It shows no number the view does not hold; a count it shows is a count of
+  rows, findings, or warnings.
 - **A row with no finding says so.** The view gives such a row the status
   healthy; the tables show "No finding" with no mark, as the PDF does, and
   rank it after the healthy rows.

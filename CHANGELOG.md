@@ -10,18 +10,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The web app is called CapacityRoom and has a look of its own, drawn from
   the nautical chart, in both themes: a new mark, typefaces, and colours,
-  critical marked in magenta, the nodes of the cluster drawn as a depth gauge
-  on the report overview, and the peak values that need attention tinted on
-  the tables.
-- The report overview opens on whether the cluster can grow, its nodes
-  against the autoscaler's maximum, and on the pressure of each scope with
-  its leading finding; the severity totals follow on one line, and the
-  inventory counts left the page.
+  critical marked in magenta, the nodes of the cluster drawn against their
+  maximum on the report overview, and the peak values that need attention
+  tinted on the tables.
+- The report overview opens on the number of findings of each severity and
+  any warning about the quality of the data, then shows whether the cluster
+  can grow and the pressure on each kind of resource, then the action plan,
+  whose actions open their finding.
+- The overview no longer counts the namespaces, workloads, HPAs, nodes, and
+  node pools, and the Data quality tab shows its number of warnings.
 - The HPAs on the autoscaling tab show the status of their findings, as the
   namespaces, workloads, and nodes do.
-- The report overview opens on the severity totals and on any warning about
-  the quality of the data, the Data quality tab shows its number of warnings,
-  and each action of the plan opens its finding.
 
 ### Fixed
 

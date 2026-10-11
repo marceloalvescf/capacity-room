@@ -5,7 +5,7 @@ import { StatusMark } from "@/components/status-mark";
 import type { ViewNode, ViewNodepool, ViewValue } from "./api";
 import { CopyName } from "./copy-name";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
-import { Facts, FindingStatus, matchNode, PeakCell, peakTint, RowFindings, StatGrid, ValueText } from "./pieces";
+import { Facts, FindingStatus, matchNode, nodeKey, PeakCell, peakTint, RowFindings, StatGrid, useFindingIndex, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewNode) => row.name;
@@ -126,8 +126,9 @@ function Pools({ pools }: { pools: ViewNodepool[] }) {
 
 export function NodesTab() {
   const { t } = useTranslation();
-  const { nodes, nodepools, findings } = useView();
-  const hasFinding = useCallback((row: ViewNode) => findings.some(matchNode(row)), [findings]);
+  const { nodes, nodepools } = useView();
+  const index = useFindingIndex();
+  const hasFinding = useCallback((row: ViewNode) => index.has(nodeKey(row)), [index]);
   const status = useCallback((row: ViewNode) => (hasFinding(row) ? row.status : ""), [hasFinding]);
   const unknownPool = t("report.node.unknownPool");
   const searchText = useCallback(

@@ -12,9 +12,9 @@ function line(fg: string, bg: string): Pair {
   return { fg, bg, min: 3 };
 }
 
-// The texts a depth tint carries: a peak cell's value and its share, each with the shape of its status.
-// The deepest tint lies only under the gauge, which holds no text.
-const onDepth = ["depth-1", "depth-2"].flatMap((depth) =>
+// The texts a peak cell carries, its value and its share with the shape of their status, on Depth 1 and on the
+// stripe of the hazard hatch over it. Depth 2 and Depth 3 lie only under the gauge, which holds no text.
+const onDepth = ["depth-1", "hazard-stripe"].flatMap((depth) =>
   ["fg", "muted-fg", "healthy", "attention", "critical", "neutral"].map((fg) => text(fg, depth)),
 );
 

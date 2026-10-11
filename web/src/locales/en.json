@@ -478,7 +478,7 @@
       "notices": "Notices",
       "noWarnings": "No warning.",
       "noNotices": "No notice.",
-      "tabWarnings": "Data quality, warnings: {{count}}"
+      "tabCount": ", warnings: {{count}}"
     }
   },
   "confidence": {

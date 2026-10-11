@@ -126,6 +126,17 @@ describe("overview tab", () => {
     expect(lines[4]).toHaveTextContent(/Critical 1\s*·\s*Attention 1$/);
   });
 
+  it("two workloads of one name and two kinds count as two rows", async () => {
+    const deployment = english.findings.find((finding) => finding.scope_type === "workload" && finding.severity === "critical") as View["findings"][number];
+    const statefulSet = { ...deployment, scope_kind: "StatefulSet", severity: "attention" as const };
+    mock.views.set(`${id}:en`, { ...english, findings: [deployment, statefulSet] });
+    await open();
+    const list = screen.getByRole("heading", { level: 2, name: "Pressure by scope" }).parentElement?.querySelector("ul") as HTMLElement;
+    const lines = within(list).getAllByRole("listitem");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toHaveTextContent(/Critical 1\s*·\s*Attention 1$/);
+  });
+
   it("an unknown node pool shows its word", async () => {
     mock.views.set(`${id}:en`, {
       ...english,

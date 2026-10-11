@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from "react";
+import { useId, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { StatusMark, StatusShape, type Status } from "@/components/status-mark";
@@ -202,16 +202,44 @@ export function RowFindings({ match }: { match: (finding: ViewFinding) => boolea
   );
 }
 
-export const matchNamespace = (row: ViewNamespace) => (f: ViewFinding) =>
-  f.scope_type === "namespace" && f.scope_name === row.name;
+// The scope a finding names, as one key: its type, its kind for a workload alone, and its name. A row owns the
+// findings whose key equals its own, so the keys below and the matchers built on them are one definition.
+function scopeKey(type: ViewFinding["scope_type"], kind: string, name: string): string {
+  return JSON.stringify([type, type === "workload" ? kind : "", name]);
+}
 
-export const matchWorkload = (row: ViewWorkload) => (f: ViewFinding) =>
-  f.scope_type === "workload" && f.scope_kind === row.kind && f.scope_name === `${row.namespace}/${row.name}`;
+export const findingKey = (f: ViewFinding): string => scopeKey(f.scope_type, f.scope_kind, f.scope_name);
+export const namespaceKey = (row: ViewNamespace): string => scopeKey("namespace", "", row.name);
+export const workloadKey = (row: ViewWorkload): string => scopeKey("workload", row.kind, `${row.namespace}/${row.name}`);
+export const hpaKey = (row: ViewHPA): string => scopeKey("hpa", "", `${row.namespace}/${row.name}`);
+export const nodeKey = (row: ViewNode): string => scopeKey("node", "", row.name);
 
-export const matchHPA = (row: ViewHPA) => (f: ViewFinding) =>
-  f.scope_type === "hpa" && f.scope_name === `${row.namespace}/${row.name}`;
+const matchKey = (key: string) => (f: ViewFinding) => findingKey(f) === key;
 
-export const matchNode = (row: ViewNode) => (f: ViewFinding) => f.scope_type === "node" && f.scope_name === row.name;
+export const matchNamespace = (row: ViewNamespace) => matchKey(namespaceKey(row));
+export const matchWorkload = (row: ViewWorkload) => matchKey(workloadKey(row));
+export const matchHPA = (row: ViewHPA) => matchKey(hpaKey(row));
+export const matchNode = (row: ViewNode) => matchKey(nodeKey(row));
+
+const severityOrder: readonly ViewFinding["severity"][] = ["critical", "attention", "healthy"];
+
+// The worst severity of the findings of each scope key, once per view; a key is present when its scope has a finding.
+export function indexFindings(findings: readonly ViewFinding[]): ReadonlyMap<string, ViewFinding["severity"]> {
+  const worst = new Map<string, ViewFinding["severity"]>();
+  for (const finding of findings) {
+    const key = findingKey(finding);
+    const held = worst.get(key);
+    if (held === undefined || severityOrder.indexOf(finding.severity) < severityOrder.indexOf(held)) {
+      worst.set(key, finding.severity);
+    }
+  }
+  return worst;
+}
+
+export function useFindingIndex(): ReadonlyMap<string, ViewFinding["severity"]> {
+  const { findings } = useView();
+  return useMemo(() => indexFindings(findings), [findings]);
+}
 
 // The finding a row of the action plan comes from: the same code and scope type, on its first scope.
 export const matchRecommendation = (row: ViewRecommendation) => (f: ViewFinding) =>
@@ -244,13 +272,6 @@ export function UsageGrids({ row }: { row: ViewNamespace | ViewWorkload }) {
       />
     </>
   );
-}
-
-// The worst severity among the findings that match, or null when none does.
-export function worstSeverity(findings: ViewFinding[], match: (finding: ViewFinding) => boolean): Status | null {
-  const order: ViewFinding["severity"][] = ["critical", "attention", "healthy"];
-  const kept = findings.filter(match).map((finding) => finding.severity);
-  return order.find((severity) => kept.includes(severity)) ?? null;
 }
 
 // The status of a row that has a finding is drawn as a mark; a row with none says so in plain text.

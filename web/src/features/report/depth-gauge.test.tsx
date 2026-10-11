@@ -80,4 +80,38 @@ describe("depth gauge", () => {
     expect(gauge(10, 40).labels).toEqual(["0", "4", "8", "12", "16", "20", "24", "28", "32", "36", "40"]);
     expect(gauge(10, 25).labels).toEqual(["0", "3", "6", "9", "12", "15", "18", "21", "25"]);
   });
+
+  it("above sixty nodes draws the level as one band in the three tints of its thirds", () => {
+    const { svg, bands, labels } = gauge(150, 200, 20, null);
+    expect(bands).toHaveLength(0);
+    expect([...svg.querySelectorAll("[data-level]")].map((rect) => rect.getAttribute("class"))).toEqual([
+      "fill-depth-1",
+      "fill-depth-2",
+      "fill-depth-3",
+    ]);
+    expect(svg.querySelectorAll("rect").length).toBeLessThan(10);
+    expect(labels).toEqual(["0", "20", "40", "60", "80", "100", "120", "140", "160", "180", "200"]);
+  });
+
+  it("above sixty nodes a full scale still hatches its last node", () => {
+    const { svg } = gauge(200, 200, null, "critical");
+    expect(svg.querySelectorAll("[data-hazard]")).toHaveLength(1);
+    expect(svg.querySelector("[data-hazard]")).toHaveAttribute("data-band", "199");
+  });
+
+  it("a level is a whole number of nodes between none and the maximum", () => {
+    const filled = (current: number, max: number) =>
+      gauge(current, max, null, null).bands.filter((band) => band.getAttribute("class")?.startsWith("fill-depth")).length;
+    expect(filled(2.6, 5)).toBe(3);
+    expect(filled(2.4, 5)).toBe(2);
+    expect(filled(-3, 5)).toBe(0);
+    expect(gauge(9, 5, null, "critical").svg.querySelectorAll("[data-hazard]")).toHaveLength(1);
+  });
+
+  it("a maximum that is not a count draws nothing and throws nothing", () => {
+    for (const max of [Number.NaN, Number.POSITIVE_INFINITY, 0.2, -4]) {
+      const { container } = render(<DepthGauge current={1} max={max} min={null} severity={null} />);
+      expect(container.querySelector("svg")).toBeNull();
+    }
+  });
 });

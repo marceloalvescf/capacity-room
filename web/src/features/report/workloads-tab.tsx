@@ -3,7 +3,19 @@ import { useTranslation } from "react-i18next";
 import type { ViewWorkload } from "./api";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
 import { useAddress } from "@/lib/address";
-import { Facts, FindingStatus, matchWorkload, PeakCell, peakTint, RowFindings, UsageGrids, ValueText, WorkloadName } from "./pieces";
+import {
+  Facts,
+  FindingStatus,
+  matchWorkload,
+  PeakCell,
+  peakTint,
+  RowFindings,
+  useFindingIndex,
+  UsageGrids,
+  ValueText,
+  WorkloadName,
+  workloadKey,
+} from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewWorkload) => `${row.namespace}/${row.kind}/${row.name}`;
@@ -43,6 +55,7 @@ const renderOpened = (row: ViewWorkload) => <Opened row={row} />;
 function Unobserved() {
   const { t } = useTranslation();
   const view = useView();
+  const index = useFindingIndex();
   const needle = (useAddress().params.get("q") ?? "").toLowerCase();
   const rows = useMemo(
     () =>
@@ -83,7 +96,7 @@ function Unobserved() {
                   <WorkloadName row={row} />
                 </td>
                 <td className="px-3 py-2 align-top">
-                  <FindingStatus status={row.status} hasFinding={view.findings.some(matchWorkload(row))} />
+                  <FindingStatus status={row.status} hasFinding={index.has(workloadKey(row))} />
                 </td>
                 <td className="px-3 py-2 align-top">{t(`hpaCoverage.${row.hpa_coverage}`)}</td>
               </tr>
@@ -99,7 +112,8 @@ export function WorkloadsTab() {
   const { t } = useTranslation();
   const view = useView();
   const workloads = useMemo(() => view.workloads.filter((workload) => workload.observed_usage), [view.workloads]);
-  const hasFinding = useCallback((row: ViewWorkload) => view.findings.some(matchWorkload(row)), [view.findings]);
+  const index = useFindingIndex();
+  const hasFinding = useCallback((row: ViewWorkload) => index.has(workloadKey(row)), [index]);
   const status = useCallback((row: ViewWorkload) => (hasFinding(row) ? row.status : ""), [hasFinding]);
   const columns = useMemo<Column<ViewWorkload>[]>(
     () => [
