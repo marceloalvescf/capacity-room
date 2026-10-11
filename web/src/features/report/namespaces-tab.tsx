@@ -1,14 +1,12 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { StatusMark } from "@/components/status-mark";
 import type { ViewNamespace } from "./api";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
-import { matchNamespace, PeakCell, RowFindings, UsageGrids, ValueText } from "./pieces";
+import { FindingStatus, matchNamespace, PeakCell, RowFindings, UsageGrids, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewNamespace) => row.name;
 const searchText = (row: ViewNamespace) => row.name;
-const status = (row: ViewNamespace) => row.status;
 
 function Opened({ row }: { row: ViewNamespace }) {
   return (
@@ -23,7 +21,9 @@ const renderOpened = (row: ViewNamespace) => <Opened row={row} />;
 
 export function NamespacesTab() {
   const { t } = useTranslation();
-  const { namespaces } = useView();
+  const { namespaces, findings } = useView();
+  const hasFinding = useCallback((row: ViewNamespace) => findings.some(matchNamespace(row)), [findings]);
+  const status = useCallback((row: ViewNamespace) => (hasFinding(row) ? row.status : ""), [hasFinding]);
   const columns = useMemo<Column<ViewNamespace>[]>(
     () => [
       {
@@ -35,8 +35,8 @@ export function NamespacesTab() {
       {
         id: "status",
         header: t("report.column.status"),
-        cell: (row) => <StatusMark status={row.status} />,
-        sortValue: (row) => severityRank[row.status] ?? 3,
+        cell: (row) => <FindingStatus status={row.status} hasFinding={hasFinding(row)} />,
+        sortValue: (row) => severityRank[status(row)] ?? 3,
       },
       {
         id: "pods",
@@ -62,7 +62,7 @@ export function NamespacesTab() {
         sortValue: (row) => row.memory_usage.peak.raw,
       },
     ],
-    [t],
+    [t, hasFinding, status],
   );
   return (
     <DataTable

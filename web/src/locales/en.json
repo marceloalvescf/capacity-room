@@ -317,6 +317,7 @@
   },
   "report": {
     "tabs": "Report sections",
+    "noFinding": "No finding",
     "tab": {
       "overview": "Overview",
       "findings": "Findings",

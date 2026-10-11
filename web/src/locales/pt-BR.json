@@ -317,6 +317,7 @@
   },
   "report": {
     "tabs": "Seções do relatório",
+    "noFinding": "Sem achado",
     "tab": {
       "overview": "Visão geral",
       "findings": "Achados",

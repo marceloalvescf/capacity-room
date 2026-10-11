@@ -1,15 +1,13 @@
-import { useId, useMemo } from "react";
+import { useCallback, useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { StatusMark } from "@/components/status-mark";
 import type { ViewWorkload } from "./api";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
-import { Facts, matchWorkload, PeakCell, RowFindings, UsageGrids, ValueText, WorkloadName } from "./pieces";
+import { Facts, FindingStatus, matchWorkload, PeakCell, RowFindings, UsageGrids, ValueText, WorkloadName } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewWorkload) => `${row.namespace}/${row.kind}/${row.name}`;
 const rowName = (row: ViewWorkload) => row.name;
 const searchText = (row: ViewWorkload) => `${row.name} ${row.kind} ${row.namespace}`;
-const status = (row: ViewWorkload) => row.status;
 
 function Opened({ row }: { row: ViewWorkload }) {
   const { t } = useTranslation();
@@ -76,7 +74,7 @@ function Unobserved() {
                   <WorkloadName row={row} />
                 </td>
                 <td className="px-3 py-2 align-top">
-                  <StatusMark status={row.status} />
+                  <FindingStatus status={row.status} hasFinding={view.findings.some(matchWorkload(row))} />
                 </td>
                 <td className="px-3 py-2 align-top">{t(`hpaCoverage.${row.hpa_coverage}`)}</td>
               </tr>
@@ -92,6 +90,8 @@ export function WorkloadsTab() {
   const { t } = useTranslation();
   const view = useView();
   const workloads = useMemo(() => view.workloads.filter((workload) => workload.observed_usage), [view.workloads]);
+  const hasFinding = useCallback((row: ViewWorkload) => view.findings.some(matchWorkload(row)), [view.findings]);
+  const status = useCallback((row: ViewWorkload) => (hasFinding(row) ? row.status : ""), [hasFinding]);
   const columns = useMemo<Column<ViewWorkload>[]>(
     () => [
       {
@@ -103,8 +103,8 @@ export function WorkloadsTab() {
       {
         id: "status",
         header: t("report.column.status"),
-        cell: (row) => <StatusMark status={row.status} />,
-        sortValue: (row) => severityRank[row.status] ?? 3,
+        cell: (row) => <FindingStatus status={row.status} hasFinding={hasFinding(row)} />,
+        sortValue: (row) => severityRank[status(row)] ?? 3,
       },
       {
         id: "pods",
@@ -130,7 +130,7 @@ export function WorkloadsTab() {
         sortValue: (row) => row.memory_usage.peak.raw,
       },
     ],
-    [t],
+    [t, hasFinding, status],
   );
   return (
     <div className="flex flex-col gap-6">

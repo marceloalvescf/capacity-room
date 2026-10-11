@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
-import { StatusMark, StatusShape } from "@/components/status-mark";
+import { StatusMark, StatusShape, type Status } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
 import type { ViewFinding, ViewHPA, ViewNamespace, ViewNode, ViewStatistic, ViewValue, ViewWorkload } from "./api";
 import { useView } from "./report-page";
@@ -207,4 +207,10 @@ export function UsageGrids({ row }: { row: ViewNamespace | ViewWorkload }) {
       />
     </>
   );
+}
+
+// The status of a row that has a finding is drawn as a mark; a row with none says so in plain text.
+export function FindingStatus({ status, hasFinding }: { status: Status; hasFinding: boolean }) {
+  const { t } = useTranslation();
+  return hasFinding ? <StatusMark status={status} /> : <span className="text-muted-fg">{t("report.noFinding")}</span>;
 }

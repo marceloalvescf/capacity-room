@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "@/api/schema.gen";
@@ -105,7 +105,6 @@ describe("nodes tab", () => {
     expect(orphan[3]).toHaveTextContent("Unknown");
     const second = within(rowOf("Nodes", "pool-a-2")).getAllByRole("cell");
     expect(second[3]).toHaveTextContent("Not ready · Unschedulable");
-    expect(within(second[3] as HTMLElement).getByText("Not ready · Unschedulable")).toHaveClass("text-attention");
     const first = within(rowOf("Nodes", firstNode)).getAllByRole("cell");
     expect(first[4]).toHaveTextContent("95%");
     expect(first[4]).toHaveTextContent("25% requested");
@@ -160,8 +159,42 @@ describe("nodes tab", () => {
     const state = (name: string) => within(rowOf("Nodes", name)).getAllByRole("cell")[3];
     expect(state("n-unknown")).toHaveTextContent(/^Unknown$/);
     expect(state("n-ready")).toHaveTextContent(/^Ready$/);
-    expect(state("n-down")).toHaveTextContent(/^Not ready$/);
+    expect(state("n-down")).toHaveTextContent(/^AttentionNot ready$/);
     expect(state("n-unknown-ready")).toHaveTextContent(/^Unknown$/);
+  });
+
+  it("a node with no finding says so and ranks last", async () => {
+    await open("nodes");
+    const orphan = within(rowOf("Nodes", "orphan")).getAllByRole("cell");
+    expect(orphan[2]).toHaveTextContent(/^No finding$/);
+    expect(orphan[2]?.querySelector("svg")).toBeNull();
+    expect(within(orphan[2] as HTMLElement).getByText("No finding")).toHaveClass("text-muted-fg");
+    const second = within(rowOf("Nodes", "pool-a-2")).getAllByRole("cell");
+    expect(second[2]).toHaveTextContent(/^Healthy$/);
+    const names = within(screen.getByRole("table", { name: "Nodes" }))
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getAllByRole("cell")[1]?.textContent ?? "");
+    expect(names[names.length - 1]).toContain("orphan");
+  });
+
+  it("the state of a node carries a shape", async () => {
+    await open("nodes");
+    const down = within(rowOf("Nodes", "pool-a-2")).getAllByRole("cell")[3] as HTMLElement;
+    expect(down.querySelector("svg")?.parentElement).toHaveClass("text-attention");
+    expect(down).toHaveTextContent("AttentionNot ready · Unschedulable");
+    expect(within(down).getByText("Attention")).toHaveClass("sr-only");
+    const unknown = within(rowOf("Nodes", "orphan")).getAllByRole("cell")[3] as HTMLElement;
+    expect(unknown.querySelector("svg")?.parentElement).toHaveClass("text-neutral");
+    expect(unknown).toHaveTextContent(/^Unknown$/);
+  });
+
+  it("no finding is worded in Portuguese", async () => {
+    await open("nodes");
+    await act(async () => {
+      await i18next.changeLanguage("pt-BR");
+    });
+    expect(await screen.findByText("Sem achado")).toBeInTheDocument();
   });
 
   it("the search of nodes finds the shown pool word", async () => {

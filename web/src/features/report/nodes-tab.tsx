@@ -2,16 +2,14 @@ import { useCallback, useMemo } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
-import { cn } from "@/lib/cn";
 import type { ViewNode, ViewNodepool, ViewValue } from "./api";
 import { CopyName } from "./copy-name";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
-import { Facts, matchNode, PeakCell, RowFindings, StatGrid, ValueText } from "./pieces";
+import { Facts, FindingStatus, matchNode, PeakCell, RowFindings, StatGrid, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewNode) => row.name;
 const rowName = (row: ViewNode) => row.name;
-const status = (row: ViewNode) => row.status;
 
 function FactValue({ value }: { value: ViewValue }) {
   return (
@@ -67,6 +65,19 @@ function stateText(row: ViewNode, t: TFunction): string {
   return `${ready} · ${t(row.schedulable ? "report.node.schedulable" : "report.node.unschedulable")}`;
 }
 
+// A node that is not ready is marked for attention; an unknown readiness is marked unavailable.
+function NodeState({ row }: { row: ViewNode }) {
+  const { t } = useTranslation();
+  const text = stateText(row, t);
+  if (row.ready === false) {
+    return <StatusMark status="attention" label={text} withStatus />;
+  }
+  if (row.ready === null) {
+    return <StatusMark status="unavailable" label={text} />;
+  }
+  return <span>{text}</span>;
+}
+
 function Pools({ pools }: { pools: ViewNodepool[] }) {
   const { t } = useTranslation();
   if (pools.length === 0) {
@@ -115,7 +126,9 @@ function Pools({ pools }: { pools: ViewNodepool[] }) {
 
 export function NodesTab() {
   const { t } = useTranslation();
-  const { nodes, nodepools } = useView();
+  const { nodes, nodepools, findings } = useView();
+  const hasFinding = useCallback((row: ViewNode) => findings.some(matchNode(row)), [findings]);
+  const status = useCallback((row: ViewNode) => (hasFinding(row) ? row.status : ""), [hasFinding]);
   const unknownPool = t("report.node.unknownPool");
   const searchText = useCallback(
     (row: ViewNode) => `${row.name} ${row.pool === "unknown" ? unknownPool : row.pool}`,
@@ -139,17 +152,13 @@ export function NodesTab() {
       {
         id: "status",
         header: t("report.column.status"),
-        cell: (row) => <StatusMark status={row.status} />,
-        sortValue: (row) => severityRank[row.status] ?? 3,
+        cell: (row) => <FindingStatus status={row.status} hasFinding={hasFinding(row)} />,
+        sortValue: (row) => severityRank[status(row)] ?? 3,
       },
       {
         id: "state",
         header: t("report.column.state"),
-        cell: (row) => (
-          <span className={cn(row.ready === false && "text-attention")}>
-            {stateText(row, t)}
-          </span>
-        ),
+        cell: (row) => <NodeState row={row} />,
       },
       {
         id: "cpu",
@@ -166,7 +175,7 @@ export function NodesTab() {
         sortValue: (row) => row.memory_usage_percent.peak.raw,
       },
     ],
-    [t],
+    [t, hasFinding, status],
   );
   return (
     <div className="flex flex-col gap-6">

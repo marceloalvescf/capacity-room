@@ -173,6 +173,25 @@ describe("workloads tab", () => {
     expect(screen.queryByRole("heading", { name: "Workloads without observed usage" })).not.toBeInTheDocument();
   });
 
+  it("an unobserved workload with no finding says so", async () => {
+    mock.views.set(`${id}:en`, { ...english, findings: english.findings.filter((f) => f.scope_name !== "payments/queue") });
+    await open("workloads");
+    const rows = within(screen.getByRole("table", { name: "Workloads without observed usage" })).getAllByRole("row");
+    const status = within(rows[2] as HTMLElement).getAllByRole("cell")[1] as HTMLElement;
+    expect(status).toHaveTextContent(/^No finding$/);
+    expect(status.querySelector("svg")).toBeNull();
+    expect(within(rows[1] as HTMLElement).getAllByRole("cell")[1]?.querySelector("svg")).not.toBeNull();
+  });
+
+  it("a workload with no finding says so", async () => {
+    mock.views.set(`${id}:en`, { ...english, findings: english.findings.filter((f) => f.scope_name !== "payments/payments-web") });
+    await open("workloads");
+    const status = within(bodyRows()[0] as HTMLElement).getAllByRole("cell")[2] as HTMLElement;
+    expect(status).toHaveTextContent(/^No finding$/);
+    expect(status.querySelector("svg")).toBeNull();
+    expect(within(status).getByText("No finding")).toHaveClass("text-muted-fg");
+  });
+
   it("the section is worded in Portuguese", async () => {
     await open("workloads");
     await act(async () => {
@@ -198,6 +217,20 @@ describe("namespaces tab", () => {
     expect(screen.queryByText("HPA", { selector: "dt" })).not.toBeInTheDocument();
     const links = within(screen.getByRole("list", { name: "Findings" })).getAllByRole("link");
     expect(links.map((link) => link.getAttribute("href"))).toEqual([1, 2, 3, 4].map(hrefEnding));
+  });
+
+  it("a namespace with no finding says so, in Portuguese too", async () => {
+    const without = (view: View): View => ({ ...view, findings: view.findings.filter((f) => f.scope_type !== "namespace") });
+    mock.views.set(`${id}:en`, without(english));
+    mock.views.set(`${id}:pt-BR`, without(portuguese));
+    await open("namespaces");
+    const status = within(bodyRows()[0] as HTMLElement).getAllByRole("cell")[2] as HTMLElement;
+    expect(status).toHaveTextContent(/^No finding$/);
+    expect(status.querySelector("svg")).toBeNull();
+    await act(async () => {
+      await i18next.changeLanguage("pt-BR");
+    });
+    expect(await within(bodyRows()[0] as HTMLElement).findByText("Sem achado")).toBeInTheDocument();
   });
 
   it("a missing number shows its placeholder muted", async () => {
