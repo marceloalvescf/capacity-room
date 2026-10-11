@@ -240,7 +240,7 @@ export function ReportsPage() {
                         ) : null}
                       </td>
                     ) : null}
-                    <td className="px-3 py-2 font-mono">{time}</td>
+                    <td className="px-3 py-2 font-mono whitespace-nowrap">{time}</td>
                     <td className={cn("px-3 py-2", !names.has(row.profile_id) && "font-mono")}>{profileName(row)}</td>
                     <td className="px-3 py-2">
                       <StatusMark
@@ -257,7 +257,7 @@ export function ReportsPage() {
                         "—"
                       )}
                     </td>
-                    <td className="px-3 py-2 font-mono">{formatDate(row.expires_at)}</td>
+                    <td className="px-3 py-2 font-mono whitespace-nowrap">{formatDate(row.expires_at)}</td>
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-end gap-2">
                         {row.expired ? null : (

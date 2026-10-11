@@ -31,6 +31,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   usage.
 - Status words and units no longer break in the middle of a word in narrow
   table cells.
+- A date and its time stay on one line, and the thresholds of a profile read
+  "70%" in both languages.
 - On the report screen, a namespace, workload, or node with no finding reads
   "No finding" instead of Healthy, and the state of a node that is not ready
   or unknown carries its mark.

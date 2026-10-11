@@ -247,11 +247,11 @@ A cool chart palette: blue-cast neutrals, three blue depth tints, and three char
 ### Hierarchy
 - **Display** (`text-display`: mono 600, 3.5rem, line-height 1, tracking -0.025em): the verdict numeral "current / maximum" of the overview. One per screen; the slash between is set in Public Sans 400 in Muted Ink.
 - **Headline** (600, 1.25rem): the page title of every screen and the sign-in card.
-- **Title** (600, 1.125rem): dialog titles and the brand word (700, tracking tight). Section headings inside a page step down to 1rem 600.
+- **Title** (600, 1.125rem): dialog titles and the brand word (700, tracking tight). Section headings inside a page step down to 1rem 600, the severity groups of the findings list among them; the title of a finding detail stays at 1.125rem.
 - **Body** (400, 0.875rem / 1.25rem): sentences, table cells, controls, captions. Small meta under a name is 0.75rem.
 - **Data** (mono 400, 0.875rem): every cluster name, number, version, user name, and time zone. Count rows set it at 1.25rem 600.
 - **Sounding** (mono italic): the share under a peak, every count after its status word, the minimum-node and event figures, and the gauge scale (`text-sounding`, 0.6875rem). A count always follows its word: "Critical 9".
-- **Label** (600, 0.6875rem, line-height 1rem, tracking 0.08em, uppercase, Muted Ink): table headers and small section headings. A sort button inside a header takes it whole.
+- **Label** (600, 0.6875rem, line-height 1rem, tracking 0.08em, uppercase, Muted Ink): table headers and small section headings, among them the detail headings of a finding (Observed, What to do, Evidence). A sort button inside a header takes it whole.
 
 ### Named Rules
 **The Mono Names Rule.** Every name and number a cluster produced is set in JetBrains Mono, and only those. Interface words never are: a placeholder such as "Unavailable", the unknown node pool, a workload kind, a profile's display name, the word "Version" beside its number. A summary line mixes the two, its values in mono and its words upright.

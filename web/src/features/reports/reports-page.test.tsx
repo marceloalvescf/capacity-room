@@ -685,3 +685,18 @@ describe("report list", () => {
     expect(within(rowOf(id(0))).getAllByRole("cell")).toHaveLength(6);
   });
 });
+
+describe("date cells", () => {
+  it("never break inside a date", async () => {
+    mock.reports = [report()];
+    await renderApp("/reports");
+    await screen.findByRole("heading", { level: 1, name: t("reports.title") });
+    const row = await waitFor(() => rowOf(mock.reports[0]?.id ?? ""));
+    const cells = within(row).getAllByRole("cell");
+    const dated = cells.filter((cell) => /^\d{4}-\d{2}-\d{2}( \d{2}:\d{2})?$/.test(cell.textContent));
+    expect(dated.length).toBeGreaterThanOrEqual(2);
+    for (const cell of dated) {
+      expect(cell).toHaveClass("whitespace-nowrap");
+    }
+  });
+});

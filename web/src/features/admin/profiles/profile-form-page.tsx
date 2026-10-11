@@ -1,3 +1,4 @@
+import { DatedText } from "@/components/dated-text";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import {
@@ -575,7 +576,7 @@ function Header({ profile }: { profile: Profile | undefined }) {
         {" · "}
         <span className="font-mono">{profile.id}</span>
         {" · "}
-        {t("admin.profile.revision", { revision: profile.revision, time: formatTime(profile.created_at) })}
+        <DatedText i18nKey="admin.profile.revision" values={{ revision: profile.revision, time: formatTime(profile.created_at) }} />
       </p>
     </div>
   );

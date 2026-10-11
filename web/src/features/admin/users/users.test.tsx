@@ -5,7 +5,7 @@ import { adminUsersKey } from "./api";
 import { newUserSchema } from "./new-user-dialog";
 import { i18next } from "@/i18n/i18n";
 import { adminUser, installMockApi, principal, signedIn } from "../../../../tests/msw";
-import { location, renderApp } from "../../../../tests/render";
+import { location, renderApp, sentence } from "../../../../tests/render";
 import { findShown, shown } from "../../../../tests/shown";
 
 const mock = installMockApi(signedIn({ username: "admin" }));
@@ -222,7 +222,7 @@ describe("the users screen", () => {
   it("own row", async () => {
     await renderApp("/users");
     await openRow("admin");
-    expect(await screen.findByText("Created 2026-09-01")).toBeInTheDocument();
+    expect(await screen.findByText(sentence("Created 2026-09-01"))).toBeInTheDocument();
     expect(screen.getByText(i18next.t("admin.users.own"))).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open the account page" })).toHaveAttribute("href", "/account");
     expect(screen.queryByRole("combobox")).toBeNull();

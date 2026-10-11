@@ -1,3 +1,4 @@
+import { DatedText } from "@/components/dated-text";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -78,7 +79,7 @@ function ProfileRow({
           <FileName name={profile.ca_bundle_file} />
         </Fact>
         <Fact label={t("admin.profiles.fact.revision")}>
-          {t("admin.profiles.revisionValue", { revision: profile.revision, time: formatTime(profile.created_at) })}
+          <DatedText i18nKey="admin.profiles.revisionValue" values={{ revision: profile.revision, time: formatTime(profile.created_at) }} />
         </Fact>
         <Fact label={t("admin.profiles.fact.namespaces")} wide>
           <span className="font-mono">{profile.allowed_namespaces.join(", ")}</span>

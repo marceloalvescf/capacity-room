@@ -1,3 +1,4 @@
+import { DatedText } from "@/components/dated-text";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, NavLink, Outlet, useOutletContext, useParams } from "react-router";
@@ -79,9 +80,9 @@ export function ReportPage() {
             <span>
               {t("report.cluster")} <span className="font-mono text-fg">{view.data.report.cluster_name}</span>
             </span>
-            <span>{view.data.report.period_text}</span>
+            <span className="whitespace-nowrap">{view.data.report.period_text}</span>
             <span>{t(`reportProfile.${view.data.report.profile}`)}</span>
-            <span>{t("progress.requested", { time: formatTime(data.created_at), username: data.owner_username })}</span>
+            <span><DatedText i18nKey="progress.requested" values={{ time: formatTime(data.created_at), username: data.owner_username }} /></span>
           </p>
         </div>
         <Popover>

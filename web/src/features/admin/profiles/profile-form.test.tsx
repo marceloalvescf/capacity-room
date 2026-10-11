@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { adminProfile, anonymous, installMockApi, signedIn } from "../../../../tests/msw";
-import { location, renderApp } from "../../../../tests/render";
+import { location, renderApp, sentence } from "../../../../tests/render";
 import { findShown, shown } from "../../../../tests/shown";
 
 const mock = installMockApi(signedIn());
@@ -52,9 +52,9 @@ describe("the profile form", () => {
     expect(within(choices).getByText("America/Sao_Paulo")).toHaveClass("font-mono");
     const thresholds = screen.getByText("Low utilization").closest("p") as HTMLElement;
     expect(thresholds).toHaveTextContent(
-      /^Attention 70 % · Critical 85 % · Low utilization 30 % · Near maximum 80 % · Node pool spread 30 · Variation 100 % · Divergence 1$/,
+      /^Attention 70% · Critical 85% · Low utilization 30% · Near maximum 80% · Node pool spread 30 · Variation 100% · Divergence 1$/,
     );
-    expect(within(thresholds).getByText("70 %")).toHaveClass("font-mono");
+    expect(within(thresholds).getByText("70%")).toHaveClass("font-mono");
     expect(screen.getByText("Saving creates revision 1.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Cancel" })).toHaveAttribute("href", "/profiles");
     expect(screen.getByLabelText("Allowed namespaces")).toHaveAttribute("rows", "5");
@@ -523,7 +523,7 @@ describe("the profile form", () => {
       expect(screen.getByLabelText("Display name")).toHaveValue("Theirs");
     });
     expect(mock.calls.map((call) => `${call.method} ${call.path}`)).toEqual(["GET /admin/profiles/production"]);
-    expect(screen.getByText(/Revision 4, saved /)).toBeInTheDocument();
+    expect(screen.getByText(sentence(/Revision 4, saved /))).toBeInTheDocument();
     expect(screen.getByText(/Saving writes revision 5\./)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();

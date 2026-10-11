@@ -292,8 +292,8 @@
   "progress": {
     "screen": "Report",
     "title": "Report on {{profile}}",
-    "requested": "Requested {{time}} by {{username}}",
-    "keptUntil": "Kept until {{date}}",
+    "requested": "Requested <date>{{time}}</date> by {{username}}",
+    "keptUntil": "Kept until <date>{{date}}</date>",
     "steps": "Progress",
     "stepDone": "Done",
     "stepPending": "Not started",
@@ -472,7 +472,7 @@
     "copied": "Copied: {{name}}",
     "copyFailed": "The name could not be copied.",
     "quality": {
-      "collected": "Collected from {{start}} to {{end}}, in {{elapsed}}",
+      "collected": "Collected from <date>{{start}}</date> to <date>{{end}}</date>, in {{elapsed}}",
       "metrics": "Metrics read",
       "warnings": "Warnings",
       "notices": "Notices",
@@ -570,7 +570,7 @@
         "operator": "Operator",
         "reader": "Reader"
       },
-      "created": "Created {{date}}",
+      "created": "Created <date>{{date}}</date>",
       "roleLabel": "Role",
       "languageLabel": "Language",
       "roleHint": "Changing the role signs the user out everywhere.",
@@ -621,7 +621,7 @@
         "namespaces": "Namespaces",
         "choices": "Report form choices"
       },
-      "revisionValue": "{{revision}}, saved {{time}}",
+      "revisionValue": "{{revision}}, saved <date>{{time}}</date>",
       "none": "None",
       "test": "Test connection",
       "testing": "Testing…",
@@ -654,7 +654,7 @@
       "newTitle": "New profile",
       "editScreen": "Edit profile",
       "kind": "Profile",
-      "revision": "Revision {{revision}}, saved {{time}}",
+      "revision": "Revision {{revision}}, saved <date>{{time}}</date>",
       "back": "Back to the profiles",
       "section": {
         "identity": "Identity",

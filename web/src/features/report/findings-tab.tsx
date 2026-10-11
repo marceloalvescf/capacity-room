@@ -87,16 +87,16 @@ function Detail({ finding }: { finding: ViewFinding }) {
         )}
       </header>
       <section className="flex flex-col gap-1">
-        <h4 className="text-sm font-semibold">{t("report.findings.observed")}</h4>
+        <h4 className="label">{t("report.findings.observed")}</h4>
         <p className="text-sm">{finding.sentence}</p>
       </section>
       <section className="flex flex-col gap-1">
-        <h4 className="text-sm font-semibold">{t("report.findings.action")}</h4>
+        <h4 className="label">{t("report.findings.action")}</h4>
         <p className="text-sm">{finding.action}</p>
       </section>
       {finding.evidence.length === 0 ? null : (
         <section className="flex flex-col gap-1">
-          <h4 className="text-sm font-semibold">{t("report.findings.evidence")}</h4>
+          <h4 className="label">{t("report.findings.evidence")}</h4>
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
             {finding.evidence.map((item) => (
               <div key={item.name} className="contents">
@@ -233,7 +233,7 @@ export function FindingsTab() {
               }
               return (
                 <section key={severity} className="flex flex-col gap-1">
-                  <h2 className="flex items-center justify-between text-sm font-semibold">
+                  <h2 className="flex items-center justify-between text-base font-semibold">
                     <StatusMark status={severity} />
                     <span className="font-mono text-muted-fg italic">{group.length}</span>
                   </h2>

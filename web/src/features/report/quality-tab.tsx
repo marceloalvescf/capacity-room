@@ -1,3 +1,4 @@
+import { DatedText } from "@/components/dated-text";
 import { useCallback, useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StatusMark, type Status } from "@/components/status-mark";
@@ -101,11 +102,10 @@ export function QualityTab() {
   return (
     <div className="flex flex-col gap-6">
       <p className="text-sm">
-        {t("report.quality.collected", {
-          start: formatTimeIn(quality.collection_started_at, report.timezone),
-          end: formatTimeIn(quality.collection_completed_at, report.timezone),
-          elapsed: formatElapsed(elapsed),
-        })}
+        <DatedText
+          i18nKey="report.quality.collected"
+          values={{ start: formatTimeIn(quality.collection_started_at, report.timezone), end: formatTimeIn(quality.collection_completed_at, report.timezone), elapsed: formatElapsed(elapsed) }}
+        />
       </p>
       <DataTable
         label={t("report.tab.quality")}

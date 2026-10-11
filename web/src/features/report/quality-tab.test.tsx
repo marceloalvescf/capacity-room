@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { components } from "@/api/schema.gen";
 import { i18next } from "@/i18n/i18n";
 import { installMockApi, profileSummary, report, signedIn } from "../../../tests/msw";
-import { renderApp } from "../../../tests/render";
+import { renderApp, sentence } from "../../../tests/render";
 import { mockColourScheme } from "../../../tests/match-media";
 import viewEn from "../../../tests/fixtures/view/edge-scaling.en.json";
 import viewPt from "../../../tests/fixtures/view/edge-scaling.pt-BR.json";
@@ -35,13 +35,13 @@ async function open(tab = "quality", search = "") {
 describe("data quality tab", () => {
   it("collection line", async () => {
     await open();
-    expect(await screen.findByText("Collected from 2026-07-15 14:30 to 2026-07-15 14:30, in 0:42")).toBeInTheDocument();
+    expect(await screen.findByText(sentence("Collected from 2026-07-15 14:30 to 2026-07-15 14:30, in 0:42"))).toBeInTheDocument();
   });
 
   it("collection line in the zone of the report", async () => {
     mock.views.set(`${id}:en`, { ...english, report: { ...english.report, timezone: "Asia/Tokyo" } });
     await open();
-    expect(await screen.findByText("Collected from 2026-07-16 02:30 to 2026-07-16 02:30, in 0:42")).toBeInTheDocument();
+    expect(await screen.findByText(sentence("Collected from 2026-07-16 02:30 to 2026-07-16 02:30, in 0:42"))).toBeInTheDocument();
   });
 
   it("an unavailable capability is critical", async () => {

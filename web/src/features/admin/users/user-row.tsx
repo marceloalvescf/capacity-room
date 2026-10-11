@@ -1,3 +1,4 @@
+import { DatedText } from "@/components/dated-text";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRef, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
@@ -264,7 +265,7 @@ export function UserRow({ user }: { user: User }) {
   const own = principal?.id === user.id;
   return (
     <div className="flex max-w-2xl flex-col gap-4">
-      <p className="text-sm">{t("admin.users.created", { date: formatDate(user.created_at) })}</p>
+      <p className="text-sm"><DatedText i18nKey="admin.users.created" values={{ date: formatDate(user.created_at) }} /></p>
       {own ? (
         <>
           <p className="text-sm">{t("admin.users.own")}</p>

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "@/api/schema.gen";
 import { i18next } from "@/i18n/i18n";
 import { failure, installMockApi, profileSummary, report, server, signedIn } from "../../../tests/msw";
-import { location, renderApp } from "../../../tests/render";
+import { location, renderApp, sentence } from "../../../tests/render";
 import { mockColourScheme } from "../../../tests/match-media";
 
 const mock = installMockApi(signedIn());
@@ -106,7 +106,7 @@ describe("progress screen", () => {
     await advance(1700);
     await screen.findByRole("group", { name: t("language.en") });
     expect(screen.queryByRole("list", { name: t("progress.steps") })).not.toBeInTheDocument();
-    expect(screen.getByText(t("progress.keptUntil", { date: "2026-11-06" }))).toBeInTheDocument();
+    expect(screen.getByText(sentence("Kept until 2026-11-06"))).toBeInTheDocument();
   });
 
   it("checks 19 times after 1.5 s, 20 after 3 s, then every 6 s", async () => {

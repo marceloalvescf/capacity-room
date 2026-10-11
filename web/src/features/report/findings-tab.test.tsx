@@ -341,3 +341,18 @@ describe("links into the findings tab", () => {
     expect(within(detail()).getByText(english.findings[13]?.action ?? "")).toBeInTheDocument();
   });
 });
+
+describe("findings type scale", () => {
+  it("groups at 16px, detail title at 18px, section labels as labels, body at 14px", async () => {
+    await open();
+    const group = screen.getAllByRole("heading", { level: 2 }).find((h) => /^Critical/.test(h.textContent));
+    expect(group).toHaveClass("text-base", "font-semibold");
+    const title = screen.getByRole("heading", { level: 3 });
+    expect(title).toHaveClass("text-lg", "font-semibold");
+    for (const name of ["Observed", "What to do"]) {
+      expect(screen.getByRole("heading", { level: 4, name })).toHaveClass("label");
+    }
+    expect(screen.getByText(sentenceOf(0), { selector: "p" })).toHaveClass("text-sm");
+    expect(items()[0]).toHaveClass("text-sm");
+  });
+});

@@ -1,3 +1,4 @@
+import { DatedText } from "@/components/dated-text";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
@@ -164,10 +165,10 @@ export function ProgressPage() {
       <div className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold">{t("progress.title", { profile })}</h1>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-fg">
-          <span>{t("progress.requested", { time: formatTime(data.created_at), username: data.owner_username })}</span>
+          <span><DatedText i18nKey="progress.requested" values={{ time: formatTime(data.created_at), username: data.owner_username }} /></span>
           <StatusMark status={reportMark(data)} label={t(`reportStatus.${data.status}`)} />
           {data.status === "collected" ? (
-            <span>{t("progress.keptUntil", { date: formatDate(data.expires_at) })}</span>
+            <span><DatedText i18nKey="progress.keptUntil" values={{ date: formatDate(data.expires_at) }} /></span>
           ) : null}
           {data.status === "collected" && !data.expired ? (
             <Link to={`/reports/${data.id}/overview`} className={buttonStyles("primary")}>

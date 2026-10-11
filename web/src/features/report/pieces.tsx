@@ -182,7 +182,7 @@ export function RowFindings({ match }: { match: (finding: ViewFinding) => boolea
   }
   return (
     <section className="flex flex-col gap-2">
-      <h2 id={headingId} className="text-sm font-semibold">
+      <h2 id={headingId} className="text-base font-semibold">
         {t("report.tab.findings")}
       </h2>
       <ul aria-labelledby={headingId} className="flex flex-col gap-1">

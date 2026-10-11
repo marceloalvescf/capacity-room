@@ -24,3 +24,11 @@ export async function renderApp(path: string, language: Language = "en") {
 export function location(router: ReturnType<typeof createMemoryRouter>): string {
   return router.state.location.pathname + router.state.location.search;
 }
+
+// Matches the element that holds the whole sentence, whose dates sit in nowrap spans of their own.
+export function sentence(text: string | RegExp) {
+  return (_content: string, element: Element | null): boolean =>
+    element !== null &&
+    element.querySelector(":scope > span.whitespace-nowrap") !== null &&
+    (typeof text === "string" ? element.textContent === text : text.test(element.textContent));
+}

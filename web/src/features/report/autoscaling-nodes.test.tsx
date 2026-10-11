@@ -319,3 +319,18 @@ describe("copy without a clipboard", () => {
     });
   });
 });
+
+describe("replica range", () => {
+  it("an unavailable bound is a muted sans placeholder, never mono", async () => {
+    const hpa = english.hpas[0] as components["schemas"]["ViewHPA"];
+    const gone = { raw: null, text: "Unavailable", status: null };
+    mock.views.set(`${id}:en`, { ...english, hpas: [{ ...hpa, spec_min: gone, spec_max: gone }] });
+    await open("autoscaling");
+    const cell = within(screen.getByRole("table", { name: "HPAs" })).getAllByRole("cell").find((c) => /^Unavailable \/ Unavailable$/.test(c.textContent));
+    expect(cell).toBeDefined();
+    for (const word of within(cell as HTMLElement).getAllByText("Unavailable")) {
+      expect(word).toHaveClass("text-muted-fg");
+      expect(word.closest(".font-mono")).toBeNull();
+    }
+  });
+});

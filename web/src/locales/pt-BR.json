@@ -292,8 +292,8 @@
   "progress": {
     "screen": "Relatório",
     "title": "Relatório de {{profile}}",
-    "requested": "Criado em {{time}} por {{username}}",
-    "keptUntil": "Disponível até {{date}}",
+    "requested": "Criado em <date>{{time}}</date> por {{username}}",
+    "keptUntil": "Disponível até <date>{{date}}</date>",
     "steps": "Progresso",
     "stepDone": "Concluído",
     "stepPending": "Não iniciado",
@@ -472,7 +472,7 @@
     "copied": "Copiado: {{name}}",
     "copyFailed": "Não foi possível copiar o nome.",
     "quality": {
-      "collected": "Coletado de {{start}} a {{end}}, em {{elapsed}}",
+      "collected": "Coletado de <date>{{start}}</date> a <date>{{end}}</date>, em {{elapsed}}",
       "metrics": "Métricas lidas",
       "warnings": "Avisos",
       "notices": "Notas",
@@ -570,7 +570,7 @@
         "operator": "Operador",
         "reader": "Leitor"
       },
-      "created": "Criado em {{date}}",
+      "created": "Criado em <date>{{date}}</date>",
       "roleLabel": "Papel",
       "languageLabel": "Idioma",
       "roleHint": "Mudar o papel encerra todas as sessões do usuário.",
@@ -621,7 +621,7 @@
         "namespaces": "Namespaces",
         "choices": "Opções do formulário de relatório"
       },
-      "revisionValue": "{{revision}}, salva em {{time}}",
+      "revisionValue": "{{revision}}, salva em <date>{{time}}</date>",
       "none": "Nenhum",
       "test": "Testar conexão",
       "testing": "Testando…",
@@ -654,7 +654,7 @@
       "newTitle": "Novo perfil",
       "editScreen": "Editar perfil",
       "kind": "Perfil",
-      "revision": "Revisão {{revision}}, salva em {{time}}",
+      "revision": "Revisão {{revision}}, salva em <date>{{time}}</date>",
       "back": "Voltar aos perfis",
       "section": {
         "identity": "Identificação",

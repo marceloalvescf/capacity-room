@@ -88,6 +88,14 @@ describe("values of a profile", () => {
 describe("summaries", () => {
   const t = i18next.getFixedT("en");
 
+  it("writes a percent threshold without a space in both languages", () => {
+    for (const language of ["en", "pt-BR"]) {
+      const { thresholds } = summaries(valuesOf(adminProfile({})), i18next.getFixedT(language));
+      expect(summaryText(thresholds)).toMatch(/70% .*85% .*30% .*80% .*100%/);
+      expect(summaryText(thresholds)).not.toMatch(/\d %/);
+    }
+  });
+
   it("words the choices and the thresholds", () => {
     const values = valuesOf(
       adminProfile({ permitted_periods: ["24h", "7d"], default_period: "7d", default_report_profile: "executive" }),
@@ -95,7 +103,7 @@ describe("summaries", () => {
     const { choices, thresholds } = summaries(values, t);
     expect(summaryText(choices)).toBe("24h, 7d · 7d · America/Sao_Paulo · Executive · All");
     expect(summaryText(thresholds)).toBe(
-      "Attention 70 % · Critical 85 % · Low utilization 30 % · Near maximum 80 % · Node pool spread 30 · Variation 100 % · Divergence 1",
+      "Attention 70% · Critical 85% · Low utilization 30% · Near maximum 80% · Node pool spread 30 · Variation 100% · Divergence 1",
     );
     expect(choices.map((entry) => entry.map((part) => part.value))).toEqual([[true], [true], [true], [false], [false]]);
     expect(thresholds.every(([label, number]) => label?.value === false && number?.value === true)).toBe(true);

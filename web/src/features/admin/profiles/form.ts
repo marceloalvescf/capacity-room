@@ -113,7 +113,7 @@ export function summaries(values: ProfileValues, t: TFunction): { choices: Summa
     ],
     thresholds: thresholdKeys.map((key) => [
       ...wordPart(t(`admin.profile.short.${key}`)),
-      ...valuePart(key.endsWith("_percent") ? `${values.thresholds[key]} %` : values.thresholds[key]),
+      ...valuePart(key.endsWith("_percent") ? `${values.thresholds[key]}%` : values.thresholds[key]),
     ]),
   };
 }

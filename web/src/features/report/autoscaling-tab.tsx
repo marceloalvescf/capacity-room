@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
-import type { ViewHPA } from "./api";
+import type { ViewHPA, ViewValue } from "./api";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
 import { Counts, FindingStatus, matchHPA, RowFindings, StatGrid, ValueText, worstSeverity } from "./pieces";
 import { useView } from "./report-page";
@@ -9,6 +9,11 @@ import { useView } from "./report-page";
 const rowKey = (row: ViewHPA) => `${row.namespace}/${row.name}`;
 const rowName = (row: ViewHPA) => row.name;
 const searchText = (row: ViewHPA) => `${row.name} ${row.target_kind} ${row.target_name} ${row.namespace}`;
+
+// A replica bound in mono; an unavailable one is its placeholder word alone, muted, in the sans face.
+function ReplicaBound({ value }: { value: ViewValue }) {
+  return value.raw === null ? <span className="text-muted-fg">{value.text}</span> : <span className="font-mono"><ValueText value={value} /></span>;
+}
 
 function Opened({ row }: { row: ViewHPA }) {
   const { t } = useTranslation();
@@ -73,8 +78,8 @@ export function AutoscalingTab() {
         id: "range",
         header: t("report.column.replicaRange"),
         cell: (row) => (
-          <span className="font-mono">
-            <ValueText value={row.spec_min} /> / <ValueText value={row.spec_max} />
+          <span>
+            <ReplicaBound value={row.spec_min} /> / <ReplicaBound value={row.spec_max} />
           </span>
         ),
         sortValue: (row) => row.spec_min.raw,
