@@ -19,6 +19,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   inventory counts left the page.
 - The HPAs on the autoscaling tab show the status of their findings, as the
   namespaces, workloads, and nodes do.
+- The report overview opens on the severity totals and on any warning about
+  the quality of the data, the Data quality tab shows its number of warnings,
+  and each action of the plan opens its finding.
 
 ### Fixed
 

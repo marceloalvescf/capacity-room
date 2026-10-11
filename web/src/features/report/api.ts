@@ -15,6 +15,7 @@ export type ViewNode = Schemas["ViewNode"];
 export type ViewNodepool = Schemas["ViewNodepool"];
 export type ViewCapability = Schemas["ViewCapability"];
 export type ViewMessage = Schemas["ViewMessage"];
+export type ViewRecommendation = Schemas["ViewRecommendation"];
 
 // The view of a report in one language. It is read once: the snapshot behind it never changes, so no change of
 // the reports reloads it. The view of the previous language of the same report stays on screen while the new one

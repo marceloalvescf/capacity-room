@@ -1,12 +1,12 @@
 import { CaretRightIcon } from "@phosphor-icons/react";
-import { useId } from "react";
+import { Fragment, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { StatusMark, StatusShape } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
-import type { ViewFinding } from "./api";
+import type { ViewFinding, ViewRecommendation } from "./api";
 import { DepthGauge, type GaugeSeverity } from "./depth-gauge";
-import { isUnknownPool, scopeName, ValueText } from "./pieces";
+import { isUnknownPool, matchRecommendation, scopeName, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const severities = ["critical", "attention", "healthy"] as const;
@@ -186,42 +186,116 @@ function Verdict() {
   );
 }
 
-// A severity the view's minimum leaves out keeps its count and offers no findings to see.
-function Totals() {
+const statusText: Record<Severity, string> = {
+  critical: "text-critical",
+  attention: "text-attention",
+  healthy: "text-healthy",
+};
+
+// The answer first: the findings of each severity, the worst present in its colour, then the way to all of them. A
+// severity the view's minimum leaves out keeps its count and offers no findings to see.
+function AnswerStrip() {
   const { t } = useTranslation();
   const { summary, min_severity: floor } = useView();
+  const worst = severities.find((severity) => (summary[severity].raw ?? 0) > 0);
+  if (worst === undefined) {
+    return <p className="text-xl">{t("report.findings.none")}</p>;
+  }
   return (
-    <div role="group" aria-label={t("report.overview.totals")} className="flex flex-wrap items-center gap-6 text-sm">
-      {severities.map((severity) => {
-        const content = (
-          <>
-            <StatusShape status={severity} />
-            {t(`status.${severity}`)}
-            <span className="font-mono italic">{summary[severity].text}</span>
-          </>
-        );
-        return rank[severity] < (minimum[floor] ?? 0) ? (
-          <span key={severity} className="inline-flex items-center gap-1.5">
-            {content}
-          </span>
-        ) : (
-          <Link
-            key={severity}
-            to={`../findings?severity=${severity}`}
-            className="inline-flex items-center gap-1.5 hover:underline focus-visible:outline-2 focus-visible:outline-accent"
-          >
-            {content}
-          </Link>
-        );
-      })}
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      <div role="group" aria-label={t("report.overview.totals")} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xl">
+        {severities.map((severity, position) => {
+          const item = cn("inline-flex items-center gap-2", severity === worst ? `${statusText[severity]} font-semibold` : "text-fg");
+          const content = (
+            <>
+              <StatusShape status={severity} className="size-4" />
+              <span>{t(`status.${severity}`)}</span>
+              <span className="font-mono italic">{summary[severity].text}</span>
+            </>
+          );
+          return (
+            <Fragment key={severity}>
+              {position > 0 ? (
+                <span aria-hidden="true" className="text-muted-fg">
+                  ·
+                </span>
+              ) : null}
+              {rank[severity] < (minimum[floor] ?? 0) ? (
+                <span className={item}>{content}</span>
+              ) : (
+                <Link
+                  to={`../findings?severity=${severity}`}
+                  className={cn(item, "hover:underline focus-visible:outline-2 focus-visible:outline-accent")}
+                >
+                  {content}
+                </Link>
+              )}
+            </Fragment>
+          );
+        })}
+      </div>
+      <Link to="../findings" className="inline-flex items-center gap-1 text-sm text-accent underline">
+        {t("report.overview.allFindings")}
+        <CaretRightIcon aria-hidden="true" className="size-3" />
+      </Link>
     </div>
+  );
+}
+
+const shownWarnings = 3;
+
+// The warnings of the data, when there are any: the first three in their words, a count of the rest, and the tab.
+function QualityNotice() {
+  const { t } = useTranslation();
+  const labelId = useId();
+  const { warnings } = useView().quality;
+  if (warnings.length === 0) {
+    return null;
+  }
+  const rest = warnings.length - shownWarnings;
+  return (
+    <div role="group" aria-labelledby={labelId} className="flex flex-col gap-1 text-sm">
+      <p className="flex items-center gap-2">
+        <StatusShape status="attention" />
+        <span id={labelId} className="font-semibold">
+          {t("report.tab.quality")}
+        </span>
+        <span className="font-mono italic">{warnings.length}</span>
+      </p>
+      <ul className="flex flex-col gap-0.5 pl-5">
+        {warnings.slice(0, shownWarnings).map((warning, index) => (
+          <li key={index}>{warning.text}</li>
+        ))}
+        {rest > 0 ? <li className="text-muted-fg">{t("report.overview.moreWarnings", { count: rest })}</li> : null}
+      </ul>
+      <Link to="../quality" className="ml-5 inline-flex items-center gap-1 self-start text-accent underline">
+        {t("report.overview.seeQuality")}
+        <CaretRightIcon aria-hidden="true" className="size-3" />
+      </Link>
+    </div>
+  );
+}
+
+// An action of the plan leads to the finding it comes from; with none to match, it stays plain text.
+function PlanAction({ recommendation, findings }: { recommendation: ViewRecommendation; findings: ViewFinding[] }) {
+  const index = findings.findIndex(matchRecommendation(recommendation));
+  if (index < 0) {
+    return recommendation.action;
+  }
+  return (
+    <Link
+      to={`../findings?scope=${recommendation.scope_type}&finding=${String(index)}`}
+      className="underline decoration-border underline-offset-4 hover:decoration-accent"
+    >
+      {recommendation.action}
+    </Link>
   );
 }
 
 function Plan() {
   const { t } = useTranslation();
   const headingId = useId();
-  const { recommendations } = useView();
+  const { recommendations, findings } = useView();
   return (
     <section className="flex flex-col gap-2">
       <h2 id={headingId} className="text-base font-semibold">
@@ -248,7 +322,9 @@ function Plan() {
                   <td className="px-3 py-2 whitespace-nowrap">
                     <StatusMark status={recommendation.severity} />
                   </td>
-                  <td className="px-3 py-2">{recommendation.action}</td>
+                  <td className="px-3 py-2">
+                    <PlanAction recommendation={recommendation} findings={findings} />
+                  </td>
                   <td className="px-3 py-2 font-mono whitespace-nowrap">{recommendation.scope_text}</td>
                   <td className="px-3 py-2">{t(`confidence.${recommendation.confidence}`)}</td>
                 </tr>
@@ -291,8 +367,11 @@ function About() {
 export function OverviewTab() {
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 pt-2">
+        <AnswerStrip />
+        <QualityNotice />
+      </div>
       <Verdict />
-      <Totals />
       <Plan />
       <About />
     </div>

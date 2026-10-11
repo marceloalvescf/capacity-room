@@ -54,7 +54,9 @@ describe("report screen", () => {
     await open();
     const nav = screen.getByRole("navigation", { name: t("report.tabs") });
     const links = within(nav).getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual(reportTabs.map((tab) => t(`report.tab.${tab}`)));
+    expect(links.map((link) => link.textContent)).toEqual(
+      reportTabs.map((tab) => `${t(`report.tab.${tab}`)}${tab === "quality" ? "2" : ""}`),
+    );
     links.forEach((link, index) => {
       expect(link.getAttribute("href")).toMatch(new RegExp(`/${reportTabs[index] ?? ""}$`));
     });
@@ -122,7 +124,24 @@ describe("report screen", () => {
     expect(mock.calls.some((call) => call.path === `/reports/${id}/view` && call.search === "?lang=pt-BR")).toBe(true);
     const nav = screen.getByRole("navigation", { name: t("report.tabs") });
     expect(within(nav).getByRole("link", { name: "Visão geral" })).toBeInTheDocument();
-    expect(within(nav).getByRole("link", { name: "Qualidade dos dados" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Qualidade dos dados, avisos: 2" })).toBeInTheDocument();
+  });
+
+  it("the data quality tab carries its count of warnings", async () => {
+    await open();
+    const nav = screen.getByRole("navigation", { name: t("report.tabs") });
+    const tab = within(nav).getByRole("link", { name: "Data quality, warnings: 2" });
+    expect(within(tab).getByText("2")).toHaveClass("font-mono", "italic");
+    expect(tab.querySelector("svg.text-attention")).not.toBeNull();
+  });
+
+  it("the data quality tab with no warning is its word alone", async () => {
+    mock.views.set(`${id}:en`, { ...english, quality: { ...english.quality, warnings: [] } });
+    await open();
+    const nav = screen.getByRole("navigation", { name: t("report.tabs") });
+    const tab = within(nav).getByRole("link", { name: "Data quality" });
+    expect(tab).toHaveTextContent(/^Data quality$/);
+    expect(tab.querySelector("svg")).toBeNull();
   });
 
   it("keeps the frame while the view of a new language loads", async () => {
@@ -144,7 +163,7 @@ describe("report screen", () => {
     expect(screen.getAllByRole("heading", { level: 2 }).length).toBeGreaterThan(0);
     release();
     const nav = await screen.findByRole("navigation", { name: "Seções do relatório" });
-    expect(await within(nav).findByRole("link", { name: "Qualidade dos dados" })).toBeInTheDocument();
+    expect(await within(nav).findByRole("link", { name: "Qualidade dos dados, avisos: 2" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Plano de ação priorizado" })).toBeInTheDocument();
     expect(screen.getByText(portuguese.report.period_text)).toBeInTheDocument();
   });

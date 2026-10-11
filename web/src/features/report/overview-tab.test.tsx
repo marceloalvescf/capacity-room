@@ -148,9 +148,11 @@ describe("overview tab", () => {
     expect(heading.parentElement?.querySelector("ul")).toBeNull();
   });
 
-  it("totals", async () => {
+  it("the answer strip: the three totals above the band, the worst one in its colour, each a link", async () => {
     await open();
     const totals = screen.getByRole("group", { name: "Findings by severity" });
+    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" });
+    expect(totals.compareDocumentPosition(band) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const links = within(totals).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual(["Critical9", "Attention10", "Healthy7"]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
@@ -158,7 +160,20 @@ describe("overview tab", () => {
       expect.stringMatching(/findings\?severity=attention$/),
       expect.stringMatching(/findings\?severity=healthy$/),
     ]);
-    expect(within(links[0] as HTMLElement).getByText("9")).toHaveClass("font-mono");
+    expect(links[0]).toHaveClass("text-critical", "font-semibold");
+    expect(links[1]).toHaveClass("text-fg");
+    expect(links[1]).not.toHaveClass("font-semibold");
+    expect(within(links[0] as HTMLElement).getByText("9")).toHaveClass("font-mono", "italic");
+    expect(totals).toHaveClass("text-xl");
+    expect(screen.getByRole("link", { name: "See all findings" }).getAttribute("href")).toMatch(/\/findings$/);
+  });
+
+  it("the worst severity present leads the strip", async () => {
+    mock.views.set(`${id}:en`, { ...english, summary: { ...english.summary, critical: { raw: 0, text: "0", status: null } } });
+    await open();
+    const links = within(screen.getByRole("group", { name: "Findings by severity" })).getAllByRole("link");
+    expect(links[0]).not.toHaveClass("font-semibold");
+    expect(links[1]).toHaveClass("text-attention", "font-semibold");
   });
 
   it("a total below the minimum severity keeps its count and no link", async () => {
@@ -169,18 +184,57 @@ describe("overview tab", () => {
       expect.stringMatching(/findings\?severity=critical$/),
       expect.stringMatching(/findings\?severity=attention$/),
     ]);
-    expect(totals.children).toHaveLength(3);
-    expect(totals.children[2]).toHaveTextContent("Healthy7");
-    expect(within(totals.children[2] as HTMLElement).queryByRole("link")).toBeNull();
-    expect(within(totals.children[2] as HTMLElement).getByText("7")).toHaveClass("font-mono");
+    const healthy = within(totals).getByText("Healthy").parentElement as HTMLElement;
+    expect(healthy).toHaveTextContent("Healthy7");
+    expect(healthy.closest("a")).toBeNull();
+    expect(within(healthy).getByText("7")).toHaveClass("font-mono");
 
     mock.views.set(`${id}:en`, { ...english, min_severity: "critical" });
     cleanup();
     await open();
     totals = screen.getByRole("group", { name: "Findings by severity" });
     expect(within(totals).getAllByRole("link")).toHaveLength(1);
-    expect(totals.children[1]).toHaveTextContent("Attention10");
-    expect(within(totals.children[1] as HTMLElement).queryByRole("link")).toBeNull();
+    expect((within(totals).getByText("Attention").parentElement as HTMLElement).closest("a")).toBeNull();
+  });
+
+  it("a report with no finding says so in the strip", async () => {
+    const none = { raw: 0, text: "0", status: null };
+    mock.views.set(`${id}:en`, {
+      ...english,
+      findings: [],
+      recommendations: [],
+      summary: { ...english.summary, critical: none, attention: none, healthy: none },
+    });
+    await open();
+    expect(screen.getByText("This report holds no findings.")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Findings by severity" })).toBeNull();
+  });
+
+  it("a data quality notice under the strip names each warning", async () => {
+    await open();
+    const notice = screen.getByRole("group", { name: "Data quality" });
+    expect(notice).toHaveTextContent(/^Data quality2/);
+    expect(within(notice).getByText("2")).toHaveClass("font-mono", "italic");
+    for (const warning of english.quality.warnings) {
+      expect(within(notice).getByText(warning.text)).toBeInTheDocument();
+    }
+    expect(within(notice).getByRole("link", { name: "See data quality" }).getAttribute("href")).toMatch(/\/quality$/);
+  });
+
+  it("no data quality notice without a warning", async () => {
+    mock.views.set(`${id}:en`, { ...english, quality: { ...english.quality, warnings: [] } });
+    await open();
+    expect(screen.queryByRole("group", { name: "Data quality" })).toBeNull();
+  });
+
+  it("the notice shows three warnings and counts the rest", async () => {
+    const warnings = ["a", "b", "c", "d", "e"].map((letter) => ({ code: `W_${letter}`, text: `Warning ${letter}.` }));
+    mock.views.set(`${id}:en`, { ...english, quality: { ...english.quality, warnings } });
+    await open();
+    const notice = screen.getByRole("group", { name: "Data quality" });
+    expect(within(notice).getByText("Warning c.")).toBeInTheDocument();
+    expect(within(notice).queryByText("Warning d.")).toBeNull();
+    expect(within(notice).getByText("+2")).toHaveClass("text-muted-fg");
   });
 
   it("portuguese words", async () => {
@@ -189,6 +243,9 @@ describe("overview tab", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Pressão por escopo" })).toBeInTheDocument();
     expect(screen.getByText("Nodes · atual / máximo")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Achados por severidade" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver todos os achados" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver qualidade dos dados" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Qualidade dos dados, avisos: 2" })).toBeInTheDocument();
   });
 
   it("action plan", async () => {
@@ -202,6 +259,24 @@ describe("overview tab", () => {
     const cells = within(rows[0] as HTMLElement).getAllByRole("cell");
     expect(cells.map((cell) => cell.textContent)).toEqual(["1", "Critical", english.recommendations[0]?.action, "web", "Exact"]);
     expect(screen.getByRole("heading", { level: 2, name: "Prioritized action plan" })).toBeInTheDocument();
+  });
+
+  it("an action of the plan links to its finding", async () => {
+    await open();
+    const rows = within(screen.getByRole("table", { name: "Prioritized action plan" })).getAllByRole("row").slice(1);
+    const first = within(rows[0] as HTMLElement).getByRole("link", { name: english.recommendations[0]?.action ?? "" });
+    expect(first.getAttribute("href")).toMatch(/\/findings\?scope=hpa&finding=7$/);
+    const eighth = within(rows[7] as HTMLElement).getByRole("link");
+    expect(eighth.getAttribute("href")).toMatch(/\/findings\?scope=workload&finding=11$/);
+  });
+
+  it("an action with no matching finding stays plain text", async () => {
+    const [first, ...rest] = english.recommendations;
+    mock.views.set(`${id}:en`, { ...english, recommendations: [{ ...(first as View["recommendations"][number]), scopes: ["payments/nothing"] }, ...rest] });
+    await open();
+    const rows = within(screen.getByRole("table", { name: "Prioritized action plan" })).getAllByRole("row").slice(1);
+    expect(within(rows[0] as HTMLElement).queryByRole("link")).toBeNull();
+    expect(rows[0]).toHaveTextContent(first?.action ?? "");
   });
 
   it("overview empty plan", async () => {

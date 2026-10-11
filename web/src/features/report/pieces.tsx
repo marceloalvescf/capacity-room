@@ -3,7 +3,16 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { StatusMark, StatusShape, type Status } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
-import type { ViewFinding, ViewHPA, ViewNamespace, ViewNode, ViewStatistic, ViewValue, ViewWorkload } from "./api";
+import type {
+  ViewFinding,
+  ViewHPA,
+  ViewNamespace,
+  ViewNode,
+  ViewRecommendation,
+  ViewStatistic,
+  ViewValue,
+  ViewWorkload,
+} from "./api";
 import { useView } from "./report-page";
 
 // A workload's name, with its kind and namespace beneath.
@@ -203,6 +212,10 @@ export const matchHPA = (row: ViewHPA) => (f: ViewFinding) =>
   f.scope_type === "hpa" && f.scope_name === `${row.namespace}/${row.name}`;
 
 export const matchNode = (row: ViewNode) => (f: ViewFinding) => f.scope_type === "node" && f.scope_name === row.name;
+
+// The finding a row of the action plan comes from: the same code and scope type, on its first scope.
+export const matchRecommendation = (row: ViewRecommendation) => (f: ViewFinding) =>
+  f.code === row.code && f.scope_type === row.scope_type && f.scope_name === row.scopes[0];
 
 // The CPU and memory grids of a namespace or a workload.
 export function UsageGrids({ row }: { row: ViewNamespace | ViewWorkload }) {

@@ -27,10 +27,10 @@ function Shape({ status }: { status: Status }) {
   }
 }
 
-// The shape of a status alone, for a place where the word is given separately.
-export function StatusShape({ status }: { status: Status }) {
+// The shape of a status alone, for a place where the word is given separately. It is 12px unless a size is given.
+export function StatusShape({ status, className }: { status: Status; className?: string }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 12 12" className={cn("size-3 shrink-0", colour[status])}>
+    <svg aria-hidden="true" viewBox="0 0 12 12" className={cn("size-3 shrink-0", colour[status], className)}>
       <Shape status={status} />
     </svg>
   );

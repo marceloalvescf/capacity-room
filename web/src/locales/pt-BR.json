@@ -340,7 +340,10 @@
         "namespace": "Namespaces",
         "workload": "Workloads",
         "hpa": "HPAs"
-      }
+      },
+      "allFindings": "Ver todos os achados",
+      "seeQuality": "Ver qualidade dos dados",
+      "moreWarnings": "+{{count}}"
     },
     "plan": {
       "title": "Plano de ação priorizado",
@@ -474,7 +477,8 @@
       "warnings": "Avisos",
       "notices": "Notas",
       "noWarnings": "Nenhum aviso.",
-      "noNotices": "Nenhuma nota."
+      "noNotices": "Nenhuma nota.",
+      "tabWarnings": "Qualidade dos dados, avisos: {{count}}"
     }
   },
   "confidence": {
