@@ -20,6 +20,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- In the findings, the detail of a finding stays in view while the list
+  scrolls, and a filter that matches nothing offers to show every finding.
+- The workloads search also narrows the list of workloads with no observed
+  usage.
+- Status words and units no longer break in the middle of a word in narrow
+  table cells.
 - On the report screen, a namespace, workload, or node with no finding reads
   "No finding" instead of Healthy, and the state of a node that is not ready
   or unknown carries its mark.
