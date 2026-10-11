@@ -9,6 +9,7 @@ import { StatusMark } from "@/components/status-mark";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/cn";
 import { formatDate, formatTime } from "@/lib/format";
 import { usePrincipal } from "@/session/session";
 import {
@@ -167,7 +168,7 @@ export function ReportsPage() {
       <>
         {chosen.length === 0 ? null : (
           <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface px-3 py-2 text-sm text-surface-fg">
-            <span className="font-mono">{t("reports.selected", { count: chosen.length })}</span>
+            <span>{t("reports.selected", { count: chosen.length })}</span>
             <Button variant="danger" onClick={askBulk}>
               {t("reports.deleteSelected")}
             </Button>
@@ -240,7 +241,7 @@ export function ReportsPage() {
                       </td>
                     ) : null}
                     <td className="px-3 py-2 font-mono">{time}</td>
-                    <td className="px-3 py-2 font-mono">{profileName(row)}</td>
+                    <td className={cn("px-3 py-2", !names.has(row.profile_id) && "font-mono")}>{profileName(row)}</td>
                     <td className="px-3 py-2">
                       <StatusMark
                         status={reportMark(row)}
@@ -306,7 +307,9 @@ export function ReportsPage() {
           </h1>
           {updating ? (
             <p className="flex items-center gap-2 text-sm text-muted-fg">
-              <span aria-hidden="true" className="size-2 rounded-full bg-accent motion-safe:animate-pulse" />
+              <svg aria-hidden="true" viewBox="0 0 10 10" className="size-2.5 stroke-accent motion-safe:animate-pulse">
+                <circle cx="5" cy="5" r="3.75" fill="none" strokeWidth="1.5" />
+              </svg>
               {t("reports.updating")}
             </p>
           ) : null}

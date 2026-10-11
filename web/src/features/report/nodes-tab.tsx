@@ -141,9 +141,9 @@ export function NodesTab() {
         header: t("report.column.node"),
         cell: (row) => (
           <div className="flex flex-col gap-0.5">
-            <span className="font-mono">{row.name}</span>
+            <span className="font-mono [overflow-wrap:anywhere]">{row.name}</span>
             <span className="text-xs text-muted-fg">
-              {row.pool === "unknown" ? t("report.node.unknownPool") : <span className="font-mono">{row.pool}</span>}
+              {row.pool === "unknown" ? t("report.node.unknownPool") : <span className="font-mono [overflow-wrap:anywhere]">{row.pool}</span>}
             </span>
           </div>
         ),
@@ -165,7 +165,7 @@ export function NodesTab() {
         header: t("report.column.cpuPeak"),
         cell: (row) => <PeakCell peak={row.cpu_usage_percent.peak} share={row.cpu_request_percent} word="requested" />,
         sortValue: (row) => row.cpu_usage_percent.peak.raw,
-        cellClassName: (row) => peakTint(row.cpu_usage_percent.peak),
+        cellClassName: (row) => peakTint(row.cpu_usage_percent.peak, row.cpu_request_percent),
       },
       {
         id: "memory",
@@ -174,7 +174,7 @@ export function NodesTab() {
           <PeakCell peak={row.memory_usage_percent.peak} share={row.memory_request_percent} word="requested" />
         ),
         sortValue: (row) => row.memory_usage_percent.peak.raw,
-        cellClassName: (row) => peakTint(row.memory_usage_percent.peak),
+        cellClassName: (row) => peakTint(row.memory_usage_percent.peak, row.memory_request_percent),
       },
     ],
     [t, hasFinding, status],

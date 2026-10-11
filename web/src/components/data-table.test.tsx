@@ -336,12 +336,13 @@ describe("data table", () => {
     expect(screen.getByRole("cell", { name: "api-1" })).toHaveClass("bg-depth-2");
   });
 
-  it("cells wrap", () => {
-    mount(named);
+  it("a cell breaks no word; an opened row breaks only a value longer than the table", () => {
+    mount(named, "/?open=web-1");
     const cells = screen.getAllByRole("cell");
     expect(cells.length).toBeGreaterThan(0);
     for (const cell of cells) {
-      expect(cell).toHaveClass("[overflow-wrap:anywhere]");
+      expect(cell).not.toHaveClass("[overflow-wrap:anywhere]");
     }
+    expect(screen.getByText("details of web-1").parentElement).toHaveClass("[overflow-wrap:anywhere]");
   });
 });

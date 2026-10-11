@@ -4,7 +4,7 @@
     "short": "CapacityRoom",
     "title": "{{screen}} · CapacityRoom",
     "skip": "Pular para o conteúdo",
-    "version": "Versão {{version}}"
+    "version": "Versão"
   },
   "nav": {
     "label": "Navegação principal",
@@ -430,6 +430,7 @@
       "allScopes": "Todos os escopos",
       "none": "Este relatório não tem achados.",
       "noMatch": "Nenhum achado corresponde a estes filtros.",
+      "showAll": "Mostrar todos os achados",
       "observed": "Observado",
       "action": "O que fazer",
       "evidence": "Evidências"
@@ -631,13 +632,13 @@
     "profile": {
       "anyPeriod": "Qualquer período",
       "short": {
-        "warning_percent": "Atenção {{value}} %",
-        "critical_percent": "Crítico {{value}} %",
-        "low_utilization_percent": "Baixa utilização {{value}} %",
-        "autoscaler_near_max_percent": "Perto do máximo {{value}} %",
-        "nodepool_spread_points": "Diferença entre node pools {{value}}",
-        "bursty_gap_percent": "Variação {{value}} %",
-        "hpa_replica_divergence": "Divergência {{value}}"
+        "warning_percent": "Atenção",
+        "critical_percent": "Crítico",
+        "low_utilization_percent": "Baixa utilização",
+        "autoscaler_near_max_percent": "Perto do máximo",
+        "nodepool_spread_points": "Diferença entre node pools",
+        "bursty_gap_percent": "Variação",
+        "hpa_replica_divergence": "Divergência"
       },
       "testRefused": "Corrija os campos marcados e teste de novo.",
       "stale": "Alguém salvou este perfil depois que você o abriu. Seus valores continuam aqui.",

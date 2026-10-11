@@ -5,8 +5,8 @@ import { Link } from "react-router";
 import { StatusMark, StatusShape } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
 import type { ViewFinding } from "./api";
-import { DepthGauge } from "./depth-gauge";
-import { scopeName, ValueText } from "./pieces";
+import { DepthGauge, type GaugeSeverity } from "./depth-gauge";
+import { isUnknownPool, scopeName, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const severities = ["critical", "attention", "healthy"] as const;
@@ -35,18 +35,20 @@ function Growth() {
       (best, finding) => (best === null || severities.indexOf(finding.severity) < severities.indexOf(best.severity) ? finding : best),
       null,
     );
+  // A full scale is a hazard only when the view gives the cluster a finding above healthy.
+  const severity: GaugeSeverity = worst === null || worst.severity === "healthy" ? null : worst.severity;
   return (
     <div className="flex flex-col gap-3">
       <h2 className="label">{t("report.autoscaling.title")}</h2>
       {enabled ? (
         <div className="flex flex-col gap-1">
-          <p className="font-mono text-[3.5rem] leading-none font-semibold tracking-tight">
+          <p className="font-mono text-display font-semibold">
             <ValueText value={autoscaling.current_nodes} />
             <span className="mx-2 font-sans font-normal text-muted-fg">/</span>
             <ValueText value={autoscaling.max_nodes} />
           </p>
           {current !== null && max !== null && max > 0 ? (
-            <DepthGauge current={current} max={max} min={autoscaling.min_nodes.raw} />
+            <DepthGauge current={current} max={max} min={autoscaling.min_nodes.raw} severity={severity} />
           ) : null}
           <p className="text-sm text-muted-fg">{t("report.overview.nodesCaption")}</p>
         </div>
@@ -83,7 +85,7 @@ function Growth() {
           </span>
         </p>
       ) : null}
-      <Link to="../autoscaling" className="inline-flex items-center gap-1 text-sm text-accent underline">
+      <Link to="../autoscaling" className="inline-flex items-center gap-1 self-start text-sm text-accent underline">
         {t("report.overview.seeAutoscaling")}
         <CaretRightIcon aria-hidden="true" className="size-3" />
       </Link>
@@ -127,7 +129,9 @@ function PressureLine({ type }: { type: (typeof scopeTypes)[number] }) {
         </p>
         {name === null && peak === undefined ? null : (
           <p className="flex flex-wrap gap-x-3 text-sm">
-            {name === null ? null : <span className="font-mono break-all">{name}</span>}
+            {name === null ? null : (
+              <span className={cn("break-all", !isUnknownPool(lead.finding) && "font-mono")}>{name}</span>
+            )}
             {peak === undefined ? null : (
               <span className="whitespace-nowrap">
                 <span className="text-muted-fg">{t("evidence.peak_percent")}</span> <span className="font-mono">{peak.text}</span>
@@ -175,7 +179,7 @@ function Pressure() {
 // The top of the overview: whether the cluster can grow, then where it runs short.
 function Verdict() {
   return (
-    <section className="flex flex-col gap-6 border-t border-b border-t-neatline border-b-border py-6 xl:grid xl:grid-cols-[4fr_7fr] xl:gap-10">
+    <section className="flex flex-col gap-6 border-b border-border py-6 xl:grid xl:grid-cols-[4fr_7fr] xl:gap-10">
       <Growth />
       <Pressure />
     </section>
@@ -192,8 +196,8 @@ function Totals() {
         const content = (
           <>
             <StatusShape status={severity} />
-            <span className="font-mono">{summary[severity].text}</span>
             {t(`status.${severity}`)}
+            <span className="font-mono italic">{summary[severity].text}</span>
           </>
         );
         return rank[severity] < (minimum[floor] ?? 0) ? (

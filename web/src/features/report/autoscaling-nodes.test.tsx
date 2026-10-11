@@ -146,6 +146,15 @@ describe("nodes tab", () => {
     }
   });
 
+  it("a peak with no number is its placeholder word alone, muted and upright", async () => {
+    await open("nodes");
+    const cpu = within(rowOf("Nodes", "orphan")).getAllByRole("cell")[4] as HTMLElement;
+    expect(cpu).toHaveTextContent(/^Unavailable$/);
+    const word = within(cpu).getByText("Unavailable");
+    expect(word).toHaveClass("text-muted-fg");
+    expect(cpu.querySelector(".font-mono")).toBeNull();
+  });
+
   it("a peak cell takes the tint of the status the view gives its peak", async () => {
     const node = english.nodes[0] as View["nodes"][number];
     const peak = (raw: number, status: "healthy" | "attention" | "critical") => ({ raw, text: `${String(raw)}%`, status });

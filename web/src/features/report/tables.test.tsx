@@ -1,4 +1,4 @@
-import { act, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { components } from "@/api/schema.gen";
@@ -64,7 +64,7 @@ describe("workloads tab", () => {
     const cells = within(rows[0] as HTMLElement).getAllByRole("cell");
     const name = cells[1] as HTMLElement;
     expect(within(name).getByText("payments-web")).toHaveClass("font-mono");
-    expect(within(name).getByText("Deployment")).toHaveClass("font-mono");
+    expect(within(name).getByText("Deployment")).not.toHaveClass("font-mono");
     expect(within(name).getByText("payments")).toHaveClass("font-mono");
     expect(cells[2]).toHaveTextContent("Critical");
     expect(cells[3]).toHaveTextContent("1");
@@ -164,6 +164,27 @@ describe("workloads tab", () => {
     expect(rows).toHaveLength(3);
     expect(rows[1]).toHaveTextContent("apiDeploymentpaymentsAttentionNo HPA");
     expect(rows[2]).toHaveTextContent("queueStatefulSetpaymentsHealthyNo HPA");
+  });
+
+  it("the search of the table filters the workloads without observed usage too", async () => {
+    await open("workloads", "?q=statefulset");
+    const rows = within(screen.getByRole("table", { name: "Workloads without observed usage" })).getAllByRole("row");
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toHaveTextContent("queueStatefulSetpayments");
+    cleanup();
+    await open("workloads", "?q=payments-web");
+    expect(screen.queryByRole("heading", { name: "Workloads without observed usage" })).not.toBeInTheDocument();
+  });
+
+  it("a peak cell takes the worse of the statuses of its peak and its share", async () => {
+    await open("workloads");
+    const cpu = within(bodyRows()[0] as HTMLElement).getAllByRole("cell")[4] as HTMLElement;
+    expect(cpu).toHaveClass("bg-depth-1");
+    cleanup();
+    await open("namespaces");
+    const nsCpu = within(bodyRows()[0] as HTMLElement).getAllByRole("cell")[4] as HTMLElement;
+    expect(nsCpu).toHaveTextContent("660%");
+    expect(nsCpu).toHaveClass("hazard");
   });
 
   it("every workload observed leaves no such section", async () => {

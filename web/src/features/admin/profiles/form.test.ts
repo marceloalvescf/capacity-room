@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { summaryText } from "@/components/summary-line";
 import { i18next } from "@/i18n/i18n";
 import { adminProfile } from "../../../../tests/msw";
 import { ApiFailure } from "@/api/client";
@@ -91,15 +92,19 @@ describe("summaries", () => {
     const values = valuesOf(
       adminProfile({ permitted_periods: ["24h", "7d"], default_period: "7d", default_report_profile: "executive" }),
     );
-    expect(summaries(values, t)).toEqual({
-      choices: "24h, 7d · 7d · America/Sao_Paulo · Executive · All",
-      thresholds:
-        "Attention 70 % · Critical 85 % · Low utilization 30 % · Near maximum 80 % · Node pool spread 30 · Variation 100 % · Divergence 1",
-    });
+    const { choices, thresholds } = summaries(values, t);
+    expect(summaryText(choices)).toBe("24h, 7d · 7d · America/Sao_Paulo · Executive · All");
+    expect(summaryText(thresholds)).toBe(
+      "Attention 70 % · Critical 85 % · Low utilization 30 % · Near maximum 80 % · Node pool spread 30 · Variation 100 % · Divergence 1",
+    );
+    expect(choices.map((entry) => entry.map((part) => part.value))).toEqual([[true], [true], [true], [false], [false]]);
+    expect(thresholds.every(([label, number]) => label?.value === false && number?.value === true)).toBe(true);
   });
 
   it("falls back to the defaults of an empty choice", () => {
-    expect(summaries(valuesOf(adminProfile()), t).choices).toBe("Any period · 24h · America/Sao_Paulo · Detailed · All");
+    const { choices } = summaries(valuesOf(adminProfile()), t);
+    expect(summaryText(choices)).toBe("Any period · 24h · America/Sao_Paulo · Detailed · All");
+    expect(choices[0]?.[0]?.value).toBe(false);
   });
 
   it("names the seven thresholds", () => {

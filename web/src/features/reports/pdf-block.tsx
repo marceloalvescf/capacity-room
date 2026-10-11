@@ -40,7 +40,7 @@ export function PdfBlock({ report, canRequest }: { report: Report; canRequest: b
     <section className="flex flex-col gap-3">
       <h2 className="text-base font-semibold">{t("progress.pdf")}</h2>
       {problem === null ? null : <Alert tone="error">{problem}</Alert>}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col divide-y divide-border">
         {ordered(i18n.language).map((language) => {
           const state = report.pdfs.find((candidate) => candidate.language === language);
           const label = `pdf-${language}`;
@@ -60,7 +60,7 @@ export function PdfBlock({ report, canRequest }: { report: Report; canRequest: b
               key={language}
               role="group"
               aria-labelledby={label}
-              className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface px-3 py-2 text-surface-fg"
+              className="flex flex-wrap items-center gap-3 py-2 text-sm first:pt-0 last:pb-0"
             >
               <span id={label} className="min-w-40 font-medium">
                 {t(`language.${language}`)}

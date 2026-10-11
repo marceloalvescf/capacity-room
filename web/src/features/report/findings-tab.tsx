@@ -2,11 +2,12 @@ import { useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { viewScopeTypeValues, viewSeverityValues } from "@/api/schema.gen";
 import { StatusMark } from "@/components/status-mark";
+import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 import { useAddress } from "@/lib/address";
 import type { ViewFinding } from "./api";
-import { scopeName } from "./pieces";
+import { isUnknownPool, scopeName } from "./pieces";
 import { useView } from "./report-page";
 import { SearchField, useSearchText } from "@/components/search-field";
 
@@ -56,7 +57,9 @@ function ListItem({ entry, selected, onSelect }: { entry: Entry; selected: boole
         <span className="flex flex-wrap items-center gap-x-3">
           <StatusMark status={entry.finding.severity} />
           <span className="text-muted-fg">{t(`scope.${entry.finding.scope_type}`)}</span>
-          {name === null ? null : <span className="min-w-0 truncate font-mono">{name}</span>}
+          {name === null ? null : (
+            <span className={cn("min-w-0 truncate", !isUnknownPool(entry.finding) && "font-mono")}>{name}</span>
+          )}
         </span>
         <span className="truncate">{entry.finding.sentence}</span>
       </button>
@@ -68,7 +71,7 @@ function Detail({ finding }: { finding: ViewFinding }) {
   const { t } = useTranslation();
   const name = scopeName(finding, t("report.node.unknownPool"));
   return (
-    <article className="flex flex-col gap-4 rounded-md border border-border bg-surface p-4 text-surface-fg">
+    <article className="flex flex-col gap-4 rounded-md border border-border bg-surface p-4 text-surface-fg lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
       <header className="flex flex-col gap-1">
         <p className="flex flex-wrap items-center gap-x-3 text-sm">
           <StatusMark status={finding.severity} />
@@ -79,7 +82,9 @@ function Detail({ finding }: { finding: ViewFinding }) {
           </span>
           <span className="text-muted-fg">{t("report.confidence", { value: t(`confidence.${finding.confidence}`) })}</span>
         </p>
-        {name === null ? null : <h3 className="font-mono text-lg font-semibold">{name}</h3>}
+        {name === null ? null : (
+          <h3 className={cn("text-lg font-semibold break-all", !isUnknownPool(finding) && "font-mono")}>{name}</h3>
+        )}
       </header>
       <section className="flex flex-col gap-1">
         <h4 className="text-sm font-semibold">{t("report.findings.observed")}</h4>
@@ -172,11 +177,11 @@ export function FindingsTab() {
                   }}
                   className={cn(
                     "inline-flex min-h-9 items-center gap-2 rounded-md border px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-                    pressed ? "border-accent bg-info-surface text-fg" : "border-input-border bg-surface text-muted-fg",
+                    pressed ? "border-action bg-action text-action-fg" : "border-neatline bg-surface text-surface-fg",
                   )}
                 >
-                  <StatusMark status={severity} />
-                  <span className="font-mono">{findings.filter((finding) => finding.severity === severity).length}</span>
+                  <StatusMark status={severity} plain={pressed} />
+                  <span className="font-mono italic">{findings.filter((finding) => finding.severity === severity).length}</span>
                 </button>
               );
             })}
@@ -204,7 +209,20 @@ export function FindingsTab() {
         </Select>
       </div>
       {selected === undefined ? (
-        <p className="text-sm text-muted-fg">{t("report.findings.noMatch")}</p>
+        <div className="flex flex-col items-start gap-3">
+          <p className="text-sm text-muted-fg">{t("report.findings.noMatch")}</p>
+          <Button
+            onClick={() => {
+              search.change("");
+              write((next) => {
+                next.delete("severity");
+                next.delete("scope");
+              });
+            }}
+          >
+            {t("report.findings.showAll")}
+          </Button>
+        </div>
       ) : (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
           <div className="flex flex-col gap-3">
@@ -217,7 +235,7 @@ export function FindingsTab() {
                 <section key={severity} className="flex flex-col gap-1">
                   <h2 className="flex items-center justify-between text-sm font-semibold">
                     <StatusMark status={severity} />
-                    <span className="font-mono text-muted-fg">{group.length}</span>
+                    <span className="font-mono text-muted-fg italic">{group.length}</span>
                   </h2>
                   <ul className="rounded-md border border-border bg-surface text-surface-fg">
                     {group.map((entry) => (

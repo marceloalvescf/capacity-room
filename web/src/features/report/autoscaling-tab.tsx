@@ -40,10 +40,10 @@ export function AutoscalingTab() {
         header: t("report.column.hpa"),
         cell: (row) => (
           <div className="flex flex-col gap-0.5">
-            <span className="font-mono">{row.name}</span>
+            <span className="font-mono [overflow-wrap:anywhere]">{row.name}</span>
             <span className="text-xs text-muted-fg">
-              {row.target_kind} <span className="font-mono">{row.target_name}</span> ·{" "}
-              <span className="font-mono">{row.namespace}</span>
+              {row.target_kind} <span className="font-mono [overflow-wrap:anywhere]">{row.target_name}</span> ·{" "}
+              <span className="font-mono [overflow-wrap:anywhere]">{row.namespace}</span>
             </span>
           </div>
         ),

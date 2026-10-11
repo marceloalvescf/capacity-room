@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { SummaryLine, type Summary } from "@/components/summary-line";
 import { Button } from "@/components/ui/button";
 
 // A section of the form that starts folded: its title and a line that sums it up, with the button that opens it
@@ -12,7 +13,7 @@ export function Folded({
   children,
 }: {
   title: string;
-  summary: string;
+  summary: Summary;
   open: boolean;
   onToggle: () => void;
   children: ReactNode;
@@ -26,7 +27,9 @@ export function Folded({
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 id={titleId} className="font-semibold">{title}</h2>
-          <p className="font-mono text-sm break-words text-muted-fg">{summary}</p>
+          <p className="text-sm break-words text-muted-fg">
+            <SummaryLine summary={summary} />
+          </p>
         </div>
         <Button
           id={buttonId}

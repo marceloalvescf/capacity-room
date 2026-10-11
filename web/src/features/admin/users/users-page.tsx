@@ -33,7 +33,7 @@ export function UsersPage() {
         header: t("admin.users.column.user"),
         cell: (user) => (
           <>
-            <span className="font-mono">{user.username}</span>
+            <span className="font-mono [overflow-wrap:anywhere]">{user.username}</span>
             {user.id === ownId ? <span className="text-muted-fg">{` ${t("admin.users.you")}`}</span> : null}
           </>
         ),

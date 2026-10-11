@@ -2,6 +2,7 @@ import { useCallback, useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ViewWorkload } from "./api";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
+import { useAddress } from "@/lib/address";
 import { Facts, FindingStatus, matchWorkload, PeakCell, peakTint, RowFindings, UsageGrids, ValueText, WorkloadName } from "./pieces";
 import { useView } from "./report-page";
 
@@ -38,10 +39,18 @@ function Opened({ row }: { row: ViewWorkload }) {
 
 const renderOpened = (row: ViewWorkload) => <Opened row={row} />;
 
+// The workloads with no observed usage, filtered by the search of the table above.
 function Unobserved() {
   const { t } = useTranslation();
   const view = useView();
-  const rows = useMemo(() => view.workloads.filter((workload) => !workload.observed_usage), [view.workloads]);
+  const needle = (useAddress().params.get("q") ?? "").toLowerCase();
+  const rows = useMemo(
+    () =>
+      view.workloads.filter(
+        (workload) => !workload.observed_usage && searchText(workload).toLowerCase().includes(needle),
+      ),
+    [view.workloads, needle],
+  );
   const heading = useId();
   if (rows.length === 0) {
     return null;
@@ -122,14 +131,14 @@ export function WorkloadsTab() {
         header: t("report.column.cpuPeak"),
         cell: (row) => <PeakCell peak={row.cpu_usage.peak} share={row.cpu_request_percent.peak} word="request" />,
         sortValue: (row) => row.cpu_usage.peak.raw,
-        cellClassName: (row) => peakTint(row.cpu_usage.peak),
+        cellClassName: (row) => peakTint(row.cpu_usage.peak, row.cpu_request_percent.peak),
       },
       {
         id: "memory",
         header: t("report.column.memoryPeak"),
         cell: (row) => <PeakCell peak={row.memory_usage.peak} share={row.memory_request_percent.peak} word="request" />,
         sortValue: (row) => row.memory_usage.peak.raw,
-        cellClassName: (row) => peakTint(row.memory_usage.peak),
+        cellClassName: (row) => peakTint(row.memory_usage.peak, row.memory_request_percent.peak),
       },
     ],
     [t, hasFinding, status],

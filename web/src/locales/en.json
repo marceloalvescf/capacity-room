@@ -4,7 +4,7 @@
     "short": "CapacityRoom",
     "title": "{{screen}} · CapacityRoom",
     "skip": "Skip to content",
-    "version": "Version {{version}}"
+    "version": "Version"
   },
   "nav": {
     "label": "Main navigation",
@@ -430,6 +430,7 @@
       "allScopes": "All scopes",
       "none": "This report holds no findings.",
       "noMatch": "No finding matches these filters.",
+      "showAll": "Show all findings",
       "observed": "Observed",
       "action": "What to do",
       "evidence": "Evidence"
@@ -631,13 +632,13 @@
     "profile": {
       "anyPeriod": "Any period",
       "short": {
-        "warning_percent": "Attention {{value}} %",
-        "critical_percent": "Critical {{value}} %",
-        "low_utilization_percent": "Low utilization {{value}} %",
-        "autoscaler_near_max_percent": "Near maximum {{value}} %",
-        "nodepool_spread_points": "Node pool spread {{value}}",
-        "bursty_gap_percent": "Variation {{value}} %",
-        "hpa_replica_divergence": "Divergence {{value}}"
+        "warning_percent": "Attention",
+        "critical_percent": "Critical",
+        "low_utilization_percent": "Low utilization",
+        "autoscaler_near_max_percent": "Near maximum",
+        "nodepool_spread_points": "Node pool spread",
+        "bursty_gap_percent": "Variation",
+        "hpa_replica_divergence": "Divergence"
       },
       "testRefused": "Correct the marked fields, then test again.",
       "stale": "Someone saved this profile after you opened it. Your values are kept here.",

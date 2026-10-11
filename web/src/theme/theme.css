@@ -9,7 +9,7 @@
   --sidebar-fg: #26404f;
   --sidebar-active: #bcdbe9;
   --sidebar-active-fg: #0b1f2b;
-  --muted-fg: #4a5c68;
+  --muted-fg: #455560;
   --border: #cfdbe2;
   --neatline: #22323d;
   --scrim: rgb(14 26 34 / 0.45);
@@ -17,18 +17,19 @@
   --accent: #14375c;
   --action: #22323d;
   --action-fg: #ffffff;
-  --healthy: #17694f;
-  --attention: #7f4d00;
-  --critical: #a3135c;
-  --neutral: #485a66;
+  --healthy: #155e46;
+  --attention: #784800;
+  --critical: #a0135a;
+  --neutral: #445661;
   --critical-surface: #fbe8f1;
   --critical-border: #e9b1cd;
   --critical-surface-fg: #76104a;
   --info-surface: #e3f0f7;
   --info-surface-fg: #1b4870;
-  --depth-1: #d3e8f2;
-  --depth-2: #bcdbea;
-  --depth-3: #9ccae0;
+  --depth-1: #c5deea;
+  --depth-2: #aacee0;
+  --depth-3: #8bbcd5;
+  --hatch: 12%;
   color-scheme: light;
 }
 
@@ -41,7 +42,7 @@
   --sidebar-fg: #9fb7c8;
   --sidebar-active: #1a3650;
   --sidebar-active-fg: #e4eef4;
-  --muted-fg: #8ea3b2;
+  --muted-fg: #97aab8;
   --border: #1f2f3c;
   --neatline: #68849a;
   --scrim: rgb(0 0 0 / 0.65);
@@ -51,16 +52,17 @@
   --action-fg: #0a1118;
   --healthy: #6cc0a0;
   --attention: #d6a24a;
-  --critical: #e07fb0;
-  --neutral: #8ea3b2;
+  --critical: #e38db9;
+  --neutral: #97aab8;
   --critical-surface: #2a1222;
   --critical-border: #6a2a4c;
   --critical-surface-fg: #f1bad6;
-  --info-surface: #122840;
+  --info-surface: #122332;
   --info-surface-fg: #a9cbea;
-  --depth-1: #142d42;
-  --depth-2: #173650;
-  --depth-3: #1c4262;
+  --depth-1: #17324a;
+  --depth-2: #1b3f5e;
+  --depth-3: #1f4b70;
+  --hatch: 20%;
   color-scheme: dark;
 }
 
@@ -109,6 +111,12 @@
   --drop-shadow-*: initial;
   --text-shadow-*: initial;
 
+  /* The verdict numeral, and the soundings of the gauge scale at the size of a label. */
+  --text-display: 3.5rem;
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -0.025em;
+  --text-sounding: 0.6875rem;
+
   /* The depth gauge sounds once: the level rises to the nodes in use, then the hazard shows. */
   --animate-sounding: sounding 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-hazard-in: hazard-in 200ms ease-out 600ms both;
@@ -151,7 +159,7 @@
   background-color: var(--depth-2);
   background-image: repeating-linear-gradient(
       135deg,
-      color-mix(in srgb, var(--critical) 12%, transparent) 0 1.5px,
+      color-mix(in srgb, var(--critical) var(--hatch), transparent) 0 1.5px,
       transparent 1.5px 6px
     );
 }

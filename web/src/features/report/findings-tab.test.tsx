@@ -261,6 +261,27 @@ describe("findings tab", () => {
     expect(chips().map((c) => c.getAttribute("aria-pressed"))).toEqual(["false", "false", "false"]);
   });
 
+  it("show all findings clears the severities, the scope and the search", async () => {
+    const user = userEvent.setup();
+    const { router } = await open("?severity=&scope=node&q=nothing");
+    expect(screen.getByText("No finding matches these filters.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Show all findings" }));
+    expect(params(router).has("severity")).toBe(false);
+    expect(params(router).has("scope")).toBe(false);
+    expect(params(router).has("q")).toBe(false);
+    expect(items()).toHaveLength(26);
+    expect(screen.getByRole("searchbox", { name: i18next.t("report.findings.search") })).toHaveValue("");
+  });
+
+  it("a pressed severity takes the selected fill; a released one a neat-line outline", async () => {
+    await open("?severity=critical");
+    expect(chip("Critical")).toHaveClass("bg-action", "text-action-fg");
+    expect(chip("Critical").querySelector(".text-critical")).toBeNull();
+    expect(chip("Attention")).toHaveClass("border-neatline", "bg-surface");
+    expect(chip("Attention").querySelector(".text-attention")).not.toBeNull();
+    expect(chip("Critical").querySelector(".font-mono")).toHaveClass("italic");
+  });
+
   it("unknown pool and cluster scopes", async () => {
     await open("?finding=18");
     expect(within(detail()).getByRole("heading", { name: "Unknown pool" })).toBeInTheDocument();
@@ -268,6 +289,8 @@ describe("findings tab", () => {
     expect(items()).toHaveLength(26);
     const poolItem = items().find((button) => button.textContent.includes(sentenceOf(18))) as HTMLElement;
     expect(poolItem).toHaveTextContent("Unknown pool");
+    expect(within(poolItem).getByText("Unknown pool")).not.toHaveClass("font-mono");
+    expect(within(detail()).getByRole("heading", { name: "Unknown pool" })).not.toHaveClass("font-mono");
     const clusterItem = items().find((button) => button.textContent.includes(sentenceOf(10))) as HTMLElement;
     expect(clusterItem).toHaveTextContent("Cluster");
     expect(clusterItem.querySelector(".font-mono")).toBeNull();

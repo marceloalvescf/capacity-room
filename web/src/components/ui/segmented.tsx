@@ -12,7 +12,7 @@ interface SegmentedProps<T extends string> {
 export function Segmented<T extends string>({ legend, hideLegend = false, name, value, options, onChange }: SegmentedProps<T>) {
   return (
     <fieldset className="flex">
-      <legend className={hideLegend ? "sr-only" : "mb-3 text-lg font-semibold"}>{legend}</legend>
+      <legend className={hideLegend ? "sr-only" : "mb-1 text-sm font-medium"}>{legend}</legend>
       {options.map((option) => (
         <label
           key={option.value}

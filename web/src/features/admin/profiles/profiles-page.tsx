@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { errorText, toError } from "@/api/errors";
 import { useAnnounce } from "@/app/live-region";
 import { useScreenTitle } from "@/app/title";
+import { SummaryLine } from "@/components/summary-line";
 import { DataTable, factGrid, type Column } from "@/components/data-table";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonStyles } from "@/components/ui/button";
@@ -83,7 +84,7 @@ function ProfileRow({
           <span className="font-mono">{profile.allowed_namespaces.join(", ")}</span>
         </Fact>
         <Fact label={t("admin.profiles.fact.choices")} wide>
-          <span className="font-mono">{choices}</span>
+          <SummaryLine summary={choices} />
         </Fact>
       </dl>
       <div className="flex flex-wrap items-center gap-3">
@@ -101,7 +102,6 @@ function ProfileRow({
             {t("admin.profiles.edit")}
           </Link>
           <Button
-            variant="danger"
             onClick={(event) => {
               onDelete(profile, event.currentTarget);
             }}
@@ -169,14 +169,14 @@ export function ProfilesPage() {
         cell: (profile) => (
           <>
             <div>{profile.display_name}</div>
-            <div className="font-mono text-xs text-muted-fg">{profile.id}</div>
+            <div className="font-mono text-xs text-muted-fg [overflow-wrap:anywhere]">{profile.id}</div>
           </>
         ),
       },
       {
         id: "cluster",
         header: t("admin.profiles.column.cluster"),
-        cell: (profile) => <span className="font-mono">{profile.cluster_name}</span>,
+        cell: (profile) => <span className="font-mono [overflow-wrap:anywhere]">{profile.cluster_name}</span>,
       },
       {
         id: "state",

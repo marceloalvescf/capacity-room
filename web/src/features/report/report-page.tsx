@@ -94,7 +94,7 @@ export function ReportPage() {
           </PopoverContent>
         </Popover>
       </div>
-      <div className="border-b border-border">
+      <div className="border-b border-neatline">
         <nav aria-label={t("report.tabs")} className="-mb-px flex flex-wrap">
           {reportTabs.map((tab) => (
             <NavLink

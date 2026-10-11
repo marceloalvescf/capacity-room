@@ -19,16 +19,36 @@ function soundings(max: number): number[] {
 
 const tints = ["fill-depth-1", "fill-depth-2", "fill-depth-3"] as const;
 
+// The severity the view gives the cluster: it alone decides whether a full scale is drawn as a hazard.
+export type GaugeSeverity = "critical" | "attention" | null;
+
+const hazardStroke = { critical: "stroke-critical", attention: "stroke-attention" } as const;
+
 // The nodes of the cluster as a depth scale: one band per node up to the maximum, the bands in use tinted
-// deeper toward the maximum, the minimum as a dashed contour, and the last band hatched once no room is left.
-// The numbers are in the headline above it, so the drawing is hidden from assistive technology. Under reduced
-// motion, or with no animation at all, every part is drawn at once.
-export function DepthGauge({ current, max, min }: { current: number; max: number; min: number | null }) {
+// deeper toward the maximum, and the minimum as a dashed contour. Once no room is left, the last band and the
+// line that closes the scale take the severity of the cluster finding: hatched and drawn in its colour when it
+// is critical or attention, plain depth and a neat-line otherwise. The numbers are in the headline above it,
+// so the drawing is hidden from assistive technology. Under reduced motion, or with no animation at all, every
+// part is drawn at once.
+export function DepthGauge({
+  current,
+  max,
+  min,
+  severity,
+}: {
+  current: number;
+  max: number;
+  min: number | null;
+  severity: GaugeSeverity;
+}) {
   const pattern = `hazard-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const x = (value: number) => left + (span * Math.min(Math.max(value, 0), max)) / max;
   const full = current >= max;
+  const hatched = full && severity !== null;
   const bands = Array.from({ length: max }, (_, n) => n);
-  const filled = bands.filter((n) => n < current && !(full && n === max - 1));
+  const filled = bands.filter((n) => n < current && !(hatched && n === max - 1));
+  const tint = (n: number) => tints[Math.min(2, Math.floor((3 * n) / max))];
+  // A class would override the fill attribute, so the hatched band takes the pattern alone.
   const band = (n: number, className?: string) => (
     <rect
       key={n}
@@ -44,24 +64,23 @@ export function DepthGauge({ current, max, min }: { current: number; max: number
   );
   return (
     <svg viewBox={`0 0 ${String(width)} ${String(height)}`} aria-hidden="true" className="mt-2 block h-auto w-full max-w-[360px] overflow-visible">
-      <defs>
-        <pattern id={pattern} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <rect width="6" height="6" className="fill-depth-3" />
-          <line x1="0" y1="0" x2="0" y2="6" strokeWidth="2.2" className="stroke-critical" />
-        </pattern>
-      </defs>
+      {hatched ? (
+        <defs>
+          <pattern id={pattern} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="6" height="6" className="fill-depth-3" />
+            <line x1="0" y1="0" x2="0" y2="6" strokeWidth="2.2" className={hazardStroke[severity]} />
+          </pattern>
+        </defs>
+      ) : null}
       {/* The level rises once, from the left edge, to the nodes in use. */}
       <g className="origin-left [transform-box:view-box] motion-safe:animate-sounding">
-        {filled.map((n) => band(n, tints[Math.min(2, Math.floor((3 * n) / max))]))}
+        {filled.map((n) => band(n, tint(n)))}
         {full ? null : (
           <line x1={x(current)} y1={top - 4} x2={x(current)} y2={top + depth + 4} strokeWidth="2" className="stroke-accent" />
         )}
       </g>
-      {/* Once the level is in, the last band shows hatched. A class would override the fill attribute, so the
-          hatched band takes the pattern alone. */}
-      {full ? (
-        <g className="motion-safe:animate-hazard-in">{band(max - 1)}</g>
-      ) : null}
+      {/* Once the level is in, the last band shows hatched. */}
+      {hatched ? <g className="motion-safe:animate-hazard-in">{band(max - 1)}</g> : null}
       {bands.filter((n) => n >= current).map((n) => band(n, "fill-transparent"))}
       {max <= 40
         ? bands.slice(1).map((n) => (
@@ -83,12 +102,13 @@ export function DepthGauge({ current, max, min }: { current: number; max: number
       <rect x={left} y={top} width={span} height={depth} fill="none" strokeWidth="1" className="stroke-neatline" />
       {full ? (
         <line
+          data-closing=""
           x1={x(max)}
           y1={top - 4}
           x2={x(max)}
           y2={top + depth + 4}
           strokeWidth="2"
-          className="stroke-critical motion-safe:animate-hazard-in"
+          className={`${hatched ? hazardStroke[severity] : "stroke-neatline"} motion-safe:animate-hazard-in`}
         />
       ) : null}
       {soundings(max).map((value) => (
@@ -98,7 +118,7 @@ export function DepthGauge({ current, max, min }: { current: number; max: number
             x={x(value)}
             y={top + depth + 18}
             textAnchor={value === 0 ? "start" : value === max ? "end" : "middle"}
-            className="fill-muted-fg font-mono text-[11px] italic"
+            className="fill-muted-fg font-mono text-sounding italic"
           >
             {value}
           </text>

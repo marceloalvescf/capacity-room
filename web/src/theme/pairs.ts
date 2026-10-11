@@ -64,4 +64,5 @@ export const pairs: readonly Pair[] = [
   line("action", "bg"),
   line("critical", "bg"),
   line("critical", "depth-3"),
+  line("attention", "depth-3"),
 ];

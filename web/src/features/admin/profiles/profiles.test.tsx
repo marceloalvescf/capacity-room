@@ -86,7 +86,10 @@ describe("the profiles screen", () => {
     expect(revision).toHaveTextContent("3, saved 2026-09-01");
     expect(revision.querySelector(".font-mono")).toBeNull();
     expect(within(fact("Namespaces") as HTMLElement).getByText("payments, billing")).toHaveClass("font-mono");
-    expect(within(fact("Report form choices") as HTMLElement).getByText("Any period · 24h · America/Sao_Paulo · Detailed · All")).toHaveClass("font-mono");
+    const choices = fact("Report form choices") as HTMLElement;
+    expect(choices).toHaveTextContent("Any period · 24h · America/Sao_Paulo · Detailed · All");
+    expect(within(choices).getByText("Any period")).not.toHaveClass("font-mono");
+    expect(within(choices).getByText("America/Sao_Paulo")).toHaveClass("font-mono");
     expect(screen.getByRole("link", { name: "Edit" })).toHaveAttribute("href", "/profiles/production/edit");
   });
 
@@ -147,8 +150,10 @@ describe("the profiles screen", () => {
     await screen.findByRole("heading", { level: 1, name: "New report" });
     await user.click(screen.getByRole("link", { name: "Profiles" }));
     await user.click(await screen.findByRole("button", { name: "Show the details of lab" }));
+    expect(screen.getByRole("button", { name: "Delete" })).not.toHaveClass("bg-critical");
     await user.click(screen.getByRole("button", { name: "Delete" }));
     const dialog = await screen.findByRole("alertdialog", { name: "Delete the profile Lab?" });
+    expect(within(dialog).getByRole("button", { name: "Delete" })).toHaveClass("bg-critical");
     expect(dialog).toHaveTextContent(
       "It leaves this list and the new report form. Reports already requested keep it, and its identifier can be used again.",
     );

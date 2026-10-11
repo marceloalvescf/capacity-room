@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import type { UseFormSetError } from "react-hook-form";
 import { z } from "zod";
+import { valuePart, wordPart, type Summary } from "@/components/summary-line";
 import { ApiFailure } from "@/api/client";
 import type { components } from "@/api/schema.gen";
 import type { Profile, ProfileDocument } from "./api";
@@ -100,20 +101,20 @@ export function valuesOf(profile: Profile): ProfileValues {
 }
 
 // The two lines that sum up the choices of the report form and the thresholds of a profile.
-export function summaries(values: ProfileValues, t: TFunction): { choices: string; thresholds: string } {
+export function summaries(values: ProfileValues, t: TFunction): { choices: Summary; thresholds: Summary } {
   const periods = toLines(values.permitted_periods);
-  const choices = [
-    periods.length === 0 ? t("admin.profile.anyPeriod") : periods.join(", "),
-    values.default_period === "" ? "24h" : values.default_period,
-    values.default_timezone === "" ? "America/Sao_Paulo" : values.default_timezone,
-    t(`reportProfile.${values.default_report_profile === "" ? "detailed" : values.default_report_profile}`),
-    t(`minSeverity.${values.default_min_severity === "" ? "all" : values.default_min_severity}`),
-  ];
   return {
-    choices: choices.join(" · "),
-    thresholds: thresholdKeys
-      .map((key) => t(`admin.profile.short.${key}`, { value: values.thresholds[key] }))
-      .join(" · "),
+    choices: [
+      periods.length === 0 ? wordPart(t("admin.profile.anyPeriod")) : valuePart(periods.join(", ")),
+      valuePart(values.default_period === "" ? "24h" : values.default_period),
+      valuePart(values.default_timezone === "" ? "America/Sao_Paulo" : values.default_timezone),
+      wordPart(t(`reportProfile.${values.default_report_profile === "" ? "detailed" : values.default_report_profile}`)),
+      wordPart(t(`minSeverity.${values.default_min_severity === "" ? "all" : values.default_min_severity}`)),
+    ],
+    thresholds: thresholdKeys.map((key) => [
+      ...wordPart(t(`admin.profile.short.${key}`)),
+      ...valuePart(key.endsWith("_percent") ? `${values.thresholds[key]} %` : values.thresholds[key]),
+    ]),
   };
 }
 

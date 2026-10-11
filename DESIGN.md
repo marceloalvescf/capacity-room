@@ -10,25 +10,25 @@ colors:
   shallows-ink: "#26404f"
   shallows-active: "#bcdbe9"
   shallows-active-ink: "#0b1f2b"
-  muted-ink: "#4a5c68"
+  muted-ink: "#455560"
   hairline: "#cfdbe2"
   neatline: "#22323d"
   input-border: "#6c808d"
   sounding-blue: "#14375c"
   action-ink: "#22323d"
   action-ink-fg: "#ffffff"
-  sea-green: "#17694f"
-  ochre: "#7f4d00"
-  chart-magenta: "#a3135c"
-  slate-neutral: "#485a66"
+  sea-green: "#155e46"
+  ochre: "#784800"
+  chart-magenta: "#a0135a"
+  slate-neutral: "#445661"
   hazard-surface: "#fbe8f1"
   hazard-border: "#e9b1cd"
   hazard-surface-ink: "#76104a"
   info-surface: "#e3f0f7"
   info-surface-ink: "#1b4870"
-  depth-1: "#d3e8f2"
-  depth-2: "#bcdbea"
-  depth-3: "#9ccae0"
+  depth-1: "#c5deea"
+  depth-2: "#aacee0"
+  depth-3: "#8bbcd5"
 typography:
   display:
     fontFamily: "JetBrains Mono Variable, ui-monospace, monospace"
@@ -56,6 +56,11 @@ typography:
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.43
+  sounding:
+    fontFamily: "JetBrains Mono Variable, ui-monospace, monospace"
+    fontSize: "0.6875rem"
+    fontStyle: "italic"
+    fontWeight: 400
   label:
     fontFamily: "Public Sans Variable, system-ui, sans-serif"
     fontSize: "0.6875rem"
@@ -133,6 +138,18 @@ components:
     backgroundColor: "{colors.info-surface}"
   peak-cell-attention:
     backgroundColor: "{colors.depth-1}"
+  severity-toggle-pressed:
+    backgroundColor: "{colors.action-ink}"
+    textColor: "{colors.action-ink-fg}"
+    rounded: "{rounded.hairline}"
+    padding: "0 12px"
+    height: "36px"
+  severity-toggle:
+    backgroundColor: "{colors.sheet}"
+    textColor: "{colors.sheet-ink}"
+    rounded: "{rounded.hairline}"
+    padding: "0 12px"
+    height: "36px"
   alert-error:
     backgroundColor: "{colors.hazard-surface}"
     textColor: "{colors.hazard-surface-ink}"
@@ -169,7 +186,7 @@ components:
 
 CapacityRoom reads a cluster the way a hydrographic chart reads water. Room left is depth under the keel. The ground is white deep water with a faint blue cast. The shell is a pale shallow-water tint closed by dark neat-lines. Graded blue depth tints appear only where room runs out. Chart magenta marks a hazard (critical), ochre marks attention, and sea-green marks healthy. The dark theme is a night chart: muted and never glowing.
 
-The system is flat, dense, and drawn with hairlines. Every radius is 2px and nothing casts a shadow. Structure comes from neat-lines, hairline rules, and tonal tints. Names and numbers are set in JetBrains Mono, and its italic is the soundings voice of secondary numbers. Interface text is set in Public Sans. The signature drawing is the depth gauge: the cluster's nodes as a sounded depth scale, with the last band hatched in magenta once no room is left.
+The system is flat, dense, and drawn with hairlines. Every radius is 2px and nothing casts a shadow. Structure comes from neat-lines, hairline rules, and tonal tints. Names and numbers are set in JetBrains Mono, and its italic is the soundings voice of secondary numbers. Interface text is set in Public Sans. The signature drawing is the depth gauge: the cluster's nodes as a sounded depth scale, whose last band is hatched once no room is left and the report gives the cluster a finding.
 
 The visual system answers to two binding project rules. Status is a shape, then a label, then a colour, so no status is ever carried by colour alone. Every foreground and background drawn together is a listed token pair that passes a contrast test in both themes.
 
@@ -177,10 +194,10 @@ The visual system answers to two binding project rules. Status is a shape, then 
 - White chart ground, pale shallows shell, dark neat-lines.
 - Hairline shapes: 2px radius everywhere, no shadows anywhere.
 - Three depth tints that follow the status the report gives a value, never a threshold of the web app's own.
-- Magenta hatching is the one hazard device.
-- Monospace for every name and number; mono italic for secondary soundings.
+- Hatching is the one hazard device, and it follows a status of the report: magenta for critical, ochre for attention on the gauge.
+- Monospace for every name and number, and only for them; mono italic for secondary soundings.
 - One uppercase tracked label size for table headers and small section headings.
-- Motion only under reduced-motion-safe conditions, and only to sound the gauge once.
+- Motion only under reduced-motion-safe conditions: the gauge sounds once, and a pulse marks work in progress.
 
 ## Colors
 
@@ -192,12 +209,12 @@ A cool chart palette: blue-cast neutrals, three blue depth tints, and three char
 
 ### Secondary
 - **Chart Magenta** (critical): the critical status, field error text, the danger button, and the hazard hatching. Critical labels are set bold.
-- **Ochre** (attention): the attention status.
+- **Ochre** (attention): the attention status, and the gauge hatch when the cluster finding is attention.
 - **Sea Green** (healthy): the healthy status.
 - **Slate Neutral** (neutral): the undefined and unavailable statuses.
 
 ### Tertiary
-- **Depth 1 / Depth 2 / Depth 3** (depth-1..3): graded water. Depth 1 tints a peak cell in attention. Depth 2 is the ground of the hazard hatch on a critical peak cell. Depth 3 lies only under the gauge and carries no text. The gauge tints its filled bands from Depth 1 to Depth 3 toward the maximum.
+- **Depth 1 / Depth 2 / Depth 3** (depth-1..3): graded water. Depth 1 tints a peak cell in attention. Depth 2 is the ground of the hazard hatch on a critical peak cell. Depth 3 lies only under the gauge and carries no text. The gauge tints its filled bands from Depth 1 to Depth 3 toward the maximum. Night values: #17324a, #1b3f5e, #1f4b70. Each step stands at least about 1.2:1 from the next, and Depth 1 as far from Sheet and from Info Surface, so a tint stays visible on an opened row in both themes.
 
 ### Neutral
 - **Chart Ground** (bg): page background.
@@ -207,17 +224,17 @@ A cool chart palette: blue-cast neutrals, three blue depth tints, and three char
 - **Shallows Active** (sidebar-active / sidebar-active-fg): the current navigation entry and a highlighted menu item.
 - **Muted Ink** (muted-fg): captions, meta lines, labels, secondary values.
 - **Hairline** (border): row rules, table frames, the tab baseline.
-- **Neatline** (neatline): the shell's closing lines, the frame of every floating layer, the top rule of the overview verdict, and the gauge outline and ticks.
+- **Neatline** (neatline): the shell's closing lines, the baseline of the report tabs, the frame of every floating layer, the double frame of the sign-in card, the outline of a released severity toggle, and the gauge outline and ticks.
 - **Input Border** (input-border): field and secondary-button strokes, held at 3:1.
 - **Scrim** (`rgb(14 26 34 / 0.45)` light, `rgb(0 0 0 / 0.65)` dark): the overlay behind a modal.
-- **Hazard Surface / Border / Ink** and **Info Surface / Ink**: the error alert and the notice alert. Info Surface is also the ground of an opened table row.
+- **Hazard Surface / Border / Ink** and **Info Surface / Ink**: the error alert and the notice alert. Info Surface is also the ground of an opened table row; its night value is #122332, kept apart from the night depth tints.
 
 ### Named Rules
 **The Token Pair Rule.** A colour is a token pair. Every foreground drawn on a background is listed in `web/src/theme/pairs.ts` and must reach 4.5:1 for text, or 3:1 for a large heading, an input border, a focus ring, or a line, in both themes. A new pair on screen enters the list first.
 
-**The Status-Led Depth Rule.** A depth tint follows the status the report view gives a value. Attention takes Depth 1, critical takes the hazard hatch over Depth 2, and every other status takes none. The web app never computes a threshold of its own.
+**The Status-Led Depth Rule.** A depth tint follows the statuses the report view gives a value. A peak cell takes the worse of the status of its peak and the status of its share of the request: attention takes Depth 1, critical takes the hazard hatch over Depth 2, and every other status takes none. The web app never computes a threshold of its own.
 
-**The One Hazard Rule.** Magenta hatching (135 degrees, 1.5px lines every 6px at 12% critical over Depth 2 in a cell; 2.2px critical lines over Depth 3 in the gauge) means critical and nothing else.
+**The One Hazard Rule.** Hatching marks a status of the report and nothing else. In a cell it is magenta: 135 degrees, 1.5px lines every 6px, critical at 12% in light and 20% in dark (the `--hatch` token) over Depth 2. On the gauge, the last band of a full scale takes 2.2px lines over Depth 3 in the colour of the worst cluster finding: magenta for critical, ochre for attention. With no such finding a full scale is plain Depth 3, closed by a Neatline; the numbers alone never hatch it.
 
 ## Typography
 
@@ -228,16 +245,16 @@ A cool chart palette: blue-cast neutrals, three blue depth tints, and three char
 **Character:** Public Sans stands upright for names of things in the interface: navigation, headings, sentences. JetBrains Mono carries every name and number of the cluster, and its italic speaks the secondary soundings: shares, counts, gauge scale numbers. Both faces are self-hosted from npm packages, because the CSP allows no outside source.
 
 ### Hierarchy
-- **Display** (mono 600, 3.5rem, line-height 1, tracking -0.025em): the verdict numeral "current / maximum" of the overview. One per screen; the slash between is set in Public Sans 400 in Muted Ink.
+- **Display** (`text-display`: mono 600, 3.5rem, line-height 1, tracking -0.025em): the verdict numeral "current / maximum" of the overview. One per screen; the slash between is set in Public Sans 400 in Muted Ink.
 - **Headline** (600, 1.25rem): the page title of every screen and the sign-in card.
 - **Title** (600, 1.125rem): dialog titles and the brand word (700, tracking tight). Section headings inside a page step down to 1rem 600.
 - **Body** (400, 0.875rem / 1.25rem): sentences, table cells, controls, captions. Small meta under a name is 0.75rem.
 - **Data** (mono 400, 0.875rem): every cluster name, number, version, user name, and time zone. Count rows set it at 1.25rem 600.
-- **Sounding** (mono italic): the share under a peak, counts after a status word, the minimum-node and event figures, and the gauge scale (11px).
+- **Sounding** (mono italic): the share under a peak, every count after its status word, the minimum-node and event figures, and the gauge scale (`text-sounding`, 0.6875rem). A count always follows its word: "Critical 9".
 - **Label** (600, 0.6875rem, line-height 1rem, tracking 0.08em, uppercase, Muted Ink): table headers and small section headings. A sort button inside a header takes it whole.
 
 ### Named Rules
-**The Mono Names Rule.** Every name and number a cluster produced is set in JetBrains Mono. Interface words never are.
+**The Mono Names Rule.** Every name and number a cluster produced is set in JetBrains Mono, and only those. Interface words never are: a placeholder such as "Unavailable", the unknown node pool, a workload kind, a profile's display name, the word "Version" beside its number. A summary line mixes the two, its values in mono and its words upright.
 
 **The One Label Rule.** Uppercase tracked text has exactly one size (0.6875rem). It names a column or a section; it is never a decorative tag above a title.
 
@@ -247,7 +264,7 @@ The signed-in screen is a two-column grid at `md` (768px) and above: a 16rem sha
 
 Spacing follows a 4px step: 2, 4, 6, 8, 12, 16, 24, and 40px are the values in use. Controls and table cells use 12px horizontal and 8px vertical padding; stacks of sections use 16px gaps; the overview verdict uses 24px vertical padding and a 40px column gap. At `xl` (1280px) the verdict splits 4fr to 7fr: growth on the left, pressure by scope on the right.
 
-Tables never scroll sideways. Cells wrap, names break anywhere, and the header sticks under the window top. An opened row reveals itself between the sticky header and the window bottom. Report screens have seven tabs under the title; the PDF action sits at the right of the title.
+Tables never scroll sideways. Cells wrap between words and never inside one; only a mono name may break anywhere, and a status word never breaks. The header sticks under the window top. An opened row reveals itself between the sticky header and the window bottom, and only a value longer than the table breaks inside it. Report screens have seven tabs under the title, over a Neatline baseline that also closes the top of the overview verdict; the PDF action sits at the right end of the title row. On the findings tab at `lg` and above, the detail of the selected finding sticks 16px under the window top and scrolls within the window height.
 
 ## Elevation & Depth
 
@@ -258,7 +275,7 @@ The system is flat. The theme resets every Tailwind shadow scale (`--shadow-*`, 
 
 ## Shapes
 
-Every radius is 2px: a near-square corner that keeps a hairline drawing from looking cut. Borders are 1px; the active tab rule is 2px; the focus ring is a 2px Sounding Blue outline with a 2px offset. The active navigation entry gets an inset 1px Neatline ring. The brand mark is a load-line (Plimsoll) disc: a 2.25px circle crossed at the centre by a Sounding Blue line. Status shapes are drawn as 12px SVGs: a filled circle (healthy), a filled triangle (attention), a filled diamond (critical), an open circle (undefined), and a dash (unavailable).
+Every radius is 2px: a near-square corner that keeps a hairline drawing from looking cut. Borders are 1px; the active tab rule is 2px; the focus ring is a 2px Sounding Blue outline with a 2px offset. The active navigation entry gets an inset 1px Neatline ring. The sign-in card has a double neat-line frame: a 1px Neatline border and a 1px Hairline outline 4px outside it. The brand mark is a load-line (Plimsoll) disc: a 2.25px circle crossed at the centre by a Sounding Blue line. Status shapes are drawn as 12px SVGs: a filled circle (healthy), a filled triangle (attention), a filled diamond (critical), an open circle (undefined), and a dash (unavailable).
 
 ## Components
 
@@ -266,12 +283,15 @@ Every radius is 2px: a near-square corner that keeps a hairline drawing from loo
 - **Shape:** gently squared (2px), 1px border, min height 36px, 12px horizontal padding, 0.875rem weight 500.
 - **Primary:** Action Ink fill and border with Action Ink foreground.
 - **Secondary (default):** Sheet fill, Input Border stroke, Sheet ink.
-- **Danger:** Chart Magenta fill and border, Sheet text; for destructive confirmation.
+- **Danger:** Chart Magenta fill and border, Sheet text; only on the confirm button of a destructive dialog. The action that opens that dialog is a secondary button.
 - **Focus / Disabled:** 2px Sounding Blue outline offset 2px; disabled drops to 60% opacity with a not-allowed cursor. No hover colour shift.
 - **Icon button:** a secondary button 36px square with a 20px Phosphor icon; its name is in `aria-label` and in a tooltip on hover and focus.
 
 ### Segmented control
-A row of radio labels joined edge to edge (-1px overlap), 2px outer corners, 16px padding. The checked segment takes the Action Ink fill; focus outlines the segment.
+A row of radio labels joined edge to edge (-1px overlap), 2px outer corners, 16px padding, under a legend in the field-label style (0.875rem 500). The checked segment takes the Action Ink fill; focus outlines the segment.
+
+### Severity toggles
+The findings filter: one 2px-cornered toggle per severity, the status mark then its count in mono italic. A pressed toggle takes the checked-segment style, Action Ink fill and Action Ink Foreground text, and its mark takes that text colour while keeping its shape and word; a released toggle is Sheet with a Neatline outline and the mark in its status colour. When the filters leave no finding, a secondary button "Show all findings" clears the severities, the scope, and the search.
 
 ### Inputs / Fields
 - **Style:** Sheet fill, 1px Input Border, 2px radius, min height 36px, 12px padding. The label sits above at 0.875rem 500; a hint below in Muted Ink; an error below in Chart Magenta. A select is the browser's own `<select>`, styled the same.
@@ -279,11 +299,11 @@ A row of radio labels joined edge to edge (-1px overlap), 2px outer corners, 16p
 - **Checkbox:** native box tinted with Action Ink.
 
 ### Navigation
-- **Shell:** Shallows column, brand at the top, links at 0.875rem with 8px by 12px padding. The current page takes the Shallows Active tint, weight 600, and an inset Neatline frame. The user name and version sit at the foot in mono.
-- **Report tabs:** a row of 0.875rem tabs over a Hairline baseline; the active tab is Chart Ink 600 with a 2px Sounding Blue underline, the rest Muted Ink.
+- **Shell:** Shallows column, brand at the top, links at 0.875rem with 8px by 12px padding. The current page takes the Shallows Active tint, weight 600, and an inset Neatline frame; Reports stays current on a report and on a job in progress. The user name sits at the foot in mono, and the version as the word "Version" upright beside its number in mono.
+- **Report tabs:** a row of 0.875rem tabs, 10px apart in padding, over a Neatline baseline; the active tab is Chart Ink 600 with a 2px Sounding Blue underline, the rest Muted Ink. The seven tabs hold one line at 1024px in both languages.
 
 ### Data table
-The one table of the app: a Sheet container with a 1px Hairline frame and 2px corners, uppercase labels in the sticky header, Hairline rules between rows, an expander column of 48px. An opened row is tinted Info Surface and its detail row sits on Chart Ground at 24px by 16px padding. A peak cell stacks the peak in mono over its share in mono italic, and takes the depth tint its status earns.
+The one table of the app: a Sheet container with a 1px Hairline frame and 2px corners, uppercase labels in the sticky header, Hairline rules between rows, an expander column of 48px. An opened row is tinted Info Surface and its detail row sits on Chart Ground at 24px by 16px padding. A peak cell stacks the peak in mono over its share in mono italic, and takes the depth tint its statuses earn. A peak with no number shows its placeholder word alone, upright in Muted Ink, with no share under it.
 
 ### Status mark
 Shape, then label, then colour. The 12px shape and the word share the status hue; critical words are bold. Where the label is not the status word, the status word is added for screen readers.
@@ -295,25 +315,35 @@ Shape, then label, then colour. The 12px shape and the word share the status hue
 Menu, popover, dialog, and alert dialog are Sheet with a 1px Neatline frame and 2px corners; a dialog pads 24px and caps at 36rem wide (28rem for a confirmation). A highlighted menu item takes Shallows Active with an inset Sounding Blue outline. The tooltip inverts: Chart Ink ground, Chart Ground text, 0.75rem.
 
 ### Depth gauge (signature)
-The cluster's nodes drawn as a sounded depth scale 360px wide: one band per node up to the autoscaler maximum, inside a 1px Neatline frame. Filled bands are tinted Depth 1 to Depth 3 toward the maximum and parted by hairlines in the ground colour. A 2px Sounding Blue line marks the current level; the minimum is a dashed Neatline contour. Once no room is left, the last band is hatched magenta and a 2px Chart Magenta line closes the scale. Ticks below carry mono italic 11px soundings, at most ten. The level rises once from the left (`sounding`, 600ms, cubic-bezier(0.16, 1, 0.3, 1)), then the hazard fades in (`hazard-in`, 200ms after 600ms). Under reduced motion every part is drawn at once. The drawing is hidden from assistive technology because the numbers stand in the headline above it.
+The cluster's nodes drawn as a sounded depth scale 360px wide: one band per node up to the autoscaler maximum, inside a 1px Neatline frame. Filled bands are tinted Depth 1 to Depth 3 toward the maximum and parted by hairlines in the ground colour. A 2px Sounding Blue line marks the current level; the minimum is a dashed Neatline contour. Once no room is left, a 2px line closes the scale, and the last band and that line take the severity of the worst cluster finding: hatched and drawn in Chart Magenta for critical, in Ochre for attention; with no cluster finding above healthy, the band stays plain Depth 3 and the line is Neatline. Ticks below carry mono italic soundings (`text-sounding`), at most ten. The drawing is hidden from assistive technology because the numbers stand in the headline above it.
 
 ### Overview verdict
-A section between a Neatline top rule and a Hairline bottom rule. Left: a label, the display numeral, the depth gauge, a caption, the worst cluster finding, mono italic secondary figures, and a link. Right: pressure by scope, one row per scope type with a Hairline top rule, the scope label as a status mark in an 8rem column, then the leading finding as an underlined link, its name and peak in mono, and its severity counts.
+A section under the Neatline baseline of the report tabs, closed by a Hairline bottom rule. Left: a label, the display numeral, the depth gauge, a caption, the worst cluster finding, mono italic secondary figures, and a link. The link to the autoscaling tab sits at the start of its line, so its focus ring hugs the text. Right: pressure by scope, one row per scope type with a Hairline top rule, the scope label as a status mark in an 8rem column, then the leading finding as an underlined link, its name and peak in mono, and its severity counts. Below: the totals, each a shape, its word, and its count in mono italic.
+
+### PDF block
+In the PDF popover and on the progress page: one row per language at 0.875rem, parted by Hairline dividers inside the layer's Neatline frame, with no box of their own.
+
+## Motion
+Motion appears only under `motion-safe:`; under reduced motion everything is drawn at once and nothing pulses.
+- **Sounding:** the gauge level rises once from the left (`sounding`, 600ms, cubic-bezier(0.16, 1, 0.3, 1)), then the hatched band and the closing line fade in (`hazard-in`, 200ms after 600ms).
+- **Updating ring:** while a report on the list is queued, running, or has a pending PDF, a 10px Sounding Blue ring (an outline circle, not a filled dot) pulses beside the words that say the list is updating.
+- **Progress step:** on the progress page the current step pulses.
+- Navigation links have no transition.
 
 ## Do's and Don'ts
 
 ### Do:
 - **Do** take every colour from a token in `web/src/theme/theme.css` and add each new foreground and background pair to `web/src/theme/pairs.ts` before shipping it.
 - **Do** draw a status as its shape first, then its word, then its colour, through the status mark.
-- **Do** set every cluster name and number in JetBrains Mono, and secondary numbers in its italic.
+- **Do** set every cluster name and number in JetBrains Mono, and secondary numbers in its italic; set every interface word upright, placeholders included.
 - **Do** keep every corner at 2px and separate layers with a Neatline frame.
-- **Do** tint a value only by the status the report gives it: Depth 1 for attention, the hazard hatch for critical.
-- **Do** put motion only under `motion-safe:` and keep it to the single sounding of the gauge.
+- **Do** tint a value only by the statuses the report gives it: Depth 1 for attention, the hazard hatch for critical.
+- **Do** put motion only under `motion-safe:` and keep it to the sounding of the gauge and the pulses of work in progress.
 - **Do** style through classes and the theme's utilities; the CSP allows no inline style and no injected style element.
 
 ### Don't:
 - **Don't** add a shadow, a glow, or a gradient to any surface; the theme resets every shadow scale.
-- **Don't** use magenta hatching or Chart Magenta for anything but critical.
+- **Don't** use magenta hatching or Chart Magenta for anything but critical, and never hatch the gauge by its numbers alone.
 - **Don't** let a depth tint carry Depth 3 under text; Depth 3 lies only under the gauge.
 - **Don't** set a label in uppercase at any size other than 0.6875rem, or use it as a decorative tag above a title.
 - **Don't** compute a threshold in the web app to decide a tint or a status.

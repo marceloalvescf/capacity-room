@@ -46,12 +46,15 @@ describe("the profile form", () => {
       expect(screen.getByRole("button", { name })).toHaveTextContent(/^Change$/);
     }
     expect(screen.getByLabelText("Active")).toHaveAccessibleDescription("An active profile is offered in the new report form.");
-    expect(screen.getByText("Any period · 24h · America/Sao_Paulo · Detailed · All")).toHaveClass("font-mono");
-    expect(
-      screen.getByText(
-        "Attention 70 % · Critical 85 % · Low utilization 30 % · Near maximum 80 % · Node pool spread 30 · Variation 100 % · Divergence 1",
-      ),
-    ).toBeInTheDocument();
+    const choices = screen.getByText("Any period").closest("p") as HTMLElement;
+    expect(choices).toHaveTextContent(/^Any period · 24h · America\/Sao_Paulo · Detailed · All$/);
+    expect(choices).not.toHaveClass("font-mono");
+    expect(within(choices).getByText("America/Sao_Paulo")).toHaveClass("font-mono");
+    const thresholds = screen.getByText("Low utilization").closest("p") as HTMLElement;
+    expect(thresholds).toHaveTextContent(
+      /^Attention 70 % · Critical 85 % · Low utilization 30 % · Near maximum 80 % · Node pool spread 30 · Variation 100 % · Divergence 1$/,
+    );
+    expect(within(thresholds).getByText("70 %")).toHaveClass("font-mono");
     expect(screen.getByText("Saving creates revision 1.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Cancel" })).toHaveAttribute("href", "/profiles");
     expect(screen.getByLabelText("Allowed namespaces")).toHaveAttribute("rows", "5");

@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -357,5 +357,22 @@ describe("screens", () => {
     expect(document.querySelectorAll("[aria-live='polite']")).toHaveLength(1);
     expect(screen.getByText("ana")).toHaveClass("font-mono");
     expect(document.getElementById("main")).toHaveAttribute("tabindex", "-1");
+  });
+});
+
+describe("navigation", () => {
+  it("Reports is the current entry for the list, a job in progress, and a report", async () => {
+    const id = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a01";
+    mock.reports = [report()];
+    mock.profiles = [profileSummary()];
+    mock.views.set(`${id}:en`, viewEn as components["schemas"]["ReportView"]);
+    for (const path of ["/reports", `/jobs/${id}`, `/reports/${id}/overview`]) {
+      await renderApp(path, "en");
+      await screen.findByRole("heading", { level: 1 });
+      const nav = screen.getByRole("navigation", { name: "Main navigation" });
+      expect(within(nav).getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
+      expect(within(nav).getByRole("link", { name: "Account" })).not.toHaveAttribute("aria-current");
+      cleanup();
+    }
   });
 });

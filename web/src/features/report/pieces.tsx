@@ -10,13 +10,18 @@ import { useView } from "./report-page";
 export function WorkloadName({ row }: { row: ViewWorkload }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="font-mono">{row.name}</span>
+      <span className="font-mono [overflow-wrap:anywhere]">{row.name}</span>
       <span className="flex flex-wrap gap-x-2 text-xs text-muted-fg">
-        <span className="font-mono">{row.kind}</span>
-        <span className="font-mono">{row.namespace}</span>
+        <span>{row.kind}</span>
+        <span className="font-mono [overflow-wrap:anywhere]">{row.namespace}</span>
       </span>
     </div>
   );
+}
+
+// The node pool the report could not name, which reads as a word, not as a name of the cluster.
+export function isUnknownPool(finding: ViewFinding): boolean {
+  return finding.scope_type === "nodepool" && finding.scope_name === "unknown";
 }
 
 // The scope name as the reader sees it: none for the cluster, a word for a node pool the report could not name.
@@ -24,7 +29,7 @@ export function scopeName(finding: ViewFinding, unknownPool: string): string | n
   if (finding.scope_type === "cluster") {
     return null;
   }
-  return finding.scope_type === "nodepool" && finding.scope_name === "unknown" ? unknownPool : finding.scope_name;
+  return isUnknownPool(finding) ? unknownPool : finding.scope_name;
 }
 
 // A value of the view: the shape of its status, the status word for screen readers, then its text.
@@ -59,9 +64,13 @@ export function Counts({ label, items }: { label: string; items: { label: string
   );
 }
 
-// The peak of a row and, under it, the share it makes of the request, each beside the shape of its status.
+// The peak of a row and, under it, the share it makes of the request, each beside the shape of its status. A peak
+// with no number is its placeholder word alone, muted, with no share under it.
 export function PeakCell({ peak, share, word }: { peak: ViewValue; share: ViewValue; word: "request" | "requested" }) {
   const { t } = useTranslation();
+  if (peak.raw === null) {
+    return <span className="text-muted-fg">{peak.text}</span>;
+  }
   const text =
     share.raw === null ? share.text : t(word === "request" ? "report.share.request" : "report.share.requested", { value: share.text });
   return (
@@ -76,10 +85,11 @@ export function PeakCell({ peak, share, word }: { peak: ViewValue; share: ViewVa
   );
 }
 
-// The tint of a peak cell follows the status the view gives the peak, never a threshold of its own:
-// attention takes the first depth, critical the second hatched as a hazard, any other status none.
-export function peakTint(peak: ViewValue): string {
-  return peak.status === "attention" ? "bg-depth-1" : peak.status === "critical" ? "hazard" : "";
+// The tint of a peak cell follows the worse of the statuses the view gives the peak and its share, never a
+// threshold of its own: attention takes the first depth, critical the second hatched as a hazard, any other none.
+export function peakTint(peak: ViewValue, share: ViewValue): string {
+  const statuses = [peak.status, share.status];
+  return statuses.includes("critical") ? "hazard" : statuses.includes("attention") ? "bg-depth-1" : "";
 }
 
 const statistics = ["average", "minimum", "peak", "current"] as const;

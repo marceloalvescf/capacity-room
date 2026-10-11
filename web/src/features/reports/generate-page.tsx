@@ -8,6 +8,7 @@ import { useScreenTitle } from "@/app/title";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SummaryLine, valuePart, wordPart, type Summary } from "@/components/summary-line";
 import { Segmented } from "@/components/ui/segmented";
 import { Select } from "@/components/ui/select";
 import { isLanguage, type Language } from "@/i18n/language";
@@ -320,12 +321,14 @@ function GenerateForm({
       ? { kind: "range", ...resolveCalendar(values.period.name, values.timezone, new Date()) }
       : values.period,
   );
-  const summary = [
-    periodText(t, language, values.period),
-    values.timezone,
-    t(`reportProfile.${values.reportProfile}`),
-    t(`minSeverity.${values.minSeverity}`),
-  ].join(" · ");
+  // A typed range is two wall times, a value; a length or a calendar name reads as words.
+  const period = periodText(t, language, values.period);
+  const summary: Summary = [
+    values.period.kind === "range" ? valuePart(period) : wordPart(period),
+    valuePart(values.timezone),
+    wordPart(t(`reportProfile.${values.reportProfile}`)),
+    wordPart(t(`minSeverity.${values.minSeverity}`)),
+  ];
   const namespaceProblem = problemText("namespaces");
 
   return (
@@ -394,20 +397,24 @@ function GenerateForm({
 
       <div className="flex flex-col gap-4 rounded-md border border-border bg-surface p-3 text-surface-fg">
         <div className="flex flex-wrap items-center gap-3">
-          <b className="text-sm">{t("generate.options")}</b>
+          <div className="min-w-0">
+            <p className="font-semibold">{t("generate.options")}</p>
+            {optionsOpen ? null : (
+              <p className="text-sm break-words text-muted-fg">
+                <SummaryLine summary={summary} />
+              </p>
+            )}
+          </div>
           {optionsOpen ? null : (
-            <>
-              <span className="font-mono text-sm text-muted-fg">{summary}</span>
-              <Button
-                className="ml-auto"
-                onClick={() => {
-                  focusPeriodOnOpen.current = true;
-                  setOptionsOpen(true);
-                }}
-              >
-                {t("generate.change")}
-              </Button>
-            </>
+            <Button
+              className="ml-auto"
+              onClick={() => {
+                focusPeriodOnOpen.current = true;
+                setOptionsOpen(true);
+              }}
+            >
+              {t("generate.change")}
+            </Button>
           )}
         </div>
         {optionsOpen ? (

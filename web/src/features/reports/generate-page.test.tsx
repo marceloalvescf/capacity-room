@@ -8,6 +8,11 @@ import { failure, installMockApi, profileSummary, report, server, signedIn } fro
 import { location, renderApp } from "../../../tests/render";
 import { mockColourScheme } from "../../../tests/match-media";
 
+// The options summary is one paragraph of words and values in their own spans.
+function summaryLine(text: string) {
+  return (_: string, element: Element | null) => element?.tagName === "P" && element.textContent === text;
+}
+
 const mock = installMockApi(signedIn());
 
 const t = (key: string, options: Record<string, string | number> = {}): string => i18next.t(key, options);
@@ -74,7 +79,7 @@ describe("new report form", () => {
     mock.session = signedIn({ language: "pt-BR" });
     await open("/generate", "pt-BR");
     expect(profileSelect().value).toBe("prod");
-    expect(screen.getByText("Últimas 24 horas · America/Sao_Paulo · Detalhado · Todas")).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("Últimas 24 horas · America/Sao_Paulo · Detalhado · Todas"))).toBeInTheDocument();
     expect(screen.getAllByRole("checkbox").filter((box) => (box as HTMLInputElement).checked)).toEqual([]);
     expect(screen.getByRole("radio", { name: "Português (Brasil)" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "English" })).not.toBeChecked();
@@ -87,7 +92,7 @@ describe("new report form", () => {
     await user.selectOptions(profileSelect(), "staging");
     expect(screen.queryByRole("checkbox", { name: "payments" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("checkbox").filter((box) => (box as HTMLInputElement).checked)).toEqual([]);
-    expect(screen.getByText("Last 7 days · UTC · Executive · Attention and critical")).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("Last 7 days · UTC · Executive · Attention and critical"))).toBeInTheDocument();
   });
 
   it("namespaces are shown in monospace", async () => {
@@ -429,7 +434,7 @@ describe("new report form", () => {
     expect(namespace("checkout")).toBeChecked();
     expect(namespace("web")).not.toBeChecked();
     expect(screen.getByRole("radio", { name: "Português (Brasil)" })).toBeChecked();
-    expect(screen.getByText("Last 36 hours · America/Sao_Paulo · Detailed · Critical only")).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("Last 36 hours · America/Sao_Paulo · Detailed · Critical only"))).toBeInTheDocument();
   });
 
   it("a report that cannot be read leaves a blank form", async () => {
@@ -620,7 +625,9 @@ describe("calendar ranges", () => {
     });
     mock.reports = [source];
     await open(`/generate?from=${source.id}`);
-    expect(screen.getByText("2026-09-01 00:00 to 2026-10-01 00:00 · America/Sao_Paulo · Detailed · All")).toBeInTheDocument();
+    const range = screen.getByText(summaryLine("2026-09-01 00:00 to 2026-10-01 00:00 · America/Sao_Paulo · Detailed · All"));
+    expect(within(range).getByText("2026-09-01 00:00 to 2026-10-01 00:00")).toHaveClass("font-mono");
+    expect(within(range).getByText("Detailed")).not.toHaveClass("font-mono");
   });
 
   it("a resend of a calendar name keeps the key and the body", async () => {
@@ -724,7 +731,7 @@ describe("calendar ranges", () => {
     });
     mock.reports = [source];
     await open(`/generate?from=${source.id}`);
-    expect(screen.getByText("Last 7 days · America/Sao_Paulo · Detailed · All")).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("Last 7 days · America/Sao_Paulo · Detailed · All"))).toBeInTheDocument();
   });
 
   it("long range", async () => {

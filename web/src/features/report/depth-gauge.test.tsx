@@ -1,9 +1,9 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { DepthGauge } from "./depth-gauge";
+import { DepthGauge, type GaugeSeverity } from "./depth-gauge";
 
-function gauge(current: number, max: number, min: number | null = null) {
-  const { container } = render(<DepthGauge current={current} max={max} min={min} />);
+function gauge(current: number, max: number, min: number | null = null, severity: GaugeSeverity = "critical") {
+  const { container } = render(<DepthGauge current={current} max={max} min={min} severity={severity} />);
   const svg = container.querySelector("svg") as SVGSVGElement;
   return {
     svg,
@@ -29,14 +29,37 @@ describe("depth gauge", () => {
     expect(svg.querySelector("[data-hazard]")).toBeNull();
   });
 
-  it("hatches the last band once no room is left", () => {
-    const { svg, bands } = gauge(3, 3);
+  it("a full scale under a critical cluster finding hatches the last band in the critical colour", () => {
+    const { svg, bands } = gauge(3, 3, null, "critical");
     expect(bands).toHaveLength(3);
     const hazard = svg.querySelectorAll("[data-hazard]");
     expect(hazard).toHaveLength(1);
     expect(hazard[0]).toBe(bands[2]);
     expect(hazard[0]?.getAttribute("fill")).toMatch(/^url\(#hazard-[a-zA-Z0-9]+\)$/);
     expect(svg.querySelector("pattern line")).toHaveClass("stroke-critical");
+    expect(svg.querySelector("[data-closing]")).toHaveClass("stroke-critical");
+  });
+
+  it("a full scale under an attention cluster finding hatches the last band in the attention colour", () => {
+    const { svg } = gauge(3, 3, null, "attention");
+    expect(svg.querySelectorAll("[data-hazard]")).toHaveLength(1);
+    expect(svg.querySelector("pattern line")).toHaveClass("stroke-attention");
+    expect(svg.querySelector("[data-closing]")).toHaveClass("stroke-attention");
+    expect(svg.querySelector(".stroke-critical")).toBeNull();
+  });
+
+  it("a full scale with no cluster finding is plain depth closed by a neat-line, never hatched by the numbers", () => {
+    const { svg, bands } = gauge(3, 3, null, null);
+    expect(svg.querySelector("[data-hazard]")).toBeNull();
+    expect(svg.querySelector("pattern")).toBeNull();
+    expect(bands.map((band) => band.getAttribute("class"))).toEqual(["fill-depth-1", "fill-depth-2", "fill-depth-3"]);
+    expect(svg.querySelector("[data-closing]")).toHaveClass("stroke-neatline");
+  });
+
+  it("room left draws no closing line and no hatch, whatever the severity", () => {
+    const { svg } = gauge(2, 3, null, "critical");
+    expect(svg.querySelector("[data-hazard]")).toBeNull();
+    expect(svg.querySelector("[data-closing]")).toBeNull();
   });
 
   it("sounds once under motion-safe: the level rises, then the hazard shows", () => {

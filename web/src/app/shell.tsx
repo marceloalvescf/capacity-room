@@ -1,7 +1,7 @@
 import { SignOutIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useApi } from "@/api/context";
 import { ApiFailure } from "@/api/client";
 import { errorText, toError } from "@/api/errors";
@@ -14,7 +14,7 @@ import { useAnnounce } from "./live-region";
 
 // The page in view: the active tint, semibold, and a neat-line frame on every side.
 const navLink =
-  "block rounded-md px-3 py-2 text-sm motion-safe:transition-colors aria-[current=page]:bg-sidebar-active aria-[current=page]:font-semibold aria-[current=page]:ring-1 aria-[current=page]:ring-neatline aria-[current=page]:ring-inset aria-[current=page]:text-sidebar-active-fg";
+  "block rounded-md px-3 py-2 text-sm aria-[current=page]:bg-sidebar-active aria-[current=page]:font-semibold aria-[current=page]:ring-1 aria-[current=page]:ring-neatline aria-[current=page]:ring-inset aria-[current=page]:text-sidebar-active-fg";
 
 const version = import.meta.env.VITE_KCR_VERSION;
 
@@ -25,6 +25,8 @@ export function Shell() {
   const navigate = useNavigate();
   const announce = useAnnounce();
   const principal = usePrincipal();
+  // The list, a job in progress, and a report all sit under Reports.
+  const inReports = /^\/(reports|jobs)(\/|$)/.test(useLocation().pathname);
 
   if (principal === null) {
     return null;
@@ -57,9 +59,9 @@ export function Shell() {
         <nav aria-label={t("nav.label")} className="flex-1">
           <ul>
             <li>
-              <NavLink to="/reports" className={navLink}>
+              <Link to="/reports" aria-current={inReports ? "page" : undefined} className={navLink}>
                 {t("nav.reports")}
-              </NavLink>
+              </Link>
             </li>
             {principal.role === "reader" ? null : (
               <li>
@@ -92,7 +94,9 @@ export function Shell() {
         <div className="flex flex-col text-sm">
           <span className="font-mono">{principal.username}</span>
           <span>{t(`role.${principal.role}`)}</span>
-          <span className="mt-3 font-mono">{t("app.version", { version })}</span>
+          <span className="mt-3">
+            {t("app.version")} <span className="font-mono">{version}</span>
+          </span>
         </div>
       </aside>
       <div className="flex min-w-0 flex-col">

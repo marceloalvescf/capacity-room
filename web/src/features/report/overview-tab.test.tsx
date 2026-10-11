@@ -59,7 +59,7 @@ describe("overview tab", () => {
     expect(within(band).getByRole("link", { name: "See autoscaling" })).toBeInTheDocument();
   });
 
-  it("a depth gauge under the nodes, hatched at the maximum", async () => {
+  it("a depth gauge under the nodes, hatched at the maximum in the colour of the cluster finding", async () => {
     await open();
     const heading = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" });
     expect(heading).toHaveClass("label");
@@ -67,7 +67,20 @@ describe("overview tab", () => {
     const band = heading.parentElement as HTMLElement;
     expect(band.querySelectorAll("[data-band]")).toHaveLength(3);
     expect(band.querySelectorAll("[data-hazard]")).toHaveLength(1);
+    expect(band.querySelector("pattern line")).toHaveClass("stroke-attention");
     expect(band.querySelector("[data-contour]")).not.toBeNull();
+  });
+
+  it("a full scale with no cluster finding is not hatched", async () => {
+    mock.views.set(`${id}:en`, {
+      ...english,
+      findings: english.findings.filter((finding) => finding.scope_type !== "cluster"),
+    });
+    await open();
+    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
+    expect(band.querySelectorAll("[data-band]")).toHaveLength(3);
+    expect(band.querySelector("[data-hazard]")).toBeNull();
+    expect(band.querySelector("[data-closing]")).toHaveClass("stroke-neatline");
   });
 
   it("no depth gauge without a maximum", async () => {
@@ -120,7 +133,7 @@ describe("overview tab", () => {
     });
     await open();
     const only = screen.getByText("Node pools").closest("li") as HTMLElement;
-    expect(within(only).getByText("Unknown pool")).toHaveClass("font-mono");
+    expect(within(only).getByText("Unknown pool")).not.toHaveClass("font-mono");
     expect(only).not.toHaveTextContent(/\bunknown\b/);
   });
 
@@ -139,7 +152,7 @@ describe("overview tab", () => {
     await open();
     const totals = screen.getByRole("group", { name: "Findings by severity" });
     const links = within(totals).getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual(["Critical9".replace("Critical9", "9Critical"), "10Attention", "7Healthy"]);
+    expect(links.map((link) => link.textContent)).toEqual(["Critical9", "Attention10", "Healthy7"]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       expect.stringMatching(/findings\?severity=critical$/),
       expect.stringMatching(/findings\?severity=attention$/),
@@ -157,7 +170,7 @@ describe("overview tab", () => {
       expect.stringMatching(/findings\?severity=attention$/),
     ]);
     expect(totals.children).toHaveLength(3);
-    expect(totals.children[2]).toHaveTextContent("7Healthy");
+    expect(totals.children[2]).toHaveTextContent("Healthy7");
     expect(within(totals.children[2] as HTMLElement).queryByRole("link")).toBeNull();
     expect(within(totals.children[2] as HTMLElement).getByText("7")).toHaveClass("font-mono");
 
@@ -166,7 +179,7 @@ describe("overview tab", () => {
     await open();
     totals = screen.getByRole("group", { name: "Findings by severity" });
     expect(within(totals).getAllByRole("link")).toHaveLength(1);
-    expect(totals.children[1]).toHaveTextContent("10Attention");
+    expect(totals.children[1]).toHaveTextContent("Attention10");
     expect(within(totals.children[1] as HTMLElement).queryByRole("link")).toBeNull();
   });
 

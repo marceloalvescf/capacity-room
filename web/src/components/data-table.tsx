@@ -185,7 +185,7 @@ export function DataTable<Row extends RowData>({
   const byId = new Map(columns.map((column) => [column.id, column]));
   const cellClass = (column: Column<Row> | undefined, row: Row) =>
     cn(
-      "px-3 py-2 align-top [overflow-wrap:anywhere]",
+      "px-3 py-2 align-top",
       column?.align === "end" ? "text-right" : "text-left",
       column?.cellClassName?.(row),
     );
@@ -238,7 +238,7 @@ export function DataTable<Row extends RowData>({
                 return (
                   <Fragment key={row.id}>
                     <tr ref={opened ? openedRow : undefined} className={cn(opened && "bg-info-surface")}>
-                      <td className="px-3 py-1 align-top [overflow-wrap:anywhere]">
+                      <td className="px-3 py-1 align-top">
                         <IconButton
                           label={t(opened ? "table.close" : "table.open", { name })}
                           variant="secondary"
@@ -272,8 +272,9 @@ export function DataTable<Row extends RowData>({
                     </tr>
                     {opened ? (
                       <tr ref={openedPair} className="bg-bg">
-                        <td colSpan={columns.length + 1} className="px-6 py-4 [overflow-wrap:anywhere]">
-                          <div className="min-w-0">{renderOpened(row.original)}</div>
+                        <td colSpan={columns.length + 1} className="px-6 py-4">
+                          {/* An opened row spans the table, so only a value longer than the table breaks: an address, a list. */}
+                          <div className="min-w-0 [overflow-wrap:anywhere]">{renderOpened(row.original)}</div>
                         </td>
                       </tr>
                     ) : null}
