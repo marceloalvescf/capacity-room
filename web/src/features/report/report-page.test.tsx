@@ -141,7 +141,7 @@ describe("report screen", () => {
       await i18next.changeLanguage("pt-BR");
     });
     expect(screen.getByRole("navigation", { name: "Seções do relatório" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2 })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 2 }).length).toBeGreaterThan(0);
     release();
     const nav = await screen.findByRole("navigation", { name: "Seções do relatório" });
     expect(await within(nav).findByRole("link", { name: "Qualidade dos dados" })).toBeInTheDocument();

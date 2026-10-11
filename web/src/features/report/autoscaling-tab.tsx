@@ -107,7 +107,7 @@ export function AutoscalingTab() {
             { label: t("report.autoscaling.managedPools"), value: autoscaling.managed_node_groups },
             { label: t("report.autoscaling.scaleEvents"), value: autoscaling.scale_events },
             { label: t("report.autoscaling.unschedulablePods"), value: autoscaling.unschedulable_pods },
-            { label: t("report.inventory.workloadsWithoutHpa"), value: summary.workloads_without_hpa },
+            { label: t("report.autoscaling.workloadsWithoutHpa"), value: summary.workloads_without_hpa },
           ]}
         />
       </section>

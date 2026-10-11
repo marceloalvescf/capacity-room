@@ -6,6 +6,7 @@ import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 import { useAddress } from "@/lib/address";
 import type { ViewFinding } from "./api";
+import { scopeName } from "./pieces";
 import { useView } from "./report-page";
 import { SearchField, useSearchText } from "@/components/search-field";
 
@@ -31,14 +32,6 @@ function readSeverities(param: string | null): ReadonlySet<Severity> {
 
 function readIndex(param: string | null): number | null {
   return param !== null && /^\d+$/.test(param) ? Number(param) : null;
-}
-
-// The scope name as the reader sees it: none for the cluster, a word for a node pool the report could not name.
-function scopeName(finding: ViewFinding, unknownPool: string): string | null {
-  if (finding.scope_type === "cluster") {
-    return null;
-  }
-  return finding.scope_type === "nodepool" && finding.scope_name === "unknown" ? unknownPool : finding.scope_name;
 }
 
 interface Entry {

@@ -43,6 +43,7 @@ export const families: Readonly<Record<string, readonly string[]>> = {
   pdfFailure: pDFFailureCodeValues,
   reportFailure: reportFailureCodeValues,
   "report.tab": reportTabs,
+  "report.overview.scope": viewScopeTypeValues.filter((type) => type !== "cluster"),
   confidence: viewConfidenceValues,
   scope: viewScopeTypeValues,
   evidence: viewEvidenceNameValues,

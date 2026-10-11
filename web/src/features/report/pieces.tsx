@@ -19,6 +19,14 @@ export function WorkloadName({ row }: { row: ViewWorkload }) {
   );
 }
 
+// The scope name as the reader sees it: none for the cluster, a word for a node pool the report could not name.
+export function scopeName(finding: ViewFinding, unknownPool: string): string | null {
+  if (finding.scope_type === "cluster") {
+    return null;
+  }
+  return finding.scope_type === "nodepool" && finding.scope_name === "unknown" ? unknownPool : finding.scope_name;
+}
+
 // A value of the view: the shape of its status, the status word for screen readers, then its text.
 export function ValueText({ value }: { value: ViewValue }) {
   const { t } = useTranslation();

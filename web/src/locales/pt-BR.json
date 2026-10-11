@@ -330,16 +330,18 @@
     "cluster": "Cluster",
     "open": "Abrir relatório",
     "overview": {
-      "seeFindings": "Ver achados",
-      "inventory": "Inventário"
-    },
-    "inventory": {
-      "namespaces": "Namespaces",
-      "workloads": "Workloads",
-      "hpas": "HPAs",
-      "workloadsWithoutHpa": "Workloads sem HPA",
-      "nodes": "Nodes",
-      "nodepools": "Node pools"
+      "nodesCaption": "Nodes · atual / máximo",
+      "seeAutoscaling": "Ver autoscaling",
+      "pressure": "Pressão por escopo",
+      "noPressure": "Nada pede atenção.",
+      "totals": "Achados por severidade",
+      "scope": {
+        "node": "Nodes",
+        "nodepool": "Node pools",
+        "namespace": "Namespaces",
+        "workload": "Workloads",
+        "hpa": "HPAs"
+      }
     },
     "plan": {
       "title": "Plano de ação priorizado",
@@ -450,7 +452,8 @@
       "maxNodes": "Máximo de nodes",
       "managedPools": "Node pools gerenciados",
       "scaleEvents": "Eventos de escala",
-      "unschedulablePods": "Pods não agendáveis"
+      "unschedulablePods": "Pods não agendáveis",
+      "workloadsWithoutHpa": "Workloads sem HPA"
     },
     "hpas": {
       "title": "HPAs"

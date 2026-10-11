@@ -295,11 +295,11 @@ describe("findings tab", () => {
 });
 
 describe("links into the findings tab", () => {
-  it("a severity tile of the overview", async () => {
+  it("a severity total of the overview", async () => {
     const user = userEvent.setup();
     const { router } = await renderApp(`/reports/${id}/overview`, "en");
-    const links = await screen.findAllByRole("link", { name: "See findings" });
-    await user.click(links[0] as HTMLElement);
+    const totals = await screen.findByRole("group", { name: "Findings by severity" });
+    await user.click(within(totals).getAllByRole("link")[0] as HTMLElement);
     expect(location(router)).toBe(`/reports/${id}/findings?severity=critical`);
     await screen.findByRole("searchbox", { name: "Search findings" });
     expect(items()).toHaveLength(9);

@@ -698,6 +698,15 @@ redactor the moment the settings are loaded, before the pool opens.
   report only. A later failed fetch of either never replaces a screen that is
   held, except a 404 or a 410 of either, or a 409 of the view, which opens
   the progress page.
+- **The overview opens on a verdict, built from the view alone.** Whether the
+  cluster can grow (its nodes against the autoscaler's maximum, and the worst
+  cluster finding), then the pressure of each scope (its worst severity, the
+  first finding of that severity, linked to the findings tab), then the
+  severity totals. It shows no number the view does not hold; a count it
+  shows is a count of rows or findings.
+- **A row with no finding says so.** The view gives such a row the status
+  healthy; the tables show "No finding" with no mark, as the PDF does, and
+  rank it after the healthy rows.
 - **The closed sets of the view are contract enums.** The `View*` enums of
   `api/openapi.yaml` are excluded from the Go generation and held equal to
   the Go registries by `TestViewEnumsEqualTheRegistries`, so the frontend's

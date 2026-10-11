@@ -6,6 +6,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The report overview opens on whether the cluster can grow, its nodes
+  against the autoscaler's maximum, and on the pressure of each scope with
+  its leading finding; the severity totals follow on one line, and the
+  inventory counts left the page.
+
 ### Fixed
 
 - On the report screen, a namespace, workload, or node with no finding reads

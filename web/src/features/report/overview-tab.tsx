@@ -2,54 +2,208 @@ import { CaretRightIcon } from "@phosphor-icons/react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
-import { StatusMark } from "@/components/status-mark";
+import { StatusMark, StatusShape } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
-import { Counts } from "./pieces";
+import type { ViewFinding } from "./api";
+import { scopeName, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const severities = ["critical", "attention", "healthy"] as const;
 
-// A tile whose severity the view's minimum leaves out keeps its count and offers no findings to see.
 const minimum: Record<string, number> = { all: 0, healthy: 0, attention: 1, critical: 2 };
 const rank: Record<(typeof severities)[number], number> = { healthy: 0, attention: 1, critical: 2 };
 
-function Tiles() {
+const scopeTypes = ["node", "nodepool", "namespace", "workload", "hpa"] as const;
+type Severity = (typeof severities)[number];
+
+function worstOf(list: Severity[]): Severity {
+  return severities.find((severity) => list.includes(severity)) ?? "healthy";
+}
+
+// Whether the cluster can grow: its nodes against the autoscaler's maximum, and the worst finding of the cluster.
+function Growth() {
   const { t } = useTranslation();
-  const { summary, min_severity: floor } = useView();
+  const { summary, findings } = useView();
+  const { autoscaling } = summary;
+  const enabled = autoscaling.status === "enabled";
+  const worst = findings
+    .filter((finding) => finding.scope_type === "cluster")
+    .reduce<ViewFinding | null>(
+      (best, finding) => (best === null || severities.indexOf(finding.severity) < severities.indexOf(best.severity) ? finding : best),
+      null,
+    );
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {severities.map((severity) => (
-        <div key={severity} className="flex flex-col gap-1 rounded-md border border-border bg-surface p-4 text-surface-fg">
-          <StatusMark status={severity} />
-          <span className="font-mono text-3xl font-semibold">{summary[severity].text}</span>
-          {rank[severity] < (minimum[floor] ?? 0) ? null : (
-            <Link to={`../findings?severity=${severity}`} className="inline-flex items-center gap-1 text-sm text-accent underline">
-              {t("report.overview.seeFindings")}
-              <CaretRightIcon aria-hidden="true" className="size-3" />
-            </Link>
-          )}
+    <div className="flex flex-col gap-3">
+      <h2 className="text-sm font-medium text-muted-fg">{t("report.autoscaling.title")}</h2>
+      {enabled ? (
+        <div className="flex flex-col gap-1">
+          <p className="font-mono text-4xl font-semibold">
+            <ValueText value={autoscaling.current_nodes} />
+            <span className="mx-2 font-sans font-normal text-muted-fg">/</span>
+            <ValueText value={autoscaling.max_nodes} />
+          </p>
+          <p className="text-sm text-muted-fg">{t("report.overview.nodesCaption")}</p>
         </div>
-      ))}
+      ) : (
+        <p className="text-2xl font-semibold">{t(`autoscalingStatus.${autoscaling.status}`)}</p>
+      )}
+      {worst === null ? null : (
+        <div className="flex flex-col gap-1">
+          <StatusMark status={worst.severity} />
+          <p className="text-sm">{worst.sentence}</p>
+        </div>
+      )}
+      {enabled ? (
+        <p className="text-sm text-muted-fg">
+          <span className="whitespace-nowrap">
+            {t("report.autoscaling.minNodes")}{" "}
+            <span className="font-mono">
+              <ValueText value={autoscaling.min_nodes} />
+            </span>
+          </span>
+          {" · "}
+          <span className="whitespace-nowrap">
+            {t("report.autoscaling.unschedulablePods")}{" "}
+            <span className="font-mono">
+              <ValueText value={autoscaling.unschedulable_pods} />
+            </span>
+          </span>
+          {" · "}
+          <span className="whitespace-nowrap">
+            {t("report.autoscaling.scaleEvents")}{" "}
+            <span className="font-mono">
+              <ValueText value={autoscaling.scale_events} />
+            </span>
+          </span>
+        </p>
+      ) : null}
+      <Link to="../autoscaling" className="inline-flex items-center gap-1 text-sm text-accent underline">
+        {t("report.overview.seeAutoscaling")}
+        <CaretRightIcon aria-hidden="true" className="size-3" />
+      </Link>
     </div>
   );
 }
 
-function Inventory() {
+// One scope: its worst severity, the first finding of that severity, and how many of its rows reach each severity.
+function PressureLine({ type }: { type: (typeof scopeTypes)[number] }) {
   const { t } = useTranslation();
-  const { summary } = useView();
+  const { findings } = useView();
+  const indexed = findings.map((finding, index) => ({ finding, index })).filter(({ finding }) => finding.scope_type === type);
+  const byName = new Map<string, Severity[]>();
+  for (const { finding } of indexed) {
+    byName.set(finding.scope_name, [...(byName.get(finding.scope_name) ?? []), finding.severity]);
+  }
+  const worstByName = [...byName.values()].map(worstOf);
+  const worst = worstOf(worstByName);
+  const lead = indexed.find(({ finding }) => finding.severity === worst);
+  if (worst === "healthy" || lead === undefined) {
+    return null;
+  }
+  const name = scopeName(lead.finding, t("report.node.unknownPool"));
+  const peak = lead.finding.evidence.find((item) => item.name === "peak_percent");
+  const counts = (["critical", "attention"] as const)
+    .map((severity) => ({ severity, count: worstByName.filter((value) => value === severity).length }))
+    .filter(({ count }) => count > 0);
   return (
-    <div className="rounded-md border border-border bg-surface p-4 text-surface-fg">
-      <Counts
-        label={t("report.overview.inventory")}
-        items={[
-          { label: t("report.inventory.namespaces"), value: summary.namespaces },
-          { label: t("report.inventory.workloads"), value: summary.workloads },
-          { label: t("report.inventory.hpas"), value: summary.hpas },
-          { label: t("report.inventory.workloadsWithoutHpa"), value: summary.workloads_without_hpa },
-          { label: t("report.inventory.nodes"), value: summary.nodes },
-          { label: t("report.inventory.nodepools"), value: summary.nodepools },
-        ]}
-      />
+    <li className="grid grid-cols-[8rem_1fr] gap-3 border-t border-border py-3">
+      <div>
+        <StatusMark status={worst} label={t(`report.overview.scope.${type}`)} withStatus />
+      </div>
+      <div className="flex flex-col gap-1">
+        <p className="text-sm">
+          <Link
+            to={`../findings?scope=${type}&finding=${String(lead.index)}`}
+            className="underline decoration-border underline-offset-4 hover:decoration-accent"
+          >
+            {lead.finding.sentence}
+          </Link>
+        </p>
+        {name === null && peak === undefined ? null : (
+          <p className="flex flex-wrap gap-x-3 text-sm">
+            {name === null ? null : <span className="font-mono break-all">{name}</span>}
+            {peak === undefined ? null : (
+              <span className="whitespace-nowrap">
+                <span className="text-muted-fg">{t("evidence.peak_percent")}</span> <span className="font-mono">{peak.text}</span>
+              </span>
+            )}
+          </p>
+        )}
+        <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-fg">
+          {counts.map(({ severity, count }, position) => (
+            <span key={severity} className="inline-flex items-center gap-1.5">
+              {position > 0 ? <span aria-hidden="true">·</span> : null}
+              <StatusShape status={severity} />
+              {t(`status.${severity}`)} <span className="font-mono">{count}</span>
+            </span>
+          ))}
+        </p>
+      </div>
+    </li>
+  );
+}
+
+// The scopes with a finding above healthy, in a fixed order.
+function Pressure() {
+  const { t } = useTranslation();
+  const { findings } = useView();
+  const any = findings.some(
+    (finding) => finding.severity !== "healthy" && (scopeTypes as readonly string[]).includes(finding.scope_type),
+  );
+  return (
+    <div className="flex flex-col gap-3">
+      <h2 className="text-sm font-medium text-muted-fg">{t("report.overview.pressure")}</h2>
+      {any ? (
+        <ul>
+          {scopeTypes.map((type) => (
+            <PressureLine key={type} type={type} />
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-fg">{t("report.overview.noPressure")}</p>
+      )}
+    </div>
+  );
+}
+
+// The top of the overview: whether the cluster can grow, then where it runs short.
+function Verdict() {
+  return (
+    <section className="flex flex-col gap-6 rounded-md border border-border bg-surface p-6 text-surface-fg xl:grid xl:grid-cols-[4fr_7fr] xl:gap-10">
+      <Growth />
+      <Pressure />
+    </section>
+  );
+}
+
+// A severity the view's minimum leaves out keeps its count and offers no findings to see.
+function Totals() {
+  const { t } = useTranslation();
+  const { summary, min_severity: floor } = useView();
+  return (
+    <div role="group" aria-label={t("report.overview.totals")} className="flex flex-wrap items-center gap-6 text-sm">
+      {severities.map((severity) => {
+        const content = (
+          <>
+            <StatusShape status={severity} />
+            <span className="font-mono">{summary[severity].text}</span>
+            {t(`status.${severity}`)}
+          </>
+        );
+        return rank[severity] < (minimum[floor] ?? 0) ? (
+          <span key={severity} className="inline-flex items-center gap-1.5">
+            {content}
+          </span>
+        ) : (
+          <Link
+            key={severity}
+            to={`../findings?severity=${severity}`}
+            className="inline-flex items-center gap-1.5 hover:underline focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            {content}
+          </Link>
+        );
+      })}
     </div>
   );
 }
@@ -127,8 +281,8 @@ function About() {
 export function OverviewTab() {
   return (
     <div className="flex flex-col gap-4">
-      <Tiles />
-      <Inventory />
+      <Verdict />
+      <Totals />
       <Plan />
       <About />
     </div>
