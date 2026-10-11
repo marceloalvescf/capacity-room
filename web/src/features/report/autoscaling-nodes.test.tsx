@@ -146,6 +146,24 @@ describe("nodes tab", () => {
     }
   });
 
+  it("a peak cell takes the tint of the status the view gives its peak", async () => {
+    const node = english.nodes[0] as View["nodes"][number];
+    const peak = (raw: number, status: "healthy" | "attention" | "critical") => ({ raw, text: `${String(raw)}%`, status });
+    const nodes = [
+      { ...node, name: "n-attention", cpu_usage_percent: { ...node.cpu_usage_percent, peak: peak(40, "attention") } },
+      { ...node, name: "n-critical", cpu_usage_percent: { ...node.cpu_usage_percent, peak: peak(40, "critical") } },
+      { ...node, name: "n-healthy", cpu_usage_percent: { ...node.cpu_usage_percent, peak: peak(99, "healthy") } },
+    ];
+    mock.views.set(`${id}:en`, { ...english, nodes });
+    await open("nodes");
+    const cpu = (name: string) => within(rowOf("Nodes", name)).getAllByRole("cell")[4] as HTMLElement;
+    expect(cpu("n-attention")).toHaveClass("bg-depth-1");
+    expect(cpu("n-attention")).not.toHaveClass("hazard");
+    expect(cpu("n-critical")).toHaveClass("hazard");
+    expect(cpu("n-healthy")).not.toHaveClass("bg-depth-1");
+    expect(cpu("n-healthy")).not.toHaveClass("hazard");
+  });
+
   it("the state of a node", async () => {
     const node = english.nodes[0] as View["nodes"][number];
     const nodes = [

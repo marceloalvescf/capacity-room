@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import indexHtml from "../../index.html?raw";
 import en from "@/locales/en.json";
 import ptBR from "@/locales/pt-BR.json";
 import { families } from "./families";
@@ -61,10 +62,14 @@ describe("locales", () => {
   });
 
   it("product name", () => {
+    const page = /<title>(.*)<\/title>/.exec(indexHtml)?.[1];
     for (const [lang, file] of Object.entries(files)) {
-      expect({ lang, name: `${file.get("app.short") ?? ""} - ${file.get("app.long") ?? ""}` }).toEqual({
+      const name = file.get("app.name");
+      expect({ lang, short: file.get("app.short"), page, title: file.get("app.title") }).toEqual({
         lang,
-        name: file.get("app.name"),
+        short: name,
+        page: name,
+        title: `{{screen}} · ${name ?? ""}`,
       });
     }
   });

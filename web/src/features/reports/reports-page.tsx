@@ -184,7 +184,7 @@ export function ReportsPage() {
           <table className="w-full border-collapse text-sm">
             <caption className="sr-only">{t("reports.title")}</caption>
             <thead>
-              <tr className="text-left text-xs text-muted-fg">
+              <tr className="text-left">
                 {selectable ? (
                   <th scope="col" className="px-3 py-2">
                     <Checkbox
@@ -198,19 +198,19 @@ export function ReportsPage() {
                     />
                   </th>
                 ) : null}
-                <th scope="col" className="px-3 py-2 font-semibold">
+                <th scope="col" className="label px-3 py-2">
                   {t("reports.column.requested")}
                 </th>
-                <th scope="col" className="px-3 py-2 font-semibold">
+                <th scope="col" className="label px-3 py-2">
                   {t("reports.column.profile")}
                 </th>
-                <th scope="col" className="px-3 py-2 font-semibold">
+                <th scope="col" className="label px-3 py-2">
                   {t("reports.column.status")}
                 </th>
-                <th scope="col" className="px-3 py-2 font-semibold">
+                <th scope="col" className="label px-3 py-2">
                   {t("reports.column.pdf")}
                 </th>
-                <th scope="col" className="px-3 py-2 font-semibold">
+                <th scope="col" className="label px-3 py-2">
                   {t("reports.column.keptUntil")}
                 </th>
                 <th scope="col" className="px-3 py-2">

@@ -8,6 +8,16 @@ function text(fg: string, bg: string): Pair {
   return { fg, bg, min: 4.5 };
 }
 
+function line(fg: string, bg: string): Pair {
+  return { fg, bg, min: 3 };
+}
+
+// The texts a depth tint carries: a peak cell's value and its share, each with the shape of its status.
+// The deepest tint lies only under the gauge, which holds no text.
+const onDepth = ["depth-1", "depth-2"].flatMap((depth) =>
+  ["fg", "muted-fg", "healthy", "attention", "critical", "neutral"].map((fg) => text(fg, depth)),
+);
+
 export const pairs: readonly Pair[] = [
   text("fg", "bg"),
   text("bg", "fg"),
@@ -26,7 +36,7 @@ export const pairs: readonly Pair[] = [
   text("muted-fg", "bg"),
   text("accent", "surface"),
   text("accent", "bg"),
-  text("accent-fg", "accent"),
+  text("action-fg", "action"),
   text("healthy", "surface"),
   text("healthy", "bg"),
   text("attention", "surface"),
@@ -38,11 +48,20 @@ export const pairs: readonly Pair[] = [
   text("surface", "critical"),
   text("critical-surface-fg", "critical-surface"),
   text("info-surface-fg", "info-surface"),
-  { fg: "input-border", bg: "surface", min: 3 },
-  { fg: "input-border", bg: "bg", min: 3 },
-  { fg: "accent", bg: "surface", min: 3 },
-  { fg: "accent", bg: "bg", min: 3 },
-  { fg: "accent", bg: "info-surface", min: 3 },
-  { fg: "accent", bg: "sidebar", min: 3 },
-  { fg: "accent", bg: "sidebar-active", min: 3 },
+  ...onDepth,
+  line("input-border", "surface"),
+  line("input-border", "bg"),
+  line("accent", "surface"),
+  line("accent", "bg"),
+  line("accent", "info-surface"),
+  line("accent", "sidebar"),
+  line("accent", "sidebar-active"),
+  line("neatline", "bg"),
+  line("neatline", "surface"),
+  line("neatline", "sidebar"),
+  line("neatline", "sidebar-active"),
+  line("action", "surface"),
+  line("action", "bg"),
+  line("critical", "bg"),
+  line("critical", "depth-3"),
 ];

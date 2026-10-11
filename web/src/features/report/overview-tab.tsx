@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import { StatusMark, StatusShape } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
 import type { ViewFinding } from "./api";
+import { DepthGauge } from "./depth-gauge";
 import { scopeName, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
@@ -26,6 +27,8 @@ function Growth() {
   const { summary, findings } = useView();
   const { autoscaling } = summary;
   const enabled = autoscaling.status === "enabled";
+  const current = autoscaling.current_nodes.raw;
+  const max = autoscaling.max_nodes.raw;
   const worst = findings
     .filter((finding) => finding.scope_type === "cluster")
     .reduce<ViewFinding | null>(
@@ -34,14 +37,17 @@ function Growth() {
     );
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-medium text-muted-fg">{t("report.autoscaling.title")}</h2>
+      <h2 className="label">{t("report.autoscaling.title")}</h2>
       {enabled ? (
         <div className="flex flex-col gap-1">
-          <p className="font-mono text-4xl font-semibold">
+          <p className="font-mono text-[3.5rem] leading-none font-semibold tracking-tight">
             <ValueText value={autoscaling.current_nodes} />
             <span className="mx-2 font-sans font-normal text-muted-fg">/</span>
             <ValueText value={autoscaling.max_nodes} />
           </p>
+          {current !== null && max !== null && max > 0 ? (
+            <DepthGauge current={current} max={max} min={autoscaling.min_nodes.raw} />
+          ) : null}
           <p className="text-sm text-muted-fg">{t("report.overview.nodesCaption")}</p>
         </div>
       ) : (
@@ -57,21 +63,21 @@ function Growth() {
         <p className="text-sm text-muted-fg">
           <span className="whitespace-nowrap">
             {t("report.autoscaling.minNodes")}{" "}
-            <span className="font-mono">
+            <span className="font-mono italic">
               <ValueText value={autoscaling.min_nodes} />
             </span>
           </span>
           {" · "}
           <span className="whitespace-nowrap">
             {t("report.autoscaling.unschedulablePods")}{" "}
-            <span className="font-mono">
+            <span className="font-mono italic">
               <ValueText value={autoscaling.unschedulable_pods} />
             </span>
           </span>
           {" · "}
           <span className="whitespace-nowrap">
             {t("report.autoscaling.scaleEvents")}{" "}
-            <span className="font-mono">
+            <span className="font-mono italic">
               <ValueText value={autoscaling.scale_events} />
             </span>
           </span>
@@ -134,7 +140,7 @@ function PressureLine({ type }: { type: (typeof scopeTypes)[number] }) {
             <span key={severity} className="inline-flex items-center gap-1.5">
               {position > 0 ? <span aria-hidden="true">·</span> : null}
               <StatusShape status={severity} />
-              {t(`status.${severity}`)} <span className="font-mono">{count}</span>
+              {t(`status.${severity}`)} <span className="font-mono italic">{count}</span>
             </span>
           ))}
         </p>
@@ -152,7 +158,7 @@ function Pressure() {
   );
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-medium text-muted-fg">{t("report.overview.pressure")}</h2>
+      <h2 className="label">{t("report.overview.pressure")}</h2>
       {any ? (
         <ul>
           {scopeTypes.map((type) => (
@@ -169,7 +175,7 @@ function Pressure() {
 // The top of the overview: whether the cluster can grow, then where it runs short.
 function Verdict() {
   return (
-    <section className="flex flex-col gap-6 rounded-md border border-border bg-surface p-6 text-surface-fg xl:grid xl:grid-cols-[4fr_7fr] xl:gap-10">
+    <section className="flex flex-col gap-6 border-t border-b border-t-neatline border-b-border py-6 xl:grid xl:grid-cols-[4fr_7fr] xl:gap-10">
       <Growth />
       <Pressure />
     </section>
@@ -222,13 +228,13 @@ function Plan() {
       ) : (
         <div className="overflow-x-auto rounded-md border border-border bg-surface text-surface-fg">
           <table aria-labelledby={headingId} className="w-full text-sm">
-            <thead className="border-b border-border text-left text-muted-fg">
+            <thead className="border-b border-border text-left">
               <tr>
-                <th className="px-3 py-2 font-medium">{t("report.plan.order")}</th>
-                <th className="px-3 py-2 font-medium">{t("report.plan.priority")}</th>
-                <th className="px-3 py-2 font-medium">{t("report.plan.action")}</th>
-                <th className="px-3 py-2 font-medium">{t("report.plan.scope")}</th>
-                <th className="px-3 py-2 font-medium">{t("report.plan.confidence")}</th>
+                <th className="label px-3 py-2">{t("report.plan.order")}</th>
+                <th className="label px-3 py-2">{t("report.plan.priority")}</th>
+                <th className="label px-3 py-2">{t("report.plan.action")}</th>
+                <th className="label px-3 py-2">{t("report.plan.scope")}</th>
+                <th className="label px-3 py-2">{t("report.plan.confidence")}</th>
               </tr>
             </thead>
             <tbody>

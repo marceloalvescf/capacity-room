@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 type Variant = "primary" | "secondary" | "danger";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-accent text-accent-fg border-accent",
+  primary: "bg-action text-action-fg border-action",
   secondary: "bg-surface text-surface-fg border-input-border",
   danger: "bg-critical text-surface border-critical",
 };

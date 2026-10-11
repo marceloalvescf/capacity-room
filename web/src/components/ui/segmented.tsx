@@ -19,7 +19,7 @@ export function Segmented<T extends string>({ legend, hideLegend = false, name, 
           className={cn(
             "relative inline-flex min-h-9 cursor-pointer items-center border border-input-border bg-surface px-4 text-sm font-medium text-surface-fg",
             "first:rounded-l-md last:rounded-r-md not-first:-ml-px",
-            "has-checked:z-10 has-checked:border-accent has-checked:bg-accent has-checked:text-accent-fg",
+            "has-checked:z-10 has-checked:border-action has-checked:bg-action has-checked:text-action-fg",
             "has-focus-visible:z-20 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent",
           )}
         >

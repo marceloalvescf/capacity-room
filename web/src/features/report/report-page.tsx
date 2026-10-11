@@ -70,37 +70,21 @@ export function ReportPage() {
   const profile = profiles.data?.find((candidate) => candidate.id === data.profile_id)?.display_name ?? data.profile_id;
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">{t("progress.title", { profile })}</h1>
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-fg">
-          <span>
-            {t("report.cluster")} <span className="font-mono text-fg">{view.data.report.cluster_name}</span>
-          </span>
-          <span>{view.data.report.period_text}</span>
-          <span>{t(`reportProfile.${view.data.report.profile}`)}</span>
-          <span>{t("progress.requested", { time: formatTime(data.created_at), username: data.owner_username })}</span>
-        </p>
-      </div>
-      <div className="flex items-end justify-between gap-4 border-b border-border">
-        <nav aria-label={t("report.tabs")} className="-mb-px flex flex-wrap gap-1">
-          {reportTabs.map((tab) => (
-            <NavLink
-              key={tab}
-              to={tab}
-              className={({ isActive }) =>
-                cn(
-                  "border-b-2 px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-accent",
-                  isActive ? "border-accent font-semibold text-fg" : "border-transparent text-muted-fg",
-                )
-              }
-            >
-              {t(`report.tab.${tab}`)}
-            </NavLink>
-          ))}
-        </nav>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h1 className="text-xl font-semibold">{t("progress.title", { profile })}</h1>
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-fg">
+            <span>
+              {t("report.cluster")} <span className="font-mono text-fg">{view.data.report.cluster_name}</span>
+            </span>
+            <span>{view.data.report.period_text}</span>
+            <span>{t(`reportProfile.${view.data.report.profile}`)}</span>
+            <span>{t("progress.requested", { time: formatTime(data.created_at), username: data.owner_username })}</span>
+          </p>
+        </div>
         <Popover>
           <PopoverTrigger asChild>
-            <Button className="mb-1">
+            <Button className="shrink-0">
               {t("progress.pdf")}
               <CaretDownIcon aria-hidden="true" className="size-4" />
             </Button>
@@ -109,6 +93,24 @@ export function ReportPage() {
             <PdfBlock report={data} canRequest={principal.role !== "reader"} />
           </PopoverContent>
         </Popover>
+      </div>
+      <div className="border-b border-border">
+        <nav aria-label={t("report.tabs")} className="-mb-px flex flex-wrap">
+          {reportTabs.map((tab) => (
+            <NavLink
+              key={tab}
+              to={tab}
+              className={({ isActive }) =>
+                cn(
+                  "border-b-2 px-2.5 py-2 text-sm focus-visible:outline-2 focus-visible:outline-accent",
+                  isActive ? "border-accent font-semibold text-fg" : "border-transparent text-muted-fg",
+                )
+              }
+            >
+              {t(`report.tab.${tab}`)}
+            </NavLink>
+          ))}
+        </nav>
       </div>
       <Outlet context={view.data} />
     </div>

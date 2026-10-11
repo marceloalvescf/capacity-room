@@ -55,7 +55,33 @@ describe("overview tab", () => {
     expect(within(band).getByText("Unknown")).toHaveClass("text-2xl");
     expect(band).not.toHaveTextContent("Nodes · current / maximum");
     expect(band).not.toHaveTextContent("Minimum nodes");
+    expect(band.querySelector("svg[aria-hidden=true] [data-band]")).toBeNull();
     expect(within(band).getByRole("link", { name: "See autoscaling" })).toBeInTheDocument();
+  });
+
+  it("a depth gauge under the nodes, hatched at the maximum", async () => {
+    await open();
+    const heading = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" });
+    expect(heading).toHaveClass("label");
+    expect(screen.getByRole("heading", { level: 2, name: "Pressure by scope" })).toHaveClass("label");
+    const band = heading.parentElement as HTMLElement;
+    expect(band.querySelectorAll("[data-band]")).toHaveLength(3);
+    expect(band.querySelectorAll("[data-hazard]")).toHaveLength(1);
+    expect(band.querySelector("[data-contour]")).not.toBeNull();
+  });
+
+  it("no depth gauge without a maximum", async () => {
+    mock.views.set(`${id}:en`, {
+      ...english,
+      summary: {
+        ...english.summary,
+        autoscaling: { ...english.summary.autoscaling, max_nodes: { raw: null, text: "Unavailable", status: null } },
+      },
+    });
+    await open();
+    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
+    expect(band).toHaveTextContent("Nodes · current / maximum");
+    expect(band.querySelector("[data-band]")).toBeNull();
   });
 
   it("pressure lines", async () => {

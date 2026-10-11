@@ -63,12 +63,12 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-bg text-fg">
-      <header className="flex items-center justify-between gap-4 border-b border-border px-6 py-3">
+      <header className="flex items-center justify-between gap-4 border-b border-neatline bg-sidebar px-6 py-3 text-sidebar-fg">
         <Brand />
         <LanguageMenu />
       </header>
       <main id="main" tabIndex={-1} className="flex justify-center p-6 outline-none">
-        <div className="flex w-full max-w-sm flex-col gap-4 rounded-md border border-border bg-surface p-6 text-surface-fg">
+        <div className="flex w-full max-w-sm flex-col gap-4 rounded-md border border-neatline bg-surface p-6 text-surface-fg outline outline-offset-4 outline-border">
           <h1 className="text-xl font-semibold">{t("login.title")}</h1>
           {params.get("changed") === "1" ? <Alert tone="notice">{t("login.passwordChanged")}</Alert> : null}
           {params.get("ended") === "1" ? <Alert tone="notice">{t("login.sessionEnded")}</Alert> : null}

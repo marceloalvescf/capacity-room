@@ -2,7 +2,7 @@ import { useCallback, useId, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ViewWorkload } from "./api";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
-import { Facts, FindingStatus, matchWorkload, PeakCell, RowFindings, UsageGrids, ValueText, WorkloadName } from "./pieces";
+import { Facts, FindingStatus, matchWorkload, PeakCell, peakTint, RowFindings, UsageGrids, ValueText, WorkloadName } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewWorkload) => `${row.namespace}/${row.kind}/${row.name}`;
@@ -54,15 +54,15 @@ function Unobserved() {
       <p className="text-sm text-muted-fg">{t("report.unobserved.hint")}</p>
       <div className="rounded-md border border-border bg-surface text-surface-fg">
         <table aria-labelledby={heading} className="w-full text-sm">
-          <thead className="border-b border-border text-muted-fg">
+          <thead className="border-b border-border">
             <tr>
-              <th scope="col" className="px-3 py-2 text-left font-medium">
+              <th scope="col" className="label px-3 py-2 text-left">
                 {t("report.column.workload")}
               </th>
-              <th scope="col" className="px-3 py-2 text-left font-medium">
+              <th scope="col" className="label px-3 py-2 text-left">
                 {t("report.column.status")}
               </th>
-              <th scope="col" className="px-3 py-2 text-left font-medium">
+              <th scope="col" className="label px-3 py-2 text-left">
                 {t("report.facts.hpa")}
               </th>
             </tr>
@@ -122,12 +122,14 @@ export function WorkloadsTab() {
         header: t("report.column.cpuPeak"),
         cell: (row) => <PeakCell peak={row.cpu_usage.peak} share={row.cpu_request_percent.peak} word="request" />,
         sortValue: (row) => row.cpu_usage.peak.raw,
+        cellClassName: (row) => peakTint(row.cpu_usage.peak),
       },
       {
         id: "memory",
         header: t("report.column.memoryPeak"),
         cell: (row) => <PeakCell peak={row.memory_usage.peak} share={row.memory_request_percent.peak} word="request" />,
         sortValue: (row) => row.memory_usage.peak.raw,
+        cellClassName: (row) => peakTint(row.memory_usage.peak),
       },
     ],
     [t, hasFinding, status],

@@ -295,6 +295,47 @@ describe("data table", () => {
     expect(spy.mock.calls[0]?.[1]).toBe(screen.getByText("details of api-1").closest("tr"));
   });
 
+  it("every header wears the label", () => {
+    mount(named);
+    for (const header of screen.getAllByRole("columnheader").slice(1)) {
+      expect(header).toHaveClass("label");
+    }
+  });
+
+  it("a column gives a cell the classes of its row", () => {
+    const tinted: Column<Row>[] = [
+      ...columns,
+      { id: "tint", header: "Tint", cell: (row) => row.key, cellClassName: (row) => (row.pods > 1 ? "bg-depth-2" : "") },
+    ];
+    render(
+      <LiveRegion>
+        <RouterProvider
+          router={createMemoryRouter(
+            [
+              {
+                path: "*",
+                element: (
+                  <DataTable
+                    label="Things"
+                    rows={named}
+                    rowKey={(row) => row.key}
+                    rowName={(row) => row.name}
+                    columns={tinted}
+                    empty="No rows in this report."
+                    renderOpened={() => null}
+                  />
+                ),
+              },
+            ],
+            { initialEntries: ["/"] },
+          )}
+        />
+      </LiveRegion>,
+    );
+    expect(screen.getByRole("cell", { name: "web-1" })).not.toHaveClass("bg-depth-2");
+    expect(screen.getByRole("cell", { name: "api-1" })).toHaveClass("bg-depth-2");
+  });
+
   it("cells wrap", () => {
     mount(named);
     const cells = screen.getAllByRole("cell");

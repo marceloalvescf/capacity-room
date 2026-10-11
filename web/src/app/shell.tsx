@@ -12,8 +12,9 @@ import { Brand } from "./brand";
 import { LanguageMenu } from "./language-menu";
 import { useAnnounce } from "./live-region";
 
+// The page in view: the active tint, semibold, and a neat-line frame on every side.
 const navLink =
-  "block rounded-md px-3 py-2 text-sm motion-safe:transition-colors aria-[current=page]:bg-sidebar-active aria-[current=page]:text-sidebar-active-fg";
+  "block rounded-md px-3 py-2 text-sm motion-safe:transition-colors aria-[current=page]:bg-sidebar-active aria-[current=page]:font-semibold aria-[current=page]:ring-1 aria-[current=page]:ring-neatline aria-[current=page]:ring-inset aria-[current=page]:text-sidebar-active-fg";
 
 const version = import.meta.env.VITE_KCR_VERSION;
 
@@ -51,7 +52,7 @@ export function Shell() {
       >
         {t("app.skip")}
       </a>
-      <aside aria-label={t("app.name")} className="flex flex-col gap-6 bg-sidebar p-4 text-sidebar-fg">
+      <aside aria-label={t("app.name")} className="flex flex-col gap-6 bg-sidebar p-4 text-sidebar-fg border-b border-neatline md:border-r md:border-b-0">
         <Brand />
         <nav aria-label={t("nav.label")} className="flex-1">
           <ul>
@@ -95,7 +96,7 @@ export function Shell() {
         </div>
       </aside>
       <div className="flex min-w-0 flex-col">
-        <header className="flex flex-wrap items-center justify-end gap-2 border-b border-border px-6 py-3">
+        <header className="flex flex-wrap items-center justify-end gap-2 border-b border-neatline px-6 py-3">
           <LanguageMenu />
           <ThemeToggle />
           <IconButton

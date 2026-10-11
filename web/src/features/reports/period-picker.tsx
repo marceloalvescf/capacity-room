@@ -37,7 +37,7 @@ type Mode = "length" | "range";
 type Side = "from" | "to";
 
 const choice =
-  "min-h-9 px-3 text-left text-sm text-surface-fg hover:underline aria-pressed:bg-accent aria-pressed:text-accent-fg " +
+  "min-h-9 px-3 text-left text-sm text-surface-fg hover:underline aria-pressed:bg-action aria-pressed:text-action-fg " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 const calendarClasses: Partial<ClassNames> = {
@@ -58,7 +58,7 @@ const calendarClasses: Partial<ClassNames> = {
   day_button:
     "h-8 w-full rounded-md font-mono text-sm focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
   outside: "text-muted-fg",
-  selected: "rounded-md bg-accent text-accent-fg data-[outside=true]:text-accent-fg",
+  selected: "rounded-md bg-action text-action-fg data-[outside=true]:text-action-fg",
 };
 
 const problemKeys: Record<RangeProblem, string> = {
@@ -220,7 +220,7 @@ function Range({ initial, zone, calendar, buttons, onCalendar, onApply }: RangeP
         modifiersClassNames={{
           between:
             "rounded-none bg-info-surface text-info-surface-fg data-[outside=true]:bg-transparent data-[outside=true]:text-muted-fg",
-          otherEnd: "rounded-md bg-accent text-accent-fg data-[outside=true]:text-accent-fg",
+          otherEnd: "rounded-md bg-action text-action-fg data-[outside=true]:text-action-fg",
         }}
         onSelect={(day) => {
           edit(side, withDay(text[side], day));

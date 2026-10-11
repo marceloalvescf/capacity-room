@@ -38,7 +38,7 @@ export function Checkbox({
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={described === "" ? undefined : described}
         className={cn(
-          "size-4 cursor-pointer accent-accent",
+          "size-4 cursor-pointer accent-action",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
           className,
         )}

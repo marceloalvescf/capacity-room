@@ -569,9 +569,10 @@ function Header({ profile }: { profile: Profile | undefined }) {
   }
   return (
     <div>
-      <p className="text-sm text-muted-fg">{t("admin.profile.eyebrow")}</p>
       <h1 className="text-xl font-semibold">{profile.display_name}</h1>
       <p className="text-sm text-muted-fg">
+        {t("admin.profile.kind")}
+        {" · "}
         <span className="font-mono">{profile.id}</span>
         {" · "}
         {t("admin.profile.revision", { revision: profile.revision, time: formatTime(profile.created_at) })}

@@ -171,7 +171,7 @@ export function FindingsTab() {
                     toggle(severity);
                   }}
                   className={cn(
-                    "inline-flex min-h-9 items-center gap-2 rounded-full border px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                    "inline-flex min-h-9 items-center gap-2 rounded-md border px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
                     pressed ? "border-accent bg-info-surface text-fg" : "border-input-border bg-surface text-muted-fg",
                   )}
                 >

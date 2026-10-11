@@ -3,7 +3,8 @@
 `k8s-capacity-report` generates Kubernetes capacity reports from a
 Prometheus-compatible API. It reads metrics only: it never uses a kubeconfig,
 the Kubernetes API, or cloud credentials. Reports are produced as PDF through
-Typst, in Portuguese (Brazil) or English.
+Typst, in Portuguese (Brazil) or English. Its web app is called CapacityRoom;
+the command, the image, and the PDF keep the name `k8s-capacity-report`.
 
 The project is under construction. This file documents what exists today; the
 full design is in

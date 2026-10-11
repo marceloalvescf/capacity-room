@@ -69,11 +69,17 @@ export function PeakCell({ peak, share, word }: { peak: ViewValue; share: ViewVa
       <span className="font-mono">
         <ValueText value={peak} />
       </span>
-      <span className="font-mono text-xs text-muted-fg">
+      <span className="font-mono text-xs text-muted-fg italic">
         <ValueText value={{ ...share, text }} />
       </span>
     </div>
   );
+}
+
+// The tint of a peak cell follows the status the view gives the peak, never a threshold of its own:
+// attention takes the first depth, critical the second hatched as a hazard, any other status none.
+export function peakTint(peak: ViewValue): string {
+  return peak.status === "attention" ? "bg-depth-1" : peak.status === "critical" ? "hazard" : "";
 }
 
 const statistics = ["average", "minimum", "peak", "current"] as const;
@@ -100,16 +106,16 @@ export function StatGrid({
               {title}
             </th>
           )}
-          <th scope="col" className="px-3 py-1.5 text-right font-medium">
+          <th scope="col" className="label px-3 py-1.5 text-right">
             {t("report.stat.average")}
           </th>
-          <th scope="col" className="px-3 py-1.5 text-right font-medium">
+          <th scope="col" className="label px-3 py-1.5 text-right">
             {t("report.stat.minimum")}
           </th>
-          <th scope="col" className="px-3 py-1.5 text-right font-medium">
+          <th scope="col" className="label px-3 py-1.5 text-right">
             {t("report.stat.peak")}
           </th>
-          <th scope="col" className="px-3 py-1.5 text-right font-medium">
+          <th scope="col" className="label px-3 py-1.5 text-right">
             {t("report.stat.current")}
           </th>
         </tr>

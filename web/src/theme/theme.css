@@ -1,53 +1,67 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f6f7f9;
-  --fg: #15181d;
+  --bg: #f5f9fb;
+  --fg: #0e1a22;
   --surface: #ffffff;
-  --surface-fg: #15181d;
-  --sidebar: #eceef2;
-  --sidebar-fg: #4a515c;
-  --sidebar-active: #dfe3ea;
-  --sidebar-active-fg: #15181d;
-  --muted-fg: #5e6570;
-  --border: #dde0e6;
-  --input-border: #868c96;
-  --accent: #2f5bd3;
-  --accent-fg: #ffffff;
-  --healthy: #1d6b40;
-  --attention: #a15c00;
-  --critical: #b42318;
-  --neutral: #5e6570;
-  --critical-surface: #fdecea;
-  --critical-border: #f1b5ae;
-  --critical-surface-fg: #8c1d13;
-  --info-surface: #eef2fc;
-  --info-surface-fg: #2443a3;
+  --surface-fg: #0e1a22;
+  --sidebar: #deedf4;
+  --sidebar-fg: #26404f;
+  --sidebar-active: #bcdbe9;
+  --sidebar-active-fg: #0b1f2b;
+  --muted-fg: #4a5c68;
+  --border: #cfdbe2;
+  --neatline: #22323d;
+  --scrim: rgb(14 26 34 / 0.45);
+  --input-border: #6c808d;
+  --accent: #14375c;
+  --action: #22323d;
+  --action-fg: #ffffff;
+  --healthy: #17694f;
+  --attention: #7f4d00;
+  --critical: #a3135c;
+  --neutral: #485a66;
+  --critical-surface: #fbe8f1;
+  --critical-border: #e9b1cd;
+  --critical-surface-fg: #76104a;
+  --info-surface: #e3f0f7;
+  --info-surface-fg: #1b4870;
+  --depth-1: #d3e8f2;
+  --depth-2: #bcdbea;
+  --depth-3: #9ccae0;
+  color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  --bg: #111318;
-  --fg: #e6e8ec;
-  --surface: #1a1d23;
-  --surface-fg: #e6e8ec;
-  --sidebar: #16181d;
-  --sidebar-fg: #aab0bb;
-  --sidebar-active: #252932;
-  --sidebar-active-fg: #f1f2f4;
-  --muted-fg: #9aa1ad;
-  --border: #2a2e36;
-  --input-border: #6b7280;
-  --accent: #7d9bf0;
-  --accent-fg: #0d1530;
-  --healthy: #6fcf97;
-  --attention: #f2b84b;
-  --critical: #f28b82;
-  --neutral: #9aa1ad;
-  --critical-surface: #2a1716;
-  --critical-border: #6b2a26;
-  --critical-surface-fg: #f2b8b2;
-  --info-surface: #18213a;
-  --info-surface-fg: #9db4f5;
+  --bg: #0a1118;
+  --fg: #d5e0e8;
+  --surface: #0f1922;
+  --surface-fg: #d5e0e8;
+  --sidebar: #0e2030;
+  --sidebar-fg: #9fb7c8;
+  --sidebar-active: #1a3650;
+  --sidebar-active-fg: #e4eef4;
+  --muted-fg: #8ea3b2;
+  --border: #1f2f3c;
+  --neatline: #68849a;
+  --scrim: rgb(0 0 0 / 0.65);
+  --input-border: #5d7585;
+  --accent: #8fb9e2;
+  --action: #c9d6df;
+  --action-fg: #0a1118;
+  --healthy: #6cc0a0;
+  --attention: #d6a24a;
+  --critical: #e07fb0;
+  --neutral: #8ea3b2;
+  --critical-surface: #2a1222;
+  --critical-border: #6a2a4c;
+  --critical-surface-fg: #f1bad6;
+  --info-surface: #122840;
+  --info-surface-fg: #a9cbea;
+  --depth-1: #142d42;
+  --depth-2: #173650;
+  --depth-3: #1c4262;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -61,9 +75,12 @@
   --color-sidebar-active-fg: var(--sidebar-active-fg);
   --color-muted-fg: var(--muted-fg);
   --color-border: var(--border);
+  --color-neatline: var(--neatline);
+  --color-scrim: var(--scrim);
   --color-input-border: var(--input-border);
   --color-accent: var(--accent);
-  --color-accent-fg: var(--accent-fg);
+  --color-action: var(--action);
+  --color-action-fg: var(--action-fg);
   --color-healthy: var(--healthy);
   --color-attention: var(--attention);
   --color-critical: var(--critical);
@@ -73,8 +90,74 @@
   --color-critical-surface-fg: var(--critical-surface-fg);
   --color-info-surface: var(--info-surface);
   --color-info-surface-fg: var(--info-surface-fg);
-  --font-sans: "Inter Variable", system-ui, sans-serif;
-  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+  --color-depth-1: var(--depth-1);
+  --color-depth-2: var(--depth-2);
+  --color-depth-3: var(--depth-3);
+  --font-sans: "Public Sans Variable", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+}
+
+/* Hairline shapes: every radius is 2px, and nothing casts a shadow. */
+@theme {
+  --radius: 2px;
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+
+  /* The depth gauge sounds once: the level rises to the nodes in use, then the hazard shows. */
+  --animate-sounding: sounding 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-hazard-in: hazard-in 200ms ease-out 600ms both;
+
+  @keyframes sounding {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes hazard-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* The one size of every label: a table header, a small heading. A sort button inside takes it whole. */
+@utility label {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-fg);
+
+  & button {
+    text-transform: inherit;
+  }
+}
+
+/* A critical value: the deepest tint that still carries text, hatched in the critical colour. */
+@utility hazard {
+  background-color: var(--depth-2);
+  background-image: repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--critical) 12%, transparent) 0 1.5px,
+      transparent 1.5px 6px
+    );
+}
+
+:root {
+  accent-color: var(--action);
 }
 
 :focus-visible {

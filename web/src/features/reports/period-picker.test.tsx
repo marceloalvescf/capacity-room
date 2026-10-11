@@ -301,8 +301,8 @@ describe("period picker", () => {
         const dialog = await september(userEvent.setup());
         const oct = cell(dialog, "2026-10-01");
         expect(oct).not.toBeNull();
-        expect(oct?.className).toContain("bg-accent");
-        expect(oct?.className).toContain("data-[outside=true]:text-accent-fg");
+        expect(oct?.className).toContain("bg-action");
+        expect(oct?.className).toContain("data-[outside=true]:text-action-fg");
       });
 
       it("picking an outside day sets the date and keeps the time", async () => {

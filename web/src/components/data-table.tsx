@@ -25,6 +25,8 @@ export interface Column<Row> {
   // A column without a sort value does not sort; a null sorts after every value.
   sortValue?: (row: Row) => number | string | null;
   align?: "start" | "end";
+  // Classes a cell of this column takes for its row, such as the tint of a value by its status.
+  cellClassName?: (row: Row) => string;
 }
 
 // The layout of a set of facts inside an opened row: as many columns of at least 14rem as the row holds.
@@ -181,8 +183,12 @@ export function DataTable<Row extends RowData>({
   }
 
   const byId = new Map(columns.map((column) => [column.id, column]));
-  const cellClass = (column: Column<Row> | undefined) =>
-    cn("px-3 py-2 align-top [overflow-wrap:anywhere]", column?.align === "end" ? "text-right" : "text-left");
+  const cellClass = (column: Column<Row> | undefined, row: Row) =>
+    cn(
+      "px-3 py-2 align-top [overflow-wrap:anywhere]",
+      column?.align === "end" ? "text-right" : "text-left",
+      column?.cellClassName?.(row),
+    );
 
   return (
     <div className="flex flex-col gap-3">
@@ -192,7 +198,7 @@ export function DataTable<Row extends RowData>({
       ) : (
         <div className="rounded-md border border-border bg-surface text-surface-fg">
           <table aria-label={label} className="w-full border-separate border-spacing-0 text-sm">
-            <thead ref={head} className="sticky top-0 z-10 bg-surface text-muted-fg [&>tr>th]:border-b [&>tr>th]:border-border">
+            <thead ref={head} className="sticky top-0 z-10 bg-surface [&>tr>th]:border-b [&>tr>th]:border-border">
               {table.getHeaderGroups().map((group) => (
                 <tr key={group.id}>
                   <th scope="col" className="w-12 px-3 py-2">
@@ -205,13 +211,13 @@ export function DataTable<Row extends RowData>({
                       <th
                         key={header.id}
                         aria-sort={direction === false ? undefined : direction === "asc" ? "ascending" : "descending"}
-                        className={cn("px-3 py-2 font-medium", column?.align === "end" ? "text-right" : "text-left")}
+                        className={cn("label px-3 py-2", column?.align === "end" ? "text-right" : "text-left")}
                       >
                         {header.column.getCanSort() ? (
                           <button
                             type="button"
                             onClick={header.column.getToggleSortingHandler()}
-                            className="inline-flex items-center gap-1 font-medium focus-visible:outline-2 focus-visible:outline-accent"
+                            className="inline-flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-accent"
                           >
                             {column?.header}
                             <Sorted direction={direction} />
@@ -258,7 +264,7 @@ export function DataTable<Row extends RowData>({
                       {row.getAllCells().map((cell) => {
                         const column = byId.get(cell.column.id);
                         return (
-                          <td key={cell.id} className={cellClass(column)}>
+                          <td key={cell.id} className={cellClass(column, row.original)}>
                             {column?.cell(row.original)}
                           </td>
                         );

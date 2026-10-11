@@ -10,7 +10,7 @@ function tokens(selector: string): Map<string, string> {
   const start = css.indexOf(`${selector} {`);
   const end = css.indexOf("}", start);
   const found = new Map<string, string>();
-  for (const m of css.slice(start, end).matchAll(/--([a-z-]+):\s*(#[0-9a-f]{6});/g)) {
+  for (const m of css.slice(start, end).matchAll(/--([a-z0-9-]+):\s*(#[0-9a-f]{6});/g)) {
     found.set(m[1] ?? "", m[2] ?? "");
   }
   return found;
@@ -56,7 +56,7 @@ describe("contrast", () => {
   });
 
   it("every token has a dark twin", () => {
-    expect(themes.light.size).toBe(22);
+    expect(themes.light.size).toBe(27);
     expect([...themes.dark.keys()].sort()).toEqual([...themes.light.keys()].sort());
   });
 });

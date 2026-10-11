@@ -615,6 +615,16 @@ redactor the moment the settings are loaded, before the pool opens.
   the PDF, drawn by `StatusMark`.
 - **Names and numbers use the monospaced font,** and motion appears only
   under `motion-safe:`.
+- **The look is recorded in `DESIGN.md`,** derived from the built code; a
+  change of a token, a face, or a component rule updates it in the same
+  commit. The web app is named CapacityRoom; nothing outside `web/` and the
+  documents takes that name.
+- **A tint follows a status the view gives.** A depth tint or the hazard
+  hatch marks a value by its own status from the view, never by a threshold
+  of the web app. Filled actions use the `action` tokens; `accent` is for
+  links, focus, and the current-level line. Nothing casts a shadow: a
+  floating layer is closed by a neat-line, and a modal dims the page through
+  the `scrim` token.
 - **An icon button keeps its name.** `IconButton` puts the name in
   `aria-label` and shows it in a tooltip on hover and on focus.
 - **The static handler answers what no route answers,** for `GET` and `HEAD`

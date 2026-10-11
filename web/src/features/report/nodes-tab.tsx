@@ -5,7 +5,7 @@ import { StatusMark } from "@/components/status-mark";
 import type { ViewNode, ViewNodepool, ViewValue } from "./api";
 import { CopyName } from "./copy-name";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
-import { Facts, FindingStatus, matchNode, PeakCell, RowFindings, StatGrid, ValueText } from "./pieces";
+import { Facts, FindingStatus, matchNode, PeakCell, peakTint, RowFindings, StatGrid, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewNode) => row.name;
@@ -86,15 +86,15 @@ function Pools({ pools }: { pools: ViewNodepool[] }) {
   return (
     <div className="rounded-md border border-border bg-surface text-surface-fg">
       <table aria-label={t("report.pools.title")} className="w-full text-sm">
-        <thead className="border-b border-border text-muted-fg">
+        <thead className="border-b border-border">
           <tr>
-            <th scope="col" className="px-3 py-2 text-left font-medium">
+            <th scope="col" className="label px-3 py-2 text-left">
               {t("report.column.nodepool")}
             </th>
-            <th scope="col" className="px-3 py-2 text-left font-medium">
+            <th scope="col" className="label px-3 py-2 text-left">
               {t("report.column.confidence")}
             </th>
-            <th scope="col" className="px-3 py-2 text-left font-medium">
+            <th scope="col" className="label px-3 py-2 text-left">
               {t("report.column.nodes")}
             </th>
           </tr>
@@ -165,6 +165,7 @@ export function NodesTab() {
         header: t("report.column.cpuPeak"),
         cell: (row) => <PeakCell peak={row.cpu_usage_percent.peak} share={row.cpu_request_percent} word="requested" />,
         sortValue: (row) => row.cpu_usage_percent.peak.raw,
+        cellClassName: (row) => peakTint(row.cpu_usage_percent.peak),
       },
       {
         id: "memory",
@@ -173,6 +174,7 @@ export function NodesTab() {
           <PeakCell peak={row.memory_usage_percent.peak} share={row.memory_request_percent} word="requested" />
         ),
         sortValue: (row) => row.memory_usage_percent.peak.raw,
+        cellClassName: (row) => peakTint(row.memory_usage_percent.peak),
       },
     ],
     [t, hasFinding, status],

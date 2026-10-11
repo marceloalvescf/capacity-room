@@ -1,9 +1,8 @@
 {
   "app": {
-    "name": "kcr - Kubernetes Capacity Report",
-    "short": "kcr",
-    "long": "Kubernetes Capacity Report",
-    "title": "{{screen}} · kcr - Kubernetes Capacity Report",
+    "name": "CapacityRoom",
+    "short": "CapacityRoom",
+    "title": "{{screen}} · CapacityRoom",
     "skip": "Pular para o conteúdo",
     "version": "Versão {{version}}"
   },
@@ -649,7 +648,7 @@
       "stay": "Ficar",
       "newTitle": "Novo perfil",
       "editScreen": "Editar perfil",
-      "eyebrow": "Perfil",
+      "kind": "Perfil",
       "revision": "Revisão {{revision}}, salva em {{time}}",
       "back": "Voltar aos perfis",
       "section": {

@@ -8,6 +8,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The web app is called CapacityRoom and has a look of its own, drawn from
+  the nautical chart, in both themes: a new mark, typefaces, and colours,
+  critical marked in magenta, the nodes of the cluster drawn as a depth gauge
+  on the report overview, and the peak values that need attention tinted on
+  the tables.
 - The report overview opens on whether the cluster can grow, its nodes
   against the autoscaler's maximum, and on the pressure of each scope with
   its leading finding; the severity totals follow on one line, and the

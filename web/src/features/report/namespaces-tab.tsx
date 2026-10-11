@@ -2,7 +2,7 @@ import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ViewNamespace } from "./api";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
-import { FindingStatus, matchNamespace, PeakCell, RowFindings, UsageGrids, ValueText } from "./pieces";
+import { FindingStatus, matchNamespace, PeakCell, peakTint, RowFindings, UsageGrids, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewNamespace) => row.name;
@@ -54,12 +54,14 @@ export function NamespacesTab() {
         header: t("report.column.cpuPeak"),
         cell: (row) => <PeakCell peak={row.cpu_usage.peak} share={row.cpu_request_percent.peak} word="request" />,
         sortValue: (row) => row.cpu_usage.peak.raw,
+        cellClassName: (row) => peakTint(row.cpu_usage.peak),
       },
       {
         id: "memory",
         header: t("report.column.memoryPeak"),
         cell: (row) => <PeakCell peak={row.memory_usage.peak} share={row.memory_request_percent.peak} word="request" />,
         sortValue: (row) => row.memory_usage.peak.raw,
+        cellClassName: (row) => peakTint(row.memory_usage.peak),
       },
     ],
     [t, hasFinding, status],

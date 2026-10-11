@@ -1,7 +1,9 @@
 # Operations guide
 
 This guide is for the person who installs and runs the k8s-capacity-report
-platform: the web server, the worker, and their database. It covers the
+platform: the web server, the worker, and their database. The web app it
+serves is called CapacityRoom; every command, setting, and variable keeps
+the name `k8s-capacity-report` or the prefix `KCR_`. The guide covers the
 install behind a TLS proxy, the settings, the first start, the day to day,
 backups, upgrades, sizing, and the limits of the platform. The command-line
 tool, `k8s-capacity-report report`, needs none of this; the README describes

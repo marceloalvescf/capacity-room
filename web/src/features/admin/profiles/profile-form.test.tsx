@@ -161,10 +161,10 @@ describe("the profile form", () => {
 
   it("shows an edit with its revision", async () => {
     await renderApp("/profiles/production/edit");
-    await screen.findByRole("heading", { level: 1, name: "Production" });
-    expect(screen.getByText("Profile")).toBeInTheDocument();
+    const heading = await screen.findByRole("heading", { level: 1, name: "Production" });
+    expect(heading.previousElementSibling).toBeNull();
     expect(screen.getByText("production")).toHaveClass("font-mono");
-    expect(screen.getByText(/Revision 3, saved /)).toBeInTheDocument();
+    expect(heading.nextElementSibling).toHaveTextContent(/^Profile · production · Revision 3, saved /);
     expect(screen.queryByLabelText("Identifier")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Display name")).toHaveValue("Production");
     expect(screen.getByLabelText("Credential file")).toHaveValue("production-token");
