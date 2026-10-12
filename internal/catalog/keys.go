@@ -100,6 +100,7 @@ const (
 
 	SectionsNamespacesHeading           Key = "sections.namespaces.heading"
 	SectionsNamespacesEmpty             Key = "sections.namespaces.empty"
+	SectionsNamespacesBelowMinimum      Key = "sections.namespaces.below_minimum"
 	SectionsNamespacesHeaderResource    Key = "sections.namespaces.header_resource"
 	SectionsNamespacesHeaderAverage     Key = "sections.namespaces.header_average"
 	SectionsNamespacesHeaderPeak        Key = "sections.namespaces.header_peak"
@@ -112,6 +113,7 @@ const (
 
 	SectionsWorkloadsHeading             Key = "sections.workloads.heading"
 	SectionsWorkloadsEmpty               Key = "sections.workloads.empty"
+	SectionsWorkloadsBelowMinimum        Key = "sections.workloads.below_minimum"
 	SectionsWorkloadsHeaderWorkload      Key = "sections.workloads.header_workload"
 	SectionsWorkloadsHeaderPods          Key = "sections.workloads.header_pods"
 	SectionsWorkloadsHeaderCPUAverage    Key = "sections.workloads.header_cpu_average"
@@ -181,6 +183,7 @@ const (
 	SectionsNodepoolsEmptySummary            Key = "sections.nodepools.empty_summary"
 	SectionsNodepoolsEmptyProfile            Key = "sections.nodepools.empty_profile"
 	SectionsNodepoolsEmptyDetail             Key = "sections.nodepools.empty_detail"
+	SectionsNodepoolsBelowMinimum            Key = "sections.nodepools.below_minimum"
 	SectionsNodepoolsNoFinding               Key = "sections.nodepools.no_finding"
 
 	NodeStateReady         Key = "node_state.ready"
@@ -232,7 +235,6 @@ const (
 	SectionsExecutiveHeaderOrder            Key = "sections.executive.header_order"
 	SectionsExecutiveHeaderAction           Key = "sections.executive.header_action"
 	SectionsExecutiveHeaderScope            Key = "sections.executive.header_scope"
-	SectionsExecutiveActionQualified        Key = "sections.executive.action_qualified"
 	SectionsExecutiveLimitationsHeading     Key = "sections.executive.limitations_heading"
 	SectionsExecutiveLimitationsEmpty       Key = "sections.executive.limitations_empty"
 	SectionsExecutiveHeaderCapability       Key = "sections.executive.header_capability"
@@ -286,11 +288,11 @@ var wordingKeys = []Key{
 	CapabilityReasonNodeAddressMappingIncomplete, CapabilityReasonNodepoolLabelsNotFound,
 	CapabilityReasonNodeAutoscalingUndetermined,
 	SectionsNamespaceLabel,
-	SectionsNamespacesHeading, SectionsNamespacesEmpty, SectionsNamespacesHeaderResource,
+	SectionsNamespacesHeading, SectionsNamespacesEmpty, SectionsNamespacesBelowMinimum, SectionsNamespacesHeaderResource,
 	SectionsNamespacesHeaderAverage, SectionsNamespacesHeaderPeak, SectionsNamespacesHeaderRequest,
 	SectionsNamespacesHeaderLimit, SectionsNamespacesHeaderPeakRequest, SectionsNamespacesHeaderPeakLimit,
 	SectionsNamespacesRowCPU, SectionsNamespacesRowMemory,
-	SectionsWorkloadsHeading, SectionsWorkloadsEmpty, SectionsWorkloadsHeaderWorkload,
+	SectionsWorkloadsHeading, SectionsWorkloadsEmpty, SectionsWorkloadsBelowMinimum, SectionsWorkloadsHeaderWorkload,
 	SectionsWorkloadsHeaderPods, SectionsWorkloadsHeaderCPUAverage, SectionsWorkloadsHeaderCPUPeak,
 	SectionsWorkloadsHeaderCPURequest, SectionsWorkloadsHeaderCPULimit, SectionsWorkloadsHeaderMemoryAverage,
 	SectionsWorkloadsHeaderMemoryPeak, SectionsWorkloadsHeaderMemoryRequest, SectionsWorkloadsHeaderMemoryLimit,
@@ -313,7 +315,7 @@ var wordingKeys = []Key{
 	SectionsNodepoolsHeaderMemoryRequested, SectionsNodepoolsHeaderNode,
 	SectionsNodepoolsHeaderCPUAvgPeak, SectionsNodepoolsHeaderMemoryAvgPeak,
 	SectionsNodepoolsHeaderReason, SectionsNodepoolsHeaderState, SectionsNodepoolsEmptySummary,
-	SectionsNodepoolsEmptyProfile, SectionsNodepoolsEmptyDetail, SectionsNodepoolsNoFinding,
+	SectionsNodepoolsEmptyProfile, SectionsNodepoolsEmptyDetail, SectionsNodepoolsBelowMinimum, SectionsNodepoolsNoFinding,
 	NodeStateReady, NodeStateNotReady, NodeStateSchedulable, NodeStateUnschedulable,
 	PlaceholderUndetermined, PlaceholderEmptyCell,
 	ValueYes, ValueNo,
@@ -336,7 +338,7 @@ var wordingKeys = []Key{
 	SectionsExecutivePoolAttention, SectionsExecutivePoolCritical,
 	SectionsExecutiveActionsHeading, SectionsExecutiveActionsEmpty,
 	SectionsExecutiveHeaderOrder, SectionsExecutiveHeaderAction,
-	SectionsExecutiveHeaderScope, SectionsExecutiveActionQualified,
+	SectionsExecutiveHeaderScope,
 	SectionsExecutiveLimitationsHeading, SectionsExecutiveLimitationsEmpty,
 	SectionsExecutiveHeaderCapability, SectionsExecutiveHeaderCoverage,
 	SectionsExecutiveInterpretation, SectionsExecutiveReasonAllMissing,
@@ -355,14 +357,12 @@ var (
 
 // Priorities lists the priorities the executive body prints: attention and
 // critical. RiskSeverities lists the two severities a namespace at risk
-// counts. ScopeQualifiers lists the scope types whose action the plan may
-// qualify. ScopeSummaries lists the kinds of a scope list of more than
+// counts. ScopeSummaries lists the kinds of a scope list of more than
 // three names.
 var (
-	Priorities      = []string{"attention", "critical"}
-	RiskSeverities  = []string{"critical", "attention"}
-	ScopeQualifiers = []string{"namespace", "workload", "hpa", "cluster"}
-	ScopeSummaries  = []string{"namespace", "workload", "hpa", "deployment"}
+	Priorities     = []string{"attention", "critical"}
+	RiskSeverities = []string{"critical", "attention"}
+	ScopeSummaries = []string{"namespace", "workload", "hpa", "deployment"}
 )
 
 // CapabilityName returns the key that names capability name, one of
@@ -417,10 +417,6 @@ func RiskCount(severity string, count float64) Key {
 	}
 	return Key("risk_status." + severity + ".plural")
 }
-
-// ScopeQualifier returns the key of the qualifier of an action whose scope
-// has type scopeType, one of ScopeQualifiers: scope_qualifier.<scopeType>.
-func ScopeQualifier(scopeType string) Key { return Key("scope_qualifier." + scopeType) }
 
 // ScopeSummary returns the key of the summary of a scope list of kind, one
 // of ScopeSummaries: scope_summary.<kind>.
@@ -516,9 +512,6 @@ func Keys() []Key {
 	}
 	for _, severity := range RiskSeverities {
 		keys = append(keys, RiskCount(severity, 1), RiskCount(severity, 2))
-	}
-	for _, scopeType := range ScopeQualifiers {
-		keys = append(keys, ScopeQualifier(scopeType))
 	}
 	for _, kind := range ScopeSummaries {
 		keys = append(keys, ScopeSummary(kind))

@@ -109,7 +109,6 @@ func TestViewSaysWhatThePDFSays(t *testing.T) {
 			view := mustView(t, s, lang)
 			doc := detailedDocument(t, s, lang)
 			where := name + "/" + string(lang)
-			cat := mustCatalog(t, lang)
 
 			viewNamespaces := map[string]ViewNamespace{}
 			for _, n := range view.Namespaces {
@@ -215,20 +214,7 @@ func TestViewSaysWhatThePDFSays(t *testing.T) {
 						r := view.Recommendations[plan]
 						plan++
 						recs++
-						shared := 0
-						for _, other := range view.Recommendations {
-							if other.Action == r.Action {
-								shared++
-							}
-						}
-						wantAction := r.Action
-						if shared > 1 {
-							wantAction = catText(t, cat, catalog.SectionsExecutiveActionQualified, catalog.Params{
-								"Action":    r.Action,
-								"Qualifier": catText(t, cat, catalog.ScopeQualifier(r.ScopeType), nil),
-							})
-						}
-						requireText(t, where+" action", wantAction, cellText(row[2]))
+						requireText(t, where+" action", r.Action, cellText(row[2]))
 						requireText(t, where+" scope", r.ScopeText, cellText(row[3]))
 					}
 					if len(table.Rows) != len(view.Recommendations) {

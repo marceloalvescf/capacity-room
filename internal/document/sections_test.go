@@ -130,7 +130,7 @@ func TestSectionsOfDirectCompleteInPortuguese(t *testing.T) {
 	}
 
 	cpu := table.Rows[0]
-	wantCPU := []string{"CPU", "300 mCPU", "400 mCPU", "500 mCPU", "1 cores"}
+	wantCPU := []string{"CPU", "300 mCPU", "400 mCPU", "500 mCPU", "1 core"}
 	for i, want := range wantCPU {
 		if got := runText(t, cpu[i][0]); got != want {
 			t.Errorf("cpu cell %d = %q, want %q", i, got, want)
@@ -900,13 +900,16 @@ func TestDocumentEqualsParityForItsSections(t *testing.T) {
 
 // parityCorrection names one cell of the original's fixture that the
 // document writes differently: because the snapshot holds a number the
-// fixture leaves out, or because the document draws a capability that could
-// not be read as unavailable where the original drew it as critical.
+// fixture leaves out, because the document draws a capability that could
+// not be read as unavailable where the original drew it as critical, or
+// because the document names a scope by its full name where the original
+// used the part after the last slash.
 type parityCorrection struct {
 	table  string // the id of the table
 	row    int
 	cell   int
-	from   catalog.Key // the placeholder the fixture holds; empty for a status correction
+	from   catalog.Key // the placeholder the fixture holds; empty for a status or an identifier correction
+	ident  string      // the short scope name the fixture holds, when the document writes the full name
 	to     string      // the text the document writes
 	status [2]string   // the status the fixture holds and the one the document draws, when they differ
 }
@@ -920,6 +923,8 @@ type parityCorrection struct {
 var parityCorrections = []parityCorrection{
 	{table: "hpa-observed", row: 0, cell: 4, from: catalog.PlaceholderUnavailable, to: "2"},
 	{table: "material-limitations", row: 0, cell: 1, status: [2]string{"critical", "unavailable"}},
+	{table: "action-plan", row: 0, cell: 3, ident: "api", to: "payments/api"},
+	{table: "action-plan", row: 1, cell: 3, ident: "api", to: "payments/api"},
 }
 
 // applyParityCorrections rewrites, in place, the cells of want that
@@ -946,6 +951,12 @@ func applyParityCorrections(t *testing.T, cat *catalog.Catalog, want any) {
 			if c.from != "" {
 				if run["text"] != from {
 					t.Fatalf("cell %d of row %d of %s holds %q, want %q", c.cell, c.row, c.table, run["text"], from)
+				}
+				run["text"] = c.to
+			}
+			if c.ident != "" {
+				if run["text"] != c.ident {
+					t.Fatalf("cell %d of row %d of %s holds %q, want %q", c.cell, c.row, c.table, run["text"], c.ident)
 				}
 				run["text"] = c.to
 			}

@@ -182,7 +182,7 @@
               [
                 {
                   "kind": "text",
-                  "text": "Attention / high priority"
+                  "text": "Attention"
                 }
               ]
             ],
@@ -197,7 +197,7 @@
               [
                 {
                   "kind": "text",
-                  "text": "Critical / critical priority"
+                  "text": "Critical"
                 }
               ]
             ],
@@ -881,7 +881,7 @@
           [
             {
               "kind": "text",
-              "text": "1 cores"
+              "text": "1 core"
             }
           ],
           [
@@ -1024,7 +1024,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Workloads with critical priority"
+          "text": "Critical workloads"
         }
       ]
     },
@@ -1073,7 +1073,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Workloads with high priority"
+          "text": "Workloads needing attention"
         }
       ]
     },
@@ -1168,7 +1168,7 @@
           [
             {
               "kind": "text",
-              "text": "1 critical · 1 high"
+              "text": "Critical 1 · Attention 1"
             }
           ],
           [
@@ -1288,7 +1288,7 @@
           [
             {
               "kind": "ident",
-              "text": "api"
+              "text": "payments/api"
             }
           ]
         ],
@@ -1315,7 +1315,7 @@
           [
             {
               "kind": "ident",
-              "text": "api"
+              "text": "payments/api"
             }
           ]
         ],
@@ -1330,7 +1330,7 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "High"
+              "text": "Attention"
             }
           ],
           [
@@ -1342,7 +1342,7 @@
           [
             {
               "kind": "ident",
-              "text": "payments-web"
+              "text": "payments/payments-web"
             }
           ]
         ],
@@ -1357,13 +1357,13 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "High"
+              "text": "Attention"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Set or justify the CPU limit according to the policy of the workload. (namespaces)"
+              "text": "Set or justify the CPU limit according to the policy of the workload."
             }
           ],
           [
@@ -1384,7 +1384,7 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "High"
+              "text": "Attention"
             }
           ],
           [
@@ -1411,19 +1411,19 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "High"
+              "text": "Attention"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Set or justify the CPU limit according to the policy of the workload. (workloads)"
+              "text": "Set or justify the CPU limit according to the policy of the workload."
             }
           ],
           [
             {
               "kind": "ident",
-              "text": "queue"
+              "text": "payments/queue"
             }
           ]
         ],
@@ -1438,7 +1438,7 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "High"
+              "text": "Attention"
             }
           ],
           [
@@ -1450,7 +1450,7 @@
           [
             {
               "kind": "ident",
-              "text": "queue"
+              "text": "payments/queue"
             }
           ]
         ],
@@ -1465,7 +1465,7 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "High"
+              "text": "Attention"
             }
           ],
           [
@@ -1477,7 +1477,7 @@
           [
             {
               "kind": "ident",
-              "text": "queue"
+              "text": "payments/queue"
             }
           ]
         ],
@@ -1492,7 +1492,7 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "High"
+              "text": "Attention"
             }
           ],
           [
@@ -1504,7 +1504,7 @@
           [
             {
               "kind": "ident",
-              "text": "api"
+              "text": "payments/api"
             }
           ]
         ],
@@ -1519,7 +1519,7 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "High"
+              "text": "Attention"
             }
           ],
           [
@@ -1531,7 +1531,7 @@
           [
             {
               "kind": "ident",
-              "text": "queue"
+              "text": "payments/queue"
             }
           ]
         ]

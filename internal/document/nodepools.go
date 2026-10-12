@@ -257,8 +257,10 @@ func poolProfile(b *builder, pools []snapshot.NodePool, nodes map[string]snapsho
 func nodeDetail(b *builder, s snapshot.Snapshot, nodes map[string]snapshot.Node, minRank int, thresholds config.Thresholds) []Block {
 	blocks := []Block{numberedHeading(b, catalog.SectionsNodepoolsDetailHeading)}
 	shown := false
+	total := 0
 	for _, pool := range s.Nodepools {
 		var rows [][][]Run
+		total += len(poolNodes(pool, nodes))
 		for _, n := range poolNodes(pool, nodes) {
 			if analysis.Rank(scopeSeverity(s.Findings, analysis.ScopeNode, n.Name, "")) < minRank {
 				continue
@@ -287,7 +289,11 @@ func nodeDetail(b *builder, s snapshot.Snapshot, nodes map[string]snapshot.Node,
 			})
 	}
 	if !shown {
-		blocks = append(blocks, Paragraph{Runs: []Run{Text(b.text(catalog.SectionsNodepoolsEmptyDetail, nil))}})
+		key := catalog.SectionsNodepoolsBelowMinimum
+		if total == 0 {
+			key = catalog.SectionsNodepoolsEmptyDetail
+		}
+		blocks = append(blocks, Paragraph{Runs: []Run{Text(b.text(key, nil))}})
 	}
 	return blocks
 }

@@ -344,7 +344,7 @@ func TestNamespacesAtRiskRows(t *testing.T) {
 	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
 
 	assertRows(t, subsection(t, blocks, 2),
-		[]string{"ident:payments", "status/healthy:49,9%", "status/attention:76,8%", "text:" + reason(t, "request_peak", "cpu", "97%"), "text:" + pt(t, catalog.RiskCount("critical", 1), nil), "status/critical:" + pt(t, catalog.Priority("critical"), nil)},
+		[]string{"ident:payments", "status/healthy:49,9%", "status/attention:76,8%", "text:" + reason(t, "request_peak", "cpu", "97%"), "text:" + pt(t, catalog.RiskCount("critical", 1), nil), "status/critical:Crítico"},
 		[]string{"ident:stock", "status/healthy:37,9%", "status/healthy:45,4%", "text:" + reason(t, "request_peak", "cpu", "75%"), "text:" + pt(t, catalog.RiskCount("attention", 1), nil), "status/attention:" + pt(t, catalog.Priority("attention"), nil)})
 }
 
@@ -526,7 +526,7 @@ func TestNodepoolStatusRows(t *testing.T) {
 		nodeFinding("NODE_MEMORY_USAGE_CRITICAL", analysis.SeverityCritical, "worker-a", number("peak_percent", 91)))
 
 	want := [][]string{
-		{"ident:apps", "status/critical:" + pt(t, catalog.Priority("critical"), nil), "text:" + pt(t, catalog.FindingObservation("node_usage", "memory"), nil)},
+		{"ident:apps", "status/critical:Crítica", "text:" + pt(t, catalog.FindingObservation("node_usage", "memory"), nil)},
 		{"ident:stable", "status/healthy:" + pt(t, catalog.SectionsExecutivePoolStable, nil), "text:" + pt(t, catalog.PlaceholderEmptyCell, nil)},
 	}
 	if len(rows) != 2 || !slices.Equal(rows[0], want[0]) || !slices.Equal(rows[1], want[1]) {
@@ -541,7 +541,7 @@ func TestNodepoolStatusKeepsTheHighestSeverityOnly(t *testing.T) {
 		snapshot.Finding{Code: "NODEPOOL_MEMORY_UNEVEN", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeNodepool, ScopeName: "pool-a", Confidence: "exact"},
 		nodeFinding("NODE_CPU_REQUEST_HIGH", analysis.SeverityCritical, "pool-a-1", number("percent", 91)))
 
-	want := []string{"ident:pool-a", "status/critical:" + pt(t, catalog.Priority("critical"), nil), "text:" + pt(t, catalog.FindingObservation("node_request_high", "cpu"), nil)}
+	want := []string{"ident:pool-a", "status/critical:Crítica", "text:" + pt(t, catalog.FindingObservation("node_request_high", "cpu"), nil)}
 	if len(rows) != 1 || !slices.Equal(rows[0], want) {
 		t.Errorf("rows = %q, want %q", rows, want)
 	}
@@ -621,14 +621,7 @@ func planRows(t *testing.T, severity string, recommendations ...snapshot.Recomme
 	return rowsOf(t, blocks), blocks, nil
 }
 
-// action reads the action sentence of a family and resource.
-func action(t *testing.T, family, resource string) string {
-	t.Helper()
-	return catText(t, mustCatalog(t, catalog.PortugueseBrazil), catalog.FindingAction(family, resource), nil)
-}
-
 func TestActionPlanRows(t *testing.T) {
-	cat := mustCatalog(t, catalog.PortugueseBrazil)
 	rows, _, err := planRows(t, "attention",
 		recommendation("NAMESPACE_MEMORY_LIMIT_CRITICAL", "critical", "namespace", "payments"),
 		recommendation("NAMESPACE_MEMORY_REQUEST_CRITICAL", "critical", "namespace", "payments"),
@@ -642,21 +635,17 @@ func TestActionPlanRows(t *testing.T) {
 		t.Fatalf("builder error = %v", err)
 	}
 
-	qualified := func(family, resource, qualifier string) string {
-		return catText(t, cat, catalog.SectionsExecutiveActionQualified, catalog.Params{"Action": action(t, family, resource), "Qualifier": qualifier})
-	}
-	critical := "status/critical:" + catText(t, cat, catalog.Priority("critical"), nil)
-	attention := "status/attention:" + catText(t, cat, catalog.Priority("attention"), nil)
-	namespaces := catText(t, cat, catalog.ScopeQualifier("namespace"), nil)
-	workloads := catText(t, cat, catalog.ScopeQualifier("workload"), nil)
+	limit := "text:Revisar o limit de memória e o perfil de consumo observado."
+	request := "text:Revisar o request de memória e o consumo observado."
+	cpu := "text:Revisar o request de CPU e o consumo observado."
 	want := [][]string{
-		{"text:1", critical, "text:" + qualified("resource_limit_usage", "memory", namespaces), "ident:payments"},
-		{"text:2", critical, "text:" + qualified("resource_request_usage", "memory", namespaces), "ident:payments"},
-		{"text:3", critical, "text:" + qualified("resource_limit_usage", "memory", workloads), "ident:payments-web"},
-		{"text:4", critical, "text:" + qualified("resource_request_usage", "memory", workloads), "ident:payments-web"},
-		{"text:5", attention, "text:" + action(t, "hpa_divergence", ""), "ident:payments-web"},
-		{"text:6", attention, "text:" + qualified("resource_request_usage", "cpu", namespaces), "ident:payments"},
-		{"text:7", attention, "text:" + qualified("resource_request_usage", "cpu", workloads), "ident:payments-web"},
+		{"text:1", "status/critical:Crítico", limit, "ident:payments"},
+		{"text:2", "status/critical:Crítico", request, "ident:payments"},
+		{"text:3", "status/critical:Crítico", limit, "ident:payments/payments-web"},
+		{"text:4", "status/critical:Crítico", request, "ident:payments/payments-web"},
+		{"text:5", "status/attention:Atenção", "text:Investigar eventos, restrições de agendamento e tempo de estabilização.", "ident:payments/payments-web"},
+		{"text:6", "status/attention:Atenção", cpu, "ident:payments"},
+		{"text:7", "status/attention:Atenção", cpu, "ident:payments/payments-web"},
 	}
 	if len(rows) != len(want) {
 		t.Fatalf("rows = %q, want %d", rows, len(want))
@@ -665,6 +654,22 @@ func TestActionPlanRows(t *testing.T) {
 		if !slices.Equal(rows[i], want[i]) {
 			t.Errorf("row %d = %q, want %q", i+1, rows[i], want[i])
 		}
+	}
+}
+
+func TestActionPlanSpeaksEnglish(t *testing.T) {
+	s := baseSnapshot(t)
+	s.Recommendations = []snapshot.Recommendation{
+		recommendation("WORKLOAD_MEMORY_LIMIT_CRITICAL", "critical", "workload", "payments/web"),
+		recommendation("WORKLOAD_CPU_REQUEST_ATTENTION", "attention", "workload", "payments/web"),
+	}
+	b := &builder{cat: mustCatalog(t, catalog.English)}
+	rows := rowsOf(t, actionPlan(b, s, minimumRank(raiseToAttention("attention"))))
+	if b.err != nil {
+		t.Fatalf("builder error = %v", b.err)
+	}
+	if len(rows) != 2 || rows[0][1] != "status/critical:Critical" || rows[1][1] != "status/attention:Attention" || rows[0][3] != "ident:payments/web" {
+		t.Errorf("rows = %q, want Critical and Attention priorities and the full scope name", rows)
 	}
 }
 
@@ -694,11 +699,7 @@ func edgeScalingRecommendations() []snapshot.Recommendation {
 	}
 }
 
-func TestActionPlanQualifiesOnlyIncludedCollisions(t *testing.T) {
-	cat := mustCatalog(t, catalog.PortugueseBrazil)
-	namespaces := catText(t, cat, catalog.ScopeQualifier("namespace"), nil)
-	qualified := catText(t, cat, catalog.SectionsExecutiveActionQualified, catalog.Params{"Action": action(t, "resource_request_usage", "cpu"), "Qualifier": namespaces})
-
+func TestActionPlanNamesNoQualifier(t *testing.T) {
 	rows, _, err := planRows(t, "attention", edgeScalingRecommendations()...)
 	if err != nil {
 		t.Fatalf("builder error = %v", err)
@@ -706,25 +707,16 @@ func TestActionPlanQualifiesOnlyIncludedCollisions(t *testing.T) {
 	if len(rows) != 10 {
 		t.Fatalf("rows at attention = %d, want 10", len(rows))
 	}
-	if rows[0][3] != "ident:web" {
-		t.Errorf("row 1 scope = %q, want ident:web", rows[0][3])
+	if rows[0][3] != "ident:payments/web" {
+		t.Errorf("row 1 scope = %q, want ident:payments/web", rows[0][3])
 	}
-	if rows[2][2] != "text:"+qualified {
-		t.Errorf("row 3 action at attention = %q, want %q", rows[2][2], qualified)
-	}
-	if rows[1][2] != "text:"+action(t, "resource_limit_usage", "cpu") {
-		t.Errorf("row 2 action = %q, want no qualifier", rows[1][2])
-	}
-
-	rows, _, err = planRows(t, "critical", edgeScalingRecommendations()...)
-	if err != nil {
-		t.Fatalf("builder error = %v", err)
-	}
-	if len(rows) != 7 {
-		t.Fatalf("rows at critical = %d, want 7", len(rows))
-	}
-	if rows[2][2] != "text:"+action(t, "resource_request_usage", "cpu") {
-		t.Errorf("row 3 action at critical = %q, want no qualifier", rows[2][2])
+	for i, wantAction := range map[int]string{
+		1: "text:Revisar o limit de CPU e o perfil de consumo observado.",
+		2: "text:Revisar o request de CPU e o consumo observado.",
+	} {
+		if rows[i][2] != wantAction {
+			t.Errorf("row %d action = %q, want %q", i+1, rows[i][2], wantAction)
+		}
 	}
 }
 
@@ -769,8 +761,8 @@ func TestActionPlanScopeNames(t *testing.T) {
 	if err != nil {
 		t.Fatalf("builder error = %v", err)
 	}
-	if len(rows) != 2 || rows[0][3] != "ident:api, worker" || rows[1][3] != "ident:a/api, b/api" {
-		t.Errorf("scopes = %q, want a/api, b/api and api, worker", rows)
+	if len(rows) != 2 || rows[0][3] != "ident:payments/api, payments/worker" || rows[1][3] != "ident:a/api, b/api" {
+		t.Errorf("scopes = %q, want payments/api, payments/worker and a/api, b/api", rows)
 	}
 }
 
@@ -843,16 +835,6 @@ func TestActionPlanRefusesAStatefulSetSummary(t *testing.T) {
 	_, _, err := planRows(t, "attention",
 		recommendation("STATEFULSET_WITHOUT_HPA_INFO", "attention", "workload", "a/1", "a/2", "a/3", "a/4"))
 	want := `recommendation STATEFULSET_WITHOUT_HPA_INFO of scope type "workload" has no summary`
-	if err == nil || err.Error() != want {
-		t.Errorf("builder error = %v, want %q", err, want)
-	}
-}
-
-func TestActionPlanRefusesAnUnqualifiableScopeType(t *testing.T) {
-	_, _, err := planRows(t, "attention",
-		recommendation("WORKLOAD_CPU_REQUEST_ATTENTION", "attention", "node", "a/x"),
-		recommendation("NAMESPACE_CPU_REQUEST_ATTENTION", "attention", "node", "a"))
-	want := `recommendation of scope type "node" has no qualifier`
 	if err == nil || err.Error() != want {
 		t.Errorf("builder error = %v, want %q", err, want)
 	}

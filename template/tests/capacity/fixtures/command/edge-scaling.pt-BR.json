@@ -182,7 +182,7 @@
               [
                 {
                   "kind": "text",
-                  "text": "Atenção / prioridade alta"
+                  "text": "Atenção"
                 }
               ]
             ],
@@ -197,7 +197,7 @@
               [
                 {
                   "kind": "text",
-                  "text": "Crítico / prioridade crítica"
+                  "text": "Crítico"
                 }
               ]
             ],
@@ -352,7 +352,7 @@
           [
             {
               "kind": "text",
-              "text": "1 cores"
+              "text": "1 core"
             }
           ],
           [
@@ -1491,7 +1491,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Workloads com prioridade crítica"
+          "text": "Workloads críticos"
         }
       ]
     },
@@ -1540,7 +1540,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Workloads com prioridade alta"
+          "text": "Workloads que pedem atenção"
         }
       ]
     },
@@ -1606,14 +1606,14 @@
           [
             {
               "kind": "text",
-              "text": "1 crítica"
+              "text": "Crítico 1"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ]
         ]
@@ -1826,7 +1826,7 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ],
           [
@@ -1838,7 +1838,7 @@
           [
             {
               "kind": "ident",
-              "text": "web"
+              "text": "payments/web"
             }
           ]
         ],
@@ -1853,7 +1853,7 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ],
           [
@@ -1880,13 +1880,13 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Revisar o request de CPU e o consumo observado. (namespaces)"
+              "text": "Revisar o request de CPU e o consumo observado."
             }
           ],
           [
@@ -1907,13 +1907,13 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Revisar o limit de memória e o perfil de consumo observado. (namespaces)"
+              "text": "Revisar o limit de memória e o perfil de consumo observado."
             }
           ],
           [
@@ -1934,13 +1934,13 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Revisar o request de memória e o consumo observado. (namespaces)"
+              "text": "Revisar o request de memória e o consumo observado."
             }
           ],
           [
@@ -1961,19 +1961,19 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Revisar o limit de memória e o perfil de consumo observado. (workloads)"
+              "text": "Revisar o limit de memória e o perfil de consumo observado."
             }
           ],
           [
             {
               "kind": "ident",
-              "text": "payments-web"
+              "text": "payments/payments-web"
             }
           ]
         ],
@@ -1988,19 +1988,19 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Revisar o request de memória e o consumo observado. (workloads)"
+              "text": "Revisar o request de memória e o consumo observado."
             }
           ],
           [
             {
               "kind": "ident",
-              "text": "payments-web"
+              "text": "payments/payments-web"
             }
           ]
         ],
@@ -2015,7 +2015,7 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Alta"
+              "text": "Atenção"
             }
           ],
           [
@@ -2027,7 +2027,7 @@
           [
             {
               "kind": "ident",
-              "text": "api"
+              "text": "payments/api"
             }
           ]
         ],
@@ -2042,7 +2042,7 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Alta"
+              "text": "Atenção"
             }
           ],
           [
@@ -2054,7 +2054,7 @@
           [
             {
               "kind": "ident",
-              "text": "idle"
+              "text": "payments/idle"
             }
           ]
         ],
@@ -2069,19 +2069,19 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Alta"
+              "text": "Atenção"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Revisar o request de CPU e o consumo observado. (workloads)"
+              "text": "Revisar o request de CPU e o consumo observado."
             }
           ],
           [
             {
               "kind": "ident",
-              "text": "payments-web"
+              "text": "payments/payments-web"
             }
           ]
         ]

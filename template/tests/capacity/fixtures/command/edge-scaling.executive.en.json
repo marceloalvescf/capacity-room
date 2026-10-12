@@ -182,7 +182,7 @@
               [
                 {
                   "kind": "text",
-                  "text": "Attention / high priority"
+                  "text": "Attention"
                 }
               ]
             ],
@@ -197,7 +197,7 @@
               [
                 {
                   "kind": "text",
-                  "text": "Critical / critical priority"
+                  "text": "Critical"
                 }
               ]
             ],
@@ -312,7 +312,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Workloads with critical priority"
+          "text": "Critical workloads"
         }
       ]
     },
@@ -361,7 +361,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Workloads with high priority"
+          "text": "Workloads needing attention"
         }
       ]
     },
@@ -427,7 +427,7 @@
           [
             {
               "kind": "text",
-              "text": "1 critical"
+              "text": "Critical 1"
             }
           ],
           [
@@ -675,7 +675,7 @@
           [
             {
               "kind": "ident",
-              "text": "web"
+              "text": "payments/web"
             }
           ]
         ],
@@ -723,7 +723,7 @@
           [
             {
               "kind": "text",
-              "text": "Review the CPU request and the observed consumption. (namespaces)"
+              "text": "Review the CPU request and the observed consumption."
             }
           ],
           [
@@ -750,7 +750,7 @@
           [
             {
               "kind": "text",
-              "text": "Review the memory limit and the observed consumption profile. (namespaces)"
+              "text": "Review the memory limit and the observed consumption profile."
             }
           ],
           [
@@ -777,7 +777,7 @@
           [
             {
               "kind": "text",
-              "text": "Review the memory request and the observed consumption. (namespaces)"
+              "text": "Review the memory request and the observed consumption."
             }
           ],
           [
@@ -804,13 +804,13 @@
           [
             {
               "kind": "text",
-              "text": "Review the memory limit and the observed consumption profile. (workloads)"
+              "text": "Review the memory limit and the observed consumption profile."
             }
           ],
           [
             {
               "kind": "ident",
-              "text": "payments-web"
+              "text": "payments/payments-web"
             }
           ]
         ],
@@ -831,13 +831,13 @@
           [
             {
               "kind": "text",
-              "text": "Review the memory request and the observed consumption. (workloads)"
+              "text": "Review the memory request and the observed consumption."
             }
           ],
           [
             {
               "kind": "ident",
-              "text": "payments-web"
+              "text": "payments/payments-web"
             }
           ]
         ],
@@ -852,7 +852,7 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "High"
+              "text": "Attention"
             }
           ],
           [
@@ -864,7 +864,7 @@
           [
             {
               "kind": "ident",
-              "text": "api"
+              "text": "payments/api"
             }
           ]
         ],
@@ -879,7 +879,7 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "High"
+              "text": "Attention"
             }
           ],
           [
@@ -891,7 +891,7 @@
           [
             {
               "kind": "ident",
-              "text": "idle"
+              "text": "payments/idle"
             }
           ]
         ],
@@ -906,19 +906,19 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "High"
+              "text": "Attention"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Review the CPU request and the observed consumption. (workloads)"
+              "text": "Review the CPU request and the observed consumption."
             }
           ],
           [
             {
               "kind": "ident",
-              "text": "payments-web"
+              "text": "payments/payments-web"
             }
           ]
         ]

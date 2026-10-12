@@ -46,12 +46,16 @@ func (c *Catalog) Percent(value float64) string {
 }
 
 // CPU writes cores in millicores when its absolute value is below 1, and in
-// cores otherwise.
+// cores otherwise; a value that writes as 1 or -1 takes the singular "core".
 func (c *Catalog) CPU(cores float64) string {
 	if math.Abs(cores) < 1 {
 		return c.Decimal(cores*1000, 1) + " mCPU"
 	}
-	return c.Decimal(cores, 2) + " cores"
+	written := c.Decimal(cores, 2)
+	if written == c.Decimal(1, 2) || written == c.Decimal(-1, 2) {
+		return written + " core"
+	}
+	return written + " cores"
 }
 
 // Memory writes bytes in the largest of B, KiB, MiB, GiB, and TiB whose

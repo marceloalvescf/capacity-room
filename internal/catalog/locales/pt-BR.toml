@@ -33,8 +33,8 @@ heading = "Legenda de status"
 header_status = "Status"
 header_meaning = "Interpretação"
 healthy = "Saudável"
-attention = "Atenção / prioridade alta"
-critical = "Crítico / prioridade crítica"
+attention = "Atenção"
+critical = "Crítico"
 unavailable = "Dado indisponível"
 undefined = "Sem base de cálculo"
 
@@ -52,7 +52,7 @@ header_source = "Fonte"
 header_remark = "Observação"
 header_evidence = "Evidência técnica"
 no_remark = "Sem observação"
-empty = "Nenhuma evidência técnica está disponível para os filtros atuais."
+empty = "Nenhuma capacidade dos dados atinge a severidade mínima deste relatório."
 
 [state]
 available = "Disponível"
@@ -141,7 +141,8 @@ namespace_label = "Namespace:"
 
 [sections.namespaces]
 heading = "Capacidade por Namespace"
-empty = "Nenhum dado de namespace está disponível para os filtros atuais."
+empty = "Nenhum dado de namespace está disponível."
+below_minimum = "Nenhum namespace atinge a severidade mínima deste relatório."
 header_resource = "Recurso"
 header_average = "Uso médio"
 header_peak = "Pico"
@@ -154,7 +155,8 @@ row_memory = "Memória"
 
 [sections.workloads]
 heading = "Recursos por workload"
-empty = "Nenhum dado de workload está disponível para os filtros atuais."
+empty = "Nenhum dado de workload está disponível."
+below_minimum = "Nenhum workload atinge a severidade mínima deste relatório."
 header_workload = "Workload"
 header_pods = "Pods"
 header_cpu_average = "CPU média"
@@ -219,7 +221,8 @@ header_reason = "Motivo"
 header_state = "Estado"
 empty_summary = "Nenhum node pool foi identificado."
 empty_profile = "Nenhum perfil agregado está disponível."
-empty_detail = "Nenhum node foi identificado para os filtros atuais."
+empty_detail = "Nenhum node foi identificado."
+below_minimum = "Nenhum node atinge a severidade mínima deste relatório."
 no_finding = "Sem achado"
 
 [node_state]
@@ -444,9 +447,9 @@ action = "Manter acompanhamento do mínimo, do máximo e dos eventos de escala."
 [sections.executive]
 heading = "Resumo executivo"
 intro = "Síntese dos principais riscos identificados no período de {{.Period}}, com foco em pontos de prioridade crítica e alta que requerem atenção imediata."
-critical_heading = "Workloads com prioridade crítica"
+critical_heading = "Workloads críticos"
 critical_empty = "Nenhum workload com prioridade crítica foi identificado."
-attention_heading = "Workloads com prioridade alta"
+attention_heading = "Workloads que pedem atenção"
 attention_empty = "Nenhum workload com prioridade alta foi identificado."
 header_namespace = "Namespace"
 header_workload = "Workload"
@@ -478,7 +481,6 @@ actions_empty = "Nenhuma ação priorizada foi identificada."
 header_order = "Ordem"
 header_action = "Ação"
 header_scope = "Workloads / Escopo"
-action_qualified = "{{.Action}} ({{.Qualifier}})"
 limitations_heading = "Limitações materiais"
 limitations_empty = "Nenhuma limitação material foi identificada."
 header_capability = "Capacidade"
@@ -492,22 +494,16 @@ singular = "1 ativo"
 plural = "{{.Count}} ativos"
 
 [priority]
-attention = "Alta"
-critical = "Crítica"
+attention = "Atenção"
+critical = "Crítico"
 
 [risk_status.critical]
-singular = "1 crítica"
-plural = "{{.Count}} críticas"
+singular = "Crítico 1"
+plural = "Crítico {{.Count}}"
 
 [risk_status.attention]
-singular = "1 alta"
-plural = "{{.Count}} altas"
-
-[scope_qualifier]
-namespace = "namespaces"
-workload = "workloads"
-hpa = "HPAs"
-cluster = "cluster"
+singular = "Atenção 1"
+plural = "Atenção {{.Count}}"
 
 [scope_summary]
 namespace = "{{.Count}} namespaces identificados"

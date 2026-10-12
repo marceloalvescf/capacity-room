@@ -182,7 +182,7 @@
               [
                 {
                   "kind": "text",
-                  "text": "Atenção / prioridade alta"
+                  "text": "Atenção"
                 }
               ]
             ],
@@ -197,7 +197,7 @@
               [
                 {
                   "kind": "text",
-                  "text": "Crítico / prioridade crítica"
+                  "text": "Crítico"
                 }
               ]
             ],
@@ -312,7 +312,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Workloads com prioridade crítica"
+          "text": "Workloads críticos"
         }
       ]
     },
@@ -361,7 +361,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Workloads com prioridade alta"
+          "text": "Workloads que pedem atenção"
         }
       ]
     },
@@ -427,14 +427,14 @@
           [
             {
               "kind": "text",
-              "text": "1 crítica"
+              "text": "Crítico 1"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ]
         ]
@@ -535,13 +535,13 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Revisar o limit de memória e o perfil de consumo observado. (namespaces)"
+              "text": "Revisar o limit de memória e o perfil de consumo observado."
             }
           ],
           [
@@ -562,13 +562,13 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Revisar o request de memória e o consumo observado. (namespaces)"
+              "text": "Revisar o request de memória e o consumo observado."
             }
           ],
           [
@@ -589,19 +589,19 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Revisar o limit de memória e o perfil de consumo observado. (workloads)"
+              "text": "Revisar o limit de memória e o perfil de consumo observado."
             }
           ],
           [
             {
               "kind": "ident",
-              "text": "payments-web"
+              "text": "payments/payments-web"
             }
           ]
         ],
@@ -616,19 +616,19 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítico"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Revisar o request de memória e o consumo observado. (workloads)"
+              "text": "Revisar o request de memória e o consumo observado."
             }
           ],
           [
             {
               "kind": "ident",
-              "text": "payments-web"
+              "text": "payments/payments-web"
             }
           ]
         ],
@@ -643,7 +643,7 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Alta"
+              "text": "Atenção"
             }
           ],
           [
@@ -655,7 +655,7 @@
           [
             {
               "kind": "ident",
-              "text": "payments-web"
+              "text": "payments/payments-web"
             }
           ]
         ],
@@ -670,13 +670,13 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Alta"
+              "text": "Atenção"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Revisar o request de CPU e o consumo observado. (namespaces)"
+              "text": "Revisar o request de CPU e o consumo observado."
             }
           ],
           [
@@ -697,19 +697,19 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Alta"
+              "text": "Atenção"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Revisar o request de CPU e o consumo observado. (workloads)"
+              "text": "Revisar o request de CPU e o consumo observado."
             }
           ],
           [
             {
               "kind": "ident",
-              "text": "payments-web"
+              "text": "payments/payments-web"
             }
           ]
         ]
@@ -755,7 +755,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Nenhuma evidência técnica está disponível para os filtros atuais."
+          "text": "Nenhuma capacidade dos dados atinge a severidade mínima deste relatório."
         }
       ]
     }

@@ -124,8 +124,8 @@ func ratioRun(b *builder, stat snapshot.Statistics, thresholds config.Thresholds
 
 // buildNamespacesSection assembles section 1: a numbered heading, then one
 // heading and table for every row whose severity clears severity, in the
-// order rows holds them; or, when none clears it, the section's own empty
-// paragraph.
+// order rows holds them; or, when none clears it, one paragraph that says
+// there is no data or that no row reaches the minimum.
 func buildNamespacesSection(b *builder, rows []snapshot.Namespace, findings []snapshot.Finding, thresholds config.Thresholds, severity string) []Block {
 	heading := Heading{Level: 1, Numbered: true, Runs: []Run{Text(b.text(catalog.SectionsNamespacesHeading, nil))}}
 
@@ -138,7 +138,11 @@ func buildNamespacesSection(b *builder, rows []snapshot.Namespace, findings []sn
 		shown = append(shown, namespaceHeading(b, row.Name), namespaceTable(b, row, thresholds))
 	}
 	if len(shown) == 0 {
-		return []Block{heading, Paragraph{Runs: []Run{Text(b.text(catalog.SectionsNamespacesEmpty, nil))}}}
+		key := catalog.SectionsNamespacesBelowMinimum
+		if len(rows) == 0 {
+			key = catalog.SectionsNamespacesEmpty
+		}
+		return []Block{heading, Paragraph{Runs: []Run{Text(b.text(key, nil))}}}
 	}
 	return append([]Block{heading}, shown...)
 }
@@ -213,7 +217,11 @@ func buildWorkloadsSection(b *builder, rows []snapshot.Workload, findings []snap
 		grouped[row.Namespace] = append(grouped[row.Namespace], workloadRow(b, row, thresholds))
 	}
 	if len(order) == 0 {
-		return []Block{heading, Paragraph{Runs: []Run{Text(b.text(catalog.SectionsWorkloadsEmpty, nil))}}}
+		key := catalog.SectionsWorkloadsBelowMinimum
+		if len(rows) == 0 {
+			key = catalog.SectionsWorkloadsEmpty
+		}
+		return []Block{heading, Paragraph{Runs: []Run{Text(b.text(key, nil))}}}
 	}
 
 	blocks := []Block{heading}

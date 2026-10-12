@@ -33,8 +33,8 @@ heading = "Status legend"
 header_status = "Status"
 header_meaning = "Meaning"
 healthy = "Healthy"
-attention = "Attention / high priority"
-critical = "Critical / critical priority"
+attention = "Attention"
+critical = "Critical"
 unavailable = "Data unavailable"
 undefined = "No base for the ratio"
 
@@ -52,7 +52,7 @@ header_source = "Source"
 header_remark = "Remark"
 header_evidence = "Technical evidence"
 no_remark = "No remark"
-empty = "No technical evidence is available for the current filters."
+empty = "No capability of the data reaches the minimum severity of this report."
 
 [state]
 available = "Available"
@@ -141,7 +141,8 @@ namespace_label = "Namespace:"
 
 [sections.namespaces]
 heading = "Capacity by namespace"
-empty = "No namespace data is available for the current filters."
+empty = "No namespace data is available."
+below_minimum = "No namespace reaches the minimum severity of this report."
 header_resource = "Resource"
 header_average = "Average usage"
 header_peak = "Peak"
@@ -154,7 +155,8 @@ row_memory = "Memory"
 
 [sections.workloads]
 heading = "Resources by workload"
-empty = "No workload data is available for the current filters."
+empty = "No workload data is available."
+below_minimum = "No workload reaches the minimum severity of this report."
 header_workload = "Workload"
 header_pods = "Pods"
 header_cpu_average = "Average CPU"
@@ -219,7 +221,8 @@ header_reason = "Reason"
 header_state = "State"
 empty_summary = "No node pool was identified."
 empty_profile = "No aggregate profile is available."
-empty_detail = "No node was identified for the current filters."
+empty_detail = "No node was identified."
+below_minimum = "No node reaches the minimum severity of this report."
 no_finding = "No finding"
 
 [node_state]
@@ -444,9 +447,9 @@ action = "Keep following the bounds and the scaling events."
 [sections.executive]
 heading = "Executive summary"
 intro = "Summary of the main risks identified over the period of {{.Period}}, with a focus on points of critical and high priority that need immediate attention."
-critical_heading = "Workloads with critical priority"
+critical_heading = "Critical workloads"
 critical_empty = "No workload with critical priority was identified."
-attention_heading = "Workloads with high priority"
+attention_heading = "Workloads needing attention"
 attention_empty = "No workload with high priority was identified."
 header_namespace = "Namespace"
 header_workload = "Workload"
@@ -478,7 +481,6 @@ actions_empty = "No prioritized action was identified."
 header_order = "Order"
 header_action = "Action"
 header_scope = "Workloads / Scope"
-action_qualified = "{{.Action}} ({{.Qualifier}})"
 limitations_heading = "Material limitations"
 limitations_empty = "No material limitation was identified."
 header_capability = "Capability"
@@ -492,22 +494,16 @@ singular = "1 active"
 plural = "{{.Count}} active"
 
 [priority]
-attention = "High"
+attention = "Attention"
 critical = "Critical"
 
 [risk_status.critical]
-singular = "1 critical"
-plural = "{{.Count}} critical"
+singular = "Critical 1"
+plural = "Critical {{.Count}}"
 
 [risk_status.attention]
-singular = "1 high"
-plural = "{{.Count}} high"
-
-[scope_qualifier]
-namespace = "namespaces"
-workload = "workloads"
-hpa = "HPAs"
-cluster = "cluster"
+singular = "Attention 1"
+plural = "Attention {{.Count}}"
 
 [scope_summary]
 namespace = "{{.Count}} namespaces identified"

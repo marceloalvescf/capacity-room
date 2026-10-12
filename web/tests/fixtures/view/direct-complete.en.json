@@ -412,7 +412,7 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments-web"
+      "scope_text": "payments/payments-web"
     },
     {
       "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
@@ -423,7 +423,7 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments-web"
+      "scope_text": "payments/payments-web"
     },
     {
       "code": "HPA_REPLICA_DIVERGENCE",
@@ -434,7 +434,7 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments-web"
+      "scope_text": "payments/payments-web"
     },
     {
       "code": "NAMESPACE_CPU_REQUEST_ATTENTION",
@@ -456,7 +456,7 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments-web"
+      "scope_text": "payments/payments-web"
     }
   ],
   "namespaces": [
@@ -565,22 +565,22 @@
         "state": "value",
         "average": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         },
         "minimum": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         },
         "peak": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         },
         "current": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         }
       },
@@ -811,22 +811,22 @@
         "state": "value",
         "average": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         },
         "minimum": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         },
         "peak": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         },
         "current": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         }
       },

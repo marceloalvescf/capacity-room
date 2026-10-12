@@ -951,7 +951,7 @@ func compareExecutive(scenario string, snap snapshot.Snapshot, want map[string]p
 			if table, ok := doc.Blocks[pos+1].(document.Table); ok {
 				rows = table.Rows
 			}
-			diffs = append(diffs, compareExecutiveRows(label, indexes, rows, originalLimitationMarks(sub.name, sub.rows(recorded)))...)
+			diffs = append(diffs, compareExecutiveRows(label, indexes, rows, originalPlanCells(sub.name, rows, originalLimitationMarks(sub.name, sub.rows(recorded))))...)
 
 			if sub.name == "replica_ceiling" && pos+2 < len(doc.Blocks) {
 				if callout, ok := doc.Blocks[pos+2].(document.Callout); ok {
@@ -997,6 +997,64 @@ func originalLimitationMarks(table string, rows [][][]pythonRun) [][][]pythonRun
 			for i := range out[r][c] {
 				if out[r][c][i].Status == "critical" {
 					out[r][c][i].Status = "unavailable"
+				}
+			}
+		}
+	}
+	return out
+}
+
+// originalPlanCells returns the recorded rows of the action plan with two
+// differences of wording read as this project writes them. The original
+// wrote a parenthesised qualifier after an action that more than one row
+// shares, and named a scope by the part of its name after the last slash;
+// this project writes the action alone and each scope by its full name. The
+// qualifier is stripped from the recorded action (one trailing " (...)"
+// only), and a recorded scope that equals ours, or equals the part after the
+// last slash of ours, scope by scope and in order, is read as ours. A scope
+// that names another object, a different count of scopes, and every other
+// cell, status, row, and number are left as recorded. The rows given are
+// left as they are.
+func originalPlanCells(table string, got [][][]document.Run, want [][][]pythonRun) [][][]pythonRun {
+	if table != "action_plan" {
+		return want
+	}
+	out := make([][][]pythonRun, len(want))
+	for r, row := range want {
+		out[r] = make([][]pythonRun, len(row))
+		for c, cell := range row {
+			out[r][c] = slices.Clone(cell)
+			if len(out[r][c]) != 1 {
+				continue
+			}
+			switch c {
+			case 2:
+				text := out[r][c][0].Text
+				if strings.HasSuffix(text, ")") {
+					if open := strings.LastIndex(text, " ("); open >= 0 {
+						out[r][c][0].Text = text[:open]
+					}
+				}
+			case 3:
+				if r >= len(got) || len(got[r]) <= 3 {
+					continue
+				}
+				runs, err := runsOf(got[r][3])
+				if err != nil || len(runs) != 1 {
+					continue
+				}
+				ours, theirs := strings.Split(runs[0].Text, ", "), strings.Split(out[r][c][0].Text, ", ")
+				if len(ours) != len(theirs) {
+					continue
+				}
+				same := true
+				for i := range ours {
+					if theirs[i] != ours[i] && theirs[i] != ours[i][strings.LastIndex(ours[i], "/")+1:] {
+						same = false
+					}
+				}
+				if same {
+					out[r][c][0].Text = runs[0].Text
 				}
 			}
 		}
@@ -2144,7 +2202,7 @@ func TestComparisonCanFail(t *testing.T) {
 		plan := want.Executive["attention"].ActionPlan
 		plan[0][3][0].Text = "other"
 		checkScaling(t, want, []string{
-			scaling.Name + ": executive.attention.action_plan: row 0, cell 3, run 0: text: got \"web\", want \"other\"",
+			scaling.Name + ": executive.attention.action_plan: row 0, cell 3, run 0: text: got \"payments/web\", want \"other\"",
 		})
 	})
 
@@ -2230,15 +2288,16 @@ func TestComparisonCanFail(t *testing.T) {
 		})
 	})
 
-	t.Run("a qualifier moved to another plan row", func(t *testing.T) {
+	t.Run("a recorded scope names another object", func(t *testing.T) {
 		want := freshScaling(t)
-		plan := want.Executive["attention"].ActionPlan
-		plan[1][2][0].Text += " (namespaces)"
-		plan[2][2][0].Text = strings.TrimSuffix(plan[2][2][0].Text, " (namespaces)")
-		checkScaling(t, want, []string{
-			scaling.Name + `: executive.attention.action_plan: row 1, cell 2, run 0: text: got "Revisar o limit de CPU e o perfil de consumo observado." as finding.resource_limit_usage.cpu.action, want "Revisar o limite de CPU e o perfil de consumo observado. (namespaces)" as sections.executive.action_qualified(Action=finding.resource_limit_usage.cpu.action, Qualifier=scope_qualifier.namespace)`,
-			scaling.Name + `: executive.attention.action_plan: row 2, cell 2, run 0: text: got "Revisar o request de CPU e o consumo observado. (namespaces)" as sections.executive.action_qualified(Action=finding.resource_request_usage.cpu.action, Qualifier=scope_qualifier.namespace), want "Revisar a solicitação de CPU e o consumo observado." as finding.resource_request_usage.cpu.action`,
-		})
+		want.Executive["attention"].ActionPlan[2][3][0].Text = "payments-api"
+		checkScaling(t, want, []string{scaling.Name + `: executive.attention.action_plan: row 2, cell 3, run 0: text: got "payments", want "payments-api"`})
+	})
+
+	t.Run("a recorded action differs after its qualifier is stripped", func(t *testing.T) {
+		want := freshScaling(t)
+		want.Executive["attention"].ActionPlan[2][2][0].Text = "Revisar outra coisa. (namespaces)"
+		checkScaling(t, want, []string{scaling.Name + `: executive.attention.action_plan: row 2, cell 2, run 0: text: got "Revisar o request de CPU e o consumo observado." as finding.resource_request_usage.cpu.action, want "Revisar outra coisa." with no catalog key`})
 	})
 
 	t.Run("a kind of the replica ceiling changed", func(t *testing.T) {

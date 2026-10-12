@@ -27,17 +27,18 @@ type originalText struct {
 	key  catalog.Key
 }
 
-// originalExecutiveTexts holds the Portuguese texts the original writes in
-// the cells of the seven executive tables, letter for letter, each with
-// the catalog key of the same meaning. The recorded files of
-// testdata/python/ hold these texts.
+// originalExecutiveTexts pins the original's Portuguese, letter for letter,
+// for the entries whose wording this project keeps, each with the catalog
+// key of the same meaning. The words this project changed to follow the web
+// app are not listed. The recorded files of testdata/python/ hold these
+// texts.
 var originalExecutiveTexts = func() []originalText {
 	texts := []originalText{
 		// The status labels.
-		{"Crítica", catalog.Priority("critical")},
 		{"Crítica", catalog.SectionsExecutivePoolCritical},
-		{"Alta", catalog.Priority("attention")},
 		{"Atenção", catalog.SectionsExecutivePoolAttention},
+		{"Crítica", catalog.Priority("critical")},
+		{"Alta", catalog.Priority("attention")},
 		{"Estável", catalog.SectionsExecutivePoolStable},
 		{"Máximo do HPA atingido", catalog.SectionsExecutiveSituationHPAMax},
 		{"Sem HPA", catalog.SectionsHPAsSituationNoHPA},
@@ -84,10 +85,6 @@ var originalExecutiveTexts = func() []originalText {
 		{"Limite de Memória não observado", catalog.Reason("limit_missing", "memory")},
 
 		// The counts of a namespace at risk.
-		{"1 crítica", catalog.RiskCount("critical", 1)},
-		{"{{.Count}} críticas", catalog.RiskCount("critical", 2)},
-		{"1 alta", catalog.RiskCount("attention", 1)},
-		{"{{.Count}} altas", catalog.RiskCount("attention", 2)},
 		{"{{.Critical}} · {{.Attention}}", catalog.SectionsExecutiveRiskStatusBoth},
 
 		// The replicas of the replica ceiling.
@@ -141,11 +138,10 @@ var originalExecutiveTexts = func() []originalText {
 		{"Registrar os limites operacionais sem inferir valores ausentes.", catalog.FindingAction("autoscaling_bounds_unknown", "")},
 		{"Manter acompanhamento da demanda.", catalog.FindingAction("autoscaling_at_min", "")},
 		{"Manter acompanhamento dos limites e eventos de escala.", catalog.FindingAction("autoscaling_enabled", "")},
-		{"{{.Action}} ({{.Qualifier}})", catalog.SectionsExecutiveActionQualified},
-		{"namespaces", catalog.ScopeQualifier("namespace")},
-		{"cargas de trabalho", catalog.ScopeQualifier("workload")},
-		{"HPAs", catalog.ScopeQualifier("hpa")},
-		{"cluster", catalog.ScopeQualifier("cluster")},
+		{"1 crítica", catalog.RiskCount("critical", 1)},
+		{"{{.Count}} críticas", catalog.RiskCount("critical", 2)},
+		{"1 alta", catalog.RiskCount("attention", 1)},
+		{"{{.Count}} altas", catalog.RiskCount("attention", 2)},
 		{"{{.Count}} namespaces identificados", catalog.ScopeSummary("namespace")},
 		{"{{.Count}} cargas de trabalho identificadas", catalog.ScopeSummary("workload")},
 		{"{{.Count}} HPAs identificados", catalog.ScopeSummary("hpa")},
@@ -389,8 +385,6 @@ func TestTextIndexReadsParametersAndFragments(t *testing.T) {
 	}{
 		{"CPU: pico de 97% da solicitação", []string{`reason.request_peak.cpu(Percent="97%")`}},
 		{"Memória: média de 27,5% do limite", []string{`reason.limit_average.memory(Percent="27,5%")`}},
-		{"Manter acompanhamento da demanda. (cluster)", []string{"sections.executive.action_qualified(Action=finding.autoscaling_at_min.action, Qualifier=scope_qualifier.cluster)"}},
-		{"2 críticas · 1 alta", []string{`sections.executive.risk_status_both(Attention=risk_status.attention.singular, Critical=risk_status.critical.plural(Count="2"))`}},
 		{"CPU: variação de 40%; Limite de Memória não observado", []string{`reason.bursty.cpu(Percent="40%") ; reason.limit_missing.memory`}},
 		{"Indisponível", []string{"placeholder.unavailable", "state.unavailable"}},
 		{"Deployment", nil},

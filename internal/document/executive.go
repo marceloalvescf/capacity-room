@@ -530,13 +530,12 @@ func planRecommendations(s snapshot.Snapshot, minRank int) []snapshot.Recommenda
 	return included
 }
 
-// actionPlan writes the rows of planRecommendations. An action that more
-// than one row shares carries the qualifier of its scope type. It follows _recommendation_rows of the original.
+// actionPlan writes the rows of planRecommendations. It follows
+// _recommendation_rows of the original.
 func actionPlan(b *builder, s snapshot.Snapshot, minRank int) []Block {
 	included := planRecommendations(s, minRank)
 
 	actions := make([]string, len(included))
-	counts := make(map[string]int)
 	for i, r := range included {
 		definition, ok := analysis.Lookup(r.Code)
 		if !ok {
@@ -546,28 +545,14 @@ func actionPlan(b *builder, s snapshot.Snapshot, minRank int) []Block {
 			return nil
 		}
 		actions[i] = b.text(catalog.FindingAction(definition.Family, definition.Params["resource"]), nil)
-		counts[actions[i]]++
 	}
 
 	var rows [][][]Run
 	for i, r := range included {
-		action := actions[i]
-		if counts[action] > 1 {
-			if !slices.Contains(catalog.ScopeQualifiers, r.ScopeType) {
-				if b.err == nil {
-					b.err = fmt.Errorf("recommendation of scope type %q has no qualifier", r.ScopeType)
-				}
-				return nil
-			}
-			action = b.text(catalog.SectionsExecutiveActionQualified, catalog.Params{
-				"Action":    action,
-				"Qualifier": b.text(catalog.ScopeQualifier(r.ScopeType), nil),
-			})
-		}
 		rows = append(rows, [][]Run{
 			{Text(b.cat.Integer(i + 1))},
 			{StatusText(r.Severity, b.text(catalog.Priority(r.Severity), nil))},
-			{Text(action)},
+			{Text(actions[i])},
 			{recommendationScope(b, r)},
 		})
 	}
@@ -579,20 +564,11 @@ func actionPlan(b *builder, s snapshot.Snapshot, minRank int) []Block {
 }
 
 // recommendationScope writes the scopes of a recommendation: with up to
-// three, their names after the last slash, or whole when two short names
-// collide, as one identifier; with more, a summary of how many there are.
+// three, their full names as one identifier; with more, a summary of how many
+// there are.
 func recommendationScope(b *builder, r snapshot.Recommendation) Run {
 	if len(r.Scopes) <= 3 {
-		names := make([]string, len(r.Scopes))
-		for i, scope := range r.Scopes {
-			names[i] = scope[strings.LastIndex(scope, "/")+1:]
-		}
-		sorted := slices.Clone(names)
-		slices.Sort(sorted)
-		if len(slices.Compact(sorted)) != len(names) {
-			names = r.Scopes
-		}
-		return Ident(strings.Join(names, ", "))
+		return Ident(strings.Join(r.Scopes, ", "))
 	}
 
 	kind := r.ScopeType

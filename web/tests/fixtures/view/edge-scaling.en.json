@@ -655,7 +655,7 @@
       "scopes": [
         "payments/web"
       ],
-      "scope_text": "web"
+      "scope_text": "payments/web"
     },
     {
       "code": "NAMESPACE_CPU_LIMIT_CRITICAL",
@@ -710,7 +710,7 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments-web"
+      "scope_text": "payments/payments-web"
     },
     {
       "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
@@ -721,7 +721,7 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments-web"
+      "scope_text": "payments/payments-web"
     },
     {
       "code": "DEPLOYMENT_WITHOUT_HPA",
@@ -732,7 +732,7 @@
       "scopes": [
         "payments/api"
       ],
-      "scope_text": "api"
+      "scope_text": "payments/api"
     },
     {
       "code": "HPA_REPLICA_DIVERGENCE",
@@ -743,7 +743,7 @@
       "scopes": [
         "payments/idle"
       ],
-      "scope_text": "idle"
+      "scope_text": "payments/idle"
     },
     {
       "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
@@ -754,7 +754,7 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments-web"
+      "scope_text": "payments/payments-web"
     }
   ],
   "namespaces": [
@@ -863,22 +863,22 @@
         "state": "value",
         "average": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         },
         "minimum": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         },
         "peak": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         },
         "current": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         }
       },
@@ -1354,22 +1354,22 @@
         "state": "value",
         "average": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         },
         "minimum": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         },
         "peak": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         },
         "current": {
           "raw": 1,
-          "text": "1 cores",
+          "text": "1 core",
           "status": null
         }
       },
