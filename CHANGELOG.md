@@ -19,6 +19,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   whose actions open their finding.
 - The overview no longer counts the namespaces, workloads, HPAs, nodes, and
   node pools, and the Data quality tab shows its number of warnings.
+- On a narrower screen the report overview keeps whether the cluster can
+  grow beside the pressure on each kind of resource, lists the worst
+  pressure first, and says when the evidence of the nodes is incomplete.
 - The HPAs on the autoscaling tab show the status of their findings, as the
   namespaces, workloads, and nodes do.
 - The nodes and the HPAs on the report say under each status why the row

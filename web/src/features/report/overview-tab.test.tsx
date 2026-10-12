@@ -8,6 +8,7 @@ import { location, renderApp } from "../../../tests/render";
 import { mockColourScheme } from "../../../tests/match-media";
 import viewEn from "../../../tests/fixtures/view/edge-scaling.en.json";
 import viewPt from "../../../tests/fixtures/view/edge-scaling.pt-BR.json";
+import directComplete from "../../../tests/fixtures/view/direct-complete.en.json";
 
 const mock = installMockApi(signedIn());
 
@@ -97,33 +98,46 @@ describe("overview tab", () => {
     expect(band.querySelector("[data-band]")).toBeNull();
   });
 
-  it("pressure lines", async () => {
+  it("pressure lines, the worst scopes first and the fixed order among equals", async () => {
     await open();
     const list = screen.getByRole("heading", { level: 2, name: "Pressure by scope" }).parentElement?.querySelector("ul") as HTMLElement;
     const lines = within(list).getAllByRole("listitem");
     expect(lines.map((line) => line.querySelector("span.inline-flex")?.textContent)).toEqual([
       "CriticalNodes",
-      "AttentionNode pools",
       "CriticalNamespaces",
       "CriticalWorkloads",
       "CriticalHPAs",
+      "AttentionNode pools",
     ]);
     const lead = (line: HTMLElement) => within(line).getAllByRole("link")[0] as HTMLElement;
     expect(lead(lines[0] as HTMLElement)).toHaveTextContent("Observed CPU usage on the node.");
     expect(lead(lines[0] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=node&finding=0$/);
-    expect(lead(lines[1] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=nodepool&finding=14$/);
-    expect(lead(lines[2] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=namespace&finding=1$/);
-    expect(lead(lines[3] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=workload&finding=5$/);
-    expect(lead(lines[4] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=hpa&finding=7$/);
+    expect(lead(lines[1] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=namespace&finding=1$/);
+    expect(lead(lines[2] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=workload&finding=5$/);
+    expect(lead(lines[3] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=hpa&finding=7$/);
+    expect(lead(lines[4] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=nodepool&finding=14$/);
     expect(within(lines[0] as HTMLElement).getByText("aks-agentpool-12345678-vmss000000")).toHaveClass("font-mono");
     expect(within(lines[0] as HTMLElement).getByText("Peak")).toBeInTheDocument();
     expect(within(lines[0] as HTMLElement).getByText("95%")).toHaveClass("font-mono");
-    expect(within(lines[2] as HTMLElement).queryByText("Peak")).toBeInTheDocument();
+    expect(within(lines[1] as HTMLElement).queryByText("Peak")).toBeInTheDocument();
     expect(lines[0]).toHaveTextContent(/Critical 2$/);
-    expect(lines[1]).toHaveTextContent(/Attention 2$/);
-    expect(lines[2]).toHaveTextContent(/Critical 1$/);
+    expect(lines[1]).toHaveTextContent(/Critical 1$/);
+    expect(lines[2]).toHaveTextContent(/Critical 1\s*·\s*Attention 1$/);
     expect(lines[3]).toHaveTextContent(/Critical 1\s*·\s*Attention 1$/);
-    expect(lines[4]).toHaveTextContent(/Critical 1\s*·\s*Attention 1$/);
+    expect(lines[4]).toHaveTextContent(/Attention 2$/);
+  });
+
+  it("the node evidence warning stands under the verdict of the growth side", async () => {
+    await open();
+    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
+    expect(within(band).getByText("The capacity evidence of the nodes is incomplete.").parentElement).toHaveClass("text-attention");
+  });
+
+  it("no node evidence warning when the view holds none", async () => {
+    mock.views.set(`${id}:en`, directComplete as View);
+    await open();
+    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
+    expect(band).not.toHaveTextContent("The capacity evidence of the nodes is incomplete.");
   });
 
   it("two workloads of one name and two kinds count as two rows", async () => {

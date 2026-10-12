@@ -24,8 +24,9 @@ function worstOf(list: Severity[]): Severity {
 // Whether the cluster can grow: its nodes against the autoscaler's maximum, and the worst finding of the cluster.
 function Growth() {
   const { t } = useTranslation();
-  const { summary, findings } = useView();
+  const { summary, findings, quality } = useView();
   const { autoscaling } = summary;
+  const evidenceWarning = quality.warnings.find((warning) => warning.code === "NODE_CAPACITY_EVIDENCE_INCOMPLETE");
   const enabled = autoscaling.status === "enabled";
   const current = autoscaling.current_nodes.raw;
   const max = autoscaling.max_nodes.raw;
@@ -61,6 +62,12 @@ function Growth() {
           <p className="text-sm">{worst.sentence}</p>
         </div>
       )}
+      {evidenceWarning === undefined ? null : (
+        <p className="flex items-baseline gap-1.5 text-sm text-attention">
+          <StatusShape status="attention" />
+          <span>{evidenceWarning.text}</span>
+        </p>
+      )}
       {enabled ? (
         <p className="text-sm text-muted-fg">
           <span className="whitespace-nowrap">
@@ -93,10 +100,16 @@ function Growth() {
   );
 }
 
+type ScopeSummary = {
+  type: (typeof scopeTypes)[number];
+  worst: Severity;
+  lead: { finding: ViewFinding; index: number };
+  counts: { severity: "critical" | "attention"; count: number }[];
+};
+
 // One scope: its worst severity, the first finding of that severity, and how many of its rows reach each severity.
-function PressureLine({ type }: { type: (typeof scopeTypes)[number] }) {
-  const { t } = useTranslation();
-  const { findings } = useView();
+// A scope whose worst is healthy has no summary.
+function summarise(type: (typeof scopeTypes)[number], findings: ViewFinding[]): ScopeSummary | null {
   const indexed = findings.map((finding, index) => ({ finding, index })).filter(({ finding }) => finding.scope_type === type);
   // Rows are told apart as the tabs tell them: a workload by its kind too.
   const byScope = new Map<string, Severity[]>();
@@ -110,11 +123,17 @@ function PressureLine({ type }: { type: (typeof scopeTypes)[number] }) {
   if (worst === "healthy" || lead === undefined) {
     return null;
   }
-  const name = scopeName(lead.finding, t("report.node.unknownPool"));
-  const peak = lead.finding.evidence.find((item) => item.name === "peak_percent");
   const counts = (["critical", "attention"] as const)
     .map((severity) => ({ severity, count: worstByName.filter((value) => value === severity).length }))
     .filter(({ count }) => count > 0);
+  return { type, worst, lead, counts };
+}
+
+function PressureLine({ summary }: { summary: ScopeSummary }) {
+  const { t } = useTranslation();
+  const { type, worst, lead, counts } = summary;
+  const name = scopeName(lead.finding, t("report.node.unknownPool"));
+  const peak = lead.finding.evidence.find((item) => item.name === "peak_percent");
   return (
     <li className="grid grid-cols-[8rem_1fr] gap-3 border-t border-border py-3">
       <div>
@@ -155,20 +174,21 @@ function PressureLine({ type }: { type: (typeof scopeTypes)[number] }) {
   );
 }
 
-// The scopes with a finding above healthy, in a fixed order.
+// The scopes with a finding above healthy, the worst first and in a fixed order among equals.
 function Pressure() {
   const { t } = useTranslation();
   const { findings } = useView();
-  const any = findings.some(
-    (finding) => finding.severity !== "healthy" && (scopeTypes as readonly string[]).includes(finding.scope_type),
-  );
+  const summaries = scopeTypes
+    .map((type) => summarise(type, findings))
+    .filter((summary) => summary !== null)
+    .sort((a, b) => rank[b.worst] - rank[a.worst]);
   return (
     <div className="flex flex-col gap-3">
       <h2 className="label">{t("report.overview.pressure")}</h2>
-      {any ? (
+      {summaries.length > 0 ? (
         <ul>
-          {scopeTypes.map((type) => (
-            <PressureLine key={type} type={type} />
+          {summaries.map((summary) => (
+            <PressureLine key={summary.type} summary={summary} />
           ))}
         </ul>
       ) : (
@@ -181,7 +201,7 @@ function Pressure() {
 // The top of the overview: whether the cluster can grow, then where it runs short.
 function Verdict() {
   return (
-    <section className="flex flex-col gap-6 border-b border-border py-6 xl:grid xl:grid-cols-[4fr_7fr] xl:gap-10">
+    <section className="flex flex-col gap-6 border-b border-border py-6 lg:grid lg:grid-cols-[4fr_7fr] lg:gap-10">
       <Growth />
       <Pressure />
     </section>

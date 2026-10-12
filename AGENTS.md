@@ -716,11 +716,12 @@ redactor the moment the settings are loaded, before the pool opens.
 - **The overview opens on its answer, built from the view alone.** First the
   answer strip: the severity totals and any data-quality warnings. Then the
   verdict band: whether the cluster can grow (its nodes against the
-  autoscaler's maximum, and the worst cluster finding) and the pressure of
-  each scope (its worst severity, the first finding of that severity, linked
-  to the findings tab). Then the action plan, whose rows open their finding.
-  It shows no number the view does not hold; a count it shows is a count of
-  rows, findings, or warnings.
+  autoscaler's maximum, the worst cluster finding, and the node-evidence
+  warning when the report has it) and the pressure of each scope, the scopes
+  worst first (its worst severity, the first finding of that severity,
+  linked to the findings tab). Then the action plan, whose rows open their
+  finding. It shows no number the view does not hold; a count it shows is a
+  count of rows, findings, or warnings.
 - **A row with no finding says so.** The view gives such a row the status
   healthy; the tables show "No finding" with no mark, as the PDF does, and
   rank it after the healthy rows.
