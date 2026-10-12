@@ -620,3 +620,35 @@ func pdfTextPage(t *testing.T, pdf string, page int) string {
 	}
 	return string(out)
 }
+
+// TestCapacityVerdictFixturesCompile compiles each positive verdict fixture
+// and reads the words the text must hold, and one it must not.
+func TestCapacityVerdictFixturesCompile(t *testing.T) {
+	ws := workspace(t)
+	tests := []struct {
+		stem string
+		want []string
+		not  string
+	}{
+		{"verdict.en", []string{"CLUSTER AUTOSCALING", "PRESSURE BY SCOPE", "5 of 10 actions. The full plan is in the executive summary.", "Minimum nodes"}, "Disabled"},
+		{"verdict.many-nodes", []string{"95", "120", "Nodes · current / maximum"}, "Disabled"},
+		{"verdict.disabled", []string{"Disabled", "CLUSTER AUTOSCALING"}, "Nodes · current / maximum"},
+		{"verdict.empty", []string{"This report holds no findings.", "Nothing needs attention.", "No prioritized action was identified."}, "5 of 10 actions"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.stem, func(t *testing.T) {
+			pdf, stderr, err := compileCapacityData(t, ws, capacityFixture(ws, tt.stem))
+			assertCleanCompile(t, stderr, err)
+			assertNonEmptyPDF(t, pdf)
+			page := pdfText(t, pdf)
+			for _, want := range tt.want {
+				if !strings.Contains(page, want) {
+					t.Errorf("the text lacks %q:\n%s", want, page)
+				}
+			}
+			if strings.Contains(page, tt.not) {
+				t.Errorf("the text holds %q:\n%s", tt.not, page)
+			}
+		})
+	}
+}

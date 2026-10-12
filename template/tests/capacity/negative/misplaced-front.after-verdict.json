@@ -1,0 +1,905 @@
+{
+  "schema": "1",
+  "language": "en",
+  "theme": {
+    "lang": "en",
+    "region": "US"
+  },
+  "labels": {
+    "note": "Note",
+    "info": "Information",
+    "warning": "Warning"
+  },
+  "cover": {
+    "title": "CAPACITY REPORT",
+    "cluster_label": "Cluster:",
+    "cluster": "prod",
+    "author_label": "PREPARED BY:",
+    "author": "Time SRE",
+    "issued_label": "ISSUED ON:",
+    "issued": "07/15/2026 14:30"
+  },
+  "footer": {
+    "classification": "Uso interno",
+    "page_label": "Page"
+  },
+  "blocks": [
+    {
+      "type": "verdict",
+      "totals": {
+        "items": [
+          {
+            "status": "critical",
+            "label": "Critical",
+            "count": "9"
+          },
+          {
+            "status": "attention",
+            "label": "Attention",
+            "count": "10"
+          },
+          {
+            "status": "healthy",
+            "label": "Healthy",
+            "count": "7"
+          }
+        ],
+        "none": null
+      },
+      "quality": {
+        "label": "Data quality",
+        "count": "2",
+        "items": [
+          "Ambiguous HPA configuration or target values were omitted.",
+          "The capacity evidence of the nodes is incomplete."
+        ],
+        "more": null
+      },
+      "growth": {
+        "title": "Cluster autoscaling",
+        "current": "3",
+        "max": "3",
+        "state": null,
+        "gauge": {
+          "current": 3,
+          "max": 3,
+          "min": 2,
+          "hazard": true
+        },
+        "caption": "Nodes · current / maximum",
+        "finding": {
+          "status": "attention",
+          "label": "Attention",
+          "sentence": "The number of nodes is close to the observed maximum."
+        },
+        "warning": "The capacity evidence of the nodes is incomplete.",
+        "facts": [
+          {
+            "label": "Minimum nodes",
+            "value": "2"
+          },
+          {
+            "label": "Unschedulable pods",
+            "value": "2"
+          },
+          {
+            "label": "Scale events",
+            "value": "1"
+          }
+        ]
+      },
+      "pressure": {
+        "title": "Pressure by scope",
+        "rows": [
+          {
+            "status": "critical",
+            "scope": "Nodes",
+            "sentence": "Observed CPU usage on the node.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "aks-agentpool-12345678-vmss000000"
+              }
+            ],
+            "peak": {
+              "label": "Peak",
+              "value": "95%"
+            },
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "2"
+              }
+            ]
+          },
+          {
+            "status": "critical",
+            "scope": "Namespaces",
+            "sentence": "CPU usage against the limit indicates an increased risk of CPU throttling.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "payments"
+              }
+            ],
+            "peak": {
+              "label": "Peak",
+              "value": "330%"
+            },
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "1"
+              }
+            ]
+          },
+          {
+            "status": "critical",
+            "scope": "Workloads",
+            "sentence": "Memory usage against the limit indicates an increased risk of OOMKill.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "payments/payments-web"
+              }
+            ],
+            "peak": {
+              "label": "Peak",
+              "value": "12000%"
+            },
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "1"
+              },
+              {
+                "status": "attention",
+                "label": "Attention",
+                "count": "1"
+              }
+            ]
+          },
+          {
+            "status": "critical",
+            "scope": "HPAs",
+            "sentence": "The HPA reached its observed maximum of replicas.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "payments/web"
+              }
+            ],
+            "peak": null,
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "1"
+              },
+              {
+                "status": "attention",
+                "label": "Attention",
+                "count": "1"
+              }
+            ]
+          },
+          {
+            "status": "attention",
+            "scope": "Node pools",
+            "sentence": "Peak CPU pressure varied among the nodes of the pool.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "pool-a"
+              }
+            ],
+            "peak": null,
+            "counts": [
+              {
+                "status": "attention",
+                "label": "Attention",
+                "count": "2"
+              }
+            ]
+          }
+        ],
+        "empty": null
+      },
+      "plan": {
+        "title": "Prioritized action plan",
+        "table": {
+          "type": "table",
+          "id": "verdict-plan",
+          "headers": [
+            "Order",
+            "Priority",
+            "Action",
+            "Scope"
+          ],
+          "rows": [
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "1"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Critical"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Review the configured maximum and the capacity of the workload."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments/web"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "2"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Critical"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Review the CPU limit and the observed consumption profile."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "3"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Critical"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Review the CPU request and the observed consumption."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "4"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Critical"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Review the memory limit and the observed consumption profile."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "5"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Critical"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Review the memory request and the observed consumption."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ]
+          ]
+        },
+        "empty": null,
+        "more": "5 of 10 actions. The full plan is in the executive summary."
+      },
+      "legend": [
+        {
+          "status": "healthy",
+          "label": "Healthy"
+        },
+        {
+          "status": "attention",
+          "label": "Attention"
+        },
+        {
+          "status": "critical",
+          "label": "Critical"
+        },
+        {
+          "status": "unavailable",
+          "label": "Data unavailable"
+        },
+        {
+          "status": "undefined",
+          "label": "No base for the ratio"
+        }
+      ]
+    },
+    {
+      "type": "pagebreak",
+      "weak": false
+    },
+    {
+      "type": "front",
+      "blocks": [
+        {
+          "type": "outline",
+          "title": "Contents",
+          "depth": 2
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Report metadata"
+            }
+          ]
+        },
+        {
+          "type": "table",
+          "id": "report-metadata",
+          "headers": [
+            "Field",
+            "Value"
+          ],
+          "rows": [
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Environment"
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "prod"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Analysis period"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "07/14/2026 14:30 to 07/15/2026 14:30"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Namespaces"
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Excluded containers"
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "istio-proxy"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Organization"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "ACME"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Classification"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Uso interno"
+                }
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Status legend"
+            }
+          ]
+        },
+        {
+          "type": "table",
+          "id": "status-legend",
+          "headers": [
+            "Status",
+            "Meaning"
+          ],
+          "rows": [
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "healthy",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Healthy"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "attention",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Attention"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Critical"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "unavailable",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Data unavailable"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "undefined",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "No base for the ratio"
+                }
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Data quality"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            [
+              {
+                "kind": "strong",
+                "text": "Available:"
+              },
+              {
+                "kind": "text",
+                "text": " 8"
+              }
+            ],
+            [
+              {
+                "kind": "strong",
+                "text": "Partial:"
+              },
+              {
+                "kind": "text",
+                "text": " 1"
+              }
+            ],
+            [
+              {
+                "kind": "strong",
+                "text": "Unavailable:"
+              },
+              {
+                "kind": "text",
+                "text": " 0"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "front",
+      "blocks": [
+        {
+          "type": "outline",
+          "title": "Contents",
+          "depth": 2
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Report metadata"
+            }
+          ]
+        },
+        {
+          "type": "table",
+          "id": "report-metadata",
+          "headers": [
+            "Field",
+            "Value"
+          ],
+          "rows": [
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Environment"
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "prod"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Analysis period"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "07/14/2026 14:30 to 07/15/2026 14:30"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Namespaces"
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Excluded containers"
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "istio-proxy"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Organization"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "ACME"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Classification"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Uso interno"
+                }
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Status legend"
+            }
+          ]
+        },
+        {
+          "type": "table",
+          "id": "status-legend",
+          "headers": [
+            "Status",
+            "Meaning"
+          ],
+          "rows": [
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "healthy",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Healthy"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "attention",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Attention"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Critical"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "unavailable",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Data unavailable"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "status",
+                  "status": "undefined",
+                  "text": null
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "No base for the ratio"
+                }
+              ]
+            ]
+          ]
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "numbered": false,
+          "runs": [
+            {
+              "kind": "text",
+              "text": "Data quality"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "items": [
+            [
+              {
+                "kind": "strong",
+                "text": "Available:"
+              },
+              {
+                "kind": "text",
+                "text": " 8"
+              }
+            ],
+            [
+              {
+                "kind": "strong",
+                "text": "Partial:"
+              },
+              {
+                "kind": "text",
+                "text": " 1"
+              }
+            ],
+            [
+              {
+                "kind": "strong",
+                "text": "Unavailable:"
+              },
+              {
+                "kind": "text",
+                "text": " 0"
+              }
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -208,6 +208,227 @@ func (c Callout) MarshalJSON() ([]byte, error) {
 	}{"callout", c.Kind, title, nonNilRuns(c.Runs)})
 }
 
+// Verdict is the first page: the answer, whether the cluster can grow,
+// where it runs short, the first actions, and the legend.
+type Verdict struct {
+	Totals   VerdictTotals
+	Quality  *VerdictQuality // nil when the data carries no warning
+	Growth   VerdictGrowth
+	Pressure VerdictPressure
+	Plan     VerdictPlan
+	Legend   []VerdictLegendItem // the five statuses, in legendOrder
+}
+
+func (Verdict) blockType() string { return "verdict" }
+
+// VerdictTotals holds the three counts, critical first, or the sentence
+// that says there is no finding (then Items is empty).
+type VerdictTotals struct {
+	Items []VerdictCount
+	None  *string
+}
+
+// VerdictCount is one status, its word, and its count as text.
+type VerdictCount struct{ Status, Label, Count string }
+
+// VerdictQuality is the data-quality line: its label, the number of
+// warnings, and the first three in words.
+type VerdictQuality struct {
+	Label string
+	Count string
+	Items []string
+	More  *string // "+N" when more than three
+}
+
+// VerdictGrowth is whether the cluster can grow.
+type VerdictGrowth struct {
+	Title   string
+	Current *string       // nil unless the autoscaling is enabled
+	Max     *string       // nil unless the autoscaling is enabled
+	State   *string       // the status word when it is not enabled
+	Gauge   *VerdictGauge // nil without a positive maximum
+	Caption *string       // "Nodes · current / maximum" with a gauge
+	Finding *VerdictFinding
+	Warning *string // the node-evidence warning, when the data has it
+	Facts   []VerdictFact
+}
+
+// VerdictGauge is what the depth gauge draws: whole nodes.
+type VerdictGauge struct {
+	Current int
+	Max     int
+	Min     *int
+	Hazard  bool // the last band is hatched when full and the cluster has a finding above healthy
+}
+
+// VerdictFinding is a finding drawn with its mark and its sentence.
+type VerdictFinding struct{ Status, Label, Sentence string }
+
+// VerdictFact is a label and its value, such as the minimum nodes.
+type VerdictFact struct{ Label, Value string }
+
+// VerdictPressure lists the scopes with a finding above healthy, worst
+// first, or the sentence that says none has one (then Rows is empty).
+type VerdictPressure struct {
+	Title string
+	Rows  []VerdictPressureRow
+	Empty *string
+}
+
+// VerdictPressureRow is one scope: its worst status, its name, the first
+// finding of that status, and how many of its rows reach each status.
+type VerdictPressureRow struct {
+	Status   string
+	Scope    string
+	Sentence string
+	Name     []Run        // ident, or placeholder for an unknown pool; empty when none
+	Peak     *VerdictFact // the peak percent of the lead finding, when it has one
+	Counts   []VerdictCount
+}
+
+// VerdictPlan is the first actions of the plan, as a table of id
+// "verdict-plan", and the line that says how many there are in all.
+type VerdictPlan struct {
+	Title string
+	Table *Table  // nil when the plan is empty
+	Empty *string // the sentence of an empty plan
+	More  *string // "5 of 10 actions. The full plan is in the executive summary."
+}
+
+// VerdictLegendItem is one status and its word.
+type VerdictLegendItem struct{ Status, Label string }
+
+func nonNil[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
+}
+
+// MarshalJSON writes the keys "type", "totals", "quality", "growth",
+// "pressure", "plan", and "legend", in that order.
+func (v Verdict) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Type     string              `json:"type"`
+		Totals   VerdictTotals       `json:"totals"`
+		Quality  *VerdictQuality     `json:"quality"`
+		Growth   VerdictGrowth       `json:"growth"`
+		Pressure VerdictPressure     `json:"pressure"`
+		Plan     VerdictPlan         `json:"plan"`
+		Legend   []VerdictLegendItem `json:"legend"`
+	}{"verdict", v.Totals, v.Quality, v.Growth, v.Pressure, v.Plan, nonNil(v.Legend)})
+}
+
+// MarshalJSON writes the keys "items" and "none".
+func (t VerdictTotals) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Items []VerdictCount `json:"items"`
+		None  *string        `json:"none"`
+	}{nonNil(t.Items), t.None})
+}
+
+// MarshalJSON writes the keys "status", "label", and "count".
+func (c VerdictCount) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Status string `json:"status"`
+		Label  string `json:"label"`
+		Count  string `json:"count"`
+	}{c.Status, c.Label, c.Count})
+}
+
+// MarshalJSON writes the keys "label", "count", "items", and "more".
+func (q VerdictQuality) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Label string   `json:"label"`
+		Count string   `json:"count"`
+		Items []string `json:"items"`
+		More  *string  `json:"more"`
+	}{q.Label, q.Count, nonNil(q.Items), q.More})
+}
+
+// MarshalJSON writes the keys "title", "current", "max", "state", "gauge",
+// "caption", "finding", "warning", and "facts".
+func (g VerdictGrowth) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Title   string          `json:"title"`
+		Current *string         `json:"current"`
+		Max     *string         `json:"max"`
+		State   *string         `json:"state"`
+		Gauge   *VerdictGauge   `json:"gauge"`
+		Caption *string         `json:"caption"`
+		Finding *VerdictFinding `json:"finding"`
+		Warning *string         `json:"warning"`
+		Facts   []VerdictFact   `json:"facts"`
+	}{g.Title, g.Current, g.Max, g.State, g.Gauge, g.Caption, g.Finding, g.Warning, nonNil(g.Facts)})
+}
+
+// MarshalJSON writes the keys "current", "max", "min", and "hazard".
+func (g VerdictGauge) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Current int  `json:"current"`
+		Max     int  `json:"max"`
+		Min     *int `json:"min"`
+		Hazard  bool `json:"hazard"`
+	}{g.Current, g.Max, g.Min, g.Hazard})
+}
+
+// MarshalJSON writes the keys "status", "label", and "sentence".
+func (f VerdictFinding) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Status   string `json:"status"`
+		Label    string `json:"label"`
+		Sentence string `json:"sentence"`
+	}{f.Status, f.Label, f.Sentence})
+}
+
+// MarshalJSON writes the keys "label" and "value".
+func (f VerdictFact) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Label string `json:"label"`
+		Value string `json:"value"`
+	}{f.Label, f.Value})
+}
+
+// MarshalJSON writes the keys "title", "rows", and "empty".
+func (p VerdictPressure) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Title string               `json:"title"`
+		Rows  []VerdictPressureRow `json:"rows"`
+		Empty *string              `json:"empty"`
+	}{p.Title, nonNil(p.Rows), p.Empty})
+}
+
+// MarshalJSON writes the keys "status", "scope", "sentence", "name",
+// "peak", and "counts".
+func (r VerdictPressureRow) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Status   string         `json:"status"`
+		Scope    string         `json:"scope"`
+		Sentence string         `json:"sentence"`
+		Name     []Run          `json:"name"`
+		Peak     *VerdictFact   `json:"peak"`
+		Counts   []VerdictCount `json:"counts"`
+	}{r.Status, r.Scope, r.Sentence, nonNilRuns(r.Name), r.Peak, nonNil(r.Counts)})
+}
+
+// MarshalJSON writes the keys "title", "table", "empty", and "more".
+func (p VerdictPlan) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Title string  `json:"title"`
+		Table *Table  `json:"table"`
+		Empty *string `json:"empty"`
+		More  *string `json:"more"`
+	}{p.Title, p.Table, p.Empty, p.More})
+}
+
+// MarshalJSON writes the keys "status" and "label".
+func (i VerdictLegendItem) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Status string `json:"status"`
+		Label  string `json:"label"`
+	}{i.Status, i.Label})
+}
+
 // PageBreak forces a new page, or, when Weak is set, forces one only if a
 // page break has not already happened since the last content.
 type PageBreak struct{ Weak bool }

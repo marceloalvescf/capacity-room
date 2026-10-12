@@ -1,0 +1,1 @@
+capacity-report: `blocks[0].growth.gauge.max` must be a positive integer; received 0

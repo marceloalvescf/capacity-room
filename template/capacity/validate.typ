@@ -39,6 +39,7 @@
   empty-runs: "`runs` must not be empty at",
   empty-list: "`items` must not be empty at",
   misplaced-front: "block \"front\" is allowed only as the first block",
+  misplaced-verdict: "block \"verdict\" is allowed only as the first block",
   nested-block: "block",
   duplicate-outline: "block \"outline\" is allowed only once; found again at",
   trailing-pagebreak: "block \"pagebreak\" is not allowed as the last block",
@@ -310,8 +311,145 @@
   expect-bool(place + ".weak", block.weak)
 }
 
+#let check-status(path, status) = {
+  expect-string(path, status)
+  if not (status in allowed-statuses) {
+    fail("unknown-status", " \"" + status + "\" at " + path)
+  }
+}
+
+#let check-strings(path, value, keys) = {
+  for key in keys {
+    expect-string(path + "." + key, value.at(key))
+  }
+}
+
+#let check-int(path, value, bound, bound-word) = {
+  if type(value) != int {
+    fail("wrong-type", path + "` must be an integer; received " + type-name(value))
+  }
+  if value < bound {
+    fail("wrong-type", path + "` must be " + bound-word + " integer; received " + repr(value))
+  }
+}
+
+#let check-counts(path, counts) = {
+  expect-array(path, counts)
+  for (i, count) in counts.enumerate() {
+    let item = path + "[" + str(i) + "]"
+    check-exact-keys(item, count, ("status", "label", "count"))
+    check-status(item + ".status", count.status)
+    check-strings(item, count, ("label", "count"))
+  }
+}
+
+#let check-fact(path, fact) = {
+  check-exact-keys(path, fact, ("label", "value"))
+  check-strings(path, fact, ("label", "value"))
+}
+
+// validate-verdict-block checks the first page: every object has exactly
+// its keys, every leaf its type, and the gauge its range.
+#let validate-verdict-block(place, block) = {
+  check-exact-keys(place, block, ("type", "totals", "quality", "growth", "pressure", "plan", "legend"))
+
+  let totals = place + ".totals"
+  check-exact-keys(totals, block.totals, ("items", "none"))
+  check-counts(totals + ".items", block.totals.items)
+  expect-string-or-none(totals + ".none", block.totals.none)
+
+  let quality = place + ".quality"
+  if block.quality != none {
+    check-exact-keys(quality, block.quality, ("label", "count", "items", "more"))
+    check-strings(quality, block.quality, ("label", "count"))
+    expect-array(quality + ".items", block.quality.items)
+    for (i, item) in block.quality.items.enumerate() {
+      expect-string(quality + ".items[" + str(i) + "]", item)
+    }
+    expect-string-or-none(quality + ".more", block.quality.more)
+  }
+
+  let growth = place + ".growth"
+  let g = block.growth
+  check-exact-keys(
+    growth,
+    g,
+    ("title", "current", "max", "state", "gauge", "caption", "finding", "warning", "facts"),
+  )
+  expect-string(growth + ".title", g.title)
+  for key in ("current", "max", "state", "caption", "warning") {
+    expect-string-or-none(growth + "." + key, g.at(key))
+  }
+  if g.gauge != none {
+    let gauge = growth + ".gauge"
+    check-exact-keys(gauge, g.gauge, ("current", "max", "min", "hazard"))
+    check-int(gauge + ".current", g.gauge.current, 0, "a non-negative")
+    check-int(gauge + ".max", g.gauge.max, 1, "a positive")
+    if g.gauge.min != none {
+      check-int(gauge + ".min", g.gauge.min, 0, "a non-negative")
+      if g.gauge.min > g.gauge.max {
+        fail("wrong-type", gauge + ".min` must not exceed `max`; received " + repr(g.gauge.min))
+      }
+    }
+    expect-bool(gauge + ".hazard", g.gauge.hazard)
+  }
+  if g.finding != none {
+    let finding = growth + ".finding"
+    check-exact-keys(finding, g.finding, ("status", "label", "sentence"))
+    check-status(finding + ".status", g.finding.status)
+    check-strings(finding, g.finding, ("label", "sentence"))
+  }
+  expect-array(growth + ".facts", g.facts)
+  for (i, fact) in g.facts.enumerate() {
+    check-fact(growth + ".facts[" + str(i) + "]", fact)
+  }
+
+  let pressure = place + ".pressure"
+  let p = block.pressure
+  check-exact-keys(pressure, p, ("title", "rows", "empty"))
+  expect-string(pressure + ".title", p.title)
+  expect-array(pressure + ".rows", p.rows)
+  for (i, row) in p.rows.enumerate() {
+    let item = pressure + ".rows[" + str(i) + "]"
+    check-exact-keys(item, row, ("status", "scope", "sentence", "name", "peak", "counts"))
+    check-status(item + ".status", row.status)
+    check-strings(item, row, ("scope", "sentence"))
+    expect-array(item + ".name", row.name)
+    for (k, run) in row.name.enumerate() {
+      validate-run(item + ".name[" + str(k) + "]", run)
+    }
+    if row.peak != none {
+      check-fact(item + ".peak", row.peak)
+    }
+    check-counts(item + ".counts", row.counts)
+  }
+  expect-string-or-none(pressure + ".empty", p.empty)
+
+  let plan = place + ".plan"
+  let q = block.plan
+  check-exact-keys(plan, q, ("title", "table", "empty", "more"))
+  expect-string(plan + ".title", q.title)
+  if q.table != none {
+    validate-table-block(plan + ".table", q.table)
+    if q.table.id != "verdict-plan" {
+      fail("wrong-type", plan + ".table.id` must be \"verdict-plan\"; received " + repr(q.table.id))
+    }
+  }
+  expect-string-or-none(plan + ".empty", q.empty)
+  expect-string-or-none(plan + ".more", q.more)
+
+  let legend = place + ".legend"
+  expect-array(legend, block.legend)
+  for (i, item) in block.legend.enumerate() {
+    let path = legend + "[" + str(i) + "]"
+    check-exact-keys(path, item, ("status", "label"))
+    check-status(path + ".status", item.status)
+    expect-string(path + ".label", item.label)
+  }
+}
+
 #let allowed-top-block-types = (
-  "outline", "front", "heading", "paragraph", "list", "table", "callout", "pagebreak",
+  "verdict", "outline", "front", "heading", "paragraph", "list", "table", "callout", "pagebreak",
 )
 #let allowed-front-block-types = ("outline", "heading", "paragraph", "list", "table", "callout")
 
@@ -321,9 +459,10 @@
 // time, so a function can call itself but not a sibling defined afterward
 // — this is why `front` is handled inline here rather than through a
 // separate `validate-front-block` that would need to call this one back.
-#let validate-block(index, block, in-front) = {
+#let validate-block(index, block, front-at, verdict-first) = {
+  let in-front = front-at != none
   let place = if in-front {
-    "blocks[0].blocks[" + str(index) + "]"
+    "blocks[" + str(front-at) + "].blocks[" + str(index) + "]"
   } else {
     "blocks[" + str(index) + "]"
   }
@@ -345,11 +484,17 @@
     fail("unknown-block-type", " \"" + block-type + "\" at " + place)
   }
 
-  if block-type == "front" and index != 0 {
+  if block-type == "verdict" and index != 0 {
+    fail("misplaced-verdict", "")
+  }
+
+  if block-type == "front" and not (index == 0 or (index == 2 and verdict-first)) {
     fail("misplaced-front", "")
   }
 
-  if block-type == "outline" {
+  if block-type == "verdict" {
+    validate-verdict-block(place, block)
+  } else if block-type == "outline" {
     validate-outline-block(place, block)
   } else if block-type == "front" {
     check-exact-keys(place, block, ("type", "blocks"))
@@ -358,7 +503,7 @@
       fail("no-blocks", "")
     }
     for (j, inner) in block.blocks.enumerate() {
-      validate-block(j, inner, true)
+      validate-block(j, inner, index, false)
     }
   } else if block-type == "heading" {
     validate-heading-block(place, block)
@@ -434,8 +579,10 @@
   if data.blocks.len() == 0 {
     fail("no-blocks", "")
   }
+  let first = data.blocks.first()
+  let verdict-first = type(first) == dictionary and first.at("type", default: none) == "verdict"
   for (index, block) in data.blocks.enumerate() {
-    validate-block(index, block, false)
+    validate-block(index, block, none, verdict-first)
   }
 
   if data.blocks.last().type == "pagebreak" {
@@ -459,7 +606,7 @@
         if inner.type == "outline" {
           outline-count += 1
           if outline-count > 1 {
-            fail("duplicate-outline", " " + "blocks[0].blocks[" + str(j) + "]")
+            fail("duplicate-outline", " " + "blocks[" + str(index) + "].blocks[" + str(j) + "]")
           }
         }
       }

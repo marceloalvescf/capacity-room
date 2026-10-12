@@ -5,6 +5,8 @@
 // built; `blocks.typ` calls `render-table` once the shape is already known
 // to be correct.
 
+#import "runs.typ": mono
+
 #let layouts = (
   report-metadata: (columns: (1fr, 3fr), size: 8.5pt, inset-y: 2pt, faces: ("text", "text")),
   status-legend: (columns: (0.7fr, 3fr), size: 8.5pt, inset-y: 2pt, faces: ("mark", "text")),
@@ -80,6 +82,12 @@
     inset-y: 3.5pt,
     faces: ("num", "mark", "text", "name"),
   ),
+  verdict-plan: (
+    columns: (0.3fr, 1fr, 4fr, 2.2fr),
+    size: 8pt,
+    inset-y: 4pt,
+    faces: ("num", "mark", "text", "name"),
+  ),
   material-limitations: (
     columns: (1.8fr, 0.8fr, 3fr),
     size: 7.5pt,
@@ -119,7 +127,7 @@
     ))
     #let body = rows.map(row => row.enumerate().map(((i, cell)) => table.cell(
       align: face-align.at(faces.at(i)) + horizon,
-      if faces.at(i) == "num" { text(font: "JetBrains Mono", cell) } else { cell },
+      if faces.at(i) == "num" { text(font: mono, cell) } else { cell },
     ))).flatten()
     #table(
       columns: layout.columns,

@@ -270,8 +270,8 @@ func TestCapacityEveryDiagnosticIsCovered(t *testing.T) {
 	ws := workspace(t)
 	capDir := filepath.Join(ws, "capacity")
 	names := diagnosticNames(t, filepath.Join(capDir, "validate.typ"))
-	if len(names) != 21 {
-		t.Errorf("diagnostic names = %v (%d), want 21", names, len(names))
+	if len(names) != 22 {
+		t.Errorf("diagnostic names = %v (%d), want 22", names, len(names))
 	}
 
 	dir := capacityNegativeDir(ws)
@@ -480,6 +480,7 @@ var capacityLayouts = []capacityLayout{
 	{"replica-ceiling", 5, "7.2pt", "3.5pt", []string{"name", "name", "text", "num", "text"}},
 	{"nodepool-status", 3, "7.3pt", "3.5pt", []string{"name", "mark", "text"}},
 	{"action-plan", 4, "7.2pt", "3.5pt", []string{"num", "mark", "text", "name"}},
+	{"verdict-plan", 4, "8pt", "4pt", []string{"num", "mark", "text", "name"}},
 	{"material-limitations", 3, "7.5pt", "3.5pt", []string{"text", "mark", "text"}},
 	{"quality-appendix", 5, "7pt", "3.5pt", []string{"text", "mark", "text", "text", "text"}},
 	{"interpretation-notes", 1, "7.5pt", "3.5pt", []string{"text"}},

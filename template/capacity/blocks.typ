@@ -9,6 +9,7 @@
 #import "../graphite/lib.typ": callout
 #import "runs.typ": runs-to-content
 #import "tables.typ": render-table
+#import "verdict.typ": build-verdict
 
 #let build-block(entry) = {
   if entry.type == "outline" {
@@ -42,6 +43,8 @@
   } else if entry.type == "callout" {
     let title = if entry.title == none { none } else { runs-to-content(entry.title) }
     callout(kind: entry.kind, title: title, runs-to-content(entry.runs))
+  } else if entry.type == "verdict" {
+    build-verdict(entry)
   } else {
     pagebreak(weak: entry.weak)
   }
