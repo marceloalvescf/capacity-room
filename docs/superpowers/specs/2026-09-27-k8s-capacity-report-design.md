@@ -79,6 +79,7 @@ reference. That folder is never tracked by Git.
 | Portuguese sentences translate every term: solicitação, limite, carga de trabalho, pool de nós | Every technical term is English in both languages; only a common noun is Portuguese | Owner's decision of 2026-09-30: Brazilian readers use the Kubernetes vocabulary in English |
 | Table cells set at the top left | Every table cell, the header row included, is centred horizontally and vertically | Owner's decision of 2026-10-02, after reading the report of a real cluster |
 | Page margins of 2.5 cm on every side | One inch at the top, the left, and the right; half an inch at the bottom | Owner's decision of 2026-10-02, for more rows per page |
+| The PDF follows the order, the words, and the faces of the original; the detailed report numbers its sections 1 to 5 and the appendix 6 | The first page is a verdict; the executive summary is section 1 and the evidence follows (detailed: namespaces 2, workloads 3, HPAs 4, node pools 5, appendix 6; executive: appendix 2); the words follow the web app; the faces are Public Sans and JetBrains Mono; critical is marked `◆`; the action plan names each scope with its type | Owner's decision of 2026-10-12: parity with the original binds the numbers alone |
 | A period always ends when the report runs ("the last N") | A period is the last N or a calendar range that ends at or before the run | Owner's decision of 2026-10-07 (F-131): a report of a past month or of a past incident |
 
 Accepted consequences:
@@ -550,6 +551,7 @@ Go decides what is said. The template decides how it looks.
 
 | Block | Content |
 |---|---|
+| `verdict` | The first page, 2026-10-12: totals by status, data-quality warnings, whether the cluster can grow (counts, depth gauge, finding, facts), the pressure by scope, the first actions, and the legend of the five statuses |
 | `front` | The opening matter, set in smaller type; holds other blocks |
 | `outline` | Title and depth |
 | `heading` | Level, text, and whether it is numbered |
@@ -558,6 +560,7 @@ Go decides what is said. The template decides how it looks.
 | `table` | Table identifier, header texts, rows of cells |
 | `callout` | Kind, optional title, runs of text |
 | `pagebreak` | Weak or not |
+| `colophon` | The closing line, 2026-10-12: where the report came from and when it was issued; always the last block |
 
 A cell or paragraph is a list of runs. Each run has a kind:
 
@@ -592,12 +595,15 @@ Rules:
 
 ### 10.3 Content
 
-The detailed and executive profiles keep the section order, tables, columns,
-sort orders, and fallback sentences of the original.
+The detailed and executive profiles keep the tables, columns, sort orders, and
+numbers of the original. Since 2026-10-12 parity binds the numbers alone: the
+order is the verdict page, the opening page, the executive summary, and then
+the evidence, and the words follow the web app.
 `docs/reference/inventory/document-frontend.md` holds the inventory.
 
-- Status marks keep their shapes: healthy `●`, attention `▲`, critical `♦`,
-  no base `○`, unavailable `—`. Meaning never depends on colour.
+- Status marks keep their shapes: healthy `●`, attention `▲`, critical `◆`,
+  no base `○`, unavailable `—`. Meaning never depends on colour. The glyphs
+  are set in JetBrains Mono, which holds all five (2026-10-12).
 - The cover shows the author only when `report.author` is set.
 - The footer starts on the second page and shows the classification, when
   set, and the page number.
@@ -670,6 +676,7 @@ typst compile --root <work> --font-path <work>/graphite/assets/fonts \
 |---|---|
 | Code and template | MIT |
 | Liberation Sans fonts | SIL Open Font License 1.1 |
+| Public Sans and JetBrains Mono fonts, 2026-10-12 | SIL Open Font License 1.1 |
 
 The font licence text stays beside the fonts, is embedded with them, and is
 present in the container image.

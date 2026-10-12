@@ -132,7 +132,7 @@ minimum severity is not `all`, it comes after the cluster:
 
 The report profile is `detailed`, the default, or `executive`. Set it with
 `report.profile`, `--report-profile`, or `KCR_REPORT_PROFILE`. The `executive`
-profile writes the cover, the opening page, the executive summary as its only
+profile writes the verdict page, the opening page, the executive summary as its only
 numbered section, 1, and the appendix as section 2. Its minimum severity is
 raised to at least attention for the whole report, the appendix included. Its
 PDF is named
@@ -174,29 +174,34 @@ node pools with their capacity and usage, and the cluster autoscaling.
 - **`--check` collects nothing.** It sends the requests of the preflight
   and stops.
 
-The detailed report holds five sections, numbered 1 to 5, and the appendix, 6:
+The PDF opens on a verdict page, which gives the findings by severity, whether
+the cluster can grow, the pressure on each scope, and the first actions, and
+then the opening page. The detailed report holds five sections, numbered 1 to
+5, and the appendix, 6; its words are those of the web app. A line that names
+the program and the date closes the document.
 
-- **Capacity by namespace** (section 1). For each namespace, the average and
+- **Executive summary** (section 1). The critical workloads and those needing
+  attention; the namespaces with workloads at risk; the workloads at their
+  replica maximum and without an HPA; the situation of the node pools; the
+  prioritized action plan, which names each scope with its kind; and the
+  material limitations. Its rows start at the severity attention, whatever
+  the minimum.
+- **Capacity by namespace** (section 2). For each namespace, the average and
   peak usage of CPU and memory, its requests and limits, and the two ratios
   of the peak to the request and to the limit.
-- **Resources by workload** (section 2). For each workload, its pods, the
+- **Resources by workload** (section 3). For each workload, its pods, the
   average and peak usage of CPU and memory, and the four ratios of usage to
   request and to limit.
-- **HPA history** (section 3). For each namespace, the HPAs that were
+- **HPA history** (section 4). For each namespace, the HPAs that were
   observed, with their specs, the current average, the minimum and the
   maximum they reached, and their situation; the workloads without an HPA,
   with their pods and their situation; and a note when the HPA data is
   incomplete or partial.
-- **Resource usage by node pool** (section 4). A summary of each pool, with
+- **Resource usage by node pool** (section 5). A summary of each pool, with
   its average and peak usage and the confidence in the identity of the pool;
   an aggregate profile of the allocatable, used, and requested CPU and memory
   of each node; and the detail of each node, with its usage, the reason of
   its state, and whether it is ready and schedulable.
-- **Executive summary** (section 5). The workloads with critical priority and
-  those with high priority; the namespaces with workloads at risk; the
-  workloads at their replica maximum and without an HPA; the situation of the
-  node pools; the prioritized action plan; and the material limitations. Its
-  rows start at the severity attention, whatever the minimum.
 
 The appendix, 6, holds the technical quality of the data and the
 interpretation notes.

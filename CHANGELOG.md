@@ -15,8 +15,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The executive summary of the PDF comes before the sections of evidence.
 - The PDF uses the typefaces of the web app, with names and numbers set in a monospaced face and numbers aligned to the right.
-- The PDF words its statuses, headings, and action plan as the web app does, and names each scope of an action in full.
+- The PDF words its statuses, headings, and action plan as the web app does, and names each scope of an action with its kind and in full.
 - The opening page of the PDF names the profile and the minimum severity of the report.
+- The scope text of an action in the API names each of up to three scopes in full.
 - An empty table of the PDF says whether there was no data or no row reached the minimum severity.
 
 ### Fixed

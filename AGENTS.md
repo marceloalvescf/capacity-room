@@ -854,9 +854,11 @@ looks.
   2026-10-12). A change to a number needs a decision recorded in
   `ROADMAP.md`; a change to the page margins, one inch at the top and the
   sides and half an inch at the bottom, needs a new golden page.
-- Rendering was measured equal on linux/amd64, linux/arm64, and macOS
-  (`docs/decisions/0001-golden-architecture.md`). Measure again when the
-  pinned Typst version changes.
+- Rendering was measured equal on linux/amd64, linux/arm64, and macOS in
+  2026-09 (`docs/decisions/0001-golden-architecture.md`). The goldens of
+  2026-10 were rendered on linux/amd64 only; the other platforms are measured
+  again before the next release. Measure again when the pinned Typst version
+  changes.
 
 ## Delegating to subagents
 
