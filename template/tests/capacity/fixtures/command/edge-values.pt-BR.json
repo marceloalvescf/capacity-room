@@ -1013,7 +1013,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Síntese dos principais riscos identificados no período de 24 horas, com foco em pontos de prioridade crítica e alta que requerem atenção imediata."
+          "text": "Síntese dos principais riscos identificados no período de 24 horas, com foco nos pontos críticos e nos que pedem atenção."
         }
       ]
     },
@@ -1232,7 +1232,7 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Estável"
+              "text": "Saudável"
             }
           ],
           [

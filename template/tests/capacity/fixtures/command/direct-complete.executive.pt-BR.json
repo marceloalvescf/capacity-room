@@ -301,7 +301,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Síntese dos principais riscos identificados no período de 24 horas, com foco em pontos de prioridade crítica e alta que requerem atenção imediata."
+          "text": "Síntese dos principais riscos identificados no período de 24 horas, com foco nos pontos críticos e nos que pedem atenção."
         }
       ]
     },
@@ -370,7 +370,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Nenhum workload com prioridade alta foi identificado."
+          "text": "Nenhum workload que peça atenção foi identificado."
         }
       ]
     },
@@ -491,7 +491,7 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Estável"
+              "text": "Saudável"
             }
           ],
           [
@@ -755,7 +755,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Nenhuma capacidade dos dados atinge a severidade mínima deste relatório."
+          "text": "Nenhuma capacidade atinge a severidade mínima deste relatório."
         }
       ]
     }

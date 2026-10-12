@@ -1004,14 +1004,19 @@ func originalLimitationMarks(table string, rows [][][]pythonRun) [][][]pythonRun
 	return out
 }
 
+// originalQualifiers are the four qualifier words the original wrote in
+// parentheses after an action, as testdata/python records them.
+var originalQualifiers = []string{"namespaces", "cargas de trabalho", "HPAs", "cluster"}
+
 // originalPlanCells returns the recorded rows of the action plan with two
 // differences of wording read as this project writes them. The original
 // wrote a parenthesised qualifier after an action that more than one row
 // shares, and named a scope by the part of its name after the last slash;
 // this project writes the action alone and each scope by its full name. The
-// qualifier is stripped from the recorded action (one trailing " (...)"
-// only), and a recorded scope that equals ours, or equals the part after the
-// last slash of ours, scope by scope and in order, is read as ours. A scope
+// qualifier is stripped from the recorded action when it is one of the four
+// words the original recorded (originalQualifiers), and no other
+// parenthesis; a recorded scope that equals ours, or equals the part after
+// the last slash of ours, scope by scope and in order, is read as ours. A scope
 // that names another object, a different count of scopes, and every other
 // cell, status, row, and number are left as recorded. The rows given are
 // left as they are.
@@ -1030,11 +1035,10 @@ func originalPlanCells(table string, got [][][]document.Run, want [][][]pythonRu
 			switch c {
 			case 2:
 				text := out[r][c][0].Text
-				if strings.HasSuffix(text, ")") {
-					if open := strings.LastIndex(text, " ("); open >= 0 {
-						out[r][c][0].Text = text[:open]
-					}
+				for _, qualifier := range originalQualifiers {
+					text = strings.TrimSuffix(text, " ("+qualifier+")")
 				}
+				out[r][c][0].Text = text
 			case 3:
 				if r >= len(got) || len(got[r]) <= 3 {
 					continue
@@ -2292,6 +2296,12 @@ func TestComparisonCanFail(t *testing.T) {
 		want := freshScaling(t)
 		want.Executive["attention"].ActionPlan[2][3][0].Text = "payments-api"
 		checkScaling(t, want, []string{scaling.Name + `: executive.attention.action_plan: row 2, cell 3, run 0: text: got "payments", want "payments-api"`})
+	})
+
+	t.Run("an unknown trailing parenthesis is not stripped", func(t *testing.T) {
+		want := freshScaling(t)
+		want.Executive["attention"].ActionPlan[1][2][0].Text += " (x)"
+		checkScaling(t, want, []string{scaling.Name + `: executive.attention.action_plan: row 1, cell 2, run 0: text: got "Revisar o limit de CPU e o perfil de consumo observado." as finding.resource_limit_usage.cpu.action, want "Revisar o limite de CPU e o perfil de consumo observado. (x)" with no catalog key`})
 	})
 
 	t.Run("a recorded action differs after its qualifier is stripped", func(t *testing.T) {

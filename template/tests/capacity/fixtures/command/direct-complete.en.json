@@ -947,7 +947,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Summary of the main risks identified over the period of 24 hours, with a focus on points of critical and high priority that need immediate attention."
+          "text": "Summary of the main risks identified over the period of 24 hours, with a focus on the critical points and those that need attention."
         }
       ]
     },
@@ -1016,7 +1016,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "No workload with high priority was identified."
+          "text": "No workload needing attention was identified."
         }
       ]
     },
@@ -1137,7 +1137,7 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Stable"
+              "text": "Healthy"
             }
           ],
           [

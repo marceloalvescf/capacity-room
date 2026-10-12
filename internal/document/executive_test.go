@@ -526,7 +526,7 @@ func TestNodepoolStatusRows(t *testing.T) {
 		nodeFinding("NODE_MEMORY_USAGE_CRITICAL", analysis.SeverityCritical, "worker-a", number("peak_percent", 91)))
 
 	want := [][]string{
-		{"ident:apps", "status/critical:Crítica", "text:" + pt(t, catalog.FindingObservation("node_usage", "memory"), nil)},
+		{"ident:apps", "status/critical:Crítico", "text:" + pt(t, catalog.FindingObservation("node_usage", "memory"), nil)},
 		{"ident:stable", "status/healthy:" + pt(t, catalog.SectionsExecutivePoolStable, nil), "text:" + pt(t, catalog.PlaceholderEmptyCell, nil)},
 	}
 	if len(rows) != 2 || !slices.Equal(rows[0], want[0]) || !slices.Equal(rows[1], want[1]) {
@@ -541,7 +541,7 @@ func TestNodepoolStatusKeepsTheHighestSeverityOnly(t *testing.T) {
 		snapshot.Finding{Code: "NODEPOOL_MEMORY_UNEVEN", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeNodepool, ScopeName: "pool-a", Confidence: "exact"},
 		nodeFinding("NODE_CPU_REQUEST_HIGH", analysis.SeverityCritical, "pool-a-1", number("percent", 91)))
 
-	want := []string{"ident:pool-a", "status/critical:Crítica", "text:" + pt(t, catalog.FindingObservation("node_request_high", "cpu"), nil)}
+	want := []string{"ident:pool-a", "status/critical:Crítico", "text:" + pt(t, catalog.FindingObservation("node_request_high", "cpu"), nil)}
 	if len(rows) != 1 || !slices.Equal(rows[0], want) {
 		t.Errorf("rows = %q, want %q", rows, want)
 	}
