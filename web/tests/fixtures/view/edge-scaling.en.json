@@ -2195,7 +2195,7 @@
       "cpu_request_percent": {
         "raw": 90,
         "text": "90%",
-        "status": null
+        "status": "critical"
       },
       "memory_request_percent": {
         "raw": 50,

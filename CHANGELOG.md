@@ -49,6 +49,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A report whose metric source could not be reached no longer says that the
   source did not answer in time.
 - Screen readers tell the actions of the action plan apart by their scope.
+- A node whose requests take a high share of it marks that share on the
+  report's nodes tab.
 
 ## [1.0.0] - 2026-10-10
 

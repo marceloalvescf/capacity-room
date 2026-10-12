@@ -202,6 +202,16 @@ describe("nodes tab", () => {
     expect(cpu("n-healthy")).not.toHaveClass("hazard");
   });
 
+  it("a peak cell is hatched and its share marked critical by the status the view gives the share", async () => {
+    await open("nodes");
+    const cpu = within(rowOf("Nodes", "pool-a-1")).getAllByRole("cell")[4] as HTMLElement;
+    expect(cpu).toHaveClass("hazard");
+    const share = within(cpu).getByText("90% requested");
+    expect(share).toHaveTextContent(/^Critical90% requested$/);
+    const memory = within(rowOf("Nodes", "pool-a-1")).getAllByRole("cell")[5] as HTMLElement;
+    expect(memory).not.toHaveClass("hazard");
+  });
+
   it("the state of a node", async () => {
     const node = english.nodes[0] as View["nodes"][number];
     const nodes = [

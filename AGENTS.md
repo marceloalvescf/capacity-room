@@ -399,7 +399,10 @@ redactor the moment the settings are loaded, before the pool opens.
   words a snapshot for the web from the helpers the PDF uses, so every text
   is the PDF's and the rows kept are the PDF's (the action plan's
   recommendations through one helper); a closed set travels as its code,
-  and the mark the PDF prints beside a text travels as its status.
+  and the mark the PDF prints beside a text travels as its status. A
+  node's request share carries the severity of the node's request finding
+  for that resource, a status the PDF states as that finding rather than
+  beside the share.
   The contract describes it as `ReportView`, excluded from the Go
   generation, and `TestViewMatchesTheContract` walks the view of every
   golden snapshot against that schema both ways.

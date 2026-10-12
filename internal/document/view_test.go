@@ -710,3 +710,28 @@ func TestViewMarksEveryNumberAsThePDFDoes(t *testing.T) {
 		t.Errorf("a ratio without a base: marks %v, want %v", got, want)
 	}
 }
+
+func TestViewMarksANodeRequestShareWithItsFinding(t *testing.T) {
+	for _, n := range mustView(t, goldenSnapshot(t, "direct-complete"), catalog.English).Nodes {
+		if n.CPURequestPercent.Status != nil || n.MemoryRequestPercent.Status != nil {
+			t.Errorf("%s has no request finding, marks %v and %v, want none", n.Name, n.CPURequestPercent.Status, n.MemoryRequestPercent.Status)
+		}
+	}
+
+	marked := 0
+	for _, n := range mustView(t, goldenSnapshot(t, "edge-scaling"), catalog.English).Nodes {
+		if n.Name != "pool-a-1" {
+			continue
+		}
+		marked++
+		if got := statusText(n.CPURequestPercent.Status); got != "critical" {
+			t.Errorf("pool-a-1 cpu request percent mark %s, want critical", got)
+		}
+		if got := statusText(n.MemoryRequestPercent.Status); got != "null" {
+			t.Errorf("pool-a-1 memory request percent mark %s, want null", got)
+		}
+	}
+	if marked != 1 {
+		t.Fatalf("edge-scaling holds %d nodes named pool-a-1, want 1", marked)
+	}
+}

@@ -36,7 +36,8 @@ type View struct {
 
 // Value is a number with its text: Raw is nil when the number is absent,
 // and Text is then the placeholder the PDF prints for it. Status is the
-// mark the PDF prints beside the text, and nil when it prints none.
+// mark the PDF prints beside the text, and nil when it prints none; a
+// node's request share carries the severity of the node's request finding.
 type Value struct {
 	Raw    *float64 `json:"raw"`
 	Text   string   `json:"text"`
@@ -639,8 +640,8 @@ func (vb *viewBuilder) nodes(s snapshot.Snapshot, minRank int) []ViewNode {
 			MemoryCapacity:       vb.number(n.MemoryCapacity, vb.b.cat.Memory),
 			CPUAllocatable:       vb.number(n.CPUAllocatable, vb.b.cat.CPU),
 			MemoryAllocatable:    vb.number(n.MemoryAllocatable, vb.b.cat.Memory),
-			CPURequestPercent:    vb.number(n.CPURequestPercent, vb.b.cat.Percent),
-			MemoryRequestPercent: vb.number(n.MemoryRequestPercent, vb.b.cat.Percent),
+			CPURequestPercent:    requestShare(vb.number(n.CPURequestPercent, vb.b.cat.Percent), s.Findings, n.Name, "NODE_CPU_REQUEST_HIGH"),
+			MemoryRequestPercent: requestShare(vb.number(n.MemoryRequestPercent, vb.b.cat.Percent), s.Findings, n.Name, "NODE_MEMORY_REQUEST_HIGH"),
 			CPUUsagePercent:      vb.statistic(n.CPUUsagePercent, usage),
 			MemoryUsagePercent:   vb.statistic(n.MemoryUsagePercent, usage),
 			Ready:                n.Ready,
@@ -650,6 +651,18 @@ func (vb *viewBuilder) nodes(s snapshot.Snapshot, minRank int) []ViewNode {
 		})
 	}
 	return out
+}
+
+// requestShare marks a node's request share with the severity of the
+// node's finding of code, and leaves it unmarked when the node has none.
+func requestShare(value Value, findings []snapshot.Finding, node, code string) Value {
+	for _, f := range findings {
+		if f.Code == code && f.ScopeType == analysis.ScopeNode && f.ScopeName == node {
+			value.Status = mark(f.Severity)
+			break
+		}
+	}
+	return value
 }
 
 func (vb *viewBuilder) nodepools(pools []snapshot.NodePool) []ViewNodepool {
