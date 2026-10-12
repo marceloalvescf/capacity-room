@@ -371,11 +371,29 @@ func TestStoredRequestWithoutLanguage(t *testing.T) {
 	}
 	path := "/api/v1/reports/" + id.String()
 
+	broken := ts.seedReport(t, stored{owner: c.ops.user.ID})
+	if _, err := ts.pool.Exec(context.Background(), `UPDATE reports SET request = '"text"' WHERE id = $1`, broken); err != nil {
+		t.Fatal(err)
+	}
+
 	w := ts.as(t, &c.ops, "GET", "/api/v1/reports", "", nil)
-	if w.Code != 200 || !strings.Contains(w.Body.String(), id.String()) {
+	if w.Code != 200 {
 		t.Fatalf("list: %d %s", w.Code, w.Body.String())
 	}
+	listed := 0
+	for _, it := range decodeStrict[ReportPage](t, w).Items {
+		if it.Id == id || it.Id == broken {
+			listed++
+			if it.Selection != nil {
+				t.Fatalf("report %s lists selection %+v", it.Id, it.Selection)
+			}
+		}
+	}
+	if listed != 2 || !strings.Contains(w.Body.String(), `"selection":null`) {
+		t.Fatalf("listed %d of the 2 unreadable reports: %s", listed, w.Body.String())
+	}
 	wantProblem(t, ts.as(t, &c.ops, "GET", path, "", nil), 500, CodeInternalError, nil)
+	wantProblem(t, ts.as(t, &c.ops, "GET", "/api/v1/reports/"+broken.String(), "", nil), 500, CodeInternalError, nil)
 	if w := ts.as(t, &c.ops, "DELETE", path, "", nil); w.Code != 204 {
 		t.Fatalf("delete: %d %s", w.Code, w.Body.String())
 	}

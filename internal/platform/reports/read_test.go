@@ -344,6 +344,29 @@ func TestBodiesReadThroughTheDownloadPool(t *testing.T) {
 	}
 }
 
+func TestListShowsAnUnreadableRequestWithNoSelection(t *testing.T) {
+	f := newFixture(t)
+	good := f.seedReport(t, "collected", "complete", fixedNow.Add(time.Hour), "")
+	broken := f.seedReport(t, "collected", "complete", fixedNow.Add(time.Hour), "")
+	noLanguage := f.seedReport(t, "collected", "complete", fixedNow.Add(time.Hour), "")
+	badLanguage := f.seedReport(t, "collected", "complete", fixedNow.Add(time.Hour), "")
+	f.exec(t, `UPDATE reports SET request = '"text"' WHERE id = $1`, broken)
+	f.exec(t, `UPDATE reports SET request = request - 'language' WHERE id = $1`, noLanguage)
+	f.exec(t, `UPDATE reports SET request = '{"language":"fr"}' WHERE id = $1`, badLanguage)
+	page, err := f.svc.List(context.Background(), f.read, "", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Items) != 4 {
+		t.Fatalf("items %+v", page.Items)
+	}
+	for _, it := range page.Items {
+		if (it.ID == good) != (it.Selection != nil) {
+			t.Fatalf("report %s selection %+v", it.ID, it.Selection)
+		}
+	}
+}
+
 func TestListCarriesTheSelectionOfARange(t *testing.T) {
 	f := newFixture(t)
 	f.seedReport(t, "collected", "complete", fixedNow.Add(time.Hour), "")

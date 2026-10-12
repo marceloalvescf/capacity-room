@@ -324,6 +324,19 @@ describe("progress screen", () => {
     expect(screen.queryByRole("link", { name: "Check the profile" })).not.toBeInTheDocument();
   });
 
+  it.each([
+    ["administrator", "Check the profile"],
+    ["operator", "An administrator can test the connection of the profile."],
+  ] as const)("a deleted profile offers %s no next step", async (role, text) => {
+    signIn(role);
+    mock.reports = [report({ status: "failed", failure_code: "ENDPOINT_UNREACHABLE", profile_id: "gone" })];
+    await renderApp(`/jobs/${id}`);
+    await screen.findByRole("alert");
+    await screen.findByRole("link", { name: t("progress.requestAgain") });
+    expect(screen.queryByText(text)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: text })).not.toBeInTheDocument();
+  });
+
   it("a failure outside the profile test codes offers no next step", async () => {
     signIn("administrator");
     mock.reports = [report({ status: "failed", failure_code: "NOTHING_TO_REPORT" })];

@@ -726,6 +726,14 @@ describe("report scope", () => {
     expect(cell).toHaveTextContent("payments · 2026-10-01 00:00 to 2026-10-02 00:00");
   });
 
+  it("shows no second line for a report whose request could not be read", async () => {
+    mock.reports = many(1, () => ({ profile_id: "gone" })).map((row) => ({ ...row, selection: null }));
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    const cell = within(rowOf(id(0))).getByText("gone").closest("td") as HTMLElement;
+    expect(cell.children).toHaveLength(1);
+  });
+
   it("counts the namespaces past the third", async () => {
     mock.reports = many(1, () => ({ selection: selection({ namespaces: ["a", "b", "c", "d", "e"], period: "7d" }) }));
     await renderApp("/reports");

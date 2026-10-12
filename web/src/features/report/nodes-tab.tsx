@@ -68,7 +68,7 @@ function NodeState({ row }: { row: ViewNode }) {
     return <StatusMark status="attention" label={text} withStatus />;
   }
   if (row.ready === null) {
-    return <StatusMark status="unavailable" label={text} />;
+    return <StatusMark status="unavailable" label={text} withStatus />;
   }
   return <span>{text}</span>;
 }
@@ -115,7 +115,7 @@ function Pools({ pools }: { pools: ViewNodepool[] }) {
                 <span className="font-mono">{pool.nodes.length}</span>
                 <ul className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted-fg">
                   {pool.nodes.map((name) => (
-                    <li key={name} className="font-mono">
+                    <li key={name} className="font-mono [overflow-wrap:anywhere]">
                       {name}
                     </li>
                   ))}

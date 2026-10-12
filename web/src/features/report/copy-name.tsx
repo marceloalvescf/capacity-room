@@ -18,7 +18,7 @@ export function CopyName({ name }: { name: string }) {
   }
   return (
     <span className="inline-flex items-center gap-2">
-      <span className="font-mono">{name}</span>
+      <span className="font-mono [overflow-wrap:anywhere]">{name}</span>
       <IconButton
         label={t("report.copy", { name })}
         variant="secondary"

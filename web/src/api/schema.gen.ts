@@ -432,10 +432,12 @@ export interface components {
             expires_at: string;
             /** @description expires_at is at or before now: the report answers REPORT_EXPIRED until it is purged. */
             expired: boolean;
-            selection: components["schemas"]["ReportSelection"];
+            /** @description null in the list when the stored request cannot be read; the report itself then answers 500. */
+            selection: components["schemas"]["ReportSelection"] | null;
         };
         /** @description A report with its request and its progress. */
         Report: components["schemas"]["ReportSummary"] & {
+            selection: components["schemas"]["ReportSelection"];
             /** Format: uuid */
             profile_revision_id: string;
             /** @description The collection attempt that runs or ran it; 0 before the first. */
@@ -723,7 +725,7 @@ export interface components {
          * @enum {string|null}
          */
         ViewMark: "healthy" | "attention" | "critical" | "undefined" | "unavailable" | null;
-        /** @description A number with the text the PDF prints for it and the mark it prints beside it. */
+        /** @description A number with the text the PDF prints for it and the status of its mark; a node's request share carries the severity of the node's request finding. */
         ViewValue: {
             /**
              * Format: double

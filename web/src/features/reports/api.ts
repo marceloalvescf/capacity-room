@@ -17,6 +17,7 @@ type Schemas = components["schemas"];
 export type Report = Schemas["Report"];
 export type ReportPage = Schemas["ReportPage"];
 export type ReportSummary = Schemas["ReportSummary"];
+export type ReportSelection = Schemas["ReportSelection"];
 export type ReportPDFState = Schemas["ReportPDFState"];
 export type ProfileSummary = Schemas["ProfileSummary"];
 

@@ -1266,14 +1266,21 @@ components:
             expires_at is at or before now: the report answers REPORT_EXPIRED
             until it is purged.
         selection:
-          $ref: "#/components/schemas/ReportSelection"
+          allOf:
+            - $ref: "#/components/schemas/ReportSelection"
+          nullable: true
+          description: >-
+            null in the list when the stored request cannot be read; the
+            report itself then answers 500.
     Report:
       description: A report with its request and its progress.
       allOf:
         - $ref: "#/components/schemas/ReportSummary"
         - type: object
-          required: [profile_revision_id, attempt, started_at, collected_at]
+          required: [profile_revision_id, attempt, started_at, collected_at, selection]
           properties:
+            selection:
+              $ref: "#/components/schemas/ReportSelection"
             profile_revision_id:
               type: string
               format: uuid
@@ -2001,7 +2008,10 @@ components:
       enum: [healthy, attention, critical, undefined, unavailable, null]
     ViewValue:
       type: object
-      description: A number with the text the PDF prints for it and the mark it prints beside it.
+      description: >-
+        A number with the text the PDF prints for it and the status of its
+        mark; a node's request share carries the severity of the node's
+        request finding.
       required: [raw, text, status]
       properties:
         raw:

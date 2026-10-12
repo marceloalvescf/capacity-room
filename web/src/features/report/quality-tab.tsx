@@ -22,7 +22,7 @@ function Opened({ row }: { row: ViewCapability }) {
       <p className="text-sm font-medium">{t("report.quality.metrics")}</p>
       <ul className="flex flex-col gap-1">
         {row.evidence.map((metric) => (
-          <li key={metric} className="font-mono text-sm">
+          <li key={metric} className="font-mono text-sm [overflow-wrap:anywhere]">
             {metric}
           </li>
         ))}

@@ -283,12 +283,12 @@ function QualityNotice() {
   );
 }
 
-// An action of the plan leads to the finding it comes from; with none to match, it stays plain text.
 // The scopes of an action by their full names; a long list is the summary the view gives.
 function scopeLabel(recommendation: ViewRecommendation): string {
   return recommendation.scopes.length <= 3 ? recommendation.scopes.join(", ") : recommendation.scope_text;
 }
 
+// An action of the plan leads to the finding it comes from; with none to match, it stays plain text.
 function PlanAction({ recommendation, findings }: { recommendation: ViewRecommendation; findings: ViewFinding[] }) {
   const { t } = useTranslation();
   const index = findings.findIndex(matchRecommendation(recommendation));

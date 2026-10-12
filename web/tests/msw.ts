@@ -187,7 +187,7 @@ function overlay(base: AdminProfile, document: Schemas["ProfileDocument"]): Admi
 export interface Mock {
   session: Session;
   calls: Call[];
-  reports: Report[];
+  reports: (Omit<Report, "selection"> & { selection: Report["selection"] | null })[];
   profiles: ProfileSummary[];
   // The reports requested by key, so that a key sent again answers the same report.
   requested: Map<string, { body: string; id: string }>;

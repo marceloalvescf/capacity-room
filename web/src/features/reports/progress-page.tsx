@@ -142,7 +142,8 @@ export function ProgressPage() {
   const profile = profiles.data?.find((candidate) => candidate.id === data.profile_id)?.display_name ?? data.profile_id;
   const canRequest = principal.role !== "reader";
   const profileCode = data.failure_code !== null && (profileTestCodeValues as readonly string[]).includes(data.failure_code);
-  const checkProfile = profileCode && principal.role === "administrator";
+  const profileKnown = profiles.data?.some((candidate) => candidate.id === data.profile_id) === true;
+  const checkProfile = profileCode && profileKnown && principal.role === "administrator";
   const finished = data.status === "collected" || data.status === "failed";
 
   async function confirm() {
@@ -211,7 +212,7 @@ export function ProgressPage() {
               </Link>
             ) : null}
           </div>
-          {profileCode && principal.role !== "administrator" ? (
+          {profileCode && profileKnown && principal.role !== "administrator" ? (
             <p className="text-sm text-muted-fg">{t("progress.askAdministrator")}</p>
           ) : null}
         </>

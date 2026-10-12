@@ -19,6 +19,7 @@ import {
   useDeleteReports,
   useProfiles,
   useReports,
+  type ReportSelection,
   type ReportSummary,
 } from "./api";
 import { DeleteDialog, type DeleteTarget } from "./delete-dialog";
@@ -66,8 +67,8 @@ export function ReportsPage() {
   const names = new Map(profiles.data?.map((profile) => [profile.id, profile.display_name]));
   const profileName = (row: ReportSummary): string => names.get(row.profile_id) ?? row.profile_id;
   const lang: Language = isLanguage(i18n.language) ? i18n.language : "en";
-  const scope = (row: ReportSummary): string => {
-    const { period, start, end } = row.selection;
+  const scope = (selection: ReportSelection): string => {
+    const { period, start, end } = selection;
     const value: PeriodValue = period === null ? { kind: "range", start: start ?? "", end: end ?? "" } : { kind: "length", period };
     return periodText(t, lang, value);
   };
@@ -251,9 +252,11 @@ export function ReportsPage() {
                     <td className="px-3 py-2 font-mono whitespace-nowrap">{time}</td>
                     <td className="px-3 py-2">
                       <div className={cn(!names.has(row.profile_id) && "font-mono")}>{profileName(row)}</div>
-                      <div className="text-xs text-muted-fg">
-                        <ReportScope row={row} period={scope(row)} />
-                      </div>
+                      {row.selection !== null ? (
+                        <div className="text-xs text-muted-fg">
+                          <ReportScope selection={row.selection} period={scope(row.selection)} />
+                        </div>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2">
                       <StatusMark
@@ -363,9 +366,9 @@ const shownNamespaces = 3;
 
 // The namespaces a report covers, at most three, then the count of the rest, and its period. Each part stays whole;
 // the line breaks only between them.
-function ReportScope({ row, period }: { row: ReportSummary; period: string }) {
+function ReportScope({ selection, period }: { selection: ReportSelection; period: string }) {
   const { t } = useTranslation();
-  const { namespaces } = row.selection;
+  const { namespaces } = selection;
   const rest = namespaces.length - shownNamespaces;
   return (
     <>

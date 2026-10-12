@@ -133,7 +133,7 @@ describe("nodes tab", () => {
     await open("nodes");
     const orphan = within(rowOf("Nodes", "orphan")).getAllByRole("cell");
     expect(within(orphan[1] as HTMLElement).getByText("Unknown pool")).not.toHaveClass("font-mono");
-    expect(orphan[3]).toHaveTextContent("Unknown");
+    expect(orphan[3]).toHaveTextContent("UnavailableUnknown");
     const second = within(rowOf("Nodes", "pool-a-2")).getAllByRole("cell");
     expect(second[3]).toHaveTextContent("Not ready · Unschedulable");
     const first = within(rowOf("Nodes", firstNode)).getAllByRole("cell");
@@ -224,10 +224,10 @@ describe("nodes tab", () => {
     mock.views.set(`${id}:en`, { ...english, nodes });
     await open("nodes");
     const state = (name: string) => within(rowOf("Nodes", name)).getAllByRole("cell")[3];
-    expect(state("n-unknown")).toHaveTextContent(/^Unknown$/);
+    expect(state("n-unknown")).toHaveTextContent(/^UnavailableUnknown$/);
     expect(state("n-ready")).toHaveTextContent(/^Ready$/);
     expect(state("n-down")).toHaveTextContent(/^AttentionNot ready$/);
-    expect(state("n-unknown-ready")).toHaveTextContent(/^Unknown$/);
+    expect(state("n-unknown-ready")).toHaveTextContent(/^UnavailableUnknown$/);
   });
 
   it("a node with no finding says so and ranks last", async () => {
@@ -263,7 +263,7 @@ describe("nodes tab", () => {
     expect(within(down).getByText("Attention")).toHaveClass("sr-only");
     const unknown = within(rowOf("Nodes", "orphan")).getAllByRole("cell")[3] as HTMLElement;
     expect(unknown.querySelector("svg")?.parentElement).toHaveClass("text-neutral");
-    expect(unknown).toHaveTextContent(/^Unknown$/);
+    expect(unknown).toHaveTextContent(/^UnavailableUnknown$/);
   });
 
   it("no finding is worded in Portuguese", async () => {

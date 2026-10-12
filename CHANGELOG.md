@@ -13,50 +13,64 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - The web app is called CapacityRoom and has a look of its own, drawn from
-  the nautical chart, in both themes: a new mark, typefaces, and colours,
-  critical marked in magenta, the nodes of the cluster drawn against their
-  maximum on the report overview, and the peak values that need attention
-  tinted on the tables.
+  the nautical chart, in both themes.
+- The web app has a new mark, typefaces, and colours, and critical is marked
+  in magenta.
+- The report overview draws the nodes of the cluster against their maximum.
+- The tables tint the peak values that need attention.
 - The report overview opens on the number of findings of each severity and
-  any warning about the quality of the data, then shows whether the cluster
-  can grow and the pressure on each kind of resource, then the action plan,
-  whose actions open their finding.
+  any warning about the quality of the data.
+- The report overview shows whether the cluster can grow and the pressure on
+  each kind of resource.
+- The report overview ends with the action plan, whose actions open their
+  finding.
 - The overview no longer counts the namespaces, workloads, HPAs, nodes, and
-  node pools, and the Data quality tab shows its number of warnings.
+  node pools.
+- The Data quality tab shows its number of warnings.
 - On a narrower screen the report overview keeps whether the cluster can
-  grow beside the pressure on each kind of resource, lists the worst
-  pressure first, and says when the evidence of the nodes is incomplete.
+  grow beside the pressure on each kind of resource.
+- On a narrower screen the report overview lists the worst pressure first.
+- The report overview says when the evidence of the nodes is incomplete.
 - The HPAs on the autoscaling tab show the status of their findings, as the
   namespaces, workloads, and nodes do.
 - The nodes and the HPAs on the report say under each status why the row
   has it.
 - The period of a new report is a field of its own, and its choices open
   below it in two columns without scrolling.
-- Deleting a report names it in the confirmation, and a report that failed
-  on its metric source points an administrator to the profile.
-- The node pools on the report show the status of their findings, and the
-  PDF choices line up.
-- The autoscaling tab opens on the cluster's verdict, the action plan names
-  the kind of each scope, and a failed report can be deleted.
+- Deleting a report names it in the confirmation.
+- A report that failed on its metric source points an administrator to the
+  profile.
+- The node pools on the report show the status of their findings.
+- The PDF choices on a new report line up.
+- The autoscaling tab opens on the cluster's verdict.
+- The action plan names the kind of each scope.
+- A failed report can be deleted.
 
 ### Fixed
 
 - In the findings, the detail of a finding stays in view while the list
-  scrolls, and a filter that matches nothing offers to show every finding.
+  scrolls.
+- A filter in the findings that matches nothing offers to show every
+  finding.
 - The workloads search also narrows the list of workloads with no observed
   usage.
 - Status words and units no longer break in the middle of a word in narrow
   table cells.
-- A date and its time stay on one line, and the thresholds of a profile read
-  "70%" in both languages.
+- A date and its time stay on one line.
+- The thresholds of a profile read "70%" in both languages.
 - On the report screen, a namespace, workload, or node with no finding reads
-  "No finding" instead of Healthy, and the state of a node that is not ready
-  or unknown carries its mark.
+  "No finding" instead of Healthy.
+- On the report screen, the state of a node that is not ready or unknown
+  carries its mark.
 - A report whose metric source could not be reached no longer says that the
   source did not answer in time.
 - Screen readers tell the actions of the action plan apart by their scope.
 - A node whose requests take a high share of it marks that share on the
   report's nodes tab.
+- A report whose profile was deleted no longer points to the profile after a
+  failure.
+- A report whose stored request cannot be read no longer stops the list of
+  reports from loading.
 
 ## [1.0.0] - 2026-10-10
 

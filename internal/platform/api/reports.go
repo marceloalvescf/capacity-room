@@ -112,8 +112,13 @@ func reportSelectionOf(r reports.Resolved) ReportSelection {
 }
 
 func reportSummaryOf(s reports.Summary) ReportSummary {
+	var selection *ReportSelection
+	if s.Selection != nil {
+		sel := reportSelectionOf(*s.Selection)
+		selection = &sel
+	}
 	return ReportSummary{
-		Selection: reportSelectionOf(s.Selection),
+		Selection: selection,
 		Id:        s.ID, OwnerId: s.OwnerID, OwnerUsername: s.OwnerUsername, ProfileId: s.ProfileID,
 		Status: ReportStatus(s.Status), Phase: ReportPhase(s.Phase), FailureCode: failureCodeOf(s.FailureCode),
 		Pdfs: pdfStatesOf(s.PDFs), CreatedAt: s.CreatedAt.UTC(), CompletedAt: utc(s.CompletedAt),
@@ -137,7 +142,7 @@ func reportOf(d reports.Detail) Report {
 		Pdfs: pdfStatesOf(d.PDFs), CreatedAt: d.CreatedAt.UTC(), StartedAt: utc(d.StartedAt),
 		CollectedAt: utc(d.CollectedAt), CompletedAt: utc(d.CompletedAt),
 		ExpiresAt: d.ExpiresAt.UTC(), Expired: d.Expired,
-		Selection: reportSelectionOf(d.Selection),
+		Selection: reportSelectionOf(*d.Selection),
 	}
 }
 

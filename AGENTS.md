@@ -369,7 +369,9 @@ redactor the moment the settings are loaded, before the pool opens.
   reused with another language is a conflict. The collect handler queues
   one render, for that language. A stored request without a valid language
   fails its collection with `INTERNAL_FAILURE`, and `GET /reports/{id}`
-  answers 500 for it; there is no fallback. `POST /reports/{id}/pdfs`
+  answers 500 for it; there is no fallback, and `GET /reports` lists such a
+  report, or one whose stored request cannot be decoded, with a null
+  selection. `POST /reports/{id}/pdfs`
   makes the PDF of a language under the report's row lock: no row inserts a
   pending one with a render job, a failed row is compiled again, a pending
   row changes nothing, and a ready row answers `PDF_ALREADY_READY`; each
@@ -723,8 +725,10 @@ redactor the moment the settings are loaded, before the pool opens.
   warning when the report has it) and the pressure of each scope, the scopes
   worst first (its worst severity, the first finding of that severity,
   linked to the findings tab). Then the action plan, whose rows open their
-  finding. It shows no number the view does not hold; a count it shows is a
-  count of rows, findings, or warnings.
+  finding. The scope of a row names each scope by its full name and kind,
+  where the PDF prints the short name. The overview shows no number the
+  view does not hold; a count it shows is a count of rows, findings, or
+  warnings.
 - **A row with no finding says so.** The view gives such a row the status
   healthy; the tables show "No finding" with no mark, as the PDF does, and
   rank it after the healthy rows.

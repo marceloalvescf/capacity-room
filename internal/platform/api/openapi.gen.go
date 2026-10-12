@@ -917,9 +917,9 @@ type ReportSummary struct {
 	Phase     ReportPhase `json:"phase"`
 	ProfileId string      `json:"profile_id"`
 
-	// Selection The selection the report runs, with every default resolved.
-	Selection ReportSelection `json:"selection"`
-	Status    ReportStatus    `json:"status"`
+	// Selection null in the list when the stored request cannot be read; the report itself then answers 500.
+	Selection *ReportSelection `json:"selection"`
+	Status    ReportStatus     `json:"status"`
 }
 
 // Role defines model for Role.
