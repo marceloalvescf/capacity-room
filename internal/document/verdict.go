@@ -130,21 +130,15 @@ func verdictGrowth(b *builder, s snapshot.Snapshot, findings []snapshot.Finding)
 		return growth
 	}
 
-	if a.CurrentNodes != nil {
-		current := vb.number(a.CurrentNodes, b.cat.Count).Text
-		growth.Current = &current
-	}
-	if a.MaxNodes != nil {
-		maximum := vb.number(a.MaxNodes, b.cat.Count).Text
-		growth.Max = &maximum
-	}
+	current := vb.number(a.CurrentNodes, b.cat.Count).Text
+	growth.Current = &current
+	maximum := vb.number(a.MaxNodes, b.cat.Count).Text
+	growth.Max = &maximum
+	caption := b.text(catalog.VerdictGrowthCaption, nil)
+	growth.Caption = &caption
 	if a.CurrentNodes != nil && a.MaxNodes != nil && *a.MaxNodes > 0 {
 		hazard := worst != nil && worst.Severity != analysis.SeverityHealthy
 		growth.Gauge = depthGauge(*a.CurrentNodes, *a.MaxNodes, a.MinNodes, hazard)
-	}
-	if growth.Gauge != nil {
-		caption := b.text(catalog.VerdictGrowthCaption, nil)
-		growth.Caption = &caption
 	}
 	growth.Facts = []VerdictFact{
 		{Label: b.text(catalog.VerdictGrowthMinNodes, nil), Value: vb.number(a.MinNodes, b.cat.Count).Text},
@@ -156,7 +150,8 @@ func verdictGrowth(b *builder, s snapshot.Snapshot, findings []snapshot.Finding)
 
 // depthGauge counts whole nodes as the gauge of the web does: the maximum
 // is rounded and the level is held between none and the maximum. It is nil
-// when the rounded maximum is not above zero.
+// when the rounded maximum is not above zero. The minimum is drawn only
+// between none and the maximum, as the web draws it.
 func depthGauge(current, maximum float64, minimum *float64, hazard bool) *VerdictGauge {
 	rounded := int(math.Round(maximum))
 	if rounded <= 0 {
@@ -166,7 +161,9 @@ func depthGauge(current, maximum float64, minimum *float64, hazard bool) *Verdic
 	gauge := &VerdictGauge{Current: level, Max: rounded, Hazard: hazard}
 	if minimum != nil {
 		floor := int(math.Round(*minimum))
-		gauge.Min = &floor
+		if floor > 0 && floor < rounded {
+			gauge.Min = &floor
+		}
 	}
 	return gauge
 }

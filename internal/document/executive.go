@@ -542,7 +542,7 @@ func actionPlan(b *builder, s snapshot.Snapshot, minRank int) []Block {
 }
 
 // actionRows writes one row for each recommendation: its number, priority,
-// action, and scope.
+// action, and scope, which starts with the word of its type.
 func actionRows(b *builder, included []snapshot.Recommendation) [][][]Run {
 	actions := make([]string, len(included))
 	for i, r := range included {
@@ -562,7 +562,7 @@ func actionRows(b *builder, included []snapshot.Recommendation) [][][]Run {
 			{Text(b.cat.Integer(i + 1))},
 			{StatusText(r.Severity, b.text(catalog.Priority(r.Severity), nil))},
 			{Text(actions[i])},
-			{recommendationScope(b, r)},
+			{Text(b.text(catalog.Scope(r.ScopeType), nil) + " "), recommendationScope(b, r)},
 		})
 	}
 	return rows

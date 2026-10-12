@@ -913,6 +913,7 @@ type parityCorrection struct {
 	from   catalog.Key // the placeholder the fixture holds; empty for a status or an identifier correction
 	ident  string      // the short scope name the fixture holds, when the document writes the full name
 	to     string      // the text the document writes
+	word   string      // the scope type word the document writes before the name
 	status [2]string   // the status the fixture holds and the one the document draws, when they differ
 }
 
@@ -925,8 +926,8 @@ type parityCorrection struct {
 var parityCorrections = []parityCorrection{
 	{table: "hpa-observed", row: 0, cell: 4, from: catalog.PlaceholderUnavailable, to: "2"},
 	{table: "material-limitations", row: 0, cell: 1, status: [2]string{"critical", "unavailable"}},
-	{table: "action-plan", row: 0, cell: 3, ident: "api", to: "payments/api"},
-	{table: "action-plan", row: 1, cell: 3, ident: "api", to: "payments/api"},
+	{table: "action-plan", row: 0, cell: 3, ident: "api", to: "payments/api", word: "Workload "},
+	{table: "action-plan", row: 1, cell: 3, ident: "api", to: "payments/api", word: "HPA "},
 }
 
 // applyParityCorrections rewrites, in place, the cells of want that
@@ -961,6 +962,10 @@ func applyParityCorrections(t *testing.T, cat *catalog.Catalog, want any) {
 					t.Fatalf("cell %d of row %d of %s holds %q, want %q", c.cell, c.row, c.table, run["text"], c.ident)
 				}
 				run["text"] = c.to
+			}
+			if c.word != "" {
+				cell := table["rows"].([]any)[c.row].([]any)[c.cell].([]any)
+				table["rows"].([]any)[c.row].([]any)[c.cell] = append([]any{map[string]any{"kind": "text", "text": c.word}}, cell...)
 			}
 			if c.status[0] != "" {
 				if run["status"] != c.status[0] {

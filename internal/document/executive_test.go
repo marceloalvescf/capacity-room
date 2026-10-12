@@ -639,13 +639,13 @@ func TestActionPlanRows(t *testing.T) {
 	request := "text:Revisar o request de memória e o consumo observado."
 	cpu := "text:Revisar o request de CPU e o consumo observado."
 	want := [][]string{
-		{"text:1", "status/critical:Crítico", limit, "ident:payments"},
-		{"text:2", "status/critical:Crítico", request, "ident:payments"},
-		{"text:3", "status/critical:Crítico", limit, "ident:payments/payments-web"},
-		{"text:4", "status/critical:Crítico", request, "ident:payments/payments-web"},
-		{"text:5", "status/attention:Atenção", "text:Investigar eventos, restrições de agendamento e tempo de estabilização.", "ident:payments/payments-web"},
-		{"text:6", "status/attention:Atenção", cpu, "ident:payments"},
-		{"text:7", "status/attention:Atenção", cpu, "ident:payments/payments-web"},
+		{"text:1", "status/critical:Crítico", limit, "text:Namespace |ident:payments"},
+		{"text:2", "status/critical:Crítico", request, "text:Namespace |ident:payments"},
+		{"text:3", "status/critical:Crítico", limit, "text:Workload |ident:payments/payments-web"},
+		{"text:4", "status/critical:Crítico", request, "text:Workload |ident:payments/payments-web"},
+		{"text:5", "status/attention:Atenção", "text:Investigar eventos, restrições de agendamento e tempo de estabilização.", "text:HPA |ident:payments/payments-web"},
+		{"text:6", "status/attention:Atenção", cpu, "text:Namespace |ident:payments"},
+		{"text:7", "status/attention:Atenção", cpu, "text:Workload |ident:payments/payments-web"},
 	}
 	if len(rows) != len(want) {
 		t.Fatalf("rows = %q, want %d", rows, len(want))
@@ -668,7 +668,7 @@ func TestActionPlanSpeaksEnglish(t *testing.T) {
 	if b.err != nil {
 		t.Fatalf("builder error = %v", b.err)
 	}
-	if len(rows) != 2 || rows[0][1] != "status/critical:Critical" || rows[1][1] != "status/attention:Attention" || rows[0][3] != "ident:payments/web" {
+	if len(rows) != 2 || rows[0][1] != "status/critical:Critical" || rows[1][1] != "status/attention:Attention" || rows[0][3] != "text:Workload |ident:payments/web" {
 		t.Errorf("rows = %q, want Critical and Attention priorities and the full scope name", rows)
 	}
 }
@@ -707,8 +707,8 @@ func TestActionPlanNamesNoQualifier(t *testing.T) {
 	if len(rows) != 10 {
 		t.Fatalf("rows at attention = %d, want 10", len(rows))
 	}
-	if rows[0][3] != "ident:payments/web" {
-		t.Errorf("row 1 scope = %q, want ident:payments/web", rows[0][3])
+	if rows[0][3] != "text:HPA |ident:payments/web" {
+		t.Errorf("row 1 scope = %q, want text:HPA |ident:payments/web", rows[0][3])
 	}
 	for i, wantAction := range map[int]string{
 		1: "text:Revisar o limit de CPU e o perfil de consumo observado.",
@@ -743,7 +743,7 @@ func TestActionPlanScopeSummary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("builder error = %v", err)
 	}
-	want := []string{"placeholder:" + pt(t, catalog.ScopeSummary("hpa"), catalog.Params{"Count": "4"}), "placeholder:" + pt(t, catalog.ScopeSummary("deployment"), catalog.Params{"Count": "4"}), "placeholder:" + pt(t, catalog.ScopeSummary("namespace"), catalog.Params{"Count": "4"})}
+	want := []string{"text:HPA |placeholder:" + pt(t, catalog.ScopeSummary("hpa"), catalog.Params{"Count": "4"}), "text:Workload |placeholder:" + pt(t, catalog.ScopeSummary("deployment"), catalog.Params{"Count": "4"}), "text:Namespace |placeholder:" + pt(t, catalog.ScopeSummary("namespace"), catalog.Params{"Count": "4"})}
 	if len(rows) != 3 {
 		t.Fatalf("rows = %q, want 3", rows)
 	}
@@ -761,7 +761,7 @@ func TestActionPlanScopeNames(t *testing.T) {
 	if err != nil {
 		t.Fatalf("builder error = %v", err)
 	}
-	if len(rows) != 2 || rows[0][3] != "ident:payments/api, payments/worker" || rows[1][3] != "ident:a/api, b/api" {
+	if len(rows) != 2 || rows[0][3] != "text:Workload |ident:payments/api, payments/worker" || rows[1][3] != "text:Workload |ident:a/api, b/api" {
 		t.Errorf("scopes = %q, want payments/api, payments/worker and a/api, b/api", rows)
 	}
 }

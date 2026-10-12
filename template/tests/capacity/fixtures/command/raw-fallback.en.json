@@ -192,6 +192,10 @@
               ],
               [
                 {
+                  "kind": "text",
+                  "text": "Namespace "
+                },
+                {
                   "kind": "ident",
                   "text": "payments"
                 }
@@ -218,6 +222,10 @@
                 }
               ],
               [
+                {
+                  "kind": "text",
+                  "text": "Namespace "
+                },
                 {
                   "kind": "ident",
                   "text": "payments"
@@ -246,6 +254,10 @@
               ],
               [
                 {
+                  "kind": "text",
+                  "text": "Workload "
+                },
+                {
                   "kind": "ident",
                   "text": "payments/payments-web"
                 }
@@ -273,6 +285,10 @@
               ],
               [
                 {
+                  "kind": "text",
+                  "text": "Workload "
+                },
+                {
                   "kind": "ident",
                   "text": "payments/payments-web"
                 }
@@ -299,6 +315,10 @@
                 }
               ],
               [
+                {
+                  "kind": "text",
+                  "text": "HPA "
+                },
                 {
                   "kind": "ident",
                   "text": "payments/payments-web"
@@ -887,6 +907,10 @@
           ],
           [
             {
+              "kind": "text",
+              "text": "Namespace "
+            },
+            {
               "kind": "ident",
               "text": "payments"
             }
@@ -913,6 +937,10 @@
             }
           ],
           [
+            {
+              "kind": "text",
+              "text": "Namespace "
+            },
             {
               "kind": "ident",
               "text": "payments"
@@ -941,6 +969,10 @@
           ],
           [
             {
+              "kind": "text",
+              "text": "Workload "
+            },
+            {
               "kind": "ident",
               "text": "payments/payments-web"
             }
@@ -967,6 +999,10 @@
             }
           ],
           [
+            {
+              "kind": "text",
+              "text": "Workload "
+            },
             {
               "kind": "ident",
               "text": "payments/payments-web"
@@ -995,6 +1031,10 @@
           ],
           [
             {
+              "kind": "text",
+              "text": "HPA "
+            },
+            {
               "kind": "ident",
               "text": "payments/payments-web"
             }
@@ -1021,6 +1061,10 @@
             }
           ],
           [
+            {
+              "kind": "text",
+              "text": "Namespace "
+            },
             {
               "kind": "ident",
               "text": "payments"

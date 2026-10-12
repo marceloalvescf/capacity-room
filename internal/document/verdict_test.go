@@ -152,7 +152,7 @@ func TestVerdictOfEdgeScalingPlan(t *testing.T) {
 		{Text("1")},
 		{StatusText("critical", "Critical")},
 		{Text("Review the configured maximum and the capacity of the workload.")},
-		{Ident("payments/web")},
+		{Text("HPA "), Ident("payments/web")},
 	}
 	if !reflect.DeepEqual(plan.Table.Rows[0], wantFirst) {
 		t.Errorf("first row = %+v, want %+v", plan.Table.Rows[0], wantFirst)
@@ -221,8 +221,56 @@ func TestVerdictWithoutAMaximum(t *testing.T) {
 	if g.Current == nil || *g.Current != "3" {
 		t.Errorf("Current = %v, want 3", g.Current)
 	}
-	if g.Max != nil || g.Gauge != nil || g.Caption != nil {
-		t.Errorf("Growth = %+v, want no maximum, gauge, or caption", g)
+	if g.Max == nil || *g.Max != "Unavailable" {
+		t.Errorf("Max = %v, want Unavailable", g.Max)
+	}
+	if g.Gauge != nil {
+		t.Errorf("Gauge = %+v, want none", g.Gauge)
+	}
+	if g.Caption == nil || *g.Caption != "Nodes · current / maximum" {
+		t.Errorf("Caption = %v, want the caption", g.Caption)
+	}
+}
+
+func TestVerdictWithoutACurrentCount(t *testing.T) {
+	s := goldenSnapshot(t, "edge-scaling")
+	s.Summary.Autoscaling.CurrentNodes = nil
+	g := englishVerdict(t, s, "all").Growth
+
+	if g.Current == nil || *g.Current != "Unavailable" {
+		t.Errorf("Current = %v, want Unavailable", g.Current)
+	}
+	if g.Max == nil || *g.Max != "3" {
+		t.Errorf("Max = %v, want 3", g.Max)
+	}
+	if g.Gauge != nil || g.Caption == nil {
+		t.Errorf("Gauge = %+v, Caption = %v, want no gauge and a caption", g.Gauge, g.Caption)
+	}
+}
+
+func TestVerdictDrawsTheMinimumOnlyBetweenNoneAndTheMaximum(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		minimum float64
+		want    *int
+	}{
+		{"above the maximum", 5, nil},
+		{"negative", -1, nil},
+		{"equal to the maximum", 3, nil},
+		{"zero", 0, nil},
+		{"inside", 2, intPtr(2)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := goldenSnapshot(t, "edge-scaling")
+			s.Summary.Autoscaling.MinNodes = floatPtr(tc.minimum)
+			g := englishVerdict(t, s, "all").Growth.Gauge
+			if g == nil {
+				t.Fatal("Gauge = nil, want a gauge")
+			}
+			if !reflect.DeepEqual(g.Min, tc.want) {
+				t.Errorf("Min = %v, want %v", g.Min, tc.want)
+			}
+		})
 	}
 }
 

@@ -403,6 +403,12 @@ var (
 	ScopeSummaries = []string{"namespace", "workload", "hpa", "deployment"}
 )
 
+// ScopeTypes lists the scope types of a recommendation.
+var ScopeTypes = []string{"namespace", "workload", "hpa", "node", "nodepool", "cluster"}
+
+// Scope returns the key of the word that names a scope type: scope.<type>.
+func Scope(scopeType string) Key { return Key("scope." + scopeType) }
+
 // VerdictGrowthStates lists the autoscaling statuses the verdict words when
 // the autoscaling is not enabled. VerdictPressureScopes lists the scope types
 // the verdict summarises.
@@ -569,6 +575,9 @@ func Keys() []Key {
 	}
 	for _, kind := range ScopeSummaries {
 		keys = append(keys, ScopeSummary(kind))
+	}
+	for _, scopeType := range ScopeTypes {
+		keys = append(keys, Scope(scopeType))
 	}
 	for _, state := range VerdictGrowthStates {
 		keys = append(keys, VerdictGrowthState(state))

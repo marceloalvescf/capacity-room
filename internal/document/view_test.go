@@ -215,7 +215,7 @@ func TestViewSaysWhatThePDFSays(t *testing.T) {
 						plan++
 						recs++
 						requireText(t, where+" action", r.Action, cellText(row[2]))
-						requireText(t, where+" scope", r.ScopeText, cellText(row[3]))
+						requireText(t, where+" scope", catText(t, mustCatalog(t, lang), catalog.Scope(r.ScopeType), nil)+" "+r.ScopeText, cellText(row[3]))
 					}
 					if len(table.Rows) != len(view.Recommendations) {
 						t.Errorf("%s: the action plan has %d rows, the view %d recommendations", where, len(table.Rows), len(view.Recommendations))

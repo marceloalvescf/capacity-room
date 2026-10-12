@@ -512,6 +512,14 @@ plural = "Critical {{.Count}}"
 singular = "Attention 1"
 plural = "Attention {{.Count}}"
 
+[scope]
+namespace = "Namespace"
+workload = "Workload"
+hpa = "HPA"
+node = "Node"
+nodepool = "Node pool"
+cluster = "Cluster"
+
 [scope_summary]
 namespace = "{{.Count}} namespaces identified"
 workload = "{{.Count}} workloads identified"

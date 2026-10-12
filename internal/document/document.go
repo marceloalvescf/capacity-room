@@ -245,11 +245,11 @@ type VerdictQuality struct {
 // VerdictGrowth is whether the cluster can grow.
 type VerdictGrowth struct {
 	Title   string
-	Current *string       // nil unless the autoscaling is enabled
-	Max     *string       // nil unless the autoscaling is enabled
+	Current *string       // nil unless the autoscaling is enabled; the placeholder when the count is absent
+	Max     *string       // nil unless the autoscaling is enabled; the placeholder when the count is absent
 	State   *string       // the status word when it is not enabled
-	Gauge   *VerdictGauge // nil without a positive maximum
-	Caption *string       // "Nodes · current / maximum" with a gauge
+	Gauge   *VerdictGauge // nil unless both counts are known and the maximum is positive
+	Caption *string       // "Nodes · current / maximum" whenever the autoscaling is enabled
 	Finding *VerdictFinding
 	Warning *string // the node-evidence warning, when the data has it
 	Facts   []VerdictFact
@@ -259,7 +259,7 @@ type VerdictGrowth struct {
 type VerdictGauge struct {
 	Current int
 	Max     int
-	Min     *int
+	Min     *int // nil unless between none and the maximum
 	Hazard  bool // the last band is hatched when full and the cluster has a finding above healthy
 }
 

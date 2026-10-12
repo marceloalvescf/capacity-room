@@ -1016,7 +1016,9 @@ var originalQualifiers = []string{"namespaces", "cargas de trabalho", "HPAs", "c
 // qualifier is stripped from the recorded action when it is one of the four
 // words the original recorded (originalQualifiers), and no other
 // parenthesis; a recorded scope that equals ours, or equals the part after
-// the last slash of ours, scope by scope and in order, is read as ours. A scope
+// the last slash of ours, scope by scope and in order, is read as ours; the
+// word of the scope type that starts our cell is read as the recorded cell's
+// own. A scope
 // that names another object, a different count of scopes, and every other
 // cell, status, row, and number are left as recorded. The rows given are
 // left as they are.
@@ -1044,10 +1046,21 @@ func originalPlanCells(table string, got [][][]document.Run, want [][][]pythonRu
 					continue
 				}
 				runs, err := runsOf(got[r][3])
-				if err != nil || len(runs) != 1 {
+				if err != nil {
 					continue
 				}
-				ours, theirs := strings.Split(runs[0].Text, ", "), strings.Split(out[r][c][0].Text, ", ")
+				// This project starts the cell with the word of the scope
+				// type, a text run the original did not write; the word is
+				// carried over and the names are compared as before.
+				if len(runs) == 2 && runs[0].Kind == "text" {
+					out[r][c] = append([]pythonRun{runs[0]}, out[r][c]...)
+					runs = runs[1:]
+				}
+				if len(runs) != 1 {
+					continue
+				}
+				last := len(out[r][c]) - 1
+				ours, theirs := strings.Split(runs[0].Text, ", "), strings.Split(out[r][c][last].Text, ", ")
 				if len(ours) != len(theirs) {
 					continue
 				}
@@ -1058,7 +1071,7 @@ func originalPlanCells(table string, got [][][]document.Run, want [][][]pythonRu
 					}
 				}
 				if same {
-					out[r][c][0].Text = runs[0].Text
+					out[r][c][last].Text = runs[0].Text
 				}
 			}
 		}
@@ -2206,7 +2219,7 @@ func TestComparisonCanFail(t *testing.T) {
 		plan := want.Executive["attention"].ActionPlan
 		plan[0][3][0].Text = "other"
 		checkScaling(t, want, []string{
-			scaling.Name + ": executive.attention.action_plan: row 0, cell 3, run 0: text: got \"payments/web\", want \"other\"",
+			scaling.Name + ": executive.attention.action_plan: row 0, cell 3, run 1: text: got \"payments/web\", want \"other\"",
 		})
 	})
 
@@ -2295,7 +2308,7 @@ func TestComparisonCanFail(t *testing.T) {
 	t.Run("a recorded scope names another object", func(t *testing.T) {
 		want := freshScaling(t)
 		want.Executive["attention"].ActionPlan[2][3][0].Text = "payments-api"
-		checkScaling(t, want, []string{scaling.Name + `: executive.attention.action_plan: row 2, cell 3, run 0: text: got "payments", want "payments-api"`})
+		checkScaling(t, want, []string{scaling.Name + `: executive.attention.action_plan: row 2, cell 3, run 1: text: got "payments", want "payments-api"`})
 	})
 
 	t.Run("an unknown trailing parenthesis is not stripped", func(t *testing.T) {

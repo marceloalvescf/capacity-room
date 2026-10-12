@@ -4,7 +4,7 @@
 // was given.
 
 #import "runs.typ": mono, runs-to-content, status-glyph
-#import "tables.typ": render-table
+#import "tables.typ": num-run, render-table
 
 #let muted = luma(35%)
 #let hair = luma(78%)
@@ -15,6 +15,10 @@
 #let mark(status, label) = box[#status-glyph(status)#h(3pt)#label]
 
 #let num(body) = text(font: mono, body)
+
+// A value set by the digit rule of the tables: monospaced only when it
+// holds a digit, so a placeholder word keeps the body face.
+#let value(body) = num-run((kind: "text", text: body))
 
 #let eyebrow(body) = text(size: 7pt, weight: "semibold", tracking: 0.08em, fill: muted, upper(body))
 
@@ -112,7 +116,7 @@
   eyebrow(growth.title)
   v(2pt)
   if growth.current != none {
-    text(font: mono, size: 30pt, weight: "semibold", tracking: -0.04em)[#growth.current#h(0.12em)/#h(0.12em)#growth.max]
+    text(size: 30pt, weight: "semibold", tracking: -0.04em)[#value(growth.current)#h(0.12em)#text(font: mono)[/]#h(0.12em)#value(growth.max)]
   } else if growth.state != none {
     text(size: 20pt, weight: "semibold", growth.state)
   }
@@ -135,7 +139,7 @@
   }
   if growth.facts.len() > 0 {
     v(4pt)
-    text(fill: muted, growth.facts.map(f => [#f.label #num(f.value)]).join(" · "))
+    text(fill: muted, growth.facts.map(f => [#f.label #value(f.value)]).join(" · "))
   }
 }
 
@@ -162,7 +166,7 @@
         }
         if row.peak != none {
           h(6pt)
-          text(fill: muted)[#row.peak.label #row.peak.value]
+          text(fill: muted, box[#row.peak.label #value(row.peak.value)])
         }
         linebreak()
         count-line(row.counts)

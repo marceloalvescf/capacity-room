@@ -110,6 +110,7 @@ func TestKeysHoldTheNewFamilies(t *testing.T) {
 		{"priorities", len(Priorities), 2, prefixed(keys, "priority.")},
 		{"risk counts", len(RiskSeverities) * 2, 4, prefixed(keys, "risk_status.")},
 		{"summaries", len(ScopeSummaries), 4, prefixed(keys, "scope_summary.")},
+		{"scope words", len(ScopeTypes), 6, prefixed(keys, "scope.")},
 		{"reasons", len(ReasonFamilies) * len(ReasonResources), 20, prefixed(keys, "reason.")},
 	} {
 		if group.count != group.want {

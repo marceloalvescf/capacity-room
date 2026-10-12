@@ -303,6 +303,12 @@ var wordingTable = []struct {
 	{ScopeSummary("workload"), "{{.Count}} workloads identificados", "{{.Count}} workloads identified"},
 	{ScopeSummary("hpa"), "{{.Count}} HPAs identificados", "{{.Count}} HPAs identified"},
 	{ScopeSummary("deployment"), "{{.Count}} Deployments identificados", "{{.Count}} Deployments identified"},
+	{Scope("namespace"), "Namespace", "Namespace"},
+	{Scope("workload"), "Workload", "Workload"},
+	{Scope("hpa"), "HPA", "HPA"},
+	{Scope("node"), "Node", "Node"},
+	{Scope("nodepool"), "Node pool", "Node pool"},
+	{Scope("cluster"), "Cluster", "Cluster"},
 	{FrontMetadataProfile, "Perfil", "Profile"},
 	{FrontMetadataProfileDetailed, "Detalhado", "Detailed"},
 	{FrontMetadataProfileExecutive, "Executivo", "Executive"},
@@ -595,6 +601,12 @@ var sectionsWordingTable = []struct {
 	{ScopeSummary("workload"), "{{.Count}} workloads identificados"},
 	{ScopeSummary("hpa"), "{{.Count}} HPAs identificados"},
 	{ScopeSummary("deployment"), "{{.Count}} Deployments identificados"},
+	{Scope("namespace"), "Namespace"},
+	{Scope("workload"), "Workload"},
+	{Scope("hpa"), "HPA"},
+	{Scope("node"), "Node"},
+	{Scope("nodepool"), "Node pool"},
+	{Scope("cluster"), "Cluster"},
 	{Reason("request_peak", "cpu"), "CPU: pico de {{.Percent}} do request"},
 	{Reason("request_peak", "memory"), "Memória: pico de {{.Percent}} do request"},
 	{Reason("request_average", "cpu"), "CPU: média de {{.Percent}} do request"},
@@ -1851,6 +1863,9 @@ func TestKeysHoldEveryConstant(t *testing.T) {
 	}
 	for _, kind := range ScopeSummaries {
 		derived[ScopeSummary(kind)] = true
+	}
+	for _, scopeType := range ScopeTypes {
+		derived[Scope(scopeType)] = true
 	}
 	for _, state := range VerdictGrowthStates {
 		derived[VerdictGrowthState(state)] = true

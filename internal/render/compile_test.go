@@ -70,3 +70,28 @@ func TestCompileRefusesBytesThatAreNotAPDF(t *testing.T) {
 		t.Fatalf("the temporary folder holds %d entries after the refusal, want none", len(entries))
 	}
 }
+
+func TestCompileDrawsAMinimumOutsideTheGauge(t *testing.T) {
+	tc, err := typst.Locate(os.Getenv, exec.LookPath)
+	if err != nil {
+		t.Fatalf("Locate: %v", err)
+	}
+	if err := tc.Probe(context.Background()); err != nil {
+		t.Fatalf("Probe: %v", err)
+	}
+	for _, minimum := range []float64{5, -1} {
+		snap := loadSnapshot(t, "edge-scaling")
+		snap.Summary.Autoscaling.MinNodes = &minimum
+		data, err := render.Document(snap, catalog.English, document.Options{})
+		if err != nil {
+			t.Fatalf("Document with minimum %v: %v", minimum, err)
+		}
+		pdf, err := render.Compile(context.Background(), tc, t.TempDir(), data)
+		if err != nil {
+			t.Fatalf("Compile with minimum %v: %v", minimum, err)
+		}
+		if !bytes.HasPrefix(pdf, []byte("%PDF-")) {
+			t.Fatalf("minimum %v: the bytes do not start with %%PDF-", minimum)
+		}
+	}
+}
