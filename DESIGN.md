@@ -360,3 +360,34 @@ Motion appears only under `motion-safe:`; under reduced motion everything is dra
 - **Don't** compute a threshold in the web app to decide a tint or a status.
 - **Don't** load a font, a stylesheet, or an icon from outside the bundle.
 - **Don't** make the dark theme glow: night-chart hues stay muted.
+
+## The PDF
+
+The report on paper is the same instrument drawn in ink alone. It is monochrome: every fill, rule, and glyph is `black`, `white`, or a `luma(...)` grey, and no page holds a coloured pixel. It shares the faces of the web app, so a name or a number reads the same on both.
+
+### Faces and sizes
+- **Words:** Public Sans (Regular, SemiBold, Bold, and their italics) at 9pt on the verdict page and 7pt to 8.5pt in tables. Title 18pt Bold; the plan heading 11pt SemiBold; the totals line 13pt.
+- **Names and numbers:** JetBrains Mono. A cluster name, a period, an issue time, an identifier (at 0.92em, never hyphenated), and every number cell. The verdict numeral "current / maximum" is mono 30pt SemiBold, tracking -0.04em; the gauge scale is mono italic 5.5pt.
+- **Labels:** the eyebrow over a block is 7pt SemiBold, tracking 0.08em, upper case, in Muted grey.
+- **Table text:** per layout, 6.8pt to 8.5pt, with a row inset of 2pt or 3.5pt. The page margins are one inch at the top and the sides and half an inch at the bottom.
+
+### Greys
+Foreground is black. Muted text (the eyebrow, the footer, the facts under the gauge, the issue block) is `luma(35%)`. Healthy, unavailable, and no-base glyphs are `luma(45%)`. Hairlines between rows and the colophon rule are `luma(78%)`. The gauge bands are tinted `luma(93%)`, `luma(85%)`, and `luma(74%)`, with a `luma(55%)` band edge.
+
+### Status glyphs
+Status is a shape, then a word. The five glyphs (the diamond of critical, the triangle of attention, the circle of healthy, the empty circle of no base, the dash of unavailable) are set in JetBrains Mono, the one face that holds all five. Critical is bold and black; attention is black; the other three are `luma(45%)`. A glyph never stands without its word where the page has room for the word.
+
+### The gauge
+The depth gauge is drawn in black. Up to sixty nodes, one band per node, filled bands tinted by thirds of the scale; above sixty, three bands over the thirds of the scale, each filled to the share of the current count that falls in it. A dashed 0.7pt line marks the minimum, rounded to a whole node. Once the cluster is at its maximum and the report gives it a finding, the last band is hatched: diagonal black strokes of 1.1pt over the darkest tint. The scale beneath shows every node up to ten, else ten values spread evenly, the first and the last included.
+
+### The verdict page
+The first page of a report the command writes. From the top: the title band, the severity totals with the leading count in bold, the data-quality line, then two columns (0.9fr, 1.5fr). The left column is the cluster autoscaling block, the numeral, the gauge, the caption, the worst cluster finding, the node-evidence warning, and the facts. The right column is the pressure by scope, one row after a hairline, worst scope first. Below both, the prioritized action plan with its footer line ("5 of 10 actions"), and the legend of the five statuses.
+
+### The title band
+One block at the head of the first page: the title at 18pt Bold and, under it, the cluster in mono, the period with its numbers in mono, and the profile; the author and the issue time at 8pt Muted, right aligned, on the same baseline. The rule below is graphite's own title rule at 0.8pt.
+
+### Tables
+Each table layout names a face for every column. A `num` column is set in mono and aligned right; a `name`, `text`, or `mark` column is aligned from the left. Cells sit at the middle of the row. The header is SemiBold, repeats at a page break, and is closed by a 0.8pt black rule; every other row is parted by a 0.5pt `luma(78%)` hairline.
+
+### The colophon
+The last block of the document: a hairline rule, then the load-line disc (a ring crossed by a line, drawn in black at 8pt) and the line naming the program, k8s-capacity-report, at 7pt Muted.

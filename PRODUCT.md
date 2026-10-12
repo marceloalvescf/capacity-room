@@ -67,6 +67,8 @@ where, and what to do first, and trusts every mark enough to act on it.
   `k8s-capacity-report`.
 - No company branding: each deployment sits inside someone else's
   organisation.
+- The PDF carries the load-line disc in its colophon and shares the faces of
+  the web app, Public Sans and JetBrains Mono.
 - The PDF has its own monochrome look (the graphite template; no coloured
   pixel on a page). The web app need not copy it.
 

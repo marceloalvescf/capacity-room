@@ -167,7 +167,7 @@ No guard checks these. The reviewer of each task does.
   the code written again.
 - **The executive profile raises the minimum severity to at least attention
   for the whole document, the appendix included; the detailed profile raises
-  it for section 5 alone and never for the appendix.**
+  it for the executive summary alone and never for the appendix.**
 
 Build tags in use:
 
@@ -816,6 +816,21 @@ looks.
   each has a fixture that triggers it. A data file that is not valid JSON
   stops with Typst's own message, because Typst cannot catch a parse
   error; the command that writes the file answers for its syntax.
+- The report is set in three faces, all shipped in `template/graphite/assets/fonts/`:
+  Public Sans 2.001 for words, JetBrains Mono 2.304 for every name, number,
+  and status glyph, and Liberation Sans for the generic layer's own default.
+  The five status glyphs (the diamond of critical, the triangle of attention,
+  the circle of healthy, the empty circle of no base, the dash of unavailable)
+  are set in JetBrains Mono, which holds them all; critical is bold.
+- A table column has a face: `name` and `num` and `mark` and `text`, held with
+  its width in `template/capacity/tables.typ`. A number is set in mono and
+  aligned right, a name and a text and a mark from the left.
+- The data file that the command writes opens with the verdict block: the
+  answer strip, the node gauge, the pressure of each scope, the head of the
+  action plan, and the legend, under the title band that the graphite title
+  draws. The front matter follows it. It closes with the colophon block: a
+  rule, the load-line disc, and the line naming the program.
+- The report layer has 23 diagnostics in `validate.typ`.
 - No page may contain a coloured pixel.
 - The public surface of the generic layer is frozen: `graphite-report`,
   `callout`, `keep-together`, with the keys its README documents.
@@ -832,14 +847,13 @@ looks.
 - After `make update-golden`, open every page that changed and review it
   before committing. A page that changed without a reason you can name is a
   defect, not a new golden page.
-- The pages of the snapshot `capacity-parity` equal the pages of the
-  original report in every word and number, and differ from them in two
-  decided ways: every table cell is centred, where the original set it at
-  the top left, and the page margins are one inch at the top and the sides
-  and half an inch at the bottom, where the original had 2.5 cm all round
-  (decisions of 2026-10-02). A change that alters them in any
-  other way has moved away from the original, and needs a decision recorded
-  in `ROADMAP.md`.
+- The snapshot `capacity-parity` pins the numbers of the original report:
+  every value of its tables reaches its cell unchanged. Parity binds the
+  numbers alone; the words follow the web app, and the order of the
+  sections, the layout, and the faces are this project's (decided
+  2026-10-12). A change to a number needs a decision recorded in
+  `ROADMAP.md`; a change to the page margins, one inch at the top and the
+  sides and half an inch at the bottom, needs a new golden page.
 - Rendering was measured equal on linux/amd64, linux/arm64, and macOS
   (`docs/decisions/0001-golden-architecture.md`). Measure again when the
   pinned Typst version changes.
