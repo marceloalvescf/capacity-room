@@ -304,7 +304,7 @@ The findings filter: one 2px-cornered toggle per severity, the status mark then 
 - **Report tabs:** a row of 0.875rem tabs, 10px apart in padding, over a Neatline baseline; the active tab is Chart Ink 600 with a 2px Sounding Blue underline, the rest Muted Ink. When the report has data-quality warnings, the Data quality tab carries a 10px attention shape and the count in mono italic after its word, and its accessible name states the count. The seven tabs hold one line at 1024px in both languages.
 
 ### Data table
-The one table of the app: a Sheet container with a 1px Hairline frame and 2px corners, uppercase labels in the sticky header, Hairline rules between rows, an expander column of 48px. An opened row is tinted Info Surface and its detail row sits on Chart Ground at 24px by 16px padding. A peak cell stacks the peak in mono over its share in mono italic, and takes the depth tint its statuses earn. A peak with no number shows its placeholder word alone, upright in Muted Ink, with no share under it. On the nodes tab and the HPA table the Status cell carries a line under the severity, in Sheet ink at the small size on a 14rem measure, that says why: a node's reason, an HPA's worst finding sentence. A row with no finding has none.
+The one table of the app: a Sheet container with a 1px Hairline frame and 2px corners, uppercase labels in the sticky header, Hairline rules between rows, an expander column of 48px. An opened row is tinted Info Surface and its detail row sits on Chart Ground at 24px by 16px padding. A peak cell stacks the peak in mono over its share in mono italic, and takes the depth tint its statuses earn. A peak with no number shows its placeholder word alone, upright in Muted Ink, with no share under it. On the nodes tab and the HPA table the Status cell carries a line under the severity, in Sheet ink at the small size on a 14rem measure, that says why: a node's reason, an HPA's worst finding sentence. A row with no finding has none. The node pools table has a Status column after the pool's name, drawn the same way from the pool's worst finding, with no line under it. In the findings list each entry's sentence clamps at two lines, so the key words of a long sentence stay; the name above it stays on one.
 
 ### Status mark
 Shape, then label, then colour. The 12px shape and the word share the status hue; critical words are bold. Where the label is not the status word, the status word is added for screen readers.
@@ -328,7 +328,7 @@ A section under the answer strip, closed by a Hairline bottom rule. Left: a labe
 The overview's table of recommendations. An action whose finding the view holds (the same code and scope type, on the first scope) is a link to that finding, underlined in Hairline and in Sounding Blue on hover, like a pressure line; an action with no match stays plain text.
 
 ### PDF block
-In the PDF popover and on the progress page: one row per language at 0.875rem, parted by Hairline dividers inside the layer's Neatline frame, with no box of their own.
+In the PDF popover and on the progress page: one row per language at 0.875rem, parted by Hairline dividers inside the layer's Neatline frame, with no box of their own. The rows share three columns, the language, the status, and the action, so they line up from row to row, and the action never wraps under the status.
 
 ## Motion
 Motion appears only under `motion-safe:`; under reduced motion everything is drawn at once and nothing pulses.

@@ -190,6 +190,26 @@ describe("progress screen", () => {
     expect(within(group("en")).getByRole("link", { name: "Baixar PDF" })).toBeInTheDocument();
   });
 
+  it("each language row is a subgrid of its name, its status, and its action, in that order", async () => {
+    mock.reports = [report({ pdfs: [pdf("en", "ready"), pdf("pt-BR", "failed", "PDF_COMPILE_FAILED")] })];
+    await open();
+    const rows = (["en", "pt-BR"] as const).map(group);
+    const list = rows[0]?.parentElement as HTMLElement;
+    expect(list).toHaveClass("grid", "grid-cols-[auto_1fr_auto]");
+    for (const row of rows) {
+      expect(row.parentElement).toBe(list);
+      expect(row).toHaveClass("col-span-3", "grid-cols-subgrid");
+      expect(row.children).toHaveLength(3);
+    }
+    const [en, pt] = rows as [HTMLElement, HTMLElement];
+    expect(en.children[0]).toHaveTextContent(t("language.en"));
+    expect(en.children[1]).toHaveTextContent(t("pdfStatus.ready"));
+    expect(en.children[2]?.querySelector("a")).toHaveTextContent(t("progress.download"));
+    expect(pt.children[0]).toHaveTextContent(t("language.pt-BR"));
+    expect(pt.children[1]).toHaveTextContent(t("pdfStatus.failed"));
+    expect(pt.children[2]?.querySelector("button")).toHaveTextContent(t("progress.retryPdf"));
+  });
+
   it("generates the other language", async () => {
     mock.reports = [report({ pdfs: [pdf("en", "ready")] })];
     vi.useFakeTimers({ shouldAdvanceTime: true });

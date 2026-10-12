@@ -5,7 +5,7 @@ import { StatusMark } from "@/components/status-mark";
 import type { ViewNode, ViewNodepool, ViewValue } from "./api";
 import { CopyName } from "./copy-name";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
-import { Facts, FindingStatus, matchNode, nodeKey, PeakCell, peakTint, RowFindings, StatGrid, useFindingIndex, ValueText } from "./pieces";
+import { Facts, FindingStatus, matchNode, nodeKey, nodepoolKey, PeakCell, peakTint, RowFindings, StatGrid, useFindingIndex, useWorstFindingIndex, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewNode) => row.name;
@@ -75,6 +75,7 @@ function NodeState({ row }: { row: ViewNode }) {
 
 function Pools({ pools }: { pools: ViewNodepool[] }) {
   const { t } = useTranslation();
+  const index = useWorstFindingIndex();
   if (pools.length === 0) {
     return <p className="text-sm text-muted-fg">{t("report.table.empty")}</p>;
   }
@@ -85,6 +86,9 @@ function Pools({ pools }: { pools: ViewNodepool[] }) {
           <tr>
             <th scope="col" className="label px-3 py-2 text-left">
               {t("report.column.nodepool")}
+            </th>
+            <th scope="col" className="label px-3 py-2 text-left">
+              {t("report.column.status")}
             </th>
             <th scope="col" className="label px-3 py-2 text-left">
               {t("report.column.confidence")}
@@ -99,6 +103,12 @@ function Pools({ pools }: { pools: ViewNodepool[] }) {
             <tr key={pool.name}>
               <td className="px-3 py-2 align-top">
                 {pool.name === "unknown" ? t("report.node.unknownPool") : <CopyName name={pool.name} />}
+              </td>
+              <td className="px-3 py-2 align-top">
+                <FindingStatus
+                  status={index.get(nodepoolKey(pool))?.severity ?? "healthy"}
+                  hasFinding={index.has(nodepoolKey(pool))}
+                />
               </td>
               <td className="px-3 py-2 align-top">{t(`confidence.${pool.confidence}`)}</td>
               <td className="px-3 py-2 align-top">

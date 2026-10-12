@@ -30,6 +30,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   below it in two columns without scrolling.
 - Deleting a report names it in the confirmation, and a report that failed
   on its metric source points an administrator to the profile.
+- The node pools on the report show the status of their findings, and the
+  PDF choices line up.
 
 ### Fixed
 

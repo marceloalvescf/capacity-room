@@ -355,4 +355,10 @@ describe("findings type scale", () => {
     expect(screen.getByText(sentenceOf(0), { selector: "p" })).toHaveClass("text-sm");
     expect(items()[0]).toHaveClass("text-sm");
   });
+
+  it("a sentence in the list keeps two lines before it is cut", async () => {
+    await open();
+    const entry = items()[0] as HTMLElement;
+    expect(within(entry).getByText(sentenceOf(0))).toHaveClass("line-clamp-2");
+  });
 });

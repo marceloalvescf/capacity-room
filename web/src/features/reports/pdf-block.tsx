@@ -40,7 +40,7 @@ export function PdfBlock({ report, canRequest }: { report: Report; canRequest: b
     <section className="flex flex-col gap-3">
       <h2 className="text-base font-semibold">{t("progress.pdf")}</h2>
       {problem === null ? null : <Alert tone="error">{problem}</Alert>}
-      <div className="flex flex-col divide-y divide-border">
+      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 divide-y divide-border">
         {ordered(i18n.language).map((language) => {
           const state = report.pdfs.find((candidate) => candidate.language === language);
           const label = `pdf-${language}`;
@@ -60,30 +60,32 @@ export function PdfBlock({ report, canRequest }: { report: Report; canRequest: b
               key={language}
               role="group"
               aria-labelledby={label}
-              className="flex flex-wrap items-center gap-3 py-2 text-sm first:pt-0 last:pb-0"
+              className="col-span-3 grid grid-cols-subgrid items-center py-2 text-sm first:pt-0 last:pb-0"
             >
-              <span id={label} className="min-w-40 font-medium">
+              <span id={label} className="font-medium">
                 {t(`language.${language}`)}
               </span>
               {state === undefined ? (
                 <>
                   <span className="text-muted-fg">{t("reports.notGenerated")}</span>
-                  {generateButton(t("progress.generatePdf"))}
+                  <span>{generateButton(t("progress.generatePdf"))}</span>
                 </>
               ) : (
                 <>
-                  <StatusMark status={pdfMark(state.status)} label={t(`pdfStatus.${state.status}`)} />
-                  {state.status === "ready" ? (
-                    <a href={`/api/v1/reports/${report.id}/pdf?lang=${language}`} className={buttonStyles("primary")}>
-                      {t("progress.download")}
-                    </a>
-                  ) : null}
-                  {state.status === "failed" ? (
-                    <>
+                  <span className="flex flex-wrap items-center gap-x-3">
+                    <StatusMark status={pdfMark(state.status)} label={t(`pdfStatus.${state.status}`)} />
+                    {state.status === "failed" ? (
                       <span>{state.failure_code === null ? t("error.general") : t(`pdfFailure.${state.failure_code}`)}</span>
-                      {generateButton(t("progress.retryPdf"))}
-                    </>
-                  ) : null}
+                    ) : null}
+                  </span>
+                  <span>
+                    {state.status === "ready" ? (
+                      <a href={`/api/v1/reports/${report.id}/pdf?lang=${language}`} className={buttonStyles("primary")}>
+                        {t("progress.download")}
+                      </a>
+                    ) : null}
+                    {state.status === "failed" ? generateButton(t("progress.retryPdf")) : null}
+                  </span>
                 </>
               )}
             </div>

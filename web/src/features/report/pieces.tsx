@@ -8,6 +8,7 @@ import type {
   ViewHPA,
   ViewNamespace,
   ViewNode,
+  ViewNodepool,
   ViewRecommendation,
   ViewStatistic,
   ViewValue,
@@ -213,6 +214,7 @@ export const namespaceKey = (row: ViewNamespace): string => scopeKey("namespace"
 export const workloadKey = (row: ViewWorkload): string => scopeKey("workload", row.kind, `${row.namespace}/${row.name}`);
 export const hpaKey = (row: ViewHPA): string => scopeKey("hpa", "", `${row.namespace}/${row.name}`);
 export const nodeKey = (row: ViewNode): string => scopeKey("node", "", row.name);
+export const nodepoolKey = (pool: ViewNodepool): string => scopeKey("nodepool", "", pool.name);
 
 const matchKey = (key: string) => (f: ViewFinding) => findingKey(f) === key;
 

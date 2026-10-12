@@ -260,7 +260,7 @@ describe("nodes tab", () => {
     await act(async () => {
       await i18next.changeLanguage("pt-BR");
     });
-    expect(await screen.findByText("Sem achado")).toBeInTheDocument();
+    expect((await screen.findAllByText("Sem achado")).length).toBeGreaterThan(1);
   });
 
   it("the search of nodes finds the shown pool word", async () => {
@@ -305,7 +305,7 @@ describe("nodes tab", () => {
     expect(within(rows[1] as HTMLElement).getByRole("button", { name: "Copy pool-a" })).toBeInTheDocument();
     expect(within(rows[2] as HTMLElement).queryByRole("button")).not.toBeInTheDocument();
     expect(within(rows[2] as HTMLElement).getByText("Unknown pool")).toBeInTheDocument();
-    const counts = rows.map((row) => within(row).getAllByRole("cell")[2] as HTMLElement);
+    const counts = rows.map((row) => within(row).getAllByRole("cell")[3] as HTMLElement);
     expect(counts.map((cell) => cell.querySelector("span")?.textContent)).toEqual(["1", "2", "1"]);
     expect(counts.map((cell) => within(cell).getAllByRole("listitem").map((item) => item.textContent))).toEqual([
       [firstNode],
@@ -313,6 +313,22 @@ describe("nodes tab", () => {
       ["orphan"],
     ]);
     expect(within(counts[1] as HTMLElement).getAllByRole("listitem")[0]).toHaveClass("font-mono");
+  });
+
+  it("the pools carry the status of their worst finding, or say none", async () => {
+    await open("nodes");
+    const table = screen.getByRole("table", { name: "Node pools" });
+    expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
+      "Node pool",
+      "Status",
+      "Confidence",
+      "Nodes",
+    ]);
+    const status = within(table)
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getAllByRole("cell")[1]?.textContent);
+    expect(status).toEqual(["No finding", "Attention", "Attention"]);
   });
 });
 

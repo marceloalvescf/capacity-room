@@ -61,7 +61,7 @@ function ListItem({ entry, selected, onSelect }: { entry: Entry; selected: boole
             <span className={cn("min-w-0 truncate", !isUnknownPool(entry.finding) && "font-mono")}>{name}</span>
           )}
         </span>
-        <span className="truncate">{entry.finding.sentence}</span>
+        <span className="line-clamp-2">{entry.finding.sentence}</span>
       </button>
     </li>
   );
