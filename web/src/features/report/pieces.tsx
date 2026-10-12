@@ -223,17 +223,28 @@ export const matchNode = (row: ViewNode) => matchKey(nodeKey(row));
 
 const severityOrder: readonly ViewFinding["severity"][] = ["critical", "attention", "healthy"];
 
-// The worst severity of the findings of each scope key, once per view; a key is present when its scope has a finding.
-export function indexFindings(findings: readonly ViewFinding[]): ReadonlyMap<string, ViewFinding["severity"]> {
-  const worst = new Map<string, ViewFinding["severity"]>();
+// The worst finding of each scope key, once per view: the first of the worst severity, in the view's order. A key
+// is present when its scope has a finding.
+export function indexWorstFindings(findings: readonly ViewFinding[]): ReadonlyMap<string, ViewFinding> {
+  const worst = new Map<string, ViewFinding>();
   for (const finding of findings) {
     const key = findingKey(finding);
     const held = worst.get(key);
-    if (held === undefined || severityOrder.indexOf(finding.severity) < severityOrder.indexOf(held)) {
-      worst.set(key, finding.severity);
+    if (held === undefined || severityOrder.indexOf(finding.severity) < severityOrder.indexOf(held.severity)) {
+      worst.set(key, finding);
     }
   }
   return worst;
+}
+
+// The worst severity of the findings of each scope key.
+export function indexFindings(findings: readonly ViewFinding[]): ReadonlyMap<string, ViewFinding["severity"]> {
+  return new Map([...indexWorstFindings(findings)].map(([key, finding]) => [key, finding.severity]));
+}
+
+export function useWorstFindingIndex(): ReadonlyMap<string, ViewFinding> {
+  const { findings } = useView();
+  return useMemo(() => indexWorstFindings(findings), [findings]);
 }
 
 export function useFindingIndex(): ReadonlyMap<string, ViewFinding["severity"]> {

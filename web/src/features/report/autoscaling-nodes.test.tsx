@@ -94,6 +94,14 @@ describe("autoscaling tab", () => {
     expect(status("web").querySelector("svg")).not.toBeNull();
   });
 
+  it("the status cell of an HPA says why under the severity, and none for no finding", async () => {
+    await open("autoscaling");
+    const status = (name: string) => within(rowOf("HPAs", name)).getAllByRole("cell")[2] as HTMLElement;
+    expect(status("idle")).toHaveTextContent("There is a persistent average difference between current and desired replicas.");
+    expect(status("web")).toHaveTextContent("The HPA reached its observed maximum of replicas.");
+    expect(status("dup")).toHaveTextContent(/^No finding$/);
+  });
+
   it("hpa default order", async () => {
     await open("autoscaling");
     const names = within(screen.getByRole("table", { name: "HPAs" }))
@@ -139,9 +147,8 @@ describe("nodes tab", () => {
     expect(rows[1]).toHaveTextContent(firstNode);
     await user.click(screen.getByRole("button", { name: `Show the details of ${firstNode}` }));
     expect(screen.getAllByRole("button", { name: `Copy ${firstNode}` })).toHaveLength(1);
-    const reason = screen.getAllByText("CPU: peak of 95% utilization").find((node) => node.closest("td[colspan]") !== null);
-    expect(reason).toBeDefined();
-    expect((reason as HTMLElement).closest("span.inline-flex")).toHaveClass("text-critical");
+    expect(screen.getAllByText("CPU: peak of 95% utilization").filter((node) => node.closest("td[colspan]") !== null)).toHaveLength(0);
+    expect(screen.getAllByText("CPU: peak of 95% utilization")).toHaveLength(1);
     const facts = screen.getByText("CPU capacity", { selector: "dt" }).closest("dl") as HTMLElement;
     expect(within(facts).getAllByRole("term").map((term) => term.textContent)).toEqual([
       "CPU capacity",
@@ -219,12 +226,22 @@ describe("nodes tab", () => {
     expect(orphan[2]?.querySelector("svg")).toBeNull();
     expect(within(orphan[2] as HTMLElement).getByText("No finding")).toHaveClass("text-muted-fg");
     const second = within(rowOf("Nodes", "pool-a-2")).getAllByRole("cell");
-    expect(second[2]).toHaveTextContent(/^Healthy$/);
+    expect(second[2]).toHaveTextContent(/^HealthyCPU: peak of 60% utilization; Memory: peak of 55% utilization$/);
     const names = within(screen.getByRole("table", { name: "Nodes" }))
       .getAllByRole("row")
       .slice(1)
       .map((row) => within(row).getAllByRole("cell")[1]?.textContent ?? "");
     expect(names[names.length - 1]).toContain("orphan");
+  });
+
+  it("the status cell of a node says why under the severity, and none for no finding", async () => {
+    await open("nodes");
+    const status = (name: string) => within(rowOf("Nodes", name)).getAllByRole("cell")[2] as HTMLElement;
+    expect(status("pool-a-1")).toHaveTextContent("CPU: 90% of the allocatable requested");
+    const line = within(status("pool-a-1")).getByText("CPU: 90% of the allocatable requested");
+    expect(line).toHaveClass("text-xs");
+    expect(line.querySelector("svg")).toBeNull();
+    expect(status("orphan")).toHaveTextContent(/^No finding$/);
   });
 
   it("the state of a node carries a shape", async () => {

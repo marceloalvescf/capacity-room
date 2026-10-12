@@ -21,6 +21,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   node pools, and the Data quality tab shows its number of warnings.
 - The HPAs on the autoscaling tab show the status of their findings, as the
   namespaces, workloads, and nodes do.
+- The nodes and the HPAs on the report say under each status why the row
+  has it.
 
 ### Fixed
 

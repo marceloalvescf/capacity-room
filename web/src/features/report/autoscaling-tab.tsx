@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
 import type { ViewHPA, ViewValue } from "./api";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
-import { Counts, FindingStatus, hpaKey, matchHPA, RowFindings, StatGrid, useFindingIndex, ValueText } from "./pieces";
+import { Counts, FindingStatus, hpaKey, matchHPA, RowFindings, StatGrid, useWorstFindingIndex, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewHPA) => `${row.namespace}/${row.name}`;
@@ -36,8 +36,8 @@ const renderOpened = (row: ViewHPA) => <Opened row={row} />;
 export function AutoscalingTab() {
   const { t } = useTranslation();
   const { summary, hpas } = useView();
-  const index = useFindingIndex();
-  const status = useCallback((row: ViewHPA) => index.get(hpaKey(row)) ?? "", [index]);
+  const index = useWorstFindingIndex();
+  const status = useCallback((row: ViewHPA) => index.get(hpaKey(row))?.severity ?? "", [index]);
   const { autoscaling } = summary;
   const columns = useMemo<Column<ViewHPA>[]>(
     () => [
@@ -59,8 +59,13 @@ export function AutoscalingTab() {
         id: "status",
         header: t("report.column.status"),
         cell: (row) => {
-          const worst = status(row);
-          return <FindingStatus status={worst === "" ? "healthy" : worst} hasFinding={worst !== ""} />;
+          const worst = index.get(hpaKey(row));
+          return (
+            <div className="flex flex-col gap-0.5">
+              <FindingStatus status={worst?.severity ?? "healthy"} hasFinding={worst !== undefined} />
+              {worst !== undefined && <span className="max-w-56 text-xs leading-snug">{worst.sentence}</span>}
+            </div>
+          );
         },
         sortValue: (row) => severityRank[status(row)] ?? 3,
       },
@@ -98,7 +103,7 @@ export function AutoscalingTab() {
         align: "end",
       },
     ],
-    [t, status],
+    [t, index, status],
   );
   return (
     <div className="flex flex-col gap-6">

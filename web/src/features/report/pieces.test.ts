@@ -5,6 +5,7 @@ import directEn from "../../../tests/fixtures/view/direct-complete.en.json";
 import {
   hpaKey,
   indexFindings,
+  indexWorstFindings,
   matchHPA,
   matchNamespace,
   matchNode,
@@ -51,5 +52,20 @@ describe("finding index", () => {
     const finding = (viewEn as View).findings.find((f) => f.scope_type === "workload") as Finding;
     const index = indexFindings([finding, { ...finding, scope_kind: "StatefulSet", severity: "healthy" }]);
     expect(index.size).toBe(2);
+  });
+});
+
+describe("worst finding index", () => {
+  const base = (viewEn as View).findings.find((f) => f.scope_type === "node") as Finding;
+  const finding = (severity: Finding["severity"], sentence: string): Finding => ({ ...base, severity, sentence });
+
+  it("keeps the worst severity, whatever the order", () => {
+    const worst = indexWorstFindings([finding("healthy", "a"), finding("critical", "b"), finding("attention", "c")]);
+    expect([...worst.values()].map((f) => f.sentence)).toEqual(["b"]);
+  });
+
+  it("keeps the first of a tie", () => {
+    const worst = indexWorstFindings([finding("attention", "first"), finding("attention", "second")]);
+    expect([...worst.values()].map((f) => f.sentence)).toEqual(["first"]);
   });
 });

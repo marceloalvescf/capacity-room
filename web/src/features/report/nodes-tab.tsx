@@ -23,13 +23,8 @@ function Opened({ row }: { row: ViewNode }) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-4">
-      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      <p className="text-sm">
         <CopyName name={row.name} />
-        {row.reason_status === null ? (
-          <span>{row.reason}</span>
-        ) : (
-          <StatusMark status={row.reason_status} label={row.reason} withStatus />
-        )}
       </p>
       <Facts
         items={[
@@ -153,7 +148,12 @@ export function NodesTab() {
       {
         id: "status",
         header: t("report.column.status"),
-        cell: (row) => <FindingStatus status={row.status} hasFinding={hasFinding(row)} />,
+        cell: (row) => (
+          <div className="flex flex-col gap-0.5">
+            <FindingStatus status={row.status} hasFinding={hasFinding(row)} />
+            {row.reason_status !== null && <span className="max-w-56 text-xs leading-snug">{row.reason}</span>}
+          </div>
+        ),
         sortValue: (row) => severityRank[status(row)] ?? 3,
       },
       {
