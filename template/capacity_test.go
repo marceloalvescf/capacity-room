@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -165,36 +164,6 @@ func stripWhitespace(s string) string {
 	}, s)
 }
 
-// cellSplit divides one line of pdftotext -layout output into columns: two
-// or more consecutive spaces is the column separator that mode uses to
-// keep a table's columns aligned.
-var cellSplit = regexp.MustCompile(`\s{2,}`)
-
-// leadingCellStream concatenates the FIRST column of every non-blank line
-// of text, in order, with no separator. It exists because a wide table
-// row, wrapped by pdftotext -layout onto a second physical line, places
-// that continuation at the very start of the next line — but stripping
-// whitespace from the whole text naively concatenates the *entire* first
-// line (every column) before the second, so the neighbouring columns'
-// text lands in the middle of the wrapped value. Concatenating only each
-// line's first column sidesteps that: nothing else can land between a
-// value and its own continuation, since neither ever holds more than the
-// first column's text. It is deliberately a second, narrower view of the
-// text, used alongside (never instead of) stripWhitespace(pdfText(...))
-// on the whole document, which still finds every identifier that does not
-// happen to sit in the first column of a wrapped row.
-func leadingCellStream(text string) string {
-	var b strings.Builder
-	for _, line := range strings.Split(text, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
-		}
-		b.WriteString(stripWhitespace(cellSplit.Split(trimmed, 2)[0]))
-	}
-	return b.String()
-}
-
 // TestCapacityIdentifiersSurviveTheTextLayer proves every `ident` run of
 // detailed.pt-BR and detailed.en reaches the PDF's text layer intact: an
 // identifier that vanished, or was mangled by hyphenation, would be a
@@ -247,17 +216,9 @@ func TestCapacityIdentifiersSurviveTheTextLayer(t *testing.T) {
 
 			pdf, stderr, err := compileCapacityData(t, ws, path)
 			assertCleanCompile(t, stderr, err)
-			pageText := pdfText(t, pdf)
-			whole := stripWhitespace(pageText)
-			// leadingCellStream is also counted, and the larger of the two
-			// counts is kept: a wrapped identifier's second half can only
-			// be recovered through leadingCellStream (see its doc
-			// comment), while an identifier repeated across several
-			// columns is only counted correctly by the whole-text strip
-			// (leadingCellStream sees just the first column). Today no
-			// identifier's occurrences are split across both situations
-			// at once, so the larger count is always the accurate one.
-			leading := leadingCellStream(pageText)
+			// Raw order keeps a wrapped name whole: the cells beside a name
+			// are centred vertically, so a layout read interleaves them.
+			whole := stripWhitespace(pdfTextRaw(t, pdf))
 
 			seen := make(map[string]bool, len(idents))
 			for _, ident := range idents {
@@ -268,9 +229,6 @@ func TestCapacityIdentifiersSurviveTheTextLayer(t *testing.T) {
 
 				dataCount := strings.Count(data, ident)
 				textCount := strings.Count(whole, ident)
-				if lc := strings.Count(leading, ident); lc > textCount {
-					textCount = lc
-				}
 				if textCount < dataCount {
 					t.Errorf("%s: ident %q occurs %d time(s) in the text layer, want at least %d (its count in the data)",
 						stem, ident, textCount, dataCount)
@@ -287,11 +245,9 @@ func TestCapacityIdentDoesNotRepeatTheHyphen(t *testing.T) {
 	ws := workspace(t)
 	pdf, stderr, err := compileCapacityData(t, ws, capacityFixture(ws, "identifiers.pt-BR"))
 	assertCleanCompile(t, stderr, err)
-	// leadingCellStream, not a whole-text strip: this table has several
-	// columns, and row 1's identifier wraps onto a second physical line,
-	// so a whole-text strip would splice the neighbouring columns' text
-	// in between the two halves. See leadingCellStream's doc comment.
-	leading := leadingCellStream(pdfText(t, pdf))
+	// Raw order, not a layout read: the identifier wraps onto a second
+	// line, and the cells beside it would land between its halves.
+	leading := stripWhitespace(pdfTextRaw(t, pdf))
 
 	want := "aks-generalpool-29715314-vmss000001"
 	if !strings.Contains(leading, want) {

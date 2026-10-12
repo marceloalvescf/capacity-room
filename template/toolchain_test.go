@@ -10,17 +10,27 @@ import (
 	"testing"
 )
 
-var liberationSansFontFiles = []string{
+var fontFiles = []string{
 	"LiberationSans-Regular.ttf",
 	"LiberationSans-Bold.ttf",
 	"LiberationSans-Italic.ttf",
 	"LiberationSans-BoldItalic.ttf",
+	"PublicSans-Regular.ttf",
+	"PublicSans-Italic.ttf",
+	"PublicSans-SemiBold.ttf",
+	"PublicSans-SemiBoldItalic.ttf",
+	"PublicSans-Bold.ttf",
+	"PublicSans-BoldItalic.ttf",
+	"JetBrainsMono-Regular.ttf",
+	"JetBrainsMono-Italic.ttf",
+	"JetBrainsMono-SemiBold.ttf",
+	"JetBrainsMono-Bold.ttf",
 }
 
 func TestFontFacesExist(t *testing.T) {
 	ws := workspace(t)
 	fontDir := FontPath(ws)
-	for _, name := range liberationSansFontFiles {
+	for _, name := range fontFiles {
 		path := filepath.Join(fontDir, name)
 		info, err := os.Stat(path)
 		if err != nil {
@@ -32,7 +42,7 @@ func TestFontFacesExist(t *testing.T) {
 	}
 }
 
-func TestTypstListsLiberationSans(t *testing.T) {
+func TestTypstListsTheThreeFaces(t *testing.T) {
 	tc := toolchain(t)
 	ws := workspace(t)
 
@@ -46,10 +56,13 @@ func TestTypstListsLiberationSans(t *testing.T) {
 		t.Fatalf("typst fonts: %v\n%s", err, out)
 	}
 
+	lines := map[string]bool{}
 	for _, line := range strings.Split(string(out), "\n") {
-		if strings.HasPrefix(line, "Liberation Sans") {
-			return
+		lines[strings.TrimSpace(line)] = true
+	}
+	for _, want := range []string{"JetBrains Mono", "Liberation Sans", "Public Sans"} {
+		if !lines[want] {
+			t.Errorf("typst fonts output = %q, want the line %q", out, want)
 		}
 	}
-	t.Fatalf("typst fonts output = %q, want a line starting with %q", out, "Liberation Sans")
 }

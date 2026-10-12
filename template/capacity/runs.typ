@@ -1,17 +1,28 @@
 // runs.typ turns an array of run objects, already checked by
 // `validate.typ`, into Typst content. A run's `text` (and a callout
 // title's or table cell's runs) is only ever handed to `text(...)`; this
-// module never parses a string as markup. Reproduces `report-ident`,
-// `report-placeholder`, and `report-status` from the original Python
-// renderer (older/kubernetes-report/kube_capacity_report/renderers/
-// sections.py, lines 44-68).
+// module never parses a string as markup. It draws the runs of the data
+// file: text, strong words, identifiers, placeholders, and statuses.
+
+#let mono = "JetBrains Mono"
 
 #let status-symbols = (
   healthy: "●",
   attention: "▲",
-  critical: "♦",
+  critical: "◆",
   undefined: "○",
   unavailable: "—",
+)
+
+#let status-fill(status) = if status in ("healthy", "unavailable", "undefined") { luma(45%) } else { black }
+
+// status-glyph sets the mark of a status in the monospaced face, which
+// holds all five glyphs; the face of the words holds none of them.
+#let status-glyph(status) = text(
+  font: mono,
+  fill: status-fill(status),
+  weight: if status == "critical" { "bold" } else { "regular" },
+  status-symbols.at(status),
 )
 
 #let run-to-content(run) = {
@@ -20,15 +31,13 @@
   } else if run.kind == "strong" {
     text(weight: "bold", run.text)
   } else if run.kind == "ident" {
-    text(size: 0.92em, hyphenate: false, lang: "en", run.text)
+    text(font: mono, size: 0.92em, hyphenate: false, lang: "en", run.text)
   } else if run.kind == "placeholder" {
-    text(size: 0.92em, run.text)
+    text(run.text)
   } else {
-    let symbol = status-symbols.at(run.status)
-    let fill = if run.status in ("healthy", "unavailable", "undefined") { luma(45%) } else { black }
     let weight = if run.status == "critical" { "bold" } else { "regular" }
-    box(text(fill: fill, weight: weight)[
-      #symbol#if run.text != none { h(2pt); text(run.text) }
+    box(text(fill: status-fill(run.status), weight: weight)[
+      #status-glyph(run.status)#if run.text != none { h(2pt); text(run.text) }
     ])
   }
 }

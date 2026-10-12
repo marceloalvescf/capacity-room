@@ -174,3 +174,17 @@ func assertNonEmptyPDF(t *testing.T, path string) {
 		t.Fatalf("%s is empty", path)
 	}
 }
+
+// pdfTextRaw reads the text layer in content order, cell by cell, so a
+// value that wraps inside a cell stays whole.
+func pdfTextRaw(t *testing.T, pdf string) string {
+	t.Helper()
+	out, err := exec.Command("pdftotext", "-raw", pdf, "-").Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			t.Fatalf("pdftotext -raw %s -: %v, stderr: %s", pdf, exitErr, exitErr.Stderr)
+		}
+		t.Fatalf("pdftotext -raw %s -: %v", pdf, err)
+	}
+	return string(out)
+}

@@ -574,8 +574,10 @@ func TestEmbeddedFilesMatchDisk(t *testing.T) {
 }
 
 func TestFontLicenceIsEmbedded(t *testing.T) {
-	if _, err := embedded.ReadFile("graphite/assets/fonts/LICENSE"); err != nil {
-		t.Fatalf("reading embedded font licence: %v", err)
+	for _, name := range []string{"LICENSE", "OFL-PublicSans.txt", "OFL-JetBrainsMono.txt"} {
+		if _, err := embedded.ReadFile("graphite/assets/fonts/" + name); err != nil {
+			t.Fatalf("reading embedded font licence: %v", err)
+		}
 	}
 }
 

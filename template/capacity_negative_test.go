@@ -462,26 +462,27 @@ type capacityLayout struct {
 	columns int
 	size    string
 	insetY  string
+	faces   []string
 }
 
 var capacityLayouts = []capacityLayout{
-	{"report-metadata", 2, "8.5pt", "2pt"},
-	{"status-legend", 2, "8.5pt", "2pt"},
-	{"namespace-capacity", 7, "7.1pt", "3.5pt"},
-	{"workload-resources", 10, "6.2pt", "3.5pt"},
-	{"hpa-observed", 7, "7pt", "3.5pt"},
-	{"workloads-without-hpa", 4, "7.4pt", "3.5pt"},
-	{"nodepool-summary", 7, "7.1pt", "3.5pt"},
-	{"nodepool-profile", 7, "6.8pt", "3.5pt"},
-	{"node-detail", 5, "7.1pt", "3.5pt"},
-	{"priority-workloads", 4, "7.2pt", "3.5pt"},
-	{"namespaces-at-risk", 6, "7.2pt", "3.5pt"},
-	{"replica-ceiling", 5, "7.2pt", "3.5pt"},
-	{"nodepool-status", 3, "7.3pt", "3.5pt"},
-	{"action-plan", 4, "7.2pt", "3.5pt"},
-	{"material-limitations", 3, "7.5pt", "3.5pt"},
-	{"quality-appendix", 5, "7pt", "3.5pt"},
-	{"interpretation-notes", 1, "7.5pt", "3.5pt"},
+	{"report-metadata", 2, "8.5pt", "2pt", []string{"text", "text"}},
+	{"status-legend", 2, "8.5pt", "2pt", []string{"mark", "text"}},
+	{"namespace-capacity", 7, "7.1pt", "3.5pt", []string{"text", "num", "num", "num", "num", "num", "num"}},
+	{"workload-resources", 10, "6.8pt", "3.5pt", []string{"name", "num", "num", "num", "num", "num", "num", "num", "num", "num"}},
+	{"hpa-observed", 7, "7pt", "3.5pt", []string{"name", "num", "num", "num", "num", "num", "text"}},
+	{"workloads-without-hpa", 4, "7.4pt", "3.5pt", []string{"text", "name", "num", "text"}},
+	{"nodepool-summary", 7, "7.1pt", "3.5pt", []string{"name", "num", "num", "num", "num", "num", "text"}},
+	{"nodepool-profile", 7, "6.8pt", "3.5pt", []string{"name", "num", "num", "num", "num", "num", "num"}},
+	{"node-detail", 5, "7.1pt", "3.5pt", []string{"name", "num", "num", "text", "text"}},
+	{"priority-workloads", 4, "7.2pt", "3.5pt", []string{"name", "name", "num", "text"}},
+	{"namespaces-at-risk", 6, "7.2pt", "3.5pt", []string{"name", "num", "num", "text", "text", "mark"}},
+	{"replica-ceiling", 5, "7.2pt", "3.5pt", []string{"name", "name", "text", "num", "text"}},
+	{"nodepool-status", 3, "7.3pt", "3.5pt", []string{"name", "mark", "text"}},
+	{"action-plan", 4, "7.2pt", "3.5pt", []string{"num", "mark", "text", "name"}},
+	{"material-limitations", 3, "7.5pt", "3.5pt", []string{"text", "mark", "text"}},
+	{"quality-appendix", 5, "7pt", "3.5pt", []string{"text", "mark", "text", "text", "text"}},
+	{"interpretation-notes", 1, "7.5pt", "3.5pt", []string{"text"}},
 }
 
 func TestCapacityTableLayoutsMatchThePlan(t *testing.T) {
@@ -497,6 +498,17 @@ func TestCapacityTableLayoutsMatchThePlan(t *testing.T) {
 		b.WriteString("#assert.eq(layouts.at(\"" + l.id + "\").columns.len(), " + strconv.Itoa(l.columns) + ")\n")
 		b.WriteString("#assert.eq(layouts.at(\"" + l.id + "\").size, " + l.size + ")\n")
 		b.WriteString("#assert.eq(layouts.at(\"" + l.id + "\").inset-y, " + l.insetY + ")\n")
+		b.WriteString("#assert.eq(layouts.at(\"" + l.id + "\").faces.len(), layouts.at(\"" + l.id + "\").columns.len())\n")
+		b.WriteString("#assert.eq(layouts.at(\"" + l.id + "\").faces, (")
+		for _, face := range l.faces {
+			switch face {
+			case "name", "num", "text", "mark":
+			default:
+				t.Fatalf("layout %s: face %q is not one of name, num, text, mark", l.id, face)
+			}
+			b.WriteString("\"" + face + "\", ")
+		}
+		b.WriteString("))\n")
 	}
 	b.WriteString("#\"ok\"\n")
 
