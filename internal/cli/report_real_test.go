@@ -160,13 +160,11 @@ func TestRealReportFromEachScenario(t *testing.T) {
 
 // TestRealReportPageCount checks that direct-complete, whose fixture backs
 // every one of the nine capabilities and gives payments-web its own rows,
-// renders as exactly four pages in the detailed profile: the opening page;
-// the page of sections 1 to 4; the page of section 5, the executive
-// summary; and the quality appendix, with its interpretation notes. The
-// executive summary is the page the detailed profile gained when it
-// printed section 5, and the executive profile drops sections 1 to 4, so it
-// renders as three pages: the opening page, the executive summary, and the
-// appendix.
+// renders as exactly five pages in the detailed profile: the verdict; the
+// opening page; the page of section 1, the executive summary; the page of
+// sections 2 to 5; and the quality appendix, with its interpretation notes.
+// The executive profile drops sections 2 to 5, so it renders as four pages:
+// the verdict, the opening page, the executive summary, and the appendix.
 func TestRealReportPageCount(t *testing.T) {
 	server, _, scenario := startScenario(t, "direct-complete")
 	defer server.Close()
@@ -182,8 +180,8 @@ func TestRealReportPageCount(t *testing.T) {
 	}
 
 	text := pdfText(t, outPath)
-	if got := strings.Count(text, "\f"); got != 4 {
-		t.Fatalf("form feed count = %d, want 4 (the opening page, sections 1 to 4, the executive summary, and the quality appendix)", got)
+	if got := strings.Count(text, "\f"); got != 5 {
+		t.Fatalf("form feed count = %d, want 5 (the verdict, the opening page, the executive summary, sections 2 to 5, and the quality appendix)", got)
 	}
 }
 
@@ -444,7 +442,7 @@ func TestFromSnapshotPrintsTheSections(t *testing.T) {
 
 // TestRealReportExecutiveProfile checks, in both languages, that the
 // executive profile prints the executive summary and the appendix and none
-// of the headings of sections 1 to 4, and that the outline on page 1 lists
+// of the headings of sections 2 to 5, and that the outline on page 2 lists
 // the two sections it prints and no more.
 func TestRealReportExecutiveProfile(t *testing.T) {
 	for _, lang := range catalog.Languages() {
@@ -466,8 +464,8 @@ func TestRealReportExecutiveProfile(t *testing.T) {
 				t.Fatalf("catalog.Load(%s): %v", lang, err)
 			}
 			pages := pdfPages(pdfText(t, outPath))
-			if len(pages) != 3 {
-				t.Fatalf("PDF has %d page(s), want 3", len(pages))
+			if len(pages) != 4 {
+				t.Fatalf("PDF has %d page(s), want 4", len(pages))
 			}
 
 			for _, h := range []struct {
@@ -478,30 +476,30 @@ func TestRealReportExecutiveProfile(t *testing.T) {
 				{2, catalog.AppendixHeading},
 			} {
 				want := numberedHeading(t, cat, h.number, h.key)
-				if !containsText(pages[0], want) {
-					t.Errorf("the outline on page 1 does not contain %q", want)
+				if !containsText(pages[1], want) {
+					t.Errorf("the outline on page 2 does not contain %q", want)
 				}
 				if headingPage(pages, want) == -1 {
-					t.Errorf("no page after the first contains the heading %q", want)
+					t.Errorf("no page after the opening page contains the heading %q", want)
 				}
 			}
 
 			for number, key := range map[int]catalog.Key{
-				1: catalog.SectionsNamespacesHeading,
-				2: catalog.SectionsWorkloadsHeading,
-				3: catalog.SectionsHPAsHeading,
-				4: catalog.SectionsNodepoolsHeading,
+				2: catalog.SectionsNamespacesHeading,
+				3: catalog.SectionsWorkloadsHeading,
+				4: catalog.SectionsHPAsHeading,
+				5: catalog.SectionsNodepoolsHeading,
 			} {
-				// The title of section 3 is also a capability name of the
+				// The title of section 4 is also a capability name of the
 				// quality table, so only the numbered heading counts.
 				text, err := cat.Text(key, nil)
 				if err != nil {
 					t.Fatalf("%s text: %v", key, err)
 				}
 				absent := fmt.Sprintf("%d %s", number, text)
-				for i, page := range pages[1:] {
+				for i, page := range pages[2:] {
 					if containsText(page, absent) {
-						t.Errorf("page %d contains the heading %q of a section the executive profile leaves out", i+2, absent)
+						t.Errorf("page %d contains the heading %q of a section the executive profile leaves out", i+3, absent)
 					}
 				}
 			}
@@ -573,10 +571,11 @@ func TestWordAppears(t *testing.T) {
 }
 
 // headingPage returns the 0-based index of the first page after the opening
-// page whose text holds want, or -1 when none does. The opening page carries
-// the outline, which names every heading without being its place.
+// page, the second, whose text holds want, or -1 when none does. The opening
+// page carries the outline, which names every heading without being its
+// place.
 func headingPage(pages []string, want string) int {
-	for i := 1; i < len(pages); i++ {
+	for i := 2; i < len(pages); i++ {
 		if containsText(pages[i], want) {
 			return i
 		}
@@ -586,12 +585,12 @@ func headingPage(pages []string, want string) int {
 
 // TestRealReportTextOfEveryScenario checks, for every one of the eight
 // scenarios and both languages, that the compiled PDF: names the numbered
-// headings of the six parts (namespaces 1, workloads 2, HPA history 3,
-// node pools 4, executive summary 5, appendix 6) in the outline, on page 1; carries each of
-// those headings, with its number, on a page after the first, in the order
+// headings of the six parts (executive summary 1, namespaces 2, workloads 3,
+// HPA history 4, node pools 5, appendix 6) in the outline, on page 2; carries each of
+// those headings, with its number, on a page after the second, in the order
 // of the numbers; carries the name of every namespace and every workload
 // the scenario's snapshot holds, as a word of its own, on the pages from
-// section 1 through the start of section 3; carries the interpretation
+// section 2 through the start of section 4; carries the interpretation
 // notes heading, after the appendix heading, exactly when the snapshot
 // holds a warning or a notice, and on no page otherwise; and, for
 // edge-values, carries neither of the two workload names its snapshot
@@ -649,23 +648,23 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 						number int
 						key    catalog.Key
 					}{
-						{1, catalog.SectionsNamespacesHeading},
-						{2, catalog.SectionsWorkloadsHeading},
-						{3, catalog.SectionsHPAsHeading},
-						{4, catalog.SectionsNodepoolsHeading},
-						{5, catalog.SectionsExecutiveHeading},
+						{1, catalog.SectionsExecutiveHeading},
+						{2, catalog.SectionsNamespacesHeading},
+						{3, catalog.SectionsWorkloadsHeading},
+						{4, catalog.SectionsHPAsHeading},
+						{5, catalog.SectionsNodepoolsHeading},
 						{6, catalog.AppendixHeading},
 					}
 
-					// Page 1's own outline names every heading, whether or
+					// Page 2's own outline names every heading, whether or
 					// not the heading it names reaches a page: a separate
 					// assertion from the one below, so a lost section and a
 					// lost outline entry are never reported as the same
 					// fault.
 					for _, h := range headings {
 						want := numberedHeading(t, cat, h.number, h.key)
-						if !containsText(pages[0], want) {
-							t.Errorf("the outline on page 1 does not contain %q", want)
+						if !containsText(pages[1], want) {
+							t.Errorf("the outline on page 2 does not contain %q", want)
 						}
 					}
 
@@ -676,7 +675,7 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 						want := numberedHeading(t, cat, h.number, h.key)
 						found[i] = headingPage(pages, want)
 						if found[i] == -1 {
-							t.Errorf("no page after the first contains the heading %q", want)
+							t.Errorf("no page after the opening page contains the heading %q", want)
 						}
 						if i > 0 && found[i] != -1 && found[i] < found[i-1] {
 							t.Errorf("the heading %q is on page %d, before the heading of the part before it, on page %d", want, found[i]+1, found[i-1]+1)
@@ -686,17 +685,17 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 						return
 					}
 
-					// The names of the rows: from the page of section 1
-					// through the page where section 3 starts.
-					rowPages := strings.Join(pages[found[0]:found[2]+1], "\f")
+					// The names of the rows: from the page of section 2
+					// through the page where section 4 starts.
+					rowPages := strings.Join(pages[found[1]:found[3]+1], "\f")
 					for _, ns := range snap.Namespaces {
 						if !wordAppears(rowPages, ns.Name) {
-							t.Errorf("the pages of sections 1 and 2 do not contain the namespace name %q as a word of its own", ns.Name)
+							t.Errorf("the pages of sections 2 and 3 do not contain the namespace name %q as a word of its own", ns.Name)
 						}
 					}
 					for _, wl := range snap.Workloads {
 						if !wordAppears(rowPages, wl.Name) {
-							t.Errorf("the pages of sections 1 and 2 do not contain the workload name %q as a word of its own", wl.Name)
+							t.Errorf("the pages of sections 2 and 3 do not contain the workload name %q as a word of its own", wl.Name)
 						}
 					}
 
@@ -764,13 +763,13 @@ func TestRealReportHoldsSectionsThreeAndFour(t *testing.T) {
 						t.Fatalf("catalog.Load(%s): %v", lang, err)
 					}
 					pages := pdfPages(pdfText(t, outPath))
-					body := stripWhitespace(strings.Join(pages[1:], "\f"))
+					body := stripWhitespace(strings.Join(pages[2:], "\f"))
 					for _, h := range []struct {
 						number int
 						key    catalog.Key
 					}{
-						{3, catalog.SectionsHPAsHeading},
-						{4, catalog.SectionsNodepoolsHeading},
+						{4, catalog.SectionsHPAsHeading},
+						{5, catalog.SectionsNodepoolsHeading},
 					} {
 						want := stripWhitespace(numberedHeading(t, cat, h.number, h.key))
 						if got := strings.Count(body, want); got != 1 {

@@ -432,14 +432,19 @@ func (vb *viewBuilder) summary(m snapshot.Summary) ViewSummary {
 	}
 }
 
-// definition looks up the registry entry of a code, and keeps an error
-// when the code is not in it.
-func (vb *viewBuilder) definition(code string) (analysis.Definition, bool) {
+// findingDefinition looks up the registry entry of a finding code, and keeps
+// an error when the code is not in it.
+func findingDefinition(b *builder, code string) (analysis.Definition, bool) {
 	definition, ok := analysis.Lookup(code)
-	if !ok && vb.b.err == nil {
-		vb.b.err = fmt.Errorf("finding %s is not in the registry", code)
+	if !ok && b.err == nil {
+		b.err = fmt.Errorf("finding %s is not in the registry", code)
 	}
 	return definition, ok
+}
+
+// findingSentence writes the sentence of a finding of definition.
+func findingSentence(b *builder, definition analysis.Definition) string {
+	return b.text(catalog.FindingSummary(definition.Family, definition.Params["resource"]), nil)
 }
 
 func (vb *viewBuilder) findings(findings []snapshot.Finding, minRank int) []ViewFinding {
@@ -448,7 +453,7 @@ func (vb *viewBuilder) findings(findings []snapshot.Finding, minRank int) []View
 		if analysis.Rank(f.Severity) < minRank {
 			continue
 		}
-		definition, ok := vb.definition(f.Code)
+		definition, ok := findingDefinition(vb.b, f.Code)
 		if !ok {
 			return out
 		}
@@ -460,7 +465,7 @@ func (vb *viewBuilder) findings(findings []snapshot.Finding, minRank int) []View
 			ScopeKind:  f.ScopeKind,
 			ScopeName:  f.ScopeName,
 			Confidence: f.Confidence,
-			Sentence:   vb.b.text(catalog.FindingSummary(definition.Family, resource), nil),
+			Sentence:   findingSentence(vb.b, definition),
 			Action:     vb.b.text(catalog.FindingAction(definition.Family, resource), nil),
 			Evidence:   vb.evidence(f.Evidence),
 		})
@@ -474,32 +479,37 @@ func (vb *viewBuilder) findings(findings []snapshot.Finding, minRank int) []View
 func (vb *viewBuilder) evidence(evidence []snapshot.Evidence) []ViewEvidence {
 	out := make([]ViewEvidence, 0, len(evidence))
 	for _, e := range evidence {
-		item := ViewEvidence{Name: e.Name}
-		switch e.Value.Kind {
-		case "number":
-			item.Raw = e.Value.Number
-			switch {
-			case strings.HasSuffix(e.Name, "percent"):
-				item.Text = vb.b.cat.Percent(e.Value.Number)
-			case e.Value.Number == math.Trunc(e.Value.Number):
-				item.Text = vb.b.cat.Count(e.Value.Number)
-			default:
-				item.Text = vb.b.cat.Decimal(e.Value.Number, 2)
-			}
-		case "boolean":
-			item.Raw = e.Value.Boolean
-			if e.Value.Boolean {
-				item.Text = vb.b.text(catalog.ValueYes, nil)
-			} else {
-				item.Text = vb.b.text(catalog.ValueNo, nil)
-			}
-		default:
-			item.Raw = e.Value.Text
-			item.Text = e.Value.Text
-		}
-		out = append(out, item)
+		out = append(out, evidenceView(vb.b, e))
 	}
 	return out
+}
+
+// evidenceView words one value of a finding.
+func evidenceView(b *builder, e snapshot.Evidence) ViewEvidence {
+	item := ViewEvidence{Name: e.Name}
+	switch e.Value.Kind {
+	case "number":
+		item.Raw = e.Value.Number
+		switch {
+		case strings.HasSuffix(e.Name, "percent"):
+			item.Text = b.cat.Percent(e.Value.Number)
+		case e.Value.Number == math.Trunc(e.Value.Number):
+			item.Text = b.cat.Count(e.Value.Number)
+		default:
+			item.Text = b.cat.Decimal(e.Value.Number, 2)
+		}
+	case "boolean":
+		item.Raw = e.Value.Boolean
+		if e.Value.Boolean {
+			item.Text = b.text(catalog.ValueYes, nil)
+		} else {
+			item.Text = b.text(catalog.ValueNo, nil)
+		}
+	default:
+		item.Raw = e.Value.Text
+		item.Text = e.Value.Text
+	}
+	return item
 }
 
 func (vb *viewBuilder) recommendations(recommendations []snapshot.Recommendation) []ViewRecommendation {

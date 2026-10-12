@@ -39,6 +39,13 @@ const (
 	FrontMetadataNoExcludedContainers Key = "front.metadata.no_excluded_containers"
 	FrontMetadataOrganization         Key = "front.metadata.organization"
 	FrontMetadataClassification       Key = "front.metadata.classification"
+	FrontMetadataProfile              Key = "front.metadata.profile"
+	FrontMetadataProfileDetailed      Key = "front.metadata.profile_detailed"
+	FrontMetadataProfileExecutive     Key = "front.metadata.profile_executive"
+	FrontMetadataMinSeverity          Key = "front.metadata.min_severity"
+	FrontMetadataMinSeverityAll       Key = "front.metadata.min_severity_all"
+	FrontMetadataMinSeverityAttention Key = "front.metadata.min_severity_attention"
+	FrontMetadataMinSeverityCritical  Key = "front.metadata.min_severity_critical"
 
 	FrontLegendHeading       Key = "front.legend.heading"
 	FrontLegendHeaderStatus  Key = "front.legend.header_status"
@@ -251,6 +258,29 @@ const (
 	PeriodMinutePlural   Key = "period.minute.plural"
 	PeriodSecondSingular Key = "period.second.singular"
 	PeriodSecondPlural   Key = "period.second.plural"
+
+	VerdictNone                    Key = "verdict.none"
+	VerdictQuality                 Key = "verdict.quality"
+	VerdictMoreWarnings            Key = "verdict.more_warnings"
+	VerdictGrowthTitle             Key = "verdict.growth.title"
+	VerdictGrowthCaption           Key = "verdict.growth.caption"
+	VerdictGrowthMinNodes          Key = "verdict.growth.min_nodes"
+	VerdictGrowthUnschedulablePods Key = "verdict.growth.unschedulable_pods"
+	VerdictGrowthScaleEvents       Key = "verdict.growth.scale_events"
+	VerdictPressureTitle           Key = "verdict.pressure.title"
+	VerdictPressureEmpty           Key = "verdict.pressure.empty"
+	VerdictPressurePeak            Key = "verdict.pressure.peak"
+	VerdictPlanTitle               Key = "verdict.plan.title"
+	VerdictPlanOrder               Key = "verdict.plan.order"
+	VerdictPlanPriority            Key = "verdict.plan.priority"
+	VerdictPlanAction              Key = "verdict.plan.action"
+	VerdictPlanScope               Key = "verdict.plan.scope"
+	VerdictPlanEmpty               Key = "verdict.plan.empty"
+	VerdictPlanMore                Key = "verdict.plan.more"
+
+	StatusHealthy   Key = "status.healthy"
+	StatusAttention Key = "status.attention"
+	StatusCritical  Key = "status.critical"
 )
 
 // wordingKeys lists every constant above, in the order of the wording
@@ -260,6 +290,9 @@ var wordingKeys = []Key{
 	CoverTitle, CoverClusterLabel, CoverAuthorLabel, CoverIssuedLabel,
 	FooterPageLabel,
 	FrontOutlineTitle,
+	FrontMetadataProfile, FrontMetadataProfileDetailed, FrontMetadataProfileExecutive,
+	FrontMetadataMinSeverity, FrontMetadataMinSeverityAll, FrontMetadataMinSeverityAttention,
+	FrontMetadataMinSeverityCritical,
 	FrontMetadataHeading, FrontMetadataHeaderField, FrontMetadataHeaderValue,
 	FrontMetadataEnvironment, FrontMetadataPeriod, FrontMetadataPeriodRange,
 	FrontMetadataNamespaces, FrontMetadataExcludedContainers,
@@ -345,6 +378,13 @@ var wordingKeys = []Key{
 	SectionsExecutiveRiskStatusBoth,
 	PeriodDaySingular, PeriodDayPlural, PeriodHourSingular, PeriodHourPlural,
 	PeriodMinuteSingular, PeriodMinutePlural, PeriodSecondSingular, PeriodSecondPlural,
+	VerdictNone, VerdictQuality, VerdictMoreWarnings,
+	VerdictGrowthTitle, VerdictGrowthCaption, VerdictGrowthMinNodes,
+	VerdictGrowthUnschedulablePods, VerdictGrowthScaleEvents,
+	VerdictPressureTitle, VerdictPressureEmpty, VerdictPressurePeak,
+	VerdictPlanTitle, VerdictPlanOrder, VerdictPlanPriority, VerdictPlanAction,
+	VerdictPlanScope, VerdictPlanEmpty, VerdictPlanMore,
+	StatusHealthy, StatusAttention, StatusCritical,
 }
 
 // Confidences, ReasonFamilies, and ReasonResources are the values the key
@@ -364,6 +404,22 @@ var (
 	RiskSeverities = []string{"critical", "attention"}
 	ScopeSummaries = []string{"namespace", "workload", "hpa", "deployment"}
 )
+
+// VerdictGrowthStates lists the autoscaling statuses the verdict words when
+// the autoscaling is not enabled. VerdictPressureScopes lists the scope types
+// the verdict summarises.
+var (
+	VerdictGrowthStates   = []string{"disabled", "unknown"}
+	VerdictPressureScopes = []string{"node", "nodepool", "namespace", "workload", "hpa"}
+)
+
+// VerdictGrowthState returns the key of the word for an autoscaling status
+// that is not enabled, one of VerdictGrowthStates: verdict.growth.state.<status>.
+func VerdictGrowthState(status string) Key { return Key("verdict.growth.state." + status) }
+
+// VerdictPressureScope returns the key of the name of a scope type, one of
+// VerdictPressureScopes: verdict.pressure.scope.<type>.
+func VerdictPressureScope(scopeType string) Key { return Key("verdict.pressure.scope." + scopeType) }
 
 // CapabilityName returns the key that names capability name, one of
 // discovery.Names.
@@ -515,6 +571,12 @@ func Keys() []Key {
 	}
 	for _, kind := range ScopeSummaries {
 		keys = append(keys, ScopeSummary(kind))
+	}
+	for _, state := range VerdictGrowthStates {
+		keys = append(keys, VerdictGrowthState(state))
+	}
+	for _, scopeType := range VerdictPressureScopes {
+		keys = append(keys, VerdictPressureScope(scopeType))
 	}
 	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 	return keys

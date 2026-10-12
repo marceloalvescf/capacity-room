@@ -533,8 +533,17 @@ func planRecommendations(s snapshot.Snapshot, minRank int) []snapshot.Recommenda
 // actionPlan writes the rows of planRecommendations. It follows
 // _recommendation_rows of the original.
 func actionPlan(b *builder, s snapshot.Snapshot, minRank int) []Block {
-	included := planRecommendations(s, minRank)
+	rows := actionRows(b, planRecommendations(s, minRank))
+	return tableOrFallback(b, catalog.SectionsExecutiveActionsHeading, catalog.SectionsExecutiveActionsEmpty,
+		newTable(b, "action-plan", []catalog.Key{
+			catalog.SectionsExecutiveHeaderOrder, catalog.SectionsExecutiveHeaderPriority,
+			catalog.SectionsExecutiveHeaderAction, catalog.SectionsExecutiveHeaderScope,
+		}, rows))
+}
 
+// actionRows writes one row for each recommendation: its number, priority,
+// action, and scope.
+func actionRows(b *builder, included []snapshot.Recommendation) [][][]Run {
 	actions := make([]string, len(included))
 	for i, r := range included {
 		definition, ok := analysis.Lookup(r.Code)
@@ -556,11 +565,7 @@ func actionPlan(b *builder, s snapshot.Snapshot, minRank int) []Block {
 			{recommendationScope(b, r)},
 		})
 	}
-	return tableOrFallback(b, catalog.SectionsExecutiveActionsHeading, catalog.SectionsExecutiveActionsEmpty,
-		newTable(b, "action-plan", []catalog.Key{
-			catalog.SectionsExecutiveHeaderOrder, catalog.SectionsExecutiveHeaderPriority,
-			catalog.SectionsExecutiveHeaderAction, catalog.SectionsExecutiveHeaderScope,
-		}, rows))
+	return rows
 }
 
 // recommendationScope writes the scopes of a recommendation: with up to

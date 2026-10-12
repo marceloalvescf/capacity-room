@@ -292,22 +292,23 @@ func scenarioSnapshot(t *testing.T) snapshot.Snapshot {
 	return s
 }
 
-func TestBlocksFollowTheOrderOfTheOriginal(t *testing.T) {
+func TestBlocksPutTheAnswerFirst(t *testing.T) {
 	s := scenarioSnapshot(t)
 	doc := mustBuild(t, s, mustCatalog(t, catalog.PortugueseBrazil), Options{})
 
 	wantTypes := []string{
-		"front", "pagebreak",
-		"heading", "heading", "table",
-		"heading", "heading", "table",
-		"heading", "paragraph", "heading", "paragraph",
-		"heading", "heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
+		"verdict", "pagebreak", "front", "pagebreak",
 		// The executive section: heading, introduction, six subsections that
 		// are a heading and a table or a paragraph, and the limitations table.
 		"heading", "paragraph",
 		"heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
 		"heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
 		"heading", "table",
+		// The four sections of the evidence.
+		"heading", "heading", "table",
+		"heading", "heading", "table",
+		"heading", "paragraph", "heading", "paragraph",
+		"heading", "heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
 		"pagebreak",
 		"heading", "table",
 		"heading", "table",
@@ -326,22 +327,22 @@ func TestBlocksFollowTheOrderOfTheOriginal(t *testing.T) {
 			t.Errorf("Blocks[%d] = level %d numbered %v, want level %d numbered %v", i, h.Level, h.Numbered, level, numbered)
 		}
 	}
-	wantHeading(2, 1, true)   // Capacidade por Namespace
-	wantHeading(3, 2, false)  // Namespace: payments
-	wantHeading(5, 1, true)   // Recursos por workload
-	wantHeading(6, 2, false)  // Namespace: payments
-	wantHeading(8, 1, true)   // Histórico de HPA
-	wantHeading(10, 2, false) // Namespace: payments
-	wantHeading(12, 1, true)  // Uso de recursos por node pool
-	wantHeading(19, 1, true)  // Resumo executivo
-	wantHeading(36, 1, true)  // Apêndice técnico de qualidade
-	wantHeading(38, 2, false) // Avisos de interpretação
+	wantHeading(20, 1, true)  // Capacidade por Namespace
+	wantHeading(21, 2, false) // Namespace: payments
+	wantHeading(23, 1, true)  // Recursos por workload
+	wantHeading(24, 2, false) // Namespace: payments
+	wantHeading(26, 1, true)  // Histórico de HPA
+	wantHeading(28, 2, false) // Namespace: payments
+	wantHeading(30, 1, true)  // Uso de recursos por node pool
+	wantHeading(4, 1, true)   // Resumo executivo
+	wantHeading(38, 1, true)  // Apêndice técnico de qualidade
+	wantHeading(40, 2, false) // Avisos de interpretação
 
 	if pb, ok := doc.Blocks[1].(PageBreak); !ok || pb.Weak {
 		t.Errorf("Blocks[1] = %+v, want a non-weak pagebreak", doc.Blocks[1])
 	}
-	if pb, ok := doc.Blocks[35].(PageBreak); !ok || !pb.Weak {
-		t.Errorf("Blocks[35] = %+v, want a weak pagebreak", doc.Blocks[35])
+	if pb, ok := doc.Blocks[37].(PageBreak); !ok || !pb.Weak {
+		t.Errorf("Blocks[37] = %+v, want a weak pagebreak", doc.Blocks[37])
 	}
 
 	wantTable := func(i int, id string) {
@@ -351,10 +352,10 @@ func TestBlocksFollowTheOrderOfTheOriginal(t *testing.T) {
 			t.Errorf("Blocks[%d] = %+v, want table %q", i, doc.Blocks[i], id)
 		}
 	}
-	wantTable(4, "namespace-capacity")
-	wantTable(7, "workload-resources")
-	wantTable(37, "quality-appendix")
-	wantTable(39, "interpretation-notes")
+	wantTable(22, "namespace-capacity")
+	wantTable(25, "workload-resources")
+	wantTable(39, "quality-appendix")
+	wantTable(41, "interpretation-notes")
 }
 
 func TestHeadingOfANamespaceHasTwoRuns(t *testing.T) {

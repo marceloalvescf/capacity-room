@@ -25,6 +25,369 @@
   },
   "blocks": [
     {
+      "type": "verdict",
+      "totals": {
+        "items": [
+          {
+            "status": "critical",
+            "label": "Crítico",
+            "count": "9"
+          },
+          {
+            "status": "attention",
+            "label": "Atenção",
+            "count": "10"
+          },
+          {
+            "status": "healthy",
+            "label": "Saudável",
+            "count": "7"
+          }
+        ],
+        "none": null
+      },
+      "quality": {
+        "label": "Qualidade dos dados",
+        "count": "2",
+        "items": [
+          "Valores ambíguos de configuração ou alvo de HPA foram omitidos.",
+          "As evidências de capacidade dos nodes estão incompletas."
+        ],
+        "more": null
+      },
+      "growth": {
+        "title": "Autoscaling do cluster",
+        "current": "3",
+        "max": "3",
+        "state": null,
+        "gauge": {
+          "current": 3,
+          "max": 3,
+          "min": 2,
+          "hazard": true
+        },
+        "caption": "Nodes · atual / máximo",
+        "finding": {
+          "status": "attention",
+          "label": "Atenção",
+          "sentence": "O número de nodes está próximo ao máximo observado."
+        },
+        "warning": "As evidências de capacidade dos nodes estão incompletas.",
+        "facts": [
+          {
+            "label": "Mínimo de nodes",
+            "value": "2"
+          },
+          {
+            "label": "Pods não agendáveis",
+            "value": "2"
+          },
+          {
+            "label": "Eventos de escala",
+            "value": "1"
+          }
+        ]
+      },
+      "pressure": {
+        "title": "Pressão por escopo",
+        "rows": [
+          {
+            "status": "critical",
+            "scope": "Nodes",
+            "sentence": "Uso observado de CPU no node.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "aks-agentpool-12345678-vmss000000"
+              }
+            ],
+            "peak": {
+              "label": "Pico",
+              "value": "95%"
+            },
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Crítico",
+                "count": "2"
+              }
+            ]
+          },
+          {
+            "status": "critical",
+            "scope": "Namespaces",
+            "sentence": "O uso de CPU em relação ao limit indica risco aumentado de throttling de CPU.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "payments"
+              }
+            ],
+            "peak": {
+              "label": "Pico",
+              "value": "330%"
+            },
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Crítico",
+                "count": "1"
+              }
+            ]
+          },
+          {
+            "status": "critical",
+            "scope": "Workloads",
+            "sentence": "O uso de memória em relação ao limit indica risco aumentado de OOMKill.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "payments/payments-web"
+              }
+            ],
+            "peak": {
+              "label": "Pico",
+              "value": "12000%"
+            },
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Crítico",
+                "count": "1"
+              },
+              {
+                "status": "attention",
+                "label": "Atenção",
+                "count": "1"
+              }
+            ]
+          },
+          {
+            "status": "critical",
+            "scope": "HPAs",
+            "sentence": "O HPA atingiu o máximo observado de replicas.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "payments/web"
+              }
+            ],
+            "peak": null,
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Crítico",
+                "count": "1"
+              },
+              {
+                "status": "attention",
+                "label": "Atenção",
+                "count": "1"
+              }
+            ]
+          },
+          {
+            "status": "attention",
+            "scope": "Node pools",
+            "sentence": "A pressão de pico de CPU variou entre nodes do pool.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "pool-a"
+              }
+            ],
+            "peak": null,
+            "counts": [
+              {
+                "status": "attention",
+                "label": "Atenção",
+                "count": "2"
+              }
+            ]
+          }
+        ],
+        "empty": null
+      },
+      "plan": {
+        "title": "Plano de ação priorizado",
+        "table": {
+          "type": "table",
+          "id": "verdict-plan",
+          "headers": [
+            "#",
+            "Prioridade",
+            "Ação",
+            "Escopo"
+          ],
+          "rows": [
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "1"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Crítico"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Revisar o máximo configurado e a capacidade do workload."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments/web"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "2"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Crítico"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Revisar o limit de CPU e o perfil de consumo observado."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "3"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Crítico"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Revisar o request de CPU e o consumo observado."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "4"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Crítico"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Revisar o limit de memória e o perfil de consumo observado."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "5"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Crítico"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Revisar o request de memória e o consumo observado."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ]
+          ]
+        },
+        "empty": null,
+        "more": "5 de 10 ações. O plano completo está no resumo executivo."
+      },
+      "legend": [
+        {
+          "status": "healthy",
+          "label": "Saudável"
+        },
+        {
+          "status": "attention",
+          "label": "Atenção"
+        },
+        {
+          "status": "critical",
+          "label": "Crítico"
+        },
+        {
+          "status": "unavailable",
+          "label": "Dado indisponível"
+        },
+        {
+          "status": "undefined",
+          "label": "Sem base de cálculo"
+        }
+      ]
+    },
+    {
+      "type": "pagebreak",
+      "weak": false
+    },
+    {
       "type": "front",
       "blocks": [
         {
@@ -76,6 +439,34 @@
                 {
                   "kind": "text",
                   "text": "14/07/2026 14:30 a 15/07/2026 14:30"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Perfil"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Executivo"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Severidade mínima"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Atenção e crítico"
                 }
               ]
             ],

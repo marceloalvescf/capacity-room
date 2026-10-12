@@ -27,6 +27,13 @@ excluded_containers = "Containers excluídos"
 no_excluded_containers = "Nenhum"
 organization = "Organização"
 classification = "Classificação"
+profile = "Perfil"
+profile_detailed = "Detalhado"
+profile_executive = "Executivo"
+min_severity = "Severidade mínima"
+min_severity_all = "Todas"
+min_severity_attention = "Atenção e crítico"
+min_severity_critical = "Somente crítico"
 
 [front.legend]
 heading = "Legenda de status"
@@ -538,3 +545,45 @@ memory = "Limit de memória não observado"
 [reason.bursty]
 cpu = "CPU: variação de {{.Percent}}"
 memory = "Memória: variação de {{.Percent}}"
+
+[verdict]
+none = "Este relatório não tem achados."
+quality = "Qualidade dos dados"
+more_warnings = "+{{.Count}}"
+
+[verdict.growth]
+title = "Autoscaling do cluster"
+caption = "Nodes · atual / máximo"
+min_nodes = "Mínimo de nodes"
+unschedulable_pods = "Pods não agendáveis"
+scale_events = "Eventos de escala"
+
+[verdict.growth.state]
+disabled = "Inativo"
+unknown = "Desconhecido"
+
+[verdict.pressure]
+title = "Pressão por escopo"
+empty = "Nada pede atenção."
+peak = "Pico"
+
+[verdict.pressure.scope]
+node = "Nodes"
+nodepool = "Node pools"
+namespace = "Namespaces"
+workload = "Workloads"
+hpa = "HPAs"
+
+[verdict.plan]
+title = "Plano de ação priorizado"
+order = "#"
+priority = "Prioridade"
+action = "Ação"
+scope = "Escopo"
+empty = "Nenhuma ação priorizada foi identificada."
+more = "{{.Shown}} de {{.Total}} ações. O plano completo está no resumo executivo."
+
+[status]
+healthy = "Saudável"
+attention = "Atenção"
+critical = "Crítico"

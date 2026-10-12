@@ -168,13 +168,13 @@ func blockTypes(blocks []Block) []string {
 	return out
 }
 
-// frontBlock returns doc.Blocks[0] as a Front, failing the test if it is
-// not one.
+// frontBlock returns doc.Blocks[2], the opening page after the verdict, as
+// a Front, failing the test if it is not one.
 func frontBlock(t *testing.T, doc Document) Front {
 	t.Helper()
-	f, ok := doc.Blocks[0].(Front)
+	f, ok := doc.Blocks[2].(Front)
 	if !ok {
-		t.Fatalf("Blocks[0] is %T, want Front", doc.Blocks[0])
+		t.Fatalf("Blocks[2] is %T, want Front", doc.Blocks[2])
 	}
 	return f
 }
@@ -204,8 +204,8 @@ func allTableRowCounts(doc Document) map[string]int {
 		}
 	}
 	collect(doc.Blocks)
-	if len(doc.Blocks) > 0 {
-		if f, ok := doc.Blocks[0].(Front); ok {
+	for _, b := range doc.Blocks {
+		if f, ok := b.(Front); ok {
 			collect(f.Blocks)
 		}
 	}
@@ -324,17 +324,18 @@ func TestBuildBlockOrder(t *testing.T) {
 	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{})
 
 	wantTop := []string{
-		"front", "pagebreak",
-		"heading", "heading", "table", "heading", "table",
-		"heading", "paragraph",
-		"heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
-		"heading", "heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
+		"verdict", "pagebreak", "front", "pagebreak",
 		// The executive section: heading, introduction, six subsections that
 		// are a heading and a table or a paragraph, and the limitations table.
 		"heading", "paragraph",
 		"heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
 		"heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
 		"heading", "table",
+		// The four sections of the evidence.
+		"heading", "heading", "table", "heading", "table",
+		"heading", "paragraph",
+		"heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
+		"heading", "heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
 		"pagebreak",
 		"heading", "table",
 	}
@@ -371,15 +372,16 @@ func TestBuildOrdersTheSections(t *testing.T) {
 		}
 	}
 	want := []string{
-		"Capacity by namespace", "Resources by workload", "HPA history",
-		"Resource usage by node pool", "Executive summary", "Technical quality appendix",
+		"Executive summary", "Capacity by namespace", "Resources by workload", "HPA history",
+		"Resource usage by node pool", "Technical quality appendix",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("level-1 headings = %v, want %v", got, want)
 	}
 
-	// The executive section sits between the pools and the weak page break,
-	// and the appendix comes after the break.
+	// The executive section follows the opening page, the four sections of
+	// the evidence come before the weak page break, and the appendix comes
+	// after the break.
 	var executive, weakBreak, appendix int
 	for i, blk := range doc.Blocks {
 		switch x := blk.(type) {
@@ -432,14 +434,19 @@ func TestBuildExecutiveProfile(t *testing.T) {
 		t.Fatalf("level-1 headings = %v, want %v", headings, want)
 	}
 
-	if _, ok := doc.Blocks[0].(Front); !ok {
-		t.Fatalf("first block is %T, want the front", doc.Blocks[0])
+	if _, ok := doc.Blocks[0].(Verdict); !ok {
+		t.Fatalf("first block is %T, want the verdict", doc.Blocks[0])
 	}
-	if pb, ok := doc.Blocks[1].(PageBreak); !ok || pb.Weak {
-		t.Fatalf("second block = %#v, want the hard page break", doc.Blocks[1])
+	if _, ok := doc.Blocks[2].(Front); !ok {
+		t.Fatalf("third block is %T, want the front", doc.Blocks[2])
 	}
-	if h, ok := doc.Blocks[2].(Heading); !ok || runText(t, h.Runs[0]) != want[0] {
-		t.Fatalf("third block = %#v, want the executive heading", doc.Blocks[2])
+	for _, i := range []int{1, 3} {
+		if pb, ok := doc.Blocks[i].(PageBreak); !ok || pb.Weak {
+			t.Fatalf("block %d = %#v, want the hard page break", i, doc.Blocks[i])
+		}
+	}
+	if h, ok := doc.Blocks[4].(Heading); !ok || runText(t, h.Runs[0]) != want[0] {
+		t.Fatalf("fifth block = %#v, want the executive heading", doc.Blocks[4])
 	}
 	weak := slices.IndexFunc(doc.Blocks, func(b Block) bool { pb, ok := b.(PageBreak); return ok && pb.Weak })
 	if weak < 0 {
@@ -473,7 +480,7 @@ func TestBuildExecutiveRaisesTheMinimum(t *testing.T) {
 	if ew < 0 || dw < 0 {
 		t.Fatalf("weak page breaks at %d and %d", ew, dw)
 	}
-	for _, blk := range executive.Blocks[2:ew] {
+	for _, blk := range executive.Blocks[4:ew] {
 		table, ok := blk.(Table)
 		if !ok || table.ID != "priority-workloads" {
 			continue
@@ -521,10 +528,10 @@ func TestBuildMetadataRows(t *testing.T) {
 		mutate   func(*snapshot.Snapshot)
 		wantRows int
 	}{
-		{"all set", func(*snapshot.Snapshot) {}, 6},
-		{"no organization", func(s *snapshot.Snapshot) { s.Report.Organization = "" }, 5},
-		{"no classification", func(s *snapshot.Snapshot) { s.Report.Classification = "" }, 5},
-		{"no excluded container", func(s *snapshot.Snapshot) { s.Scope.ExcludedContainers = []string{} }, 6},
+		{"all set", func(*snapshot.Snapshot) {}, 8},
+		{"no organization", func(s *snapshot.Snapshot) { s.Report.Organization = "" }, 7},
+		{"no classification", func(s *snapshot.Snapshot) { s.Report.Classification = "" }, 7},
+		{"no excluded container", func(s *snapshot.Snapshot) { s.Scope.ExcludedContainers = []string{} }, 8},
 	}
 	cat := mustCatalog(t, catalog.English)
 	for _, tt := range tests {
@@ -554,7 +561,7 @@ func TestBuildMetadataNoExcludedContainersFallback(t *testing.T) {
 			s.Scope.ExcludedContainers = []string{}
 			doc := mustBuild(t, s, mustCatalog(t, tt.lang), Options{})
 			table := findTable(t, frontBlock(t, doc).Blocks, "report-metadata")
-			got := runText(t, table.Rows[3][1][0])
+			got := runText(t, table.Rows[5][1][0])
 			if got != tt.want {
 				t.Errorf("excluded containers value = %q, want %q", got, tt.want)
 			}
@@ -578,8 +585,8 @@ func TestBuildMetadataNamesAreIdentRuns(t *testing.T) {
 
 	want := map[int][]Run{
 		0: {Ident("prod-east")},
-		2: {Ident("a"), Text(", "), Ident("b"), Text(", "), Ident("c")},
-		3: {Ident("istio-proxy"), Text(", "), Ident("linkerd")},
+		4: {Ident("a"), Text(", "), Ident("b"), Text(", "), Ident("c")},
+		5: {Ident("istio-proxy"), Text(", "), Ident("linkerd")},
 	}
 	for row, runs := range want {
 		if got := table.Rows[row][1]; !reflect.DeepEqual(got, runs) {
@@ -599,7 +606,7 @@ func TestBuildPrintsNamesAsTheyAre(t *testing.T) {
 	}
 
 	table := findTable(t, frontBlock(t, doc).Blocks, "report-metadata")
-	if got := runText(t, table.Rows[4][1][0]); got != s.Report.Organization {
+	if got := runText(t, table.Rows[6][1][0]); got != s.Report.Organization {
 		t.Errorf("Organization value = %q, want %q", got, s.Report.Organization)
 	}
 

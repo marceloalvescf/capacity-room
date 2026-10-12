@@ -92,12 +92,13 @@ func resolve(s snapshot.Snapshot, opts Options) (profile, severity string, err e
 	return profile, severity, nil
 }
 
-// Build assembles the document of a snapshot: a cover, an opening page,
-// the five sections, and a quality appendix with its notes. The executive
-// profile keeps the cover, the opening page, the executive section, and the
-// appendix with its notes, and raises the minimum severity to at least
-// attention for the whole document; the detailed profile raises it for the
-// executive section alone.
+// Build assembles the document of a snapshot: a cover, the verdict, the
+// opening page, the executive section, and then, for the detailed profile,
+// the four sections of the evidence, and a quality appendix with its notes.
+// The executive profile keeps the cover, the verdict, the opening page, the
+// executive section, and the appendix with its notes, and raises the
+// minimum severity to at least attention for the whole document; the
+// detailed profile raises it for the executive section alone.
 func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, error) {
 	profile, severity, err := resolve(s, opts)
 	if err != nil {
@@ -107,15 +108,19 @@ func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, err
 	b := &builder{cat: c}
 	thresholds := thresholdsFromSnapshot(s.Report.Thresholds)
 
-	front := buildFront(b, s)
-	blocks := []Block{front, PageBreak{Weak: false}}
+	shownSeverity := severity
+	if profile == "executive" {
+		shownSeverity = raiseToAttention(severity)
+	}
+	front := buildFront(b, s, profile, shownSeverity)
+	blocks := []Block{buildVerdict(b, s, shownSeverity), PageBreak{Weak: false}, front, PageBreak{Weak: false}}
+	blocks = append(blocks, buildExecutiveSection(b, s, thresholds, severity, profile == "executive")...)
 	if profile == "detailed" {
 		blocks = append(blocks, buildNamespacesSection(b, s.Namespaces, s.Findings, thresholds, severity)...)
 		blocks = append(blocks, buildWorkloadsSection(b, s.Workloads, s.Findings, thresholds, severity)...)
 		blocks = append(blocks, buildHPAsSection(b, s)...)
 		blocks = append(blocks, buildNodepoolsSection(b, s, thresholds, severity)...)
 	}
-	blocks = append(blocks, buildExecutiveSection(b, s, thresholds, severity, profile == "executive")...)
 	blocks = append(blocks, PageBreak{Weak: true})
 	appendixSeverity := severity
 	if profile == "executive" {

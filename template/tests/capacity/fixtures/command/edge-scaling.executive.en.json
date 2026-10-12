@@ -25,6 +25,369 @@
   },
   "blocks": [
     {
+      "type": "verdict",
+      "totals": {
+        "items": [
+          {
+            "status": "critical",
+            "label": "Critical",
+            "count": "9"
+          },
+          {
+            "status": "attention",
+            "label": "Attention",
+            "count": "10"
+          },
+          {
+            "status": "healthy",
+            "label": "Healthy",
+            "count": "7"
+          }
+        ],
+        "none": null
+      },
+      "quality": {
+        "label": "Data quality",
+        "count": "2",
+        "items": [
+          "Ambiguous HPA configuration or target values were omitted.",
+          "The capacity evidence of the nodes is incomplete."
+        ],
+        "more": null
+      },
+      "growth": {
+        "title": "Cluster autoscaling",
+        "current": "3",
+        "max": "3",
+        "state": null,
+        "gauge": {
+          "current": 3,
+          "max": 3,
+          "min": 2,
+          "hazard": true
+        },
+        "caption": "Nodes · current / maximum",
+        "finding": {
+          "status": "attention",
+          "label": "Attention",
+          "sentence": "The number of nodes is close to the observed maximum."
+        },
+        "warning": "The capacity evidence of the nodes is incomplete.",
+        "facts": [
+          {
+            "label": "Minimum nodes",
+            "value": "2"
+          },
+          {
+            "label": "Unschedulable pods",
+            "value": "2"
+          },
+          {
+            "label": "Scale events",
+            "value": "1"
+          }
+        ]
+      },
+      "pressure": {
+        "title": "Pressure by scope",
+        "rows": [
+          {
+            "status": "critical",
+            "scope": "Nodes",
+            "sentence": "Observed CPU usage on the node.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "aks-agentpool-12345678-vmss000000"
+              }
+            ],
+            "peak": {
+              "label": "Peak",
+              "value": "95%"
+            },
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "2"
+              }
+            ]
+          },
+          {
+            "status": "critical",
+            "scope": "Namespaces",
+            "sentence": "CPU usage against the limit indicates an increased risk of CPU throttling.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "payments"
+              }
+            ],
+            "peak": {
+              "label": "Peak",
+              "value": "330%"
+            },
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "1"
+              }
+            ]
+          },
+          {
+            "status": "critical",
+            "scope": "Workloads",
+            "sentence": "Memory usage against the limit indicates an increased risk of OOMKill.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "payments/payments-web"
+              }
+            ],
+            "peak": {
+              "label": "Peak",
+              "value": "12000%"
+            },
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "1"
+              },
+              {
+                "status": "attention",
+                "label": "Attention",
+                "count": "1"
+              }
+            ]
+          },
+          {
+            "status": "critical",
+            "scope": "HPAs",
+            "sentence": "The HPA reached its observed maximum of replicas.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "payments/web"
+              }
+            ],
+            "peak": null,
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "1"
+              },
+              {
+                "status": "attention",
+                "label": "Attention",
+                "count": "1"
+              }
+            ]
+          },
+          {
+            "status": "attention",
+            "scope": "Node pools",
+            "sentence": "Peak CPU pressure varied among the nodes of the pool.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "pool-a"
+              }
+            ],
+            "peak": null,
+            "counts": [
+              {
+                "status": "attention",
+                "label": "Attention",
+                "count": "2"
+              }
+            ]
+          }
+        ],
+        "empty": null
+      },
+      "plan": {
+        "title": "Prioritized action plan",
+        "table": {
+          "type": "table",
+          "id": "verdict-plan",
+          "headers": [
+            "#",
+            "Priority",
+            "Action",
+            "Scope"
+          ],
+          "rows": [
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "1"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Critical"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Review the configured maximum and the capacity of the workload."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments/web"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "2"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Critical"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Review the CPU limit and the observed consumption profile."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "3"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Critical"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Review the CPU request and the observed consumption."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "4"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Critical"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Review the memory limit and the observed consumption profile."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "5"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Critical"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Review the memory request and the observed consumption."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ]
+          ]
+        },
+        "empty": null,
+        "more": "5 of 10 actions. The full plan is in the executive summary."
+      },
+      "legend": [
+        {
+          "status": "healthy",
+          "label": "Healthy"
+        },
+        {
+          "status": "attention",
+          "label": "Attention"
+        },
+        {
+          "status": "critical",
+          "label": "Critical"
+        },
+        {
+          "status": "unavailable",
+          "label": "Data unavailable"
+        },
+        {
+          "status": "undefined",
+          "label": "No base for the ratio"
+        }
+      ]
+    },
+    {
+      "type": "pagebreak",
+      "weak": false
+    },
+    {
       "type": "front",
       "blocks": [
         {
@@ -76,6 +439,34 @@
                 {
                   "kind": "text",
                   "text": "07/14/2026 14:30 to 07/15/2026 14:30"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Profile"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Executive"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Minimum severity"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Attention and critical"
                 }
               ]
             ],

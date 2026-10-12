@@ -25,6 +25,317 @@
   },
   "blocks": [
     {
+      "type": "verdict",
+      "totals": {
+        "items": [
+          {
+            "status": "critical",
+            "label": "Crítico",
+            "count": "4"
+          },
+          {
+            "status": "attention",
+            "label": "Atenção",
+            "count": "3"
+          },
+          {
+            "status": "healthy",
+            "label": "Saudável",
+            "count": "6"
+          }
+        ],
+        "none": null
+      },
+      "quality": {
+        "label": "Qualidade dos dados",
+        "count": "1",
+        "items": [
+          "O histórico usa a associação atual entre pods ativos e workloads."
+        ],
+        "more": null
+      },
+      "growth": {
+        "title": "Autoscaling do cluster",
+        "current": "3",
+        "max": "3",
+        "state": null,
+        "gauge": {
+          "current": 3,
+          "max": 3,
+          "min": 1,
+          "hazard": true
+        },
+        "caption": "Nodes · atual / máximo",
+        "finding": {
+          "status": "attention",
+          "label": "Atenção",
+          "sentence": "O número de nodes está próximo ao máximo observado."
+        },
+        "warning": null,
+        "facts": [
+          {
+            "label": "Mínimo de nodes",
+            "value": "1"
+          },
+          {
+            "label": "Pods não agendáveis",
+            "value": "1"
+          },
+          {
+            "label": "Eventos de escala",
+            "value": "1"
+          }
+        ]
+      },
+      "pressure": {
+        "title": "Pressão por escopo",
+        "rows": [
+          {
+            "status": "critical",
+            "scope": "Namespaces",
+            "sentence": "O uso de memória em relação ao limit indica risco aumentado de OOMKill.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "payments"
+              }
+            ],
+            "peak": {
+              "label": "Pico",
+              "value": "12000%"
+            },
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Crítico",
+                "count": "1"
+              }
+            ]
+          },
+          {
+            "status": "critical",
+            "scope": "Workloads",
+            "sentence": "O uso de memória em relação ao limit indica risco aumentado de OOMKill.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "payments/payments-web"
+              }
+            ],
+            "peak": {
+              "label": "Pico",
+              "value": "10000%"
+            },
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Crítico",
+                "count": "1"
+              }
+            ]
+          },
+          {
+            "status": "attention",
+            "scope": "HPAs",
+            "sentence": "Há diferença média persistente entre replicas atuais e desejados.",
+            "name": [
+              {
+                "kind": "ident",
+                "text": "payments/payments-web"
+              }
+            ],
+            "peak": null,
+            "counts": [
+              {
+                "status": "attention",
+                "label": "Atenção",
+                "count": "1"
+              }
+            ]
+          }
+        ],
+        "empty": null
+      },
+      "plan": {
+        "title": "Plano de ação priorizado",
+        "table": {
+          "type": "table",
+          "id": "verdict-plan",
+          "headers": [
+            "#",
+            "Prioridade",
+            "Ação",
+            "Escopo"
+          ],
+          "rows": [
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "1"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Crítico"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Revisar o limit de memória e o perfil de consumo observado."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "2"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Crítico"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Revisar o request de memória e o consumo observado."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "3"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Crítico"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Revisar o limit de memória e o perfil de consumo observado."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments/payments-web"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "4"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "critical",
+                  "text": "Crítico"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Revisar o request de memória e o consumo observado."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments/payments-web"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "5"
+                }
+              ],
+              [
+                {
+                  "kind": "status",
+                  "status": "attention",
+                  "text": "Atenção"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Investigar eventos, restrições de agendamento e tempo de estabilização."
+                }
+              ],
+              [
+                {
+                  "kind": "ident",
+                  "text": "payments/payments-web"
+                }
+              ]
+            ]
+          ]
+        },
+        "empty": null,
+        "more": "5 de 6 ações. O plano completo está no resumo executivo."
+      },
+      "legend": [
+        {
+          "status": "healthy",
+          "label": "Saudável"
+        },
+        {
+          "status": "attention",
+          "label": "Atenção"
+        },
+        {
+          "status": "critical",
+          "label": "Crítico"
+        },
+        {
+          "status": "unavailable",
+          "label": "Dado indisponível"
+        },
+        {
+          "status": "undefined",
+          "label": "Sem base de cálculo"
+        }
+      ]
+    },
+    {
+      "type": "pagebreak",
+      "weak": false
+    },
+    {
       "type": "front",
       "blocks": [
         {
@@ -76,6 +387,34 @@
                 {
                   "kind": "text",
                   "text": "14/07/2026 14:30 a 15/07/2026 14:30"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Perfil"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Detalhado"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "text": "Severidade mínima"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "text": "Todas"
                 }
               ]
             ],
@@ -284,6 +623,494 @@
     {
       "type": "pagebreak",
       "weak": false
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Resumo executivo"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Síntese dos principais riscos identificados no período de 24 horas, com foco nos pontos críticos e nos que pedem atenção."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Workloads críticos"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "priority-workloads",
+      "headers": [
+        "Namespace",
+        "Workload",
+        "Qtde. Pods",
+        "Motivo"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments-web"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 10000% do limit; Memória: pico de 20000% do request"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Workloads que pedem atenção"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Nenhum workload que peça atenção foi identificado."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Namespaces com workload em risco"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "namespaces-at-risk",
+      "headers": [
+        "Namespace",
+        "CPU % / Limit",
+        "Mem % / Limit",
+        "Motivo",
+        "Status",
+        "Prioridade"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "40%"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "12000%"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Memória: pico de 10000% do limit; Memória: pico de 20000% do request"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Crítico 1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítico"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Workloads com máximo de replicas e sem HPA"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Nenhum workload atingiu o máximo de replicas ou apresentou ausência de HPA com risco automático no período analisado."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Situação dos node pools"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "nodepool-status",
+      "headers": [
+        "Node pool",
+        "Situação",
+        "Observação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "ident",
+              "text": "pool-a"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "healthy",
+              "text": "Saudável"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "—"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Plano de ação priorizado"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "action-plan",
+      "headers": [
+        "Ordem",
+        "Prioridade",
+        "Ação",
+        "Workloads / Escopo"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítico"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limit de memória e o perfil de consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítico"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o request de memória e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítico"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o limit de memória e o perfil de consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments/payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "critical",
+              "text": "Crítico"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o request de memória e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments/payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "5"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Atenção"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Investigar eventos, restrições de agendamento e tempo de estabilização."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments/payments-web"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "6"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Atenção"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Revisar o request de CPU e o consumo observado."
+            }
+          ],
+          [
+            {
+              "kind": "ident",
+              "text": "payments"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "numbered": true,
+      "runs": [
+        {
+          "kind": "text",
+          "text": "Limitações materiais"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "id": "material-limitations",
+      "headers": [
+        "Capacidade",
+        "Cobertura",
+        "Observação"
+      ],
+      "rows": [
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Uso por workload"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "A associação histórica entre pods e workloads não pôde ser reconstruída com exatidão."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Autoscaling de nodes"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "O estado do autoscaling de nodes não pôde ser determinado."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Interpretação"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "O histórico usa a associação atual entre pods ativos e workloads."
+            }
+          ]
+        ]
+      ]
     },
     {
       "type": "heading",
@@ -926,494 +1753,6 @@
             {
               "kind": "text",
               "text": "Pronto; Agendável"
-            }
-          ]
-        ]
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 1,
-      "numbered": true,
-      "runs": [
-        {
-          "kind": "text",
-          "text": "Resumo executivo"
-        }
-      ]
-    },
-    {
-      "type": "paragraph",
-      "runs": [
-        {
-          "kind": "text",
-          "text": "Síntese dos principais riscos identificados no período de 24 horas, com foco nos pontos críticos e nos que pedem atenção."
-        }
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "numbered": true,
-      "runs": [
-        {
-          "kind": "text",
-          "text": "Workloads críticos"
-        }
-      ]
-    },
-    {
-      "type": "table",
-      "id": "priority-workloads",
-      "headers": [
-        "Namespace",
-        "Workload",
-        "Qtde. Pods",
-        "Motivo"
-      ],
-      "rows": [
-        [
-          [
-            {
-              "kind": "ident",
-              "text": "payments"
-            }
-          ],
-          [
-            {
-              "kind": "ident",
-              "text": "payments-web"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "1"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Memória: pico de 10000% do limit; Memória: pico de 20000% do request"
-            }
-          ]
-        ]
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "numbered": true,
-      "runs": [
-        {
-          "kind": "text",
-          "text": "Workloads que pedem atenção"
-        }
-      ]
-    },
-    {
-      "type": "paragraph",
-      "runs": [
-        {
-          "kind": "text",
-          "text": "Nenhum workload que peça atenção foi identificado."
-        }
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "numbered": true,
-      "runs": [
-        {
-          "kind": "text",
-          "text": "Namespaces com workload em risco"
-        }
-      ]
-    },
-    {
-      "type": "table",
-      "id": "namespaces-at-risk",
-      "headers": [
-        "Namespace",
-        "CPU % / Limit",
-        "Mem % / Limit",
-        "Motivo",
-        "Status",
-        "Prioridade"
-      ],
-      "rows": [
-        [
-          [
-            {
-              "kind": "ident",
-              "text": "payments"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "healthy",
-              "text": "40%"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "critical",
-              "text": "12000%"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Memória: pico de 10000% do limit; Memória: pico de 20000% do request"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Crítico 1"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "critical",
-              "text": "Crítico"
-            }
-          ]
-        ]
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "numbered": true,
-      "runs": [
-        {
-          "kind": "text",
-          "text": "Workloads com máximo de replicas e sem HPA"
-        }
-      ]
-    },
-    {
-      "type": "paragraph",
-      "runs": [
-        {
-          "kind": "text",
-          "text": "Nenhum workload atingiu o máximo de replicas ou apresentou ausência de HPA com risco automático no período analisado."
-        }
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "numbered": true,
-      "runs": [
-        {
-          "kind": "text",
-          "text": "Situação dos node pools"
-        }
-      ]
-    },
-    {
-      "type": "table",
-      "id": "nodepool-status",
-      "headers": [
-        "Node pool",
-        "Situação",
-        "Observação"
-      ],
-      "rows": [
-        [
-          [
-            {
-              "kind": "ident",
-              "text": "pool-a"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "healthy",
-              "text": "Saudável"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "—"
-            }
-          ]
-        ]
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "numbered": true,
-      "runs": [
-        {
-          "kind": "text",
-          "text": "Plano de ação priorizado"
-        }
-      ]
-    },
-    {
-      "type": "table",
-      "id": "action-plan",
-      "headers": [
-        "Ordem",
-        "Prioridade",
-        "Ação",
-        "Workloads / Escopo"
-      ],
-      "rows": [
-        [
-          [
-            {
-              "kind": "text",
-              "text": "1"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "critical",
-              "text": "Crítico"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Revisar o limit de memória e o perfil de consumo observado."
-            }
-          ],
-          [
-            {
-              "kind": "ident",
-              "text": "payments"
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "2"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "critical",
-              "text": "Crítico"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Revisar o request de memória e o consumo observado."
-            }
-          ],
-          [
-            {
-              "kind": "ident",
-              "text": "payments"
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "3"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "critical",
-              "text": "Crítico"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Revisar o limit de memória e o perfil de consumo observado."
-            }
-          ],
-          [
-            {
-              "kind": "ident",
-              "text": "payments/payments-web"
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "4"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "critical",
-              "text": "Crítico"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Revisar o request de memória e o consumo observado."
-            }
-          ],
-          [
-            {
-              "kind": "ident",
-              "text": "payments/payments-web"
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "5"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "attention",
-              "text": "Atenção"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Investigar eventos, restrições de agendamento e tempo de estabilização."
-            }
-          ],
-          [
-            {
-              "kind": "ident",
-              "text": "payments/payments-web"
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "6"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "attention",
-              "text": "Atenção"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Revisar o request de CPU e o consumo observado."
-            }
-          ],
-          [
-            {
-              "kind": "ident",
-              "text": "payments"
-            }
-          ]
-        ]
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "numbered": true,
-      "runs": [
-        {
-          "kind": "text",
-          "text": "Limitações materiais"
-        }
-      ]
-    },
-    {
-      "type": "table",
-      "id": "material-limitations",
-      "headers": [
-        "Capacidade",
-        "Cobertura",
-        "Observação"
-      ],
-      "rows": [
-        [
-          [
-            {
-              "kind": "text",
-              "text": "Uso por workload"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "attention",
-              "text": "Parcial"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "A associação histórica entre pods e workloads não pôde ser reconstruída com exatidão."
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "Autoscaling de nodes"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "attention",
-              "text": "Parcial"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "O estado do autoscaling de nodes não pôde ser determinado."
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "Interpretação"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "attention",
-              "text": "Parcial"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "O histórico usa a associação atual entre pods ativos e workloads."
             }
           ]
         ]

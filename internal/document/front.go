@@ -24,13 +24,27 @@ var legendOrder = []legendRow{
 	{"undefined", catalog.FrontLegendUndefined},
 }
 
+// profileKeys and severityKeys word the profile and the minimum severity the
+// document was built with.
+var (
+	profileKeys = map[string]catalog.Key{
+		"detailed":  catalog.FrontMetadataProfileDetailed,
+		"executive": catalog.FrontMetadataProfileExecutive,
+	}
+	severityKeys = map[string]catalog.Key{
+		"all":       catalog.FrontMetadataMinSeverityAll,
+		"attention": catalog.FrontMetadataMinSeverityAttention,
+		"critical":  catalog.FrontMetadataMinSeverityCritical,
+	}
+)
+
 // buildFront assembles the opening page: an outline, the report metadata,
 // the status legend, and the data-quality counts.
-func buildFront(b *builder, s snapshot.Snapshot) Front {
+func buildFront(b *builder, s snapshot.Snapshot, profile, severity string) Front {
 	return Front{Blocks: []Block{
 		Outline{Title: b.text(catalog.FrontOutlineTitle, nil), Depth: 2},
 		frontHeading(b, catalog.FrontMetadataHeading),
-		metadataTable(b, s),
+		metadataTable(b, s, profile, severity),
 		frontHeading(b, catalog.FrontLegendHeading),
 		legendTable(b),
 		frontHeading(b, catalog.FrontQualityHeading),
@@ -44,14 +58,16 @@ func frontHeading(b *builder, key catalog.Key) Heading {
 	return Heading{Level: 2, Numbered: false, Runs: []Run{Text(b.text(key, nil))}}
 }
 
-// metadataTable builds the "report-metadata" table: four rows always
+// metadataTable builds the "report-metadata" table: six rows always
 // present, and the organization and classification rows only when the
 // snapshot carries them. A name is an ident run, so that it keeps its
 // letters and breaks only at its own hyphens.
-func metadataTable(b *builder, s snapshot.Snapshot) Table {
+func metadataTable(b *builder, s snapshot.Snapshot, profile, severity string) Table {
 	rows := [][][]Run{
 		metadataRow(b, catalog.FrontMetadataEnvironment, []Run{Ident(s.Scope.ClusterName)}),
 		metadataRow(b, catalog.FrontMetadataPeriod, []Run{Text(periodRange(b, s))}),
+		metadataRow(b, catalog.FrontMetadataProfile, []Run{Text(b.text(profileKeys[profile], nil))}),
+		metadataRow(b, catalog.FrontMetadataMinSeverity, []Run{Text(b.text(severityKeys[severity], nil))}),
 		metadataRow(b, catalog.FrontMetadataNamespaces, identList(s.Scope.Namespaces)),
 		metadataRow(b, catalog.FrontMetadataExcludedContainers, excludedContainers(b, s)),
 	}

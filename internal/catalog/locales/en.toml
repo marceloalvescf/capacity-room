@@ -27,6 +27,13 @@ excluded_containers = "Excluded containers"
 no_excluded_containers = "None"
 organization = "Organization"
 classification = "Classification"
+profile = "Profile"
+profile_detailed = "Detailed"
+profile_executive = "Executive"
+min_severity = "Minimum severity"
+min_severity_all = "All"
+min_severity_attention = "Attention and critical"
+min_severity_critical = "Critical only"
 
 [front.legend]
 heading = "Status legend"
@@ -538,3 +545,45 @@ memory = "Memory limit not observed"
 [reason.bursty]
 cpu = "CPU: variation of {{.Percent}}"
 memory = "Memory: variation of {{.Percent}}"
+
+[verdict]
+none = "This report holds no findings."
+quality = "Data quality"
+more_warnings = "+{{.Count}}"
+
+[verdict.growth]
+title = "Cluster autoscaling"
+caption = "Nodes · current / maximum"
+min_nodes = "Minimum nodes"
+unschedulable_pods = "Unschedulable pods"
+scale_events = "Scale events"
+
+[verdict.growth.state]
+disabled = "Disabled"
+unknown = "Unknown"
+
+[verdict.pressure]
+title = "Pressure by scope"
+empty = "Nothing needs attention."
+peak = "Peak"
+
+[verdict.pressure.scope]
+node = "Nodes"
+nodepool = "Node pools"
+namespace = "Namespaces"
+workload = "Workloads"
+hpa = "HPAs"
+
+[verdict.plan]
+title = "Prioritized action plan"
+order = "#"
+priority = "Priority"
+action = "Action"
+scope = "Scope"
+empty = "No prioritized action was identified."
+more = "{{.Shown}} of {{.Total}} actions. The full plan is in the executive summary."
+
+[status]
+healthy = "Healthy"
+attention = "Attention"
+critical = "Critical"

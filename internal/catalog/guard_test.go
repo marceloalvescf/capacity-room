@@ -305,6 +305,41 @@ var wordingTable = []struct {
 	{ScopeSummary("workload"), "{{.Count}} workloads identificados", "{{.Count}} workloads identified"},
 	{ScopeSummary("hpa"), "{{.Count}} HPAs identificados", "{{.Count}} HPAs identified"},
 	{ScopeSummary("deployment"), "{{.Count}} Deployments identificados", "{{.Count}} Deployments identified"},
+	{FrontMetadataProfile, "Perfil", "Profile"},
+	{FrontMetadataProfileDetailed, "Detalhado", "Detailed"},
+	{FrontMetadataProfileExecutive, "Executivo", "Executive"},
+	{FrontMetadataMinSeverity, "Severidade mínima", "Minimum severity"},
+	{FrontMetadataMinSeverityAll, "Todas", "All"},
+	{FrontMetadataMinSeverityAttention, "Atenção e crítico", "Attention and critical"},
+	{FrontMetadataMinSeverityCritical, "Somente crítico", "Critical only"},
+	{VerdictNone, "Este relatório não tem achados.", "This report holds no findings."},
+	{VerdictQuality, "Qualidade dos dados", "Data quality"},
+	{VerdictMoreWarnings, "+{{.Count}}", "+{{.Count}}"},
+	{VerdictGrowthTitle, "Autoscaling do cluster", "Cluster autoscaling"},
+	{VerdictGrowthCaption, "Nodes · atual / máximo", "Nodes · current / maximum"},
+	{VerdictGrowthMinNodes, "Mínimo de nodes", "Minimum nodes"},
+	{VerdictGrowthUnschedulablePods, "Pods não agendáveis", "Unschedulable pods"},
+	{VerdictGrowthScaleEvents, "Eventos de escala", "Scale events"},
+	{VerdictGrowthState("disabled"), "Inativo", "Disabled"},
+	{VerdictGrowthState("unknown"), "Desconhecido", "Unknown"},
+	{VerdictPressureTitle, "Pressão por escopo", "Pressure by scope"},
+	{VerdictPressureEmpty, "Nada pede atenção.", "Nothing needs attention."},
+	{VerdictPressureScope("node"), "Nodes", "Nodes"},
+	{VerdictPressureScope("nodepool"), "Node pools", "Node pools"},
+	{VerdictPressureScope("namespace"), "Namespaces", "Namespaces"},
+	{VerdictPressureScope("workload"), "Workloads", "Workloads"},
+	{VerdictPressureScope("hpa"), "HPAs", "HPAs"},
+	{VerdictPressurePeak, "Pico", "Peak"},
+	{VerdictPlanTitle, "Plano de ação priorizado", "Prioritized action plan"},
+	{VerdictPlanOrder, "#", "#"},
+	{VerdictPlanPriority, "Prioridade", "Priority"},
+	{VerdictPlanAction, "Ação", "Action"},
+	{VerdictPlanScope, "Escopo", "Scope"},
+	{VerdictPlanEmpty, "Nenhuma ação priorizada foi identificada.", "No prioritized action was identified."},
+	{VerdictPlanMore, "{{.Shown}} de {{.Total}} ações. O plano completo está no resumo executivo.", "{{.Shown}} of {{.Total}} actions. The full plan is in the executive summary."},
+	{StatusHealthy, "Saudável", "Healthy"},
+	{StatusAttention, "Atenção", "Attention"},
+	{StatusCritical, "Crítico", "Critical"},
 	{Reason("request_peak", "cpu"), "CPU: pico de {{.Percent}} do request", "CPU: peak of {{.Percent}} of the request"},
 	{Reason("request_peak", "memory"), "Memória: pico de {{.Percent}} do request", "Memory: peak of {{.Percent}} of the request"},
 	{Reason("request_average", "cpu"), "CPU: média de {{.Percent}} do request", "CPU: average of {{.Percent}} of the request"},
@@ -1821,6 +1856,12 @@ func TestKeysHoldEveryConstant(t *testing.T) {
 	}
 	for _, kind := range ScopeSummaries {
 		derived[ScopeSummary(kind)] = true
+	}
+	for _, state := range VerdictGrowthStates {
+		derived[VerdictGrowthState(state)] = true
+	}
+	for _, scopeType := range VerdictPressureScopes {
+		derived[VerdictPressureScope(scopeType)] = true
 	}
 	for _, pair := range FindingPairs() {
 		derived[FindingSummary(pair.Family, pair.Resource)] = true
