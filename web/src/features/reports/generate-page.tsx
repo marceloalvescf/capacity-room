@@ -13,7 +13,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { Select } from "@/components/ui/select";
 import { isLanguage, type Language } from "@/i18n/language";
 import { useProfiles, useReport, useRequestReport, type ProfileSummary, type Report } from "./api";
-import { periodDays, periodText, resolveCalendar, type PeriodValue } from "./period";
+import { periodDays, resolveCalendar, type PeriodValue } from "./period";
 import { PeriodPicker } from "./period-picker";
 
 interface Values {
@@ -117,7 +117,7 @@ function GenerateForm({
   initial: Values;
   reload: () => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const request = useRequestReport();
   const [values, setValues] = useState(initial);
@@ -134,7 +134,8 @@ function GenerateForm({
   const sending = useRef(false);
   const form = useRef<HTMLFormElement>(null);
   const periodTrigger = useRef<HTMLButtonElement>(null);
-  const focusPeriodOnOpen = useRef(false);
+  const timezoneSelect = useRef<HTMLSelectElement>(null);
+  const focusTimezoneOnOpen = useRef(false);
   // Counts the attempts that left a field marked; each one moves focus to the
   // first marked field once it is drawn. The period's trigger is a button,
   // which has no aria-invalid, so it says so with data-invalid.
@@ -158,9 +159,9 @@ function GenerateForm({
   }, [vanished]);
 
   useEffect(() => {
-    if (optionsOpen && focusPeriodOnOpen.current) {
-      focusPeriodOnOpen.current = false;
-      periodTrigger.current?.focus();
+    if (optionsOpen && focusTimezoneOnOpen.current) {
+      focusTimezoneOnOpen.current = false;
+      timezoneSelect.current?.focus();
     }
   }, [optionsOpen]);
 
@@ -169,7 +170,6 @@ function GenerateForm({
     setValues(defaultsOf(profiles[0] as ProfileSummary, values.language));
     return null;
   }
-  const language = isLanguage(i18n.language) ? i18n.language : "en";
 
   function renewKey() {
     key.current = crypto.randomUUID();
@@ -227,7 +227,7 @@ function GenerateForm({
       }
     }
     setProblems(marked);
-    if (Object.keys(marked).some((name) => name !== "namespaces")) {
+    if (Object.keys(marked).some((name) => name !== "namespaces" && name !== "period")) {
       setOptionsOpen(true);
     }
     if (Object.keys(marked).length > 0) {
@@ -250,7 +250,6 @@ function GenerateForm({
     const when = kept.current ?? bodyPeriod(values.period, values.timezone);
     if (when === null) {
       setProblems({ period: "order" });
-      setOptionsOpen(true);
       setMarks((count) => count + 1);
       return;
     }
@@ -321,10 +320,7 @@ function GenerateForm({
       ? { kind: "range", ...resolveCalendar(values.period.name, values.timezone, new Date()) }
       : values.period,
   );
-  // A typed range is two wall times, a value; a length or a calendar name reads as words.
-  const period = periodText(t, language, values.period);
   const summary: Summary = [
-    values.period.kind === "range" ? valuePart(period) : wordPart(period),
     valuePart(values.timezone),
     wordPart(t(`reportProfile.${values.reportProfile}`)),
     wordPart(t(`minSeverity.${values.minSeverity}`)),
@@ -381,6 +377,19 @@ function GenerateForm({
         )}
       </fieldset>
 
+      <div className="max-w-96">
+        <PeriodPicker
+          value={values.period}
+          zone={values.timezone}
+          permitted={profile.permitted_periods}
+          error={problemText("period")}
+          triggerRef={periodTrigger}
+          onChange={(period) => {
+            edit({ period }, ["period"]);
+          }}
+        />
+      </div>
+
       <Segmented
         legend={t("generate.language")}
         name="report-language"
@@ -409,7 +418,7 @@ function GenerateForm({
             <Button
               className="ml-auto"
               onClick={() => {
-                focusPeriodOnOpen.current = true;
+                focusTimezoneOnOpen.current = true;
                 setOptionsOpen(true);
               }}
             >
@@ -419,18 +428,9 @@ function GenerateForm({
         </div>
         {optionsOpen ? (
           <div className="grid gap-4 sm:grid-cols-2">
-            <PeriodPicker
-              value={values.period}
-              zone={values.timezone}
-              permitted={profile.permitted_periods}
-              error={problemText("period")}
-              triggerRef={periodTrigger}
-              onChange={(period) => {
-                edit({ period }, ["period"]);
-              }}
-            />
             <Select
               label={t("generate.timezone")}
+              ref={timezoneSelect}
               className="font-mono"
               value={values.timezone}
               error={problemText("timezone")}

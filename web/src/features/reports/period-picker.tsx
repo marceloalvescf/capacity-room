@@ -345,10 +345,14 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
           </button>
         </PopoverTrigger>
         <PopoverContent
+          side="bottom"
           align="start"
           aria-labelledby={labelId}
           collisionPadding={8}
-          className="max-h-(--radix-popover-content-available-height) w-[min(36rem,calc(100vw-2rem))] overflow-y-auto p-0"
+          className={cn(
+            "max-h-(--radix-popover-content-available-height) overflow-y-auto p-0",
+            restricted ? "w-[min(36rem,calc(100vw-2rem))]" : "w-[min(46rem,calc(100vw-2rem))]",
+          )}
           onEscapeKeyDown={(event) => {
             if (calendar !== null) {
               event.preventDefault();
@@ -357,7 +361,7 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
             }
           }}
         >
-          <div className={restricted ? "flex flex-col" : "grid sm:grid-cols-[1fr_12rem]"}>
+          <div className={restricted ? "flex flex-col" : "grid sm:grid-cols-[1fr_24rem]"}>
             {restricted ? (
               <p className="p-3 text-sm text-muted-fg">{t("period.restricted")}</p>
             ) : (
@@ -394,38 +398,41 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
                 )}
               </div>
             )}
-            <div className="flex flex-col px-1 py-2 sm:border-l sm:border-border">
-              {lengths.map((length) => (
-                <button
-                  key={length}
-                  type="button"
-                  aria-pressed={value.kind === "length" && value.period === length}
-                  className={choice}
-                  onClick={() => {
-                    pick({ kind: "length", period: length });
-                  }}
-                >
-                  {periodText(t, lang, { kind: "length", period: length })}
-                </button>
-              ))}
-              {restricted ? null : (
-                <>
-                  <hr className="my-2 border-border" />
-                  {calendarRanges.map((name) => (
+            <div className="px-1 py-2 sm:border-l sm:border-border">
+              <div className={restricted ? "flex flex-col" : "grid grid-cols-2 gap-x-1"}>
+                <div className="flex flex-col">
+                  {lengths.map((length) => (
                     <button
-                      key={name}
+                      key={length}
                       type="button"
-                      aria-pressed={value.kind === "calendar" && value.name === name}
-                      className={cn(choice)}
+                      aria-pressed={value.kind === "length" && value.period === length}
+                      className={choice}
                       onClick={() => {
-                        pick({ kind: "calendar", name });
+                        pick({ kind: "length", period: length });
                       }}
                     >
-                      {periodText(t, lang, { kind: "calendar", name })}
+                      {periodText(t, lang, { kind: "length", period: length })}
                     </button>
                   ))}
-                </>
-              )}
+                </div>
+                {restricted ? null : (
+                  <div className="flex flex-col">
+                    {calendarRanges.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        aria-pressed={value.kind === "calendar" && value.name === name}
+                        className={choice}
+                        onClick={() => {
+                          pick({ kind: "calendar", name });
+                        }}
+                      >
+                        {periodText(t, lang, { kind: "calendar", name })}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </PopoverContent>

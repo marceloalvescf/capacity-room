@@ -296,6 +296,7 @@ The findings filter: one 2px-cornered toggle per severity, the status mark then 
 ### Inputs / Fields
 - **Style:** Sheet fill, 1px Input Border, 2px radius, min height 36px, 12px padding. The label sits above at 0.875rem 500; a hint below in Muted Ink; an error below in Chart Magenta. A select is the browser's own `<select>`, styled the same.
 - **Focus:** 2px Sounding Blue outline, 2px offset.
+- **Period (New report form):** a field of its own above the report language, at most 24rem wide and full width below that; its trigger is an input-style button naming the period. The popover opens below the trigger at up to 46rem (the window less 2rem when narrower), Sheet with the Neatline frame: the length and the typed range on the left, the quick lengths and the calendar periods side by side in two columns of a 24rem pane on the right, each choice on one line in both languages, with no divider between them. A profile that limits its periods gets a single column of those periods in a 36rem popover. The Options box under the form holds the time zone, the report profile, and the minimum severity only; its closed summary lists those three.
 - **Checkbox:** native box tinted with Action Ink.
 
 ### Navigation

@@ -37,7 +37,6 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await page.getByLabel(en.generate.profile, { exact: true }).selectOption({ label: "Production" });
     await page.getByRole("checkbox", { name: "payments", exact: true }).check();
     await page.getByRole("radio", { name: en.language.en, exact: true }).check();
-    await page.getByRole("button", { name: en.generate.change, exact: true }).click();
     await page.getByRole("button", { name: new RegExp(`^${en.generate.period}`) }).click();
     const picker = page.getByRole("dialog");
     await picker.getByRole("radio", { name: en.period.mode.range, exact: true }).check();

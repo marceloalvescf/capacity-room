@@ -26,6 +26,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   namespaces, workloads, and nodes do.
 - The nodes and the HPAs on the report say under each status why the row
   has it.
+- The period of a new report is a field of its own, and its choices open
+  below it in two columns without scrolling.
 
 ### Fixed
 

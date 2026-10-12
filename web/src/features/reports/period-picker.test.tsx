@@ -61,6 +61,35 @@ describe("period picker", () => {
     expect(await screen.findByRole("dialog", { name: t("generate.period") })).toBeInTheDocument();
   });
 
+  it("the popover opens below, wide, with lengths and calendar periods in two lists", async () => {
+    const user = userEvent.setup();
+    open([]);
+    const dialog = await trigger(user);
+    expect(dialog).toHaveAttribute("data-side", "bottom");
+    expect(dialog).toHaveClass("w-[min(46rem,calc(100vw-2rem))]");
+    const lengths = within(dialog).getByRole("button", { name: t("period.quick.1h") }).parentElement as HTMLElement;
+    const calendar = within(dialog).getByRole("button", { name: t("period.calendar.today") }).parentElement as HTMLElement;
+    expect(lengths).not.toBe(calendar);
+    expect(lengths.parentElement).toBe(calendar.parentElement);
+    expect(lengths.parentElement).toHaveClass("grid-cols-2");
+    expect(within(lengths).getAllByRole("button").map((button) => button.textContent)).toEqual(
+      ["1h", "6h", "24h", "7d", "15d", "30d"].map((quick) => t(`period.quick.${quick}`)),
+    );
+    expect(within(calendar).queryByRole("button", { name: t("period.quick.1h") })).not.toBeInTheDocument();
+    expect(within(lengths).queryByRole("button", { name: t("period.calendar.today") })).not.toBeInTheDocument();
+    expect(dialog.querySelector("hr")).toBeNull();
+  });
+
+  it("a restricted profile has one list of its lengths", async () => {
+    const user = userEvent.setup();
+    open(["24h", "7d"]);
+    const dialog = await trigger(user);
+    expect(dialog).toHaveClass("w-[min(36rem,calc(100vw-2rem))]");
+    const first = within(dialog).getByRole("button", { name: t("period.quick.24h") }).parentElement as HTMLElement;
+    expect(within(first).getAllByRole("button")).toHaveLength(2);
+    expect(first.parentElement).not.toHaveClass("grid-cols-2");
+  });
+
   it("the popover is bounded to the window and scrolls inside", async () => {
     const user = userEvent.setup();
     open([], range("2026-09-01 00:00", "2026-10-01 00:00"));
@@ -211,8 +240,8 @@ describe("period picker", () => {
     const user = userEvent.setup();
     open([]);
     const dialog = await trigger(user);
-    const column = within(dialog).getByRole("button", { name: "Last hour" }).parentElement;
-    expect(column).toHaveClass("px-1");
+    const column = within(dialog).getByRole("button", { name: "Last hour" }).closest(".px-1");
+    expect(column).not.toBeNull();
   });
 
   describe("calendar", () => {

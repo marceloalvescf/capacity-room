@@ -79,7 +79,7 @@ describe("new report form", () => {
     mock.session = signedIn({ language: "pt-BR" });
     await open("/generate", "pt-BR");
     expect(profileSelect().value).toBe("prod");
-    expect(screen.getByText(summaryLine("Últimas 24 horas · America/Sao_Paulo · Detalhado · Todas"))).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("America/Sao_Paulo · Detalhado · Todas"))).toBeInTheDocument();
     expect(screen.getAllByRole("checkbox").filter((box) => (box as HTMLInputElement).checked)).toEqual([]);
     expect(screen.getByRole("radio", { name: "Português (Brasil)" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "English" })).not.toBeChecked();
@@ -92,7 +92,7 @@ describe("new report form", () => {
     await user.selectOptions(profileSelect(), "staging");
     expect(screen.queryByRole("checkbox", { name: "payments" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("checkbox").filter((box) => (box as HTMLInputElement).checked)).toEqual([]);
-    expect(screen.getByText(summaryLine("Last 7 days · UTC · Executive · Attention and critical"))).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("UTC · Executive · Attention and critical"))).toBeInTheDocument();
   });
 
   it("namespaces are shown in monospace", async () => {
@@ -122,15 +122,36 @@ describe("new report form", () => {
     expect(fieldset).not.toHaveAttribute("aria-invalid");
   });
 
-  it("Change opens the options and moves focus to the period", async () => {
+  it("Change opens the options and moves focus to the time zone", async () => {
     const { user } = await open();
     const change = screen.getByRole("button", { name: t("generate.change") });
     expect(change).not.toHaveAttribute("aria-expanded");
     await user.click(change);
-    const trigger = screen.getByRole("button", { name: new RegExp(t("generate.period")) });
+    const zone = screen.getByLabelText(t("generate.timezone"));
     await waitFor(() => {
-      expect(trigger).toHaveFocus();
+      expect(zone).toHaveFocus();
     });
+  });
+
+  it("the period is a field of its own, reachable with the options closed", async () => {
+    const { user } = await open();
+    expect(screen.queryByLabelText(t("generate.timezone"))).not.toBeInTheDocument();
+    const trigger = screen.getByRole("button", { name: new RegExp(t("generate.period")) });
+    expect(trigger.closest("div.max-w-96")).not.toBeNull();
+    expect(screen.getByRole("group", { name: t("generate.language") }).compareDocumentPosition(trigger)).toBe(
+      Node.DOCUMENT_POSITION_PRECEDING,
+    );
+    await user.click(trigger);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("the closed options summary leaves the period out", async () => {
+    await open();
+    const options = screen.getByText(t("generate.options")).parentElement as HTMLElement;
+    expect(options).toHaveTextContent("America/Sao_Paulo");
+    expect(options).toHaveTextContent(t("reportProfile.detailed"));
+    expect(options).not.toHaveTextContent("Last 24 hours");
+    expect(screen.getByRole("button", { name: new RegExp(t("generate.period")) })).toHaveTextContent("Last 24 hours");
   });
 
   it("sends the choices and goes to the job", async () => {
@@ -249,7 +270,6 @@ describe("new report form", () => {
       }),
     ];
     const { user } = await open();
-    await user.click(screen.getByRole("button", { name: t("generate.change") }));
     await user.click(screen.getByRole("button", { name: new RegExp(t("generate.period")) }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(t("period.restricted"))).toBeInTheDocument();
@@ -265,7 +285,6 @@ describe("new report form", () => {
     ];
     const { user } = await open();
     expect(screen.getByText(t("generate.longPeriod"))).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: t("generate.change") }));
     await user.click(screen.getByRole("button", { name: new RegExp(t("generate.period")) }));
     await user.click(await screen.findByRole("button", { name: t("period.quick.15d") }));
     expect(screen.queryByText(t("generate.longPeriod"))).not.toBeInTheDocument();
@@ -323,13 +342,34 @@ describe("new report form", () => {
     );
     await user.click(submit());
     expect(await screen.findByText(t("validation.notPermitted"))).toBeInTheDocument();
-    expect(screen.getByLabelText(t("generate.timezone"))).toBeInTheDocument();
+    expect(screen.queryByLabelText(t("generate.timezone"))).not.toBeInTheDocument();
     const trigger = screen.getByRole("button", { name: new RegExp(t("generate.period")) });
     await waitFor(() => {
       expect(trigger).toHaveFocus();
     });
     expect(trigger).toHaveAccessibleDescription(t("validation.notPermitted"));
     expect(screen.queryByText(t("error.REPORT_SELECTION_NOT_PERMITTED"))).not.toBeInTheDocument();
+  });
+
+  it("a time zone problem still opens the options and focuses the time zone", async () => {
+    const { user } = await open();
+    await user.click(namespace("payments"));
+    server.use(
+      http.post(
+        `${window.location.origin}/api/v1/reports`,
+        () =>
+          failure(422, "REPORT_SELECTION_NOT_PERMITTED", {
+            fields: { timezone: "not_permitted" },
+          }),
+        { once: true },
+      ),
+    );
+    await user.click(submit());
+    const zone = await screen.findByLabelText(t("generate.timezone"));
+    await waitFor(() => {
+      expect(zone).toHaveFocus();
+    });
+    expect(zone).toHaveAccessibleDescription(t("validation.notPermitted"));
   });
 
   it("a field the form does not show falls back to the alert of the code", async () => {
@@ -434,7 +474,7 @@ describe("new report form", () => {
     expect(namespace("checkout")).toBeChecked();
     expect(namespace("web")).not.toBeChecked();
     expect(screen.getByRole("radio", { name: "Português (Brasil)" })).toBeChecked();
-    expect(screen.getByText(summaryLine("Last 36 hours · America/Sao_Paulo · Detailed · Critical only"))).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("America/Sao_Paulo · Detailed · Critical only"))).toBeInTheDocument();
   });
 
   it("a report that cannot be read leaves a blank form", async () => {
@@ -494,10 +534,6 @@ describe("calendar ranges", () => {
   }
 
   async function openPeriod(user: ReturnType<typeof userEvent.setup>) {
-    const change = screen.queryByRole("button", { name: t("generate.change") });
-    if (change !== null) {
-      await user.click(change);
-    }
     await user.click(screen.getByRole("button", { name: new RegExp(t("generate.period")) }));
     return screen.findByRole("dialog");
   }
@@ -586,8 +622,10 @@ describe("calendar ranges", () => {
       );
       await user.click(submit());
       expect(await screen.findByText(c.word())).toBeInTheDocument();
-      expect(screen.getByLabelText(t("generate.timezone"))).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: new RegExp(t("generate.period")) })).toHaveAccessibleDescription(c.word());
+      expect(screen.queryByLabelText(t("generate.timezone"))).not.toBeInTheDocument();
+      const trigger = screen.getByRole("button", { name: new RegExp(t("generate.period")) });
+      expect(trigger).toHaveAccessibleDescription(c.word());
+      expect(trigger).toHaveFocus();
     });
   }
 
@@ -596,6 +634,7 @@ describe("calendar ranges", () => {
     const { user } = await open();
     await ready(user);
     await typeRange(user, "2026-09-01 00:00", "2026-10-01 00:00");
+    await user.click(screen.getByRole("button", { name: t("generate.change") }));
     await user.selectOptions(screen.getByLabelText(t("generate.timezone")), "America/New_York");
     await user.click(submit());
     await waitFor(() => {
@@ -625,9 +664,12 @@ describe("calendar ranges", () => {
     });
     mock.reports = [source];
     await open(`/generate?from=${source.id}`);
-    const range = screen.getByText(summaryLine("2026-09-01 00:00 to 2026-10-01 00:00 · America/Sao_Paulo · Detailed · All"));
-    expect(within(range).getByText("2026-09-01 00:00 to 2026-10-01 00:00")).toHaveClass("font-mono");
-    expect(within(range).getByText("Detailed")).not.toHaveClass("font-mono");
+    const summary = screen.getByText(summaryLine("America/Sao_Paulo · Detailed · All"));
+    expect(within(summary).getByText("America/Sao_Paulo")).toHaveClass("font-mono");
+    expect(within(summary).getByText("Detailed")).not.toHaveClass("font-mono");
+    expect(screen.getByRole("button", { name: new RegExp(t("generate.period")) })).toHaveTextContent(
+      "2026-09-01 00:00 to 2026-10-01 00:00",
+    );
   });
 
   it("a resend of a calendar name keeps the key and the body", async () => {
@@ -731,7 +773,7 @@ describe("calendar ranges", () => {
     });
     mock.reports = [source];
     await open(`/generate?from=${source.id}`);
-    expect(screen.getByText(summaryLine("Last 7 days · America/Sao_Paulo · Detailed · All"))).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("America/Sao_Paulo · Detailed · All"))).toBeInTheDocument();
   });
 
   it("long range", async () => {
