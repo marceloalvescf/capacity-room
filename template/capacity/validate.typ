@@ -38,8 +38,9 @@
   unknown-status: "unknown status",
   empty-runs: "`runs` must not be empty at",
   empty-list: "`items` must not be empty at",
-  misplaced-front: "block \"front\" is allowed only as the first block",
+  misplaced-front: "block \"front\" is allowed only as the first block, or as the third block after a verdict and its page break",
   misplaced-verdict: "block \"verdict\" is allowed only as the first block",
+  misplaced-colophon: "block \"colophon\" is allowed only as the last block",
   nested-block: "block",
   duplicate-outline: "block \"outline\" is allowed only once; found again at",
   trailing-pagebreak: "block \"pagebreak\" is not allowed as the last block",
@@ -110,6 +111,8 @@
   "author",
   "issued_label",
   "issued",
+  "period",
+  "profile",
 )
 #let footer-keys = ("classification", "page_label")
 
@@ -449,7 +452,7 @@
 }
 
 #let allowed-top-block-types = (
-  "verdict", "outline", "front", "heading", "paragraph", "list", "table", "callout", "pagebreak",
+  "verdict", "outline", "front", "heading", "paragraph", "list", "table", "callout", "pagebreak", "colophon",
 )
 #let allowed-front-block-types = ("outline", "heading", "paragraph", "list", "table", "callout")
 
@@ -459,7 +462,7 @@
 // time, so a function can call itself but not a sibling defined afterward
 // — this is why `front` is handled inline here rather than through a
 // separate `validate-front-block` that would need to call this one back.
-#let validate-block(index, block, front-at, verdict-first) = {
+#let validate-block(index, block, front-at, verdict-first, last) = {
   let in-front = front-at != none
   let place = if in-front {
     "blocks[" + str(front-at) + "].blocks[" + str(index) + "]"
@@ -492,10 +495,20 @@
     fail("misplaced-front", "")
   }
 
+  if block-type == "colophon" and not last {
+    fail("misplaced-colophon", "")
+  }
+
   if block-type == "verdict" {
     validate-verdict-block(place, block)
   } else if block-type == "outline" {
     validate-outline-block(place, block)
+  } else if block-type == "colophon" {
+    check-exact-keys(place, block, ("type", "text"))
+    expect-string(place + ".text", block.text)
+    if is-blank(block.text) {
+      fail("wrong-type", place + ".text` must be a non-empty string; received " + repr(block.text))
+    }
   } else if block-type == "front" {
     check-exact-keys(place, block, ("type", "blocks"))
     expect-array(place + ".blocks", block.blocks)
@@ -503,7 +516,7 @@
       fail("no-blocks", "")
     }
     for (j, inner) in block.blocks.enumerate() {
-      validate-block(j, inner, index, false)
+      validate-block(j, inner, index, false, false)
     }
   } else if block-type == "heading" {
     validate-heading-block(place, block)
@@ -582,7 +595,7 @@
   let first = data.blocks.first()
   let verdict-first = type(first) == dictionary and first.at("type", default: none) == "verdict"
   for (index, block) in data.blocks.enumerate() {
-    validate-block(index, block, none, verdict-first)
+    validate-block(index, block, none, verdict-first, index == data.blocks.len() - 1)
   }
 
   if data.blocks.last().type == "pagebreak" {
@@ -591,9 +604,8 @@
 
   // Every block is individually well-formed by this point, so this second
   // pass can read `.type` and `front`'s `.blocks` without checking either
-  // again. It counts every `outline` in document order — front's, since
-  // `front` can only be the first block, always come first — and fails on
-  // the second one, wherever it is.
+  // again. It counts every `outline` in document order, front's included,
+  // and fails on the second one, wherever it is.
   let outline-count = 0
   for (index, block) in data.blocks.enumerate() {
     if block.type == "outline" {

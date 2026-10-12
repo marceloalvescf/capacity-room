@@ -17,7 +17,9 @@
     "author_label": "ELABORADO POR:",
     "author": "Time SRE",
     "issued_label": "EMITIDO EM:",
-    "issued": "15/07/2026 14:30"
+    "issued": "15/07/2026 14:30",
+    "period": "07/15/2026 10:30 to 07/15/2026 14:30",
+    "profile": "Detailed"
   },
   "footer": {
     "classification": "Uso interno",

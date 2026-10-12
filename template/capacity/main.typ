@@ -53,6 +53,14 @@
   ),
 )
 
-#for block in data.blocks [
-  #build-block(block)
-]
+// A paragraph that directly follows a heading is its introduction: it sticks
+// to the block after it, so that the heading, the introduction, and the next
+// block fall on one page.
+#for (index, block) in data.blocks.enumerate() {
+  let intro = block.type == "paragraph" and index > 0 and data.blocks.at(index - 1).type == "heading"
+  if intro {
+    std.block(sticky: true, build-block(block))
+  } else {
+    build-block(block)
+  }
+}

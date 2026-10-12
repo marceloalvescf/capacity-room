@@ -121,20 +121,26 @@ func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, err
 		blocks = append(blocks, buildHPAsSection(b, s)...)
 		blocks = append(blocks, buildNodepoolsSection(b, s, thresholds, severity)...)
 	}
-	blocks = append(blocks, PageBreak{Weak: true})
 	appendixSeverity := severity
 	if profile == "executive" {
 		appendixSeverity = raiseToAttention(severity)
 	}
-	blocks = append(blocks, buildAppendix(b, s, appendixSeverity)...)
+	appendix := buildAppendix(b, s, appendixSeverity)
+	if slices.ContainsFunc(appendix, func(block Block) bool { _, ok := block.(Table); return ok }) {
+		blocks = append(blocks, PageBreak{Weak: true})
+	}
+	blocks = append(blocks, appendix...)
 	blocks = append(blocks, buildNotes(b, s)...)
+
+	cover := buildCover(b, s, profile)
+	blocks = append(blocks, Colophon{Text: b.text(catalog.ColophonText, catalog.Params{"Issued": cover.Issued})})
 
 	doc := Document{
 		Schema:   Schema,
 		Language: string(c.Language()),
 		Theme:    buildTheme(c),
 		Labels:   buildLabels(b),
-		Cover:    buildCover(b, s),
+		Cover:    cover,
 		Footer:   buildFooter(b, s),
 		Blocks:   blocks,
 	}
@@ -161,10 +167,11 @@ func buildLabels(b *builder) Labels {
 	}
 }
 
-// buildCover reads the seven fields of the title block: the cluster name
-// as the snapshot stored it, the emission time by its own wall clock, and
-// the author, null when the snapshot carries none.
-func buildCover(b *builder, s snapshot.Snapshot) Cover {
+// buildCover reads the nine fields of the title block: the cluster name
+// as the snapshot stored it, the emission time by its own wall clock, the
+// analysis period, the profile word, and the author, null when the snapshot
+// carries none.
+func buildCover(b *builder, s snapshot.Snapshot, profile string) Cover {
 	cover := Cover{
 		Title:        b.text(catalog.CoverTitle, nil),
 		ClusterLabel: b.text(catalog.CoverClusterLabel, nil),
@@ -172,6 +179,8 @@ func buildCover(b *builder, s snapshot.Snapshot) Cover {
 		AuthorLabel:  b.text(catalog.CoverAuthorLabel, nil),
 		IssuedLabel:  b.text(catalog.CoverIssuedLabel, nil),
 		Issued:       b.cat.DateTime(b.time(s.Report.EmittedAt)),
+		Period:       periodRange(b, s),
+		Profile:      b.text(profileKeys[profile], nil),
 	}
 	if s.Report.Author != "" {
 		author := s.Report.Author

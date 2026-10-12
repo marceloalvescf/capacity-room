@@ -59,8 +59,8 @@ func TestTextPlainEntry(t *testing.T) {
 		lang Language
 		want string
 	}{
-		{lang: PortugueseBrazil, want: "LEVANTAMENTO DE CAPACIDADE"},
-		{lang: English, want: "CAPACITY REPORT"},
+		{lang: PortugueseBrazil, want: "Levantamento de capacidade"},
+		{lang: English, want: "Capacity report"},
 	}
 	for _, tt := range tests {
 		t.Run(string(tt.lang), func(t *testing.T) {

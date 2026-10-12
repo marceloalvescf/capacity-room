@@ -53,6 +53,8 @@ type Cover struct {
 	Author       *string `json:"author"` // null when the author is empty
 	IssuedLabel  string  `json:"issued_label"`
 	Issued       string  `json:"issued"`
+	Period       string  `json:"period"`
+	Profile      string  `json:"profile"`
 }
 
 // Footer is the top-level running footer, shown from the second page on.
@@ -528,4 +530,18 @@ func Encode(d Document) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// Colophon is the closing line of the document: where the report came from
+// and when it was issued. It is always the last block.
+type Colophon struct{ Text string }
+
+func (Colophon) blockType() string { return "colophon" }
+
+// MarshalJSON writes the keys "type" and "text", in that order.
+func (c Colophon) MarshalJSON() ([]byte, error) {
+	return marshalNoEscape(struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}{"colophon", c.Text})
 }

@@ -250,9 +250,10 @@ func TestBuildCover(t *testing.T) {
 	tests := []struct {
 		lang                                                                      catalog.Language
 		wantTitle, wantClusterLabel, wantAuthorLabel, wantIssuedLabel, wantIssued string
+		wantPeriod, wantProfile                                                   string
 	}{
-		{catalog.PortugueseBrazil, "LEVANTAMENTO DE CAPACIDADE", "Cluster:", "ELABORADO POR:", "EMITIDO EM:", "15/07/2026 14:30"},
-		{catalog.English, "CAPACITY REPORT", "Cluster:", "PREPARED BY:", "ISSUED ON:", "07/15/2026 14:30"},
+		{catalog.PortugueseBrazil, "Levantamento de capacidade", "Cluster", "Elaborado por", "Emitido em", "15/07/2026 14:30", "14/07/2026 14:30 a 15/07/2026 14:30", "Detalhado"},
+		{catalog.English, "Capacity report", "Cluster", "Prepared by", "Issued on", "07/15/2026 14:30", "07/14/2026 14:30 to 07/15/2026 14:30", "Detailed"},
 	}
 	for _, tt := range tests {
 		t.Run(string(tt.lang), func(t *testing.T) {
@@ -280,6 +281,12 @@ func TestBuildCover(t *testing.T) {
 			}
 			if cover.Issued != tt.wantIssued {
 				t.Errorf("Issued = %q, want %q", cover.Issued, tt.wantIssued)
+			}
+			if cover.Period != tt.wantPeriod {
+				t.Errorf("Period = %q, want %q", cover.Period, tt.wantPeriod)
+			}
+			if cover.Profile != tt.wantProfile {
+				t.Errorf("Profile = %q, want %q", cover.Profile, tt.wantProfile)
 			}
 		})
 	}
@@ -338,6 +345,7 @@ func TestBuildBlockOrder(t *testing.T) {
 		"heading", "heading", "paragraph", "heading", "paragraph", "heading", "paragraph",
 		"pagebreak",
 		"heading", "table",
+		"colophon",
 	}
 	if got := blockTypes(doc.Blocks); !slices.Equal(got, wantTop) {
 		t.Fatalf("top-level block order = %v, want %v", got, wantTop)
@@ -448,20 +456,23 @@ func TestBuildExecutiveProfile(t *testing.T) {
 	if h, ok := doc.Blocks[4].(Heading); !ok || runText(t, h.Runs[0]) != want[0] {
 		t.Fatalf("fifth block = %#v, want the executive heading", doc.Blocks[4])
 	}
-	weak := slices.IndexFunc(doc.Blocks, func(b Block) bool { pb, ok := b.(PageBreak); return ok && pb.Weak })
-	if weak < 0 {
-		t.Fatal("no weak page break")
+	appendix := slices.IndexFunc(doc.Blocks, func(b Block) bool { h, ok := b.(Heading); return ok && runText(t, h.Runs[0]) == want[1] })
+	if appendix < 0 {
+		t.Fatal("no appendix heading")
 	}
-	if h, ok := doc.Blocks[weak+1].(Heading); !ok || runText(t, h.Runs[0]) != want[1] {
-		t.Fatalf("block after the weak page break = %#v, want the appendix heading", doc.Blocks[weak+1])
+	if pb, ok := doc.Blocks[appendix-1].(PageBreak); ok {
+		t.Fatalf("a %#v stands before the appendix heading that holds only its fallback sentence", pb)
+	}
+	if _, ok := doc.Blocks[appendix+1].(Paragraph); !ok {
+		t.Fatalf("block after the appendix heading = %T, want the fallback Paragraph", doc.Blocks[appendix+1])
 	}
 
 	// A snapshot that carries warnings ends with the notes table.
 	noted := mustBuild(t, goldenSnapshot(t, "partial-data"), cat, Options{Profile: "executive"})
 	notes := catText(t, cat, catalog.NotesHeading, nil)
-	n := len(noted.Blocks)
+	n := len(noted.Blocks) - 1
 	if h, ok := noted.Blocks[n-2].(Heading); !ok || runText(t, h.Runs[0]) != notes {
-		t.Errorf("the block before the last = %#v, want the notes heading", noted.Blocks[n-2])
+		t.Errorf("the block before the notes table = %#v, want the notes heading", noted.Blocks[n-2])
 	}
 	if table, ok := noted.Blocks[n-1].(Table); !ok || table.ID != "interpretation-notes" {
 		t.Errorf("the last block = %#v, want the notes table", noted.Blocks[n-1])
@@ -475,11 +486,14 @@ func TestBuildExecutiveRaisesTheMinimum(t *testing.T) {
 	detailed := mustBuild(t, s, cat, Options{Profile: "detailed", MinSeverity: "all"})
 
 	isWeak := func(b Block) bool { pb, ok := b.(PageBreak); return ok && pb.Weak }
-	ew := slices.IndexFunc(executive.Blocks, isWeak)
 	dw := slices.IndexFunc(detailed.Blocks, isWeak)
-	if ew < 0 || dw < 0 {
-		t.Fatalf("weak page breaks at %d and %d", ew, dw)
+	if slices.IndexFunc(executive.Blocks, isWeak) >= 0 || dw < 0 {
+		t.Fatalf("weak page breaks at %d (executive, want none) and %d", slices.IndexFunc(executive.Blocks, isWeak), dw)
 	}
+	ew := slices.IndexFunc(executive.Blocks, func(b Block) bool {
+		h, ok := b.(Heading)
+		return ok && h.Level == 1 && runText(t, h.Runs[0]) == catText(t, cat, catalog.AppendixHeading, nil)
+	}) - 1
 	for _, blk := range executive.Blocks[4:ew] {
 		table, ok := blk.(Table)
 		if !ok || table.ID != "priority-workloads" {
@@ -496,9 +510,6 @@ func TestBuildExecutiveRaisesTheMinimum(t *testing.T) {
 		}
 	}
 
-	if ew+2 >= len(executive.Blocks) {
-		t.Fatalf("the executive document ends at %d, after the weak break at %d", len(executive.Blocks), ew)
-	}
 	para, ok := executive.Blocks[ew+2].(Paragraph)
 	if !ok {
 		t.Fatalf("the executive appendix holds %T, want the fallback Paragraph", executive.Blocks[ew+2])
@@ -696,5 +707,24 @@ func TestLanguagesDifferOnlyInWording(t *testing.T) {
 		if enTables[id] != count {
 			t.Errorf("table %q row count differs: %d vs %d", id, count, enTables[id])
 		}
+	}
+}
+
+func TestBuildEndsWithTheColophon(t *testing.T) {
+	tests := []struct {
+		lang catalog.Language
+		want string
+	}{
+		{catalog.English, "Generated by k8s-capacity-report from a snapshot of Prometheus-compatible metrics. Issued on 07/15/2026 14:30."},
+		{catalog.PortugueseBrazil, "Gerado pelo k8s-capacity-report a partir de um snapshot de métricas compatíveis com o Prometheus. Emitido em 15/07/2026 14:30."},
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.lang), func(t *testing.T) {
+			doc := mustBuild(t, baseSnapshot(t), mustCatalog(t, tt.lang), Options{})
+			last := doc.Blocks[len(doc.Blocks)-1]
+			if got, ok := last.(Colophon); !ok || got.Text != tt.want {
+				t.Fatalf("last block = %#v, want Colophon{Text: %q}", last, tt.want)
+			}
+		})
 	}
 }

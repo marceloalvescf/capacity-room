@@ -18,8 +18,6 @@
 
 #let eyebrow(body) = text(size: 7pt, weight: "semibold", tracking: 0.08em, fill: muted, upper(body))
 
-#let joined(parts, separator) = parts.join(separator)
-
 // The soundings under the scale: every node up to ten, else ten values
 // spread evenly, the first and the last included.
 #let soundings(max) = {
@@ -103,7 +101,7 @@
 }
 
 #let build-quality(quality) = {
-  let parts = quality.items.join(" · ")
+  let parts = quality.items.join(" · ", default: "")
   if quality.more != none {
     parts = parts + " " + quality.more
   }

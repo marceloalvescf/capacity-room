@@ -136,7 +136,9 @@ const headerWithVisibleTextFixture = `{
     "author_label": "ELABORADO POR:",
     "author": null,
     "issued_label": "EMITIDO EM:",
-    "issued": "15/07/2026 14:30"
+    "issued": "15/07/2026 14:30",
+    "period": "07/15/2026 10:30 to 07/15/2026 14:30",
+    "profile": "Detailed"
   },
   "footer": {
     "classification": null,
@@ -270,8 +272,8 @@ func TestCapacityEveryDiagnosticIsCovered(t *testing.T) {
 	ws := workspace(t)
 	capDir := filepath.Join(ws, "capacity")
 	names := diagnosticNames(t, filepath.Join(capDir, "validate.typ"))
-	if len(names) != 22 {
-		t.Errorf("diagnostic names = %v (%d), want 22", names, len(names))
+	if len(names) != 23 {
+		t.Errorf("diagnostic names = %v (%d), want 23", names, len(names))
 	}
 
 	dir := capacityNegativeDir(ws)
@@ -422,7 +424,9 @@ const unnumberedHeadingFixture = `{
     "author_label": "ELABORADO POR:",
     "author": "Time SRE",
     "issued_label": "EMITIDO EM:",
-    "issued": "15/07/2026 14:30"
+    "issued": "15/07/2026 14:30",
+    "period": "07/15/2026 10:30 to 07/15/2026 14:30",
+    "profile": "Detailed"
   },
   "footer": {
     "classification": "Uso interno",

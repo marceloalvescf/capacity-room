@@ -464,8 +464,8 @@ func TestRealReportExecutiveProfile(t *testing.T) {
 				t.Fatalf("catalog.Load(%s): %v", lang, err)
 			}
 			pages := pdfPages(pdfText(t, outPath))
-			if len(pages) != 4 {
-				t.Fatalf("PDF has %d page(s), want 4", len(pages))
+			if len(pages) != 3 {
+				t.Fatalf("PDF has %d page(s), want 3", len(pages))
 			}
 
 			for _, h := range []struct {

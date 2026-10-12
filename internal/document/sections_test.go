@@ -312,6 +312,7 @@ func TestBlocksPutTheAnswerFirst(t *testing.T) {
 		"pagebreak",
 		"heading", "table",
 		"heading", "table",
+		"colophon",
 	}
 	if got := blockTypes(doc.Blocks); !slices.Equal(got, wantTypes) {
 		t.Fatalf("block types = %v, want %v", got, wantTypes)

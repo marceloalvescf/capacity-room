@@ -1,6 +1,7 @@
 package document
 
 import (
+	"cmp"
 	"math"
 	"slices"
 
@@ -207,7 +208,7 @@ func verdictPressure(b *builder, findings []snapshot.Finding) VerdictPressure {
 		}
 	}
 	slices.SortStableFunc(pressure.Rows, func(a, c VerdictPressureRow) int {
-		return analysis.Rank(c.Status) - analysis.Rank(a.Status)
+		return cmp.Compare(analysis.Rank(c.Status), analysis.Rank(a.Status))
 	})
 	if len(pressure.Rows) == 0 {
 		empty := b.text(catalog.VerdictPressureEmpty, nil)

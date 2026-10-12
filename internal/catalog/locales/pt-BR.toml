@@ -4,10 +4,13 @@ info = "Informação"
 warning = "Atenção"
 
 [cover]
-title = "LEVANTAMENTO DE CAPACIDADE"
-cluster_label = "Cluster:"
-author_label = "ELABORADO POR:"
-issued_label = "EMITIDO EM:"
+title = "Levantamento de capacidade"
+cluster_label = "Cluster"
+author_label = "Elaborado por"
+issued_label = "Emitido em"
+
+[colophon]
+text = "Gerado pelo k8s-capacity-report a partir de um snapshot de métricas compatíveis com o Prometheus. Emitido em {{.Issued}}."
 
 [footer]
 page_label = "Página"

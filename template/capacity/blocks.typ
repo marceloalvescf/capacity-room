@@ -11,6 +11,13 @@
 #import "tables.typ": render-table
 #import "verdict.typ": build-verdict
 
+// The load-line disc: a ring crossed by a line, drawn in black at the given
+// size.
+#let disc(s) = box(width: s, height: s, baseline: 18%)[
+  #place(center + horizon, circle(radius: s / 3, stroke: s * 0.075 + black))
+  #place(left + horizon, dx: s / 30, line(length: s * 28 / 30, stroke: s * 0.083 + black))
+]
+
 #let build-block(entry) = {
   if entry.type == "outline" {
     outline(title: text(entry.title), depth: entry.depth)
@@ -45,6 +52,11 @@
     callout(kind: entry.kind, title: title, runs-to-content(entry.runs))
   } else if entry.type == "verdict" {
     build-verdict(entry)
+  } else if entry.type == "colophon" {
+    v(18pt)
+    line(length: 100%, stroke: 0.5pt + luma(78%))
+    v(2pt)
+    text(size: 7pt, fill: luma(35%))[#disc(8pt)#h(4pt)#entry.text]
   } else {
     pagebreak(weak: entry.weak)
   }

@@ -108,6 +108,7 @@ func TestEncodeWritesExactKeys(t *testing.T) {
 			[]string{"type", "id", "headers", "rows"},
 		},
 		{"pagebreak", PageBreak{Weak: true}, []string{"type", "weak"}},
+		{"colophon", Colophon{Text: "x"}, []string{"type", "text"}},
 	}
 	for _, tc := range blockCases {
 		t.Run("block/"+tc.name, func(t *testing.T) {

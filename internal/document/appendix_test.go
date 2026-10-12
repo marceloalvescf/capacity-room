@@ -93,9 +93,9 @@ func TestNotesAreLeftOutWhenEmpty(t *testing.T) {
 			t.Fatalf("document holds an interpretation-notes table, want none")
 		}
 	}
-	last := doc.Blocks[len(doc.Blocks)-1]
+	last := doc.Blocks[len(doc.Blocks)-2]
 	if _, ok := last.(Table); !ok {
-		t.Fatalf("last block is %T, want Table", last)
+		t.Fatalf("block before the colophon is %T, want Table", last)
 	}
 }
 

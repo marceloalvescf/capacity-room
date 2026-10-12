@@ -631,7 +631,8 @@ func TestCapacityVerdictFixturesCompile(t *testing.T) {
 		not  string
 	}{
 		{"verdict.en", []string{"CLUSTER AUTOSCALING", "PRESSURE BY SCOPE", "5 of 10 actions. The full plan is in the executive summary.", "Minimum nodes"}, "Disabled"},
-		{"verdict.many-nodes", []string{"95", "120", "Nodes · current / maximum"}, "Disabled"},
+		{"verdict.many-nodes", []string{"95", "120", "13", "107", "Nodes · current / maximum"}, "Disabled"},
+		{"verdict.no-quality-items", []string{"Data quality", "2 warnings are listed in the appendix."}, "none"},
 		{"verdict.disabled", []string{"Disabled", "CLUSTER AUTOSCALING"}, "Nodes · current / maximum"},
 		{"verdict.empty", []string{"This report holds no findings.", "Nothing needs attention.", "No prioritized action was identified."}, "5 of 10 actions"},
 	}

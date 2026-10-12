@@ -24,6 +24,8 @@ const (
 	CoverAuthorLabel  Key = "cover.author_label"
 	CoverIssuedLabel  Key = "cover.issued_label"
 
+	ColophonText Key = "colophon.text"
+
 	FooterPageLabel Key = "footer.page_label"
 
 	FrontOutlineTitle Key = "front.outline_title"
@@ -288,6 +290,7 @@ const (
 var wordingKeys = []Key{
 	LabelsNote, LabelsInfo, LabelsWarning,
 	CoverTitle, CoverClusterLabel, CoverAuthorLabel, CoverIssuedLabel,
+	ColophonText,
 	FooterPageLabel,
 	FrontOutlineTitle,
 	FrontMetadataProfile, FrontMetadataProfileDetailed, FrontMetadataProfileExecutive,

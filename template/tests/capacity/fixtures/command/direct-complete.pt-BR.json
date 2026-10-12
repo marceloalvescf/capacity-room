@@ -11,13 +11,15 @@
     "warning": "Atenção"
   },
   "cover": {
-    "title": "LEVANTAMENTO DE CAPACIDADE",
-    "cluster_label": "Cluster:",
+    "title": "Levantamento de capacidade",
+    "cluster_label": "Cluster",
     "cluster": "prod",
-    "author_label": "ELABORADO POR:",
+    "author_label": "Elaborado por",
     "author": "Time SRE",
-    "issued_label": "EMITIDO EM:",
-    "issued": "15/07/2026 14:30"
+    "issued_label": "Emitido em",
+    "issued": "15/07/2026 14:30",
+    "period": "14/07/2026 14:30 a 15/07/2026 14:30",
+    "profile": "Detalhado"
   },
   "footer": {
     "classification": "Uso interno",
@@ -2037,6 +2039,10 @@
           ]
         ]
       ]
+    },
+    {
+      "type": "colophon",
+      "text": "Gerado pelo k8s-capacity-report a partir de um snapshot de métricas compatíveis com o Prometheus. Emitido em 15/07/2026 14:30."
     }
   ]
 }

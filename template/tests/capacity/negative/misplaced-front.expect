@@ -1,1 +1,1 @@
-capacity-report: block "front" is allowed only as the first block
+capacity-report: block "front" is allowed only as the first block, or as the third block after a verdict and its page break

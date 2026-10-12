@@ -17,7 +17,9 @@
     "author_label": "PREPARED BY:",
     "author": "SRE Team",
     "issued_label": "ISSUED ON:",
-    "issued": "07/15/2026 14:30"
+    "issued": "07/15/2026 14:30",
+    "period": "07/15/2026 10:30 to 07/15/2026 14:30",
+    "profile": "Detailed"
   },
   "footer": {
     "classification": "Internal use",
