@@ -6,6 +6,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The list of reports shows the namespaces and the period of each report.
+
 ### Changed
 
 - The web app is called CapacityRoom and has a look of its own, drawn from

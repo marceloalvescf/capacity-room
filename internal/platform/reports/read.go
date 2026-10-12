@@ -32,6 +32,7 @@ type Summary struct {
 	CompletedAt   *time.Time
 	ExpiresAt     time.Time
 	Expired       bool
+	Selection     Resolved
 }
 
 // PDFState is the state of the PDF of one language.
@@ -48,7 +49,6 @@ type Detail struct {
 	Attempt           int
 	StartedAt         *time.Time
 	CollectedAt       *time.Time
-	Selection         Resolved
 }
 
 // Page is one page of the list.
@@ -96,17 +96,34 @@ func decodeCursor(cursor string) (store.ReportCursor, error) {
 	return c, nil
 }
 
-func summaryOf(it store.ReportListItem, now time.Time) Summary {
+// decodeSelection reads the stored request of a report. The list shows a row
+// whose request lacks a valid language; the detail refuses it.
+func decodeSelection(request []byte) (Resolved, error) {
+	selection := Resolved{Namespaces: []string{}}
+	if err := json.Unmarshal(request, &selection); err != nil {
+		return Resolved{}, fmt.Errorf("decode stored selection: %w", err)
+	}
+	if selection.Namespaces == nil {
+		selection.Namespaces = []string{}
+	}
+	return selection, nil
+}
+
+func summaryOf(it store.ReportListItem, now time.Time) (Summary, error) {
+	selection, err := decodeSelection(it.Request)
+	if err != nil {
+		return Summary{}, err
+	}
 	pdfs := make([]PDFState, len(it.PDFs))
 	for i, p := range it.PDFs {
 		pdfs[i] = PDFState{Language: p.Language, Status: p.Status, FailureCode: p.FailureCode}
 	}
 	return Summary{
-		ID: it.ID, OwnerID: it.OwnerID, OwnerUsername: it.OwnerUsername, ProfileID: it.ProfileID,
+		Selection: selection, ID: it.ID, OwnerID: it.OwnerID, OwnerUsername: it.OwnerUsername, ProfileID: it.ProfileID,
 		Status: it.Status, Phase: it.Phase, FailureCode: it.FailureCode, PDFs: pdfs,
 		CreatedAt: it.CreatedAt, CompletedAt: it.CompletedAt, ExpiresAt: it.ExpiresAt,
 		Expired: isExpired(it.ExpiresAt, it.ExpiredAt, now),
-	}
+	}, nil
 }
 
 // List returns one page of the reports not deleted, newest first, after the
@@ -136,7 +153,11 @@ func (s *Service) List(ctx context.Context, _ auth.Principal, cursor string, lim
 		page.NextCursor = &next
 	}
 	for _, it := range items {
-		page.Items = append(page.Items, summaryOf(it, now))
+		sum, err := summaryOf(it, now)
+		if err != nil {
+			return Page{}, err
+		}
+		page.Items = append(page.Items, sum)
 	}
 	return page, nil
 }
@@ -154,19 +175,16 @@ func (s *Service) Get(ctx context.Context, _ auth.Principal, id uuid.UUID) (Deta
 	if isExpired(it.ExpiresAt, it.ExpiredAt, now) {
 		return Detail{}, &Error{Code: CodeReportExpired}
 	}
-	selection := Resolved{Namespaces: []string{}}
-	if err := json.Unmarshal(it.Request, &selection); err != nil {
-		return Detail{}, fmt.Errorf("decode stored selection: %w", err)
+	summary, err := summaryOf(it, now)
+	if err != nil {
+		return Detail{}, err
 	}
-	if !validLanguage(selection.Language) {
-		return Detail{}, fmt.Errorf("decode stored selection: language %q", selection.Language)
-	}
-	if selection.Namespaces == nil {
-		selection.Namespaces = []string{}
+	if !validLanguage(summary.Selection.Language) {
+		return Detail{}, fmt.Errorf("decode stored selection: language %q", summary.Selection.Language)
 	}
 	return Detail{
-		Summary: summaryOf(it, now), ProfileRevisionID: it.ProfileRevisionID, Attempt: it.Attempt,
-		StartedAt: it.StartedAt, CollectedAt: it.CollectedAt, Selection: selection,
+		Summary: summary, ProfileRevisionID: it.ProfileRevisionID, Attempt: it.Attempt,
+		StartedAt: it.StartedAt, CollectedAt: it.CollectedAt,
 	}, nil
 }
 

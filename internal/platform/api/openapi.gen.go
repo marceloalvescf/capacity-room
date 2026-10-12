@@ -914,9 +914,12 @@ type ReportSummary struct {
 	Pdfs []ReportPDFState `json:"pdfs"`
 
 	// Phase waiting while queued; preflight, collecting, analyzing, or snapshotting while running; rendering or complete once collected; complete once failed.
-	Phase     ReportPhase  `json:"phase"`
-	ProfileId string       `json:"profile_id"`
-	Status    ReportStatus `json:"status"`
+	Phase     ReportPhase `json:"phase"`
+	ProfileId string      `json:"profile_id"`
+
+	// Selection The selection the report runs, with every default resolved.
+	Selection ReportSelection `json:"selection"`
+	Status    ReportStatus    `json:"status"`
 }
 
 // Role defines model for Role.

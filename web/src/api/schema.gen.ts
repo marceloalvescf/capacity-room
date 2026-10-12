@@ -432,6 +432,7 @@ export interface components {
             expires_at: string;
             /** @description expires_at is at or before now: the report answers REPORT_EXPIRED until it is purged. */
             expired: boolean;
+            selection: components["schemas"]["ReportSelection"];
         };
         /** @description A report with its request and its progress. */
         Report: components["schemas"]["ReportSummary"] & {
@@ -443,7 +444,6 @@ export interface components {
             started_at: string | null;
             /** Format: date-time */
             collected_at: string | null;
-            selection: components["schemas"]["ReportSelection"];
         };
         ReportPage: {
             items: components["schemas"]["ReportSummary"][];

@@ -343,3 +343,20 @@ func TestBodiesReadThroughTheDownloadPool(t *testing.T) {
 		t.Fatalf("the main pool acquired %d times, want 0", got)
 	}
 }
+
+func TestListCarriesTheSelectionOfARange(t *testing.T) {
+	f := newFixture(t)
+	f.seedReport(t, "collected", "complete", fixedNow.Add(time.Hour), "")
+	f.exec(t, `UPDATE reports SET request = $1`,
+		`{"namespaces":["payments","billing"],"start":"2026-10-01 00:00","end":"2026-10-02 00:00","timezone":"UTC","report_profile":"detailed","min_severity":"all","language":"en"}`)
+	page, err := f.svc.List(context.Background(), f.read, "", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := Resolved{Namespaces: []string{"payments", "billing"}, Start: "2026-10-01 00:00", End: "2026-10-02 00:00", Timezone: "UTC", ReportProfile: "detailed", MinSeverity: "all", Language: "en"}
+	if len(page.Items) != 1 || !slices.Equal(page.Items[0].Selection.Namespaces, want.Namespaces) ||
+		page.Items[0].Selection.Period != "" || page.Items[0].Selection.Start != want.Start ||
+		page.Items[0].Selection.End != want.End || page.Items[0].Selection.Language != "en" {
+		t.Fatalf("items %+v", page.Items)
+	}
+}

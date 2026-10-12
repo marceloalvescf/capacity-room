@@ -103,9 +103,18 @@ func failureCodeOf(code *string) *ReportFailureCode {
 	return &c
 }
 
+func reportSelectionOf(r reports.Resolved) ReportSelection {
+	return ReportSelection{
+		Namespaces: r.Namespaces, Period: nullable(r.Period), Start: nullable(r.Start), End: nullable(r.End), Timezone: r.Timezone,
+		ReportProfile: ReportProfile(r.ReportProfile), MinSeverity: MinSeverity(r.MinSeverity),
+		Language: Language(r.Language),
+	}
+}
+
 func reportSummaryOf(s reports.Summary) ReportSummary {
 	return ReportSummary{
-		Id: s.ID, OwnerId: s.OwnerID, OwnerUsername: s.OwnerUsername, ProfileId: s.ProfileID,
+		Selection: reportSelectionOf(s.Selection),
+		Id:        s.ID, OwnerId: s.OwnerID, OwnerUsername: s.OwnerUsername, ProfileId: s.ProfileID,
 		Status: ReportStatus(s.Status), Phase: ReportPhase(s.Phase), FailureCode: failureCodeOf(s.FailureCode),
 		Pdfs: pdfStatesOf(s.PDFs), CreatedAt: s.CreatedAt.UTC(), CompletedAt: utc(s.CompletedAt),
 		ExpiresAt: s.ExpiresAt.UTC(), Expired: s.Expired,
@@ -121,10 +130,6 @@ func nullable(s string) *string {
 }
 
 func reportOf(d reports.Detail) Report {
-	namespaces := d.Selection.Namespaces
-	if namespaces == nil {
-		namespaces = []string{}
-	}
 	return Report{
 		Id: d.ID, OwnerId: d.OwnerID, OwnerUsername: d.OwnerUsername, ProfileId: d.ProfileID,
 		ProfileRevisionId: d.ProfileRevisionID, Attempt: d.Attempt,
@@ -132,11 +137,7 @@ func reportOf(d reports.Detail) Report {
 		Pdfs: pdfStatesOf(d.PDFs), CreatedAt: d.CreatedAt.UTC(), StartedAt: utc(d.StartedAt),
 		CollectedAt: utc(d.CollectedAt), CompletedAt: utc(d.CompletedAt),
 		ExpiresAt: d.ExpiresAt.UTC(), Expired: d.Expired,
-		Selection: ReportSelection{
-			Namespaces: namespaces, Period: nullable(d.Selection.Period), Start: nullable(d.Selection.Start), End: nullable(d.Selection.End), Timezone: d.Selection.Timezone,
-			ReportProfile: ReportProfile(d.Selection.ReportProfile), MinSeverity: MinSeverity(d.Selection.MinSeverity),
-			Language: Language(d.Selection.Language),
-		},
+		Selection: reportSelectionOf(d.Selection),
 	}
 }
 

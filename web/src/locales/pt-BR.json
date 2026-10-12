@@ -239,6 +239,7 @@
   "reports": {
     "title": "Relatórios",
     "updating": "Atualizando enquanto há relatórios em andamento",
+    "moreNamespaces": "+{{count}}",
     "column": {
       "requested": "Criado em",
       "profile": "Perfil",

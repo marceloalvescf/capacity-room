@@ -941,3 +941,23 @@ func TestPostReportWithALength(t *testing.T) {
 		t.Fatalf("selection %+v", sel)
 	}
 }
+
+func TestListItemsCarryTheirSelection(t *testing.T) {
+	ts := newTestServer(t)
+	c := ts.cast(t)
+	id := ts.seedReport(t, stored{owner: c.ops.user.ID})
+
+	w := ts.as(t, &c.eve, "GET", "/api/v1/reports", "", nil)
+	if w.Code != 200 {
+		t.Fatalf("list: %d %s", w.Code, w.Body.String())
+	}
+	page := decodeStrict[ReportPage](t, w)
+	if len(page.Items) != 1 || page.Items[0].Id != id {
+		t.Fatalf("page %+v", page)
+	}
+	sel := page.Items[0].Selection
+	if len(sel.Namespaces) != 1 || sel.Namespaces[0] != "payments" || sel.Period == nil || *sel.Period != "24h" ||
+		sel.Start != nil || sel.End != nil {
+		t.Fatalf("selection %+v", sel)
+	}
+}

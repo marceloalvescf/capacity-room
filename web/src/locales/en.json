@@ -239,6 +239,7 @@
   "reports": {
     "title": "Reports",
     "updating": "Updating while a report runs",
+    "moreNamespaces": "+{{count}}",
     "column": {
       "requested": "Requested",
       "profile": "Profile",

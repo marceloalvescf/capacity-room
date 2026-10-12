@@ -1218,6 +1218,7 @@ components:
         - completed_at
         - expires_at
         - expired
+        - selection
       properties:
         id:
           type: string
@@ -1264,12 +1265,14 @@ components:
           description: >-
             expires_at is at or before now: the report answers REPORT_EXPIRED
             until it is purged.
+        selection:
+          $ref: "#/components/schemas/ReportSelection"
     Report:
       description: A report with its request and its progress.
       allOf:
         - $ref: "#/components/schemas/ReportSummary"
         - type: object
-          required: [profile_revision_id, attempt, started_at, collected_at, selection]
+          required: [profile_revision_id, attempt, started_at, collected_at]
           properties:
             profile_revision_id:
               type: string
@@ -1288,8 +1291,6 @@ components:
               type: string
               format: date-time
               nullable: true
-            selection:
-              $ref: "#/components/schemas/ReportSelection"
     ReportPage:
       type: object
       required: [items, next_cursor]

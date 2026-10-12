@@ -702,3 +702,34 @@ describe("date cells", () => {
     }
   });
 });
+
+describe("report scope", () => {
+  const selection = (fields: Partial<ReturnType<typeof report>["selection"]>) => ({
+    ...report().selection,
+    ...fields,
+  });
+
+  it("names the namespaces and the period of a length report", async () => {
+    mock.reports = many(1, () => ({ selection: selection({ namespaces: ["payments", "billing"], period: "24h" }) }));
+    await renderApp("/reports");
+    expect(await screen.findByText("payments, billing")).toBeInTheDocument();
+    const cell = screen.getByText("payments, billing").closest("td") as HTMLElement;
+    expect(cell).toHaveTextContent("payments, billing · Last 24 hours");
+  });
+
+  it("names the range of a range report", async () => {
+    mock.reports = many(1, () => ({
+      selection: selection({ namespaces: ["payments"], period: null, start: "2026-10-01 00:00", end: "2026-10-02 00:00" }),
+    }));
+    await renderApp("/reports");
+    const cell = (await screen.findByText("payments")).closest("td") as HTMLElement;
+    expect(cell).toHaveTextContent("payments · 2026-10-01 00:00 to 2026-10-02 00:00");
+  });
+
+  it("counts the namespaces past the third", async () => {
+    mock.reports = many(1, () => ({ selection: selection({ namespaces: ["a", "b", "c", "d", "e"], period: "7d" }) }));
+    await renderApp("/reports");
+    const cell = (await screen.findByText("a, b, c")).closest("td") as HTMLElement;
+    expect(cell).toHaveTextContent("a, b, c +2 · Last 7 days");
+  });
+});

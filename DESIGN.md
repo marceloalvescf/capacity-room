@@ -330,6 +330,9 @@ The overview's table of recommendations. The Scope cell reads the scope type as 
 ### PDF block
 In the PDF popover and on the progress page: one row per language at 0.875rem, parted by Hairline dividers inside the layer's Neatline frame, with no box of their own. The rows share three columns, the language, the status, and the action, so they line up from row to row, and the action never wraps under the status.
 
+### Reports list
+The Profile cell of a row carries a second line under the profile name, in Muted Ink at the small size: the namespaces in mono (the first three, then a +N count of the rest), a middle dot, and the period in words. Cells wrap, so the table fits 1024px.
+
 ## Motion
 Motion appears only under `motion-safe:`; under reduced motion everything is drawn at once and nothing pulses.
 - **Sounding:** the gauge level rises once from the left (`sounding`, 600ms, cubic-bezier(0.16, 1, 0.3, 1)), then the hatched band and the closing line fade in (`hazard-in`, 200ms after 600ms).
