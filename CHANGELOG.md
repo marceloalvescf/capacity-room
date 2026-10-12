@@ -41,7 +41,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A report that failed on its metric source points an administrator to the
   profile.
 - The node pools on the report show the status of their findings.
-- The PDF choices on a new report line up.
+- The PDF choices of a report line up.
 - The autoscaling tab opens on the cluster's verdict.
 - The action plan names the kind of each scope.
 - A failed report can be deleted.
@@ -67,10 +67,6 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Screen readers tell the actions of the action plan apart by their scope.
 - A node whose requests take a high share of it marks that share on the
   report's nodes tab.
-- A report whose profile was deleted no longer points to the profile after a
-  failure.
-- A report whose stored request cannot be read no longer stops the list of
-  reports from loading.
 
 ## [1.0.0] - 2026-10-10
 
