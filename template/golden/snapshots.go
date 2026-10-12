@@ -146,7 +146,8 @@ var Snapshots = []Snapshot{
 		Pages:  []int{1, 2, 3, 4, 5},
 		Protects: "the cover, the opening matter set small, the dense " +
 			"tables, and the executive-summary tables of the capacity " +
-			"report, in Portuguese — every page of the document",
+			"report, in Portuguese, from a data file with no verdict " +
+			"block — every page of the document",
 	},
 	{
 		Name:   "capacity-en",
@@ -178,118 +179,129 @@ var Snapshots = []Snapshot{
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/parity.pt-BR.json",
 		Pages:  []int{1, 2, 3, 4},
-		Protects: "the report layer reproduces the original generated " +
-			"document page for page, every word and number in place, " +
-			"with its table cells centred by the decision of 2026-10-02",
+		Protects: "the numbers of the original generated document in this " +
+			"project's design: every value of the original's tables " +
+			"reaches its cell unchanged, in the order, layout, and faces " +
+			"of this project and with the words of the web app",
+	},
+	{
+		Name:   "capacity-verdict",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/verdict.en.json",
+		Pages:  []int{1},
+		Omits: "pages 2 to 6: the outline and the sections that follow the " +
+			"verdict page are pinned by the command snapshots",
+		Protects: "the verdict page: the title band, the severity totals, " +
+			"the data-quality line, the node gauge in black with its hatch, " +
+			"the pressure of each scope, and the head of the action plan",
+	},
+	{
+		Name:   "capacity-verdict-many",
+		Source: "capacity/main.typ",
+		Data:   "tests/capacity/fixtures/verdict.many-nodes.json",
+		Pages:  []int{1},
+		Omits: "pages 2 to 6: they equal those of capacity-verdict but for " +
+			"the node counts",
+		Protects: "the node gauge above sixty nodes, drawn in whole nodes " +
+			"with its scale labels thinned so that none overlaps another",
 	},
 	{
 		Name:   "command-complete-pt",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/direct-complete.pt-BR.json",
-		Pages:  []int{1, 2, 3, 4},
+		Pages:  []int{1, 2, 3, 4, 5},
 		Protects: "the report as the command writes it, from a data file " +
-			"that Go built and no hand wrote: the outline of six " +
-			"numbered sections, the capacity of a namespace, the " +
-			"resources of a workload, the HPA history, and the node " +
-			"pool tables on one page with the heading and the intro of " +
-			"the executive summary at its foot, its seven subsections " +
-			"on the next, four of them tables and " +
-			"three of them fallback sentences, and the appendix on the " +
-			"last, with no empty page between",
+			"that Go built and no hand wrote: the verdict page first, " +
+			"the outline of six numbered sections on the second page, " +
+			"the executive summary with its seven subsections, four of " +
+			"them tables and three of them fallback sentences, the " +
+			"capacity of a namespace, the resources of a workload, the " +
+			"HPA history, the node pool tables, and the appendix alone " +
+			"on the last page, with the colophon at its foot and no " +
+			"empty page between",
 	},
 	{
 		Name:   "command-complete-en",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/direct-complete.en.json",
-		Pages:  []int{1, 2, 3, 4},
+		Pages:  []int{1, 2, 3, 4, 5},
 		Protects: "the same report in English, with the wording of the " +
-			"catalog: the English headers of the ten columns of the " +
-			"workload table, each wrapped inside its own cell",
+			"catalog: the verdict page and the English headers of the " +
+			"ten columns of the workload table, each wrapped inside its " +
+			"own cell",
 	},
 	{
 		Name:   "command-partial-en",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/partial-data.en.json",
-		Pages:  []int{2, 3, 4},
-		Omits: "page 1: it differs from page 1 of command-complete-en " +
-			"in the three counts of the data quality list, all plain " +
-			"text",
+		Pages:  []int{1, 2, 3, 4, 5},
 		Protects: "the three states in the coverage column of one table, " +
 			"each with its mark, and a remark that wraps beside an " +
-			"evidence sentence that wraps; and, in English, a namespace " +
-			"whose requests and limits are unavailable and whose four " +
-			"ratios have no base; and the material limitations of " +
-			"section 5 with five rows, two of them unavailable",
+			"evidence sentence that wraps; the verdict page of a report " +
+			"with partial data; and, in English, a namespace whose " +
+			"requests and limits are unavailable and whose four ratios " +
+			"have no base; and the material limitations of the executive " +
+			"summary with five rows, two of them unavailable",
 	},
 	{
 		Name:   "command-edge-pt",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/edge-values.pt-BR.json",
-		Pages:  []int{2, 3, 4},
-		Omits: "page 1: it differs from page 1 of command-complete-pt " +
-			"only in the page number of section 5 in the outline (3 " +
-			"instead of 2), plain text; the rest is the opening page of " +
-			"the same cluster with the same nine capabilities available",
+		Pages:  []int{1, 2, 3, 4, 5},
 		Protects: "a request of zero printed as a number beside a limit " +
 			"that is unavailable; the mark of no base in a cell of the " +
 			"workload table, where its text wraps to two lines; a " +
 			"workload of high priority whose four missing requests and " +
 			"limits collapse into one reason, a namespace at risk that " +
 			"counts one critical and one high workload, and a plan of " +
-			"ten rows with qualifiers in section 5; and the " +
-			"interpretation notes, two rows under the appendix",
+			"ten rows with qualifiers; the verdict page that counts five " +
+			"of ten actions; and the interpretation notes, two rows " +
+			"under the appendix",
 	},
 	{
 		Name:   "command-scaling-pt",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/edge-scaling.pt-BR.json",
-		Pages:  []int{1, 2, 3, 4, 5},
+		Pages:  []int{1, 2, 3, 4, 5, 6},
 		Protects: "the edges of the HPA and node pool tables in " +
-			"Portuguese: the partial-coverage note of section 3 as a " +
-			"callout, an HPA scaled to zero hidden from the table, a " +
-			"situation and a spec that are unavailable, the placeholder " +
-			"of the undetermined pool in the summary, the profile, and " +
-			"a detail heading, a reason of two fragments, and a node " +
-			"whose state is unavailable twice; the tables run over a " +
-			"page break; section 5 with an HPA at its maximum beside an " +
+			"Portuguese: the partial-coverage note as a callout, an HPA " +
+			"scaled to zero hidden from the table, a situation and a " +
+			"spec that are unavailable, the placeholder of the " +
+			"undetermined pool in the summary, the profile, and a detail " +
+			"heading, a reason of two fragments, and a node whose state " +
+			"is unavailable twice; the tables run over a page break; " +
+			"the executive summary with an HPA at its maximum beside an " +
 			"uncovered Deployment without pods, the undetermined pool " +
 			"in the situation table, a plan whose qualifiers depend on " +
 			"the included rows, and two material limitations; and the " +
-			"appendix on page 5 marks the HPA history partial with the " +
-			"warning as its remark",
+			"appendix on the last page marks the HPA history partial " +
+			"with the warning as its remark",
 	},
 	{
 		Name:   "command-scaling-en",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/edge-scaling.en.json",
-		Pages:  []int{2, 3, 4},
-		Omits: "page 1: it differs from page 1 of command-complete-en " +
-			"in the page numbers of the outline (sections 4.3, 5.7, " +
-			"and 6 on pages 3, 4, and 5 instead of 2, 3, and 4) " +
-			"and in two of the three " +
-			"counts of the data quality list, all plain text; page 5: " +
-			"the appendix and the notes equal those of " +
-			"command-scaling-pt but for the wording, which " +
-			"command-partial-en already pins in English",
-		Protects: "sections 3, 4, and 5 in English: the headers of the " +
-			"twelve tables of these sections in the wording of the " +
-			"catalog, each wrapped inside its own cell, and the English " +
-			"callout, placeholders, situations, reasons, node states, " +
-			"observations, qualifiers, and limitations",
+		Pages:  []int{1, 2, 3, 4, 5, 6},
+		Protects: "the executive summary and the sections that follow it " +
+			"in English: the headers of the twelve tables in the " +
+			"wording of the catalog, each wrapped inside its own cell, " +
+			"and the English callout, placeholders, situations, " +
+			"reasons, node states, observations, qualifiers, and " +
+			"limitations",
 	},
 	{
 		Name:   "command-executive-pt",
 		Source: "capacity/main.typ",
 		Data:   "tests/capacity/fixtures/command/edge-scaling.executive.pt-BR.json",
 		Pages:  []int{1, 2, 3, 4},
-		Protects: "the executive profile in Portuguese: an outline of two " +
-			"sections, the executive summary as section 1 with no " +
-			"section of the detailed report before it, the " +
-			"partial-coverage callout after the replica ceiling table, " +
-			"the undetermined pool in the situation table, the plan " +
-			"running over a page break, and the appendix as section 2 " +
-			"at the raised minimum, with the one partial capability and " +
-			"the notes",
+		Protects: "the executive profile in Portuguese: the verdict page, " +
+			"an outline of two sections, the executive summary as " +
+			"section 1 with no section of the detailed report before " +
+			"it, the partial-coverage callout after the replica ceiling " +
+			"table, the undetermined pool in the situation table, the " +
+			"plan running over a page break, and the appendix as " +
+			"section 2 at the raised minimum, with the one partial " +
+			"capability and the notes",
 	},
 	{
 		Name:   "command-executive-en",
@@ -297,10 +309,10 @@ var Snapshots = []Snapshot{
 		Data:   "tests/capacity/fixtures/command/direct-complete.executive.en.json",
 		Pages:  []int{1, 2, 3},
 		Protects: "the executive profile in English on three pages: the " +
-			"English headers of the four tables that have rows and the " +
-			"three fallback sentences of the subsections that have " +
-			"none, with the appendix alone on the last page as its " +
-			"fallback sentence, since no capability reaches the raised " +
-			"minimum",
+			"verdict page, the outline, and the English headers of the " +
+			"four tables that have rows with the three fallback " +
+			"sentences of the subsections that have none, followed by " +
+			"the appendix as its fallback sentence, since no capability " +
+			"reaches the raised minimum",
 	},
 }
