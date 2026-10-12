@@ -807,7 +807,7 @@ func TestMaterialLimitationsRows(t *testing.T) {
 	s.Quality.Warnings = []snapshot.Message{{Code: collect.WarningWorkloadHistoryCurrentAssociation, Params: map[string]float64{}}}
 
 	want := [][]string{
-		{"text:" + catText(t, cat, catalog.CapabilityName("node_autoscaling"), nil), "status/critical:" + pt(t, catalog.State("unavailable"), nil), "text:" + catText(t, cat, catalog.CapabilityReason("NODE_AUTOSCALING_UNDETERMINED"), nil)},
+		{"text:" + catText(t, cat, catalog.CapabilityName("node_autoscaling"), nil), "status/unavailable:" + pt(t, catalog.State("unavailable"), nil), "text:" + catText(t, cat, catalog.CapabilityReason("NODE_AUTOSCALING_UNDETERMINED"), nil)},
 		{"text:" + pt(t, catalog.SectionsExecutiveInterpretation, nil), "status/attention:" + pt(t, catalog.State("partial"), nil), "text:" + catText(t, cat, catalog.Warning(collect.WarningWorkloadHistoryCurrentAssociation), nil)},
 	}
 	rows := limitationRows(t, s, "attention")

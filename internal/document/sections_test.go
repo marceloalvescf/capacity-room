@@ -899,23 +899,27 @@ func TestDocumentEqualsParityForItsSections(t *testing.T) {
 }
 
 // parityCorrection names one cell of the original's fixture that the
-// document writes differently because the snapshot holds a number the
-// fixture leaves out.
+// document writes differently: because the snapshot holds a number the
+// fixture leaves out, or because the document draws a capability that could
+// not be read as unavailable where the original drew it as critical.
 type parityCorrection struct {
-	table string // the id of the table
-	row   int
-	cell  int
-	from  catalog.Key // the placeholder the fixture holds
-	to    string      // the text the document writes
+	table  string // the id of the table
+	row    int
+	cell   int
+	from   catalog.Key // the placeholder the fixture holds; empty for a status correction
+	to     string      // the text the document writes
+	status [2]string   // the status the fixture holds and the one the document draws, when they differ
 }
 
-// parityCorrections holds the one correction of the parity comparison: the
+// parityCorrections holds the corrections of the parity comparison. The
 // original's hand-written fixture leaves out the minimum of the HPA, a
 // shape the collector never writes and Check refuses, so the fixture reads
 // "Mín Atingido" as unavailable and the document, given the minimum of 2,
-// writes it.
+// writes it. The original draws the unavailable autoscaling of the material
+// limitations as critical, and the document draws it as unavailable.
 var parityCorrections = []parityCorrection{
 	{table: "hpa-observed", row: 0, cell: 4, from: catalog.PlaceholderUnavailable, to: "2"},
+	{table: "material-limitations", row: 0, cell: 1, status: [2]string{"critical", "unavailable"}},
 }
 
 // applyParityCorrections rewrites, in place, the cells of want that
@@ -924,9 +928,13 @@ var parityCorrections = []parityCorrection{
 func applyParityCorrections(t *testing.T, cat *catalog.Catalog, want any) {
 	t.Helper()
 	for _, c := range parityCorrections {
-		from, err := cat.Text(c.from, nil)
-		if err != nil {
-			t.Fatalf("Text(%q): %v", c.from, err)
+		var from string
+		if c.from != "" {
+			var err error
+			from, err = cat.Text(c.from, nil)
+			if err != nil {
+				t.Fatalf("Text(%q): %v", c.from, err)
+			}
 		}
 		done := false
 		for _, block := range want.([]any) {
@@ -935,10 +943,18 @@ func applyParityCorrections(t *testing.T, cat *catalog.Catalog, want any) {
 				continue
 			}
 			run := table["rows"].([]any)[c.row].([]any)[c.cell].([]any)[0].(map[string]any)
-			if run["text"] != from {
-				t.Fatalf("cell %d of row %d of %s holds %q, want %q", c.cell, c.row, c.table, run["text"], from)
+			if c.from != "" {
+				if run["text"] != from {
+					t.Fatalf("cell %d of row %d of %s holds %q, want %q", c.cell, c.row, c.table, run["text"], from)
+				}
+				run["text"] = c.to
 			}
-			run["text"] = c.to
+			if c.status[0] != "" {
+				if run["status"] != c.status[0] {
+					t.Fatalf("cell %d of row %d of %s holds the status %q, want %q", c.cell, c.row, c.table, run["status"], c.status[0])
+				}
+				run["status"] = c.status[1]
+			}
 			done = true
 		}
 		if !done {

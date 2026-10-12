@@ -550,7 +550,7 @@
     },
     {
       "type": "callout",
-      "kind": "note",
+      "kind": "warning",
       "title": [
         {
           "kind": "text",
@@ -1375,7 +1375,8 @@
           ],
           [
             {
-              "kind": "text",
+              "kind": "status",
+              "status": "attention",
               "text": "Not ready; Unschedulable"
             }
           ]
@@ -1455,7 +1456,8 @@
           ],
           [
             {
-              "kind": "text",
+              "kind": "status",
+              "status": "unavailable",
               "text": "Unavailable; Unavailable"
             }
           ]

@@ -78,13 +78,13 @@ func hpaNote(b *builder, s snapshot.Snapshot) *Callout {
 	switch {
 	case incomplete:
 		return &Callout{
-			Kind:  "note",
+			Kind:  "warning",
 			Title: []Run{Text(b.text(catalog.SectionsHPAsNoteIncompleteTitle, nil))},
 			Runs:  []Run{Text(b.text(catalog.SectionsHPAsNoteIncomplete, nil))},
 		}
 	case partial:
 		return &Callout{
-			Kind:  "note",
+			Kind:  "warning",
 			Title: []Run{Text(b.text(catalog.SectionsHPAsNotePartialTitle, nil))},
 			Runs:  []Run{Text(b.text(catalog.SectionsHPAsNotePartial, nil))},
 		}

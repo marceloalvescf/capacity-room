@@ -951,7 +951,7 @@ func compareExecutive(scenario string, snap snapshot.Snapshot, want map[string]p
 			if table, ok := doc.Blocks[pos+1].(document.Table); ok {
 				rows = table.Rows
 			}
-			diffs = append(diffs, compareExecutiveRows(label, indexes, rows, sub.rows(recorded))...)
+			diffs = append(diffs, compareExecutiveRows(label, indexes, rows, originalLimitationMarks(sub.name, sub.rows(recorded)))...)
 
 			if sub.name == "replica_ceiling" && pos+2 < len(doc.Blocks) {
 				if callout, ok := doc.Blocks[pos+2].(document.Callout); ok {
@@ -974,6 +974,34 @@ func compareExecutive(scenario string, snap snapshot.Snapshot, want map[string]p
 		}
 	}
 	return diffs
+}
+
+// originalLimitationMarks returns the recorded rows of a table with the mark
+// of the coverage cell of the material limitations read as this project
+// draws it: the original drew an unavailable capability with the critical
+// mark; this project draws it with the unavailable mark, the legend's
+// meaning for missing data. Every other status stays as recorded, and
+// the rows given are left as they are.
+func originalLimitationMarks(table string, rows [][][]pythonRun) [][][]pythonRun {
+	if table != "material_limitations" {
+		return rows
+	}
+	out := make([][][]pythonRun, len(rows))
+	for r, row := range rows {
+		out[r] = make([][]pythonRun, len(row))
+		for c, cell := range row {
+			out[r][c] = slices.Clone(cell)
+			if c != 1 {
+				continue
+			}
+			for i := range out[r][c] {
+				if out[r][c][i].Status == "critical" {
+					out[r][c][i].Status = "unavailable"
+				}
+			}
+		}
+	}
+	return out
 }
 
 // compareExecutiveRows compares the rows of one table with the recorded
@@ -2218,6 +2246,22 @@ func TestComparisonCanFail(t *testing.T) {
 		want.Executive["attention"].ReplicaCeiling[0][2][0].Text = "StatefulSet"
 		checkScaling(t, want, []string{
 			scaling.Name + `: executive.attention.replica_ceiling: row 0, cell 2, run 0: text: got "Deployment", want "StatefulSet"`,
+		})
+	})
+
+	t.Run("the mark of a limitation coverage cell changed", func(t *testing.T) {
+		want := freshScaling(t)
+		want.Executive["attention"].MaterialLimitations[1][1][0].Status = "healthy"
+		checkScaling(t, want, []string{
+			scaling.Name + `: executive.attention.material_limitations: row 1, cell 1, run 0: status: got "attention", want "healthy"`,
+		})
+	})
+
+	t.Run("a critical mark in a limitation coverage cell reads as unavailable", func(t *testing.T) {
+		want := freshScaling(t)
+		want.Executive["attention"].MaterialLimitations[1][1][0].Status = "critical"
+		checkScaling(t, want, []string{
+			scaling.Name + `: executive.attention.material_limitations: row 1, cell 1, run 0: status: got "attention", want "unavailable"`,
 		})
 	})
 

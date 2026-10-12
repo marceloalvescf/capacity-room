@@ -532,7 +532,7 @@
     },
     {
       "type": "callout",
-      "kind": "note",
+      "kind": "warning",
       "title": [
         {
           "kind": "text",

@@ -169,3 +169,27 @@ func TestEffectiveCapabilitiesLeaveOtherStatesAlone(t *testing.T) {
 		t.Errorf("hpa_history = %+v, want it left unavailable with its own reason", got[3])
 	}
 }
+
+func TestAppendixStatusDrawsUnavailableAsUnavailable(t *testing.T) {
+	for state, want := range map[string]string{
+		discovery.StateAvailable:   "healthy",
+		discovery.StatePartial:     "attention",
+		discovery.StateUnavailable: "unavailable",
+	} {
+		if got := appendixStatus(state); got != want {
+			t.Errorf("appendixStatus(%q) = %q, want %q", state, got, want)
+		}
+	}
+}
+
+func TestCriticalMinimumKeepsOnlyUnavailableCapabilities(t *testing.T) {
+	for state, want := range map[string]bool{
+		discovery.StateAvailable:   false,
+		discovery.StatePartial:     false,
+		discovery.StateUnavailable: true,
+	} {
+		if got := passesSeverity(state, "critical"); got != want {
+			t.Errorf("passesSeverity(%q, critical) = %v, want %v", state, got, want)
+		}
+	}
+}

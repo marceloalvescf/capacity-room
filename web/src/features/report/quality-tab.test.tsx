@@ -44,7 +44,7 @@ describe("data quality tab", () => {
     expect(await screen.findByText(sentence("Collected from 2026-07-16 02:30 to 2026-07-16 02:30, in 0:42"))).toBeInTheDocument();
   });
 
-  it("an unavailable capability is critical", async () => {
+  it("an unavailable capability is marked unavailable", async () => {
     mock.views.set(`${id}:en`, {
       ...english,
       quality: {
@@ -56,8 +56,12 @@ describe("data quality tab", () => {
     const table = await screen.findByRole("table", { name: "Data quality" });
     const row = within(table).getAllByRole("row").slice(1)[8] as HTMLElement;
     const cell = within(row).getAllByRole("cell")[2] as HTMLElement;
-    expect(within(cell).getByText("Unavailable").closest("span.inline-flex")).toHaveClass("text-critical");
-    expect(cell.querySelector("svg polygon")).not.toBeNull();
+    const words = within(cell).getAllByText("Unavailable");
+    expect(words).toHaveLength(2);
+    expect(words[0]).toHaveClass("sr-only");
+    expect(words[0]?.closest("span.inline-flex")).toHaveClass("text-neutral");
+    expect(cell.querySelector("svg line")).not.toBeNull();
+    expect(cell.querySelector("svg polygon")).toBeNull();
   });
 
   it("capabilities in view order", async () => {

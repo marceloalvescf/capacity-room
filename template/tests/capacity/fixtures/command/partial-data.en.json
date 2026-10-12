@@ -550,7 +550,7 @@
     },
     {
       "type": "callout",
-      "kind": "note",
+      "kind": "warning",
       "title": [
         {
           "kind": "text",
@@ -1052,7 +1052,7 @@
     },
     {
       "type": "callout",
-      "kind": "note",
+      "kind": "warning",
       "title": [
         {
           "kind": "text",
@@ -1351,7 +1351,7 @@
           [
             {
               "kind": "status",
-              "status": "critical",
+              "status": "unavailable",
               "text": "Unavailable"
             }
           ],
@@ -1414,7 +1414,7 @@
           [
             {
               "kind": "status",
-              "status": "critical",
+              "status": "unavailable",
               "text": "Unavailable"
             }
           ],
@@ -1583,7 +1583,7 @@
           [
             {
               "kind": "status",
-              "status": "critical",
+              "status": "unavailable",
               "text": "Unavailable"
             }
           ],
@@ -1715,7 +1715,7 @@
           [
             {
               "kind": "status",
-              "status": "critical",
+              "status": "unavailable",
               "text": "Unavailable"
             }
           ],

@@ -10,7 +10,7 @@ import { useView } from "./report-page";
 const stateStatus: Record<ViewCapability["state"], Status> = {
   available: "healthy",
   partial: "attention",
-  unavailable: "critical",
+  unavailable: "unavailable",
 };
 
 const rowKey = (row: ViewCapability) => row.name;

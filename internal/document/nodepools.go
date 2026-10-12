@@ -299,8 +299,22 @@ func nodeRow(b *builder, n snapshot.Node, findings []snapshot.Finding, threshold
 		averagePeakCell(b, n.CPUUsagePercent, thresholds),
 		averagePeakCell(b, n.MemoryUsagePercent, thresholds),
 		{nodeReason(b, n.Name, findings)},
-		{Text(stateWord(b, n.Ready, catalog.NodeStateReady, catalog.NodeStateNotReady) + "; " + stateWord(b, n.Schedulable, catalog.NodeStateSchedulable, catalog.NodeStateUnschedulable))},
+		{nodeState(b, n)},
 	}
+}
+
+// nodeState writes the readiness and schedulability of a node, marked for
+// attention when the node is not ready and as unavailable when its readiness
+// is unknown.
+func nodeState(b *builder, n snapshot.Node) Run {
+	text := stateWord(b, n.Ready, catalog.NodeStateReady, catalog.NodeStateNotReady) + "; " + stateWord(b, n.Schedulable, catalog.NodeStateSchedulable, catalog.NodeStateUnschedulable)
+	switch {
+	case n.Ready == nil:
+		return StatusText("unavailable", text)
+	case !*n.Ready:
+		return StatusText("attention", text)
+	}
+	return Text(text)
 }
 
 // averagePeakCell writes the average and the peak of a usage statistic as

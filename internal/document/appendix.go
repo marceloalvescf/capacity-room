@@ -36,13 +36,14 @@ func buildAppendix(b *builder, s snapshot.Snapshot, severity string) []Block {
 }
 
 // appendixStatus is the status mark of a capability's state: available is
-// healthy, partial is attention, unavailable is critical.
+// healthy, partial is attention, and unavailable is drawn as unavailable: a
+// capability that could not be read is missing data, not a finding.
 func appendixStatus(state string) string {
 	switch state {
 	case discovery.StatePartial:
 		return "attention"
 	case discovery.StateUnavailable:
-		return "critical"
+		return "unavailable"
 	default:
 		return "healthy"
 	}

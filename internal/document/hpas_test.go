@@ -89,8 +89,8 @@ func TestHPASectionNote(t *testing.T) {
 			if !isCallout {
 				t.Fatalf("blocks[2] is %T, want Callout", blocks[2])
 			}
-			if callout.Kind != "note" {
-				t.Errorf("Kind = %q, want note", callout.Kind)
+			if callout.Kind != "warning" {
+				t.Errorf("Kind = %q, want warning", callout.Kind)
 			}
 			if len(callout.Title) != 1 || runText(t, callout.Title[0]) != text(tt.wantTitle) {
 				t.Errorf("Title = %+v, want %q", callout.Title, text(tt.wantTitle))

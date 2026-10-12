@@ -342,9 +342,34 @@ func TestNodeDetailState(t *testing.T) {
 			n := testNode("n1", "apps", valueStat(10, 20), valueStat(10, 20))
 			n.Ready, n.Schedulable = tt.ready, tt.schedulable
 			row := detailRow(t, poolSnapshot(t, []snapshot.Node{n}), catalog.English)
-			if got := runText(t, row[4][0]); got != tt.want || row[4][0].kind != "text" {
-				t.Errorf("state = %q (%s), want the text %q", got, row[4][0].kind, tt.want)
+			if got := runText(t, row[4][0]); got != tt.want || row[4][0].kind != wantKind(tt.ready) {
+				t.Errorf("state = %q (%s), want %q", got, row[4][0].kind, tt.want)
 			}
 		})
 	}
+}
+
+func TestNodeDetailStateMarksOnlyWhatIsTrue(t *testing.T) {
+	marks := map[string]Run{}
+	for _, block := range poolBlocks(t, goldenSnapshot(t, "edge-scaling"), catalog.PortugueseBrazil, "all") {
+		if table, ok := block.(Table); ok && table.ID == "node-detail" {
+			for _, row := range table.Rows {
+				marks[runText(t, row[0][0])] = row[4][0]
+			}
+		}
+	}
+	assertStatus(t, marks["pool-a-2"], "attention", "Não pronto; Não agendável")
+	assertStatus(t, marks["orphan"], "unavailable", "Indisponível; Indisponível")
+	if r := marks["pool-a-1"]; r.kind != "text" {
+		t.Errorf("a ready and schedulable node = %s, want a plain text cell", r.kind)
+	}
+}
+
+// wantKind is the kind of run a State cell takes: a mark when readiness is
+// not true, plain text otherwise.
+func wantKind(ready *bool) string {
+	if ready != nil && *ready {
+		return "text"
+	}
+	return "status"
 }
