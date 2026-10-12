@@ -252,6 +252,48 @@ describe("progress screen", () => {
     });
   });
 
+  it("an unreachable source says it could not be reached", async () => {
+    mock.reports = [report({ status: "failed", failure_code: "ENDPOINT_UNREACHABLE" })];
+    await open();
+    expect(await screen.findByText("The metric source could not be reached, or did not answer.")).toBeInTheDocument();
+  });
+
+  it("an administrator is pointed to the profile after a source failure", async () => {
+    signIn("administrator");
+    mock.reports = [report({ status: "failed", failure_code: "ENDPOINT_UNREACHABLE" })];
+    await open();
+    await screen.findByRole("alert");
+    expect(screen.getByRole("link", { name: "Check the profile" })).toHaveAttribute("href", "/profiles/prod/edit");
+    expect(screen.queryByText("An administrator can test the connection of the profile.")).not.toBeInTheDocument();
+  });
+
+  it("an operator is told to ask an administrator", async () => {
+    signIn("operator");
+    mock.reports = [report({ status: "failed", failure_code: "ENDPOINT_UNREACHABLE" })];
+    await open();
+    await screen.findByRole("alert");
+    expect(screen.getByText("An administrator can test the connection of the profile.")).toHaveClass("text-muted-fg");
+    expect(screen.queryByRole("link", { name: "Check the profile" })).not.toBeInTheDocument();
+  });
+
+  it("a failure outside the profile test codes offers no next step", async () => {
+    signIn("administrator");
+    mock.reports = [report({ status: "failed", failure_code: "NOTHING_TO_REPORT" })];
+    await open();
+    await screen.findByRole("alert");
+    expect(screen.queryByRole("link", { name: "Check the profile" })).not.toBeInTheDocument();
+    expect(screen.queryByText("An administrator can test the connection of the profile.")).not.toBeInTheDocument();
+  });
+
+  it("the delete dialog names the report", async () => {
+    mock.reports = [report()];
+    const user = userEvent.setup();
+    await open();
+    await user.click(await screen.findByRole("button", { name: "Delete report" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Delete the report on Production?" });
+    expect(within(dialog).getByText("The report requested 2026-10-07 17:02 by ana, its data, and its PDFs are removed. This cannot be undone.")).toBeInTheDocument();
+  });
+
   it("a reader cannot request again", async () => {
     signIn("reader");
     mock.reports = [report({ status: "failed", failure_code: "ENDPOINT_UNREACHABLE" })];

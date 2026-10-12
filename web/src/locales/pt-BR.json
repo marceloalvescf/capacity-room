@@ -182,7 +182,7 @@
     "ENDPOINT_TLS_FAILED": "A conexão TLS com a fonte de métricas falhou.",
     "ENDPOINT_AUTH_REJECTED": "A fonte de métricas recusou a credencial.",
     "ENDPOINT_API_NOT_FOUND": "Nenhuma API do Prometheus foi encontrada no endereço da fonte de métricas.",
-    "ENDPOINT_UNREACHABLE": "A fonte de métricas não respondeu a tempo.",
+    "ENDPOINT_UNREACHABLE": "Não foi possível alcançar a fonte de métricas, ou ela não respondeu.",
     "CLUSTER_SCOPE_NOT_FOUND": "O cluster do perfil não foi encontrado nas métricas.",
     "CAPABILITIES_INSUFFICIENT": "A fonte de métricas não tem as métricas de que um relatório precisa.",
     "NOTHING_TO_REPORT": "As métricas não tinham nada a relatar para esta seleção.",
@@ -264,8 +264,8 @@
     "deleted": "Excluídos: {{count}}"
   },
   "delete": {
-    "oneTitle": "Excluir este relatório?",
-    "oneBody": "Os dados do relatório selecionado e seus PDFs são removidos. Esta ação não pode ser desfeita.",
+    "oneTitle": "Excluir o relatório de {{profile}}?",
+    "oneBody": "O relatório criado em {{time}} por {{username}}, seus dados e seus PDFs são removidos. Esta ação não pode ser desfeita.",
     "manyTitle": "Excluir {{count}} relatórios?",
     "manyBody": "Os dados e os PDFs são removidos. Esta ação não pode ser desfeita.",
     "confirm": "Excluir",
@@ -307,6 +307,8 @@
     "code": "Código {{code}}",
     "requestAgain": "Gerar de novo com estes valores",
     "back": "Voltar aos relatórios",
+    "checkProfile": "Verificar o perfil",
+    "askAdministrator": "Um administrador pode testar a conexão do perfil.",
     "notFound": "Este relatório não existe ou foi excluído.",
     "expired": "Este relatório expirou; seus dados e PDFs foram removidos.",
     "announce": {
@@ -341,6 +343,7 @@
         "workload": "Workloads",
         "hpa": "HPAs"
       },
+      "pressureLink": "{{sentence}} ({{name}})",
       "allFindings": "Ver todos os achados",
       "seeQuality": "Ver qualidade dos dados",
       "moreWarnings": "+{{count}}"
@@ -352,6 +355,7 @@
       "action": "Ação",
       "scope": "Escopo",
       "confidence": "Confiança",
+      "actionLink": "{{action}} ({{scope}})",
       "empty": "Nenhuma ação priorizada foi identificada."
     },
     "about": {
@@ -478,7 +482,7 @@
       "notices": "Notas",
       "noWarnings": "Nenhum aviso.",
       "noNotices": "Nenhuma nota.",
-      "tabCount": ", avisos: {{count}}"
+      "tabName": "{{tab}}, avisos: {{count}}"
     }
   },
   "confidence": {
@@ -735,7 +739,7 @@
     "ENDPOINT_TLS_FAILED": "A conexão TLS falhou.",
     "ENDPOINT_AUTH_REJECTED": "A fonte recusou a credencial.",
     "ENDPOINT_API_NOT_FOUND": "Nenhuma API do Prometheus responde nesta URL.",
-    "ENDPOINT_UNREACHABLE": "Não foi possível alcançar a fonte.",
+    "ENDPOINT_UNREACHABLE": "Não foi possível alcançar a fonte, ou ela não respondeu.",
     "CLUSTER_SCOPE_NOT_FOUND": "Nenhuma série deste cluster foi encontrada na fonte.",
     "CAPABILITIES_INSUFFICIENT": "A fonte não tem métricas de que o relatório precisa."
   },

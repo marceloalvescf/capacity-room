@@ -218,9 +218,9 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
 
   await test.step("the operator deletes the report", async () => {
     await page.getByRole("button", { name: en.reports.delete, exact: true }).click();
-    const dialog = page.getByRole("alertdialog", { name: en.delete.oneTitle });
+    const dialog = page.getByRole("alertdialog", { name: en.delete.oneTitle.replace("{{profile}}", "Production") });
     await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText(en.delete.oneBody);
+    await expect(dialog).toContainText(`by ${operator.username}, its data, and its PDFs are removed. This cannot be undone.`);
     await expectNoViolations(page);
     await dialog.getByRole("button", { name: en.delete.confirm, exact: true }).click();
     await expect(reportRow(page, reportId)).toHaveCount(0);

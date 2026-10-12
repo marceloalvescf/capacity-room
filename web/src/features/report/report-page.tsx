@@ -113,16 +113,19 @@ export function ReportPage() {
                   )
                 }
               >
-                {t(`report.tab.${tab}`)}
                 {counted ? (
+                  // One text names the tab with its count, so no reader joins the parts with a stray space.
                   <>
+                    <span aria-hidden="true">{t(`report.tab.${tab}`)}</span>
                     <span aria-hidden="true" className="inline-flex items-center gap-1 font-mono text-xs text-attention italic">
                       <StatusShape status="attention" className="size-2.5" />
                       {warnings}
                     </span>
-                    <span className="sr-only">{t("report.quality.tabCount", { count: warnings })}</span>
+                    <span className="sr-only">{t("report.quality.tabName", { tab: t(`report.tab.${tab}`), count: warnings })}</span>
                   </>
-                ) : null}
+                ) : (
+                  t(`report.tab.${tab}`)
+                )}
               </NavLink>
             );
           })}

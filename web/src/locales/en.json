@@ -182,7 +182,7 @@
     "ENDPOINT_TLS_FAILED": "The TLS connection to the metric source failed.",
     "ENDPOINT_AUTH_REJECTED": "The metric source refused the credential.",
     "ENDPOINT_API_NOT_FOUND": "No Prometheus API was found at the address of the metric source.",
-    "ENDPOINT_UNREACHABLE": "The metric source did not answer in time.",
+    "ENDPOINT_UNREACHABLE": "The metric source could not be reached, or did not answer.",
     "CLUSTER_SCOPE_NOT_FOUND": "The cluster of the profile was not found in the metrics.",
     "CAPABILITIES_INSUFFICIENT": "The metric source lacks the metrics a report needs.",
     "NOTHING_TO_REPORT": "The metrics held nothing to report for this selection.",
@@ -264,8 +264,8 @@
     "deleted": "Deleted: {{count}}"
   },
   "delete": {
-    "oneTitle": "Delete this report?",
-    "oneBody": "The selected report's data and its PDFs are removed. This cannot be undone.",
+    "oneTitle": "Delete the report on {{profile}}?",
+    "oneBody": "The report requested {{time}} by {{username}}, its data, and its PDFs are removed. This cannot be undone.",
     "manyTitle": "Delete {{count}} reports?",
     "manyBody": "Their data and their PDFs are removed. This cannot be undone.",
     "confirm": "Delete",
@@ -307,6 +307,8 @@
     "code": "Code {{code}}",
     "requestAgain": "Request again with these values",
     "back": "Back to reports",
+    "checkProfile": "Check the profile",
+    "askAdministrator": "An administrator can test the connection of the profile.",
     "notFound": "This report does not exist, or was deleted.",
     "expired": "This report has expired; its data and PDFs were removed.",
     "announce": {
@@ -341,6 +343,7 @@
         "workload": "Workloads",
         "hpa": "HPAs"
       },
+      "pressureLink": "{{sentence}} ({{name}})",
       "allFindings": "See all findings",
       "seeQuality": "See data quality",
       "moreWarnings": "+{{count}}"
@@ -352,6 +355,7 @@
       "action": "Action",
       "scope": "Scope",
       "confidence": "Confidence",
+      "actionLink": "{{action}} ({{scope}})",
       "empty": "No prioritized action was identified."
     },
     "about": {
@@ -478,7 +482,7 @@
       "notices": "Notices",
       "noWarnings": "No warning.",
       "noNotices": "No notice.",
-      "tabCount": ", warnings: {{count}}"
+      "tabName": "{{tab}}, warnings: {{count}}"
     }
   },
   "confidence": {
@@ -735,7 +739,7 @@
     "ENDPOINT_TLS_FAILED": "The TLS connection failed.",
     "ENDPOINT_AUTH_REJECTED": "The source refused the credential.",
     "ENDPOINT_API_NOT_FOUND": "No Prometheus API answers at this URL.",
-    "ENDPOINT_UNREACHABLE": "The source could not be reached.",
+    "ENDPOINT_UNREACHABLE": "The source could not be reached, or did not answer.",
     "CLUSTER_SCOPE_NOT_FOUND": "No series of this cluster was found at the source.",
     "CAPABILITIES_INSUFFICIENT": "The source lacks metrics the report needs."
   },

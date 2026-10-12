@@ -55,7 +55,7 @@ describe("report screen", () => {
     const nav = screen.getByRole("navigation", { name: t("report.tabs") });
     const links = within(nav).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual(
-      reportTabs.map((tab) => `${t(`report.tab.${tab}`)}${tab === "quality" ? "2, warnings: 2" : ""}`),
+      reportTabs.map((tab) => `${t(`report.tab.${tab}`)}${tab === "quality" ? "2Data quality, warnings: 2" : ""}`),
     );
     links.forEach((link, index) => {
       expect(link.getAttribute("href")).toMatch(new RegExp(`/${reportTabs[index] ?? ""}$`));

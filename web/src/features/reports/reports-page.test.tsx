@@ -204,8 +204,10 @@ describe("report list", () => {
     mock.calls.length = 0;
     await user.click(within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") }));
     const dialog = await screen.findByRole("alertdialog");
-    expect(within(dialog).getByText(t("delete.oneTitle"))).toBeInTheDocument();
-    expect(within(dialog).getByText(t("delete.oneBody"))).toBeInTheDocument();
+    expect(within(dialog).getByText("Delete the report on Production?")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("The report requested 2026-10-07 16:59 by bia, its data, and its PDFs are removed. This cannot be undone."),
+    ).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: t("delete.confirm") }));
     await waitFor(() => {
       expect(screen.getAllByRole("row")).toHaveLength(3);
@@ -278,7 +280,7 @@ describe("report list", () => {
     await user.click(within(rowOf(id(0))).getByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
     const dialog = await screen.findByRole("alertdialog");
-    expect(within(dialog).getByText(t("delete.oneTitle"))).toBeInTheDocument();
+    expect(within(dialog).getByText("Delete the report on Production?")).toBeInTheDocument();
   });
 
   it("cancel keeps everything", async () => {

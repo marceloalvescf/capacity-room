@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-export type DeleteTarget = { kind: "one"; id: string } | { kind: "many"; ids: string[] };
+export type DeleteTarget = { kind: "one"; id: string; profile: string; time: string; username: string } | { kind: "many"; ids: string[] };
 
 interface DeleteDialogProps {
   target: DeleteTarget | null;
@@ -16,8 +16,8 @@ export function DeleteDialog({ target, busy, onConfirm, onCancel, onCloseAutoFoc
   let title = "";
   let body = "";
   if (target?.kind === "one") {
-    title = t("delete.oneTitle");
-    body = t("delete.oneBody");
+    title = t("delete.oneTitle", { profile: target.profile });
+    body = t("delete.oneBody", { time: target.time, username: target.username });
   } else if (target?.kind === "many") {
     title = t("delete.manyTitle", { count: target.ids.length });
     body = t("delete.manyBody");

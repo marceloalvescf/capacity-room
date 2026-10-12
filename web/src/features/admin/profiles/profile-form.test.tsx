@@ -393,7 +393,7 @@ describe("the profile form", () => {
     const user = userEvent.setup();
     mock.profileTests.set("draft", { ok: false, code: "ENDPOINT_UNREACHABLE", capabilities: [] });
     await user.click(await screen.findByRole("button", { name: "Test connection" }));
-    expect(await findShown("The source could not be reached.")).toBeInTheDocument();
+    expect(await findShown("The source could not be reached, or did not answer.")).toBeInTheDocument();
     expect(mock.calls.filter((call) => call.path === "/admin/profiles/test")).toHaveLength(1);
     expect(screen.queryByText("Fill in this field.")).not.toBeInTheDocument();
   });
@@ -442,7 +442,7 @@ describe("the profile form", () => {
     const user = await fillNew();
     mock.profileTests.set("draft", { ok: false, code: "ENDPOINT_UNREACHABLE", capabilities: [] });
     await user.click(screen.getByRole("button", { name: "Test connection" }));
-    const line = await findShown("The source could not be reached.");
+    const line = await findShown("The source could not be reached, or did not answer.");
     expect(line.parentElement).toHaveClass("text-critical");
     expect(line.parentElement?.querySelector("polygon")).not.toBeNull();
   });

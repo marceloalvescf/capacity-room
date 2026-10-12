@@ -28,6 +28,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   has it.
 - The period of a new report is a field of its own, and its choices open
   below it in two columns without scrolling.
+- Deleting a report names it in the confirmation, and a report that failed
+  on its metric source points an administrator to the profile.
 
 ### Fixed
 
@@ -42,6 +44,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - On the report screen, a namespace, workload, or node with no finding reads
   "No finding" instead of Healthy, and the state of a node that is not ready
   or unknown carries its mark.
+- A report whose metric source could not be reached no longer says that the
+  source did not answer in time.
+- Screen readers tell the actions of the action plan apart by their scope.
 
 ## [1.0.0] - 2026-10-10
 

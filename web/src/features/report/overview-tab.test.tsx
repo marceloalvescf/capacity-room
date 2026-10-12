@@ -127,6 +127,23 @@ describe("overview tab", () => {
     expect(lines[4]).toHaveTextContent(/Attention 2$/);
   });
 
+  it("a pressure link names the node it leads to", async () => {
+    await open();
+    const list = screen.getByRole("heading", { level: 2, name: "Pressure by scope" }).parentElement?.querySelector("ul") as HTMLElement;
+    const first = within(within(list).getAllByRole("listitem")[0] as HTMLElement).getAllByRole("link")[0];
+    expect(first).toHaveAccessibleName("Observed CPU usage on the node. (aks-agentpool-12345678-vmss000000)");
+  });
+
+  it("plan links with the same action are told apart by their scope", async () => {
+    await open();
+    const plan = screen.getByRole("heading", { level: 2, name: "Prioritized action plan" }).parentElement as HTMLElement;
+    const names = within(plan)
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("aria-label"));
+    expect(names).toContain("Review the memory request and the observed consumption. (payments)");
+    expect(names).toContain("Review the memory request and the observed consumption. (payments-web)");
+  });
+
   it("the node evidence warning stands under the verdict of the growth side", async () => {
     await open();
     const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
@@ -289,7 +306,7 @@ describe("overview tab", () => {
   it("an action of the plan links to its finding", async () => {
     await open();
     const rows = within(screen.getByRole("table", { name: "Prioritized action plan" })).getAllByRole("row").slice(1);
-    const first = within(rows[0] as HTMLElement).getByRole("link", { name: english.recommendations[0]?.action ?? "" });
+    const first = within(rows[0] as HTMLElement).getByRole("link", { name: "Review the configured maximum and the capacity of the workload. (web)" });
     expect(first.getAttribute("href")).toMatch(/\/findings\?scope=hpa&finding=7$/);
     const eighth = within(rows[7] as HTMLElement).getByRole("link");
     expect(eighth.getAttribute("href")).toMatch(/\/findings\?scope=workload&finding=11$/);

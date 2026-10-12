@@ -143,6 +143,7 @@ function PressureLine({ summary }: { summary: ScopeSummary }) {
         <p className="text-sm">
           <Link
             to={`../findings?scope=${type}&finding=${String(lead.index)}`}
+            aria-label={name === null ? undefined : t("report.overview.pressureLink", { sentence: lead.finding.sentence, name })}
             className="underline decoration-border underline-offset-4 hover:decoration-accent"
           >
             {lead.finding.sentence}
@@ -300,6 +301,7 @@ function QualityNotice() {
 
 // An action of the plan leads to the finding it comes from; with none to match, it stays plain text.
 function PlanAction({ recommendation, findings }: { recommendation: ViewRecommendation; findings: ViewFinding[] }) {
+  const { t } = useTranslation();
   const index = findings.findIndex(matchRecommendation(recommendation));
   if (index < 0) {
     return recommendation.action;
@@ -307,6 +309,7 @@ function PlanAction({ recommendation, findings }: { recommendation: ViewRecommen
   return (
     <Link
       to={`../findings?scope=${recommendation.scope_type}&finding=${String(index)}`}
+      aria-label={t("report.plan.actionLink", { action: recommendation.action, scope: recommendation.scope_text })}
       className="underline decoration-border underline-offset-4 hover:decoration-accent"
     >
       {recommendation.action}

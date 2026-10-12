@@ -96,7 +96,7 @@ export function ReportsPage() {
     }
     open(
       chosen.length === 1
-        ? { kind: "one", id: only.id }
+        ? { kind: "one", id: only.id, profile: profileName(only), time: formatTime(only.created_at), username: only.owner_username }
         : { kind: "many", ids: chosen.map((row) => row.id) },
     );
   }
@@ -268,7 +268,7 @@ export function ReportsPage() {
                         {mine ? (
                           <Button
                             onClick={() => {
-                              open({ kind: "one", id: row.id });
+                              open({ kind: "one", id: row.id, profile: profileName(row), time, username: row.owner_username });
                             }}
                           >
                             {t("reports.delete")}

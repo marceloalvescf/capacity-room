@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
 import { ApiFailure } from "@/api/client";
 import { errorText, toError } from "@/api/errors";
-import { reportPhaseValues } from "@/api/schema.gen";
+import { profileTestCodeValues, reportPhaseValues } from "@/api/schema.gen";
 import { useAnnounce } from "@/app/live-region";
 import { useScreenTitle } from "@/app/title";
 import { StatusMark } from "@/components/status-mark";
@@ -141,6 +141,7 @@ export function ProgressPage() {
 
   const profile = profiles.data?.find((candidate) => candidate.id === data.profile_id)?.display_name ?? data.profile_id;
   const canRequest = principal.role !== "reader";
+  const profileCode = data.failure_code !== null && (profileTestCodeValues as readonly string[]).includes(data.failure_code);
   const finished = data.status === "collected" || data.status === "failed";
 
   async function confirm() {
@@ -203,7 +204,15 @@ export function ProgressPage() {
                 {t("progress.requestAgain")}
               </Link>
             ) : null}
+            {profileCode && principal.role === "administrator" ? (
+              <Link to={`/profiles/${data.profile_id}/edit`} className={buttonStyles()}>
+                {t("progress.checkProfile")}
+              </Link>
+            ) : null}
           </div>
+          {profileCode && principal.role !== "administrator" ? (
+            <p className="text-sm text-muted-fg">{t("progress.askAdministrator")}</p>
+          ) : null}
         </>
       ) : null}
       {data.status === "collected" && canDelete(principal, data) ? (
@@ -219,7 +228,7 @@ export function ProgressPage() {
         </div>
       ) : null}
       <DeleteDialog
-        target={asking ? { kind: "one", id: data.id } : null}
+        target={asking ? { kind: "one", id: data.id, profile, time: formatTime(data.created_at), username: data.owner_username } : null}
         busy={deleteReport.isPending}
         onCloseAutoFocus={(event) => {
           event.preventDefault();
