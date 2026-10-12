@@ -6,6 +6,25 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The PDF opens on a verdict page: the findings by severity, whether the cluster can grow, the pressure on each scope, and the first actions to take.
+- The PDF ends with a line naming the program that generated it.
+
+### Changed
+
+- The executive summary of the PDF comes before the sections of evidence.
+- The PDF uses the typefaces of the web app, with names and numbers set in a monospaced face and numbers aligned to the right.
+- The PDF words its statuses, headings, and action plan as the web app does, and names each scope of an action in full.
+- The opening page of the PDF names the profile and the minimum severity of the report.
+- An empty table of the PDF says whether there was no data or no row reached the minimum severity.
+
+### Fixed
+
+- The PDF no longer marks unavailable data, a partial HPA coverage, or a node that is not ready with the mark of a healthy or critical status.
+- The data quality tab of the web app marks an unavailable capability as unavailable rather than critical.
+- The PDF and the web app write "1 core" in the singular.
+
 ## [1.1.0] - 2026-10-12
 
 ### Added
