@@ -116,16 +116,20 @@
   eyebrow(growth.title)
   v(2pt)
   if growth.current != none {
-    text(size: 30pt, weight: "semibold", tracking: -0.04em)[#value(growth.current)#h(0.12em)#text(font: mono)[/]#h(0.12em)#value(growth.max)]
+    // Two counts are set large; a word standing for an unknown count would
+    // not fit the column at that size.
+    let known = growth.current.contains(regex("\\d")) and growth.max.contains(regex("\\d"))
+    text(size: if known { 30pt } else { 15pt }, weight: "semibold", tracking: -0.04em)[#value(growth.current)#h(0.12em)#text(font: mono)[/]#h(0.12em)#value(growth.max)]
   } else if growth.state != none {
     text(size: 20pt, weight: "semibold", growth.state)
   }
   if growth.gauge != none {
     v(-2pt)
     gauge(growth.gauge)
-    if growth.caption != none {
-      text(size: 7.5pt, growth.caption)
-    }
+  }
+  if growth.caption != none {
+    v(2pt)
+    text(size: 7.5pt, growth.caption)
   }
   if growth.finding != none {
     v(6pt)
