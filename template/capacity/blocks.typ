@@ -42,11 +42,7 @@
   } else if entry.type == "list" {
     list(..entry.items.map(item => runs-to-content(item)))
   } else if entry.type == "table" {
-    render-table(
-      entry.id,
-      entry.headers,
-      entry.rows.map(row => row.map(cell => runs-to-content(cell))),
-    )
+    render-table(entry.id, entry.headers, entry.rows)
   } else if entry.type == "callout" {
     let title = if entry.title == none { none } else { runs-to-content(entry.title) }
     callout(kind: entry.kind, title: title, runs-to-content(entry.runs))

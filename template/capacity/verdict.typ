@@ -175,11 +175,7 @@
   text(size: 11pt, weight: "semibold", plan.title)
   v(2pt)
   if plan.table != none {
-    render-table(
-      plan.table.id,
-      plan.table.headers,
-      plan.table.rows.map(row => row.map(cell => runs-to-content(cell))),
-    )
+    render-table(plan.table.id, plan.table.headers, plan.table.rows)
   } else if plan.empty != none {
     plan.empty
   }

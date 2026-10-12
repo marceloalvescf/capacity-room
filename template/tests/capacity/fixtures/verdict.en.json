@@ -11,12 +11,12 @@
     "warning": "Warning"
   },
   "cover": {
-    "title": "CAPACITY REPORT",
-    "cluster_label": "Cluster:",
+    "title": "Capacity report",
+    "cluster_label": "Cluster",
     "cluster": "prod",
-    "author_label": "PREPARED BY:",
+    "author_label": "Prepared by",
     "author": "Time SRE",
-    "issued_label": "ISSUED ON:",
+    "issued_label": "Issued on",
     "issued": "07/15/2026 14:30",
     "period": "07/15/2026 10:30 to 07/15/2026 14:30",
     "profile": "Detailed"
@@ -216,7 +216,7 @@
           "type": "table",
           "id": "verdict-plan",
           "headers": [
-            "Order",
+            "#",
             "Priority",
             "Action",
             "Scope"
@@ -2174,7 +2174,7 @@
       "type": "table",
       "id": "action-plan",
       "headers": [
-        "Order",
+        "#",
         "Priority",
         "Action",
         "Workloads / Scope"

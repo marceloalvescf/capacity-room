@@ -5,7 +5,7 @@
 // built; `blocks.typ` calls `render-table` once the shape is already known
 // to be correct.
 
-#import "runs.typ": mono
+#import "runs.typ": mono, run-to-content
 
 #let layouts = (
   report-metadata: (columns: (1fr, 3fr), size: 8.5pt, inset-y: 2pt, faces: ("text", "text")),
@@ -107,10 +107,21 @@
 // number from the right in the monospaced face, a mark from the left.
 #let face-align = (name: left, num: right, text: left, mark: left)
 
+// A cell of a number column sets in the monospaced face only the runs whose
+// text holds a digit; a word keeps the body face and may wrap.
+#let num-run(run) = {
+  let content = run-to-content(run)
+  if run.kind in ("text", "strong", "placeholder", "status") and run.text != none and run.text.contains(regex("\\d")) {
+    text(font: mono, content)
+  } else {
+    content
+  }
+}
+
 // render-table assumes `id`, `headers`, and `rows` already passed
 // `validate.typ`'s checks: `id` is a known layout, `headers` holds as many
-// strings as `layout.columns`, and every row of `rows` (already converted
-// to content by `runs.typ`) holds as many cells.
+// strings as `layout.columns`, and every row of `rows` (an array of runs per
+// cell) holds as many cells.
 #let render-table(id, headers, rows) = {
   let layout = layouts.at(id)
   let faces = layout.faces
@@ -127,7 +138,7 @@
     ))
     #let body = rows.map(row => row.enumerate().map(((i, cell)) => table.cell(
       align: face-align.at(faces.at(i)) + horizon,
-      if faces.at(i) == "num" { text(font: mono, cell) } else { cell },
+      if faces.at(i) == "num" { cell.map(num-run).join() } else { cell.map(run-to-content).join() },
     ))).flatten()
     #table(
       columns: layout.columns,

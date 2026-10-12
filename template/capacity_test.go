@@ -653,3 +653,100 @@ func TestCapacityVerdictFixturesCompile(t *testing.T) {
 		})
 	}
 }
+
+// TestCapacityNumberColumnKeepsWordsApart compiles a table whose number
+// columns hold a number beside a word, and requires the boxes of the text
+// layer not to overlap: a word in a number column keeps the
+// body face and wraps instead of printing over its neighbour.
+func TestCapacityNumberColumnKeepsWordsApart(t *testing.T) {
+	ws := workspace(t)
+	raw, err := os.ReadFile(capacityFixture(ws, "minimal.pt-BR"))
+	if err != nil {
+		t.Fatalf("reading the minimal fixture: %v", err)
+	}
+	var data map[string]any
+	if err := json.Unmarshal(raw, &data); err != nil {
+		t.Fatalf("decoding the minimal fixture: %v", err)
+	}
+	text := func(s string) []any { return []any{map[string]any{"kind": "text", "text": s}} }
+
+	row := []any{text("dup"), text("1"), text("Unavailable"), text("1.5"), text("1"), text("2"), []any{map[string]any{"kind": "status", "status": "unavailable", "text": "Unavailable"}}}
+	data["blocks"] = []any{map[string]any{
+		"type":    "table",
+		"id":      "hpa-observed",
+		"headers": []any{"A", "B", "C", "D", "E", "F", "G"},
+		"rows":    []any{row},
+	}}
+	out, err := json.Marshal(data)
+	if err != nil {
+		t.Fatalf("encoding the fixture: %v", err)
+	}
+	fixture := filepath.Join(t.TempDir(), "numbers.json")
+	if err := os.WriteFile(fixture, out, 0o644); err != nil {
+		t.Fatalf("writing the fixture: %v", err)
+	}
+	pdf, stderr, err := compileCapacityData(t, ws, fixture)
+	assertCleanCompile(t, stderr, err)
+	boxes, err := exec.Command("pdftotext", "-bbox", pdf, "-").Output()
+	if err != nil {
+		t.Fatalf("pdftotext -bbox %s -: %v", pdf, err)
+	}
+	type wordBox struct {
+		text                   string
+		xMin, xMax, yMin, yMax float64
+	}
+	var words []wordBox
+	for _, line := range strings.Split(string(boxes), "\n") {
+		var w wordBox
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "<word ") {
+			continue
+		}
+		rest := line[strings.Index(line, ">")+1 : strings.LastIndex(line, "</word>")]
+		w.text = rest
+		for _, attr := range []struct {
+			name string
+			dst  *float64
+		}{{"xMin", &w.xMin}, {"xMax", &w.xMax}, {"yMin", &w.yMin}, {"yMax", &w.yMax}} {
+			i := strings.Index(line, attr.name+"=\"")
+			if i < 0 {
+				t.Fatalf("no %s in %q", attr.name, line)
+			}
+			v := line[i+len(attr.name)+2:]
+			v, _, _ = strings.Cut(v, "\"")
+			f, perr := strconv.ParseFloat(v, 64)
+			if perr != nil {
+				t.Fatalf("parsing %s of %q: %v", attr.name, line, perr)
+			}
+			*attr.dst = f
+		}
+		words = append(words, w)
+	}
+	var tableTop float64
+	for _, w := range words {
+		if w.text == "A" {
+			tableTop = w.yMin
+		}
+	}
+	if tableTop == 0 {
+		t.Fatalf("the text layer holds no table header")
+	}
+	var sawWord bool
+	for i, a := range words {
+		if a.text == "Unavailable" {
+			sawWord = true
+		}
+		if a.yMin < tableTop {
+			continue
+		}
+		for _, b := range words[i+1:] {
+			sameLine := a.yMin < b.yMax && b.yMin < a.yMax
+			if sameLine && a.xMin < b.xMax-0.5 && b.xMin < a.xMax-0.5 {
+				t.Errorf("the words %q and %q overlap on the page", a.text, b.text)
+			}
+		}
+	}
+	if !sawWord {
+		t.Errorf("the text layer holds no word %q", "Unavailable")
+	}
+}
