@@ -136,13 +136,17 @@ test-template: web $(IMAGE_DEP)
 test-golden: web $(IMAGE_DEP)
 	@mkdir -p $(GOLDEN_OUT)
 	docker run $(RUN_TEST_IMAGE_FLAGS) \
+		--user "$$(id -u):$$(id -g)" \
 		--volume "$(CURDIR)/$(GOLDEN_OUT):/out" --env KCR_GOLDEN_OUT=/out \
 		$(TEST_IMAGE) go test -v -tags='template golden' ./template/ -run 'Golden|Snapshots'
 
 # Rewrites every golden page. Run it only for an intended visual change, and
-# review each page before committing it.
+# review each page before committing it. Both golden targets run as the
+# caller, since they write into folders of the checkout; Docker keeps the
+# last --user it is given.
 update-golden: $(IMAGE_DEP)
 	docker run $(RUN_TEST_IMAGE_FLAGS) \
+		--user "$$(id -u):$$(id -g)" \
 		--volume "$(CURDIR)/template/tests/golden:/src/template/tests/golden" \
 		$(TEST_IMAGE) go run ./template/golden/cmd/update-golden
 
