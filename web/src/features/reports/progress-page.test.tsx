@@ -287,6 +287,34 @@ describe("progress screen", () => {
     expect(screen.queryByText("An administrator can test the connection of the profile.")).not.toBeInTheDocument();
   });
 
+  it("an administrator is led first to the profile after a source failure", async () => {
+    signIn("administrator");
+    mock.reports = [report({ status: "failed", failure_code: "ENDPOINT_UNREACHABLE" })];
+    await open();
+    await screen.findByRole("alert");
+    const check = screen.getByRole("link", { name: "Check the profile" });
+    const again = screen.getByRole("link", { name: t("progress.requestAgain") });
+    expect(check).toHaveClass("bg-action");
+    expect(again).not.toHaveClass("bg-action");
+    expect(check.compareDocumentPosition(again) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("an operator keeps request again as the primary action", async () => {
+    signIn("operator");
+    mock.reports = [report({ status: "failed", failure_code: "ENDPOINT_UNREACHABLE" })];
+    await open();
+    await screen.findByRole("alert");
+    expect(screen.getByRole("link", { name: t("progress.requestAgain") })).toHaveClass("bg-action");
+  });
+
+  it("a failed report can be deleted", async () => {
+    mock.reports = [report({ status: "failed", failure_code: "NOTHING_TO_REPORT" })];
+    const user = userEvent.setup();
+    await open();
+    await user.click(await screen.findByRole("button", { name: "Delete report" }));
+    expect(await screen.findByRole("alertdialog", { name: "Delete the report on Production?" })).toBeInTheDocument();
+  });
+
   it("an operator is told to ask an administrator", async () => {
     signIn("operator");
     mock.reports = [report({ status: "failed", failure_code: "ENDPOINT_UNREACHABLE" })];

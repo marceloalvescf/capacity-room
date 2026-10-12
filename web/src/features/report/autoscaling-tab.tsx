@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
 import type { ViewHPA, ViewValue } from "./api";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
+import { ClusterVerdict } from "./cluster-verdict";
 import { Counts, FindingStatus, hpaKey, matchHPA, RowFindings, StatGrid, useWorstFindingIndex, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
@@ -118,6 +119,7 @@ export function AutoscalingTab() {
             {t("report.confidence", { value: t(`confidence.${autoscaling.confidence}`) })}
           </span>
         </div>
+        <ClusterVerdict />
         <Counts
           label={t("report.autoscaling.title")}
           items={[

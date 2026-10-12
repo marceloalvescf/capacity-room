@@ -32,6 +32,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   on its metric source points an administrator to the profile.
 - The node pools on the report show the status of their findings, and the
   PDF choices line up.
+- The autoscaling tab opens on the cluster's verdict, the action plan names
+  the kind of each scope, and a failed report can be deleted.
 
 ### Fixed
 

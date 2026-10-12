@@ -348,7 +348,7 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
           side="bottom"
           align="start"
           aria-labelledby={labelId}
-          collisionPadding={8}
+          collisionPadding={24}
           className={cn(
             "max-h-(--radix-popover-content-available-height) overflow-y-auto p-0",
             restricted ? "w-[min(36rem,calc(100vw-2rem))]" : "w-[min(46rem,calc(100vw-2rem))]",

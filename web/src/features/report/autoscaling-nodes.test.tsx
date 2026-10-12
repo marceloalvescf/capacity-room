@@ -7,6 +7,7 @@ import { installMockApi, profileSummary, report, signedIn } from "../../../tests
 import { location, renderApp } from "../../../tests/render";
 import { mockColourScheme } from "../../../tests/match-media";
 import viewEn from "../../../tests/fixtures/view/edge-scaling.en.json";
+import directComplete from "../../../tests/fixtures/view/direct-complete.en.json";
 import viewPt from "../../../tests/fixtures/view/edge-scaling.pt-BR.json";
 
 const mock = installMockApi(signedIn());
@@ -375,5 +376,22 @@ describe("replica range", () => {
       expect(word).toHaveClass("text-muted-fg");
       expect(word.closest(".font-mono")).toBeNull();
     }
+  });
+});
+
+describe("autoscaling tab verdict", () => {
+  it("opens on the verdict of the cluster and the evidence warning", async () => {
+    await open("autoscaling");
+    const section = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement?.parentElement as HTMLElement;
+    const sentence = within(section).getByText("The number of nodes is close to the observed maximum.");
+    expect(within(sentence.parentElement as HTMLElement).getByText("Attention")).toBeInTheDocument();
+    expect(within(section).getByText("The capacity evidence of the nodes is incomplete.").parentElement).toHaveClass("text-attention");
+  });
+
+  it("shows the cluster finding alone when the evidence is complete", async () => {
+    mock.views.set(`${id}:en`, directComplete as View);
+    await open("autoscaling");
+    expect(screen.getByText("The number of nodes is close to the observed maximum.")).toBeInTheDocument();
+    expect(screen.queryByText("The capacity evidence of the nodes is incomplete.")).not.toBeInTheDocument();
   });
 });

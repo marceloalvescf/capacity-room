@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import { StatusMark, StatusShape } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
 import type { ViewFinding, ViewRecommendation } from "./api";
+import { ClusterVerdict, worstClusterFinding } from "./cluster-verdict";
 import { DepthGauge, type GaugeSeverity } from "./depth-gauge";
 import { findingKey, isUnknownPool, matchRecommendation, scopeName, ValueText } from "./pieces";
 import { useView } from "./report-page";
@@ -24,18 +25,12 @@ function worstOf(list: Severity[]): Severity {
 // Whether the cluster can grow: its nodes against the autoscaler's maximum, and the worst finding of the cluster.
 function Growth() {
   const { t } = useTranslation();
-  const { summary, findings, quality } = useView();
+  const { summary, findings } = useView();
   const { autoscaling } = summary;
-  const evidenceWarning = quality.warnings.find((warning) => warning.code === "NODE_CAPACITY_EVIDENCE_INCOMPLETE");
   const enabled = autoscaling.status === "enabled";
   const current = autoscaling.current_nodes.raw;
   const max = autoscaling.max_nodes.raw;
-  const worst = findings
-    .filter((finding) => finding.scope_type === "cluster")
-    .reduce<ViewFinding | null>(
-      (best, finding) => (best === null || severities.indexOf(finding.severity) < severities.indexOf(best.severity) ? finding : best),
-      null,
-    );
+  const worst = worstClusterFinding(findings);
   // A full scale is a hazard only when the view gives the cluster a finding above healthy.
   const severity: GaugeSeverity = worst === null || worst.severity === "healthy" ? null : worst.severity;
   return (
@@ -56,18 +51,7 @@ function Growth() {
       ) : (
         <p className="text-2xl font-semibold">{t(`autoscalingStatus.${autoscaling.status}`)}</p>
       )}
-      {worst === null ? null : (
-        <div className="flex flex-col gap-1">
-          <StatusMark status={worst.severity} />
-          <p className="text-sm">{worst.sentence}</p>
-        </div>
-      )}
-      {evidenceWarning === undefined ? null : (
-        <p className="flex items-baseline gap-1.5 text-sm text-attention">
-          <StatusShape status="attention" />
-          <span>{evidenceWarning.text}</span>
-        </p>
-      )}
+      <ClusterVerdict />
       {enabled ? (
         <p className="text-sm text-muted-fg">
           <span className="whitespace-nowrap">
@@ -300,6 +284,11 @@ function QualityNotice() {
 }
 
 // An action of the plan leads to the finding it comes from; with none to match, it stays plain text.
+// The scopes of an action by their full names; a long list is the summary the view gives.
+function scopeLabel(recommendation: ViewRecommendation): string {
+  return recommendation.scopes.length <= 3 ? recommendation.scopes.join(", ") : recommendation.scope_text;
+}
+
 function PlanAction({ recommendation, findings }: { recommendation: ViewRecommendation; findings: ViewFinding[] }) {
   const { t } = useTranslation();
   const index = findings.findIndex(matchRecommendation(recommendation));
@@ -309,7 +298,7 @@ function PlanAction({ recommendation, findings }: { recommendation: ViewRecommen
   return (
     <Link
       to={`../findings?scope=${recommendation.scope_type}&finding=${String(index)}`}
-      aria-label={t("report.plan.actionLink", { action: recommendation.action, scope: recommendation.scope_text })}
+      aria-label={t("report.plan.actionLink", { action: recommendation.action, scope: scopeLabel(recommendation) })}
       className="underline decoration-border underline-offset-4 hover:decoration-accent"
     >
       {recommendation.action}
@@ -350,7 +339,12 @@ function Plan() {
                   <td className="px-3 py-2">
                     <PlanAction recommendation={recommendation} findings={findings} />
                   </td>
-                  <td className="px-3 py-2 font-mono whitespace-nowrap">{recommendation.scope_text}</td>
+                  <td className="px-3 py-2">
+                    <span className="text-muted-fg">{t(`scope.${recommendation.scope_type}`)}</span>{" "}
+                    <span className={cn("[overflow-wrap:anywhere]", recommendation.scopes.length <= 3 && "font-mono")}>
+                      {scopeLabel(recommendation)}
+                    </span>
+                  </td>
                   <td className="px-3 py-2">{t(`confidence.${recommendation.confidence}`)}</td>
                 </tr>
               ))}

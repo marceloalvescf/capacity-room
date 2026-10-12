@@ -142,6 +142,7 @@ export function ProgressPage() {
   const profile = profiles.data?.find((candidate) => candidate.id === data.profile_id)?.display_name ?? data.profile_id;
   const canRequest = principal.role !== "reader";
   const profileCode = data.failure_code !== null && (profileTestCodeValues as readonly string[]).includes(data.failure_code);
+  const checkProfile = profileCode && principal.role === "administrator";
   const finished = data.status === "collected" || data.status === "failed";
 
   async function confirm() {
@@ -199,14 +200,14 @@ export function ProgressPage() {
             <Link to="/reports" className={buttonStyles()}>
               {t("progress.back")}
             </Link>
-            {canRequest ? (
-              <Link to={`/generate?from=${data.id}`} className={buttonStyles("primary")}>
-                {t("progress.requestAgain")}
+            {checkProfile ? (
+              <Link to={`/profiles/${data.profile_id}/edit`} className={buttonStyles("primary")}>
+                {t("progress.checkProfile")}
               </Link>
             ) : null}
-            {profileCode && principal.role === "administrator" ? (
-              <Link to={`/profiles/${data.profile_id}/edit`} className={buttonStyles()}>
-                {t("progress.checkProfile")}
+            {canRequest ? (
+              <Link to={`/generate?from=${data.id}`} className={buttonStyles(checkProfile ? undefined : "primary")}>
+                {t("progress.requestAgain")}
               </Link>
             ) : null}
           </div>
@@ -215,7 +216,7 @@ export function ProgressPage() {
           ) : null}
         </>
       ) : null}
-      {data.status === "collected" && canDelete(principal, data) ? (
+      {(data.status === "collected" || data.status === "failed") && canDelete(principal, data) ? (
         <div>
           <Button
             ref={trigger}

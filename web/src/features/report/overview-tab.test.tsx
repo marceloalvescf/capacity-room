@@ -141,7 +141,7 @@ describe("overview tab", () => {
       .getAllByRole("link")
       .map((link) => link.getAttribute("aria-label"));
     expect(names).toContain("Review the memory request and the observed consumption. (payments)");
-    expect(names).toContain("Review the memory request and the observed consumption. (payments-web)");
+    expect(names).toContain("Review the memory request and the observed consumption. (payments/payments-web)");
   });
 
   it("the node evidence warning stands under the verdict of the growth side", async () => {
@@ -299,14 +299,25 @@ describe("overview tab", () => {
       expect(within(rows[index] as HTMLElement).getByText(recommendation.action)).toBeInTheDocument();
     });
     const cells = within(rows[0] as HTMLElement).getAllByRole("cell");
-    expect(cells.map((cell) => cell.textContent)).toEqual(["1", "Critical", english.recommendations[0]?.action, "web", "Exact"]);
+    expect(cells.map((cell) => cell.textContent)).toEqual(["1", "Critical", english.recommendations[0]?.action, "HPA payments/web", "Exact"]);
     expect(screen.getByRole("heading", { level: 2, name: "Prioritized action plan" })).toBeInTheDocument();
+  });
+
+  it("the scope of a plan row is its kind, muted, then its full name in mono", async () => {
+    await open();
+    const rows = within(screen.getByRole("table", { name: "Prioritized action plan" })).getAllByRole("row").slice(1);
+    const hpa = within(rows[0] as HTMLElement).getAllByRole("cell")[3] as HTMLElement;
+    expect(within(hpa).getByText("HPA")).toHaveClass("text-muted-fg");
+    expect(within(hpa).getByText("payments/web")).toHaveClass("font-mono");
+    const workload = english.recommendations.findIndex((row) => row.scope_type === "workload");
+    const cell = within(rows[workload] as HTMLElement).getAllByRole("cell")[3] as HTMLElement;
+    expect(cell).toHaveTextContent("Workload payments/payments-web");
   });
 
   it("an action of the plan links to its finding", async () => {
     await open();
     const rows = within(screen.getByRole("table", { name: "Prioritized action plan" })).getAllByRole("row").slice(1);
-    const first = within(rows[0] as HTMLElement).getByRole("link", { name: "Review the configured maximum and the capacity of the workload. (web)" });
+    const first = within(rows[0] as HTMLElement).getByRole("link", { name: "Review the configured maximum and the capacity of the workload. (payments/web)" });
     expect(first.getAttribute("href")).toMatch(/\/findings\?scope=hpa&finding=7$/);
     const eighth = within(rows[7] as HTMLElement).getByRole("link");
     expect(eighth.getAttribute("href")).toMatch(/\/findings\?scope=workload&finding=11$/);
