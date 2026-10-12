@@ -1,12 +1,8 @@
 // cover.typ builds the title band of the first page, passed to
 // `graphite-report` as its `title`. Every word comes from `data.cover`; this
 // module only arranges it: the title, the cluster, the period, and the
-// profile on the left, the author and the issue time on the right, and a
-// heavy rule under both.
-//
-// The shell draws its own rule 12pt below whatever the title holds. The heavy
-// rule is laid over it at the same place, out of the flow, so that the two
-// read as one.
+// profile on the left, and the author and the issue time on the right. The
+// rule under the band is the shell's own.
 
 #import "runs.typ": mono
 
@@ -21,7 +17,7 @@
 #let build-cover(cover) = {
   set text(size: 9pt, weight: "regular")
   set par(leading: 0.5em, spacing: 0.5em)
-  box(width: 100%, grid(
+  block(above: 0pt, below: 0pt, grid(
     columns: (1fr, auto),
     align: (left + bottom, right + bottom),
     stack(
@@ -42,5 +38,4 @@
       [#cover.issued_label #text(font: mono, cover.issued)]
     }),
   ))
-  place(dy: 12pt, line(length: 100%, stroke: 1.2pt + black))
 }

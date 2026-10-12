@@ -852,10 +852,10 @@
       "type": "table",
       "id": "action-plan",
       "headers": [
-        "Ordem",
+        "#",
         "Prioridade",
         "Ação",
-        "Workloads / Escopo"
+        "Escopo"
       ],
       "rows": [
         [

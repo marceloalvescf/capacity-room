@@ -536,8 +536,8 @@ func actionPlan(b *builder, s snapshot.Snapshot, minRank int) []Block {
 	rows := actionRows(b, planRecommendations(s, minRank))
 	return tableOrFallback(b, catalog.SectionsExecutiveActionsHeading, catalog.SectionsExecutiveActionsEmpty,
 		newTable(b, "action-plan", []catalog.Key{
-			catalog.SectionsExecutiveHeaderOrder, catalog.SectionsExecutiveHeaderPriority,
-			catalog.SectionsExecutiveHeaderAction, catalog.SectionsExecutiveHeaderScope,
+			catalog.VerdictPlanOrder, catalog.VerdictPlanPriority,
+			catalog.VerdictPlanAction, catalog.VerdictPlanScope,
 		}, rows))
 }
 

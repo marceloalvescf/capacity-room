@@ -77,7 +77,7 @@
     faces: ("name", "mark", "text"),
   ),
   action-plan: (
-    columns: (0.8fr, 0.8fr, 2.7fr, 2.6fr),
+    columns: (0.3fr, 1fr, 4fr, 2.2fr),
     size: 7.2pt,
     inset-y: 3.5pt,
     faces: ("num", "mark", "text", "name"),

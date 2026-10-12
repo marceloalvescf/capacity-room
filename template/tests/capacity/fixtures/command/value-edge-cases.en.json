@@ -834,10 +834,10 @@
       "type": "table",
       "id": "action-plan",
       "headers": [
-        "Order",
+        "#",
         "Priority",
         "Action",
-        "Workloads / Scope"
+        "Scope"
       ],
       "rows": [
         [

@@ -93,8 +93,8 @@ func TestKeysHoldTheNewFamilies(t *testing.T) {
 			executive++
 		}
 	}
-	if executive != 45 {
-		t.Errorf("Keys() holds %d executive keys, want 45", executive)
+	if executive != 42 {
+		t.Errorf("Keys() holds %d executive keys, want 42", executive)
 	}
 	for _, k := range []Key{PlaceholderEmptyCell, SectionsExecutiveHeading, SectionsExecutiveActiveReplicasSingular, SectionsExecutiveActiveReplicasPlural} {
 		if !keys[k] {

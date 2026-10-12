@@ -31,10 +31,10 @@
 // lines 112-118): right aligned, starting on the second page.
 #let report-footer = context {
   if counter(page).get().first() > 1 {
-    align(right)[
+    align(right, text(size: 8pt, fill: luma(35%))[
       #if data.footer.classification != none [#data.footer.classification · ]
       #data.footer.page_label #counter(page).display()
-    ]
+    ])
   }
 }
 

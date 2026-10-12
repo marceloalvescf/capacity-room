@@ -130,12 +130,12 @@ const headerWithVisibleTextFixture = `{
     "warning": "Atenção"
   },
   "cover": {
-    "title": "LEVANTAMENTO DE CAPACIDADE",
-    "cluster_label": "Cluster:",
+    "title": "Levantamento de capacidade",
+    "cluster_label": "Cluster",
     "cluster": "aks-prod-eastus2",
-    "author_label": "ELABORADO POR:",
+    "author_label": "Elaborado por",
     "author": null,
-    "issued_label": "EMITIDO EM:",
+    "issued_label": "Emitido em",
     "issued": "15/07/2026 14:30",
     "period": "07/15/2026 10:30 to 07/15/2026 14:30",
     "profile": "Detailed"
@@ -418,12 +418,12 @@ const unnumberedHeadingFixture = `{
     "warning": "Atenção"
   },
   "cover": {
-    "title": "LEVANTAMENTO DE CAPACIDADE",
-    "cluster_label": "Cluster:",
+    "title": "Levantamento de capacidade",
+    "cluster_label": "Cluster",
     "cluster": "production-east",
-    "author_label": "ELABORADO POR:",
+    "author_label": "Elaborado por",
     "author": "Time SRE",
-    "issued_label": "EMITIDO EM:",
+    "issued_label": "Emitido em",
     "issued": "15/07/2026 14:30",
     "period": "07/15/2026 10:30 to 07/15/2026 14:30",
     "profile": "Detailed"

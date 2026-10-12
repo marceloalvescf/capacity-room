@@ -241,9 +241,6 @@ const (
 	SectionsExecutivePoolCritical           Key = "sections.executive.pool_critical"
 	SectionsExecutiveActionsHeading         Key = "sections.executive.actions_heading"
 	SectionsExecutiveActionsEmpty           Key = "sections.executive.actions_empty"
-	SectionsExecutiveHeaderOrder            Key = "sections.executive.header_order"
-	SectionsExecutiveHeaderAction           Key = "sections.executive.header_action"
-	SectionsExecutiveHeaderScope            Key = "sections.executive.header_scope"
 	SectionsExecutiveLimitationsHeading     Key = "sections.executive.limitations_heading"
 	SectionsExecutiveLimitationsEmpty       Key = "sections.executive.limitations_empty"
 	SectionsExecutiveHeaderCapability       Key = "sections.executive.header_capability"
@@ -373,8 +370,6 @@ var wordingKeys = []Key{
 	SectionsExecutiveHeaderRemark, SectionsExecutivePoolStable,
 	SectionsExecutivePoolAttention, SectionsExecutivePoolCritical,
 	SectionsExecutiveActionsHeading, SectionsExecutiveActionsEmpty,
-	SectionsExecutiveHeaderOrder, SectionsExecutiveHeaderAction,
-	SectionsExecutiveHeaderScope,
 	SectionsExecutiveLimitationsHeading, SectionsExecutiveLimitationsEmpty,
 	SectionsExecutiveHeaderCapability, SectionsExecutiveHeaderCoverage,
 	SectionsExecutiveInterpretation, SectionsExecutiveReasonAllMissing,
