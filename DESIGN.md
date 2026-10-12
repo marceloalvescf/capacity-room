@@ -384,7 +384,7 @@ The depth gauge is drawn in black. Up to sixty nodes, one band per node, filled 
 The first page of a report the command writes. From the top: the title band, the severity totals with the leading count in bold, the data-quality line, then two columns (0.9fr, 1.5fr). The left column is the cluster autoscaling block, the numeral, the gauge, the caption, the worst cluster finding, the node-evidence warning, and the facts. The right column is the pressure by scope, one row after a hairline, worst scope first. Below both, the prioritized action plan with its footer line ("5 of 10 actions"), and the legend of the five statuses.
 
 ### The title band
-One block at the head of the first page: the title at 18pt Bold and, under it, the cluster in mono, the period with its numbers in mono, and the profile; the author and the issue time at 8pt Muted, right aligned, on the same baseline. The rule below is graphite's own title rule at 0.8pt.
+One block at the head of the first page: the title at 18pt Bold and, 10pt under it, the cluster in mono and the period with its numbers in mono, each kept whole, so a long cluster name moves the period to the next line instead of breaking a word; the profile, the author, and the issue time at 8pt Muted, right aligned, the last on the baseline of the period. The rule below is graphite's own title rule at 0.8pt.
 
 ### Tables
 Each table layout names a face for every column. A `num` column is set in mono and aligned right; a `name`, `text`, or `mark` column is aligned from the left. Cells sit at the middle of the row. The header is SemiBold, repeats at a page break, and is closed by a 0.8pt black rule; every other row is parted by a 0.5pt `luma(78%)` hairline.

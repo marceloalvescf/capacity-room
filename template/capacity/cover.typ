@@ -1,8 +1,9 @@
 // cover.typ builds the title band of the first page, passed to
 // `graphite-report` as its `title`. Every word comes from `data.cover`; this
-// module only arranges it: the title, the cluster, the period, and the
-// profile on the left, and the author and the issue time on the right. The
-// rule under the band is the shell's own.
+// module only arranges it: the title, the cluster, and the period on the
+// left, and the profile, the author, and the issue time on the right. The
+// cluster and the period are each kept whole, so a long line wraps between
+// them and never inside a word. The rule under the band is the shell's own.
 
 #import "runs.typ": mono
 
@@ -20,20 +21,21 @@
   block(above: 0pt, below: 0pt, grid(
     columns: (1fr, auto),
     align: (left + bottom, right + bottom),
+    column-gutter: 16pt,
     stack(
-      spacing: 4pt,
+      spacing: 10pt,
       text(size: 18pt, weight: "bold", cover.title),
-      {
-        cover.cluster_label
-        [ ]
-        text(font: mono, hyphenate: false, lang: "en", cover.cluster)
-        h(8pt)
-        mono-numbers(cover.period)
-        h(8pt)
-        cover.profile
-      },
+      par(justify: false, {
+        box[#cover.cluster_label #text(font: mono, hyphenate: false, lang: "en", cover.cluster)]
+        // The gap disappears where the line wraps; the zero-width space is
+        // the one place it may wrap.
+        h(10pt, weak: true)
+        sym.zws
+        box(mono-numbers(cover.period))
+      }),
     ),
-    text(size: 8pt, fill: muted, {
+    text(size: 8pt, fill: muted, hyphenate: false, {
+      [#cover.profile \ ]
       if cover.author != none [#cover.author_label #cover.author \ ]
       [#cover.issued_label #text(font: mono, cover.issued)]
     }),
