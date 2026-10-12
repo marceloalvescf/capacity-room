@@ -1318,7 +1318,7 @@
       "type": "table",
       "id": "action-plan",
       "headers": [
-        "Ordem",
+        "#",
         "Prioridade",
         "Ação",
         "Cargas de trabalho / Escopo"
