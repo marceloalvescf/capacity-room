@@ -110,9 +110,9 @@ describe("workloads tab", () => {
     expect(screen.getByRole("table", { name: "Memory" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Findings" })).toBeInTheDocument();
     const links = within(screen.getByRole("list", { name: "Findings" })).getAllByRole("link");
-    expect(links.map((link) => link.getAttribute("href"))).toEqual([5, 6, 13, 20].map(hrefEnding));
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([5, 6, 13, 22].map(hrefEnding));
     expect(links.map((link) => link.textContent)).toEqual(
-      [5, 6, 13, 20].map((index) => textHolding(english.findings[index]?.sentence ?? "")),
+      [5, 6, 13, 22].map((index) => textHolding(english.findings[index]?.sentence ?? "")),
     );
   });
 

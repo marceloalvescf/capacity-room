@@ -27,7 +27,7 @@ func TestVerdictOfEdgeScalingTotalsAndQuality(t *testing.T) {
 
 	wantTotals := []VerdictCount{
 		{"critical", "Critical", "9"},
-		{"attention", "Attention", "10"},
+		{"attention", "Attention", "12"},
 		{"healthy", "Healthy", "7"},
 	}
 	if !reflect.DeepEqual(v.Totals.Items, wantTotals) || v.Totals.None != nil {
@@ -78,7 +78,7 @@ func TestVerdictOfEdgeScalingPressure(t *testing.T) {
 			Sentence: "Observed CPU usage on the node.",
 			Name:     []Run{Ident("aks-agentpool-12345678-vmss000000")},
 			Peak:     &VerdictFact{"Peak", "95%"},
-			Counts:   []VerdictCount{{"critical", "Critical", "2"}},
+			Counts:   []VerdictCount{{"critical", "Critical", "2"}, {"attention", "Attention", "1"}},
 		},
 		{
 			Status: "critical", Label: "Critical", Scope: "Namespaces",
@@ -325,7 +325,7 @@ func TestVerdictOfTheExecutiveProfileRaisesTheMinimum(t *testing.T) {
 
 	wantTotals := []VerdictCount{
 		{"critical", "Critical", "9"},
-		{"attention", "Attention", "10"},
+		{"attention", "Attention", "12"},
 		{"healthy", "Healthy", "7"},
 	}
 	if !reflect.DeepEqual(v.Totals.Items, wantTotals) {

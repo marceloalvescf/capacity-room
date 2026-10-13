@@ -148,7 +148,7 @@ describe("overview tab", () => {
     expect(within(lines[0] as HTMLElement).getByText("Peak")).toBeInTheDocument();
     expect(within(lines[0] as HTMLElement).getByText("95%")).toHaveClass("font-mono");
     expect(within(lines[1] as HTMLElement).queryByText("Peak")).toBeInTheDocument();
-    expect(lines[0]).toHaveTextContent(/Critical 2$/);
+    expect(lines[0]).toHaveTextContent(/Critical 2\s*·\s*Attention 1$/);
     expect(lines[1]).toHaveTextContent(/Critical 1$/);
     expect(lines[2]).toHaveTextContent(/Critical 1\s*·\s*Attention 1$/);
     expect(lines[3]).toHaveTextContent(/Critical 1\s*·\s*Attention 1$/);
@@ -219,7 +219,7 @@ describe("overview tab", () => {
   it("an unknown node pool shows its word", async () => {
     mock.views.set(`${id}:en`, {
       ...english,
-      verdict: { ...english.verdict, pressure: [{ scope_type: "nodepool", severity: "attention", finding: 18, critical: 0, attention: 1 }] },
+      verdict: { ...english.verdict, pressure: [{ scope_type: "nodepool", severity: "attention", finding: 20, critical: 0, attention: 1 }] },
     });
     await open();
     const only = screen.getByText("Node pools").closest("li") as HTMLElement;
@@ -231,7 +231,7 @@ describe("overview tab", () => {
     mock.session = signedIn({ language: "pt-BR" });
     mock.views.set(`${id}:pt-BR`, {
       ...portuguese,
-      verdict: { ...portuguese.verdict, pressure: [{ scope_type: "nodepool", severity: "attention", finding: 18, critical: 0, attention: 1 }] },
+      verdict: { ...portuguese.verdict, pressure: [{ scope_type: "nodepool", severity: "attention", finding: 20, critical: 0, attention: 1 }] },
     });
     await open("pt-BR");
     const only = screen.getByText("Node pools").closest("li") as HTMLElement;
@@ -255,7 +255,7 @@ describe("overview tab", () => {
     const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" });
     expect(totals.compareDocumentPosition(band) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const links = within(totals).getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual(["Critical9", "Attention10", "Healthy7"]);
+    expect(links.map((link) => link.textContent)).toEqual(["Critical9", "Attention12", "Healthy7"]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       expect.stringMatching(/findings\?severity=critical$/),
       expect.stringMatching(/findings\?severity=attention$/),

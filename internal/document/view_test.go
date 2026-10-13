@@ -273,10 +273,10 @@ func TestViewNarrowsAsThePDF(t *testing.T) {
 		wantMin                 string
 		findings, recs          int
 	}{
-		{"all", "detailed", "all", "all", 26, 10},
-		{"attention", "detailed", "attention", "attention", 19, 10},
+		{"all", "detailed", "all", "all", 28, 10},
+		{"attention", "detailed", "attention", "attention", 21, 10},
 		{"critical", "detailed", "critical", "critical", 9, 7},
-		{"executive at all", "executive", "all", "attention", 19, 10},
+		{"executive at all", "executive", "all", "attention", 21, 10},
 		{"executive at critical", "executive", "critical", "critical", 9, 7},
 	}
 	for _, tc := range cases {
@@ -798,7 +798,7 @@ func TestViewVerdictOfEdgeScaling(t *testing.T) {
 		NodeEvidenceWarning: intPtr(1),
 		Gauge:               &ViewGauge{Current: 3, Max: 3, Min: intPtr(2), Hazard: strPtr("attention")},
 		Pressure: []ViewPressure{
-			{ScopeType: "node", Severity: "critical", Finding: 0, Critical: 2, Attention: 0},
+			{ScopeType: "node", Severity: "critical", Finding: 0, Critical: 2, Attention: 1},
 			{ScopeType: "namespace", Severity: "critical", Finding: 1, Critical: 1, Attention: 0},
 			{ScopeType: "workload", Severity: "critical", Finding: 5, Critical: 1, Attention: 1},
 			{ScopeType: "hpa", Severity: "critical", Finding: 7, Critical: 1, Attention: 1},

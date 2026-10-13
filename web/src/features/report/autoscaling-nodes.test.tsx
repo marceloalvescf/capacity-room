@@ -243,7 +243,7 @@ describe("nodes tab", () => {
     expect(orphan[2]?.querySelector("svg")).toBeNull();
     expect(within(orphan[2] as HTMLElement).getByText("No finding")).toHaveClass("text-muted-fg");
     const second = within(rowOf("Nodes", "pool-a-2")).getAllByRole("cell");
-    expect(second[2]).toHaveTextContent(/^HealthyCPU: peak of 60% utilization; Memory: peak of 55% utilization$/);
+    expect(second[2]).toHaveTextContent(/^AttentionThe node was not ready at the end of the period; The node was unschedulable at the end of the period$/);
     const names = within(screen.getByRole("table", { name: "Nodes" }))
       .getAllByRole("row")
       .slice(1)

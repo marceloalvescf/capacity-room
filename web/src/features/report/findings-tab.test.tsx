@@ -65,14 +65,14 @@ describe("findings tab", () => {
   it("grouped, critical first", async () => {
     await open();
     const headings = screen.getAllByRole("heading", { level: 2 }).filter((h) => /^(Critical|Attention|Healthy)/.test(h.textContent));
-    expect(headings.map((h) => h.textContent)).toEqual(["Critical9", "Attention10", "Healthy7"]);
+    expect(headings.map((h) => h.textContent)).toEqual(["Critical9", "Attention12", "Healthy7"]);
     const lists = headings.map((h) => (h.parentElement as HTMLElement).querySelector("ul") as HTMLElement);
     const critical = within(lists[0] as HTMLElement).getAllByRole("button");
     expect(critical).toHaveLength(9);
     expect(critical[0]).toHaveTextContent(sentenceOf(0));
     expect(critical[8]).toHaveTextContent(sentenceOf(8));
-    expect(within(lists[2] as HTMLElement).getAllByRole("button")[0]).toHaveTextContent(sentenceOf(19));
-    expect(chips().map((c) => c.textContent)).toEqual(["Critical9", "Attention10", "Healthy7"]);
+    expect(within(lists[2] as HTMLElement).getAllByRole("button")[0]).toHaveTextContent(sentenceOf(21));
+    expect(chips().map((c) => c.textContent)).toEqual(["Critical9", "Attention12", "Healthy7"]);
     expect(within(chip("Critical")).getByText("9")).toHaveClass("font-mono");
   });
 
@@ -82,8 +82,8 @@ describe("findings tab", () => {
     await user.click(chip("Healthy"));
     expect(chip("Healthy")).toHaveAttribute("aria-pressed", "false");
     expect(chip("Critical")).toHaveAttribute("aria-pressed", "true");
-    expect(shownSentences().join()).not.toContain(sentenceOf(19));
-    expect(items()).toHaveLength(19);
+    expect(shownSentences().join()).not.toContain(sentenceOf(21));
+    expect(items()).toHaveLength(21);
     expect(params(router).get("severity")).toBe("critical,attention");
     await user.click(chip("Healthy"));
     expect(params(router).has("severity")).toBe(false);
@@ -110,7 +110,7 @@ describe("findings tab", () => {
     ]);
     await user.selectOptions(select, "Node");
     expect(params(router).get("scope")).toBe("node");
-    expect(items()).toHaveLength(9);
+    expect(items()).toHaveLength(11);
     for (const button of items()) {
       expect(button).toHaveTextContent("Node");
     }
@@ -160,7 +160,7 @@ describe("findings tab", () => {
     await user.clear(screen.getByRole("searchbox"));
     await user.type(screen.getByRole("searchbox"), "Undetermined");
     expect(items()).toHaveLength(1);
-    expect(items()[0]).toHaveTextContent(sentenceOf(18));
+    expect(items()[0]).toHaveTextContent(sentenceOf(20));
     await user.clear(screen.getByRole("searchbox"));
     await user.type(screen.getByRole("searchbox"), "Review the headroom");
     expect(items()).toHaveLength(1);
@@ -191,7 +191,7 @@ describe("findings tab", () => {
   it("a stale scope is ignored", async () => {
     await open("?scope=bogus");
     expect(screen.getByRole("combobox", { name: "Scope" })).toHaveValue("");
-    expect(items()).toHaveLength(26);
+    expect(items()).toHaveLength(28);
   });
 
   it("a finding the filters hide gives way to the first one shown", async () => {
@@ -238,7 +238,7 @@ describe("findings tab", () => {
   it("stale finding", async () => {
     const { router } = await open("?finding=99&severity=bogus");
     expect(chips().map((c) => c.getAttribute("aria-pressed"))).toEqual(["true", "true", "true"]);
-    expect(items()).toHaveLength(26);
+    expect(items()).toHaveLength(28);
     expect(within(detail()).getByText(sentenceOf(0))).toBeInTheDocument();
     expect(location(router)).toBe(`/reports/${id}/findings?finding=99&severity=bogus`);
   });
@@ -269,7 +269,7 @@ describe("findings tab", () => {
     expect(params(router).has("severity")).toBe(false);
     expect(params(router).has("scope")).toBe(false);
     expect(params(router).has("q")).toBe(false);
-    expect(items()).toHaveLength(26);
+    expect(items()).toHaveLength(28);
     expect(screen.getByRole("searchbox", { name: i18next.t("report.findings.search") })).toHaveValue("");
   });
 
@@ -283,11 +283,11 @@ describe("findings tab", () => {
   });
 
   it("unknown pool and cluster scopes", async () => {
-    await open("?finding=18");
+    await open("?finding=20");
     expect(within(detail()).getByRole("heading", { name: "Undetermined" })).toBeInTheDocument();
     expect(within(detail()).queryByText("unknown")).toBeNull();
-    expect(items()).toHaveLength(26);
-    const poolItem = items().find((button) => button.textContent.includes(sentenceOf(18))) as HTMLElement;
+    expect(items()).toHaveLength(28);
+    const poolItem = items().find((button) => button.textContent.includes(sentenceOf(20))) as HTMLElement;
     expect(poolItem).toHaveTextContent("Undetermined");
     expect(within(poolItem).getByText("Undetermined")).not.toHaveClass("font-mono");
     expect(within(detail()).getByRole("heading", { name: "Undetermined" })).not.toHaveClass("font-mono");
