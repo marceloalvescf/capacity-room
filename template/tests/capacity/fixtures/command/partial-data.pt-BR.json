@@ -17,8 +17,8 @@
     "author_label": "Elaborado por",
     "author": "Time SRE",
     "issued_label": "Emitido em",
-    "issued": "15/07/2026 14:30",
-    "period": "14/07/2026 14:30 a 15/07/2026 14:30",
+    "issued": "2026-07-15 14:30",
+    "period": "2026-07-14 14:30 a 2026-07-15 14:30",
     "profile": "Detalhado"
   },
   "footer": {
@@ -377,7 +377,7 @@
               [
                 {
                   "kind": "text",
-                  "text": "14/07/2026 14:30 a 15/07/2026 14:30"
+                  "text": "2026-07-14 14:30 a 2026-07-15 14:30"
                 }
               ]
             ],
@@ -2224,7 +2224,7 @@
     },
     {
       "type": "colophon",
-      "text": "Gerado pelo k8s-capacity-report a partir de um snapshot de métricas compatíveis com o Prometheus. Emitido em 15/07/2026 14:30."
+      "text": "Gerado pelo k8s-capacity-report a partir de um snapshot de métricas compatíveis com o Prometheus. Emitido em 2026-07-15 14:30."
     }
   ]
 }
