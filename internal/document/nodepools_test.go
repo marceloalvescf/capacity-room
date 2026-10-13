@@ -338,6 +338,12 @@ func TestNodeDetailState(t *testing.T) {
 		{"fine", yes, yes, nil, "Ready; Schedulable", "text", ""},
 		{"stored without the finding", no, yes, nil, "Not ready; Schedulable", "text", ""},
 		{"another node's finding", yes, yes, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n2")}, "Ready; Schedulable", "text", ""},
+		{"usage finding only", yes, yes, []snapshot.Finding{nodeFinding("NODE_LOW_UTILIZATION", analysis.SeverityAttention, "n1", number("maximum_average_percent", 10))}, "Ready; Schedulable", "text", ""},
+		{"ready, schedulability unknown", yes, nil, nil, "Ready; Unavailable", "text", ""},
+		{"not ready, schedulability unknown", no, nil, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1")}, "Not ready; Unavailable", "status", "attention"},
+		{"not ready and cordoned", no, no, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1"), nodeFinding("NODE_UNSCHEDULABLE", analysis.SeverityAttention, "n1")}, "Not ready; Unschedulable", "status", "attention"},
+		{"readiness unknown, schedulable", nil, yes, nil, "Unavailable; Schedulable", "status", "unavailable"},
+		{"readiness unknown, cordoned", nil, no, nil, "Unavailable; Unschedulable", "status", "unavailable"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -915,6 +915,7 @@ func TestNodeStateStatus(t *testing.T) {
 		{"not ready", no, yes, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1")}, "attention", "attention"},
 		{"cordoned", yes, no, []snapshot.Finding{nodeFinding("NODE_UNSCHEDULABLE", analysis.SeverityAttention, "n1")}, "attention", "attention"},
 		{"fine", yes, yes, nil, "", "null"},
+		{"usage finding only", yes, yes, []snapshot.Finding{nodeFinding("NODE_LOW_UTILIZATION", analysis.SeverityAttention, "n1", number("maximum_average_percent", 10))}, "", "null"},
 		{"stored without the finding", no, yes, nil, "", "null"},
 	}
 	for _, tt := range tests {
@@ -958,6 +959,22 @@ func TestExecutiveCountsANodeNotReadyWithoutAnAction(t *testing.T) {
 	pdf := englishVerdict(t, s, view.MinSeverity)
 	if len(pdf.Pressure.Rows) != len(view.Verdict.Pressure) {
 		t.Errorf("PDF has %d pressure rows, view %d", len(pdf.Pressure.Rows), len(view.Verdict.Pressure))
+	}
+	pdfNodes := 0
+	for _, row := range pdf.Pressure.Rows {
+		if row.Scope != "Nodes" {
+			continue
+		}
+		pdfNodes++
+		if want := []VerdictCount{{"attention", "Attention", "1"}}; row.Status != "attention" || !reflect.DeepEqual(row.Counts, want) {
+			t.Errorf("PDF node pressure = %s %+v, want attention %+v", row.Status, row.Counts, want)
+		}
+	}
+	if pdfNodes != 1 {
+		t.Errorf("PDF has %d node pressure rows, want 1", pdfNodes)
+	}
+	if (pdf.Plan.Table != nil && len(pdf.Plan.Table.Rows) != 0) || pdf.Plan.Empty == nil {
+		t.Errorf("PDF plan = %+v, want no action for a node's readiness", pdf.Plan)
 	}
 	for _, r := range view.Recommendations {
 		if strings.HasPrefix(r.Code, "NODE_") {
