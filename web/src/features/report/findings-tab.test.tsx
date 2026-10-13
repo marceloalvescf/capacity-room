@@ -158,7 +158,7 @@ describe("findings tab", () => {
     await user.type(screen.getByRole("searchbox"), "cluster");
     expect(items()).toHaveLength(0);
     await user.clear(screen.getByRole("searchbox"));
-    await user.type(screen.getByRole("searchbox"), "Unknown pool");
+    await user.type(screen.getByRole("searchbox"), "Undetermined");
     expect(items()).toHaveLength(1);
     expect(items()[0]).toHaveTextContent(sentenceOf(18));
     await user.clear(screen.getByRole("searchbox"));
@@ -284,13 +284,13 @@ describe("findings tab", () => {
 
   it("unknown pool and cluster scopes", async () => {
     await open("?finding=18");
-    expect(within(detail()).getByRole("heading", { name: "Unknown pool" })).toBeInTheDocument();
+    expect(within(detail()).getByRole("heading", { name: "Undetermined" })).toBeInTheDocument();
     expect(within(detail()).queryByText("unknown")).toBeNull();
     expect(items()).toHaveLength(26);
     const poolItem = items().find((button) => button.textContent.includes(sentenceOf(18))) as HTMLElement;
-    expect(poolItem).toHaveTextContent("Unknown pool");
-    expect(within(poolItem).getByText("Unknown pool")).not.toHaveClass("font-mono");
-    expect(within(detail()).getByRole("heading", { name: "Unknown pool" })).not.toHaveClass("font-mono");
+    expect(poolItem).toHaveTextContent("Undetermined");
+    expect(within(poolItem).getByText("Undetermined")).not.toHaveClass("font-mono");
+    expect(within(detail()).getByRole("heading", { name: "Undetermined" })).not.toHaveClass("font-mono");
     const clusterItem = items().find((button) => button.textContent.includes(sentenceOf(10))) as HTMLElement;
     expect(clusterItem).toHaveTextContent("Cluster");
     expect(clusterItem.querySelector(".font-mono")).toBeNull();

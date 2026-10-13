@@ -445,7 +445,7 @@
     },
     "confidence": "Confiança: {{value}}",
     "node": {
-      "unknownPool": "Node pool desconhecido",
+      "unknownPool": "Indeterminado",
       "ready": "Pronto",
       "notReady": "Não pronto",
       "schedulable": "Agendável",

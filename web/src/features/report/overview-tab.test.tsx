@@ -175,8 +175,19 @@ describe("overview tab", () => {
     });
     await open();
     const only = screen.getByText("Node pools").closest("li") as HTMLElement;
-    expect(within(only).getByText("Unknown pool")).not.toHaveClass("font-mono");
+    expect(within(only).getByText("Undetermined")).not.toHaveClass("font-mono");
     expect(only).not.toHaveTextContent(/\bunknown\b/);
+  });
+
+  it("an unknown node pool shows its word in portuguese", async () => {
+    mock.session = signedIn({ language: "pt-BR" });
+    mock.views.set(`${id}:pt-BR`, {
+      ...portuguese,
+      findings: portuguese.findings.filter((finding) => finding.scope_type !== "nodepool" || finding.scope_name === "unknown"),
+    });
+    await open("pt-BR");
+    const only = screen.getByText("Node pools").closest("li") as HTMLElement;
+    expect(within(only).getByText("Indeterminado")).not.toHaveClass("font-mono");
   });
 
   it("nothing needs attention", async () => {

@@ -132,7 +132,7 @@ describe("nodes tab", () => {
   it("node rows", async () => {
     await open("nodes");
     const orphan = within(rowOf("Nodes", "orphan")).getAllByRole("cell");
-    expect(within(orphan[1] as HTMLElement).getByText("Unknown pool")).not.toHaveClass("font-mono");
+    expect(within(orphan[1] as HTMLElement).getByText("Undetermined")).not.toHaveClass("font-mono");
     expect(orphan[3]).toHaveTextContent("UnavailableUnknown");
     const second = within(rowOf("Nodes", "pool-a-2")).getAllByRole("cell");
     expect(second[3]).toHaveTextContent("Not ready · Unschedulable");
@@ -277,7 +277,7 @@ describe("nodes tab", () => {
   it("the search of nodes finds the shown pool word", async () => {
     const user = userEvent.setup();
     await open("nodes");
-    await user.type(screen.getByRole("searchbox", { name: "Search nodes" }), "unknown pool");
+    await user.type(screen.getByRole("searchbox", { name: "Search nodes" }), "undetermined");
     const rows = within(screen.getByRole("table", { name: "Nodes" })).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveTextContent("orphan");
@@ -315,7 +315,7 @@ describe("nodes tab", () => {
     expect(within(rows[0] as HTMLElement).getByRole("button", { name: "Copy agentpool" })).toBeInTheDocument();
     expect(within(rows[1] as HTMLElement).getByRole("button", { name: "Copy pool-a" })).toBeInTheDocument();
     expect(within(rows[2] as HTMLElement).queryByRole("button")).not.toBeInTheDocument();
-    expect(within(rows[2] as HTMLElement).getByText("Unknown pool")).toBeInTheDocument();
+    expect(within(rows[2] as HTMLElement).getByText("Undetermined")).toBeInTheDocument();
     const counts = rows.map((row) => within(row).getAllByRole("cell")[3] as HTMLElement);
     expect(counts.map((cell) => cell.querySelector("span")?.textContent)).toEqual(["1", "2", "1"]);
     expect(counts.map((cell) => within(cell).getAllByRole("listitem").map((item) => item.textContent))).toEqual([
