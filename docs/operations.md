@@ -281,7 +281,7 @@ before the code is stored.
 |---|---|---|---|
 | `ENDPOINT_URL_REJECTED` | report | no | The profile's address is not a plain `http` or `https` URL the policy accepts |
 | `ENDPOINT_ADDRESS_REJECTED` | report | no | The source resolves to an address the allowlists do not allow, or to a refused class |
-| `ENDPOINT_RESOLUTION_FAILED` | report | no | The source's host name did not resolve |
+| `ENDPOINT_RESOLUTION_FAILED` | report | yes | The source's host name did not resolve |
 | `ENDPOINT_CONNECTION_REJECTED` | report | no | The connection reached another address than the one the policy allowed |
 | `ENDPOINT_REDIRECT_REJECTED` | report | no | The source answered with a redirect, which is never followed |
 | `PROFILE_CREDENTIAL_UNAVAILABLE` | report | no | The credential file is missing, unreadable, too large, or not a valid credential |

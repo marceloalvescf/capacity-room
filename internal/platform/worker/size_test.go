@@ -18,6 +18,7 @@ func TestRetriedCodes(t *testing.T) {
 	for code, want := range map[string]bool{
 		"ENDPOINT_UNREACHABLE": true, "INTERNAL_FAILURE": true, "COLLECTION_TIMEOUT": false,
 		"NOTHING_TO_REPORT": false, "SNAPSHOT_TOO_LARGE": false, "ENDPOINT_AUTH_REJECTED": false,
+		"ENDPOINT_RESOLUTION_FAILED": true, "SOURCE_VALUES_OUT_OF_RANGE": false,
 	} {
 		if retried(code) != want {
 			t.Errorf("retried(%s) = %v, want %v", code, !want, want)

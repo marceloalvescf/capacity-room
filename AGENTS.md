@@ -516,8 +516,9 @@ redactor the moment the settings are loaded, before the pool opens.
   stores a code; a River job's error is `<kind>: <CODE>`; the cause goes to
   the log through the run's redactor. A credential the worker reads enters
   the redactor before it is used.
-- **Only an unreachable source and an internal failure are retried,** up to
-  `job_max_attempts`; a deadline and every other code are stored at once.
+- **Only an unreachable source, a name that did not resolve, and an internal
+  failure are retried,** up to `job_max_attempts`; a deadline and every other
+  code are stored at once.
 - **A success write keeps its budget.** The transaction that stores a
   collection or a PDF runs free of the job's cancel, until the later of the
   job's deadline and now plus ten seconds; any error of it that is not a

@@ -17,6 +17,7 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/pipeline"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/audit"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
@@ -95,9 +96,10 @@ func checkSnapshotSize(n int) error {
 }
 
 // retried reports whether River tries a failure with this code again while
-// attempts remain.
+// attempts remain: a source that did not answer, a name that did not
+// resolve, and an internal failure.
 func retried(code string) bool {
-	return code == profiles.CodeUnreachable || code == codeInternalFailure
+	return code == profiles.CodeUnreachable || code == string(netpolicy.CodeResolutionFailed) || code == codeInternalFailure
 }
 
 // CollectWorker runs the collect job of a report.

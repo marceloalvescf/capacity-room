@@ -745,6 +745,29 @@ func TestCollectRetriesAnUnreachableSource(t *testing.T) {
 	}
 }
 
+func TestCollectRetriesAnUnresolvedName(t *testing.T) {
+	e := newEnv(t, func(s *settings.Settings) { s.JobMaxAttempts = 2 })
+	e.addProfile(closedEndpoint(t), "")
+	e.profiles.Resolve = func(context.Context, string) ([]netip.Addr, error) {
+		return nil, errors.New("no such host")
+	}
+	e.start(collectHooks{})
+	report := e.request()
+
+	last := e.waitJob(report.CollectJobID, rivertype.JobStateCompleted)
+	if last.Attempt != 2 {
+		t.Fatalf("attempt %d", last.Attempt)
+	}
+	got := e.report(report.ID)
+	if got.Status != "failed" || got.FailureCode == nil || *got.FailureCode != "ENDPOINT_RESOLUTION_FAILED" || got.Attempt != 2 {
+		t.Fatalf("report after attempt 2: %+v", got)
+	}
+	audits := e.audits(reports.ActionReportCollect)
+	if len(audits) != 1 || audits[0].Meta["code"] != "ENDPOINT_RESOLUTION_FAILED" {
+		t.Fatalf("audit %+v", audits)
+	}
+}
+
 func TestCollectTimeout(t *testing.T) {
 	e := newEnv(t, func(s *settings.Settings) { s.CollectTimeout = time.Second; s.JobMaxAttempts = 3 })
 	stop := make(chan struct{})
