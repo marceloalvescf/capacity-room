@@ -76,6 +76,8 @@ func parseMatrix(data json.RawMessage) ([]Series, error) {
 	series := make([]Series, 0, len(resultList))
 	for i, element := range resultList {
 		var itemRaw interface{}
+		// decodeAPIResponse already refused every number float64 cannot hold,
+		// so this decode of valid JSON cannot fail.
 		_ = json.Unmarshal(element, &itemRaw)
 		resultList[i] = nil
 		item, ok := itemRaw.(map[string]interface{})

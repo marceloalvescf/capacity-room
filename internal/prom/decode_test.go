@@ -14,7 +14,7 @@ import (
 )
 
 // answerOutcome runs a body through decodeAPIResponse and a parser, as Query
-// and QueryRange do, and returns the error and the parsed result.
+// and QueryRange do, and returns the parsed result or the error.
 func answerOutcome(body, parser string) (interface{}, error) {
 	data, err := decodeAPIResponse([]byte(body), true)
 	if err != nil {
@@ -30,58 +30,70 @@ func TestAnswerShapesKeepTheirOutcome(t *testing.T) {
 	const notAPI = "metrics endpoint did not answer the Prometheus API mid-collection"
 	const noData = "Prometheus response has no data object"
 	const badItem = "Prometheus response contains an invalid result item"
+	const noValues = "Prometheus matrix result has no values"
+	const badLabels = "Prometheus response contains invalid labels"
 	long := `{"status":"success","data":{"resultType":"vector","result":[` +
 		strings.Repeat(`{"metric":{"a":"b"},"value":[1,"1"]},`, 10000) + `{"metric":`
+	vec := func(items string) string {
+		return `{"status":"success","data":{"resultType":"vector","result":[` + items + `]}}`
+	}
 	cases := []struct {
 		name, body, parser string
-		kind               Kind
-		message            string
+		kind               Kind   // the error kind, when an error is expected
+		message            string // the error message, when an error is expected
+		ok                 bool   // success is expected, with the result in want
+		want               interface{}
 	}{
-		{"not JSON", `{"status":`, "vector", KindMetrics, notAPI},
-		{"truncated tail of a long answer", long, "vector", KindMetrics, notAPI},
-		{"array, not object", `[]`, "vector", KindMetrics, notAPI},
-		{"no status", `{"data":{}}`, "vector", KindMetrics, notAPI},
-		{"status error with errorType", `{"status":"error","errorType":"timeout"}`, "vector", KindQuery, "Prometheus query failed with type timeout"},
-		{"status error without errorType", `{"status":"error"}`, "vector", KindQuery, "Prometheus query failed with type unknown"},
-		{"status a number", `{"status":1,"data":{}}`, "vector", KindQuery, "Prometheus query failed with type unknown"},
-		{"data null", `{"status":"success","data":null}`, "vector", KindQuery, noData},
-		{"data an array", `{"status":"success","data":[]}`, "vector", KindQuery, noData},
-		{"data absent", `{"status":"success"}`, "vector", KindQuery, noData},
-		{"result null", `{"status":"success","data":{"resultType":"vector","result":null}}`, "vector", -1, ""},
-		{"result absent", `{"status":"success","data":{"resultType":"vector"}}`, "vector", -1, ""},
-		{"result an object", `{"status":"success","data":{"resultType":"vector","result":{}}}`, "vector", KindQuery, "unsupported Prometheus result type: vector"},
-		{"resultType a number", `{"status":"success","data":{"resultType":3,"result":[]}}`, "vector", KindQuery, "unsupported Prometheus result type: 3"},
-		{"matrix asked of a vector", `{"status":"success","data":{"resultType":"matrix","result":[]}}`, "vector", KindQuery, "unsupported Prometheus result type: matrix"},
-		{"item not an object", `{"status":"success","data":{"resultType":"vector","result":[1]}}`, "vector", KindQuery, badItem},
-		{"metric null", `{"status":"success","data":{"resultType":"vector","result":[{"metric":null,"value":[1,"2"]}]}}`, "vector", -2, "XX"},
-		{"metric with a number label", `{"status":"success","data":{"resultType":"vector","result":[{"metric":{"a":1},"value":[1,"2"]}]}}`, "vector", KindQuery, "Prometheus response contains invalid labels"},
-		{"repeated key, last wins", `{"status":"error","status":"success","data":{"resultType":"vector","result":[]}}`, "vector", -1, ""},
-		{"repeated result, last wins", `{"status":"success","data":{"resultType":"vector","result":[1],"result":[]}}`, "vector", -1, ""},
-		{"matrix without values", `{"status":"success","data":{"resultType":"matrix","result":[{"metric":{}}]}}`, "matrix", KindQuery, "Prometheus matrix result has no values"},
-		{"matrix values null", `{"status":"success","data":{"resultType":"matrix","result":[{"metric":{},"values":null}]}}`, "matrix", KindQuery, "Prometheus matrix result has no values"},
+		{name: "not JSON", body: `{"status":`, parser: "vector", kind: KindMetrics, message: notAPI},
+		{name: "truncated tail of a long answer", body: long, parser: "vector", kind: KindMetrics, message: notAPI},
+		{name: "array, not object", body: `[]`, parser: "vector", kind: KindMetrics, message: notAPI},
+		{name: "no status", body: `{"data":{}}`, parser: "vector", kind: KindMetrics, message: notAPI},
+		{name: "status error with errorType", body: `{"status":"error","errorType":"timeout"}`, parser: "vector", kind: KindQuery, message: "Prometheus query failed with type timeout"},
+		{name: "status error without errorType", body: `{"status":"error"}`, parser: "vector", kind: KindQuery, message: "Prometheus query failed with type unknown"},
+		{name: "status a number", body: `{"status":1,"data":{}}`, parser: "vector", kind: KindQuery, message: "Prometheus query failed with type unknown"},
+		{name: "data null", body: `{"status":"success","data":null}`, parser: "vector", kind: KindQuery, message: noData},
+		{name: "data an array", body: `{"status":"success","data":[]}`, parser: "vector", kind: KindQuery, message: noData},
+		{name: "data absent", body: `{"status":"success"}`, parser: "vector", kind: KindQuery, message: noData},
+		{name: "result null", body: `{"status":"success","data":{"resultType":"vector","result":null}}`, parser: "vector", ok: true, want: []Sample{}},
+		{name: "result absent", body: `{"status":"success","data":{"resultType":"vector"}}`, parser: "vector", ok: true, want: []Sample{}},
+		{name: "result an object", body: `{"status":"success","data":{"resultType":"vector","result":{}}}`, parser: "vector", kind: KindQuery, message: "unsupported Prometheus result type: vector"},
+		{name: "resultType a number", body: `{"status":"success","data":{"resultType":3,"result":[]}}`, parser: "vector", kind: KindQuery, message: "unsupported Prometheus result type: 3"},
+		{name: "matrix asked of a vector", body: `{"status":"success","data":{"resultType":"matrix","result":[]}}`, parser: "vector", kind: KindQuery, message: "unsupported Prometheus result type: matrix"},
+		{name: "item not an object", body: vec(`1`), parser: "vector", kind: KindQuery, message: badItem},
+		{name: "metric null", body: vec(`{"metric":null,"value":[1,"2"]}`), parser: "vector", ok: true, want: []Sample{{Labels: map[string]string{}, Value: 2, Valid: true}}},
+		{name: "metric with a number label", body: vec(`{"metric":{"a":1},"value":[1,"2"]}`), parser: "vector", kind: KindQuery, message: badLabels},
+		{name: "repeated key, last wins", body: `{"status":"error","status":"success","data":{"resultType":"vector","result":[]}}`, parser: "vector", ok: true, want: []Sample{}},
+		{name: "repeated result, last wins", body: `{"status":"success","data":{"resultType":"vector","result":[1],"result":[]}}`, parser: "vector", ok: true, want: []Sample{}},
+		{name: "matrix without values", body: `{"status":"success","data":{"resultType":"matrix","result":[{"metric":{}}]}}`, parser: "matrix", kind: KindQuery, message: noValues},
+		{name: "matrix values null", body: `{"status":"success","data":{"resultType":"matrix","result":[{"metric":{},"values":null}]}}`, parser: "matrix", kind: KindQuery, message: noValues},
+
+		{name: "overflow as a sample value", body: vec(`{"metric":{},"value":[1,1e999]}`), parser: "vector", kind: KindMetrics, message: notAPI},
+		{name: "negative overflow as a sample value", body: vec(`{"metric":{},"value":[1,-1e999]}`), parser: "vector", kind: KindMetrics, message: notAPI},
+		{name: "overflow as a timestamp", body: vec(`{"metric":{},"value":[1e999,"2"]}`), parser: "vector", kind: KindMetrics, message: notAPI},
+		{name: "overflow as a label value", body: vec(`{"metric":{"a":1e999},"value":[1,"2"]}`), parser: "vector", kind: KindMetrics, message: notAPI},
+		{name: "overflow as resultType", body: `{"status":"success","data":{"resultType":1e999,"result":[]}}`, parser: "vector", kind: KindMetrics, message: notAPI},
+		{name: "overflow in an unused member", body: vec(`{"metric":{},"value":[1,"2"],"extra":1e999}`), parser: "vector", kind: KindMetrics, message: notAPI},
+		{name: "overflow as status", body: `{"status":1e999,"data":{}}`, parser: "vector", kind: KindMetrics, message: notAPI},
+		{name: "overflow in the second item after invalid labels", body: vec(`{"metric":{"a":1},"value":[1,"2"]},{"metric":{},"value":[1,1e999]}`), parser: "vector", kind: KindMetrics, message: notAPI},
+		{name: "underflow as a sample value", body: vec(`{"metric":{},"value":[1,1e-999]}`), parser: "vector", ok: true, want: []Sample{{Labels: map[string]string{}, Value: 0, Valid: true}}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			got, err := answerOutcome(c.body, c.parser)
-			if c.kind < 0 {
+			if c.ok {
 				if err != nil {
 					t.Fatalf("want success, got %v", err)
 				}
-				if c.kind == -1 && !reflect.DeepEqual(got, []Sample{}) {
-					t.Fatalf("want an empty result, got %#v", got)
-				}
-				if c.kind == -2 && !reflect.DeepEqual(got, []Sample{{Labels: map[string]string{}, Value: 2, Valid: true}}) {
-					t.Fatalf("got %#v", got)
+				if !reflect.DeepEqual(got, c.want) {
+					t.Fatalf("got %#v, want %#v", got, c.want)
 				}
 				return
 			}
 			var e *Error
 			if !errors.As(err, &e) {
-				t.Logf("OUTCOME no error: %#v", got)
-				t.Fatalf("want error %q, got %v", c.message, err)
+				t.Fatalf("want error %q, got %v and %#v", c.message, err, got)
 			}
 			if e.Kind != c.kind || e.Message != c.message {
-				t.Logf("OUTCOME kind=%d message=%q", e.Kind, e.Message)
 				t.Fatalf("got kind %d %q, want kind %d %q", e.Kind, e.Message, c.kind, c.message)
 			}
 		})

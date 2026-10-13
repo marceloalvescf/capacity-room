@@ -414,6 +414,9 @@ func decodeAPIResponse(body []byte, answered bool) (json.RawMessage, error) {
 	if err := json.Unmarshal(body, &obj); err != nil || obj == nil {
 		return nil, endpointError("metrics endpoint did not answer the Prometheus API", answered)
 	}
+	if !numbersFitFloat64(body) {
+		return nil, endpointError("metrics endpoint did not answer the Prometheus API", answered)
+	}
 	statusRaw, hasStatus := obj["status"]
 	if !hasStatus {
 		return nil, endpointError("metrics endpoint did not answer the Prometheus API", answered)
@@ -434,6 +437,25 @@ func decodeAPIResponse(body []byte, answered bool) (json.RawMessage, error) {
 		return nil, &Error{Kind: KindQuery, Message: "Prometheus response has no data object"}
 	}
 	return data, nil
+}
+
+// numbersFitFloat64 refuses what decoding the whole answer into interface{}
+// refused: a number literal float64 cannot hold. It reads tokens only, so no
+// tree is built, and it runs on a body already known to be valid JSON.
+func numbersFitFloat64(body []byte) bool {
+	dec := json.NewDecoder(bytes.NewReader(body))
+	dec.UseNumber()
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			return err == io.EOF
+		}
+		if n, ok := tok.(json.Number); ok {
+			if _, err := strconv.ParseFloat(string(n), 64); err != nil {
+				return false
+			}
+		}
+	}
 }
 
 // isJSONObject reports whether raw, already validated JSON, is an object.

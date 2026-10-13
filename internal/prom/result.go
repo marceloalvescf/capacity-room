@@ -33,6 +33,8 @@ func parseVector(data json.RawMessage) ([]Sample, error) {
 	samples := make([]Sample, 0, len(resultList))
 	for i, element := range resultList {
 		var itemRaw interface{}
+		// decodeAPIResponse already refused every number float64 cannot hold,
+		// so this decode of valid JSON cannot fail.
 		_ = json.Unmarshal(element, &itemRaw)
 		resultList[i] = nil
 		item, ok := itemRaw.(map[string]interface{})
@@ -189,6 +191,8 @@ func readEncodedValue(encoded string) (float64, bool) {
 func resultOf(data json.RawMessage) (resultType interface{}, result []json.RawMessage, ok bool) {
 	var members map[string]json.RawMessage
 	_ = json.Unmarshal(data, &members)
+	// The data object is valid JSON whose numbers float64 holds, so these
+	// decodes cannot fail.
 	_ = json.Unmarshal(members["resultType"], &resultType)
 	raw, present := members["result"]
 	if !present || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
