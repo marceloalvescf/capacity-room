@@ -8,14 +8,11 @@ import (
 	"time"
 )
 
-// DateTime writes the wall clock of t: 15/07/2026 14:30 in Portuguese,
-// 07/15/2026 14:30 in English. It uses t's own wall clock, in whatever
-// location t carries, never converting it to another zone.
+// DateTime writes the wall clock of t as an ISO date and a time of day,
+// 2006-01-02 15:04, in both languages. It uses t's own wall clock, in
+// whatever location t carries, never converting it to another zone.
 func (c *Catalog) DateTime(t time.Time) string {
-	if c.lang == PortugueseBrazil {
-		return t.Format("02/01/2006 15:04")
-	}
-	return t.Format("01/02/2006 15:04")
+	return t.Format("2006-01-02 15:04")
 }
 
 // Integer writes a whole number with no separator.
