@@ -378,3 +378,42 @@ func TestQueryRefusesANonFiniteTimestamp(t *testing.T) {
 		})
 	}
 }
+
+// TestQueryReadsANumberValue checks that a sample whose value is a JSON
+// number is read as that number, as the original's float() reads it.
+func TestQueryReadsANumberValue(t *testing.T) {
+	body := `{"status":"success","data":{"resultType":"vector","result":[{"metric":{"pod":"a"},"value":[1000,7]}]}}`
+	client := connectedClient(t, func(int32) (int, string) { return http.StatusOK, body })
+
+	samples, err := client.Query(context.Background(), "up", time.Unix(1000, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Sample{{Labels: map[string]string{"pod": "a"}, Value: 7, Valid: true}}
+	if !reflect.DeepEqual(samples, want) {
+		t.Fatalf("samples = %+v, want %+v", samples, want)
+	}
+}
+
+// TestValueOfAnotherShapeIsRefused checks that a value that is neither a
+// text nor a number is refused as an invalid sample in both readers.
+func TestValueOfAnotherShapeIsRefused(t *testing.T) {
+	for _, raw := range []string{"true", "null", "[1]"} {
+		t.Run(raw, func(t *testing.T) {
+			t.Run("vector", func(t *testing.T) {
+				body := fmt.Sprintf(`{"status":"success","data":{"resultType":"vector","result":[{"metric":{},"value":[1000,%s]}]}}`, raw)
+				client := connectedClient(t, func(int32) (int, string) { return http.StatusOK, body })
+
+				_, err := client.Query(context.Background(), "up", time.Unix(1000, 0))
+				assertPromError(t, err, KindQuery, "Prometheus response contains an invalid sample")
+			})
+			t.Run("matrix", func(t *testing.T) {
+				body := fmt.Sprintf(`{"status":"success","data":{"resultType":"matrix","result":[{"metric":{},"values":[[1000,%s]]}]}}`, raw)
+				client := rangeClient(t, body)
+
+				_, err := client.QueryRange(context.Background(), "up", time.Unix(1, 0), time.Unix(2, 0), "1s")
+				assertPromError(t, err, KindQuery, "Prometheus response contains an invalid sample")
+			})
+		})
+	}
+}

@@ -118,7 +118,7 @@ func parseMatrix(data map[string]interface{}) ([]Series, error) {
 // "values" list. Both members are read: the timestamp must be a JSON
 // number or a JSON string strconv.ParseFloat can read, and encoded is a
 // JSON string, read by strconv.ParseFloat, which reads "1", "NaN", and
-// "+Inf" alike. Valid is false for a non-finite value, which means "no
+// "+Inf" alike, or a JSON number. Valid is false for a non-finite value, which means "no
 // data" rather than a failure.
 func parsePoint(raw interface{}) (Point, error) {
 	invalid := &Error{Kind: KindQuery, Message: "Prometheus response contains an invalid sample"}
@@ -131,11 +131,7 @@ func parsePoint(raw interface{}) (Point, error) {
 	if !ok {
 		return Point{}, invalid
 	}
-	encoded, ok := pair[1].(string)
-	if !ok {
-		return Point{}, invalid
-	}
-	value, ok := readEncodedValue(encoded)
+	value, ok := sampleValue(pair[1])
 	if !ok {
 		return Point{}, invalid
 	}

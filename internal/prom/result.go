@@ -100,7 +100,8 @@ func parseLabels(raw interface{}) (map[string]string, error) {
 // parseSampleValue reads a vector result's "value" pair: [timestamp,
 // encoded]. Both members are read: the timestamp must be a JSON number or
 // a JSON string strconv.ParseFloat can read, and encoded is a JSON string,
-// read by strconv.ParseFloat, which reads "1", "NaN", and "+Inf" alike.
+// read by strconv.ParseFloat, which reads "1", "NaN", and "+Inf" alike, or
+// a JSON number.
 // valid is false for a non-finite value, which means "no data" rather than
 // a failure. The parsed timestamp itself is not returned: Sample carries no
 // timestamp field, since an instant query has only the one moment it was
@@ -115,11 +116,7 @@ func parseSampleValue(raw interface{}) (value float64, valid bool, err error) {
 	if !isReadableSampleNumber(pair[0]) {
 		return 0, false, invalid
 	}
-	encoded, ok := pair[1].(string)
-	if !ok {
-		return 0, false, invalid
-	}
-	value, ok = readEncodedValue(encoded)
+	value, ok = sampleValue(pair[1])
 	if !ok {
 		return 0, false, invalid
 	}
@@ -155,6 +152,20 @@ func numberValue(v interface{}) (float64, bool) {
 // isFinite reports whether value is neither NaN nor infinite.
 func isFinite(value float64) bool {
 	return !math.IsNaN(value) && !math.IsInf(value, 0)
+}
+
+// sampleValue reads a sample's value member: a JSON string read by
+// readEncodedValue, or a JSON number, already a float64, taken as it is, as
+// the original's float() takes either.
+func sampleValue(v interface{}) (float64, bool) {
+	switch value := v.(type) {
+	case string:
+		return readEncodedValue(value)
+	case float64:
+		return value, true
+	default:
+		return 0, false
+	}
 }
 
 // readEncodedValue reads the text of a sample's value member: a number

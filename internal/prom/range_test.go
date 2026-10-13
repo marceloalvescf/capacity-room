@@ -153,8 +153,8 @@ func TestQueryRangeRefusesAVector(t *testing.T) {
 	assertPromError(t, err, KindQuery, "unsupported Prometheus result type: vector")
 }
 
-// TestQueryRangeRefusesBadPoint checks that a point of one element, and a
-// point whose value is a JSON number rather than a text, are both refused.
+// TestQueryRangeRefusesBadPoint checks that a point of one element is
+// refused.
 func TestQueryRangeRefusesBadPoint(t *testing.T) {
 	cases := []struct {
 		name string
@@ -164,12 +164,6 @@ func TestQueryRangeRefusesBadPoint(t *testing.T) {
 			name: "one element",
 			body: `{"status":"success","data":{"resultType":"matrix","result":[
 				{"metric":{},"values":[[1]]}
-			]}}`,
-		},
-		{
-			name: "value is a number",
-			body: `{"status":"success","data":{"resultType":"matrix","result":[
-				{"metric":{},"values":[[1,2]]}
 			]}}`,
 		},
 	}
@@ -182,6 +176,22 @@ func TestQueryRangeRefusesBadPoint(t *testing.T) {
 				t.Fatalf("err = %v, want a *prom.Error with Kind KindQuery", err)
 			}
 		})
+	}
+}
+
+// TestQueryRangeReadsANumberValue checks that a point whose value is a JSON
+// number is read as that number, as the original's float() reads it.
+func TestQueryRangeReadsANumberValue(t *testing.T) {
+	client := rangeClient(t, `{"status":"success","data":{"resultType":"matrix","result":[
+		{"metric":{"pod":"a"},"values":[[1000,2],[1010,"3"],[1020,0.5]]}
+	]}}`)
+	series, err := client.QueryRange(context.Background(), "up", time.Unix(1, 0), time.Unix(2, 0), "1s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Point{{Time: 1000, Value: 2, Valid: true}, {Time: 1010, Value: 3, Valid: true}, {Time: 1020, Value: 0.5, Valid: true}}
+	if len(series) != 1 || !reflect.DeepEqual(series[0].Points, want) {
+		t.Fatalf("series = %+v, want one series with %+v", series, want)
 	}
 }
 
