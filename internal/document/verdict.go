@@ -1,10 +1,6 @@
 package document
 
 import (
-	"cmp"
-	"math"
-	"slices"
-
 	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
@@ -30,19 +26,14 @@ var verdictScopeTypes = catalog.VerdictPressureScopes
 // buildVerdict assembles the first page from the findings at or above the
 // minimum severity, the summary, the quality warnings, and the action plan.
 func buildVerdict(b *builder, s snapshot.Snapshot, severity string) Verdict {
-	minRank := minimumRank(severity)
-	findings := make([]snapshot.Finding, 0, len(s.Findings))
-	for _, f := range s.Findings {
-		if analysis.Rank(f.Severity) >= minRank {
-			findings = append(findings, f)
-		}
-	}
+	findings := shownFindings(s, severity)
+	facts := decideVerdict(s, findings)
 
 	return Verdict{
 		Totals:   verdictTotals(b, s.Summary),
 		Quality:  verdictQuality(b, s),
-		Growth:   verdictGrowth(b, s, findings),
-		Pressure: verdictPressure(b, findings),
+		Growth:   verdictGrowth(b, s, findings, facts),
+		Pressure: verdictPressure(b, findings, facts),
 		Plan:     verdictPlan(b, s, severity),
 		Legend:   verdictLegend(b),
 	}
@@ -101,13 +92,13 @@ func verdictQuality(b *builder, s snapshot.Snapshot) *VerdictQuality {
 // verdictGrowth words whether the cluster can grow: its nodes against the
 // maximum of the autoscaler, the worst finding of the cluster, and the
 // warning that the evidence of the nodes is incomplete.
-func verdictGrowth(b *builder, s snapshot.Snapshot, findings []snapshot.Finding) VerdictGrowth {
+func verdictGrowth(b *builder, s snapshot.Snapshot, findings []snapshot.Finding, facts verdictFacts) VerdictGrowth {
 	a := s.Summary.Autoscaling
 	vb := &viewBuilder{b: b}
 	growth := VerdictGrowth{Title: b.text(catalog.VerdictGrowthTitle, nil)}
 
-	worst := worstClusterFinding(findings)
-	if worst != nil {
+	if facts.ClusterFinding >= 0 {
+		worst := findings[facts.ClusterFinding]
 		if definition, ok := findingDefinition(b, worst.Code); ok {
 			growth.Finding = &VerdictFinding{
 				Status:   worst.Severity,
@@ -116,12 +107,9 @@ func verdictGrowth(b *builder, s snapshot.Snapshot, findings []snapshot.Finding)
 			}
 		}
 	}
-	for _, w := range s.Quality.Warnings {
-		if w.Code == collect.WarningNodeCapacityEvidenceIncomplete {
-			text := warningText(b, w.Code)
-			growth.Warning = &text
-			break
-		}
+	if facts.EvidenceWarning >= 0 {
+		text := warningText(b, s.Quality.Warnings[facts.EvidenceWarning].Code)
+		growth.Warning = &text
 	}
 
 	if a.Status != collect.AutoscalingEnabled {
@@ -136,9 +124,8 @@ func verdictGrowth(b *builder, s snapshot.Snapshot, findings []snapshot.Finding)
 	growth.Max = &maximum
 	caption := b.text(catalog.VerdictGrowthCaption, nil)
 	growth.Caption = &caption
-	if a.CurrentNodes != nil && a.MaxNodes != nil && *a.MaxNodes > 0 {
-		hazard := worst != nil && worst.Severity != analysis.SeverityHealthy
-		growth.Gauge = depthGauge(*a.CurrentNodes, *a.MaxNodes, a.MinNodes, hazard)
+	if g := facts.Gauge; g != nil {
+		growth.Gauge = &VerdictGauge{Current: g.Current, Max: g.Max, Min: g.Min, Hazard: g.Hazard != ""}
 	}
 	growth.Facts = []VerdictFact{
 		{Label: b.text(catalog.VerdictGrowthMinNodes, nil), Value: vb.number(a.MinNodes, b.cat.Count).Text},
@@ -148,65 +135,12 @@ func verdictGrowth(b *builder, s snapshot.Snapshot, findings []snapshot.Finding)
 	return growth
 }
 
-// depthGauge counts whole nodes as the gauge of the web does: the maximum
-// is rounded and the level is held between none and the maximum. It is nil
-// when the rounded maximum is not above zero. The minimum is drawn only
-// between none and the maximum, as the web draws it.
-func depthGauge(current, maximum float64, minimum *float64, hazard bool) *VerdictGauge {
-	rounded := int(math.Round(maximum))
-	if rounded <= 0 {
-		return nil
-	}
-	level := min(max(int(math.Round(current)), 0), rounded)
-	gauge := &VerdictGauge{Current: level, Max: rounded, Hazard: hazard}
-	if minimum != nil {
-		floor := int(math.Round(*minimum))
-		if floor > 0 && floor < rounded {
-			gauge.Min = &floor
-		}
-	}
-	return gauge
-}
-
-// worstClusterFinding returns the first finding of the cluster at the worst
-// severity, or nil when the cluster has none.
-func worstClusterFinding(findings []snapshot.Finding) *snapshot.Finding {
-	var worst *snapshot.Finding
-	for i, f := range findings {
-		if f.ScopeType != analysis.ScopeCluster {
-			continue
-		}
-		if worst == nil || analysis.Rank(f.Severity) > analysis.Rank(worst.Severity) {
-			worst = &findings[i]
-		}
-	}
-	return worst
-}
-
-// scopeKey names the row a finding belongs to: its type, its kind for a
-// workload alone, and its name.
-type scopeKey struct{ scopeType, kind, name string }
-
-func keyOf(f snapshot.Finding) scopeKey {
-	kind := ""
-	if f.ScopeType == analysis.ScopeWorkload {
-		kind = f.ScopeKind
-	}
-	return scopeKey{f.ScopeType, kind, f.ScopeName}
-}
-
-// verdictPressure lists the scope types with a finding above healthy, the
-// worst first and in a fixed order among equals.
-func verdictPressure(b *builder, findings []snapshot.Finding) VerdictPressure {
+// verdictPressure words the scope types under pressure, the worst first.
+func verdictPressure(b *builder, findings []snapshot.Finding, facts verdictFacts) VerdictPressure {
 	pressure := VerdictPressure{Title: b.text(catalog.VerdictPressureTitle, nil)}
-	for _, scopeType := range verdictScopeTypes {
-		if row, ok := pressureRow(b, scopeType, findings); ok {
-			pressure.Rows = append(pressure.Rows, row)
-		}
+	for _, f := range facts.Pressure {
+		pressure.Rows = append(pressure.Rows, pressureRow(b, f, findings[f.Lead]))
 	}
-	slices.SortStableFunc(pressure.Rows, func(a, c VerdictPressureRow) int {
-		return cmp.Compare(analysis.Rank(c.Status), analysis.Rank(a.Status))
-	})
 	if len(pressure.Rows) == 0 {
 		empty := b.text(catalog.VerdictPressureEmpty, nil)
 		pressure.Empty = &empty
@@ -214,45 +148,17 @@ func verdictPressure(b *builder, findings []snapshot.Finding) VerdictPressure {
 	return pressure
 }
 
-// pressureRow summarises one scope type: its worst severity over its rows,
-// the first finding of that severity, and how many rows reach each severity
-// above healthy. A type whose worst is healthy has no row.
-func pressureRow(b *builder, scopeType string, findings []snapshot.Finding) (VerdictPressureRow, bool) {
-	worstByRow := make(map[scopeKey]string)
-	var own []snapshot.Finding
-	for _, f := range findings {
-		if f.ScopeType != scopeType {
-			continue
-		}
-		own = append(own, f)
-		key := keyOf(f)
-		held, seen := worstByRow[key]
-		if !seen || analysis.Rank(f.Severity) > analysis.Rank(held) {
-			worstByRow[key] = f.Severity
-		}
-	}
-
-	worst := analysis.SeverityHealthy
-	for _, severity := range worstByRow {
-		if analysis.Rank(severity) > analysis.Rank(worst) {
-			worst = severity
-		}
-	}
-	if worst == analysis.SeverityHealthy {
-		return VerdictPressureRow{}, false
-	}
-	leadAt := slices.IndexFunc(own, func(f snapshot.Finding) bool { return f.Severity == worst })
-	lead := own[leadAt]
-
+// pressureRow words one scope type from its facts and its lead finding.
+func pressureRow(b *builder, facts pressureFacts, lead snapshot.Finding) VerdictPressureRow {
 	row := VerdictPressureRow{
-		Status: worst,
-		Scope:  b.text(catalog.VerdictPressureScope(scopeType), nil),
+		Status: facts.Severity,
+		Scope:  b.text(catalog.VerdictPressureScope(facts.ScopeType), nil),
 	}
 	if definition, ok := findingDefinition(b, lead.Code); ok {
 		row.Sentence = findingSentence(b, definition)
 	}
 	row.Name = []Run{Ident(lead.ScopeName)}
-	if scopeType == analysis.ScopeNodepool {
+	if facts.ScopeType == analysis.ScopeNodepool {
 		row.Name = []Run{poolRun(b, lead.ScopeName)}
 	}
 	for _, e := range lead.Evidence {
@@ -261,18 +167,13 @@ func pressureRow(b *builder, scopeType string, findings []snapshot.Finding) (Ver
 			break
 		}
 	}
-	for _, status := range []string{analysis.SeverityCritical, analysis.SeverityAttention} {
-		count := 0
-		for _, severity := range worstByRow {
-			if severity == status {
-				count++
-			}
-		}
-		if count > 0 {
-			row.Counts = append(row.Counts, verdictCount(b, status, float64(count)))
-		}
+	if facts.Critical > 0 {
+		row.Counts = append(row.Counts, verdictCount(b, analysis.SeverityCritical, float64(facts.Critical)))
 	}
-	return row, true
+	if facts.Attention > 0 {
+		row.Counts = append(row.Counts, verdictCount(b, analysis.SeverityAttention, float64(facts.Attention)))
+	}
+	return row
 }
 
 // verdictPlan holds the first actions of the executive action plan, and the

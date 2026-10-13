@@ -1893,6 +1893,7 @@ components:
         - summary
         - findings
         - recommendations
+        - verdict
         - namespaces
         - workloads
         - hpas
@@ -1917,6 +1918,8 @@ components:
           description: The rows of the PDF's action plan, in its order.
           items:
             $ref: "#/components/schemas/ViewRecommendation"
+        verdict:
+          $ref: "#/components/schemas/ViewVerdict"
         namespaces:
           type: array
           items:
@@ -2194,7 +2197,7 @@ components:
           type: string
     ViewRecommendation:
       type: object
-      required: [code, severity, scope_type, confidence, action, scopes, scope_text]
+      required: [code, severity, scope_type, confidence, action, scopes, scope_text, finding]
       properties:
         code:
           type: string
@@ -2214,6 +2217,84 @@ components:
         scope_text:
           type: string
           description: The text of the Scope cell of the PDF's action plan.
+        finding:
+          type: integer
+          nullable: true
+          description: >-
+            Index in findings of the finding the action comes from; null when
+            none is shown.
+    ViewVerdict:
+      type: object
+      description: >-
+        The decisions of the verdict of the overview, as indices into the
+        lists of this view.
+      additionalProperties: false
+      required: [cluster_finding, node_evidence_warning, gauge, pressure]
+      properties:
+        cluster_finding:
+          type: integer
+          nullable: true
+          description: Index in findings of the worst finding of the cluster.
+        node_evidence_warning:
+          type: integer
+          nullable: true
+          description: >-
+            Index in quality.warnings of the warning that the evidence of the
+            nodes is incomplete.
+        gauge:
+          $ref: "#/components/schemas/ViewGauge"
+        pressure:
+          type: array
+          description: The scope types under pressure, the worst first.
+          items:
+            $ref: "#/components/schemas/ViewPressure"
+    ViewGauge:
+      type: object
+      nullable: true
+      description: >-
+        The depth gauge in whole nodes; null unless the autoscaling is
+        enabled with a known current and a positive maximum.
+      additionalProperties: false
+      required: [current, max, min, hazard]
+      properties:
+        current:
+          type: integer
+        max:
+          type: integer
+        min:
+          type: integer
+          nullable: true
+          description: The minimum, when it lies between none and the maximum.
+        hazard:
+          $ref: "#/components/schemas/ViewHazard"
+    ViewHazard:
+      type: string
+      nullable: true
+      description: >-
+        The severity of the worst finding of the cluster when it is above
+        healthy; null otherwise.
+      enum: [critical, attention, null]
+    ViewPressure:
+      type: object
+      description: >-
+        One scope type with a finding above healthy: its worst severity, its
+        first finding of that severity, and the rows that reach each.
+      additionalProperties: false
+      required: [scope_type, severity, finding, critical, attention]
+      properties:
+        scope_type:
+          $ref: "#/components/schemas/ViewScopeType"
+        severity:
+          $ref: "#/components/schemas/ViewSeverity"
+        finding:
+          type: integer
+          description: Index in findings of the first finding of the severity.
+        critical:
+          type: integer
+          description: Rows of the scope type that reach critical.
+        attention:
+          type: integer
+          description: Rows of the scope type that reach attention.
     ViewNamespace:
       type: object
       required:

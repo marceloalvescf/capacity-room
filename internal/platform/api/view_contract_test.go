@@ -326,6 +326,7 @@ func TestViewEnumsEqualTheRegistries(t *testing.T) {
 	}
 	enums := map[string]enum{
 		"ViewSeverity":          {want: analysis.Severities},
+		"ViewHazard":            {want: document.GaugeHazards},
 		"ViewScopeType":         {want: keys(scopeTypes)},
 		"ViewConfidence":        {want: []string{discovery.ConfidenceExact, discovery.ConfidenceInferred, discovery.ConfidenceUnknown}},
 		"ViewHPACoverage":       {want: snapshot.Coverages},
@@ -346,6 +347,9 @@ func TestViewEnumsEqualTheRegistries(t *testing.T) {
 		var got []string
 		listed, _ := schema["enum"].([]any)
 		for _, value := range listed {
+			if value == nil && schema["nullable"] == true {
+				continue
+			}
 			text, ok := value.(string)
 			if !ok {
 				t.Errorf("%s: the contract holds %v, which is not a text", name, value)
@@ -384,6 +388,8 @@ func TestViewFieldsTakeTheirEnums(t *testing.T) {
 		"ViewFinding":        {"severity": "ViewSeverity", "scope_type": "ViewScopeType", "confidence": "ViewConfidence"},
 		"ViewEvidence":       {"name": "ViewEvidenceName"},
 		"ViewRecommendation": {"severity": "ViewSeverity", "scope_type": "ViewScopeType", "confidence": "ViewConfidence"},
+		"ViewPressure":       {"scope_type": "ViewScopeType", "severity": "ViewSeverity"},
+		"ViewGauge":          {"hazard": "ViewHazard"},
 		"ViewNamespace":      {"status": "ViewSeverity"},
 		"ViewWorkload":       {"status": "ViewSeverity", "hpa_coverage": "ViewHPACoverage"},
 		"ViewNode":           {"status": "ViewSeverity", "pool_confidence": "ViewConfidence"},

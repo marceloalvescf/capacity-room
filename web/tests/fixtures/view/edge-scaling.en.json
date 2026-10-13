@@ -655,7 +655,8 @@
       "scopes": [
         "payments/web"
       ],
-      "scope_text": "payments/web"
+      "scope_text": "payments/web",
+      "finding": 7
     },
     {
       "code": "NAMESPACE_CPU_LIMIT_CRITICAL",
@@ -666,7 +667,8 @@
       "scopes": [
         "payments"
       ],
-      "scope_text": "payments"
+      "scope_text": "payments",
+      "finding": 1
     },
     {
       "code": "NAMESPACE_CPU_REQUEST_CRITICAL",
@@ -677,7 +679,8 @@
       "scopes": [
         "payments"
       ],
-      "scope_text": "payments"
+      "scope_text": "payments",
+      "finding": 2
     },
     {
       "code": "NAMESPACE_MEMORY_LIMIT_CRITICAL",
@@ -688,7 +691,8 @@
       "scopes": [
         "payments"
       ],
-      "scope_text": "payments"
+      "scope_text": "payments",
+      "finding": 3
     },
     {
       "code": "NAMESPACE_MEMORY_REQUEST_CRITICAL",
@@ -699,7 +703,8 @@
       "scopes": [
         "payments"
       ],
-      "scope_text": "payments"
+      "scope_text": "payments",
+      "finding": 4
     },
     {
       "code": "WORKLOAD_MEMORY_LIMIT_CRITICAL",
@@ -710,7 +715,8 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments/payments-web"
+      "scope_text": "payments/payments-web",
+      "finding": 5
     },
     {
       "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
@@ -721,7 +727,8 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments/payments-web"
+      "scope_text": "payments/payments-web",
+      "finding": 6
     },
     {
       "code": "DEPLOYMENT_WITHOUT_HPA",
@@ -732,7 +739,8 @@
       "scopes": [
         "payments/api"
       ],
-      "scope_text": "payments/api"
+      "scope_text": "payments/api",
+      "finding": 11
     },
     {
       "code": "HPA_REPLICA_DIVERGENCE",
@@ -743,7 +751,8 @@
       "scopes": [
         "payments/idle"
       ],
-      "scope_text": "payments/idle"
+      "scope_text": "payments/idle",
+      "finding": 12
     },
     {
       "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
@@ -754,9 +763,57 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments/payments-web"
+      "scope_text": "payments/payments-web",
+      "finding": 13
     }
   ],
+  "verdict": {
+    "cluster_finding": 10,
+    "node_evidence_warning": 1,
+    "gauge": {
+      "current": 3,
+      "max": 3,
+      "min": 2,
+      "hazard": "attention"
+    },
+    "pressure": [
+      {
+        "scope_type": "node",
+        "severity": "critical",
+        "finding": 0,
+        "critical": 2,
+        "attention": 0
+      },
+      {
+        "scope_type": "namespace",
+        "severity": "critical",
+        "finding": 1,
+        "critical": 1,
+        "attention": 0
+      },
+      {
+        "scope_type": "workload",
+        "severity": "critical",
+        "finding": 5,
+        "critical": 1,
+        "attention": 1
+      },
+      {
+        "scope_type": "hpa",
+        "severity": "critical",
+        "finding": 7,
+        "critical": 1,
+        "attention": 1
+      },
+      {
+        "scope_type": "nodepool",
+        "severity": "attention",
+        "finding": 14,
+        "critical": 0,
+        "attention": 2
+      }
+    ]
+  },
   "namespaces": [
     {
       "name": "payments",

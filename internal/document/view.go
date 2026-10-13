@@ -26,6 +26,7 @@ type View struct {
 	Summary         ViewSummary          `json:"summary"`
 	Findings        []ViewFinding        `json:"findings"`
 	Recommendations []ViewRecommendation `json:"recommendations"`
+	Verdict         ViewVerdict          `json:"verdict"`
 	Namespaces      []ViewNamespace      `json:"namespaces"`
 	Workloads       []ViewWorkload       `json:"workloads"`
 	HPAs            []ViewHPA            `json:"hpas"`
@@ -129,6 +130,7 @@ type ViewRecommendation struct {
 	Action     string   `json:"action"`
 	Scopes     []string `json:"scopes"`
 	ScopeText  string   `json:"scope_text"`
+	Finding    *int     `json:"finding"`
 }
 
 // ViewNamespace is the row of one namespace.
@@ -263,14 +265,16 @@ func buildView(s snapshot.Snapshot, c *catalog.Catalog, severity string) (View, 
 	b := &builder{cat: c}
 	vb := &viewBuilder{b: b, thresholds: thresholdsFromSnapshot(s.Report.Thresholds)}
 	minRank := minimumRank(severity)
+	findings := shownFindings(s, severity)
 
 	view := View{
 		Language:        string(c.Language()),
 		MinSeverity:     severity,
 		Report:          vb.report(s),
 		Summary:         vb.summary(s.Summary),
-		Findings:        vb.findings(s.Findings, minRank),
-		Recommendations: vb.recommendations(planRecommendations(s, executiveMinimum(severity))),
+		Findings:        vb.findings(findings),
+		Recommendations: vb.recommendations(planRecommendations(s, executiveMinimum(severity)), findings),
+		Verdict:         vb.verdict(decideVerdict(s, findings)),
 		Namespaces:      vb.namespaces(s, minRank),
 		Workloads:       vb.workloads(s, minRank),
 		HPAs:            vb.hpas(s.HPAs),
@@ -447,12 +451,9 @@ func findingSentence(b *builder, definition analysis.Definition) string {
 	return b.text(catalog.FindingSummary(definition.Family, definition.Params["resource"]), nil)
 }
 
-func (vb *viewBuilder) findings(findings []snapshot.Finding, minRank int) []ViewFinding {
+func (vb *viewBuilder) findings(findings []snapshot.Finding) []ViewFinding {
 	out := make([]ViewFinding, 0, len(findings))
 	for _, f := range findings {
-		if analysis.Rank(f.Severity) < minRank {
-			continue
-		}
 		definition, ok := findingDefinition(vb.b, f.Code)
 		if !ok {
 			return out
@@ -512,7 +513,7 @@ func evidenceView(b *builder, e snapshot.Evidence) ViewEvidence {
 	return item
 }
 
-func (vb *viewBuilder) recommendations(recommendations []snapshot.Recommendation) []ViewRecommendation {
+func (vb *viewBuilder) recommendations(recommendations []snapshot.Recommendation, findings []snapshot.Finding) []ViewRecommendation {
 	out := make([]ViewRecommendation, 0, len(recommendations))
 	for _, r := range recommendations {
 		definition, ok := analysis.Lookup(r.Code)
@@ -530,6 +531,7 @@ func (vb *viewBuilder) recommendations(recommendations []snapshot.Recommendation
 			Action:     vb.b.text(catalog.FindingAction(definition.Family, definition.Params["resource"]), nil),
 			Scopes:     nonNilStrings(r.Scopes),
 			ScopeText:  *recommendationScope(vb.b, r).text,
+			Finding:    recommendationFinding(r, findings),
 		})
 	}
 	return out
@@ -717,4 +719,59 @@ func nonNilStrings(values []string) []string {
 		return []string{}
 	}
 	return slices.Clone(values)
+}
+
+// ViewVerdict holds the decisions of the verdict of the overview, as
+// indices into the lists of the view.
+type ViewVerdict struct {
+	ClusterFinding      *int           `json:"cluster_finding"`
+	NodeEvidenceWarning *int           `json:"node_evidence_warning"`
+	Gauge               *ViewGauge     `json:"gauge"`
+	Pressure            []ViewPressure `json:"pressure"`
+}
+
+// ViewGauge is the depth gauge: whole nodes and the hazard of its last band.
+type ViewGauge struct {
+	Current int     `json:"current"`
+	Max     int     `json:"max"`
+	Min     *int    `json:"min"`
+	Hazard  *string `json:"hazard"`
+}
+
+// ViewPressure is one scope type under pressure.
+type ViewPressure struct {
+	ScopeType string `json:"scope_type"`
+	Severity  string `json:"severity"`
+	Finding   int    `json:"finding"`
+	Critical  int    `json:"critical"`
+	Attention int    `json:"attention"`
+}
+
+// verdict carries the decisions of the verdict into the view.
+func (vb *viewBuilder) verdict(facts verdictFacts) ViewVerdict {
+	v := ViewVerdict{
+		ClusterFinding:      indexOrNil(facts.ClusterFinding),
+		NodeEvidenceWarning: indexOrNil(facts.EvidenceWarning),
+		Pressure:            make([]ViewPressure, 0, len(facts.Pressure)),
+	}
+	if g := facts.Gauge; g != nil {
+		v.Gauge = &ViewGauge{Current: g.Current, Max: g.Max, Min: g.Min}
+		if g.Hazard != "" {
+			v.Gauge.Hazard = &g.Hazard
+		}
+	}
+	for _, p := range facts.Pressure {
+		v.Pressure = append(v.Pressure, ViewPressure{
+			ScopeType: p.ScopeType, Severity: p.Severity, Finding: p.Lead,
+			Critical: p.Critical, Attention: p.Attention,
+		})
+	}
+	return v
+}
+
+func indexOrNil(i int) *int {
+	if i < 0 {
+		return nil
+	}
+	return &i
 }

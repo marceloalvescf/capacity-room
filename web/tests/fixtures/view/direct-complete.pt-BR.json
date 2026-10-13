@@ -390,7 +390,8 @@
       "scopes": [
         "payments"
       ],
-      "scope_text": "payments"
+      "scope_text": "payments",
+      "finding": 0
     },
     {
       "code": "NAMESPACE_MEMORY_REQUEST_CRITICAL",
@@ -401,7 +402,8 @@
       "scopes": [
         "payments"
       ],
-      "scope_text": "payments"
+      "scope_text": "payments",
+      "finding": 1
     },
     {
       "code": "WORKLOAD_MEMORY_LIMIT_CRITICAL",
@@ -412,7 +414,8 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments/payments-web"
+      "scope_text": "payments/payments-web",
+      "finding": 2
     },
     {
       "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
@@ -423,7 +426,8 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments/payments-web"
+      "scope_text": "payments/payments-web",
+      "finding": 3
     },
     {
       "code": "HPA_REPLICA_DIVERGENCE",
@@ -434,7 +438,8 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments/payments-web"
+      "scope_text": "payments/payments-web",
+      "finding": 6
     },
     {
       "code": "NAMESPACE_CPU_REQUEST_ATTENTION",
@@ -445,7 +450,8 @@
       "scopes": [
         "payments"
       ],
-      "scope_text": "payments"
+      "scope_text": "payments",
+      "finding": 5
     },
     {
       "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
@@ -456,9 +462,43 @@
       "scopes": [
         "payments/payments-web"
       ],
-      "scope_text": "payments/payments-web"
+      "scope_text": "payments/payments-web",
+      "finding": 7
     }
   ],
+  "verdict": {
+    "cluster_finding": 4,
+    "node_evidence_warning": null,
+    "gauge": {
+      "current": 3,
+      "max": 3,
+      "min": 1,
+      "hazard": "attention"
+    },
+    "pressure": [
+      {
+        "scope_type": "namespace",
+        "severity": "critical",
+        "finding": 0,
+        "critical": 1,
+        "attention": 0
+      },
+      {
+        "scope_type": "workload",
+        "severity": "critical",
+        "finding": 2,
+        "critical": 1,
+        "attention": 0
+      },
+      {
+        "scope_type": "hpa",
+        "severity": "attention",
+        "finding": 6,
+        "critical": 0,
+        "attention": 1
+      }
+    ]
+  },
   "namespaces": [
     {
       "name": "payments",

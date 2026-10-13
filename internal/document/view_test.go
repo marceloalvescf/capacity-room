@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -438,7 +439,7 @@ func registryFindings() []snapshot.Finding {
 func TestViewFindingTexts(t *testing.T) {
 	for _, lang := range catalog.Languages() {
 		vb := &viewBuilder{b: &builder{cat: mustCatalog(t, lang)}}
-		got := vb.findings(registryFindings(), 0)
+		got := vb.findings(registryFindings())
 		if vb.b.err != nil {
 			t.Fatalf("%s: %v", lang, vb.b.err)
 		}
@@ -719,5 +720,186 @@ func TestViewMarksANodeRequestShareWithItsFinding(t *testing.T) {
 	}
 	if marked != 1 {
 		t.Fatalf("edge-scaling holds %d nodes named pool-a-1, want 1", marked)
+	}
+}
+
+func TestViewVerdictPointsAtWhatThePDFWords(t *testing.T) {
+	for _, name := range goldenNames {
+		s := goldenSnapshot(t, name)
+		view := mustView(t, s, catalog.English)
+		pdf := mustVerdict(t, s, "all")
+		if view.MinSeverity != "all" {
+			continue
+		}
+		where := name
+		v := view.Verdict
+
+		switch {
+		case v.ClusterFinding == nil && pdf.Growth.Finding != nil, v.ClusterFinding != nil && pdf.Growth.Finding == nil:
+			t.Fatalf("%s: cluster finding %v, PDF finding %v", where, v.ClusterFinding, pdf.Growth.Finding)
+		case v.ClusterFinding != nil:
+			if got := view.Findings[*v.ClusterFinding].Sentence; got != pdf.Growth.Finding.Sentence {
+				t.Errorf("%s: cluster finding %q, PDF %q", where, got, pdf.Growth.Finding.Sentence)
+			}
+		}
+
+		if len(v.Pressure) != len(pdf.Pressure.Rows) {
+			t.Fatalf("%s: %d pressure rows, PDF %d", where, len(v.Pressure), len(pdf.Pressure.Rows))
+		}
+		for i, p := range v.Pressure {
+			row := pdf.Pressure.Rows[i]
+			if got := view.Findings[p.Finding].Sentence; got != row.Sentence {
+				t.Errorf("%s: pressure %d sentence %q, PDF %q", where, i, got, row.Sentence)
+			}
+			if p.Severity != row.Status {
+				t.Errorf("%s: pressure %d severity %q, PDF %q", where, i, p.Severity, row.Status)
+			}
+			counts := map[string]string{}
+			for _, c := range row.Counts {
+				counts[c.Status] = c.Count
+			}
+			if got := b2s(p.Critical); got != zero(counts["critical"]) {
+				t.Errorf("%s: pressure %d critical %s, PDF %s", where, i, got, counts["critical"])
+			}
+			if got := b2s(p.Attention); got != zero(counts["attention"]) {
+				t.Errorf("%s: pressure %d attention %s, PDF %s", where, i, got, counts["attention"])
+			}
+		}
+
+		g := pdf.Growth.Gauge
+		switch {
+		case (v.Gauge == nil) != (g == nil):
+			t.Fatalf("%s: gauge %v, PDF gauge %v", where, v.Gauge, g)
+		case g != nil:
+			if v.Gauge.Current != g.Current || v.Gauge.Max != g.Max || !reflect.DeepEqual(v.Gauge.Min, g.Min) || (v.Gauge.Hazard != nil) != g.Hazard {
+				t.Errorf("%s: gauge %+v, PDF %+v", where, *v.Gauge, *g)
+			}
+		}
+
+		switch {
+		case (v.NodeEvidenceWarning == nil) != (pdf.Growth.Warning == nil):
+			t.Fatalf("%s: evidence warning %v, PDF %v", where, v.NodeEvidenceWarning, pdf.Growth.Warning)
+		case v.NodeEvidenceWarning != nil:
+			if got := view.Quality.Warnings[*v.NodeEvidenceWarning].Text; got != *pdf.Growth.Warning {
+				t.Errorf("%s: evidence warning %q, PDF %q", where, got, *pdf.Growth.Warning)
+			}
+		}
+	}
+}
+
+func mustVerdict(t *testing.T, s snapshot.Snapshot, severity string) Verdict {
+	t.Helper()
+	return englishVerdict(t, s, severity)
+}
+
+func b2s(n int) string { return strconv.Itoa(n) }
+
+func zero(count string) string {
+	if count == "" {
+		return "0"
+	}
+	return count
+}
+
+func TestViewVerdictOfEdgeScaling(t *testing.T) {
+	v := mustView(t, goldenSnapshot(t, "edge-scaling"), catalog.English).Verdict
+	want := ViewVerdict{
+		ClusterFinding:      intPtr(10),
+		NodeEvidenceWarning: intPtr(1),
+		Gauge:               &ViewGauge{Current: 3, Max: 3, Min: intPtr(2), Hazard: strPtr("attention")},
+		Pressure: []ViewPressure{
+			{ScopeType: "node", Severity: "critical", Finding: 0, Critical: 2, Attention: 0},
+			{ScopeType: "namespace", Severity: "critical", Finding: 1, Critical: 1, Attention: 0},
+			{ScopeType: "workload", Severity: "critical", Finding: 5, Critical: 1, Attention: 1},
+			{ScopeType: "hpa", Severity: "critical", Finding: 7, Critical: 1, Attention: 1},
+			{ScopeType: "nodepool", Severity: "attention", Finding: 14, Critical: 0, Attention: 2},
+		},
+	}
+	if !reflect.DeepEqual(v, want) {
+		t.Errorf("Verdict = %+v, want %+v", v, want)
+	}
+}
+
+func TestViewVerdictOfTheExecutiveProfile(t *testing.T) {
+	s := goldenSnapshot(t, "edge-scaling")
+	s.Report.Profile = "executive"
+	view := mustView(t, s, catalog.English)
+	v := view.Verdict
+	check := func(what string, i int) {
+		if i < 0 || i >= len(view.Findings) || view.Findings[i].Severity == "healthy" {
+			t.Errorf("%s points at %d of %d findings", what, i, len(view.Findings))
+		}
+	}
+	if v.ClusterFinding != nil {
+		check("cluster finding", *v.ClusterFinding)
+	}
+	for _, p := range v.Pressure {
+		check("pressure "+p.ScopeType, p.Finding)
+	}
+}
+
+func TestViewVerdictWithoutAutoscaling(t *testing.T) {
+	s := goldenSnapshot(t, "edge-scaling")
+	s.Summary.Autoscaling.Status = "disabled"
+	if g := viewOf(t, s).Verdict.Gauge; g != nil {
+		t.Errorf("Gauge = %+v, want none", g)
+	}
+}
+
+func TestViewRecommendationFinding(t *testing.T) {
+	s := goldenSnapshot(t, "edge-scaling")
+	view := mustView(t, s, catalog.English)
+	pointed := 0
+	for _, r := range view.Recommendations {
+		if r.Finding == nil {
+			continue
+		}
+		pointed++
+		f := view.Findings[*r.Finding]
+		if f.Code != r.Code || f.ScopeType != r.ScopeType || f.ScopeName != r.Scopes[0] {
+			t.Errorf("recommendation %s on %v points at %s on %s %s", r.Code, r.Scopes, f.Code, f.ScopeType, f.ScopeName)
+		}
+	}
+	if pointed == 0 {
+		t.Error("no recommendation points at a finding")
+	}
+
+	r := snapshot.Recommendation{Code: "NAMESPACE_CPU_LIMIT_CRITICAL", ScopeType: "namespace", Scopes: []string{"absent"}}
+	if got := recommendationFinding(r, s.Findings); got != nil {
+		t.Errorf("recommendationFinding() = %d, want none", *got)
+	}
+	r.Scopes = nil
+	if got := recommendationFinding(r, s.Findings); got != nil {
+		t.Errorf("recommendationFinding() without scopes = %d, want none", *got)
+	}
+}
+
+// viewOf builds the view past Check, so a summary Check refuses can be tried.
+func viewOf(t *testing.T, s snapshot.Snapshot) View {
+	t.Helper()
+	view, err := buildView(s, mustCatalog(t, catalog.English), "all")
+	if err != nil {
+		t.Fatalf("buildView() error = %v", err)
+	}
+	return view
+}
+
+func TestViewVerdictPressureIsNeverNull(t *testing.T) {
+	s := goldenSnapshot(t, "edge-scaling")
+	s.Findings = nil
+	data, err := EncodeView(viewOf(t, s))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded struct {
+		Verdict struct {
+			Pressure []any `json:"pressure"`
+		} `json:"verdict"`
+	}
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Verdict.Pressure == nil || len(decoded.Verdict.Pressure) != 0 {
+		t.Errorf("verdict.pressure = %v, want an empty list", decoded.Verdict.Pressure)
 	}
 }

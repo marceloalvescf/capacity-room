@@ -693,6 +693,7 @@ export interface components {
             findings: components["schemas"]["ViewFinding"][];
             /** @description The rows of the PDF's action plan, in its order. */
             recommendations: components["schemas"]["ViewRecommendation"][];
+            verdict: components["schemas"]["ViewVerdict"];
             namespaces: components["schemas"]["ViewNamespace"][];
             workloads: components["schemas"]["ViewWorkload"][];
             hpas: components["schemas"]["ViewHPA"][];
@@ -813,6 +814,42 @@ export interface components {
             scopes: string[];
             /** @description The text of the Scope cell of the PDF's action plan. */
             scope_text: string;
+            /** @description Index in findings of the finding the action comes from; null when none is shown. */
+            finding: number | null;
+        };
+        /** @description The decisions of the verdict of the overview, as indices into the lists of this view. */
+        ViewVerdict: {
+            /** @description Index in findings of the worst finding of the cluster. */
+            cluster_finding: number | null;
+            /** @description Index in quality.warnings of the warning that the evidence of the nodes is incomplete. */
+            node_evidence_warning: number | null;
+            gauge: components["schemas"]["ViewGauge"];
+            /** @description The scope types under pressure, the worst first. */
+            pressure: components["schemas"]["ViewPressure"][];
+        };
+        /** @description The depth gauge in whole nodes; null unless the autoscaling is enabled with a known current and a positive maximum. */
+        ViewGauge: {
+            current: number;
+            max: number;
+            /** @description The minimum, when it lies between none and the maximum. */
+            min: number | null;
+            hazard: components["schemas"]["ViewHazard"];
+        } | null;
+        /**
+         * @description The severity of the worst finding of the cluster when it is above healthy; null otherwise.
+         * @enum {string|null}
+         */
+        ViewHazard: "critical" | "attention" | null;
+        /** @description One scope type with a finding above healthy: its worst severity, its first finding of that severity, and the rows that reach each. */
+        ViewPressure: {
+            scope_type: components["schemas"]["ViewScopeType"];
+            severity: components["schemas"]["ViewSeverity"];
+            /** @description Index in findings of the first finding of the severity. */
+            finding: number;
+            /** @description Rows of the scope type that reach critical. */
+            critical: number;
+            /** @description Rows of the scope type that reach attention. */
+            attention: number;
         };
         ViewNamespace: {
             name: string;
