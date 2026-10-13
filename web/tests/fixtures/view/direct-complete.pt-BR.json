@@ -1296,7 +1296,7 @@
         }
       },
       "situation": "Abaixo do máximo",
-      "situation_status": "healthy"
+      "situation_status": "attention"
     }
   ],
   "nodes": [

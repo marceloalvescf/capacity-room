@@ -1473,9 +1473,9 @@
           [
             {
               "kind": "status",
-              "status": "healthy",
+              "status": "attention",
               "text": "Abaixo do máximo",
-              "alt": "Saudável"
+              "alt": "Atenção"
             }
           ]
         ]

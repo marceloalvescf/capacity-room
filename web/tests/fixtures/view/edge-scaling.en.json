@@ -2006,7 +2006,7 @@
         }
       },
       "situation": "Below the maximum",
-      "situation_status": "healthy"
+      "situation_status": "attention"
     },
     {
       "namespace": "payments",
