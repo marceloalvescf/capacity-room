@@ -102,7 +102,8 @@ func TestStopWithNothingOpen(t *testing.T) {
 }
 
 // TestStopCountsOnlyConnectionsInUse leaves one stalled download and one
-// idle keep-alive connection open at the stop; only the download counts.
+// idle keep-alive connection and one new connection that sent nothing open
+// at the stop; only the download counts.
 func TestStopCountsOnlyConnectionsInUse(t *testing.T) {
 	var log syncBuffer
 	logger := newLogger(&log, redact.New())
@@ -125,9 +126,17 @@ func TestStopCountsOnlyConnectionsInUse(t *testing.T) {
 	}), logger)
 	idle := make(chan struct{})
 	track := httpServer.ConnState
+	fresh := make(chan struct{})
 	var once sync.Once
+	var news int
 	httpServer.ConnState = func(c net.Conn, s http.ConnState) {
 		track(c, s)
+		if s == http.StateNew {
+			news++
+			if news == 2 {
+				close(fresh)
+			}
+		}
 		if s == http.StateIdle {
 			once.Do(func() { close(idle) })
 		}
@@ -147,6 +156,17 @@ func TestStopCountsOnlyConnectionsInUse(t *testing.T) {
 	case <-idle:
 	case <-time.After(5 * time.Second):
 		t.Fatal("the connection did not become idle")
+	}
+
+	freshClient, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = freshClient.Close() })
+	select {
+	case <-fresh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the new connection was not seen")
 	}
 
 	stalled, err := net.Dial("tcp", addr)

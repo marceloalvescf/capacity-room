@@ -141,8 +141,8 @@ func (c *connCount) active() int {
 	return n
 }
 
-// stopServer shuts httpServer down within timeout; connections still open
-// then are closed and counted in one warning. It fails only when the
+// stopServer shuts httpServer down within timeout; connections still serving
+// a request then are closed and counted in one warning. It fails only when the
 // listener cannot be closed.
 func stopServer(ctx context.Context, httpServer *http.Server, conns *connCount, timeout time.Duration, logger *slog.Logger) error {
 	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)

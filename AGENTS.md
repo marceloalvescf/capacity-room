@@ -418,10 +418,10 @@ redactor the moment the settings are loaded, before the pool opens.
   delete marks in id order, so two bulk deletes cannot deadlock. A replay
   reads its key and its report in one statement.
 - **`serve`'s stop is bounded.** It waits 30 seconds for the requests in
-  flight, then closes the connections still serving a request, counted by a `ConnState`
-  hook, logs one warning with their number, and exits 0; a second signal
-  ends the process at once; it fails only when
-  the listener cannot be closed.
+  flight, then closes the connections still serving a request, counted by a
+  `ConnState` hook, logs one warning with their number, and exits 0; a second
+  signal ends the process at once; it fails only when the listener cannot be
+  closed.
 - **`serve`, `worker`, and `admin` exit with 0, 1, or 2:** 1 for a failure
   at run time (the database, the listener, Typst for `worker`, jobs that did
   not stop after the drain, a refusal of `bootstrap-admin`), 2 for the

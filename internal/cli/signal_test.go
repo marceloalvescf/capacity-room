@@ -17,7 +17,7 @@ import (
 func TestSecondSignalEndsTheProcess(t *testing.T) {
 	if os.Getenv("KCR_SIGNAL_CHILD") == "1" {
 		ctx, stop := SignalContext(context.Background(), syscall.SIGTERM)
-		_ = stop
+		_ = stop // the child leaves through os.Exit, so the cancel is never needed
 		_, _ = fmt.Fprintln(os.Stdout, "ready")
 		<-ctx.Done()
 		_, _ = fmt.Fprintln(os.Stdout, "stopping")
