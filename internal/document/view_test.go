@@ -727,10 +727,7 @@ func TestViewVerdictPointsAtWhatThePDFWords(t *testing.T) {
 	for _, name := range goldenNames {
 		s := goldenSnapshot(t, name)
 		view := mustView(t, s, catalog.English)
-		pdf := mustVerdict(t, s, "all")
-		if view.MinSeverity != "all" {
-			continue
-		}
+		pdf := englishVerdict(t, s, view.MinSeverity)
 		where := name
 		v := view.Verdict
 
@@ -758,10 +755,10 @@ func TestViewVerdictPointsAtWhatThePDFWords(t *testing.T) {
 			for _, c := range row.Counts {
 				counts[c.Status] = c.Count
 			}
-			if got := b2s(p.Critical); got != zero(counts["critical"]) {
+			if got := strconv.Itoa(p.Critical); got != zero(counts["critical"]) {
 				t.Errorf("%s: pressure %d critical %s, PDF %s", where, i, got, counts["critical"])
 			}
-			if got := b2s(p.Attention); got != zero(counts["attention"]) {
+			if got := strconv.Itoa(p.Attention); got != zero(counts["attention"]) {
 				t.Errorf("%s: pressure %d attention %s, PDF %s", where, i, got, counts["attention"])
 			}
 		}
@@ -786,13 +783,6 @@ func TestViewVerdictPointsAtWhatThePDFWords(t *testing.T) {
 		}
 	}
 }
-
-func mustVerdict(t *testing.T, s snapshot.Snapshot, severity string) Verdict {
-	t.Helper()
-	return englishVerdict(t, s, severity)
-}
-
-func b2s(n int) string { return strconv.Itoa(n) }
 
 func zero(count string) string {
 	if count == "" {
@@ -825,16 +815,24 @@ func TestViewVerdictOfTheExecutiveProfile(t *testing.T) {
 	s.Report.Profile = "executive"
 	view := mustView(t, s, catalog.English)
 	v := view.Verdict
-	check := func(what string, i int) {
-		if i < 0 || i >= len(view.Findings) || view.Findings[i].Severity == "healthy" {
-			t.Errorf("%s points at %d of %d findings", what, i, len(view.Findings))
+	if view.MinSeverity != "attention" {
+		t.Fatalf("MinSeverity = %q, want attention", view.MinSeverity)
+	}
+	pdf := englishVerdict(t, s, view.MinSeverity)
+	if v.ClusterFinding == nil || pdf.Growth.Finding == nil {
+		t.Fatalf("cluster finding %v, PDF %v, want both", v.ClusterFinding, pdf.Growth.Finding)
+	}
+	if f := view.Findings[*v.ClusterFinding]; f.ScopeType != "cluster" || f.Sentence != pdf.Growth.Finding.Sentence {
+		t.Errorf("cluster finding is %s %q, PDF %q", f.ScopeType, f.Sentence, pdf.Growth.Finding.Sentence)
+	}
+	if len(v.Pressure) != len(pdf.Pressure.Rows) {
+		t.Fatalf("%d pressure rows, PDF %d", len(v.Pressure), len(pdf.Pressure.Rows))
+	}
+	for i, p := range v.Pressure {
+		f := view.Findings[p.Finding]
+		if f.ScopeType != p.ScopeType || f.Severity != p.Severity || p.Severity == "healthy" || f.Sentence != pdf.Pressure.Rows[i].Sentence {
+			t.Errorf("pressure %d points at %s %s %q, row is %s %s, PDF %q", i, f.ScopeType, f.Severity, f.Sentence, p.ScopeType, p.Severity, pdf.Pressure.Rows[i].Sentence)
 		}
-	}
-	if v.ClusterFinding != nil {
-		check("cluster finding", *v.ClusterFinding)
-	}
-	for _, p := range v.Pressure {
-		check("pressure "+p.ScopeType, p.Finding)
 	}
 }
 
