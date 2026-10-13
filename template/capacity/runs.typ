@@ -17,13 +17,15 @@
 #let status-fill(status) = if status in ("healthy", "unavailable", "undefined") { luma(45%) } else { black }
 
 // status-glyph sets the mark of a status in the monospaced face, which
-// holds all five glyphs; the face of the words holds none of them.
-#let status-glyph(status) = text(
+// holds all five glyphs; the face of the words holds none of them. The mark
+// is an artifact of the PDF: the word beside it, in its run or in the next
+// cell of the legend, is what a screen reader reads.
+#let status-glyph(status) = pdf.artifact(text(
   font: mono,
   fill: status-fill(status),
   weight: if status == "critical" { "bold" } else { "regular" },
   status-symbols.at(status),
-)
+))
 
 #let run-to-content(run) = {
   if run.kind == "text" {
