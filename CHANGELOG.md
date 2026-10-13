@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-13
+
 ### Changed
 
 - A report whose metric source's host name does not resolve is tried again, as a source that does not answer is.
