@@ -76,7 +76,7 @@ func TestStopClosesAStalledDownload(t *testing.T) {
 	if err := stopServer(context.Background(), httpServer, conns, 200*time.Millisecond, newLogger(&log, redact.New())); err != nil {
 		t.Fatalf("stopServer = %v, want nil", err)
 	}
-	if took := time.Since(begun); took > time.Second {
+	if took := time.Since(begun); took < 200*time.Millisecond || took > time.Second {
 		t.Fatalf("the stop took %v", took)
 	}
 	if got := log.String(); !strings.Contains(got, "serve: connections closed before they finished: 1") {
@@ -98,5 +98,74 @@ func TestStopWithNothingOpen(t *testing.T) {
 	}
 	if got := log.String(); got != "" {
 		t.Fatalf("log = %q, want none", got)
+	}
+}
+
+// TestStopCountsOnlyConnectionsInUse leaves one stalled download and one
+// idle keep-alive connection open at the stop; only the download counts.
+func TestStopCountsOnlyConnectionsInUse(t *testing.T) {
+	var log syncBuffer
+	logger := newLogger(&log, redact.New())
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := make(chan struct{})
+	httpServer, conns := newServeServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/quick" {
+			return
+		}
+		close(started)
+		chunk := make([]byte, 1<<20)
+		for range 256 {
+			if _, err := w.Write(chunk); err != nil {
+				return
+			}
+		}
+	}), logger)
+	idle := make(chan struct{})
+	track := httpServer.ConnState
+	var once sync.Once
+	httpServer.ConnState = func(c net.Conn, s http.ConnState) {
+		track(c, s)
+		if s == http.StateIdle {
+			once.Do(func() { close(idle) })
+		}
+	}
+	go func() { _ = httpServer.Serve(listener) }()
+	addr := listener.Addr().String()
+
+	idleClient, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = idleClient.Close() })
+	if _, err := idleClient.Write([]byte("GET /quick HTTP/1.1\r\nHost: x\r\n\r\n")); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-idle:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the connection did not become idle")
+	}
+
+	stalled, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = stalled.Close() })
+	if _, err := stalled.Write([]byte("GET /slow HTTP/1.1\r\nHost: x\r\n\r\n")); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the handler did not start")
+	}
+	if err := stopServer(context.Background(), httpServer, conns, 200*time.Millisecond, logger); err != nil {
+		t.Fatalf("stopServer = %v, want nil", err)
+	}
+	if got := log.String(); !strings.Contains(got, "serve: connections closed before they finished: 1") {
+		t.Fatalf("log = %q", got)
 	}
 }

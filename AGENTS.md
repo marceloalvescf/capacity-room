@@ -418,8 +418,9 @@ redactor the moment the settings are loaded, before the pool opens.
   delete marks in id order, so two bulk deletes cannot deadlock. A replay
   reads its key and its report in one statement.
 - **`serve`'s stop is bounded.** It waits 30 seconds for the requests in
-  flight, then closes the connections still open, counted by a `ConnState`
-  hook, logs one warning with their number, and exits 0; it fails only when
+  flight, then closes the connections still serving a request, counted by a `ConnState`
+  hook, logs one warning with their number, and exits 0; a second signal
+  ends the process at once; it fails only when
   the listener cannot be closed.
 - **`serve`, `worker`, and `admin` exit with 0, 1, or 2:** 1 for a failure
   at run time (the database, the listener, Typst for `worker`, jobs that did
@@ -543,7 +544,8 @@ redactor the moment the settings are loaded, before the pool opens.
 - **The `worker` stop is bounded:** it takes no new job, waits
   `worker_drain_seconds`, cancels the rest (River returns them with the
   attempt restored), waits once more, and then exits 1 with `jobs did not
-  stop`; readiness is false from the moment the stop begins.
+  stop`; readiness is false from the moment the stop begins. A second signal
+  ends the process at once.
 
 ### Golden snapshots and data files
 

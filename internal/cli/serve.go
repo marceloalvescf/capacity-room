@@ -106,11 +106,11 @@ func runServe(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobr
 	return nil
 }
 
-// connCount counts the connections of a server that are not yet closed or
-// handed away, through http.Server.ConnState.
+// connCount follows the last state of each connection of a server that is
+// not yet closed or handed away, through http.Server.ConnState.
 type connCount struct {
-	mu   sync.Mutex
-	open map[net.Conn]struct{}
+	mu    sync.Mutex
+	state map[net.Conn]http.ConnState
 }
 
 // track is the ConnState hook.
@@ -118,21 +118,27 @@ func (c *connCount) track(conn net.Conn, state http.ConnState) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	switch state {
-	case http.StateNew:
-		if c.open == nil {
-			c.open = map[net.Conn]struct{}{}
-		}
-		c.open[conn] = struct{}{}
 	case http.StateClosed, http.StateHijacked:
-		delete(c.open, conn)
+		delete(c.state, conn)
+	default:
+		if c.state == nil {
+			c.state = map[net.Conn]http.ConnState{}
+		}
+		c.state[conn] = state
 	}
 }
 
-// count is the number of connections still open.
-func (c *connCount) count() int {
+// active is the number of connections serving a request.
+func (c *connCount) active() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return len(c.open)
+	n := 0
+	for _, state := range c.state {
+		if state == http.StateActive {
+			n++
+		}
+	}
+	return n
 }
 
 // stopServer shuts httpServer down within timeout; connections still open
@@ -148,10 +154,10 @@ func stopServer(ctx context.Context, httpServer *http.Server, conns *connCount, 
 	if !errors.Is(err, context.DeadlineExceeded) {
 		return fmt.Errorf("cannot stop the server: %w", err)
 	}
-	open := conns.count()
-	if err := httpServer.Close(); err != nil {
-		return fmt.Errorf("cannot stop the server: %w", err)
-	}
+	open := conns.active()
+	// Shutdown has closed the listeners already, so Close only ends the
+	// connections still serving a request.
+	_ = httpServer.Close()
 	logger.Warn(fmt.Sprintf("serve: connections closed before they finished: %d", open))
 	return nil
 }
