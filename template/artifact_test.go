@@ -5,6 +5,7 @@ package template
 import (
 	"bytes"
 	"compress/zlib"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -134,5 +135,69 @@ func TestStatusGlyphCarriesItsWord(t *testing.T) {
 	}
 	if got, want := artifactOpenings(value), artifactOpenings(text); got != want {
 		t.Fatalf("artifact openings: status run with alt %d, text run %d, want them equal", got, want)
+	}
+}
+
+// pressureRows returns the rows of the first "pressure" object found in v,
+// searching objects and arrays depth first.
+func pressureRows(v any) []any {
+	switch node := v.(type) {
+	case map[string]any:
+		if pressure, ok := node["pressure"].(map[string]any); ok {
+			rows, _ := pressure["rows"].([]any)
+			return rows
+		}
+		for _, child := range node {
+			if rows := pressureRows(child); rows != nil {
+				return rows
+			}
+		}
+	case []any:
+		for _, child := range node {
+			if rows := pressureRows(child); rows != nil {
+				return rows
+			}
+		}
+	}
+	return nil
+}
+
+// TestPressureRowMarkCarriesItsWord checks that the mark of every pressure
+// row of the verdict block carries the row's label as the alternate text of
+// the PDF.
+func TestPressureRowMarkCarriesItsWord(t *testing.T) {
+	ws := workspace(t)
+	raw, err := os.ReadFile(capacityFixture(ws, "verdict.en"))
+	if err != nil {
+		t.Fatalf("reading the verdict fixture: %v", err)
+	}
+	var data any
+	if err := json.Unmarshal(raw, &data); err != nil {
+		t.Fatalf("decoding the verdict fixture: %v", err)
+	}
+	rows := pressureRows(data)
+	if len(rows) != 5 {
+		t.Fatalf("the verdict fixture holds %d pressure rows, want 5", len(rows))
+	}
+	for _, row := range rows {
+		row.(map[string]any)["label"] = "PressureRowWord"
+	}
+	out, err := json.Marshal(data)
+	if err != nil {
+		t.Fatalf("encoding the fixture: %v", err)
+	}
+	fixture := filepath.Join(t.TempDir(), "pressure.json")
+	if err := os.WriteFile(fixture, out, 0o644); err != nil {
+		t.Fatalf("writing the fixture: %v", err)
+	}
+	pdf, stderr, err := compileCapacityData(t, ws, fixture)
+	assertCleanCompile(t, stderr, err)
+	alt := regexp.MustCompile(`/Alt\s*\(PressureRowWord\)`)
+	got := 0
+	for _, body := range pdfBodies(t, pdf) {
+		got += len(alt.FindAll(body, -1))
+	}
+	if got != 5 {
+		t.Fatalf("the PDF holds %d /Alt (PressureRowWord), want 5", got)
 	}
 }
