@@ -447,7 +447,7 @@ func TestViewFindingTexts(t *testing.T) {
 			t.Fatalf("%s: %d findings, the registry holds %d codes", lang, len(got), len(analysis.Registry))
 		}
 		for _, f := range got {
-			if f.Sentence == "" || f.Action == "" {
+			if f.Sentence == "" || (f.Action == "") != (f.Severity == analysis.SeverityHealthy) {
 				t.Errorf("%s: %s has sentence %q and action %q", lang, f.Code, f.Sentence, f.Action)
 			}
 		}
@@ -1019,5 +1019,33 @@ func TestViewIdleHPAReadsItsFinding(t *testing.T) {
 	}
 	if seen != 2 {
 		t.Fatalf("edge-scaling holds %d of the two HPAs, want 2", seen)
+	}
+}
+
+func TestViewHealthyFindingHasNoAction(t *testing.T) {
+	vb := &viewBuilder{b: &builder{cat: mustCatalog(t, catalog.English)}}
+	attention := registryFindings()[0]
+	attention.Severity = analysis.SeverityAttention
+	healthy := attention
+	healthy.Severity = analysis.SeverityHealthy
+	got := vb.findings([]snapshot.Finding{attention, healthy})
+	if vb.b.err != nil || len(got) != 2 {
+		t.Fatalf("findings = %d, err = %v", len(got), vb.b.err)
+	}
+	if got[0].Action == "" {
+		t.Errorf("attention action is empty")
+	}
+	if got[1].Action != "" {
+		t.Errorf("healthy action = %q, want empty", got[1].Action)
+	}
+}
+
+func TestViewCapabilityWithoutReasonHasNoRemark(t *testing.T) {
+	s := baseSnapshot(t)
+	s.Quality.Capabilities[0].Reasons = []string{}
+	vb := &viewBuilder{b: &builder{cat: mustCatalog(t, catalog.English)}}
+	got := vb.quality(s)
+	if got.Capabilities[0].Remark != "" {
+		t.Errorf("remark = %q, want empty", got.Capabilities[0].Remark)
 	}
 }

@@ -197,3 +197,17 @@ func TestCriticalMinimumKeepsOnlyUnavailableCapabilities(t *testing.T) {
 		}
 	}
 }
+
+func TestAppendixRemarkIsEmptyWithoutReasons(t *testing.T) {
+	b := &builder{cat: mustCatalog(t, catalog.English)}
+	if got := appendixRemark(b, nil); got != "" {
+		t.Errorf("appendixRemark = %q, want empty", got)
+	}
+	s := baseSnapshot(t)
+	s.Quality.Capabilities[0].Reasons = []string{}
+	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{})
+	table := findTable(t, doc.Blocks, "quality-appendix")
+	if cell := table.Rows[0][3]; len(cell) != 0 {
+		t.Errorf("remark cell = %v, want empty", cell)
+	}
+}

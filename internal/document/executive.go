@@ -617,7 +617,7 @@ func materialLimitations(b *builder, s snapshot.Snapshot) []Block {
 		rows = append(rows, [][]Run{
 			{Text(b.text(catalog.CapabilityName(c.Name), nil))},
 			{capabilityState(b, c.State)},
-			{Text(remark)},
+			remarkCell(b, c.Reasons),
 		})
 	}
 	for _, w := range s.Quality.Warnings {

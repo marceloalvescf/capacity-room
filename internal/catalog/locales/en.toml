@@ -61,7 +61,6 @@ header_coverage = "Coverage"
 header_source = "Source"
 header_remark = "Remark"
 header_evidence = "Technical evidence"
-no_remark = "No remark"
 empty = "No capability reaches the minimum severity of this report."
 
 [state]
@@ -322,11 +321,11 @@ summary = "Memory usage against the request."
 action = "Review the memory request and the observed consumption."
 
 [finding.resource_limit_usage.cpu]
-summary = "CPU usage against the limit indicates an increased risk of CPU throttling."
+summary = "CPU usage against the limit."
 action = "Review the CPU limit and the observed consumption profile."
 
 [finding.resource_limit_usage.memory]
-summary = "Memory usage against the limit indicates an increased risk of OOMKill."
+summary = "Memory usage against the limit."
 action = "Review the memory limit and the observed consumption profile."
 
 [finding.resource_request_missing.cpu]
@@ -449,7 +448,7 @@ summary = "Node autoscaling is configured as disabled."
 action = "Plan capacity by hand and review the autoscaling decision."
 
 [finding.autoscaling_near_max]
-summary = "The number of nodes is close to the observed maximum."
+summary = "The number of nodes reached or came close to the observed maximum."
 action = "Review the configured maximum and the headroom of the cluster."
 
 [finding.autoscaling_bounds_unknown]

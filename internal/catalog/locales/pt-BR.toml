@@ -61,7 +61,6 @@ header_coverage = "Cobertura"
 header_source = "Fonte"
 header_remark = "Observação"
 header_evidence = "Evidência técnica"
-no_remark = "Sem observação"
 empty = "Nenhuma capacidade atinge a severidade mínima deste relatório."
 
 [state]
@@ -322,11 +321,11 @@ summary = "Uso de memória em relação ao request."
 action = "Revisar o request de memória e o consumo observado."
 
 [finding.resource_limit_usage.cpu]
-summary = "O uso de CPU em relação ao limit indica risco aumentado de throttling de CPU."
+summary = "Uso de CPU em relação ao limit."
 action = "Revisar o limit de CPU e o perfil de consumo observado."
 
 [finding.resource_limit_usage.memory]
-summary = "O uso de memória em relação ao limit indica risco aumentado de OOMKill."
+summary = "Uso de memória em relação ao limit."
 action = "Revisar o limit de memória e o perfil de consumo observado."
 
 [finding.resource_request_missing.cpu]
@@ -449,7 +448,7 @@ summary = "O autoscaling de nodes está configurado como desabilitado."
 action = "Planejar capacidade manual e revisar a decisão de autoscaling."
 
 [finding.autoscaling_near_max]
-summary = "O número de nodes está próximo ao máximo observado."
+summary = "O número de nodes atingiu ou ficou próximo do máximo observado."
 action = "Revisar o máximo configurado e a margem do cluster."
 
 [finding.autoscaling_bounds_unknown]

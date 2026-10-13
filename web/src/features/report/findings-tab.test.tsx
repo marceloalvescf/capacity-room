@@ -340,6 +340,17 @@ describe("links into the findings tab", () => {
     expect(within(detail()).getByText(sentenceOf(13))).toBeInTheDocument();
     expect(within(detail()).getByText(english.findings[13]?.action ?? "")).toBeInTheDocument();
   });
+
+  it("a finding with no action opens without the action heading", async () => {
+    const quiet = english.findings.map((finding, index) => (index === 2 ? { ...finding, action: "" } : finding));
+    mock.views.set(`${id}:en`, { ...english, findings: quiet });
+    await open("?finding=2");
+    expect(within(detail()).getByText("Observed")).toBeInTheDocument();
+    expect(within(detail()).queryByText("What to do")).not.toBeInTheDocument();
+    cleanup();
+    await open("?finding=3");
+    expect(within(detail()).getByText("What to do")).toBeInTheDocument();
+  });
 });
 
 describe("findings type scale", () => {

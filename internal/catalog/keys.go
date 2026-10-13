@@ -69,7 +69,6 @@ const (
 	AppendixHeaderSource     Key = "appendix.header_source"
 	AppendixHeaderRemark     Key = "appendix.header_remark"
 	AppendixHeaderEvidence   Key = "appendix.header_evidence"
-	AppendixNoRemark         Key = "appendix.no_remark"
 	AppendixEmpty            Key = "appendix.empty"
 
 	StateAvailable   Key = "state.available"
@@ -305,7 +304,7 @@ var wordingKeys = []Key{
 	FrontQualityUnavailable,
 	AppendixHeading, AppendixHeaderCapability, AppendixHeaderCoverage,
 	AppendixHeaderSource, AppendixHeaderRemark, AppendixHeaderEvidence,
-	AppendixNoRemark, AppendixEmpty,
+	AppendixEmpty,
 	StateAvailable, StatePartial, StateUnavailable,
 	StrategyRecordingRule, StrategyRawMetrics, StrategyConfigured, StrategyNone,
 	CapabilityNameNamespaceUsage, CapabilityNameWorkloadUsage,

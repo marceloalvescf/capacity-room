@@ -83,7 +83,7 @@ func appendixRows(b *builder, capabilities []snapshot.Capability, severity strin
 			{Text(b.text(catalog.CapabilityName(c.Name), nil))},
 			{capabilityState(b, c.State)},
 			{Text(b.text(catalog.Strategy(c.Strategy), nil))},
-			{Text(appendixRemark(b, c.Reasons))},
+			remarkCell(b, c.Reasons),
 			{Text(b.text(catalog.CapabilityEvidence(c.Name, c.State), nil))},
 		})
 	}
@@ -122,10 +122,10 @@ func effectiveCapabilities(s snapshot.Snapshot) []snapshot.Capability {
 }
 
 // appendixRemark joins the sentences of every reason code with one space,
-// or, when there is none, returns the catalog's "no remark" sentence.
+// or, when there is none, returns the empty string.
 func appendixRemark(b *builder, reasons []string) string {
 	if len(reasons) == 0 {
-		return b.text(catalog.AppendixNoRemark, nil)
+		return ""
 	}
 	sentences := make([]string, len(reasons))
 	for i, code := range reasons {
@@ -187,4 +187,13 @@ func buildNotes(b *builder, s snapshot.Snapshot) []Block {
 		Heading{Level: 2, Numbered: false, Runs: []Run{Text(b.text(catalog.NotesHeading, nil))}},
 		Table{ID: "interpretation-notes", Headers: []string{b.text(catalog.NotesHeaderRemark, nil)}, Rows: rows},
 	}
+}
+
+// remarkCell is the remark of a capability as a table cell: empty when the
+// capability has no reason.
+func remarkCell(b *builder, reasons []string) []Run {
+	if len(reasons) == 0 {
+		return []Run{}
+	}
+	return []Run{Text(appendixRemark(b, reasons))}
 }

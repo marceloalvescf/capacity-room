@@ -455,6 +455,14 @@ func findingSentence(b *builder, definition analysis.Definition) string {
 	return b.text(catalog.FindingSummary(definition.Family, definition.Params["resource"]), nil)
 }
 
+// action is the catalog action of a finding, empty for a healthy one.
+func (vb *viewBuilder) action(severity string, definition analysis.Definition) string {
+	if severity == analysis.SeverityHealthy {
+		return ""
+	}
+	return vb.b.text(catalog.FindingAction(definition.Family, definition.Params["resource"]), nil)
+}
+
 func (vb *viewBuilder) findings(findings []snapshot.Finding) []ViewFinding {
 	out := make([]ViewFinding, 0, len(findings))
 	for _, f := range findings {
@@ -462,7 +470,6 @@ func (vb *viewBuilder) findings(findings []snapshot.Finding) []ViewFinding {
 		if !ok {
 			return out
 		}
-		resource := definition.Params["resource"]
 		out = append(out, ViewFinding{
 			Code:       f.Code,
 			Severity:   f.Severity,
@@ -471,7 +478,7 @@ func (vb *viewBuilder) findings(findings []snapshot.Finding) []ViewFinding {
 			ScopeName:  f.ScopeName,
 			Confidence: f.Confidence,
 			Sentence:   findingSentence(vb.b, definition),
-			Action:     vb.b.text(catalog.FindingAction(definition.Family, resource), nil),
+			Action:     vb.action(f.Severity, definition),
 			Evidence:   vb.evidence(f.Evidence),
 		})
 	}

@@ -90,10 +90,12 @@ function Detail({ finding }: { finding: ViewFinding }) {
         <h4 className="label">{t("report.findings.observed")}</h4>
         <p className="text-sm">{finding.sentence}</p>
       </section>
-      <section className="flex flex-col gap-1">
-        <h4 className="label">{t("report.findings.action")}</h4>
-        <p className="text-sm">{finding.action}</p>
-      </section>
+      {finding.action === "" ? null : (
+        <section className="flex flex-col gap-1">
+          <h4 className="label">{t("report.findings.action")}</h4>
+          <p className="text-sm">{finding.action}</p>
+        </section>
+      )}
       {finding.evidence.length === 0 ? null : (
         <section className="flex flex-col gap-1">
           <h4 className="label">{t("report.findings.evidence")}</h4>

@@ -56,7 +56,7 @@ func TestVerdictOfEdgeScalingGrowth(t *testing.T) {
 		Max:     strPtr("3"),
 		Gauge:   &VerdictGauge{Current: 3, Max: 3, Min: intPtr(2), Hazard: true},
 		Caption: strPtr("Nodes · current / maximum"),
-		Finding: &VerdictFinding{"attention", "Attention", "The number of nodes is close to the observed maximum."},
+		Finding: &VerdictFinding{"attention", "Attention", "The number of nodes reached or came close to the observed maximum."},
 		Warning: strPtr("The capacity evidence of the nodes is incomplete."),
 		Facts: []VerdictFact{
 			{"Minimum nodes", "2"},
@@ -82,14 +82,14 @@ func TestVerdictOfEdgeScalingPressure(t *testing.T) {
 		},
 		{
 			Status: "critical", Label: "Critical", Scope: "Namespaces",
-			Sentence: "CPU usage against the limit indicates an increased risk of CPU throttling.",
+			Sentence: "CPU usage against the limit.",
 			Name:     []Run{Ident("payments")},
 			Peak:     &VerdictFact{"Peak", "330%"},
 			Counts:   []VerdictCount{{"critical", "Critical", "1"}},
 		},
 		{
 			Status: "critical", Label: "Critical", Scope: "Workloads",
-			Sentence: "Memory usage against the limit indicates an increased risk of OOMKill.",
+			Sentence: "Memory usage against the limit.",
 			Name:     []Run{Ident("payments/payments-web")},
 			Peak:     &VerdictFact{"Peak", "12000%"},
 			Counts:   []VerdictCount{{"critical", "Critical", "1"}, {"attention", "Attention", "1"}},
