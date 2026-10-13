@@ -1,6 +1,7 @@
 package prom
 
 import (
+	"encoding/json"
 	"errors"
 	"math"
 	"reflect"
@@ -128,10 +129,8 @@ func TestAnswerShapesKeepTheirOutcome(t *testing.T) {
 	})
 }
 
-// TestAnswerMemoryStaysBounded decodes a 32 MiB instant answer and samples
-// the live heap while it does: the peak growth stays a small multiple of the
-// body, where a whole-answer tree grew to about thirty times it.
-func TestAnswerMemoryStaysBounded(t *testing.T) {
+// answerBody builds an instant answer of about 32 MiB.
+func answerBody() []byte {
 	var b strings.Builder
 	b.WriteString(`{"status":"success","data":{"resultType":"vector","result":[`)
 	for i := 0; b.Len() < 32<<20; i++ {
@@ -141,8 +140,13 @@ func TestAnswerMemoryStaysBounded(t *testing.T) {
 		b.WriteString(`{"metric":{"a":"b"},"value":[1,"1"]}`)
 	}
 	b.WriteString(`]}}`)
-	body := []byte(b.String())
+	return []byte(b.String())
+}
 
+// peakAbove runs work with the garbage collector at 10 percent and returns
+// the highest live heap a 1 ms sampler saw while it ran, above the heap
+// before it started.
+func peakAbove(work func()) uint64 {
 	defer debug.SetGCPercent(debug.SetGCPercent(10))
 	runtime.GC()
 	sample := []metrics.Sample{{Name: "/memory/classes/heap/objects:bytes"}}
@@ -150,12 +154,14 @@ func TestAnswerMemoryStaysBounded(t *testing.T) {
 	base := sample[0].Value.Uint64()
 
 	var peak atomic.Uint64
-	done := make(chan struct{})
+	stop := make(chan struct{})
+	stopped := make(chan struct{})
 	go func() {
+		defer close(stopped)
 		s := []metrics.Sample{{Name: "/memory/classes/heap/objects:bytes"}}
 		for {
 			select {
-			case <-done:
+			case <-stop:
 				return
 			default:
 			}
@@ -166,26 +172,60 @@ func TestAnswerMemoryStaysBounded(t *testing.T) {
 			time.Sleep(time.Millisecond)
 		}
 	}()
-	data, err := decodeAPIResponse(body, true)
+	work()
+	close(stop)
+	<-stopped
+	if peak.Load() < base {
+		return 0
+	}
+	return peak.Load() - base
+}
+
+// TestAnswerMemoryStaysBounded decodes a 32 MiB instant answer and bounds
+// the live heap above its start in two ways. The decode alone, which splits
+// the answer into its elements and parses no sample, holds at most four times
+// the body. The decode and the parse of every sample together stay within
+// fifteen times it, where decoding the whole answer into a tree held about
+// thirty times it.
+func TestAnswerMemoryStaysBounded(t *testing.T) {
+	body := answerBody()
+	size := uint64(len(body))
+
+	var held json.RawMessage
+	holding := peakAbove(func() {
+		data, err := decodeAPIResponse(body, true)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		_, held, _ = resultOf(data)
+	})
+	runtime.KeepAlive(held)
+	if len(held) == 0 {
+		t.Fatal("the decode returned no result")
+	}
+
 	var samples []Sample
-	if err == nil {
-		samples, err = parseVector(data)
-	}
-	close(done)
-	if err != nil {
-		t.Fatal(err)
-	}
-	runtime.GC()
-	metrics.Read(sample)
-	kept := sample[0].Value.Uint64()
+	whole := peakAbove(func() {
+		data, err := decodeAPIResponse(body, true)
+		if err == nil {
+			samples, err = parseVector(data)
+		}
+		if err != nil {
+			t.Error(err)
+		}
+	})
 	runtime.KeepAlive(samples)
-	if kept >= peak.Load() {
-		t.Fatalf("the sampler saw no point above what the result keeps (%d MiB); nothing was measured", kept>>20)
+	if len(samples) < 900000 {
+		t.Fatalf("parsed only %d samples", len(samples))
 	}
-	overhead := peak.Load() - kept
-	t.Logf("body %d MiB, peak heap %d MiB above the start, %d MiB above what the result keeps, samples %d",
-		len(body)>>20, (peak.Load()-base)>>20, overhead>>20, len(samples))
-	if overhead > 6*uint64(len(body)) {
-		t.Fatalf("decoding held %d MiB beyond its result for a body of %d MiB", overhead>>20, len(body)>>20)
+
+	t.Logf("body %d MiB: the decode holds %.2f times it, decode and parse %.2f times it",
+		size>>20, float64(holding)/float64(size), float64(whole)/float64(size))
+	if holding > 4*size {
+		t.Errorf("the decode held %d MiB for a body of %d MiB", holding>>20, size>>20)
+	}
+	if whole > 15*size {
+		t.Errorf("decode and parse held %d MiB for a body of %d MiB", whole>>20, size>>20)
 	}
 }

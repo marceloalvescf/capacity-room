@@ -64,7 +64,7 @@ func newQueryRangeRequest(ctx context.Context, root, token, query string, start,
 // answer into series. Only a "matrix" result is accepted; a "vector" result, or
 // any other, is refused as unsupported.
 func parseMatrix(data json.RawMessage) ([]Series, error) {
-	resultTypeRaw, resultList, ok := resultOf(data)
+	resultTypeRaw, resultRaw, ok := resultOf(data)
 	if !ok {
 		return nil, unsupportedResultType(resultTypeRaw)
 	}
@@ -73,13 +73,13 @@ func parseMatrix(data json.RawMessage) ([]Series, error) {
 		return nil, unsupportedResultType(resultTypeRaw)
 	}
 
-	series := make([]Series, 0, len(resultList))
-	for i, element := range resultList {
+	series := []Series{}
+	dec := resultItems(resultRaw)
+	for dec.More() {
 		var itemRaw interface{}
 		// decodeAPIResponse already refused every number float64 cannot hold,
 		// so this decode of valid JSON cannot fail.
-		_ = json.Unmarshal(element, &itemRaw)
-		resultList[i] = nil
+		_ = dec.Decode(&itemRaw)
 		item, ok := itemRaw.(map[string]interface{})
 		if !ok {
 			return nil, &Error{Kind: KindQuery, Message: "Prometheus response contains an invalid result item"}

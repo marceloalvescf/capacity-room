@@ -21,7 +21,7 @@ type Sample struct {
 // answer into samples. Only a "vector" result is accepted; a "matrix" result, or
 // any other, is refused as unsupported.
 func parseVector(data json.RawMessage) ([]Sample, error) {
-	resultTypeRaw, resultList, ok := resultOf(data)
+	resultTypeRaw, resultRaw, ok := resultOf(data)
 	if !ok {
 		return nil, unsupportedResultType(resultTypeRaw)
 	}
@@ -30,13 +30,13 @@ func parseVector(data json.RawMessage) ([]Sample, error) {
 		return nil, unsupportedResultType(resultTypeRaw)
 	}
 
-	samples := make([]Sample, 0, len(resultList))
-	for i, element := range resultList {
+	samples := []Sample{}
+	dec := resultItems(resultRaw)
+	for dec.More() {
 		var itemRaw interface{}
 		// decodeAPIResponse already refused every number float64 cannot hold,
 		// so this decode of valid JSON cannot fail.
-		_ = json.Unmarshal(element, &itemRaw)
-		resultList[i] = nil
+		_ = dec.Decode(&itemRaw)
 		item, ok := itemRaw.(map[string]interface{})
 		if !ok {
 			return nil, &Error{Kind: KindQuery, Message: "Prometheus response contains an invalid result item"}
@@ -186,9 +186,9 @@ func readEncodedValue(encoded string) (float64, bool) {
 }
 
 // resultOf reads the "resultType" and "result" members of a data object.
-// result is nil when the member is absent or null; ok is false when it is
-// present and not an array.
-func resultOf(data json.RawMessage) (resultType interface{}, result []json.RawMessage, ok bool) {
+// result is the raw bytes of the array, nil when the member is absent or
+// null; ok is false when it is present and not an array.
+func resultOf(data json.RawMessage) (resultType interface{}, result json.RawMessage, ok bool) {
 	var members map[string]json.RawMessage
 	_ = json.Unmarshal(data, &members)
 	// The data object is valid JSON whose numbers float64 holds, so these
@@ -198,8 +198,20 @@ func resultOf(data json.RawMessage) (resultType interface{}, result []json.RawMe
 	if !present || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 		return resultType, nil, true
 	}
-	if err := json.Unmarshal(raw, &result); err != nil {
+	if !bytes.HasPrefix(bytes.TrimSpace(raw), []byte("[")) {
 		return resultType, nil, false
 	}
-	return resultType, result, true
+	return resultType, raw, true
+}
+
+// resultItems returns a decoder positioned inside the array of a result, so
+// the caller reads one element at a time; a nil result has no element.
+func resultItems(result json.RawMessage) *json.Decoder {
+	dec := json.NewDecoder(bytes.NewReader(result))
+	if result != nil {
+		// The array was validated with the whole body, so its opening
+		// bracket is there.
+		_, _ = dec.Token()
+	}
+	return dec
 }
