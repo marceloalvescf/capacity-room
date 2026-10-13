@@ -4,35 +4,26 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { StatusMark, StatusShape } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
-import type { ViewFinding, ViewRecommendation } from "./api";
-import { ClusterVerdict, worstClusterFinding } from "./cluster-verdict";
-import { DepthGauge, type GaugeSeverity } from "./depth-gauge";
-import { findingKey, isUnknownPool, matchRecommendation, scopeName, ValueText } from "./pieces";
+import type { ViewPressure, ViewRecommendation } from "./api";
+import { ClusterVerdict } from "./cluster-verdict";
+import { DepthGauge } from "./depth-gauge";
+import { isUnknownPool, scopeName, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const severities = ["critical", "attention", "healthy"] as const;
 
 const minimum: Record<string, number> = { all: 0, healthy: 0, attention: 1, critical: 2 };
 const rank: Record<(typeof severities)[number], number> = { healthy: 0, attention: 1, critical: 2 };
-
-const scopeTypes = ["node", "nodepool", "namespace", "workload", "hpa"] as const;
 type Severity = (typeof severities)[number];
 
-function worstOf(list: Severity[]): Severity {
-  return severities.find((severity) => list.includes(severity)) ?? "healthy";
-}
 
 // Whether the cluster can grow: its nodes against the autoscaler's maximum, and the worst finding of the cluster.
 function Growth() {
   const { t } = useTranslation();
-  const { summary, findings } = useView();
+  const { summary, verdict } = useView();
   const { autoscaling } = summary;
+  const { gauge } = verdict;
   const enabled = autoscaling.status === "enabled";
-  const current = autoscaling.current_nodes.raw;
-  const max = autoscaling.max_nodes.raw;
-  const worst = worstClusterFinding(findings);
-  // A full scale is a hazard only when the view gives the cluster a finding above healthy.
-  const severity: GaugeSeverity = worst === null || worst.severity === "healthy" ? null : worst.severity;
   return (
     <div className="flex flex-col gap-3">
       <h2 className="label">{t("report.autoscaling.title")}</h2>
@@ -43,9 +34,7 @@ function Growth() {
             <span className="mx-2 font-sans font-normal text-muted-fg">/</span>
             <ValueText value={autoscaling.max_nodes} />
           </p>
-          {current !== null && max !== null && max > 0 ? (
-            <DepthGauge current={current} max={max} min={autoscaling.min_nodes.raw} severity={severity} />
-          ) : null}
+          {gauge === null ? null : <DepthGauge gauge={gauge} />}
           <p className="text-sm text-muted-fg">{t("report.overview.nodesCaption")}</p>
         </div>
       ) : (
@@ -84,60 +73,38 @@ function Growth() {
   );
 }
 
-type ScopeSummary = {
-  type: (typeof scopeTypes)[number];
-  worst: Severity;
-  lead: { finding: ViewFinding; index: number };
-  counts: { severity: "critical" | "attention"; count: number }[];
-};
-
-// One scope: its worst severity, the first finding of that severity, and how many of its rows reach each severity.
-// A scope whose worst is healthy has no summary.
-function summarise(type: (typeof scopeTypes)[number], findings: ViewFinding[]): ScopeSummary | null {
-  const indexed = findings.map((finding, index) => ({ finding, index })).filter(({ finding }) => finding.scope_type === type);
-  // Rows are told apart as the tabs tell them: a workload by its kind too.
-  const byScope = new Map<string, Severity[]>();
-  for (const { finding } of indexed) {
-    const key = findingKey(finding);
-    byScope.set(key, [...(byScope.get(key) ?? []), finding.severity]);
-  }
-  const worstByName = [...byScope.values()].map(worstOf);
-  const worst = worstOf(worstByName);
-  const lead = indexed.find(({ finding }) => finding.severity === worst);
-  if (worst === "healthy" || lead === undefined) {
+function PressureLine({ pressure }: { pressure: ViewPressure }) {
+  const { t } = useTranslation();
+  const { findings } = useView();
+  const lead = findings[pressure.finding];
+  if (lead === undefined) {
     return null;
   }
-  const counts = (["critical", "attention"] as const)
-    .map((severity) => ({ severity, count: worstByName.filter((value) => value === severity).length }))
-    .filter(({ count }) => count > 0);
-  return { type, worst, lead, counts };
-}
-
-function PressureLine({ summary }: { summary: ScopeSummary }) {
-  const { t } = useTranslation();
-  const { type, worst, lead, counts } = summary;
-  const name = scopeName(lead.finding, t("report.node.unknownPool"));
-  const peak = lead.finding.evidence.find((item) => item.name === "peak_percent");
+  const { scope_type: type, severity, critical, attention } = pressure;
+  const counts = [
+    { severity: "critical", count: critical },
+    { severity: "attention", count: attention },
+  ] as const;
+  const name = scopeName(lead, t("report.node.unknownPool"));
+  const peak = lead.evidence.find((item) => item.name === "peak_percent");
   return (
     <li className="grid grid-cols-[8rem_1fr] gap-3 border-t border-border py-3">
       <div>
-        <StatusMark status={worst} label={t(`report.overview.scope.${type}`)} withStatus />
+        <StatusMark status={severity} label={t(`report.overview.scope.${type}`)} withStatus />
       </div>
       <div className="flex flex-col gap-1">
         <p className="text-sm">
           <Link
-            to={`../findings?scope=${type}&finding=${String(lead.index)}`}
-            aria-label={name === null ? undefined : t("report.overview.pressureLink", { sentence: lead.finding.sentence, name })}
+            to={`../findings?scope=${type}&finding=${String(pressure.finding)}`}
+            aria-label={name === null ? undefined : t("report.overview.pressureLink", { sentence: lead.sentence, name })}
             className="underline decoration-border underline-offset-4 hover:decoration-accent"
           >
-            {lead.finding.sentence}
+            {lead.sentence}
           </Link>
         </p>
         {name === null && peak === undefined ? null : (
           <p className="flex flex-wrap gap-x-3 text-sm">
-            {name === null ? null : (
-              <span className={cn("break-all", !isUnknownPool(lead.finding) && "font-mono")}>{name}</span>
-            )}
+            {name === null ? null : <span className={cn("break-all", !isUnknownPool(lead) && "font-mono")}>{name}</span>}
             {peak === undefined ? null : (
               <span className="whitespace-nowrap">
                 <span className="text-muted-fg">{t("evidence.peak_percent")}</span> <span className="font-mono">{peak.text}</span>
@@ -146,34 +113,32 @@ function PressureLine({ summary }: { summary: ScopeSummary }) {
           </p>
         )}
         <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-fg">
-          {counts.map(({ severity, count }, position) => (
-            <span key={severity} className="inline-flex items-center gap-1.5">
-              {position > 0 ? <span aria-hidden="true">·</span> : null}
-              <StatusShape status={severity} />
-              {t(`status.${severity}`)} <span className="font-mono italic">{count}</span>
-            </span>
-          ))}
+          {counts
+            .filter(({ count }) => count > 0)
+            .map(({ severity: reached, count }, position) => (
+              <span key={reached} className="inline-flex items-center gap-1.5">
+                {position > 0 ? <span aria-hidden="true">·</span> : null}
+                <StatusShape status={reached} />
+                {t(`status.${reached}`)} <span className="font-mono italic">{count}</span>
+              </span>
+            ))}
         </p>
       </div>
     </li>
   );
 }
 
-// The scopes with a finding above healthy, the worst first and in a fixed order among equals.
+// The scope types under pressure, in the order the view gives them.
 function Pressure() {
   const { t } = useTranslation();
-  const { findings } = useView();
-  const summaries = scopeTypes
-    .map((type) => summarise(type, findings))
-    .filter((summary) => summary !== null)
-    .sort((a, b) => rank[b.worst] - rank[a.worst]);
+  const { pressure } = useView().verdict;
   return (
     <div className="flex flex-col gap-3">
       <h2 className="label">{t("report.overview.pressure")}</h2>
-      {summaries.length > 0 ? (
+      {pressure.length > 0 ? (
         <ul>
-          {summaries.map((summary) => (
-            <PressureLine key={summary.type} summary={summary} />
+          {pressure.map((line) => (
+            <PressureLine key={line.scope_type} pressure={line} />
           ))}
         </ul>
       ) : (
@@ -288,16 +253,15 @@ function scopeLabel(recommendation: ViewRecommendation): string {
   return recommendation.scopes.length <= 3 ? recommendation.scopes.join(", ") : recommendation.scope_text;
 }
 
-// An action of the plan leads to the finding it comes from; with none to match, it stays plain text.
-function PlanAction({ recommendation, findings }: { recommendation: ViewRecommendation; findings: ViewFinding[] }) {
+// An action of the plan leads to the finding the view names; with none, it stays plain text.
+function PlanAction({ recommendation }: { recommendation: ViewRecommendation }) {
   const { t } = useTranslation();
-  const index = findings.findIndex(matchRecommendation(recommendation));
-  if (index < 0) {
+  if (recommendation.finding === null) {
     return recommendation.action;
   }
   return (
     <Link
-      to={`../findings?scope=${recommendation.scope_type}&finding=${String(index)}`}
+      to={`../findings?scope=${recommendation.scope_type}&finding=${String(recommendation.finding)}`}
       aria-label={t("report.plan.actionLink", { action: recommendation.action, scope: scopeLabel(recommendation) })}
       className="underline decoration-border underline-offset-4 hover:decoration-accent"
     >
@@ -309,7 +273,7 @@ function PlanAction({ recommendation, findings }: { recommendation: ViewRecommen
 function Plan() {
   const { t } = useTranslation();
   const headingId = useId();
-  const { recommendations, findings } = useView();
+  const { recommendations } = useView();
   return (
     <section className="flex flex-col gap-2">
       <h2 id={headingId} className="text-base font-semibold">
@@ -337,7 +301,7 @@ function Plan() {
                     <StatusMark status={recommendation.severity} />
                   </td>
                   <td className="px-3 py-2">
-                    <PlanAction recommendation={recommendation} findings={findings} />
+                    <PlanAction recommendation={recommendation} />
                   </td>
                   <td className="px-3 py-2">
                     {recommendation.scopes.length <= 3 ? (

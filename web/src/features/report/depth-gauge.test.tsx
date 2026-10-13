@@ -1,9 +1,9 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { DepthGauge, type GaugeSeverity } from "./depth-gauge";
+import { DepthGauge } from "./depth-gauge";
 
-function gauge(current: number, max: number, min: number | null = null, severity: GaugeSeverity = "critical") {
-  const { container } = render(<DepthGauge current={current} max={max} min={min} severity={severity} />);
+function gauge(current: number, max: number, min: number | null = null, hazard: "critical" | "attention" | null = "critical") {
+  const { container } = render(<DepthGauge gauge={{ current, max, min, hazard }} />);
   const svg = container.querySelector("svg") as SVGSVGElement;
   return {
     svg,
@@ -97,21 +97,5 @@ describe("depth gauge", () => {
     const { svg } = gauge(200, 200, null, "critical");
     expect(svg.querySelectorAll("[data-hazard]")).toHaveLength(1);
     expect(svg.querySelector("[data-hazard]")).toHaveAttribute("data-band", "199");
-  });
-
-  it("a level is a whole number of nodes between none and the maximum", () => {
-    const filled = (current: number, max: number) =>
-      gauge(current, max, null, null).bands.filter((band) => band.getAttribute("class")?.startsWith("fill-depth")).length;
-    expect(filled(2.6, 5)).toBe(3);
-    expect(filled(2.4, 5)).toBe(2);
-    expect(filled(-3, 5)).toBe(0);
-    expect(gauge(9, 5, null, "critical").svg.querySelectorAll("[data-hazard]")).toHaveLength(1);
-  });
-
-  it("a maximum that is not a count draws nothing and throws nothing", () => {
-    for (const max of [Number.NaN, Number.POSITIVE_INFINITY, 0.2, -4]) {
-      const { container } = render(<DepthGauge current={1} max={max} min={null} severity={null} />);
-      expect(container.querySelector("svg")).toBeNull();
-    }
   });
 });

@@ -9,7 +9,6 @@ import type {
   ViewNamespace,
   ViewNode,
   ViewNodepool,
-  ViewRecommendation,
   ViewStatistic,
   ViewValue,
   ViewWorkload,
@@ -253,10 +252,6 @@ export function useFindingIndex(): ReadonlyMap<string, ViewFinding["severity"]> 
   const { findings } = useView();
   return useMemo(() => indexFindings(findings), [findings]);
 }
-
-// The finding a row of the action plan comes from: the same code and scope type, on its first scope.
-export const matchRecommendation = (row: ViewRecommendation) => (f: ViewFinding) =>
-  f.code === row.code && f.scope_type === row.scope_type && f.scope_name === row.scopes[0];
 
 // The CPU and memory grids of a namespace or a workload.
 export function UsageGrids({ row }: { row: ViewNamespace | ViewWorkload }) {

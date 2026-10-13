@@ -13,6 +13,8 @@ import directComplete from "../../../tests/fixtures/view/direct-complete.en.json
 const mock = installMockApi(signedIn());
 
 type View = components["schemas"]["ReportView"];
+type Gauge = NonNullable<View["verdict"]["gauge"]>;
+type Pressure = View["verdict"]["pressure"][number];
 
 const id = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a01";
 const english = viewEn as View;
@@ -75,7 +77,7 @@ describe("overview tab", () => {
   it("a full scale with no cluster finding is not hatched", async () => {
     mock.views.set(`${id}:en`, {
       ...english,
-      findings: english.findings.filter((finding) => finding.scope_type !== "cluster"),
+      verdict: { ...english.verdict, cluster_finding: null, gauge: { ...(english.verdict.gauge as Gauge), hazard: null } },
     });
     await open();
     const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
@@ -84,18 +86,27 @@ describe("overview tab", () => {
     expect(band.querySelector("[data-closing]")).toHaveClass("stroke-neatline");
   });
 
-  it("no depth gauge without a maximum", async () => {
-    mock.views.set(`${id}:en`, {
-      ...english,
-      summary: {
-        ...english.summary,
-        autoscaling: { ...english.summary.autoscaling, max_nodes: { raw: null, text: "Unavailable", status: null } },
-      },
-    });
+  it("no depth gauge when the view gives none, though autoscaling is enabled", async () => {
+    mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: null } });
     await open();
     const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
     expect(band).toHaveTextContent("Nodes · current / maximum");
     expect(band.querySelector("[data-band]")).toBeNull();
+  });
+
+  it("the pressure follows the order of the view and the cluster sentence follows its index", async () => {
+    const [first, second, ...rest] = english.verdict.pressure;
+    mock.views.set(`${id}:en`, {
+      ...english,
+      verdict: { ...english.verdict, cluster_finding: 12, pressure: [second as Pressure, first as Pressure, ...rest] },
+    });
+    await open();
+    const list = screen.getByRole("heading", { level: 2, name: "Pressure by scope" }).parentElement?.querySelector("ul") as HTMLElement;
+    const lines = within(list).getAllByRole("listitem");
+    expect(lines.slice(0, 2).map((line) => line.querySelector("span.inline-flex")?.textContent)).toEqual(["CriticalNamespaces", "CriticalNodes"]);
+    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
+    expect(band).toHaveTextContent(english.findings[12]?.sentence ?? "");
+    expect(band).not.toHaveTextContent(english.findings[10]?.sentence ?? "");
   });
 
   it("pressure lines, the worst scopes first and the fixed order among equals", async () => {
@@ -160,7 +171,16 @@ describe("overview tab", () => {
   it("two workloads of one name and two kinds count as two rows", async () => {
     const deployment = english.findings.find((finding) => finding.scope_type === "workload" && finding.severity === "critical") as View["findings"][number];
     const statefulSet = { ...deployment, scope_kind: "StatefulSet", severity: "attention" as const };
-    mock.views.set(`${id}:en`, { ...english, findings: [deployment, statefulSet] });
+    mock.views.set(`${id}:en`, {
+      ...english,
+      findings: [deployment, statefulSet],
+      verdict: {
+        cluster_finding: null,
+        node_evidence_warning: null,
+        gauge: null,
+        pressure: [{ scope_type: "workload", severity: "critical", finding: 0, critical: 1, attention: 1 }],
+      },
+    });
     await open();
     const list = screen.getByRole("heading", { level: 2, name: "Pressure by scope" }).parentElement?.querySelector("ul") as HTMLElement;
     const lines = within(list).getAllByRole("listitem");
@@ -171,7 +191,7 @@ describe("overview tab", () => {
   it("an unknown node pool shows its word", async () => {
     mock.views.set(`${id}:en`, {
       ...english,
-      findings: english.findings.filter((finding) => finding.scope_type !== "nodepool" || finding.scope_name === "unknown"),
+      verdict: { ...english.verdict, pressure: [{ scope_type: "nodepool", severity: "attention", finding: 18, critical: 0, attention: 1 }] },
     });
     await open();
     const only = screen.getByText("Node pools").closest("li") as HTMLElement;
@@ -183,7 +203,7 @@ describe("overview tab", () => {
     mock.session = signedIn({ language: "pt-BR" });
     mock.views.set(`${id}:pt-BR`, {
       ...portuguese,
-      findings: portuguese.findings.filter((finding) => finding.scope_type !== "nodepool" || finding.scope_name === "unknown"),
+      verdict: { ...portuguese.verdict, pressure: [{ scope_type: "nodepool", severity: "attention", finding: 18, critical: 0, attention: 1 }] },
     });
     await open("pt-BR");
     const only = screen.getByText("Node pools").closest("li") as HTMLElement;
@@ -193,7 +213,7 @@ describe("overview tab", () => {
   it("nothing needs attention", async () => {
     mock.views.set(`${id}:en`, {
       ...english,
-      findings: english.findings.filter((finding) => finding.severity === "healthy"),
+      verdict: { ...english.verdict, cluster_finding: null, pressure: [] },
     });
     await open();
     expect(screen.getByText("Nothing needs attention.")).toBeInTheDocument();
@@ -255,6 +275,7 @@ describe("overview tab", () => {
     mock.views.set(`${id}:en`, {
       ...english,
       findings: [],
+      verdict: { cluster_finding: null, node_evidence_warning: null, gauge: null, pressure: [] },
       recommendations: [],
       summary: { ...english.summary, critical: none, attention: none, healthy: none },
     });
@@ -344,9 +365,9 @@ describe("overview tab", () => {
     expect(eighth.getAttribute("href")).toMatch(/\/findings\?scope=workload&finding=11$/);
   });
 
-  it("an action with no matching finding stays plain text", async () => {
+  it("an action the view ties to no finding stays plain text", async () => {
     const [first, ...rest] = english.recommendations;
-    mock.views.set(`${id}:en`, { ...english, recommendations: [{ ...(first as View["recommendations"][number]), scopes: ["payments/nothing"] }, ...rest] });
+    mock.views.set(`${id}:en`, { ...english, recommendations: [{ ...(first as View["recommendations"][number]), finding: null }, ...rest] });
     await open();
     const rows = within(screen.getByRole("table", { name: "Prioritized action plan" })).getAllByRole("row").slice(1);
     expect(within(rows[0] as HTMLElement).queryByRole("link")).toBeNull();

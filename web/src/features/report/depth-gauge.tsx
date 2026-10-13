@@ -1,4 +1,5 @@
 import { useId } from "react";
+import type { ViewGauge } from "./api";
 
 const width = 360;
 const height = 48;
@@ -19,9 +20,6 @@ function soundings(max: number): number[] {
 
 const tints = ["fill-depth-1", "fill-depth-2", "fill-depth-3"] as const;
 
-// The severity the view gives the cluster: it alone decides whether a full scale is drawn as a hazard.
-export type GaugeSeverity = "critical" | "attention" | null;
-
 const hazardStroke = { critical: "stroke-critical", attention: "stroke-attention" } as const;
 
 // Above this many nodes a band per node would be thinner than a hairline, so the level is drawn whole.
@@ -29,29 +27,13 @@ const bandLimit = 60;
 
 // The nodes of the cluster as a depth scale: one band per node up to the maximum, the bands in use tinted
 // deeper toward the maximum, and the minimum as a dashed contour. Once no room is left, the last band and the
-// line that closes the scale take the severity of the cluster finding: hatched and drawn in its colour when it
-// is critical or attention, plain depth and a neat-line otherwise. Counts are whole nodes: the maximum and the
-// level are rounded, and the level is held between none and the maximum. The numbers are in the headline above
-// it, so the drawing is hidden from assistive technology. Under reduced motion, or with no animation at all,
-// every part is drawn at once.
-export function DepthGauge({
-  current,
-  max: rawMax,
-  min: rawMin,
-  severity,
-}: {
-  current: number;
-  max: number;
-  min: number | null;
-  severity: GaugeSeverity;
-}) {
+// line that closes the scale take the hazard the view gives: hatched and drawn in its colour when it is critical
+// or attention, plain depth and a neat-line otherwise. The counts are the view's whole nodes, drawn as given. The
+// numbers are in the headline above it, so the drawing is hidden from assistive technology. Under reduced
+// motion, or with no animation at all, every part is drawn at once.
+export function DepthGauge({ gauge }: { gauge: ViewGauge }) {
+  const { current: level, max, min, hazard: severity } = gauge;
   const pattern = `hazard-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
-  const max = Number.isFinite(rawMax) ? Math.round(rawMax) : 0;
-  if (max <= 0) {
-    return null;
-  }
-  const level = Number.isFinite(current) ? Math.min(Math.max(Math.round(current), 0), max) : 0;
-  const min = rawMin === null || !Number.isFinite(rawMin) ? null : rawMin;
   const x = (value: number) => left + (span * Math.min(Math.max(value, 0), max)) / max;
   const full = level >= max;
   const hatched = full && severity !== null;
