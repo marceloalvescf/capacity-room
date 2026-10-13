@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-13
+
 ### Added
 
 - The report view of the API gives the verdict of the overview: the worst finding of the cluster, the node gauge, the pressure on each scope, and the finding each action comes from.
