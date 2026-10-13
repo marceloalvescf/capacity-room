@@ -167,10 +167,10 @@
     "hpas": 4,
     "nodes": 4,
     "nodepools": 3,
-    "findings": 26,
-    "recommendations": 19,
+    "findings": 28,
+    "recommendations": 21,
     "healthy": 7,
-    "attention": 10,
+    "attention": 12,
     "critical": 9,
     "workloads_without_hpa": 2,
     "autoscaling": {
@@ -1034,6 +1034,24 @@
       "confidence": "inferred"
     },
     {
+      "code": "NODE_NOT_READY",
+      "severity": "attention",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "pool-a-2",
+      "evidence": [],
+      "confidence": "exact"
+    },
+    {
+      "code": "NODE_UNSCHEDULABLE",
+      "severity": "attention",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "pool-a-2",
+      "evidence": [],
+      "confidence": "exact"
+    },
+    {
       "code": "NODEPOOL_UNKNOWN",
       "severity": "attention",
       "scope_type": "nodepool",
@@ -1298,6 +1316,24 @@
       "scope_type": "node",
       "scopes": [
         "pool-a-1"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NODE_NOT_READY",
+      "severity": "attention",
+      "scope_type": "node",
+      "scopes": [
+        "pool-a-2"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NODE_UNSCHEDULABLE",
+      "severity": "attention",
+      "scope_type": "node",
+      "scopes": [
+        "pool-a-2"
       ],
       "confidence": "exact"
     },

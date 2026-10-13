@@ -38,7 +38,7 @@
           {
             "status": "attention",
             "label": "Attention",
-            "count": "10"
+            "count": "12"
           },
           {
             "status": "healthy",
@@ -113,6 +113,11 @@
                 "status": "critical",
                 "label": "Critical",
                 "count": "2"
+              },
+              {
+                "status": "attention",
+                "label": "Attention",
+                "count": "1"
               }
             ]
           },
@@ -2583,9 +2588,9 @@
           [
             {
               "kind": "status",
-              "status": "healthy",
-              "text": "CPU: peak of 60% utilization; Memory: peak of 55% utilization",
-              "alt": "Healthy"
+              "status": "attention",
+              "text": "The node was not ready at the end of the period; The node was unschedulable at the end of the period",
+              "alt": "Attention"
             }
           ],
           [

@@ -43,13 +43,13 @@
       "status": null
     },
     "findings": {
-      "raw": 26,
-      "text": "26",
+      "raw": 28,
+      "text": "28",
       "status": null
     },
     "recommendations": {
-      "raw": 19,
-      "text": "19",
+      "raw": 21,
+      "text": "21",
       "status": null
     },
     "healthy": {
@@ -58,8 +58,8 @@
       "status": null
     },
     "attention": {
-      "raw": 10,
-      "text": "10",
+      "raw": 12,
+      "text": "12",
       "status": null
     },
     "critical": {
@@ -485,6 +485,28 @@
       ]
     },
     {
+      "code": "NODE_NOT_READY",
+      "severity": "attention",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "pool-a-2",
+      "confidence": "exact",
+      "sentence": "O node não estava pronto no fim do período.",
+      "action": "Verificar as condições do node e mover os workloads se ele não se recuperar.",
+      "evidence": []
+    },
+    {
+      "code": "NODE_UNSCHEDULABLE",
+      "severity": "attention",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "pool-a-2",
+      "confidence": "exact",
+      "sentence": "O node estava marcado como não agendável no fim do período.",
+      "action": "Confirmar que o cordon do node foi intencional e planejar o retorno ou a remoção dele.",
+      "evidence": []
+    },
+    {
       "code": "NODEPOOL_UNKNOWN",
       "severity": "attention",
       "scope_type": "nodepool",
@@ -782,7 +804,7 @@
         "severity": "critical",
         "finding": 0,
         "critical": 2,
-        "attention": 0
+        "attention": 1
       },
       {
         "scope_type": "namespace",
@@ -2314,7 +2336,7 @@
       "name": "pool-a-2",
       "pool": "pool-a",
       "pool_confidence": "exact",
-      "status": "healthy",
+      "status": "attention",
       "cpu_capacity": {
         "raw": 4,
         "text": "4 cores",
@@ -2393,8 +2415,8 @@
       },
       "ready": false,
       "schedulable": false,
-      "reason": "CPU: pico de 60% de utilização; Memória: pico de 55% de utilização",
-      "reason_status": "healthy"
+      "reason": "O node não estava pronto no fim do período; O node estava marcado como não agendável no fim do período",
+      "reason_status": "attention"
     }
   ],
   "nodepools": [

@@ -38,7 +38,7 @@
           {
             "status": "attention",
             "label": "Atenção",
-            "count": "10"
+            "count": "12"
           },
           {
             "status": "healthy",
@@ -113,6 +113,11 @@
                 "status": "critical",
                 "label": "Crítico",
                 "count": "2"
+              },
+              {
+                "status": "attention",
+                "label": "Atenção",
+                "count": "1"
               }
             ]
           },
@@ -2583,9 +2588,9 @@
           [
             {
               "kind": "status",
-              "status": "healthy",
-              "text": "CPU: pico de 60% de utilização; Memória: pico de 55% de utilização",
-              "alt": "Saudável"
+              "status": "attention",
+              "text": "O node não estava pronto no fim do período; O node estava marcado como não agendável no fim do período",
+              "alt": "Atenção"
             }
           ],
           [
