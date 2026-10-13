@@ -75,7 +75,14 @@ fast feedback, but it does not close a gate.
 The capacity report changed its faces in 2026-10: Public Sans 2.001 for
 words and JetBrains Mono 2.304 for names, numbers, and status glyphs,
 beside Liberation Sans, which the generic layer keeps as its default. The
-golden pages were rendered again, and on linux/amd64 only. Rendering on
-linux/arm64 and on macOS is to be measured again before the next release;
-until then the equality above is known for the examples of the generic layer
-alone.
+golden pages were rendered again, and on linux/amd64 only. The equality
+above is known for the examples of the generic layer alone.
+
+## Decision of 2026-10-13: the golden pages are bound to linux/amd64
+
+The owner decided not to measure linux/arm64 and macOS again. The golden
+pages are bound to linux/amd64, the platform of the gate and of
+production. A golden page that fails on another platform is not a defect
+of the report; measuring that platform again is a decision of its own. The
+test image is still built for the host platform, and no target pins
+`--platform`.
