@@ -2157,6 +2157,7 @@
       },
       "ready": true,
       "schedulable": true,
+      "state_status": null,
       "reason": "CPU: pico de 95% de utilização",
       "reason_status": "critical"
     },
@@ -2243,6 +2244,7 @@
       },
       "ready": null,
       "schedulable": null,
+      "state_status": "unavailable",
       "reason": "Sem achado",
       "reason_status": null
     },
@@ -2329,6 +2331,7 @@
       },
       "ready": true,
       "schedulable": true,
+      "state_status": null,
       "reason": "CPU: 90% solicitada do alocável",
       "reason_status": "critical"
     },
@@ -2415,6 +2418,7 @@
       },
       "ready": false,
       "schedulable": false,
+      "state_status": "attention",
       "reason": "O node não estava pronto no fim do período; O node estava marcado como não agendável no fim do período",
       "reason_status": "attention"
     }

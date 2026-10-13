@@ -2157,6 +2157,7 @@
       },
       "ready": true,
       "schedulable": true,
+      "state_status": null,
       "reason": "CPU: peak of 95% utilization",
       "reason_status": "critical"
     },
@@ -2243,6 +2244,7 @@
       },
       "ready": null,
       "schedulable": null,
+      "state_status": "unavailable",
       "reason": "No finding",
       "reason_status": null
     },
@@ -2329,6 +2331,7 @@
       },
       "ready": true,
       "schedulable": true,
+      "state_status": null,
       "reason": "CPU: 90% of the allocatable requested",
       "reason_status": "critical"
     },
@@ -2415,6 +2418,7 @@
       },
       "ready": false,
       "schedulable": false,
+      "state_status": "attention",
       "reason": "The node was not ready at the end of the period; The node was unschedulable at the end of the period",
       "reason_status": "attention"
     }

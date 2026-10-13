@@ -1383,6 +1383,7 @@
       },
       "ready": true,
       "schedulable": true,
+      "state_status": null,
       "reason": "CPU: pico de 60% de utilização; Memória: pico de 65% de utilização",
       "reason_status": "healthy"
     }
