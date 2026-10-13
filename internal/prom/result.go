@@ -1,6 +1,8 @@
 package prom
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -15,28 +17,24 @@ type Sample struct {
 	Valid  bool
 }
 
-// parseVector turns the "data" object of a successful Prometheus answer
-// into samples. Only a "vector" result is accepted; a "matrix" result, or
+// parseVector turns the "data" object, undecoded, of a successful Prometheus
+// answer into samples. Only a "vector" result is accepted; a "matrix" result, or
 // any other, is refused as unsupported.
-func parseVector(data map[string]interface{}) ([]Sample, error) {
-	resultTypeRaw := data["resultType"]
-	resultType, _ := resultTypeRaw.(string)
-
-	resultRaw := data["result"]
-	var resultList []interface{}
-	if resultRaw != nil {
-		list, ok := resultRaw.([]interface{})
-		if !ok {
-			return nil, unsupportedResultType(resultTypeRaw)
-		}
-		resultList = list
+func parseVector(data json.RawMessage) ([]Sample, error) {
+	resultTypeRaw, resultList, ok := resultOf(data)
+	if !ok {
+		return nil, unsupportedResultType(resultTypeRaw)
 	}
+	resultType, _ := resultTypeRaw.(string)
 	if resultType != "vector" {
 		return nil, unsupportedResultType(resultTypeRaw)
 	}
 
 	samples := make([]Sample, 0, len(resultList))
-	for _, itemRaw := range resultList {
+	for i, element := range resultList {
+		var itemRaw interface{}
+		_ = json.Unmarshal(element, &itemRaw)
+		resultList[i] = nil
 		item, ok := itemRaw.(map[string]interface{})
 		if !ok {
 			return nil, &Error{Kind: KindQuery, Message: "Prometheus response contains an invalid result item"}
@@ -183,4 +181,21 @@ func readEncodedValue(encoded string) (float64, bool) {
 		return value, true
 	}
 	return 0, false
+}
+
+// resultOf reads the "resultType" and "result" members of a data object.
+// result is nil when the member is absent or null; ok is false when it is
+// present and not an array.
+func resultOf(data json.RawMessage) (resultType interface{}, result []json.RawMessage, ok bool) {
+	var members map[string]json.RawMessage
+	_ = json.Unmarshal(data, &members)
+	_ = json.Unmarshal(members["resultType"], &resultType)
+	raw, present := members["result"]
+	if !present || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		return resultType, nil, true
+	}
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return resultType, nil, false
+	}
+	return resultType, result, true
 }

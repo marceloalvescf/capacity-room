@@ -2,6 +2,7 @@ package prom
 
 import (
 	"context"
+	"encoding/json"
 	"math"
 	"net/http"
 	"net/url"
@@ -59,28 +60,24 @@ func newQueryRangeRequest(ctx context.Context, root, token, query string, start,
 	return newFormRequest(ctx, root, "/query_range", token, form)
 }
 
-// parseMatrix turns the "data" object of a successful Prometheus answer
-// into series. Only a "matrix" result is accepted; a "vector" result, or
+// parseMatrix turns the "data" object, undecoded, of a successful Prometheus
+// answer into series. Only a "matrix" result is accepted; a "vector" result, or
 // any other, is refused as unsupported.
-func parseMatrix(data map[string]interface{}) ([]Series, error) {
-	resultTypeRaw := data["resultType"]
-	resultType, _ := resultTypeRaw.(string)
-
-	resultRaw := data["result"]
-	var resultList []interface{}
-	if resultRaw != nil {
-		list, ok := resultRaw.([]interface{})
-		if !ok {
-			return nil, unsupportedResultType(resultTypeRaw)
-		}
-		resultList = list
+func parseMatrix(data json.RawMessage) ([]Series, error) {
+	resultTypeRaw, resultList, ok := resultOf(data)
+	if !ok {
+		return nil, unsupportedResultType(resultTypeRaw)
 	}
+	resultType, _ := resultTypeRaw.(string)
 	if resultType != "matrix" {
 		return nil, unsupportedResultType(resultTypeRaw)
 	}
 
 	series := make([]Series, 0, len(resultList))
-	for _, itemRaw := range resultList {
+	for i, element := range resultList {
+		var itemRaw interface{}
+		_ = json.Unmarshal(element, &itemRaw)
+		resultList[i] = nil
 		item, ok := itemRaw.(map[string]interface{})
 		if !ok {
 			return nil, &Error{Kind: KindQuery, Message: "Prometheus response contains an invalid result item"}

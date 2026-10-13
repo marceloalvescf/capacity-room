@@ -1,6 +1,7 @@
 package prom
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -225,7 +226,7 @@ func runQuery(
 	answered *bool,
 	foreignTransport bool,
 	maxResponseBytes int64,
-) (map[string]interface{}, error) {
+) (json.RawMessage, error) {
 	for attempt := 0; attempt < attempts; attempt++ {
 		resp, err := send(ctx)
 		if err != nil {
@@ -405,32 +406,40 @@ func newFormRequest(ctx context.Context, root, path, token string, form url.Valu
 }
 
 // decodeAPIResponse reads the JSON body of a 2xx answer through the
-// "status" and "data" checks shared by every query.
-func decodeAPIResponse(body []byte, answered bool) (map[string]interface{}, error) {
-	var raw interface{}
-	if err := json.Unmarshal(body, &raw); err != nil {
-		return nil, endpointError("metrics endpoint did not answer the Prometheus API", answered)
-	}
-	obj, ok := raw.(map[string]interface{})
-	if !ok {
+// "status" and "data" checks shared by every query, and returns the "data"
+// object undecoded: the parsers decode it one series at a time, so no
+// whole-answer tree is ever held in memory.
+func decodeAPIResponse(body []byte, answered bool) (json.RawMessage, error) {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(body, &obj); err != nil || obj == nil {
 		return nil, endpointError("metrics endpoint did not answer the Prometheus API", answered)
 	}
 	statusRaw, hasStatus := obj["status"]
 	if !hasStatus {
 		return nil, endpointError("metrics endpoint did not answer the Prometheus API", answered)
 	}
-	if status, _ := statusRaw.(string); status != "success" {
+	var status interface{}
+	_ = json.Unmarshal(statusRaw, &status)
+	if s, _ := status.(string); s != "success" {
 		errType := "unknown"
-		if et, ok := obj["errorType"].(string); ok && et != "" {
-			errType = et
+		var et interface{}
+		_ = json.Unmarshal(obj["errorType"], &et)
+		if s, ok := et.(string); ok && s != "" {
+			errType = s
 		}
 		return nil, &Error{Kind: KindQuery, Message: fmt.Sprintf("Prometheus query failed with type %s", errType)}
 	}
-	data, ok := obj["data"].(map[string]interface{})
-	if !ok {
+	data := obj["data"]
+	if !isJSONObject(data) {
 		return nil, &Error{Kind: KindQuery, Message: "Prometheus response has no data object"}
 	}
 	return data, nil
+}
+
+// isJSONObject reports whether raw, already validated JSON, is an object.
+func isJSONObject(raw json.RawMessage) bool {
+	trimmed := bytes.TrimLeft(raw, " \t\r\n")
+	return len(trimmed) > 0 && trimmed[0] == '{'
 }
 
 // endpointError builds the error for a signal that, before any answer,

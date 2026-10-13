@@ -53,6 +53,7 @@ including running the two commands that need `KCR_BOOTSTRAP_MODE=1`.
 | Content-Security-Policy `default-src 'self'`, no inline script or style, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'none'`; `X-Frame-Options: DENY`; `nosniff`; `Referrer-Policy: same-origin`; private, revalidated caching of reports | Script injection, framing, leaks through caches | `internal/platform/api/headers.go` |
 | Containers as user 10001, read-only root, no added privileges, every capability dropped; distroless runtime image; bases pinned by digest; PostgreSQL not published | A compromise spreading inside the host | `deploy/Containerfile`, `deploy/compose.yaml` |
 | An append-only audit trail; deletion is deactivation | Erasing what was done | `internal/platform/store/migrations/` |
+| An answer of at most 256 MiB, decoded one series at a time | Memory exhaustion by a large or hostile answer | `internal/prom/client.go` |
 | `make audit` runs govulncheck, `npm audit`, and trivy at every release | Known vulnerabilities shipped | `Makefile` |
 
 ## What an operator must do
@@ -123,7 +124,7 @@ reason.
 | The DSN shows in `docker inspect` | 7 | out of scope (needs the Docker socket) | documented | `docs/operations.md` |
 | The README made the server secret world-readable | 7 | hardening | documented: the guide gives the folder to user 10001 alone | `docs/operations.md` |
 | The profile tests tell ports apart within an allowed host or range | 3 | inherent | documented: an entry grants every port | `docs/operations.md` |
-| An answer of up to 256 MiB grows about 30 times in memory when decoded | 6 | hardening | deferred | availability only, from a source the operator allowed; bounded by the memory limits |
+| An answer of up to 256 MiB grows about 30 times in memory when decoded | 6 | hardening | fixed | decoded one series at a time; peak growth measured at 1.4 times the body |
 | Samples near the largest float make an average infinite, and the collection fails | 6 | hardening | deferred | hostile data only; the report fails, it never shows a wrong number |
 | A cross-site navigation to the session route rotates the CSRF token | 2 | hardening | deferred | the page heals with one retry; a fix changes the route's contract |
 | Two routes judge an id before the body | 2 | no security effect | deferred | every check of identity and role runs first |
