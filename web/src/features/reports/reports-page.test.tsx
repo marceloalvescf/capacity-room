@@ -517,7 +517,7 @@ describe("report list", () => {
     for (let page = 1; page < 5; page += 1) {
       await user.click(await screen.findByRole("button", { name: t("reports.loadMore") }));
       await waitFor(() => {
-        expect(screen.getAllByRole("row")).toHaveLength(Math.min(50 * (page + 1), 230) + 1);
+        expect(document.querySelectorAll("tbody tr")).toHaveLength(Math.min(50 * (page + 1), 230));
       });
     }
     await user.click(screen.getByRole("checkbox", { name: t("reports.selectAll") }));
@@ -530,7 +530,8 @@ describe("report list", () => {
     expect(await screen.findByText(t("reports.deleted", { count: 230 }))).toBeInTheDocument();
     expect(sent).toEqual([200, 30]);
     expect(overlapped).toBe(false);
-  });
+    // Renders 230 rows with a checkbox each, so every role query walks hundreds of nodes.
+  }, 15_000);
 
   it("a double click on confirm sends one request", async () => {
     mock.reports = many(3);
