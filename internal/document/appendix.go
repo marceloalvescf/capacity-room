@@ -49,6 +49,13 @@ func appendixStatus(state string) string {
 	}
 }
 
+// capabilityState is the mark of a capability's state: the state's word as
+// its text and the legend's word for its status as its alternate text.
+func capabilityState(b *builder, state string) Run {
+	status := appendixStatus(state)
+	return StatusValue(status, b.text(catalog.State(state), nil), statusWord(b, status))
+}
+
 // passesSeverity reports whether a capability's state clears the minimum
 // severity: "all" keeps every row, "attention" keeps partial and
 // unavailable, "critical" keeps unavailable. It does not touch the three
@@ -74,7 +81,7 @@ func appendixRows(b *builder, capabilities []snapshot.Capability, severity strin
 		}
 		rows = append(rows, [][]Run{
 			{Text(b.text(catalog.CapabilityName(c.Name), nil))},
-			{StatusText(appendixStatus(c.State), b.text(catalog.State(c.State), nil))},
+			{capabilityState(b, c.State)},
 			{Text(b.text(catalog.Strategy(c.Strategy), nil))},
 			{Text(appendixRemark(b, c.Reasons))},
 			{Text(b.text(catalog.CapabilityEvidence(c.Name, c.State), nil))},

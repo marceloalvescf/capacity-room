@@ -616,7 +616,7 @@ func materialLimitations(b *builder, s snapshot.Snapshot) []Block {
 		remarks = append(remarks, remark)
 		rows = append(rows, [][]Run{
 			{Text(b.text(catalog.CapabilityName(c.Name), nil))},
-			{StatusText(appendixStatus(c.State), b.text(catalog.State(c.State), nil))},
+			{capabilityState(b, c.State)},
 			{Text(remark)},
 		})
 	}
@@ -627,7 +627,7 @@ func materialLimitations(b *builder, s snapshot.Snapshot) []Block {
 		}
 		rows = append(rows, [][]Run{
 			{Text(b.text(catalog.SectionsExecutiveInterpretation, nil))},
-			{StatusText("attention", b.text(catalog.State("partial"), nil))},
+			{capabilityState(b, discovery.StatePartial)},
 			{Text(text)},
 		})
 	}

@@ -1426,7 +1426,7 @@
               "kind": "status",
               "status": "attention",
               "text": "Partial",
-              "alt": null
+              "alt": "Attention"
             }
           ],
           [
@@ -1448,7 +1448,7 @@
               "kind": "status",
               "status": "attention",
               "text": "Partial",
-              "alt": null
+              "alt": "Attention"
             }
           ],
           [
@@ -2723,7 +2723,7 @@
               "kind": "status",
               "status": "healthy",
               "text": "Available",
-              "alt": null
+              "alt": "Healthy"
             }
           ],
           [
@@ -2757,7 +2757,7 @@
               "kind": "status",
               "status": "healthy",
               "text": "Available",
-              "alt": null
+              "alt": "Healthy"
             }
           ],
           [
@@ -2791,7 +2791,7 @@
               "kind": "status",
               "status": "healthy",
               "text": "Available",
-              "alt": null
+              "alt": "Healthy"
             }
           ],
           [
@@ -2825,7 +2825,7 @@
               "kind": "status",
               "status": "attention",
               "text": "Partial",
-              "alt": null
+              "alt": "Attention"
             }
           ],
           [
@@ -2859,7 +2859,7 @@
               "kind": "status",
               "status": "healthy",
               "text": "Available",
-              "alt": null
+              "alt": "Healthy"
             }
           ],
           [
@@ -2893,7 +2893,7 @@
               "kind": "status",
               "status": "healthy",
               "text": "Available",
-              "alt": null
+              "alt": "Healthy"
             }
           ],
           [
@@ -2927,7 +2927,7 @@
               "kind": "status",
               "status": "healthy",
               "text": "Available",
-              "alt": null
+              "alt": "Healthy"
             }
           ],
           [
@@ -2961,7 +2961,7 @@
               "kind": "status",
               "status": "healthy",
               "text": "Available",
-              "alt": null
+              "alt": "Healthy"
             }
           ],
           [
@@ -2995,7 +2995,7 @@
               "kind": "status",
               "status": "healthy",
               "text": "Available",
-              "alt": null
+              "alt": "Healthy"
             }
           ],
           [

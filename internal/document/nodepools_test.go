@@ -6,7 +6,9 @@ import (
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
 )
 
@@ -423,5 +425,57 @@ func TestValueStatusRunsCarryTheLegendWord(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// TestCapabilityStateRunsCarryTheLegendWord checks that the state mark of the
+// appendix capability table and of the executive material-limitations table
+// carries the legend's word for its status as its alternate text, in both
+// languages, including the row of a warning no capability explains.
+func TestCapabilityStateRunsCarryTheLegendWord(t *testing.T) {
+	capability := func(name, state string) snapshot.Capability {
+		return snapshot.Capability{
+			Name: name, State: state, Strategy: discovery.StrategyRawMetrics,
+			Evidence: []string{}, Reasons: []string{},
+		}
+	}
+	var s snapshot.Snapshot
+	s.Quality.Capabilities = []snapshot.Capability{
+		capability("hpa_history", discovery.StateAvailable),
+		capability("workloads_without_hpa", discovery.StatePartial),
+		capability("node_utilization", discovery.StateUnavailable),
+	}
+	s.Quality.Warnings = []snapshot.Message{{Code: collect.WarningNodeIdentityUnavailable, Params: map[string]float64{}}}
+	for _, lang := range []struct {
+		lang                            catalog.Language
+		healthy, attention, unavailable string
+	}{
+		{catalog.English, "Healthy", "Attention", "Data unavailable"},
+		{catalog.PortugueseBrazil, "Saudável", "Atenção", "Dado indisponível"},
+	} {
+		t.Run(string(lang.lang), func(t *testing.T) {
+			b := &builder{cat: mustCatalog(t, lang.lang)}
+			appendix := appendixRows(b, s.Quality.Capabilities, "all")
+			limits := materialLimitations(b, s)[1].(Table).Rows
+			if b.err != nil {
+				t.Fatalf("builder error = %v", b.err)
+			}
+			for _, tc := range []struct {
+				name string
+				run  Run
+				want string
+			}{
+				{"appendix available", appendix[0][1][0], lang.healthy},
+				{"appendix partial", appendix[1][1][0], lang.attention},
+				{"appendix unavailable", appendix[2][1][0], lang.unavailable},
+				{"limitations partial", limits[0][1][0], lang.attention},
+				{"limitations unavailable", limits[1][1][0], lang.unavailable},
+				{"limitations warning", limits[len(limits)-1][1][0], lang.attention},
+			} {
+				if tc.run.alt == nil || *tc.run.alt != tc.want {
+					t.Errorf("%s: alt = %v, want %q", tc.name, tc.run.alt, tc.want)
+				}
+			}
+		})
 	}
 }

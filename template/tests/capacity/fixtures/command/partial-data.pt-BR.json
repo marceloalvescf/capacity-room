@@ -1137,7 +1137,7 @@
               "kind": "status",
               "status": "unavailable",
               "text": "Indisponível",
-              "alt": null
+              "alt": "Dado indisponível"
             }
           ],
           [
@@ -1159,7 +1159,7 @@
               "kind": "status",
               "status": "attention",
               "text": "Parcial",
-              "alt": null
+              "alt": "Atenção"
             }
           ],
           [
@@ -1181,7 +1181,7 @@
               "kind": "status",
               "status": "attention",
               "text": "Parcial",
-              "alt": null
+              "alt": "Atenção"
             }
           ],
           [
@@ -1203,7 +1203,7 @@
               "kind": "status",
               "status": "unavailable",
               "text": "Indisponível",
-              "alt": null
+              "alt": "Dado indisponível"
             }
           ],
           [
@@ -1225,7 +1225,7 @@
               "kind": "status",
               "status": "attention",
               "text": "Parcial",
-              "alt": null
+              "alt": "Atenção"
             }
           ],
           [
@@ -1882,7 +1882,7 @@
               "kind": "status",
               "status": "healthy",
               "text": "Disponível",
-              "alt": null
+              "alt": "Saudável"
             }
           ],
           [
@@ -1916,7 +1916,7 @@
               "kind": "status",
               "status": "healthy",
               "text": "Disponível",
-              "alt": null
+              "alt": "Saudável"
             }
           ],
           [
@@ -1950,7 +1950,7 @@
               "kind": "status",
               "status": "healthy",
               "text": "Disponível",
-              "alt": null
+              "alt": "Saudável"
             }
           ],
           [
@@ -1984,7 +1984,7 @@
               "kind": "status",
               "status": "unavailable",
               "text": "Indisponível",
-              "alt": null
+              "alt": "Dado indisponível"
             }
           ],
           [
@@ -2018,7 +2018,7 @@
               "kind": "status",
               "status": "attention",
               "text": "Parcial",
-              "alt": null
+              "alt": "Atenção"
             }
           ],
           [
@@ -2052,7 +2052,7 @@
               "kind": "status",
               "status": "healthy",
               "text": "Disponível",
-              "alt": null
+              "alt": "Saudável"
             }
           ],
           [
@@ -2086,7 +2086,7 @@
               "kind": "status",
               "status": "attention",
               "text": "Parcial",
-              "alt": null
+              "alt": "Atenção"
             }
           ],
           [
@@ -2120,7 +2120,7 @@
               "kind": "status",
               "status": "unavailable",
               "text": "Indisponível",
-              "alt": null
+              "alt": "Dado indisponível"
             }
           ],
           [
@@ -2154,7 +2154,7 @@
               "kind": "status",
               "status": "attention",
               "text": "Parcial",
-              "alt": null
+              "alt": "Atenção"
             }
           ],
           [

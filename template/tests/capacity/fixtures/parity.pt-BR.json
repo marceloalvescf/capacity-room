@@ -1443,7 +1443,7 @@
               "kind": "status",
               "status": "critical",
               "text": "Indisponível",
-              "alt": null
+              "alt": "Dado indisponível"
             }
           ],
           [
@@ -1465,7 +1465,7 @@
               "kind": "status",
               "status": "attention",
               "text": "Parcial",
-              "alt": null
+              "alt": "Atenção"
             }
           ],
           [
