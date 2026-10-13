@@ -14,6 +14,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
 )
 
@@ -369,4 +371,13 @@ func TestAdminProfilesNamedTest(t *testing.T) {
 	if w := ts.send(t, "DELETE", profilesPath+"/test", "", cookie, csrf); w.Code != 204 {
 		t.Fatalf("delete %d %s", w.Code, w.Body.String())
 	}
+}
+
+func TestAdminProfilesPatchJudgesBodyBeforeID(t *testing.T) {
+	ts := newTestServer(t)
+	cookie, csrf := ts.signIn(t, "root")
+	path := profilesPath + "/Bad_Id"
+	base := `"base_revision_id":"` + uuid.NewString() + `"`
+	wantProblem(t, ts.send(t, "PATCH", path, `{`+base+`,"nope":1}`, cookie, csrf), 400, CodeRequestInvalid, map[string]string{"nope": "unknown"})
+	wantProblem(t, ts.send(t, "PATCH", path, `{`+base+`}`, cookie, csrf), 404, CodeProfileNotFound, nil)
 }

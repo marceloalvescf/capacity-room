@@ -77,13 +77,13 @@ func (s *Server) getUser(w http.ResponseWriter, r *http.Request, a auth.Authenti
 }
 
 func (s *Server) patchUser(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
-	id, ok := userID(w, r)
-	if !ok {
-		return
-	}
 	var body UserChange
 	if p := DecodeBody(r, &body, nil, userLimits); p != nil {
 		WriteProblem(w, p)
+		return
+	}
+	id, ok := userID(w, r)
+	if !ok {
 		return
 	}
 	user, err := s.Users.Update(r.Context(), a.Principal, id, auth.UserChange{

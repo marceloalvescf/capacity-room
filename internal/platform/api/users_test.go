@@ -218,3 +218,11 @@ func (ts *testServer) userID(t *testing.T, name string) string {
 	}
 	return id.String()
 }
+
+func TestUsersPatchJudgesBodyBeforeID(t *testing.T) {
+	ts := newTestServer(t)
+	cookie, csrf := ts.signIn(t, "root")
+	path := usersPath + "/not-a-uuid"
+	wantProblem(t, ts.send(t, "PATCH", path, `{"nope":1}`, cookie, csrf), 400, CodeRequestInvalid, map[string]string{"nope": "unknown"})
+	wantProblem(t, ts.send(t, "PATCH", path, `{"language":"en"}`, cookie, csrf), 404, CodeUserNotFound, nil)
+}

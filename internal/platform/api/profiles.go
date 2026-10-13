@@ -214,10 +214,6 @@ func (s *Server) getProfile(w http.ResponseWriter, r *http.Request, a auth.Authe
 }
 
 func (s *Server) patchProfile(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
-	id, ok := profileID(w, r)
-	if !ok {
-		return
-	}
 	data, err := io.ReadAll(io.LimitReader(r.Body, MaxBody+1))
 	if err != nil {
 		WriteProblem(w, &Problem{Code: CodeRequestInvalid, Fields: map[string]string{"": "invalid"}})
@@ -234,6 +230,10 @@ func (s *Server) patchProfile(w http.ResponseWriter, r *http.Request, a auth.Aut
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil {
 		WriteProblem(w, &Problem{Code: CodeRequestInvalid, Fields: map[string]string{"": "invalid"}})
+		return
+	}
+	id, ok := profileID(w, r)
+	if !ok {
 		return
 	}
 	delete(fields, "base_revision_id")
