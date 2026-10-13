@@ -217,8 +217,10 @@ func (u *Users) Update(ctx context.Context, actor Principal, id uuid.UUID, c Use
 			return err
 		}
 		if c.Password != nil {
-			// Written over the hash that was read. The table lock keeps
-			// every other writer out, so a miss is a broken invariant.
+			// Written over the hash that was read. The table lock conflicts
+			// with the row lock of every UPDATE, so a password writer that
+			// started first has committed and one that starts later waits;
+			// a miss is a broken invariant.
 			written, err := store.UpdatePasswordHash(ctx, tx, id, user.PasswordHash, hash, now)
 			if err != nil {
 				return err
