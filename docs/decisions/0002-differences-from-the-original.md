@@ -25,3 +25,15 @@ zero, and a real cluster showed variations of 18813 % and 28800 % on
 averages that round to 0 mCPU. No recorded scenario has a CPU average
 below 1 mCPU, so the comparison removes nothing for this decision. The
 memory codes are unchanged.
+
+### Node utilization partial on incomplete evidence
+
+The node utilization reads Partial while the warning
+`NODE_CAPACITY_EVIDENCE_INCOMPLETE` stands, as the HPA history reads
+Partial while an HPA is ambiguous. The original keeps it available beside
+the warning. The recorded scenario `edge-scaling` raises the warning; its
+executive material limitations list the warning as a row for the node
+utilization where the original lists it as an interpretation, with the
+same coverage and remark. The comparison reads the row as the
+interpretation, only when the stored capability is available and the
+warning stands.

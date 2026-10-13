@@ -911,6 +911,8 @@ func compareExecutive(scenario string, snap snapshot.Snapshot, want map[string]p
 	}
 	executiveHeading := title(catalog.SectionsExecutiveHeading)
 	incompleteTitle := title(catalog.SectionsHPAsNoteIncompleteTitle)
+	nodeUtilization := title(catalog.CapabilityName("node_utilization"))
+	interpretation := title(catalog.SectionsExecutiveInterpretation)
 	partialTitle := title(catalog.SectionsHPAsNotePartialTitle)
 
 	for _, minimum := range []string{"attention", "critical"} {
@@ -951,7 +953,7 @@ func compareExecutive(scenario string, snap snapshot.Snapshot, want map[string]p
 			if table, ok := doc.Blocks[pos+1].(document.Table); ok {
 				rows = table.Rows
 			}
-			diffs = append(diffs, compareExecutiveRows(label, indexes, rows, originalPlanCells(sub.name, rows, originalLimitationMarks(sub.name, sub.rows(recorded))))...)
+			diffs = append(diffs, compareExecutiveRows(label, indexes, nodeUtilizationAsInterpretation(snap, sub.name, nodeUtilization, interpretation, rows), originalPlanCells(sub.name, rows, originalLimitationMarks(sub.name, sub.rows(recorded))))...)
 
 			if sub.name == "replica_ceiling" && pos+2 < len(doc.Blocks) {
 				if callout, ok := doc.Blocks[pos+2].(document.Callout); ok {
@@ -2432,5 +2434,116 @@ func TestPythonEvidenceReadsThreeKinds(t *testing.T) {
 		if got != c.want {
 			t.Errorf("Unmarshal(%s) = %+v, want %+v", c.in, got, c.want)
 		}
+	}
+}
+
+// nodeUtilizationAsInterpretation returns the rows of the material
+// limitations of the executive document with the row of the node utilization
+// written as the row of the interpretation, when the snapshot stores that
+// capability as available and holds the warning
+// NODE_CAPACITY_EVIDENCE_INCOMPLETE. The document reads the capability as
+// partial and lists it with the warning's sentence, so the row that the
+// original lists for the warning as an interpretation is not listed twice;
+// the coverage and the remark of the two rows are equal, as
+// docs/decisions/0002-differences-from-the-original.md records. The rows of
+// any other table, and the rows of any other case, are returned as they
+// are. name and interpretation are the catalog texts of the first cell.
+func nodeUtilizationAsInterpretation(snap snapshot.Snapshot, table, name, interpretation string, rows [][][]document.Run) [][][]document.Run {
+	if table != "material_limitations" {
+		return rows
+	}
+	available := slices.ContainsFunc(snap.Quality.Capabilities, func(c snapshot.Capability) bool {
+		return c.Name == "node_utilization" && c.State == discovery.StateAvailable
+	})
+	warned := slices.ContainsFunc(snap.Quality.Warnings, func(w snapshot.Message) bool {
+		return w.Code == collect.WarningNodeCapacityEvidenceIncomplete
+	})
+	if !available || !warned {
+		return rows
+	}
+	out := slices.Clone(rows)
+	for i, row := range out {
+		if len(row) == 0 {
+			continue
+		}
+		if runs, err := runsOf(row[0]); err == nil && len(runs) == 1 && runs[0].Text == name {
+			out[i] = slices.Clone(row)
+			out[i][0] = []document.Run{document.Text(interpretation)}
+		}
+	}
+	return out
+}
+
+// TestPartialNodeUtilizationRowIsRewritten checks that the rewrite turns the
+// row of the node utilization in the limitations of edge-scaling, which
+// raises the warning, into an interpretation row, and changes nothing for
+// direct-complete, which does not.
+func TestPartialNodeUtilizationRowIsRewritten(t *testing.T) {
+	cat, err := catalog.Load(catalog.PortugueseBrazil)
+	if err != nil {
+		t.Fatalf("catalog.Load: %v", err)
+	}
+	name, err := cat.Text(catalog.CapabilityName("node_utilization"), nil)
+	if err != nil {
+		t.Fatalf("Text(CapabilityName): %v", err)
+	}
+	interpretation, err := cat.Text(catalog.SectionsExecutiveInterpretation, nil)
+	if err != nil {
+		t.Fatalf("Text(interpretation): %v", err)
+	}
+	heading, err := cat.Text(catalog.SectionsExecutiveLimitationsHeading, nil)
+	if err != nil {
+		t.Fatalf("Text(limitations heading): %v", err)
+	}
+	count := func(rows [][][]document.Run, first string) int {
+		n := 0
+		for _, row := range rows {
+			if runs, err := runsOf(row[0]); err == nil && len(runs) == 1 && runs[0].Text == first {
+				n++
+			}
+		}
+		return n
+	}
+	for _, tt := range []struct {
+		scenario      string
+		before, after int
+	}{
+		{"edge-scaling", 1, 0},
+		{"direct-complete", 0, 0},
+	} {
+		t.Run(tt.scenario, func(t *testing.T) {
+			var scenario promtest.Scenario
+			for _, s := range promtest.Scenarios {
+				if s.Name == tt.scenario {
+					scenario = s
+				}
+			}
+			out, _, err := run(context.Background(), scenario)
+			if err != nil {
+				t.Fatalf("run: %v", err)
+			}
+			doc, err := document.Build(out.Snapshot, cat, document.Options{Profile: "executive", MinSeverity: "attention"})
+			if err != nil {
+				t.Fatalf("Build: %v", err)
+			}
+			var rows [][][]document.Run
+			for i, b := range doc.Blocks {
+				if text, ok := headingText(b, 2); ok && text == heading {
+					if table, ok := doc.Blocks[i+1].(document.Table); ok {
+						rows = table.Rows
+					}
+				}
+			}
+			if got := count(rows, name); got != tt.before {
+				t.Errorf("rows of the node utilization before = %d, want %d", got, tt.before)
+			}
+			after := nodeUtilizationAsInterpretation(out.Snapshot, "material_limitations", name, interpretation, rows)
+			if got := count(after, name); got != tt.after {
+				t.Errorf("rows of the node utilization after = %d, want %d", got, tt.after)
+			}
+			if got := count(after, interpretation) - count(rows, interpretation); got != tt.before {
+				t.Errorf("rows of the interpretation gained = %d, want %d", got, tt.before)
+			}
+		})
 	}
 }
