@@ -729,7 +729,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Summary of the main risks identified over the period of 24 hours, with a focus on the critical points and those that need attention."
+          "text": "Summary of the main risks identified over the period of 24 hours, with a focus on the critical points and those that need attention."
         }
       ]
     },
@@ -1509,25 +1509,25 @@
           [
             {
               "kind": "text",
-              "text": "2.2 cores"
+              "text": "2.2 cores"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "3.3 cores"
+              "text": "3.3 cores"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "500 mCPU"
+              "text": "500 mCPU"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "1 core"
+              "text": "1 core"
             }
           ],
           [
@@ -1557,25 +1557,25 @@
           [
             {
               "kind": "text",
-              "text": "110 B"
+              "text": "110 B"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "120 B"
+              "text": "120 B"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "0.5 B"
+              "text": "0.5 B"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "1 B"
+              "text": "1 B"
             }
           ],
           [
@@ -1655,13 +1655,13 @@
           [
             {
               "kind": "text",
-              "text": "300 mCPU"
+              "text": "300 mCPU"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "400 mCPU"
+              "text": "400 mCPU"
             }
           ],
           [
@@ -1683,13 +1683,13 @@
           [
             {
               "kind": "text",
-              "text": "110 B"
+              "text": "110 B"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "120 B"
+              "text": "120 B"
             }
           ],
           [
@@ -1727,7 +1727,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Behavior of the Horizontal Pod Autoscalers over the period of 24 hours. The situation says whether the configured maximum was observed."
+          "text": "Behavior of the Horizontal Pod Autoscalers over the period of 24 hours. The situation says whether the configured maximum was observed."
         }
       ]
     },
@@ -2232,37 +2232,37 @@
           [
             {
               "kind": "text",
-              "text": "8 cores"
+              "text": "8 cores"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "7.4 cores"
+              "text": "7.4 cores"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "2 cores"
+              "text": "2 cores"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "13.97 GiB"
+              "text": "13.97 GiB"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "9.92 GiB"
+              "text": "9.92 GiB"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "2.79 GiB"
+              "text": "2.79 GiB"
             }
           ]
         ],
@@ -2276,37 +2276,37 @@
           [
             {
               "kind": "text",
-              "text": "4 cores"
+              "text": "4 cores"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "1.55 cores"
+              "text": "1.55 cores"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "2.3 cores"
+              "text": "2.3 cores"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "6.52 GiB"
+              "text": "6.52 GiB"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "2.53 GiB"
+              "text": "2.53 GiB"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "2.1 GiB"
+              "text": "2.1 GiB"
             }
           ]
         ],

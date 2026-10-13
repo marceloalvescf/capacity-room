@@ -636,7 +636,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Summary of the main risks identified over the period of 24 hours, with a focus on the critical points and those that need attention."
+          "text": "Summary of the main risks identified over the period of 24 hours, with a focus on the critical points and those that need attention."
         }
       ]
     },
@@ -1286,13 +1286,13 @@
           [
             {
               "kind": "text",
-              "text": "300 mCPU"
+              "text": "300 mCPU"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "400 mCPU"
+              "text": "400 mCPU"
             }
           ],
           [
@@ -1334,13 +1334,13 @@
           [
             {
               "kind": "text",
-              "text": "110 B"
+              "text": "110 B"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "120 B"
+              "text": "120 B"
             }
           ],
           [
@@ -1432,13 +1432,13 @@
           [
             {
               "kind": "text",
-              "text": "300 mCPU"
+              "text": "300 mCPU"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "400 mCPU"
+              "text": "400 mCPU"
             }
           ],
           [
@@ -1460,13 +1460,13 @@
           [
             {
               "kind": "text",
-              "text": "110 B"
+              "text": "110 B"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "120 B"
+              "text": "120 B"
             }
           ],
           [
@@ -1504,7 +1504,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Behavior of the Horizontal Pod Autoscalers over the period of 24 hours. The situation says whether the configured maximum was observed."
+          "text": "Behavior of the Horizontal Pod Autoscalers over the period of 24 hours. The situation says whether the configured maximum was observed."
         }
       ]
     },
@@ -1713,7 +1713,7 @@
           [
             {
               "kind": "text",
-              "text": "4 cores"
+              "text": "4 cores"
             }
           ],
           [
@@ -1725,13 +1725,13 @@
           [
             {
               "kind": "text",
-              "text": "1 core"
+              "text": "1 core"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "8 B"
+              "text": "8 B"
             }
           ],
           [
@@ -1743,7 +1743,7 @@
           [
             {
               "kind": "text",
-              "text": "2 B"
+              "text": "2 B"
             }
           ]
         ]

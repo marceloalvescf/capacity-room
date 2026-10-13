@@ -675,7 +675,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Síntese dos principais riscos identificados no período de 24 horas, com foco nos pontos críticos e nos que pedem atenção."
+          "text": "Síntese dos principais riscos identificados no período de 24 horas, com foco nos pontos críticos e nos que pedem atenção."
         }
       ]
     },
@@ -1233,25 +1233,25 @@
           [
             {
               "kind": "text",
-              "text": "300 mCPU"
+              "text": "300 mCPU"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "400 mCPU"
+              "text": "400 mCPU"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "500 mCPU"
+              "text": "500 mCPU"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "1 core"
+              "text": "1 core"
             }
           ],
           [
@@ -1281,25 +1281,25 @@
           [
             {
               "kind": "text",
-              "text": "110 B"
+              "text": "110 B"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "120 B"
+              "text": "120 B"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "0,5 B"
+              "text": "0,5 B"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "1 B"
+              "text": "1 B"
             }
           ],
           [
@@ -1379,13 +1379,13 @@
           [
             {
               "kind": "text",
-              "text": "300 mCPU"
+              "text": "300 mCPU"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "400 mCPU"
+              "text": "400 mCPU"
             }
           ],
           [
@@ -1407,13 +1407,13 @@
           [
             {
               "kind": "text",
-              "text": "110 B"
+              "text": "110 B"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "120 B"
+              "text": "120 B"
             }
           ],
           [
@@ -1451,7 +1451,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Comportamento dos Horizontal Pod Autoscalers no período de 24 horas. A situação indica se o máximo configurado foi observado."
+          "text": "Comportamento dos Horizontal Pod Autoscalers no período de 24 horas. A situação indica se o máximo configurado foi observado."
         }
       ]
     },
@@ -1716,37 +1716,37 @@
           [
             {
               "kind": "text",
-              "text": "4 cores"
+              "text": "4 cores"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "2,3 cores"
+              "text": "2,3 cores"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "1 core"
+              "text": "1 core"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "8 B"
+              "text": "8 B"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "3,4 B"
+              "text": "3,4 B"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "2 B"
+              "text": "2 B"
             }
           ]
         ]

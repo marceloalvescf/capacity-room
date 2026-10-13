@@ -828,22 +828,22 @@
         "state": "value",
         "average": {
           "raw": 2.1999999999999997,
-          "text": "2.2 cores",
+          "text": "2.2 cores",
           "status": null
         },
         "minimum": {
           "raw": 1.1,
-          "text": "1.1 cores",
+          "text": "1.1 cores",
           "status": null
         },
         "peak": {
           "raw": 3.3,
-          "text": "3.3 cores",
+          "text": "3.3 cores",
           "status": null
         },
         "current": {
           "raw": 2.2,
-          "text": "2.2 cores",
+          "text": "2.2 cores",
           "status": null
         }
       },
@@ -851,22 +851,22 @@
         "state": "value",
         "average": {
           "raw": 110,
-          "text": "110 B",
+          "text": "110 B",
           "status": null
         },
         "minimum": {
           "raw": 100,
-          "text": "100 B",
+          "text": "100 B",
           "status": null
         },
         "peak": {
           "raw": 120,
-          "text": "120 B",
+          "text": "120 B",
           "status": null
         },
         "current": {
           "raw": 120,
-          "text": "120 B",
+          "text": "120 B",
           "status": null
         }
       },
@@ -874,22 +874,22 @@
         "state": "value",
         "average": {
           "raw": 0.5,
-          "text": "500 mCPU",
+          "text": "500 mCPU",
           "status": null
         },
         "minimum": {
           "raw": 0.5,
-          "text": "500 mCPU",
+          "text": "500 mCPU",
           "status": null
         },
         "peak": {
           "raw": 0.5,
-          "text": "500 mCPU",
+          "text": "500 mCPU",
           "status": null
         },
         "current": {
           "raw": 0.5,
-          "text": "500 mCPU",
+          "text": "500 mCPU",
           "status": null
         }
       },
@@ -897,22 +897,22 @@
         "state": "value",
         "average": {
           "raw": 0.5,
-          "text": "0.5 B",
+          "text": "0.5 B",
           "status": null
         },
         "minimum": {
           "raw": 0.5,
-          "text": "0.5 B",
+          "text": "0.5 B",
           "status": null
         },
         "peak": {
           "raw": 0.5,
-          "text": "0.5 B",
+          "text": "0.5 B",
           "status": null
         },
         "current": {
           "raw": 0.5,
-          "text": "0.5 B",
+          "text": "0.5 B",
           "status": null
         }
       },
@@ -920,22 +920,22 @@
         "state": "value",
         "average": {
           "raw": 1,
-          "text": "1 core",
+          "text": "1 core",
           "status": null
         },
         "minimum": {
           "raw": 1,
-          "text": "1 core",
+          "text": "1 core",
           "status": null
         },
         "peak": {
           "raw": 1,
-          "text": "1 core",
+          "text": "1 core",
           "status": null
         },
         "current": {
           "raw": 1,
-          "text": "1 core",
+          "text": "1 core",
           "status": null
         }
       },
@@ -943,22 +943,22 @@
         "state": "value",
         "average": {
           "raw": 1,
-          "text": "1 B",
+          "text": "1 B",
           "status": null
         },
         "minimum": {
           "raw": 1,
-          "text": "1 B",
+          "text": "1 B",
           "status": null
         },
         "peak": {
           "raw": 1,
-          "text": "1 B",
+          "text": "1 B",
           "status": null
         },
         "current": {
           "raw": 1,
-          "text": "1 B",
+          "text": "1 B",
           "status": null
         }
       },
@@ -1319,22 +1319,22 @@
         "state": "value",
         "average": {
           "raw": 0.30000000000000004,
-          "text": "300 mCPU",
+          "text": "300 mCPU",
           "status": null
         },
         "minimum": {
           "raw": 0.2,
-          "text": "200 mCPU",
+          "text": "200 mCPU",
           "status": null
         },
         "peak": {
           "raw": 0.4,
-          "text": "400 mCPU",
+          "text": "400 mCPU",
           "status": null
         },
         "current": {
           "raw": 0.4,
-          "text": "400 mCPU",
+          "text": "400 mCPU",
           "status": null
         }
       },
@@ -1342,22 +1342,22 @@
         "state": "value",
         "average": {
           "raw": 110,
-          "text": "110 B",
+          "text": "110 B",
           "status": null
         },
         "minimum": {
           "raw": 100,
-          "text": "100 B",
+          "text": "100 B",
           "status": null
         },
         "peak": {
           "raw": 120,
-          "text": "120 B",
+          "text": "120 B",
           "status": null
         },
         "current": {
           "raw": 120,
-          "text": "120 B",
+          "text": "120 B",
           "status": null
         }
       },
@@ -1365,22 +1365,22 @@
         "state": "value",
         "average": {
           "raw": 0.5,
-          "text": "500 mCPU",
+          "text": "500 mCPU",
           "status": null
         },
         "minimum": {
           "raw": 0.5,
-          "text": "500 mCPU",
+          "text": "500 mCPU",
           "status": null
         },
         "peak": {
           "raw": 0.5,
-          "text": "500 mCPU",
+          "text": "500 mCPU",
           "status": null
         },
         "current": {
           "raw": 0.5,
-          "text": "500 mCPU",
+          "text": "500 mCPU",
           "status": null
         }
       },
@@ -1388,22 +1388,22 @@
         "state": "value",
         "average": {
           "raw": 0.5,
-          "text": "0.5 B",
+          "text": "0.5 B",
           "status": null
         },
         "minimum": {
           "raw": 0.5,
-          "text": "0.5 B",
+          "text": "0.5 B",
           "status": null
         },
         "peak": {
           "raw": 0.5,
-          "text": "0.5 B",
+          "text": "0.5 B",
           "status": null
         },
         "current": {
           "raw": 0.5,
-          "text": "0.5 B",
+          "text": "0.5 B",
           "status": null
         }
       },
@@ -1411,22 +1411,22 @@
         "state": "value",
         "average": {
           "raw": 1,
-          "text": "1 core",
+          "text": "1 core",
           "status": null
         },
         "minimum": {
           "raw": 1,
-          "text": "1 core",
+          "text": "1 core",
           "status": null
         },
         "peak": {
           "raw": 1,
-          "text": "1 core",
+          "text": "1 core",
           "status": null
         },
         "current": {
           "raw": 1,
-          "text": "1 core",
+          "text": "1 core",
           "status": null
         }
       },
@@ -1434,22 +1434,22 @@
         "state": "value",
         "average": {
           "raw": 1,
-          "text": "1 B",
+          "text": "1 B",
           "status": null
         },
         "minimum": {
           "raw": 1,
-          "text": "1 B",
+          "text": "1 B",
           "status": null
         },
         "peak": {
           "raw": 1,
-          "text": "1 B",
+          "text": "1 B",
           "status": null
         },
         "current": {
           "raw": 1,
-          "text": "1 B",
+          "text": "1 B",
           "status": null
         }
       },
@@ -2059,22 +2059,22 @@
       "status": "critical",
       "cpu_capacity": {
         "raw": 8,
-        "text": "8 cores",
+        "text": "8 cores",
         "status": null
       },
       "memory_capacity": {
         "raw": 16000000000,
-        "text": "14.9 GiB",
+        "text": "14.9 GiB",
         "status": null
       },
       "cpu_allocatable": {
         "raw": 8,
-        "text": "8 cores",
+        "text": "8 cores",
         "status": null
       },
       "memory_allocatable": {
         "raw": 15000000000,
-        "text": "13.97 GiB",
+        "text": "13.97 GiB",
         "status": null
       },
       "cpu_request_percent": {
@@ -2145,12 +2145,12 @@
       "status": "healthy",
       "cpu_capacity": {
         "raw": 2,
-        "text": "2 cores",
+        "text": "2 cores",
         "status": null
       },
       "memory_capacity": {
         "raw": 4000000000,
-        "text": "3.73 GiB",
+        "text": "3.73 GiB",
         "status": null
       },
       "cpu_allocatable": {
@@ -2231,22 +2231,22 @@
       "status": "critical",
       "cpu_capacity": {
         "raw": 4,
-        "text": "4 cores",
+        "text": "4 cores",
         "status": null
       },
       "memory_capacity": {
         "raw": 8000000000,
-        "text": "7.45 GiB",
+        "text": "7.45 GiB",
         "status": null
       },
       "cpu_allocatable": {
         "raw": 4,
-        "text": "4 cores",
+        "text": "4 cores",
         "status": null
       },
       "memory_allocatable": {
         "raw": 7000000000,
-        "text": "6.52 GiB",
+        "text": "6.52 GiB",
         "status": null
       },
       "cpu_request_percent": {
@@ -2317,22 +2317,22 @@
       "status": "healthy",
       "cpu_capacity": {
         "raw": 4,
-        "text": "4 cores",
+        "text": "4 cores",
         "status": null
       },
       "memory_capacity": {
         "raw": 8000000000,
-        "text": "7.45 GiB",
+        "text": "7.45 GiB",
         "status": null
       },
       "cpu_allocatable": {
         "raw": 4,
-        "text": "4 cores",
+        "text": "4 cores",
         "status": null
       },
       "memory_allocatable": {
         "raw": 7000000000,
-        "text": "6.52 GiB",
+        "text": "6.52 GiB",
         "status": null
       },
       "cpu_request_percent": {
