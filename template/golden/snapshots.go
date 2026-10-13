@@ -220,7 +220,9 @@ var Snapshots = []Snapshot{
 			"capacity of a namespace, the resources of a workload, the " +
 			"HPA history, the node pool tables, and the appendix alone " +
 			"on the last page, with the colophon at its foot and no " +
-			"empty page between",
+			"empty page between; a number and its unit on one line in " +
+			"the workload table; and an HPA below its maximum marked " +
+			"with the attention of its finding",
 	},
 	{
 		Name:   "command-complete-en",
@@ -277,7 +279,10 @@ var Snapshots = []Snapshot{
 			"in the situation table, a plan whose qualifiers depend on " +
 			"the included rows, and two material limitations; and the " +
 			"appendix on the last page marks the HPA history partial " +
-			"with the warning as its remark",
+			"with the warning as its remark, and the node utilization " +
+			"partial while the node capacity evidence is incomplete; " +
+			"and a node not ready and cordoned whose state and reason " +
+			"carry its two readiness findings",
 	},
 	{
 		Name:   "command-scaling-en",
