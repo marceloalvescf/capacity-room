@@ -38,7 +38,13 @@ func TestLockHoldsOffAPasswordWriter(t *testing.T) {
 			return nil
 		})
 	}()
-	<-locked
+	select {
+	case <-locked:
+	case err := <-done:
+		t.Fatalf("the lock transaction ended before the lock was taken: %v", err)
+	case <-time.After(10 * time.Second):
+		t.Fatal("the lock was never taken")
+	}
 	wrote := make(chan bool, 1)
 	go func() {
 		ok, err := store.UpdatePasswordHash(ctx, pool, user.ID, user.PasswordHash, "other", time.Now())
