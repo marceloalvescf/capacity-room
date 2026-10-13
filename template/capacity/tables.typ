@@ -17,7 +17,7 @@
     faces: ("text", "num", "num", "num", "num", "num", "num"),
   ),
   workload-resources: (
-    columns: (1.28fr, 0.45fr, 0.95fr, 0.95fr, 0.72fr, 0.92fr, 0.95fr, 0.95fr, 0.72fr, 0.92fr),
+    columns: (1.28fr, 0.45fr, 0.95fr, 0.95fr, 0.72fr, 0.72fr, 0.95fr, 0.95fr, 0.72fr, 0.72fr),
     size: 6.8pt,
     inset-y: 3.5pt,
     faces: ("name", "num", "num", "num", "num", "num", "num", "num", "num", "num"),
@@ -59,7 +59,7 @@
     faces: ("name", "name", "num", "text"),
   ),
   namespaces-at-risk: (
-    columns: (1.35fr, 0.95fr, 0.95fr, 2.6fr, 1.25fr, 0.85fr),
+    columns: (1.35fr, 0.75fr, 0.75fr, 3fr, 1.25fr, 0.85fr),
     size: 7.2pt,
     inset-y: 3.5pt,
     faces: ("name", "num", "num", "text", "text", "mark"),
