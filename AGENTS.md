@@ -404,7 +404,10 @@ redactor the moment the settings are loaded, before the pool opens.
   and the mark the PDF prints beside a text travels as its status. A
   node's request share carries the severity of the node's request finding
   for that resource, a status the PDF states as that finding rather than
-  beside the share.
+  beside the share. Its `verdict` holds the decisions of the PDF's verdict
+  page, made once by `decideVerdict`, as indices into the view's own lists
+  (`findings`, `quality.warnings`), and each recommendation names its
+  finding the same way.
   The contract describes it as `ReportView`, excluded from the Go
   generation, and `TestViewMatchesTheContract` walks the view of every
   golden snapshot against that schema both ways.
@@ -720,15 +723,17 @@ redactor the moment the settings are loaded, before the pool opens.
   the progress page.
 - **The overview opens on its answer, built from the view alone.** First the
   answer strip: the severity totals and any data-quality warnings. Then the
-  verdict band: whether the cluster can grow (its nodes against the
+  verdict band, which comes from `view.verdict` and keeps no rule of the web
+  app: whether the cluster can grow (the gauge of its nodes against the
   autoscaler's maximum, the worst cluster finding, and the node-evidence
   warning when the report has it) and the pressure of each scope, the scopes
   worst first (its worst severity, the first finding of that severity,
-  linked to the findings tab). Then the action plan, whose rows open their
-  finding. The scope of a row names each scope by its full name and kind,
-  where the PDF prints the short name. The overview shows no number the
-  view does not hold; a count it shows is a count of rows, findings, or
-  warnings.
+  linked to the findings tab). Then the action plan, whose rows open the
+  finding that `recommendation.finding` names. The scope of a row names each
+  scope by its full name, as the PDF does, and its kind too only when the
+  action has three scopes or fewer; above three, the summary alone. The
+  overview shows no number the view does not hold; a count it shows is a
+  count of rows, findings, or warnings.
 - **A row with no finding says so.** The view gives such a row the status
   healthy; the tables show "No finding" with no mark, as the PDF does, and
   rank it after the healthy rows.
@@ -821,7 +826,9 @@ looks.
   and status glyph, and Liberation Sans for the generic layer's own default.
   The five status glyphs (the diamond of critical, the triangle of attention,
   the circle of healthy, the empty circle of no base, the dash of unavailable)
-  are set in JetBrains Mono, which holds them all; critical is bold.
+  are set in JetBrains Mono, which holds them all; critical is bold. A status
+  glyph is a PDF artifact, so a screen reader skips it and reads the word
+  beside it.
 - A table column has a face: `name` and `num` and `mark` and `text`, held with
   its width in `template/capacity/tables.typ`. A number is set in mono and
   aligned right, a name and a text and a mark from the left.

@@ -6,6 +6,20 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The report view of the API gives the verdict of the overview: the worst finding of the cluster, the node gauge, the pressure on each scope, and the finding each action comes from.
+
+### Changed
+
+- The web app names a node pool it could not identify "Undetermined", as the PDF does.
+- The node gauge of the web app marks the minimum in whole nodes, as the PDF does.
+
+### Fixed
+
+- An action that covers more than three scopes no longer repeats their kind, in the PDF and in the web app.
+- Screen readers skip the status marks of the PDF and read the word beside them.
+
 ## [1.2.0] - 2026-10-13
 
 ### Added
