@@ -325,6 +325,16 @@ describe("overview tab", () => {
     expect(cell).toHaveTextContent("Workload payments/payments-web");
   });
 
+  it("a scope of more than three is its summary alone", async () => {
+    const [first, ...rest] = english.recommendations;
+    const many = { ...(first as View["recommendations"][number]), scopes: ["ns/a", "ns/b", "ns/c", "ns/d"], scope_text: "4 workloads identified", scope_type: "workload" as const };
+    mock.views.set(`${id}:en`, { ...english, recommendations: [many, ...rest] });
+    await open();
+    const rows = within(screen.getByRole("table", { name: "Prioritized action plan" })).getAllByRole("row").slice(1);
+    const cell = within(rows[0] as HTMLElement).getAllByRole("cell")[3] as HTMLElement;
+    expect(cell.textContent).toBe("4 workloads identified");
+  });
+
   it("an action of the plan links to its finding", async () => {
     await open();
     const rows = within(screen.getByRole("table", { name: "Prioritized action plan" })).getAllByRole("row").slice(1);

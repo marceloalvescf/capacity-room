@@ -743,7 +743,7 @@ func TestActionPlanScopeSummary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("builder error = %v", err)
 	}
-	want := []string{"text:HPA |placeholder:" + pt(t, catalog.ScopeSummary("hpa"), catalog.Params{"Count": "4"}), "text:Workload |placeholder:" + pt(t, catalog.ScopeSummary("deployment"), catalog.Params{"Count": "4"}), "text:Namespace |placeholder:" + pt(t, catalog.ScopeSummary("namespace"), catalog.Params{"Count": "4"})}
+	want := []string{"placeholder:" + pt(t, catalog.ScopeSummary("hpa"), catalog.Params{"Count": "4"}), "placeholder:" + pt(t, catalog.ScopeSummary("deployment"), catalog.Params{"Count": "4"}), "placeholder:" + pt(t, catalog.ScopeSummary("namespace"), catalog.Params{"Count": "4"})}
 	if len(rows) != 3 {
 		t.Fatalf("rows = %q, want 3", rows)
 	}

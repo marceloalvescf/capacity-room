@@ -340,10 +340,14 @@ function Plan() {
                     <PlanAction recommendation={recommendation} findings={findings} />
                   </td>
                   <td className="px-3 py-2">
-                    <span className="text-muted-fg">{t(`scope.${recommendation.scope_type}`)}</span>{" "}
-                    <span className={cn("[overflow-wrap:anywhere]", recommendation.scopes.length <= 3 && "font-mono")}>
-                      {scopeLabel(recommendation)}
-                    </span>
+                    {recommendation.scopes.length <= 3 ? (
+                      <>
+                        <span className="text-muted-fg">{t(`scope.${recommendation.scope_type}`)}</span>{" "}
+                        <span className="font-mono [overflow-wrap:anywhere]">{scopeLabel(recommendation)}</span>
+                      </>
+                    ) : (
+                      scopeLabel(recommendation)
+                    )}
                   </td>
                   <td className="px-3 py-2">{t(`confidence.${recommendation.confidence}`)}</td>
                 </tr>
