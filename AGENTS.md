@@ -636,10 +636,9 @@ redactor the moment the settings are loaded, before the pool opens.
   peak cell, by the worse of its peak and its share) and the hazard of the
   depth gauge (by the worst cluster finding) follow a status the view gives,
   never a threshold of the web app. The tints of the gauge's bands mark only
-  position on its own scale. The one exception is the State column of the
-  nodes, which marks Not ready as attention and Unknown as unavailable
-  though the view gives no status for readiness, an owner decision of
-  2026-10-11 (option 1A). Filled actions use the `action` tokens; `accent`
+  position on its own scale. The State column of the nodes takes the
+  status the view gives the node's state: the severity of its readiness
+  findings, or unavailable when readiness is unknown. Filled actions use the `action` tokens; `accent`
   is for links, focus, and the current-level line. Nothing casts a shadow: a
   floating layer is closed by a neat-line, and a modal dims the page through
   the `scrim` token.

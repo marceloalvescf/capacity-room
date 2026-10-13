@@ -205,7 +205,11 @@ type ViewNode struct {
 	MemoryUsagePercent   Statistic `json:"memory_usage_percent"`
 	Ready                *bool     `json:"ready"`
 	Schedulable          *bool     `json:"schedulable"`
-	Reason               string    `json:"reason"`
+	// StateStatus is the mark of the state: unavailable when readiness is
+	// unknown, else the severity of the node's readiness findings; nil when
+	// the state carries no mark.
+	StateStatus *string `json:"state_status"`
+	Reason      string  `json:"reason"`
 	// ReasonStatus is the mark of the reason cell, nil when the node has no
 	// finding and the cell has none.
 	ReasonStatus *string `json:"reason_status"`
@@ -658,6 +662,7 @@ func (vb *viewBuilder) nodes(s snapshot.Snapshot, minRank int) []ViewNode {
 			MemoryUsagePercent:   vb.statistic(n.MemoryUsagePercent, usage),
 			Ready:                n.Ready,
 			Schedulable:          n.Schedulable,
+			StateStatus:          mark(nodeStateStatus(n, s.Findings)),
 			Reason:               reason,
 			ReasonStatus:         mark(reasonStatus),
 		})

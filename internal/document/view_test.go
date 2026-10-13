@@ -901,3 +901,85 @@ func TestViewVerdictPressureIsNeverNull(t *testing.T) {
 		t.Errorf("verdict.pressure = %v, want an empty list", decoded.Verdict.Pressure)
 	}
 }
+
+func TestNodeStateStatus(t *testing.T) {
+	yes, no := boolPtr(true), boolPtr(false)
+	tests := []struct {
+		name               string
+		ready, schedulable *bool
+		findings           []snapshot.Finding
+		want               string
+		wantView           string
+	}{
+		{"unknown", nil, nil, nil, "unavailable", "unavailable"},
+		{"not ready", no, yes, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1")}, "attention", "attention"},
+		{"cordoned", yes, no, []snapshot.Finding{nodeFinding("NODE_UNSCHEDULABLE", analysis.SeverityAttention, "n1")}, "attention", "attention"},
+		{"fine", yes, yes, nil, "", "null"},
+		{"stored without the finding", no, yes, nil, "", "null"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := testNode("n1", "apps", valueStat(10, 20), valueStat(10, 20))
+			n.Ready, n.Schedulable = tt.ready, tt.schedulable
+			if got := nodeStateStatus(n, tt.findings); got != tt.want {
+				t.Errorf("nodeStateStatus() = %q, want %q", got, tt.want)
+			}
+			view := mustView(t, nodeViewSnapshot(t, n, tt.findings), catalog.English)
+			if len(view.Nodes) != 1 {
+				t.Fatalf("view holds %d nodes, want 1", len(view.Nodes))
+			}
+			if got := statusText(view.Nodes[0].StateStatus); got != tt.wantView {
+				t.Errorf("state_status = %s, want %s", got, tt.wantView)
+			}
+		})
+	}
+}
+
+func TestExecutiveCountsANodeNotReadyWithoutAnAction(t *testing.T) {
+	n := testNode("n1", "apps", valueStat(10, 20), valueStat(10, 20))
+	n.Ready = boolPtr(false)
+	s := nodeViewSnapshot(t, n, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1")})
+	s.Report.Profile = "executive"
+	s.Recommendations = deriveRecommendations(s.Findings)
+
+	view := mustView(t, s, catalog.English)
+	found := false
+	for _, p := range view.Verdict.Pressure {
+		if p.ScopeType == "node" {
+			found = true
+			if p.Severity != "attention" || p.Attention != 1 || p.Critical != 0 {
+				t.Errorf("node pressure = %s with %d critical and %d attention, want attention with 0 and 1", p.Severity, p.Critical, p.Attention)
+			}
+		}
+	}
+	if !found {
+		t.Error("the node scope has no pressure row")
+	}
+	pdf := englishVerdict(t, s, view.MinSeverity)
+	if len(pdf.Pressure.Rows) != len(view.Verdict.Pressure) {
+		t.Errorf("PDF has %d pressure rows, view %d", len(pdf.Pressure.Rows), len(view.Verdict.Pressure))
+	}
+	for _, r := range view.Recommendations {
+		if strings.HasPrefix(r.Code, "NODE_") {
+			t.Errorf("view recommendation %s, want none for a node's readiness", r.Code)
+		}
+	}
+}
+
+// nodeViewSnapshot returns a snapshot of one node with the counts of its
+// summary agreeing with what it holds.
+func nodeViewSnapshot(t *testing.T, n snapshot.Node, findings []snapshot.Finding) snapshot.Snapshot {
+	t.Helper()
+	s := poolSnapshot(t, []snapshot.Node{n}, findings...)
+	s.Summary.Nodes = 1
+	s.Summary.Nodepools = 1
+	s.Summary.Findings = float64(len(findings))
+	for _, f := range findings {
+		if f.Severity == analysis.SeverityAttention {
+			s.Summary.Attention++
+		}
+	}
+	s.Recommendations = deriveRecommendations(findings)
+	s.Summary.Recommendations = float64(len(s.Recommendations))
+	return s
+}

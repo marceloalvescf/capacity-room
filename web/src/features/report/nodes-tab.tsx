@@ -60,15 +60,12 @@ function stateText(row: ViewNode, t: TFunction): string {
   return `${ready} · ${t(row.schedulable ? "report.node.schedulable" : "report.node.unschedulable")}`;
 }
 
-// A node that is not ready is marked for attention; an unknown readiness is marked unavailable.
+// The state is marked with the status the view gives it.
 function NodeState({ row }: { row: ViewNode }) {
   const { t } = useTranslation();
   const text = stateText(row, t);
-  if (row.ready === false) {
-    return <StatusMark status="attention" label={text} withStatus />;
-  }
-  if (row.ready === null) {
-    return <StatusMark status="unavailable" label={text} withStatus />;
+  if (row.state_status) {
+    return <StatusMark status={row.state_status} label={text} withStatus />;
   }
   return <span>{text}</span>;
 }

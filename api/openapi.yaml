@@ -2455,6 +2455,7 @@ components:
         - memory_usage_percent
         - ready
         - schedulable
+        - state_status
         - reason
         - reason_status
       properties:
@@ -2489,6 +2490,8 @@ components:
         schedulable:
           type: boolean
           nullable: true
+        state_status:
+          $ref: "#/components/schemas/ViewMark"
         reason:
           type: string
           description: The reason cell of the PDF.

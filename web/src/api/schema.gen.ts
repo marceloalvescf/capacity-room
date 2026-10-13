@@ -920,6 +920,7 @@ export interface components {
             memory_usage_percent: components["schemas"]["ViewStatistic"];
             ready: boolean | null;
             schedulable: boolean | null;
+            state_status: components["schemas"]["ViewMark"];
             /** @description The reason cell of the PDF. */
             reason: string;
             reason_status: components["schemas"]["ViewMark"];

@@ -305,20 +305,38 @@ func nodeRow(b *builder, n snapshot.Node, findings []snapshot.Finding, threshold
 		averagePeakCell(b, n.CPUUsagePercent, thresholds),
 		averagePeakCell(b, n.MemoryUsagePercent, thresholds),
 		{nodeReason(b, n.Name, findings)},
-		{nodeState(b, n)},
+		{nodeState(b, n, findings)},
 	}
 }
 
-// nodeState writes the readiness and schedulability of a node, marked for
-// attention when the node is not ready and as unavailable when its readiness
-// is unknown.
-func nodeState(b *builder, n snapshot.Node) Run {
+// readinessCodes are the findings of a node's state.
+var readinessCodes = []string{"NODE_NOT_READY", "NODE_UNSCHEDULABLE"}
+
+// nodeStateStatus is the status of a node's state: unavailable when its
+// readiness is unknown, else the worst severity of its readiness findings,
+// else none ("").
+func nodeStateStatus(n snapshot.Node, findings []snapshot.Finding) string {
+	if n.Ready == nil {
+		return "unavailable"
+	}
+	status := ""
+	for _, f := range findings {
+		if f.ScopeType != analysis.ScopeNode || f.ScopeName != n.Name || !slices.Contains(readinessCodes, f.Code) {
+			continue
+		}
+		if status == "" || analysis.Rank(f.Severity) > analysis.Rank(status) {
+			status = f.Severity
+		}
+	}
+	return status
+}
+
+// nodeState writes the readiness and schedulability of a node, marked with
+// the status of its state.
+func nodeState(b *builder, n snapshot.Node, findings []snapshot.Finding) Run {
 	text := stateWord(b, n.Ready, catalog.NodeStateReady, catalog.NodeStateNotReady) + "; " + stateWord(b, n.Schedulable, catalog.NodeStateSchedulable, catalog.NodeStateUnschedulable)
-	switch {
-	case n.Ready == nil:
-		return StatusValue("unavailable", text, statusWord(b, "unavailable"))
-	case !*n.Ready:
-		return StatusValue("attention", text, statusWord(b, "attention"))
+	if status := nodeStateStatus(n, findings); status != "" {
+		return StatusValue(status, text, statusWord(b, status))
 	}
 	return Text(text)
 }

@@ -326,26 +326,27 @@ func TestNodeDetailReason(t *testing.T) {
 func TestNodeDetailState(t *testing.T) {
 	yes, no := boolPtr(true), boolPtr(false)
 	tests := []struct {
+		name               string
 		ready, schedulable *bool
+		findings           []snapshot.Finding
 		want               string
+		kind, status       string
 	}{
-		{yes, yes, "Ready; Schedulable"},
-		{yes, no, "Ready; Unschedulable"},
-		{yes, nil, "Ready; Unavailable"},
-		{no, yes, "Not ready; Schedulable"},
-		{no, no, "Not ready; Unschedulable"},
-		{no, nil, "Not ready; Unavailable"},
-		{nil, yes, "Unavailable; Schedulable"},
-		{nil, no, "Unavailable; Unschedulable"},
-		{nil, nil, "Unavailable; Unavailable"},
+		{"unknown", nil, nil, nil, "Unavailable; Unavailable", "status", "unavailable"},
+		{"not ready", no, yes, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1")}, "Not ready; Schedulable", "status", "attention"},
+		{"cordoned", yes, no, []snapshot.Finding{nodeFinding("NODE_UNSCHEDULABLE", analysis.SeverityAttention, "n1")}, "Ready; Unschedulable", "status", "attention"},
+		{"fine", yes, yes, nil, "Ready; Schedulable", "text", ""},
+		{"stored without the finding", no, yes, nil, "Not ready; Schedulable", "text", ""},
+		{"another node's finding", yes, yes, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n2")}, "Ready; Schedulable", "text", ""},
 	}
 	for _, tt := range tests {
-		t.Run(tt.want, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			n := testNode("n1", "apps", valueStat(10, 20), valueStat(10, 20))
 			n.Ready, n.Schedulable = tt.ready, tt.schedulable
-			row := detailRow(t, poolSnapshot(t, []snapshot.Node{n}), catalog.English)
-			if got := runText(t, row[4][0]); got != tt.want || row[4][0].kind != wantKind(tt.ready) {
-				t.Errorf("state = %q (%s), want %q", got, row[4][0].kind, tt.want)
+			row := detailRow(t, poolSnapshot(t, []snapshot.Node{n}, tt.findings...), catalog.English)
+			run := row[4][0]
+			if got := runText(t, run); got != tt.want || run.kind != tt.kind || run.status != tt.status {
+				t.Errorf("state = %q (%s %q), want %q (%s %q)", got, run.kind, run.status, tt.want, tt.kind, tt.status)
 			}
 		})
 	}
@@ -365,15 +366,6 @@ func TestNodeDetailStateMarksOnlyWhatIsTrue(t *testing.T) {
 	if r := marks["pool-a-1"]; r.kind != "text" {
 		t.Errorf("a ready and schedulable node = %s, want a plain text cell", r.kind)
 	}
-}
-
-// wantKind is the kind of run a State cell takes: a mark when readiness is
-// not true, plain text otherwise.
-func wantKind(ready *bool) string {
-	if ready != nil && *ready {
-		return "text"
-	}
-	return "status"
 }
 
 // TestValueStatusRunsCarryTheLegendWord checks that a status run whose text
@@ -402,7 +394,7 @@ func TestValueStatusRunsCarryTheLegendWord(t *testing.T) {
 		{"percent unavailable", func(b *builder) Run { return percentRun(b, nil, thresholds) }, "Data unavailable", "Dado indisponível"},
 		{"node reason", func(b *builder) Run { return nodeReason(b, "n1", findings) }, "Attention", "Atenção"},
 		{"node state", func(b *builder) Run {
-			return nodeState(b, snapshot.Node{Ready: no, Schedulable: no})
+			return nodeState(b, snapshot.Node{Name: "n1", Ready: no, Schedulable: no}, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1")})
 		}, "Attention", "Atenção"},
 		{"hpa situation", func(b *builder) Run { return hpaSituation(b, maxReached) }, "Critical", "Crítico"},
 		{"no hpa", func(b *builder) Run {

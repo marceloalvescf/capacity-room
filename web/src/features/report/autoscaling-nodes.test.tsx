@@ -188,7 +188,7 @@ describe("nodes tab", () => {
   it("a peak cell takes the tint of the status the view gives its peak", async () => {
     const node = english.nodes[0] as View["nodes"][number];
     const peak = (raw: number, status: "healthy" | "attention" | "critical") => ({ raw, text: `${String(raw)}%`, status });
-    const nodes = [
+    const nodes: View["nodes"] = [
       { ...node, name: "n-attention", cpu_usage_percent: { ...node.cpu_usage_percent, peak: peak(40, "attention") } },
       { ...node, name: "n-critical", cpu_usage_percent: { ...node.cpu_usage_percent, peak: peak(40, "critical") } },
       { ...node, name: "n-healthy", cpu_usage_percent: { ...node.cpu_usage_percent, peak: peak(99, "healthy") } },
@@ -215,18 +215,24 @@ describe("nodes tab", () => {
 
   it("the state of a node", async () => {
     const node = english.nodes[0] as View["nodes"][number];
-    const nodes = [
-      { ...node, name: "n-unknown", ready: null, schedulable: null },
-      { ...node, name: "n-ready", ready: true, schedulable: null },
-      { ...node, name: "n-down", ready: false, schedulable: null },
-      { ...node, name: "n-unknown-ready", ready: null, schedulable: true },
+    const nodes: View["nodes"] = [
+      { ...node, name: "n-unknown", ready: null, schedulable: null, state_status: "unavailable" },
+      { ...node, name: "n-ready", ready: true, schedulable: null, state_status: null },
+      { ...node, name: "n-down", ready: false, schedulable: null, state_status: "attention" },
+      { ...node, name: "n-cordoned", ready: true, schedulable: false, state_status: "attention" },
+      { ...node, name: "n-down-unmarked", ready: false, schedulable: true, state_status: null },
+      { ...node, name: "n-unknown-ready", ready: null, schedulable: true, state_status: "unavailable" },
     ];
     mock.views.set(`${id}:en`, { ...english, nodes });
     await open("nodes");
-    const state = (name: string) => within(rowOf("Nodes", name)).getAllByRole("cell")[3];
+    const state = (name: string) => within(rowOf("Nodes", name)).getAllByRole("cell")[3] as HTMLElement;
     expect(state("n-unknown")).toHaveTextContent(/^UnavailableUnknown$/);
     expect(state("n-ready")).toHaveTextContent(/^Ready$/);
     expect(state("n-down")).toHaveTextContent(/^AttentionNot ready$/);
+    expect(state("n-cordoned")).toHaveTextContent(/^AttentionReady · Unschedulable$/);
+    expect(state("n-cordoned").querySelector("svg")?.parentElement).toHaveClass("text-attention");
+    expect(state("n-down-unmarked")).toHaveTextContent(/^Not ready · Schedulable$/);
+    expect(state("n-down-unmarked").querySelector("svg")).toBeNull();
     expect(state("n-unknown-ready")).toHaveTextContent(/^UnavailableUnknown$/);
   });
 
