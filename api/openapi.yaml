@@ -29,6 +29,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Session"
+        "403":
+          description: >-
+            A request from another site (`Sec-Fetch-Site` neither `same-origin`
+            nor `none`); nothing is rotated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         default:
           $ref: "#/components/responses/Unexpected"
   /auth/login:

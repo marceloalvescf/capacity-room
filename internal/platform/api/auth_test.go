@@ -172,6 +172,49 @@ func TestSessionSignedIn(t *testing.T) {
 	}
 }
 
+func TestSessionRefusesAnotherSite(t *testing.T) {
+	ts := newTestServer(t)
+	session, csrf := ts.signIn(t, "root")
+	for _, site := range []string{"cross-site", "same-site"} {
+		w := ts.call(t, "GET", "/api/v1/auth/session", "", map[string]string{"Sec-Fetch-Site": site}, session)
+		wantProblem(t, w, 403, CodeCSRFRejected, nil)
+		if len(w.Header().Values("Set-Cookie")) != 0 {
+			t.Fatalf("%s set a cookie: %q", site, w.Header().Values("Set-Cookie"))
+		}
+		if err := ts.Sessions.VerifyCSRF(t.Context(), mustSessionID(t, ts, session), csrf); err != nil {
+			t.Fatalf("%s rotated the token: %v", site, err)
+		}
+	}
+}
+
+func TestSessionAnonymousRefusesAnotherSite(t *testing.T) {
+	ts := newTestServer(t)
+	w := ts.call(t, "GET", "/api/v1/auth/session", "", map[string]string{"Sec-Fetch-Site": "cross-site"})
+	wantProblem(t, w, 403, CodeCSRFRejected, nil)
+	if cookieNamed(w, LoginCSRFCookie) != nil || len(w.Header().Values("Set-Cookie")) != 0 {
+		t.Fatalf("cookie set: %q", w.Header().Values("Set-Cookie"))
+	}
+}
+
+func TestSessionAnswersSameOriginAndNone(t *testing.T) {
+	ts := newTestServer(t)
+	session, _ := ts.signIn(t, "root")
+	for _, site := range []string{"", "same-origin", "none"} {
+		header := map[string]string{}
+		if site != "" {
+			header["Sec-Fetch-Site"] = site
+		}
+		w := ts.call(t, "GET", "/api/v1/auth/session", "", header, session)
+		var s SignedInSession
+		if err := json.Unmarshal(w.Body.Bytes(), &s); err != nil {
+			t.Fatal(err)
+		}
+		if w.Code != 200 || !s.Authenticated || s.CsrfToken == "" {
+			t.Fatalf("%q: %d %s", site, w.Code, w.Body.String())
+		}
+	}
+}
+
 func mustSessionID(t *testing.T, ts *testServer, session *http.Cookie) (id uuid.UUID) {
 	t.Helper()
 	a, err := ts.Sessions.Authenticate(t.Context(), session.Value)

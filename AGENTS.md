@@ -348,6 +348,8 @@ redactor the moment the settings are loaded, before the pool opens.
   CSRF (403), body or query (400), then the service, which judges the id.
   The role is read from the database on every request. A body is at most
   64 KiB, with no unknown, repeated, or wrongly typed key.
+  `GET /auth/session` first refuses a request whose `Sec-Fetch-Site` is
+  present and neither `same-origin` nor `none`, with 403 `CSRF_REJECTED`.
 - **The report routes are those of spec 11.10:** `POST /reports`,
   `GET /reports` (a keyset page on creation time and id), `GET /reports/{id}`,
   its `/view?lang=`, `/snapshot`, and `/pdf?lang=`, `POST

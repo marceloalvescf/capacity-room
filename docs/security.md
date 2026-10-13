@@ -39,7 +39,7 @@ including running the two commands that need `KCR_BOOTSTRAP_MODE=1`.
 | `X-Forwarded-For` believed only from `trusted_proxies`, last address only | A client choosing its own address | `internal/platform/api/client.go`, `deploy/compose.yaml` (fixed subnet) |
 | Session tokens of 256 bits, stored as SHA-256; cookie `Secure`, `HttpOnly`, `SameSite=Lax`, `Path=/api`; 12 hours absolute, 1 hour idle | Session theft and fixation | `internal/platform/auth/session.go`, `internal/platform/api/auth.go` |
 | A new session at every sign-in; every session revoked on a change of role, active flag, or password | A stale session keeping rights | `internal/platform/auth/` |
-| CSRF token bound to the session, checked on every change; a double-submit pair for sign-in | Cross-site requests | `internal/platform/api/` |
+| CSRF token bound to the session, checked on every change; a double-submit pair for sign-in; the session route refuses a request from another site | Cross-site requests | `internal/platform/api/` |
 | Checks in one order on every route (session, role, CSRF, body, then the service); role read from the database on every request | A route that forgets a check | `internal/platform/api/` |
 | Reports readable by every signed-in user, deletable by an administrator or their owner; idempotency keys scoped to their owner | One user acting on another's report | `internal/platform/reports/` |
 | Outbound policy: `http` and `https` only, refused address classes, allowlists by name or range, resolution before each request, connection to the literal address, peer checked after connecting, no redirect, no proxy | SSRF to the metadata service, loopback, or the internal network | `internal/platform/netpolicy/` |
@@ -126,7 +126,7 @@ reason.
 | The profile tests tell ports apart within an allowed host or range | 3 | inherent | documented: an entry grants every port | `docs/operations.md` |
 | An answer of up to 256 MiB grows about 30 times in memory when decoded | 6 | hardening | fixed | decoded one series at a time; peak growth measured at 1.4 times the body |
 | Samples near the largest float make an average infinite, and the collection fails | 6 | hardening | fixed | a code of its own, `SOURCE_VALUES_OUT_OF_RANGE`, not retried |
-| A cross-site navigation to the session route rotates the CSRF token | 2 | hardening | deferred | the page heals with one retry; a fix changes the route's contract |
+| A cross-site navigation to the session route rotates the CSRF token | 2 | hardening | fixed | the route refuses a request from another site |
 | Two routes judge an id before the body | 2 | no security effect | deferred | every check of identity and role runs first |
 | Two password writes of one user at one instant can answer 500 | 1 | not a security defect | deferred | needs two writes at the same instant |
 | Bidirectional characters in a name reach the PDF and the view | 6 | hardening | deferred | shown as text, never run |

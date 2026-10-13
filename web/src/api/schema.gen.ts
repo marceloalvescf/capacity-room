@@ -1186,6 +1186,15 @@ export interface operations {
                     "application/json": components["schemas"]["Session"];
                 };
             };
+            /** @description A request from another site (`Sec-Fetch-Site` neither `same-origin` nor `none`); nothing is rotated. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             default: components["responses"]["Unexpected"];
         };
     };

@@ -46,6 +46,12 @@ func (s *Server) anonymous(w http.ResponseWriter, r *http.Request, clearSession 
 // both states itself: a missing, expired, or revoked session, and an
 // inactive account, answer as an anonymous caller.
 func (s *Server) getSession(w http.ResponseWriter, r *http.Request) {
+	// A request from another site, such as a top-level navigation that
+	// carries the Lax cookie, must not rotate the token of an open page.
+	if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" && site != "none" {
+		WriteProblem(w, &Problem{Code: CodeCSRFRejected})
+		return
+	}
 	cookie, err := r.Cookie(SessionCookie)
 	if err != nil || cookie.Value == "" {
 		s.anonymous(w, r, false)
