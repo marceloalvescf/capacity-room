@@ -6,6 +6,26 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A node that was not ready, or was cordoned, at the end of the period has a finding of attention, in the PDF and on the web.
+- The report view gives each node's state its own status, so the State column marks a node that is not ready or cordoned, and one whose readiness is unknown.
+
+### Changed
+
+- An HPA's situation carries the mark of its worst finding, so an HPA below its maximum with a finding of attention no longer reads healthy.
+- Node utilization reads Partial while the evidence of node capacity is incomplete.
+- The limit findings describe the usage against the limit and no longer predict a risk beside a healthy mark.
+- The node autoscaling finding says the cluster reached or came close to its observed maximum.
+- Every date of the report, in the PDF and on the web, is written as an ISO date and time.
+- A healthy finding shows no action, and a capability with no remark shows an empty cell in place of "No remark".
+- CPU variation is judged only from an average of 1 mCPU, so a near-zero average no longer reports an absurd variation.
+
+### Fixed
+
+- A number and its unit no longer split across two lines in the PDF.
+- A status mark no longer sits on a line above its label in a narrow column of the PDF.
+
 ## [1.4.0] - 2026-10-13
 
 ### Changed
