@@ -128,7 +128,7 @@ describe("findings tab", () => {
     expect(items()).toHaveLength(1);
     expect(items()[0]).toHaveTextContent(sentenceOf(16));
     await user.clear(screen.getByRole("searchbox"));
-    await user.type(screen.getByRole("searchbox"), "increased risk");
+    await user.type(screen.getByRole("searchbox"), "against the limit");
     expect(items()).toHaveLength(4);
   });
 

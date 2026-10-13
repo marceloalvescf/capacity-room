@@ -41,7 +41,7 @@ describe("overview tab", () => {
     const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
     expect(band).toHaveTextContent("3/3");
     expect(within(band).getByText("Nodes · current / maximum")).toBeInTheDocument();
-    expect(within(band).getByText("The number of nodes is close to the observed maximum.")).toBeInTheDocument();
+    expect(within(band).getByText("The number of nodes reached or came close to the observed maximum.")).toBeInTheDocument();
     expect(within(band).getByText("Attention")).toBeInTheDocument();
     expect(band).toHaveTextContent("Minimum nodes 2 · Unschedulable pods 2 · Scale events 1");
     const link = within(band).getByRole("link", { name: "See autoscaling" });
