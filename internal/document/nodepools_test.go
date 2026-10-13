@@ -197,7 +197,7 @@ func TestPoolProfileMeans(t *testing.T) {
 	s := poolSnapshot(t, []snapshot.Node{n})
 	row := findTable(t, poolBlocks(t, s, catalog.PortugueseBrazil, "all"), "nodepool-profile").Rows[0]
 
-	want := []string{"apps", "7,5 cores", "4,12 cores", "4,5 cores", "30 B", "19,2 B", "21 B"}
+	want := []string{"apps", "7,5\u00a0cores", "4,12\u00a0cores", "4,5\u00a0cores", "30\u00a0B", "19,2\u00a0B", "21\u00a0B"}
 	for i, text := range want {
 		if got := runText(t, row[i][0]); got != text {
 			t.Errorf("cell %d = %q, want %q", i, got, text)
@@ -212,7 +212,7 @@ func TestPoolProfileSubsetMeans(t *testing.T) {
 	s := poolSnapshot(t, []snapshot.Node{n})
 	row := findTable(t, poolBlocks(t, s, catalog.English, "all"), "nodepool-profile").Rows[0]
 
-	want := []string{"apps", "4 cores", "Unavailable", "Unavailable", "2 KiB", "Unavailable", "Unavailable"}
+	want := []string{"apps", "4\u00a0cores", "Unavailable", "Unavailable", "2\u00a0KiB", "Unavailable", "Unavailable"}
 	for i, text := range want {
 		if got := runText(t, row[i][0]); got != text {
 			t.Errorf("cell %d = %q, want %q", i, got, text)
@@ -230,10 +230,10 @@ func TestPoolProfileDivisorIsTheSubset(t *testing.T) {
 	row := findTable(t, poolBlocks(t, s, catalog.English, "all"), "nodepool-profile").Rows[0]
 
 	// Allocatable: mean of 4 and 8. Used: only a has both numbers, so 4 * 50 / 100.
-	if got := runText(t, row[1][0]); got != "6 cores" {
+	if got := runText(t, row[1][0]); got != "6\u00a0cores" {
 		t.Errorf("allocatable = %q, want 6 cores", got)
 	}
-	if got := runText(t, row[2][0]); got != "2 cores" {
+	if got := runText(t, row[2][0]); got != "2\u00a0cores" {
 		t.Errorf("used = %q, want 2 cores", got)
 	}
 }

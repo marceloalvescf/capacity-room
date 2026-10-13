@@ -186,7 +186,7 @@ func TestExecutiveOrder(t *testing.T) {
 	if !ok {
 		t.Fatalf("blocks[1] is %T, want Paragraph", blocks[1])
 	}
-	if want := catText(t, cat, catalog.SectionsExecutiveIntro, catalog.Params{"Period": "24 horas"}); runString(p.Runs[0]) != "text:"+want {
+	if want := catText(t, cat, catalog.SectionsExecutiveIntro, catalog.Params{"Period": "24\u00a0horas"}); runString(p.Runs[0]) != "text:"+want {
 		t.Errorf("intro = %q, want %q", runString(p.Runs[0]), want)
 	}
 

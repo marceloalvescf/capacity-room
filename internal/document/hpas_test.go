@@ -347,7 +347,7 @@ func TestHPASectionHeadingsAndIntro(t *testing.T) {
 	if h.Level != 1 || !h.Numbered || runText(t, h.Runs[0]) != "Histórico de HPA" {
 		t.Errorf("heading = %+v", h)
 	}
-	want := "Comportamento dos Horizontal Pod Autoscalers no período de 24 horas. A situação indica se o máximo configurado foi observado."
+	want := "Comportamento dos Horizontal Pod Autoscalers no período de 24\u00a0horas. A situação indica se o máximo configurado foi observado."
 	if got := runText(t, blocks[1].(Paragraph).Runs[0]); got != want {
 		t.Errorf("intro = %q, want %q", got, want)
 	}

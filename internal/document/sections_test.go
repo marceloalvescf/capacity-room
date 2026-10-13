@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 	"testing"
 
@@ -130,7 +131,7 @@ func TestSectionsOfDirectCompleteInPortuguese(t *testing.T) {
 	}
 
 	cpu := table.Rows[0]
-	wantCPU := []string{"CPU", "300 mCPU", "400 mCPU", "500 mCPU", "1 core"}
+	wantCPU := []string{"CPU", "300\u00a0mCPU", "400\u00a0mCPU", "500\u00a0mCPU", "1\u00a0core"}
 	for i, want := range wantCPU {
 		if got := runText(t, cpu[i][0]); got != want {
 			t.Errorf("cpu cell %d = %q, want %q", i, got, want)
@@ -140,7 +141,7 @@ func TestSectionsOfDirectCompleteInPortuguese(t *testing.T) {
 	assertStatus(t, cpu[6][0], "healthy", "40%")
 
 	mem := table.Rows[1]
-	wantMem := []string{"Memória", "110 B", "120 B", "0,5 B", "1 B"}
+	wantMem := []string{"Memória", "110\u00a0B", "120\u00a0B", "0,5\u00a0B", "1\u00a0B"}
 	for i, want := range wantMem {
 		if got := runText(t, mem[i][0]); got != want {
 			t.Errorf("memory cell %d = %q, want %q", i, got, want)
@@ -168,8 +169,8 @@ func TestSectionsOfDirectCompleteInEnglish(t *testing.T) {
 	if got := runText(t, table.Rows[1][0][0]); got != "Memory" {
 		t.Errorf("memory row label = %q, want %q", got, "Memory")
 	}
-	if got := runText(t, table.Rows[1][3][0]); got != "0.5 B" {
-		t.Errorf("memory request = %q, want %q", got, "0.5 B")
+	if got := runText(t, table.Rows[1][3][0]); got != "0.5\u00a0B" {
+		t.Errorf("memory request = %q, want %q", got, "0.5\u00a0B")
 	}
 }
 
@@ -658,16 +659,20 @@ func parityComposed(t *testing.T, cat *catalog.Catalog) map[string]string {
 		return s
 	}
 	return map[string]string{
-		"Comportamento dos Horizontal Pod Autoscalers no período de 24 horas. A situação indica se o máximo configurado foi observado.": text(catalog.SectionsHPAsIntro, catalog.Params{"Period": "24 horas"}),
+		"Comportamento dos Horizontal Pod Autoscalers no período de 24 horas. A situação indica se o máximo configurado foi observado.": text(catalog.SectionsHPAsIntro, catalog.Params{"Period": "24\u00a0horas"}),
 		"Pronto; Agendável":                  text(catalog.NodeStateReady, nil) + "; " + text(catalog.NodeStateSchedulable, nil),
 		"Memória: pico de 80% de utilização": text(catalog.Reason("usage_peak", "memory"), catalog.Params{"Percent": "80%"}),
-		"Síntese dos principais riscos identificados no período de 24 horas, com foco em pontos de prioridade crítica e alta que requerem atenção imediata.": text(catalog.SectionsExecutiveIntro, catalog.Params{"Period": "24 horas"}),
+		"Síntese dos principais riscos identificados no período de 24 horas, com foco em pontos de prioridade crítica e alta que requerem atenção imediata.": text(catalog.SectionsExecutiveIntro, catalog.Params{"Period": "24\u00a0horas"}),
 		"CPU: pico de 97% da solicitação": text(catalog.Reason("request_peak", "cpu"), catalog.Params{"Percent": "97%"}),
 		"10 observadas / máximo 10":       text(catalog.SectionsExecutiveReplicasObserved, catalog.Params{"Peak": "10", "Max": "10"}),
 		"2 ativas":                        text(catalog.SectionsExecutiveActiveReplicasPlural, catalog.Params{"Count": "2"}),
 		"1 crítica":                       text(catalog.RiskCount("critical", 1), nil),
 	}
 }
+
+// parityUnitText matches a number and its unit written with a plain space, as
+// the original writes them.
+var parityUnitText = regexp.MustCompile(`^(-?[0-9][0-9.,]*) (mCPU|cores?|B|KiB|MiB|GiB|TiB)$`)
 
 // withCatalogTexts returns a copy of v, a decoded JSON value, in which every
 // header and every run that is not an identifier and whose text parityTexts,
@@ -689,7 +694,7 @@ func withCatalogTexts(t *testing.T, cat *catalog.Catalog, v any) any {
 		}
 		key, ok := parityTexts[s]
 		if !ok {
-			return s
+			return parityUnitText.ReplaceAllString(s, "$1\u00a0$2")
 		}
 		text, err := cat.Text(key, nil)
 		if err != nil {
@@ -994,7 +999,7 @@ func TestParitySubstitutionChangesTheFixture(t *testing.T) {
 		"rows": []any{
 			[]any{
 				[]any{map[string]any{"kind": "ident", "text": "Solicitação"}},
-				[]any{map[string]any{"kind": "text", "text": "3,5 cores"}},
+				[]any{map[string]any{"kind": "text", "text": "3,5\u00a0cores"}},
 				[]any{map[string]any{"kind": "status", "status": "unavailable", "text": "Indisponível"}},
 			},
 		},
@@ -1021,7 +1026,7 @@ func TestParitySubstitutionChangesTheFixture(t *testing.T) {
 		t.Errorf("ident run = %q, want it left alone", ident["text"])
 	}
 	number := row[1].([]any)[0].(map[string]any)
-	if number["text"] != "3,5 cores" {
+	if number["text"] != "3,5\u00a0cores" {
 		t.Errorf("number run = %q, want it left alone", number["text"])
 	}
 	status := row[2].([]any)[0].(map[string]any)

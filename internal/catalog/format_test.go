@@ -186,17 +186,17 @@ func TestCPU(t *testing.T) {
 		pt    string
 		en    string
 	}{
-		{cores: 0.5, pt: "500 mCPU", en: "500 mCPU"},
-		{cores: 0.0004, pt: "0,4 mCPU", en: "0.4 mCPU"},
-		{cores: 0.99996, pt: "1000 mCPU", en: "1000 mCPU"},
-		{cores: 1, pt: "1 core", en: "1 core"},
-		{cores: -1, pt: "-1 core", en: "-1 core"},
-		{cores: 1.004, pt: "1 core", en: "1 core"},
-		{cores: 2, pt: "2 cores", en: "2 cores"},
-		{cores: 2.5, pt: "2,5 cores", en: "2.5 cores"},
-		{cores: 3.5, pt: "3,5 cores", en: "3.5 cores"},
-		{cores: 4.125, pt: "4,12 cores", en: "4.12 cores"},
-		{cores: 0, pt: "0 mCPU", en: "0 mCPU"},
+		{cores: 0.5, pt: "500\u00a0mCPU", en: "500\u00a0mCPU"},
+		{cores: 0.0004, pt: "0,4\u00a0mCPU", en: "0.4\u00a0mCPU"},
+		{cores: 0.99996, pt: "1000\u00a0mCPU", en: "1000\u00a0mCPU"},
+		{cores: 1, pt: "1\u00a0core", en: "1\u00a0core"},
+		{cores: -1, pt: "-1\u00a0core", en: "-1\u00a0core"},
+		{cores: 1.004, pt: "1\u00a0core", en: "1\u00a0core"},
+		{cores: 2, pt: "2\u00a0cores", en: "2\u00a0cores"},
+		{cores: 2.5, pt: "2,5\u00a0cores", en: "2.5\u00a0cores"},
+		{cores: 3.5, pt: "3,5\u00a0cores", en: "3.5\u00a0cores"},
+		{cores: 4.125, pt: "4,12\u00a0cores", en: "4.12\u00a0cores"},
+		{cores: 0, pt: "0\u00a0mCPU", en: "0\u00a0mCPU"},
 	}
 
 	pt, err := Load(PortugueseBrazil)
@@ -224,12 +224,12 @@ func TestMemory(t *testing.T) {
 		pt    string
 		en    string
 	}{
-		{bytes: 12, pt: "12 B", en: "12 B"},
-		{bytes: 1.5, pt: "1,5 B", en: "1.5 B"},
-		{bytes: 1023, pt: "1023 B", en: "1023 B"},
-		{bytes: 1024, pt: "1 KiB", en: "1 KiB"},
-		{bytes: 1342177280, pt: "1,25 GiB", en: "1.25 GiB"},
-		{bytes: 2 * 1024 * 1024 * 1024 * 1024 * 1024, pt: "2048 TiB", en: "2048 TiB"},
+		{bytes: 12, pt: "12\u00a0B", en: "12\u00a0B"},
+		{bytes: 1.5, pt: "1,5\u00a0B", en: "1.5\u00a0B"},
+		{bytes: 1023, pt: "1023\u00a0B", en: "1023\u00a0B"},
+		{bytes: 1024, pt: "1\u00a0KiB", en: "1\u00a0KiB"},
+		{bytes: 1342177280, pt: "1,25\u00a0GiB", en: "1.25\u00a0GiB"},
+		{bytes: 2 * 1024 * 1024 * 1024 * 1024 * 1024, pt: "2048\u00a0TiB", en: "2048\u00a0TiB"},
 	}
 
 	pt, err := Load(PortugueseBrazil)
@@ -335,21 +335,21 @@ func TestPeriod(t *testing.T) {
 		pt     string
 		en     string
 	}{
-		{"24 hours", 24 * time.Hour, "24 horas", "24 hours"},
-		{"7 days", 7 * 24 * time.Hour, "7 dias", "7 days"},
-		{"6 days", 6 * 24 * time.Hour, "144 horas", "144 hours"},
-		{"1 hour", time.Hour, "1 hora", "1 hour"},
-		{"90 minutes", 90 * time.Minute, "90 minutos", "90 minutes"},
-		{"1 minute", time.Minute, "1 minuto", "1 minute"},
-		{"90 seconds", 90 * time.Second, "90 segundos", "90 seconds"},
-		{"1 second", time.Second, "1 segundo", "1 second"},
-		{"zero", 0, "0 segundos", "0 seconds"},
-		{"8 days", 8 * 24 * time.Hour, "8 dias", "8 days"},
-		{"7 days and 1 hour", 7*24*time.Hour + time.Hour, "169 horas", "169 hours"},
-		{"2.5 seconds", 2500 * time.Millisecond, "2 segundos", "2 seconds"},
-		{"3.5 seconds", 3500 * time.Millisecond, "4 segundos", "4 seconds"},
-		{"2.6 seconds", 2600 * time.Millisecond, "3 segundos", "3 seconds"},
-		{"negative", -5 * time.Hour, "0 segundos", "0 seconds"},
+		{"24\u00a0hours", 24 * time.Hour, "24\u00a0horas", "24\u00a0hours"},
+		{"7\u00a0days", 7 * 24 * time.Hour, "7\u00a0dias", "7\u00a0days"},
+		{"6\u00a0days", 6 * 24 * time.Hour, "144\u00a0horas", "144\u00a0hours"},
+		{"1 hour", time.Hour, "1\u00a0hora", "1\u00a0hour"},
+		{"90 minutes", 90 * time.Minute, "90\u00a0minutos", "90\u00a0minutes"},
+		{"1 minute", time.Minute, "1\u00a0minuto", "1\u00a0minute"},
+		{"90 seconds", 90 * time.Second, "90\u00a0segundos", "90\u00a0seconds"},
+		{"1 second", time.Second, "1\u00a0segundo", "1\u00a0second"},
+		{"zero", 0, "0\u00a0segundos", "0\u00a0seconds"},
+		{"8 days", 8 * 24 * time.Hour, "8\u00a0dias", "8\u00a0days"},
+		{"7 days and 1 hour", 7*24*time.Hour + time.Hour, "169\u00a0horas", "169\u00a0hours"},
+		{"2.5 seconds", 2500 * time.Millisecond, "2\u00a0segundos", "2\u00a0seconds"},
+		{"3.5 seconds", 3500 * time.Millisecond, "4\u00a0segundos", "4\u00a0seconds"},
+		{"2.6 seconds", 2600 * time.Millisecond, "3\u00a0segundos", "3\u00a0seconds"},
+		{"negative", -5 * time.Hour, "0\u00a0segundos", "0\u00a0seconds"},
 	}
 
 	pt, err := Load(PortugueseBrazil)

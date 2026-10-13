@@ -45,21 +45,27 @@ func (c *Catalog) Percent(value float64) string {
 	return c.Decimal(value, 1) + "%"
 }
 
+// unitSpace joins a number and its unit: a no-break space, so that a line
+// never breaks between them.
+const unitSpace = "\u00a0"
+
 // CPU writes cores in millicores when its absolute value is below 1, and in
-// cores otherwise; a value that writes as 1 or -1 takes the singular "core".
+// cores otherwise, followed by a no-break space and the unit; a value that
+// writes as 1 or -1 takes the singular "core".
 func (c *Catalog) CPU(cores float64) string {
 	if math.Abs(cores) < 1 {
-		return c.Decimal(cores*1000, 1) + " mCPU"
+		return c.Decimal(cores*1000, 1) + unitSpace + "mCPU"
 	}
 	written := c.Decimal(cores, 2)
 	if written == c.Decimal(1, 2) || written == c.Decimal(-1, 2) {
-		return written + " core"
+		return written + unitSpace + "core"
 	}
-	return written + " cores"
+	return written + unitSpace + "cores"
 }
 
 // Memory writes bytes in the largest of B, KiB, MiB, GiB, and TiB whose
-// absolute value stays at or above 1, with two digits.
+// absolute value stays at or above 1, with two digits, followed by a
+// no-break space and the unit.
 func (c *Catalog) Memory(bytes float64) string {
 	units := []string{"B", "KiB", "MiB", "GiB", "TiB"}
 	scaled := bytes
@@ -71,7 +77,7 @@ func (c *Catalog) Memory(bytes float64) string {
 		scaled /= 1024
 		unit = candidate
 	}
-	return c.Decimal(scaled, 2) + " " + unit
+	return c.Decimal(scaled, 2) + unitSpace + unit
 }
 
 // Count rounds value to the nearest whole number, a half to the even one,
@@ -88,7 +94,8 @@ func (c *Catalog) Count(value float64) string {
 // Period writes the length of a period as the original does: whole seconds
 // rounded half to even, then days for seven days or more when the count is
 // exact, else hours when exact, else minutes when exact, else seconds; the
-// unit word from the catalog, plural for every value but 1.
+// count is followed by a no-break space and the unit word from the catalog,
+// plural for every value but 1.
 func (c *Catalog) Period(start, end time.Time) (string, error) {
 	seconds := int(math.Max(0, math.RoundToEven(end.Sub(start).Seconds())))
 
@@ -114,5 +121,5 @@ func (c *Catalog) Period(start, end time.Time) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return c.Integer(count) + " " + word, nil
+	return c.Integer(count) + unitSpace + word, nil
 }
