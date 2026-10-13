@@ -79,8 +79,9 @@
 // check-exact-keys backs every `unknown-key` and `missing-key` diagnostic,
 // for every object of the data file: the report itself, `theme`,
 // `labels`, `cover`, `footer`, every block (including one nested inside
-// `front`), and every run (wherever it appears).
-#let check-exact-keys(place, value, allowed) = {
+// `front`), and every run (wherever it appears). A key named in `optional`
+// is allowed and may be absent.
+#let check-exact-keys(place, value, allowed, optional: ()) = {
   expect-dict(place, value)
   for key in value.keys() {
     if not (key in allowed) {
@@ -91,7 +92,7 @@
     }
   }
   for key in allowed {
-    if not (key in value.keys()) {
+    if not (key in value.keys()) and not (key in optional) {
       fail("missing-key", " \"" + key + "\" in " + place)
     }
   }
@@ -120,14 +121,17 @@
 #let allowed-statuses = ("healthy", "attention", "critical", "undefined", "unavailable")
 
 // allowed-run-keys-for-kind: `text`, `strong`, `ident`, and `placeholder`
-// runs allow only `kind` and `text`; `status` runs also allow `status`.
+// runs allow only `kind` and `text`; `status` runs also allow `status`
+// and `alt`, the word of the status when `text` is not that word. `alt` is
+// the one key a run may leave out.
 #let allowed-run-keys-for-kind = (
   text: ("kind", "text"),
   strong: ("kind", "text"),
   ident: ("kind", "text"),
   placeholder: ("kind", "text"),
-  status: ("kind", "status", "text"),
+  status: ("kind", "status", "text", "alt"),
 )
+#let optional-run-keys = ("alt",)
 
 // validate-run checks one run object, wherever it appears (a heading's,
 // paragraph's, or callout's `runs`, a callout `title`, a list item, or a
@@ -150,7 +154,7 @@
   }
   // `kind` is now a confirmed, known string: safe to use as a dictionary
   // key and to interpolate directly, with no further conversion.
-  check-exact-keys(path, run, allowed-run-keys-for-kind.at(kind))
+  check-exact-keys(path, run, allowed-run-keys-for-kind.at(kind), optional: optional-run-keys)
 
   if kind == "status" {
     let status = run.status
@@ -161,6 +165,7 @@
       fail("unknown-status", " \"" + status + "\" at " + path)
     }
     expect-string-or-none(path + ".text", run.text)
+    expect-string-or-none(path + ".alt", run.at("alt", default: none))
   } else {
     expect-string(path + ".text", run.text)
   }
@@ -414,9 +419,9 @@
   expect-array(pressure + ".rows", p.rows)
   for (i, row) in p.rows.enumerate() {
     let item = pressure + ".rows[" + str(i) + "]"
-    check-exact-keys(item, row, ("status", "scope", "sentence", "name", "peak", "counts"))
+    check-exact-keys(item, row, ("status", "label", "scope", "sentence", "name", "peak", "counts"))
     check-status(item + ".status", row.status)
-    check-strings(item, row, ("scope", "sentence"))
+    check-strings(item, row, ("label", "scope", "sentence"))
     expect-array(item + ".name", row.name)
     for (k, run) in row.name.enumerate() {
       validate-run(item + ".name[" + str(k) + "]", run)

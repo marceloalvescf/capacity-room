@@ -95,6 +95,7 @@
         "rows": [
           {
             "status": "critical",
+            "label": "Critical",
             "scope": "Nodes",
             "sentence": "Observed CPU usage on the node.",
             "name": [
@@ -117,6 +118,7 @@
           },
           {
             "status": "critical",
+            "label": "Critical",
             "scope": "Namespaces",
             "sentence": "CPU usage against the limit indicates an increased risk of CPU throttling.",
             "name": [
@@ -139,6 +141,7 @@
           },
           {
             "status": "critical",
+            "label": "Critical",
             "scope": "Workloads",
             "sentence": "Memory usage against the limit indicates an increased risk of OOMKill.",
             "name": [
@@ -166,6 +169,7 @@
           },
           {
             "status": "critical",
+            "label": "Critical",
             "scope": "HPAs",
             "sentence": "The HPA reached its observed maximum of replicas.",
             "name": [
@@ -190,6 +194,7 @@
           },
           {
             "status": "attention",
+            "label": "Attention",
             "scope": "Node pools",
             "sentence": "Peak CPU pressure varied among the nodes of the pool.",
             "name": [
@@ -233,7 +238,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Critical"
+                  "text": "Critical",
+                  "alt": null
                 }
               ],
               [
@@ -264,7 +270,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Critical"
+                  "text": "Critical",
+                  "alt": null
                 }
               ],
               [
@@ -295,7 +302,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Critical"
+                  "text": "Critical",
+                  "alt": null
                 }
               ],
               [
@@ -326,7 +334,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Critical"
+                  "text": "Critical",
+                  "alt": null
                 }
               ],
               [
@@ -357,7 +366,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Critical"
+                  "text": "Critical",
+                  "alt": null
                 }
               ],
               [
@@ -574,7 +584,8 @@
                 {
                   "kind": "status",
                   "status": "healthy",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -589,7 +600,8 @@
                 {
                   "kind": "status",
                   "status": "attention",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -604,7 +616,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -619,7 +632,8 @@
                 {
                   "kind": "status",
                   "status": "unavailable",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -634,7 +648,8 @@
                 {
                   "kind": "status",
                   "status": "undefined",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -821,14 +836,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "330%"
+              "text": "330%",
+              "alt": "Critical"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "12000%"
+              "text": "12000%",
+              "alt": "Critical"
             }
           ],
           [
@@ -847,7 +864,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Critical"
+              "text": "Critical",
+              "alt": null
             }
           ]
         ]
@@ -904,7 +922,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "HPA maximum reached"
+              "text": "HPA maximum reached",
+              "alt": "Critical"
             }
           ]
         ],
@@ -937,7 +956,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "No HPA"
+              "text": "No HPA",
+              "alt": "Attention"
             }
           ]
         ]
@@ -974,7 +994,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Critical"
+              "text": "Critical",
+              "alt": null
             }
           ],
           [
@@ -995,7 +1016,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Critical"
+              "text": "Critical",
+              "alt": null
             }
           ],
           [
@@ -1016,7 +1038,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Attention"
+              "text": "Attention",
+              "alt": null
             }
           ],
           [
@@ -1060,7 +1083,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Critical"
+              "text": "Critical",
+              "alt": null
             }
           ],
           [
@@ -1091,7 +1115,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Critical"
+              "text": "Critical",
+              "alt": null
             }
           ],
           [
@@ -1122,7 +1147,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Critical"
+              "text": "Critical",
+              "alt": null
             }
           ],
           [
@@ -1153,7 +1179,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Critical"
+              "text": "Critical",
+              "alt": null
             }
           ],
           [
@@ -1184,7 +1211,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Critical"
+              "text": "Critical",
+              "alt": null
             }
           ],
           [
@@ -1215,7 +1243,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Critical"
+              "text": "Critical",
+              "alt": null
             }
           ],
           [
@@ -1246,7 +1275,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Critical"
+              "text": "Critical",
+              "alt": null
             }
           ],
           [
@@ -1277,7 +1307,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Attention"
+              "text": "Attention",
+              "alt": null
             }
           ],
           [
@@ -1308,7 +1339,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Attention"
+              "text": "Attention",
+              "alt": null
             }
           ],
           [
@@ -1339,7 +1371,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Attention"
+              "text": "Attention",
+              "alt": null
             }
           ],
           [
@@ -1392,7 +1425,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Partial"
+              "text": "Partial",
+              "alt": null
             }
           ],
           [
@@ -1413,7 +1447,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Partial"
+              "text": "Partial",
+              "alt": null
             }
           ],
           [
@@ -1499,14 +1534,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "660%"
+              "text": "660%",
+              "alt": "Critical"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "330%"
+              "text": "330%",
+              "alt": "Critical"
             }
           ]
         ],
@@ -1545,14 +1582,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "24000%"
+              "text": "24000%",
+              "alt": "Critical"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "12000%"
+              "text": "12000%",
+              "alt": "Critical"
             }
           ]
         ]
@@ -1629,14 +1668,16 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "80%"
+              "text": "80%",
+              "alt": "Attention"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "40%"
+              "text": "40%",
+              "alt": "Healthy"
             }
           ],
           [
@@ -1655,14 +1696,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "24000%"
+              "text": "24000%",
+              "alt": "Critical"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "12000%"
+              "text": "12000%",
+              "alt": "Critical"
             }
           ]
         ]
@@ -1784,7 +1827,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Unavailable"
+              "text": "Unavailable",
+              "alt": "Data unavailable"
             }
           ]
         ],
@@ -1829,7 +1873,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Pinned"
+              "text": "Pinned",
+              "alt": "Healthy"
             }
           ]
         ],
@@ -1874,7 +1919,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Maximum reached"
+              "text": "Maximum reached",
+              "alt": "Critical"
             }
           ]
         ]
@@ -1924,7 +1970,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "No HPA"
+              "text": "No HPA",
+              "alt": "Attention"
             }
           ]
         ],
@@ -1951,7 +1998,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Specific scaling strategy"
+              "text": "Specific scaling strategy",
+              "alt": "Data unavailable"
             }
           ]
         ]
@@ -2009,28 +2057,32 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "92.5%"
+              "text": "92.5%",
+              "alt": "Critical"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "95%"
+              "text": "95%",
+              "alt": "Critical"
             }
           ],
           [
             {
               "kind": "status",
               "status": "attention",
-              "text": "71%"
+              "text": "71%",
+              "alt": "Attention"
             }
           ],
           [
             {
               "kind": "status",
               "status": "attention",
-              "text": "72%"
+              "text": "72%",
+              "alt": "Attention"
             }
           ],
           [
@@ -2057,28 +2109,32 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "38.8%"
+              "text": "38.8%",
+              "alt": "Healthy"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "60%"
+              "text": "60%",
+              "alt": "Healthy"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "38.8%"
+              "text": "38.8%",
+              "alt": "Healthy"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "55%"
+              "text": "55%",
+              "alt": "Healthy"
             }
           ],
           [
@@ -2105,28 +2161,32 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Unavailable"
+              "text": "Unavailable",
+              "alt": "Data unavailable"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Unavailable"
+              "text": "Unavailable",
+              "alt": "Data unavailable"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Unavailable"
+              "text": "Unavailable",
+              "alt": "Data unavailable"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Unavailable"
+              "text": "Unavailable",
+              "alt": "Data unavailable"
             }
           ],
           [
@@ -2344,7 +2404,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "92.5%"
+              "text": "92.5%",
+              "alt": "Critical"
             },
             {
               "kind": "text",
@@ -2353,14 +2414,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "95%"
+              "text": "95%",
+              "alt": "Critical"
             }
           ],
           [
             {
               "kind": "status",
               "status": "attention",
-              "text": "71%"
+              "text": "71%",
+              "alt": "Attention"
             },
             {
               "kind": "text",
@@ -2369,14 +2432,16 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "72%"
+              "text": "72%",
+              "alt": "Attention"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "CPU: peak of 95% utilization"
+              "text": "CPU: peak of 95% utilization",
+              "alt": "Critical"
             }
           ],
           [
@@ -2425,7 +2490,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "20%"
+              "text": "20%",
+              "alt": "Healthy"
             },
             {
               "kind": "text",
@@ -2434,14 +2500,16 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "20%"
+              "text": "20%",
+              "alt": "Healthy"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "25%"
+              "text": "25%",
+              "alt": "Healthy"
             },
             {
               "kind": "text",
@@ -2450,14 +2518,16 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "25%"
+              "text": "25%",
+              "alt": "Healthy"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "CPU: 90% of the allocatable requested"
+              "text": "CPU: 90% of the allocatable requested",
+              "alt": "Critical"
             }
           ],
           [
@@ -2478,7 +2548,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "57.5%"
+              "text": "57.5%",
+              "alt": "Healthy"
             },
             {
               "kind": "text",
@@ -2487,14 +2558,16 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "60%"
+              "text": "60%",
+              "alt": "Healthy"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "52.5%"
+              "text": "52.5%",
+              "alt": "Healthy"
             },
             {
               "kind": "text",
@@ -2503,21 +2576,24 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "55%"
+              "text": "55%",
+              "alt": "Healthy"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "CPU: peak of 60% utilization; Memory: peak of 55% utilization"
+              "text": "CPU: peak of 60% utilization; Memory: peak of 55% utilization",
+              "alt": "Healthy"
             }
           ],
           [
             {
               "kind": "status",
               "status": "attention",
-              "text": "Not ready; Unschedulable"
+              "text": "Not ready; Unschedulable",
+              "alt": "Attention"
             }
           ]
         ]
@@ -2560,7 +2636,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Unavailable"
+              "text": "Unavailable",
+              "alt": "Data unavailable"
             },
             {
               "kind": "text",
@@ -2569,14 +2646,16 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Unavailable"
+              "text": "Unavailable",
+              "alt": "Data unavailable"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Unavailable"
+              "text": "Unavailable",
+              "alt": "Data unavailable"
             },
             {
               "kind": "text",
@@ -2585,7 +2664,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Unavailable"
+              "text": "Unavailable",
+              "alt": "Data unavailable"
             }
           ],
           [
@@ -2598,7 +2678,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Unavailable; Unavailable"
+              "text": "Unavailable; Unavailable",
+              "alt": "Data unavailable"
             }
           ]
         ]
@@ -2641,7 +2722,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Available"
+              "text": "Available",
+              "alt": null
             }
           ],
           [
@@ -2674,7 +2756,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Available"
+              "text": "Available",
+              "alt": null
             }
           ],
           [
@@ -2707,7 +2790,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Available"
+              "text": "Available",
+              "alt": null
             }
           ],
           [
@@ -2740,7 +2824,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Partial"
+              "text": "Partial",
+              "alt": null
             }
           ],
           [
@@ -2773,7 +2858,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Available"
+              "text": "Available",
+              "alt": null
             }
           ],
           [
@@ -2806,7 +2892,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Available"
+              "text": "Available",
+              "alt": null
             }
           ],
           [
@@ -2839,7 +2926,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Available"
+              "text": "Available",
+              "alt": null
             }
           ],
           [
@@ -2872,7 +2960,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Available"
+              "text": "Available",
+              "alt": null
             }
           ],
           [
@@ -2905,7 +2994,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Available"
+              "text": "Available",
+              "alt": null
             }
           ],
           [

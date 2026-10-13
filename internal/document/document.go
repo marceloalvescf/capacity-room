@@ -281,6 +281,7 @@ type VerdictPressure struct {
 // finding of that status, and how many of its rows reach each status.
 type VerdictPressureRow struct {
 	Status   string
+	Label    string // the word of Status, the alternate text of its mark
 	Scope    string
 	Sentence string
 	Name     []Run        // ident, or placeholder for an unknown pool; empty when none
@@ -400,17 +401,18 @@ func (p VerdictPressure) MarshalJSON() ([]byte, error) {
 	}{p.Title, nonNil(p.Rows), p.Empty})
 }
 
-// MarshalJSON writes the keys "status", "scope", "sentence", "name",
-// "peak", and "counts".
+// MarshalJSON writes the keys "status", "label", "scope", "sentence",
+// "name", "peak", and "counts".
 func (r VerdictPressureRow) MarshalJSON() ([]byte, error) {
 	return marshalNoEscape(struct {
 		Status   string         `json:"status"`
+		Label    string         `json:"label"`
 		Scope    string         `json:"scope"`
 		Sentence string         `json:"sentence"`
 		Name     []Run          `json:"name"`
 		Peak     *VerdictFact   `json:"peak"`
 		Counts   []VerdictCount `json:"counts"`
-	}{r.Status, r.Scope, r.Sentence, nonNilRuns(r.Name), r.Peak, nonNil(r.Counts)})
+	}{r.Status, r.Label, r.Scope, r.Sentence, nonNilRuns(r.Name), r.Peak, nonNil(r.Counts)})
 }
 
 // MarshalJSON writes the keys "title", "table", "empty", and "more".
@@ -459,6 +461,7 @@ type Run struct {
 	kind   string
 	status string
 	text   *string
+	alt    *string // the status word, for a status run whose text is not that word
 }
 
 // Text returns a plain run: prose in the document language.
@@ -478,18 +481,28 @@ func Placeholder(text string) Run { return Run{kind: "placeholder", text: &text}
 // Status returns a status mark alone: its text is null.
 func Status(status string) Run { return Run{kind: "status", status: status} }
 
-// StatusText returns a status mark together with its label.
+// StatusText returns a status mark together with its label, the word of the
+// status.
 func StatusText(status, text string) Run { return Run{kind: "status", status: status, text: &text} }
 
+// StatusValue returns a status mark beside a text that is not the word of
+// the status, such as a value or a reason; alt is that word, which the PDF
+// gives the mark as its alternate text.
+func StatusValue(status, text, alt string) Run {
+	return Run{kind: "status", status: status, text: &text, alt: &alt}
+}
+
 // MarshalJSON writes "kind" first, then "status" when this run carries one,
-// then "text", which is null for a status run built by Status.
+// then "text", which is null for a status run built by Status, then "alt"
+// for a status run, null unless the run was built by StatusValue.
 func (r Run) MarshalJSON() ([]byte, error) {
 	if r.kind == "status" {
 		return marshalNoEscape(struct {
 			Kind   string  `json:"kind"`
 			Status string  `json:"status"`
 			Text   *string `json:"text"`
-		}{r.kind, r.status, r.text})
+			Alt    *string `json:"alt"`
+		}{r.kind, r.status, r.text, r.alt})
 	}
 	return marshalNoEscape(struct {
 		Kind string  `json:"kind"`

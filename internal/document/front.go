@@ -1,6 +1,8 @@
 package document
 
 import (
+	"fmt"
+
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
@@ -22,6 +24,20 @@ var legendOrder = []legendRow{
 	{"critical", catalog.FrontLegendCritical},
 	{"unavailable", catalog.FrontLegendUnavailable},
 	{"undefined", catalog.FrontLegendUndefined},
+}
+
+// statusWord is the legend's word for status: the word a status mark stands
+// for when its run's text is a value rather than that word.
+func statusWord(b *builder, status string) string {
+	for _, row := range legendOrder {
+		if row.status == status {
+			return b.text(row.key, nil)
+		}
+	}
+	if b.err == nil {
+		b.err = fmt.Errorf("document: no legend word for status %q", status)
+	}
+	return ""
 }
 
 // profileKeys and severityKeys word the profile and the minimum severity the

@@ -373,3 +373,55 @@ func wantKind(ready *bool) string {
 	}
 	return "status"
 }
+
+// TestValueStatusRunsCarryTheLegendWord checks that a status run whose text
+// is a value, a reason, or a situation carries the legend's word for its
+// status as its alternate text, in both languages.
+func TestValueStatusRunsCarryTheLegendWord(t *testing.T) {
+	thresholds := config.Default().Thresholds
+	low := 12.0
+	no := boolPtr(false)
+	findings := []snapshot.Finding{
+		nodeFinding("NODE_LOW_UTILIZATION", analysis.SeverityAttention, "n1", number("maximum_average_percent", 10)),
+	}
+	maxReached := snapshot.HPA{
+		SpecMin: floatPtr(1), SpecMax: floatPtr(3),
+		Current: snapshot.Statistics{State: stateValue, Peak: floatPtr(3)},
+	}
+	runs := []struct {
+		name string
+		run  func(b *builder) Run
+		en   string
+		pt   string
+	}{
+		{"ratio critical", func(b *builder) Run { return ratioRun(b, valueStat(0, 240), thresholds) }, "Critical", "Crítico"},
+		{"ratio no base", func(b *builder) Run { return ratioRun(b, snapshot.Statistics{State: stateNoBase}, thresholds) }, "No base for the ratio", "Sem base de cálculo"},
+		{"percent healthy", func(b *builder) Run { return percentRun(b, &low, thresholds) }, "Healthy", "Saudável"},
+		{"percent unavailable", func(b *builder) Run { return percentRun(b, nil, thresholds) }, "Data unavailable", "Dado indisponível"},
+		{"node reason", func(b *builder) Run { return nodeReason(b, "n1", findings) }, "Attention", "Atenção"},
+		{"node state", func(b *builder) Run {
+			return nodeState(b, snapshot.Node{Ready: no, Schedulable: no})
+		}, "Attention", "Atenção"},
+		{"hpa situation", func(b *builder) Run { return hpaSituation(b, maxReached) }, "Critical", "Crítico"},
+		{"no hpa", func(b *builder) Run {
+			return uncoveredTable(b, []snapshot.Workload{{Kind: deploymentKind, Name: "web"}}).Rows[0][3][0]
+		}, "Attention", "Atenção"},
+	}
+	for _, tc := range runs {
+		for _, lang := range []struct {
+			lang catalog.Language
+			want string
+		}{{catalog.English, tc.en}, {catalog.PortugueseBrazil, tc.pt}} {
+			t.Run(tc.name+"/"+string(lang.lang), func(t *testing.T) {
+				b := &builder{cat: mustCatalog(t, lang.lang)}
+				run := tc.run(b)
+				if b.err != nil {
+					t.Fatalf("builder error = %v", b.err)
+				}
+				if run.alt == nil || *run.alt != lang.want {
+					t.Errorf("alt = %v, want %q", run.alt, lang.want)
+				}
+			})
+		}
+	}
+}

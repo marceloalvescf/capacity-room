@@ -18,7 +18,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - An action that covers more than three scopes no longer repeats their kind, in the PDF and in the web app.
-- Screen readers skip the status marks of the PDF and read the word beside them.
+- Screen readers read the status of every mark in the PDF as a word.
 
 ## [1.2.0] - 2026-10-13
 

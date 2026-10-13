@@ -74,34 +74,34 @@ func TestVerdictOfEdgeScalingPressure(t *testing.T) {
 
 	want := []VerdictPressureRow{
 		{
-			Status: "critical", Scope: "Nodes",
+			Status: "critical", Label: "Critical", Scope: "Nodes",
 			Sentence: "Observed CPU usage on the node.",
 			Name:     []Run{Ident("aks-agentpool-12345678-vmss000000")},
 			Peak:     &VerdictFact{"Peak", "95%"},
 			Counts:   []VerdictCount{{"critical", "Critical", "2"}},
 		},
 		{
-			Status: "critical", Scope: "Namespaces",
+			Status: "critical", Label: "Critical", Scope: "Namespaces",
 			Sentence: "CPU usage against the limit indicates an increased risk of CPU throttling.",
 			Name:     []Run{Ident("payments")},
 			Peak:     &VerdictFact{"Peak", "330%"},
 			Counts:   []VerdictCount{{"critical", "Critical", "1"}},
 		},
 		{
-			Status: "critical", Scope: "Workloads",
+			Status: "critical", Label: "Critical", Scope: "Workloads",
 			Sentence: "Memory usage against the limit indicates an increased risk of OOMKill.",
 			Name:     []Run{Ident("payments/payments-web")},
 			Peak:     &VerdictFact{"Peak", "12000%"},
 			Counts:   []VerdictCount{{"critical", "Critical", "1"}, {"attention", "Attention", "1"}},
 		},
 		{
-			Status: "critical", Scope: "HPAs",
+			Status: "critical", Label: "Critical", Scope: "HPAs",
 			Sentence: "The HPA reached its observed maximum of replicas.",
 			Name:     []Run{Ident("payments/web")},
 			Counts:   []VerdictCount{{"critical", "Critical", "1"}, {"attention", "Attention", "1"}},
 		},
 		{
-			Status: "attention", Scope: "Node pools",
+			Status: "attention", Label: "Attention", Scope: "Node pools",
 			Sentence: "Peak CPU pressure varied among the nodes of the pool.",
 			Name:     []Run{Ident("pool-a")},
 			Counts:   []VerdictCount{{"attention", "Attention", "2"}},

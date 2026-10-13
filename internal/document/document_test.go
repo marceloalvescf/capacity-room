@@ -127,8 +127,9 @@ func TestEncodeWritesExactKeys(t *testing.T) {
 	}{
 		{"text", Text("x"), []string{"kind", "text"}},
 		{"strong", Strong("x"), []string{"kind", "text"}},
-		{"status", Status("healthy"), []string{"kind", "status", "text"}},
-		{"status-text", StatusText("healthy", "x"), []string{"kind", "status", "text"}},
+		{"status", Status("healthy"), []string{"kind", "status", "text", "alt"}},
+		{"status-text", StatusText("healthy", "x"), []string{"kind", "status", "text", "alt"}},
+		{"status-value", StatusValue("healthy", "x", "Healthy"), []string{"kind", "status", "text", "alt"}},
 	}
 	for _, tc := range runCases {
 		t.Run("run/"+tc.name, func(t *testing.T) {
@@ -237,7 +238,7 @@ func TestVerdictMarshalsFull(t *testing.T) {
 		Pressure: VerdictPressure{
 			Title: "Pressure",
 			Rows: []VerdictPressureRow{{
-				Status: "critical", Scope: "Nodes", Sentence: "Hot.",
+				Status: "critical", Label: "Critical", Scope: "Nodes", Sentence: "Hot.",
 				Name:   []Run{Ident("n-1")},
 				Peak:   &VerdictFact{"Peak", "95%"},
 				Counts: []VerdictCount{{"critical", "Critical", "2"}},
@@ -261,12 +262,34 @@ func TestVerdictMarshalsFull(t *testing.T) {
 		`"gauge":{"current":3,"max":3,"min":2,"hazard":true},"caption":"Nodes",` +
 		`"finding":{"status":"attention","label":"Attention","sentence":"Close."},"warning":"Incomplete.",` +
 		`"facts":[{"label":"Minimum nodes","value":"2"}]},` +
-		`"pressure":{"title":"Pressure","rows":[{"status":"critical","scope":"Nodes","sentence":"Hot.",` +
+		`"pressure":{"title":"Pressure","rows":[{"status":"critical","label":"Critical","scope":"Nodes","sentence":"Hot.",` +
 		`"name":[{"kind":"ident","text":"n-1"}],"peak":{"label":"Peak","value":"95%"},` +
 		`"counts":[{"status":"critical","label":"Critical","count":"2"}]}],"empty":null},` +
 		`"plan":{"title":"Plan","table":{"type":"table","id":"verdict-plan","headers":["a"],"rows":[[[{"kind":"text","text":"x"}]]]},"empty":null,"more":"1 of 2 actions."},` +
 		`"legend":[{"status":"healthy","label":"Healthy"}]}`
 	if string(data) != want {
 		t.Errorf("Marshal() = %s\nwant %s", data, want)
+	}
+}
+
+// TestStatusRunAlt checks the "alt" of every status run: null when the text
+// is the status word or there is no text, the word when the text is a value.
+func TestStatusRunAlt(t *testing.T) {
+	cases := []struct {
+		run  Run
+		want string
+	}{
+		{Status("healthy"), `{"kind":"status","status":"healthy","text":null,"alt":null}`},
+		{StatusText("critical", "Critical"), `{"kind":"status","status":"critical","text":"Critical","alt":null}`},
+		{StatusValue("critical", "24000%", "Critical"), `{"kind":"status","status":"critical","text":"24000%","alt":"Critical"}`},
+	}
+	for _, tc := range cases {
+		data, err := json.Marshal(tc.run)
+		if err != nil {
+			t.Fatalf("Marshal() error = %v", err)
+		}
+		if string(data) != tc.want {
+			t.Errorf("Marshal() = %s, want %s", data, tc.want)
+		}
 	}
 }

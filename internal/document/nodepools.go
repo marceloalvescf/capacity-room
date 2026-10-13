@@ -94,7 +94,7 @@ func maximum(values []float64) *float64 {
 // percentRun judges a percentage, or marks it unavailable when it is nil.
 func percentRun(b *builder, value *float64, thresholds config.Thresholds) Run {
 	status, text := percentText(b, value, thresholds)
-	return StatusText(status, text)
+	return StatusValue(status, text, statusWord(b, status))
 }
 
 // percentText is the status and the text of percentRun.
@@ -316,9 +316,9 @@ func nodeState(b *builder, n snapshot.Node) Run {
 	text := stateWord(b, n.Ready, catalog.NodeStateReady, catalog.NodeStateNotReady) + "; " + stateWord(b, n.Schedulable, catalog.NodeStateSchedulable, catalog.NodeStateUnschedulable)
 	switch {
 	case n.Ready == nil:
-		return StatusText("unavailable", text)
+		return StatusValue("unavailable", text, statusWord(b, "unavailable"))
 	case !*n.Ready:
-		return StatusText("attention", text)
+		return StatusValue("attention", text, statusWord(b, "attention"))
 	}
 	return Text(text)
 }
@@ -357,7 +357,7 @@ func nodeReason(b *builder, name string, findings []snapshot.Finding) Run {
 	if severity == "" {
 		return Text(text)
 	}
-	return StatusText(severity, text)
+	return StatusValue(severity, text, statusWord(b, severity))
 }
 
 // nodeReasonText is the text of nodeReason and the severity that marks it,

@@ -368,7 +368,7 @@ func replicaCeiling(b *builder, s snapshot.Snapshot, minRank int, executiveProfi
 				"Peak": b.cat.Count(*c.hpa.Current.Peak),
 				"Max":  b.cat.Count(*c.hpa.SpecMax),
 			}))},
-			{StatusText("critical", b.text(catalog.SectionsExecutiveSituationHPAMax, nil))},
+			{StatusValue("critical", b.text(catalog.SectionsExecutiveSituationHPAMax, nil), statusWord(b, "critical"))},
 		})
 	}
 
@@ -384,7 +384,7 @@ func replicaCeiling(b *builder, s snapshot.Snapshot, minRank int, executiveProfi
 				{Ident(w.Name)},
 				{Text(w.Kind)},
 				{Text(activeReplicas(b, w.Pods))},
-				{StatusText("attention", b.text(catalog.SectionsHPAsSituationNoHPA, nil))},
+				{StatusValue("attention", b.text(catalog.SectionsHPAsSituationNoHPA, nil), statusWord(b, "attention"))},
 			})
 		}
 	}

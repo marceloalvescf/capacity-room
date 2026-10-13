@@ -180,7 +180,7 @@ func hpaAtMax(h snapshot.HPA) bool {
 // when the maximum and the peak are known; unavailable otherwise.
 func hpaSituation(b *builder, h snapshot.HPA) Run {
 	status, text := hpaSituationText(b, h)
-	return StatusText(status, text)
+	return StatusValue(status, text, statusWord(b, status))
 }
 
 // hpaSituationText is the status and the text of hpaSituation.
@@ -206,9 +206,9 @@ func hpaSituationText(b *builder, h snapshot.HPA) (status, text string) {
 func uncoveredTable(b *builder, workloads []snapshot.Workload) Table {
 	rows := make([][][]Run, len(workloads))
 	for i, w := range workloads {
-		situation := StatusText("unavailable", b.text(catalog.SectionsHPAsSituationSpecificStrategy, nil))
+		situation := StatusValue("unavailable", b.text(catalog.SectionsHPAsSituationSpecificStrategy, nil), statusWord(b, "unavailable"))
 		if w.Kind == deploymentKind {
-			situation = StatusText("attention", b.text(catalog.SectionsHPAsSituationNoHPA, nil))
+			situation = StatusValue("attention", b.text(catalog.SectionsHPAsSituationNoHPA, nil), statusWord(b, "attention"))
 		}
 		rows[i] = [][]Run{
 			{Text(w.Kind)},

@@ -1,0 +1,1 @@
+capacity-report: `blocks[3].rows[0][0][0].alt` must be a string or null; received integer

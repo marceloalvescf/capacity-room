@@ -119,7 +119,7 @@ func ratioText(b *builder, stat snapshot.Statistics, value *float64, thresholds 
 // ratioRun judges a ratio's peak and returns its one status run.
 func ratioRun(b *builder, stat snapshot.Statistics, thresholds config.Thresholds) Run {
 	status, text := ratioText(b, stat, stat.Peak, thresholds)
-	return StatusText(status, text)
+	return StatusValue(status, text, statusWord(b, status))
 }
 
 // buildNamespacesSection assembles section 1: a numbered heading, then one

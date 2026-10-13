@@ -87,6 +87,7 @@
         "rows": [
           {
             "status": "critical",
+            "label": "Crítico",
             "scope": "Workloads",
             "sentence": "O uso de CPU em relação ao limit indica risco aumentado de throttling de CPU.",
             "name": [
@@ -114,6 +115,7 @@
           },
           {
             "status": "attention",
+            "label": "Atenção",
             "scope": "Namespaces",
             "sentence": "Há uma lacuna de configuração: limit de CPU não observado.",
             "name": [
@@ -133,6 +135,7 @@
           },
           {
             "status": "attention",
+            "label": "Atenção",
             "scope": "HPAs",
             "sentence": "Há diferença média persistente entre replicas atuais e desejados.",
             "name": [
@@ -176,7 +179,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -207,7 +211,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -238,7 +243,8 @@
                 {
                   "kind": "status",
                   "status": "attention",
-                  "text": "Atenção"
+                  "text": "Atenção",
+                  "alt": null
                 }
               ],
               [
@@ -269,7 +275,8 @@
                 {
                   "kind": "status",
                   "status": "attention",
-                  "text": "Atenção"
+                  "text": "Atenção",
+                  "alt": null
                 }
               ],
               [
@@ -300,7 +307,8 @@
                 {
                   "kind": "status",
                   "status": "attention",
-                  "text": "Atenção"
+                  "text": "Atenção",
+                  "alt": null
                 }
               ],
               [
@@ -517,7 +525,8 @@
                 {
                   "kind": "status",
                   "status": "healthy",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -532,7 +541,8 @@
                 {
                   "kind": "status",
                   "status": "attention",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -547,7 +557,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -562,7 +573,8 @@
                 {
                   "kind": "status",
                   "status": "unavailable",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -577,7 +589,8 @@
                 {
                   "kind": "status",
                   "status": "undefined",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -793,14 +806,16 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "50%"
+              "text": "50%",
+              "alt": "Saudável"
             }
           ],
           [
@@ -819,7 +834,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ]
         ]
@@ -876,7 +892,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Saudável"
+              "text": "Saudável",
+              "alt": null
             }
           ],
           [
@@ -920,7 +937,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -951,7 +969,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -982,7 +1001,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1013,7 +1033,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1044,7 +1065,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1075,7 +1097,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1106,7 +1129,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1137,7 +1161,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1168,7 +1193,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1199,7 +1225,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1315,14 +1342,16 @@
             {
               "kind": "status",
               "status": "undefined",
-              "text": "Não definido"
+              "text": "Não definido",
+              "alt": "Sem base de cálculo"
             }
           ],
           [
             {
               "kind": "status",
               "status": "undefined",
-              "text": "Não definido"
+              "text": "Não definido",
+              "alt": "Sem base de cálculo"
             }
           ]
         ],
@@ -1361,14 +1390,16 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "75%"
+              "text": "75%",
+              "alt": "Atenção"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "50%"
+              "text": "50%",
+              "alt": "Saudável"
             }
           ]
         ]
@@ -1445,14 +1476,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "90%"
+              "text": "90%",
+              "alt": "Crítico"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "90%"
+              "text": "90%",
+              "alt": "Crítico"
             }
           ],
           [
@@ -1471,14 +1504,16 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "30%"
+              "text": "30%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "15%"
+              "text": "15%",
+              "alt": "Saudável"
             }
           ]
         ],
@@ -1511,14 +1546,16 @@
             {
               "kind": "status",
               "status": "undefined",
-              "text": "Não definido"
+              "text": "Não definido",
+              "alt": "Sem base de cálculo"
             }
           ],
           [
             {
               "kind": "status",
               "status": "undefined",
-              "text": "Não definido"
+              "text": "Não definido",
+              "alt": "Sem base de cálculo"
             }
           ],
           [
@@ -1537,14 +1574,16 @@
             {
               "kind": "status",
               "status": "undefined",
-              "text": "Não definido"
+              "text": "Não definido",
+              "alt": "Sem base de cálculo"
             }
           ],
           [
             {
               "kind": "status",
               "status": "undefined",
-              "text": "Não definido"
+              "text": "Não definido",
+              "alt": "Sem base de cálculo"
             }
           ]
         ]
@@ -1650,7 +1689,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Abaixo do máximo"
+              "text": "Abaixo do máximo",
+              "alt": "Saudável"
             }
           ]
         ]
@@ -1700,7 +1740,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Estratégia de escala específica"
+              "text": "Estratégia de escala específica",
+              "alt": "Dado indisponível"
             }
           ]
         ]
@@ -1758,28 +1799,32 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "57,5%"
+              "text": "57,5%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "60%"
+              "text": "60%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "62,5%"
+              "text": "62,5%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "65%"
+              "text": "65%",
+              "alt": "Saudável"
             }
           ],
           [
@@ -1909,7 +1954,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "57,5%"
+              "text": "57,5%",
+              "alt": "Saudável"
             },
             {
               "kind": "text",
@@ -1918,14 +1964,16 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "60%"
+              "text": "60%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "62,5%"
+              "text": "62,5%",
+              "alt": "Saudável"
             },
             {
               "kind": "text",
@@ -1934,14 +1982,16 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "65%"
+              "text": "65%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "CPU: pico de 60% de utilização; Memória: pico de 65% de utilização"
+              "text": "CPU: pico de 60% de utilização; Memória: pico de 65% de utilização",
+              "alt": "Saudável"
             }
           ],
           [
@@ -1990,7 +2040,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2023,7 +2074,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2056,7 +2108,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2089,7 +2142,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2122,7 +2176,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2155,7 +2210,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2188,7 +2244,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2221,7 +2278,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2254,7 +2312,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [

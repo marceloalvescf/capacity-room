@@ -95,6 +95,7 @@
         "rows": [
           {
             "status": "critical",
+            "label": "Crítico",
             "scope": "Nodes",
             "sentence": "Uso observado de CPU no node.",
             "name": [
@@ -117,6 +118,7 @@
           },
           {
             "status": "critical",
+            "label": "Crítico",
             "scope": "Namespaces",
             "sentence": "O uso de CPU em relação ao limit indica risco aumentado de throttling de CPU.",
             "name": [
@@ -139,6 +141,7 @@
           },
           {
             "status": "critical",
+            "label": "Crítico",
             "scope": "Workloads",
             "sentence": "O uso de memória em relação ao limit indica risco aumentado de OOMKill.",
             "name": [
@@ -166,6 +169,7 @@
           },
           {
             "status": "critical",
+            "label": "Crítico",
             "scope": "HPAs",
             "sentence": "O HPA atingiu o máximo observado de replicas.",
             "name": [
@@ -190,6 +194,7 @@
           },
           {
             "status": "attention",
+            "label": "Atenção",
             "scope": "Node pools",
             "sentence": "A pressão de pico de CPU variou entre nodes do pool.",
             "name": [
@@ -233,7 +238,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -264,7 +270,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -295,7 +302,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -326,7 +334,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -357,7 +366,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -574,7 +584,8 @@
                 {
                   "kind": "status",
                   "status": "healthy",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -589,7 +600,8 @@
                 {
                   "kind": "status",
                   "status": "attention",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -604,7 +616,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -619,7 +632,8 @@
                 {
                   "kind": "status",
                   "status": "unavailable",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -634,7 +648,8 @@
                 {
                   "kind": "status",
                   "status": "undefined",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -821,14 +836,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "330%"
+              "text": "330%",
+              "alt": "Crítico"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "12000%"
+              "text": "12000%",
+              "alt": "Crítico"
             }
           ],
           [
@@ -847,7 +864,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ]
         ]
@@ -904,7 +922,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Máximo do HPA atingido"
+              "text": "Máximo do HPA atingido",
+              "alt": "Crítico"
             }
           ]
         ],
@@ -937,7 +956,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Sem HPA"
+              "text": "Sem HPA",
+              "alt": "Atenção"
             }
           ]
         ]
@@ -990,7 +1010,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -1011,7 +1032,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -1032,7 +1054,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1076,7 +1099,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -1107,7 +1131,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -1138,7 +1163,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -1169,7 +1195,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -1200,7 +1227,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -1231,7 +1259,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -1262,7 +1291,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -1293,7 +1323,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1324,7 +1355,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1355,7 +1387,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1408,7 +1441,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [
@@ -1429,7 +1463,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [
@@ -1478,7 +1513,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [

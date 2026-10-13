@@ -78,6 +78,7 @@
         "rows": [
           {
             "status": "critical",
+            "label": "Crítico",
             "scope": "Workloads",
             "sentence": "O uso de memória em relação ao limit indica risco aumentado de OOMKill.",
             "name": [
@@ -100,6 +101,7 @@
           },
           {
             "status": "attention",
+            "label": "Atenção",
             "scope": "Namespaces",
             "sentence": "Há uma lacuna de configuração: limit de CPU não observado.",
             "name": [
@@ -143,7 +145,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -174,7 +177,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -205,7 +209,8 @@
                 {
                   "kind": "status",
                   "status": "attention",
-                  "text": "Atenção"
+                  "text": "Atenção",
+                  "alt": null
                 }
               ],
               [
@@ -236,7 +241,8 @@
                 {
                   "kind": "status",
                   "status": "attention",
-                  "text": "Atenção"
+                  "text": "Atenção",
+                  "alt": null
                 }
               ],
               [
@@ -267,7 +273,8 @@
                 {
                   "kind": "status",
                   "status": "attention",
-                  "text": "Atenção"
+                  "text": "Atenção",
+                  "alt": null
                 }
               ],
               [
@@ -484,7 +491,8 @@
                 {
                   "kind": "status",
                   "status": "healthy",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -499,7 +507,8 @@
                 {
                   "kind": "status",
                   "status": "attention",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -514,7 +523,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -529,7 +539,8 @@
                 {
                   "kind": "status",
                   "status": "unavailable",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -544,7 +555,8 @@
                 {
                   "kind": "status",
                   "status": "undefined",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -731,14 +743,16 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
@@ -757,7 +771,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ]
         ]
@@ -830,7 +845,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Saudável"
+              "text": "Saudável",
+              "alt": null
             }
           ],
           [
@@ -874,7 +890,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -905,7 +922,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -936,7 +954,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -967,7 +986,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -998,7 +1018,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1029,7 +1050,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1060,7 +1082,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1113,7 +1136,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": null
             }
           ],
           [
@@ -1134,7 +1158,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [
@@ -1155,7 +1180,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [
@@ -1176,7 +1202,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": null
             }
           ],
           [
@@ -1197,7 +1224,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [
@@ -1283,14 +1311,16 @@
             {
               "kind": "status",
               "status": "undefined",
-              "text": "Não definido"
+              "text": "Não definido",
+              "alt": "Sem base de cálculo"
             }
           ],
           [
             {
               "kind": "status",
               "status": "undefined",
-              "text": "Não definido"
+              "text": "Não definido",
+              "alt": "Sem base de cálculo"
             }
           ]
         ],
@@ -1329,14 +1359,16 @@
             {
               "kind": "status",
               "status": "undefined",
-              "text": "Não definido"
+              "text": "Não definido",
+              "alt": "Sem base de cálculo"
             }
           ],
           [
             {
               "kind": "status",
               "status": "undefined",
-              "text": "Não definido"
+              "text": "Não definido",
+              "alt": "Sem base de cálculo"
             }
           ]
         ]
@@ -1413,14 +1445,16 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "80%"
+              "text": "80%",
+              "alt": "Atenção"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "40%"
+              "text": "40%",
+              "alt": "Saudável"
             }
           ],
           [
@@ -1439,14 +1473,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "24000%"
+              "text": "24000%",
+              "alt": "Crítico"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "12000%"
+              "text": "12000%",
+              "alt": "Crítico"
             }
           ]
         ]
@@ -1547,7 +1583,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Estratégia de escala específica"
+              "text": "Estratégia de escala específica",
+              "alt": "Dado indisponível"
             }
           ]
         ]
@@ -1605,28 +1642,32 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
@@ -1756,7 +1797,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             },
             {
               "kind": "text",
@@ -1765,14 +1807,16 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             },
             {
               "kind": "text",
@@ -1781,7 +1825,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
@@ -1836,7 +1881,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -1869,7 +1915,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -1902,7 +1949,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -1935,7 +1983,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": null
             }
           ],
           [
@@ -1968,7 +2017,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [
@@ -2001,7 +2051,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2034,7 +2085,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [
@@ -2067,7 +2119,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": null
             }
           ],
           [
@@ -2100,7 +2153,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [

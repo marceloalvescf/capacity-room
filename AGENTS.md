@@ -827,8 +827,9 @@ looks.
   The five status glyphs (the diamond of critical, the triangle of attention,
   the circle of healthy, the empty circle of no base, the dash of unavailable)
   are set in JetBrains Mono, which holds them all; critical is bold. A status
-  glyph is a PDF artifact, so a screen reader skips it and reads the word
-  beside it.
+  glyph is a PDF artifact when its word stands beside it; otherwise it
+  carries that word as alternate text, which the data file gives as the
+  run's `alt`.
 - A table column has a face: `name` and `num` and `mark` and `text`, held with
   its width in `template/capacity/tables.typ`. A number is set in mono and
   aligned right, a name and a text and a mark from the left.

@@ -152,6 +152,7 @@ func verdictPressure(b *builder, findings []snapshot.Finding, facts verdictFacts
 func pressureRow(b *builder, facts pressureFacts, lead snapshot.Finding) VerdictPressureRow {
 	row := VerdictPressureRow{
 		Status: facts.Severity,
+		Label:  statusWord(b, facts.Severity),
 		Scope:  b.text(catalog.VerdictPressureScope(facts.ScopeType), nil),
 	}
 	if definition, ok := findingDefinition(b, lead.Code); ok {

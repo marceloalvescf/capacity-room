@@ -94,6 +94,7 @@
         "rows": [
           {
             "status": "critical",
+            "label": "Critical",
             "scope": "Nodes",
             "sentence": "Observed CPU usage on the node.",
             "name": [
@@ -116,6 +117,7 @@
           },
           {
             "status": "critical",
+            "label": "Critical",
             "scope": "Namespaces",
             "sentence": "CPU usage against the limit indicates an increased risk of CPU throttling.",
             "name": [
@@ -138,6 +140,7 @@
           },
           {
             "status": "critical",
+            "label": "Critical",
             "scope": "Workloads",
             "sentence": "Memory usage against the limit indicates an increased risk of OOMKill.",
             "name": [
@@ -165,6 +168,7 @@
           },
           {
             "status": "critical",
+            "label": "Critical",
             "scope": "HPAs",
             "sentence": "The HPA reached its observed maximum of replicas.",
             "name": [
@@ -189,6 +193,7 @@
           },
           {
             "status": "attention",
+            "label": "Attention",
             "scope": "Node pools",
             "sentence": "Peak CPU pressure varied among the nodes of the pool.",
             "name": [

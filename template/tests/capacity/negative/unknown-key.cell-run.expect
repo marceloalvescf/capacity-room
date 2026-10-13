@@ -1,1 +1,1 @@
-capacity-report: unknown key "extra" in blocks[3].rows[0][0][0]; allowed keys: kind, status, text
+capacity-report: unknown key "extra" in blocks[3].rows[0][0][0]; allowed keys: kind, status, text, alt

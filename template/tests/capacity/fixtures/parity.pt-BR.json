@@ -377,14 +377,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "91%"
+              "text": "91%",
+              "alt": "Crítico"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ]
         ],
@@ -423,14 +425,16 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "79%"
+              "text": "79%",
+              "alt": "Atenção"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ]
         ]
@@ -507,14 +511,16 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "50%"
+              "text": "50%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
@@ -533,14 +539,16 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "55%"
+              "text": "55%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ]
         ],
@@ -573,14 +581,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "97%"
+              "text": "97%",
+              "alt": "Crítico"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
@@ -599,14 +609,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "95%"
+              "text": "95%",
+              "alt": "Crítico"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ]
         ]
@@ -712,7 +724,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Máximo atingido"
+              "text": "Máximo atingido",
+              "alt": "Crítico"
             }
           ]
         ]
@@ -762,7 +775,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Sem HPA"
+              "text": "Sem HPA",
+              "alt": "Atenção"
             }
           ]
         ]
@@ -820,28 +834,32 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "55%"
+              "text": "55%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "attention",
-              "text": "78%"
+              "text": "78%",
+              "alt": "Atenção"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "64%"
+              "text": "64%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "attention",
-              "text": "80%"
+              "text": "80%",
+              "alt": "Atenção"
             }
           ],
           [
@@ -971,7 +989,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "55%"
+              "text": "55%",
+              "alt": "Saudável"
             },
             {
               "kind": "text",
@@ -980,14 +999,16 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "78%"
+              "text": "78%",
+              "alt": "Atenção"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "64%"
+              "text": "64%",
+              "alt": "Saudável"
             },
             {
               "kind": "text",
@@ -996,14 +1017,16 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "80%"
+              "text": "80%",
+              "alt": "Atenção"
             }
           ],
           [
             {
               "kind": "status",
               "status": "attention",
-              "text": "Memória: pico de 80% de utilização"
+              "text": "Memória: pico de 80% de utilização",
+              "alt": "Atenção"
             }
           ],
           [
@@ -1138,14 +1161,16 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": "Dado indisponível"
             }
           ],
           [
@@ -1164,7 +1189,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítica",
+              "alt": null
             }
           ]
         ]
@@ -1221,7 +1247,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Máximo do HPA atingido"
+              "text": "Máximo do HPA atingido",
+              "alt": "Crítico"
             }
           ]
         ],
@@ -1254,7 +1281,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Sem HPA"
+              "text": "Sem HPA",
+              "alt": "Atenção"
             }
           ]
         ]
@@ -1291,7 +1319,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1335,7 +1364,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítica"
+              "text": "Crítica",
+              "alt": null
             }
           ],
           [
@@ -1362,7 +1392,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Alta"
+              "text": "Alta",
+              "alt": null
             }
           ],
           [
@@ -1411,7 +1442,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Indisponível"
+              "text": "Indisponível",
+              "alt": null
             }
           ],
           [
@@ -1432,7 +1464,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [

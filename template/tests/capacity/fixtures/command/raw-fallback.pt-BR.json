@@ -94,6 +94,7 @@
         "rows": [
           {
             "status": "critical",
+            "label": "Crítico",
             "scope": "Namespaces",
             "sentence": "O uso de memória em relação ao limit indica risco aumentado de OOMKill.",
             "name": [
@@ -116,6 +117,7 @@
           },
           {
             "status": "critical",
+            "label": "Crítico",
             "scope": "Workloads",
             "sentence": "O uso de memória em relação ao limit indica risco aumentado de OOMKill.",
             "name": [
@@ -138,6 +140,7 @@
           },
           {
             "status": "attention",
+            "label": "Atenção",
             "scope": "HPAs",
             "sentence": "Há diferença média persistente entre replicas atuais e desejados.",
             "name": [
@@ -181,7 +184,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -212,7 +216,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -243,7 +248,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -274,7 +280,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": "Crítico"
+                  "text": "Crítico",
+                  "alt": null
                 }
               ],
               [
@@ -305,7 +312,8 @@
                 {
                   "kind": "status",
                   "status": "attention",
-                  "text": "Atenção"
+                  "text": "Atenção",
+                  "alt": null
                 }
               ],
               [
@@ -522,7 +530,8 @@
                 {
                   "kind": "status",
                   "status": "healthy",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -537,7 +546,8 @@
                 {
                   "kind": "status",
                   "status": "attention",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -552,7 +562,8 @@
                 {
                   "kind": "status",
                   "status": "critical",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -567,7 +578,8 @@
                 {
                   "kind": "status",
                   "status": "unavailable",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -582,7 +594,8 @@
                 {
                   "kind": "status",
                   "status": "undefined",
-                  "text": null
+                  "text": null,
+                  "alt": null
                 }
               ],
               [
@@ -769,14 +782,16 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "40%"
+              "text": "40%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "12000%"
+              "text": "12000%",
+              "alt": "Crítico"
             }
           ],
           [
@@ -795,7 +810,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ]
         ]
@@ -852,7 +868,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Saudável"
+              "text": "Saudável",
+              "alt": null
             }
           ],
           [
@@ -896,7 +913,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -927,7 +945,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -958,7 +977,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -989,7 +1009,8 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "Crítico"
+              "text": "Crítico",
+              "alt": null
             }
           ],
           [
@@ -1020,7 +1041,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1051,7 +1073,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Atenção"
+              "text": "Atenção",
+              "alt": null
             }
           ],
           [
@@ -1104,7 +1127,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [
@@ -1125,7 +1149,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [
@@ -1146,7 +1171,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [
@@ -1232,14 +1258,16 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "80%"
+              "text": "80%",
+              "alt": "Atenção"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "40%"
+              "text": "40%",
+              "alt": "Saudável"
             }
           ]
         ],
@@ -1278,14 +1306,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "24000%"
+              "text": "24000%",
+              "alt": "Crítico"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "12000%"
+              "text": "12000%",
+              "alt": "Crítico"
             }
           ]
         ]
@@ -1362,14 +1392,16 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "66,7%"
+              "text": "66,7%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "33,3%"
+              "text": "33,3%",
+              "alt": "Saudável"
             }
           ],
           [
@@ -1388,14 +1420,16 @@
             {
               "kind": "status",
               "status": "critical",
-              "text": "20000%"
+              "text": "20000%",
+              "alt": "Crítico"
             }
           ],
           [
             {
               "kind": "status",
               "status": "critical",
-              "text": "10000%"
+              "text": "10000%",
+              "alt": "Crítico"
             }
           ]
         ]
@@ -1501,7 +1535,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Abaixo do máximo"
+              "text": "Abaixo do máximo",
+              "alt": "Saudável"
             }
           ]
         ]
@@ -1551,7 +1586,8 @@
             {
               "kind": "status",
               "status": "unavailable",
-              "text": "Estratégia de escala específica"
+              "text": "Estratégia de escala específica",
+              "alt": "Dado indisponível"
             }
           ]
         ]
@@ -1609,28 +1645,32 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "57,5%"
+              "text": "57,5%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "60%"
+              "text": "60%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "42,5%"
+              "text": "42,5%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "45%"
+              "text": "45%",
+              "alt": "Saudável"
             }
           ],
           [
@@ -1760,7 +1800,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "57,5%"
+              "text": "57,5%",
+              "alt": "Saudável"
             },
             {
               "kind": "text",
@@ -1769,14 +1810,16 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "60%"
+              "text": "60%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "42,5%"
+              "text": "42,5%",
+              "alt": "Saudável"
             },
             {
               "kind": "text",
@@ -1785,14 +1828,16 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "45%"
+              "text": "45%",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "status",
               "status": "healthy",
-              "text": "CPU: pico de 60% de utilização; Memória: pico de 45% de utilização"
+              "text": "CPU: pico de 60% de utilização; Memória: pico de 45% de utilização",
+              "alt": "Saudável"
             }
           ],
           [
@@ -1841,7 +1886,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -1874,7 +1920,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [
@@ -1907,7 +1954,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -1940,7 +1988,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -1973,7 +2022,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2006,7 +2056,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2039,7 +2090,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2072,7 +2124,8 @@
             {
               "kind": "status",
               "status": "healthy",
-              "text": "Disponível"
+              "text": "Disponível",
+              "alt": null
             }
           ],
           [
@@ -2105,7 +2158,8 @@
             {
               "kind": "status",
               "status": "attention",
-              "text": "Parcial"
+              "text": "Parcial",
+              "alt": null
             }
           ],
           [

@@ -3,7 +3,7 @@
 // word comes from the block; the soundings of the gauge are the integers it
 // was given.
 
-#import "runs.typ": mono, runs-to-content, status-glyph
+#import "runs.typ": mono, runs-to-content, status-mark
 #import "tables.typ": num-run, render-table
 
 #let muted = luma(35%)
@@ -11,8 +11,10 @@
 #let tints = (luma(93%), luma(85%), luma(74%))
 #let band-stroke = 0.4pt + luma(55%)
 
-// A status glyph in the monospaced face, then the label.
-#let mark(status, label) = box[#status-glyph(status)#h(3pt)#label]
+// A status glyph in the monospaced face, then the label. The glyph is an
+// artifact, since the label or the sentence after it tells the status,
+// unless `alt` gives the word of the status for a label that does not.
+#let mark(status, label, alt: none) = box[#status-mark(status, alt)#h(3pt)#label]
 
 #let num(body) = text(font: mono, body)
 
@@ -159,7 +161,7 @@
       columns: (7.8em, 1fr),
       column-gutter: 6pt,
       row-gutter: 3pt,
-      mark(row.status, text(weight: "semibold", row.scope)),
+      mark(row.status, text(weight: "semibold", row.scope), alt: row.label),
       {
         row.sentence
         if row.name.len() > 0 or row.peak != none {
