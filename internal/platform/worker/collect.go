@@ -28,10 +28,11 @@ const maxSnapshotBytes = 32 << 20
 
 // The codes a collect attempt stores that the profile test does not know.
 const (
-	codeNothingToReport   = "NOTHING_TO_REPORT"
-	codeSnapshotTooLarge  = "SNAPSHOT_TOO_LARGE"
-	codeCollectionTimeout = "COLLECTION_TIMEOUT"
-	codeInternalFailure   = "INTERNAL_FAILURE"
+	codeNothingToReport        = "NOTHING_TO_REPORT"
+	codeSnapshotTooLarge       = "SNAPSHOT_TOO_LARGE"
+	codeSourceValuesOutOfRange = "SOURCE_VALUES_OUT_OF_RANGE"
+	codeCollectionTimeout      = "COLLECTION_TIMEOUT"
+	codeInternalFailure        = "INTERNAL_FAILURE"
 )
 
 // outcomeTimeout bounds the transaction that stores a failure, and is the
@@ -292,6 +293,9 @@ func classify(ctx context.Context, err error) (code string, stop error) {
 		return codeCollectionTimeout, nil
 	case ctxErr != nil:
 		return "", ctxErr
+	}
+	if errors.Is(err, snapshot.ErrNotFinite) {
+		return codeSourceValuesOutOfRange, nil
 	}
 	if errors.Is(err, errSnapshotTooLarge) {
 		return codeSnapshotTooLarge, nil

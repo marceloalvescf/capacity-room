@@ -54,6 +54,11 @@ var (
 // spec 8: a Job is one finite execution and never reaches the snapshot.
 const excludedWorkloadKind = "Job"
 
+// ErrNotFinite marks a snapshot that cannot be written because one of its
+// numbers is NaN or infinite, as a source's values near the float64 maximum
+// make an average or a sum.
+var ErrNotFinite = errors.New("snapshot holds a number that is not finite")
+
 // Encode writes s with two spaces of indentation and one line break at the
 // end, without escaping "<", ">", or "&" for HTML. The same snapshot always
 // gives the same bytes.
@@ -63,6 +68,10 @@ func Encode(s Snapshot) ([]byte, error) {
 	enc.SetEscapeHTML(false)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(s); err != nil {
+		var unsupported *json.UnsupportedValueError
+		if errors.As(err, &unsupported) {
+			return nil, fmt.Errorf("%w: %w", ErrNotFinite, err)
+		}
 		return nil, err
 	}
 	return buf.Bytes(), nil

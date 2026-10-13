@@ -251,6 +251,7 @@ const (
 	ReportFailureCodePROFILECABUNDLEUNAVAILABLE   ReportFailureCode = "PROFILE_CA_BUNDLE_UNAVAILABLE"
 	ReportFailureCodePROFILECREDENTIALUNAVAILABLE ReportFailureCode = "PROFILE_CREDENTIAL_UNAVAILABLE"
 	ReportFailureCodeSNAPSHOTTOOLARGE             ReportFailureCode = "SNAPSHOT_TOO_LARGE"
+	ReportFailureCodeSOURCEVALUESOUTOFRANGE       ReportFailureCode = "SOURCE_VALUES_OUT_OF_RANGE"
 )
 
 // Valid indicates whether the value is a known member of the ReportFailureCode enum.
@@ -291,6 +292,8 @@ func (e ReportFailureCode) Valid() bool {
 	case ReportFailureCodePROFILECREDENTIALUNAVAILABLE:
 		return true
 	case ReportFailureCodeSNAPSHOTTOOLARGE:
+		return true
+	case ReportFailureCodeSOURCEVALUESOUTOFRANGE:
 		return true
 	default:
 		return false

@@ -185,6 +185,7 @@
     "ENDPOINT_UNREACHABLE": "The metric source could not be reached, or did not answer.",
     "CLUSTER_SCOPE_NOT_FOUND": "The cluster of the profile was not found in the metrics.",
     "CAPABILITIES_INSUFFICIENT": "The metric source lacks the metrics a report needs.",
+    "SOURCE_VALUES_OUT_OF_RANGE": "The metric source sent values too large to compute with.",
     "NOTHING_TO_REPORT": "The metrics held nothing to report for this selection.",
     "SNAPSHOT_TOO_LARGE": "The report's data is larger than allowed.",
     "COLLECTION_TIMEOUT": "The collection took longer than allowed.",

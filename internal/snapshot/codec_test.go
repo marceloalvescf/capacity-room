@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -2631,5 +2632,18 @@ func TestSnapshotRefusesAPeriodKey(t *testing.T) {
 	_, err = Decode(data)
 	if err == nil || !strings.HasPrefix(err.Error(), "snapshot holds an unknown key: ") {
 		t.Fatalf("Decode() error = %v, want an unknown key", err)
+	}
+}
+
+func TestEncodeNamesANumberThatIsNotFinite(t *testing.T) {
+	s := validSnapshotWithRows(t)
+	inf := math.Inf(1)
+	s.Namespaces[0].CPUUsage.Average = &inf
+	_, err := Encode(s)
+	if !errors.Is(err, ErrNotFinite) {
+		t.Fatalf("err = %v, want ErrNotFinite", err)
+	}
+	if _, err := Encode(validSnapshotWithRows(t)); err != nil {
+		t.Fatalf("a finite snapshot: %v", err)
 	}
 }

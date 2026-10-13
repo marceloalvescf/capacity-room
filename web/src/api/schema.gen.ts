@@ -356,7 +356,7 @@ export interface components {
          * @description Why a report failed; a client words the code.
          * @enum {string}
          */
-        ReportFailureCode: "ENDPOINT_URL_REJECTED" | "ENDPOINT_ADDRESS_REJECTED" | "ENDPOINT_RESOLUTION_FAILED" | "ENDPOINT_CONNECTION_REJECTED" | "ENDPOINT_REDIRECT_REJECTED" | "PROFILE_CREDENTIAL_UNAVAILABLE" | "PROFILE_CA_BUNDLE_UNAVAILABLE" | "ENDPOINT_TLS_FAILED" | "ENDPOINT_AUTH_REJECTED" | "ENDPOINT_API_NOT_FOUND" | "ENDPOINT_UNREACHABLE" | "CLUSTER_SCOPE_NOT_FOUND" | "CAPABILITIES_INSUFFICIENT" | "NOTHING_TO_REPORT" | "SNAPSHOT_TOO_LARGE" | "COLLECTION_TIMEOUT" | "JOB_ATTEMPTS_EXHAUSTED" | "INTERNAL_FAILURE";
+        ReportFailureCode: "ENDPOINT_URL_REJECTED" | "ENDPOINT_ADDRESS_REJECTED" | "ENDPOINT_RESOLUTION_FAILED" | "ENDPOINT_CONNECTION_REJECTED" | "ENDPOINT_REDIRECT_REJECTED" | "PROFILE_CREDENTIAL_UNAVAILABLE" | "PROFILE_CA_BUNDLE_UNAVAILABLE" | "ENDPOINT_TLS_FAILED" | "ENDPOINT_AUTH_REJECTED" | "ENDPOINT_API_NOT_FOUND" | "ENDPOINT_UNREACHABLE" | "CLUSTER_SCOPE_NOT_FOUND" | "CAPABILITIES_INSUFFICIENT" | "SOURCE_VALUES_OUT_OF_RANGE" | "NOTHING_TO_REPORT" | "SNAPSHOT_TOO_LARGE" | "COLLECTION_TIMEOUT" | "JOB_ATTEMPTS_EXHAUSTED" | "INTERNAL_FAILURE";
         /** @enum {string} */
         PDFStatus: "pending" | "ready" | "failed";
         /**
@@ -2115,7 +2115,7 @@ type ReadonlyArray<T> = [
 ] ? Readonly<Exclude<T, undefined>> : Readonly<Exclude<T, undefined>[]>;
 export const reportStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportStatus"]> = ["queued", "running", "collected", "failed"];
 export const reportPhaseValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportPhase"]> = ["waiting", "preflight", "collecting", "analyzing", "snapshotting", "rendering", "complete"];
-export const reportFailureCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportFailureCode"]> = ["ENDPOINT_URL_REJECTED", "ENDPOINT_ADDRESS_REJECTED", "ENDPOINT_RESOLUTION_FAILED", "ENDPOINT_CONNECTION_REJECTED", "ENDPOINT_REDIRECT_REJECTED", "PROFILE_CREDENTIAL_UNAVAILABLE", "PROFILE_CA_BUNDLE_UNAVAILABLE", "ENDPOINT_TLS_FAILED", "ENDPOINT_AUTH_REJECTED", "ENDPOINT_API_NOT_FOUND", "ENDPOINT_UNREACHABLE", "CLUSTER_SCOPE_NOT_FOUND", "CAPABILITIES_INSUFFICIENT", "NOTHING_TO_REPORT", "SNAPSHOT_TOO_LARGE", "COLLECTION_TIMEOUT", "JOB_ATTEMPTS_EXHAUSTED", "INTERNAL_FAILURE"];
+export const reportFailureCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportFailureCode"]> = ["ENDPOINT_URL_REJECTED", "ENDPOINT_ADDRESS_REJECTED", "ENDPOINT_RESOLUTION_FAILED", "ENDPOINT_CONNECTION_REJECTED", "ENDPOINT_REDIRECT_REJECTED", "PROFILE_CREDENTIAL_UNAVAILABLE", "PROFILE_CA_BUNDLE_UNAVAILABLE", "ENDPOINT_TLS_FAILED", "ENDPOINT_AUTH_REJECTED", "ENDPOINT_API_NOT_FOUND", "ENDPOINT_UNREACHABLE", "CLUSTER_SCOPE_NOT_FOUND", "CAPABILITIES_INSUFFICIENT", "SOURCE_VALUES_OUT_OF_RANGE", "NOTHING_TO_REPORT", "SNAPSHOT_TOO_LARGE", "COLLECTION_TIMEOUT", "JOB_ATTEMPTS_EXHAUSTED", "INTERNAL_FAILURE"];
 export const pDFStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PDFStatus"]> = ["pending", "ready", "failed"];
 export const pDFFailureCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PDFFailureCode"]> = ["PDF_COMPILE_FAILED", "PDF_TOO_LARGE", "PDF_ATTEMPTS_EXHAUSTED", "INTERNAL_FAILURE"];
 export const reportDeleteOutcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportDeleteOutcome"]> = ["deleted", "not_found", "forbidden"];

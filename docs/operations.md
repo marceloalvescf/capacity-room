@@ -292,6 +292,7 @@ before the code is stored.
 | `ENDPOINT_UNREACHABLE` | report | yes | The source did not answer, or answered something that is not HTTP |
 | `CLUSTER_SCOPE_NOT_FOUND` | report | no | The source holds no series for the profile's cluster name |
 | `CAPABILITIES_INSUFFICIENT` | report | no | The source lacks the metrics a report needs |
+| `SOURCE_VALUES_OUT_OF_RANGE` | report | no | The source sent values too large to compute with, such as samples near the largest number a report can hold |
 | `NOTHING_TO_REPORT` | report | no | The source answered, but nothing was found to report for the namespaces |
 | `SNAPSHOT_TOO_LARGE` | report | no | The collected data is larger than 32 MiB |
 | `COLLECTION_TIMEOUT` | report | no | The collection took longer than `collect_timeout_seconds` |

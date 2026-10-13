@@ -125,7 +125,7 @@ reason.
 | The README made the server secret world-readable | 7 | hardening | documented: the guide gives the folder to user 10001 alone | `docs/operations.md` |
 | The profile tests tell ports apart within an allowed host or range | 3 | inherent | documented: an entry grants every port | `docs/operations.md` |
 | An answer of up to 256 MiB grows about 30 times in memory when decoded | 6 | hardening | fixed | decoded one series at a time; peak growth measured at 1.4 times the body |
-| Samples near the largest float make an average infinite, and the collection fails | 6 | hardening | deferred | hostile data only; the report fails, it never shows a wrong number |
+| Samples near the largest float make an average infinite, and the collection fails | 6 | hardening | fixed | a code of its own, `SOURCE_VALUES_OUT_OF_RANGE`, not retried |
 | A cross-site navigation to the session route rotates the CSRF token | 2 | hardening | deferred | the page heals with one retry; a fix changes the route's contract |
 | Two routes judge an id before the body | 2 | no security effect | deferred | every check of identity and role runs first |
 | Two password writes of one user at one instant can answer 500 | 1 | not a security defect | deferred | needs two writes at the same instant |
