@@ -86,6 +86,23 @@ describe("overview tab", () => {
     expect(band.querySelector("[data-closing]")).toHaveClass("stroke-neatline");
   });
 
+  it("the hazard of the gauge is the view's, whatever the cluster finding", async () => {
+    const gauge = english.verdict.gauge as Gauge;
+    expect(english.findings[english.verdict.cluster_finding as number]?.severity).toBe("attention");
+    mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: { ...gauge, hazard: "critical" } } });
+    await open();
+    let band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
+    expect(band.querySelectorAll("[data-hazard]")).toHaveLength(1);
+    expect(band.querySelector("pattern line")).toHaveClass("stroke-critical");
+
+    mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: { ...gauge, hazard: null } } });
+    cleanup();
+    await open();
+    band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
+    expect(band.querySelectorAll("[data-band]")).toHaveLength(3);
+    expect(band.querySelector("[data-hazard]")).toBeNull();
+  });
+
   it("no depth gauge when the view gives none, though autoscaling is enabled", async () => {
     mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: null } });
     await open();
@@ -136,6 +153,17 @@ describe("overview tab", () => {
     expect(lines[2]).toHaveTextContent(/Critical 1\s*·\s*Attention 1$/);
     expect(lines[3]).toHaveTextContent(/Critical 1\s*·\s*Attention 1$/);
     expect(lines[4]).toHaveTextContent(/Attention 2$/);
+  });
+
+  it("the counts of a pressure line are the view's, whatever the findings", async () => {
+    const [first, ...rest] = english.verdict.pressure;
+    mock.views.set(`${id}:en`, {
+      ...english,
+      verdict: { ...english.verdict, pressure: [{ ...(first as Pressure), critical: 7, attention: 4 }, ...rest] },
+    });
+    await open();
+    const list = screen.getByRole("heading", { level: 2, name: "Pressure by scope" }).parentElement?.querySelector("ul") as HTMLElement;
+    expect(within(list).getAllByRole("listitem")[0]).toHaveTextContent(/Critical 7\s*·\s*Attention 4$/);
   });
 
   it("a pressure link names the node it leads to", async () => {
@@ -363,6 +391,16 @@ describe("overview tab", () => {
     expect(first.getAttribute("href")).toMatch(/\/findings\?scope=hpa&finding=7$/);
     const eighth = within(rows[7] as HTMLElement).getByRole("link");
     expect(eighth.getAttribute("href")).toMatch(/\/findings\?scope=workload&finding=11$/);
+  });
+
+  it("an action links to the finding the view names, whatever its code", async () => {
+    const [first, ...rest] = english.recommendations;
+    expect(first?.finding).toBe(7);
+    expect(english.findings[3]?.code).not.toBe(english.findings[7]?.code);
+    mock.views.set(`${id}:en`, { ...english, recommendations: [{ ...(first as View["recommendations"][number]), finding: 3 }, ...rest] });
+    await open();
+    const rows = within(screen.getByRole("table", { name: "Prioritized action plan" })).getAllByRole("row").slice(1);
+    expect(within(rows[0] as HTMLElement).getByRole("link").getAttribute("href")).toMatch(/[?&]finding=3$/);
   });
 
   it("an action the view ties to no finding stays plain text", async () => {
