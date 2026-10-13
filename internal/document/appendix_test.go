@@ -117,13 +117,17 @@ func TestEffectiveCapabilities(t *testing.T) {
 		name     string
 		warning  string
 		capIndex int
+		counts   []string
 	}{
-		{"ambiguous spec turns hpa_history partial", collect.WarningHPAAmbiguousSpec, 3},
-		{"ambiguous target turns workloads_without_hpa partial", collect.WarningHPAAmbiguousTarget, 4},
+		{"ambiguous spec turns hpa_history partial", collect.WarningHPAAmbiguousSpec, 3, []string{" 5", " 3", " 1"}},
+		{"ambiguous target turns workloads_without_hpa partial", collect.WarningHPAAmbiguousTarget, 4, []string{" 5", " 3", " 1"}},
+		{"incomplete node evidence turns node_utilization partial", collect.WarningNodeCapacityEvidenceIncomplete, 7, []string{" 6", " 2", " 1"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := baseSnapshot(t)
+			s.Quality.Capabilities[tt.capIndex].State = discovery.StateAvailable
+			s.Quality.Capabilities[tt.capIndex].Reasons = []string{}
 			s.Quality.Warnings = []snapshot.Message{{Code: tt.warning, Params: map[string]float64{}}}
 
 			got := effectiveCapabilities(s)
@@ -140,7 +144,7 @@ func TestEffectiveCapabilities(t *testing.T) {
 			cat := mustCatalog(t, catalog.English)
 			doc := mustBuild(t, s, cat, Options{})
 			list := frontBlock(t, doc).Blocks[6].(List)
-			for i, want := range []string{" 5", " 3", " 1"} {
+			for i, want := range tt.counts {
 				if got := runText(t, list.Items[i][1]); got != want {
 					t.Errorf("front count %d = %q, want %q", i, got, want)
 				}

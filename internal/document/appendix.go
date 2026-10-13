@@ -90,22 +90,26 @@ func appendixRows(b *builder, capabilities []snapshot.Capability, severity strin
 	return rows
 }
 
-// ambiguityWarnings names, for the two capabilities an ambiguous HPA
-// weakens, the warning that weakens each.
-var ambiguityWarnings = map[string]string{
+// weakeningWarnings names, for each capability that a warning weakens, the
+// warning that turns it partial: an ambiguous HPA weakens the HPA history
+// and the workloads without HPA, and incomplete node capacity evidence
+// weakens the node utilization.
+var weakeningWarnings = map[string]string{
 	"hpa_history":           collect.WarningHPAAmbiguousSpec,
 	"workloads_without_hpa": collect.WarningHPAAmbiguousTarget,
+	"node_utilization":      collect.WarningNodeCapacityEvidenceIncomplete,
 }
 
 // effectiveCapabilities returns the capabilities of the snapshot with an
-// available hpa_history turned partial when the warning HPA_AMBIGUOUS_SPEC
-// is present, and an available workloads_without_hpa turned partial when
-// HPA_AMBIGUOUS_TARGET is, the warning's code standing as the one reason.
+// available capability turned partial when the warning that weakens it is
+// present (HPA_AMBIGUOUS_SPEC for hpa_history, HPA_AMBIGUOUS_TARGET for
+// workloads_without_hpa, NODE_CAPACITY_EVIDENCE_INCOMPLETE for
+// node_utilization), the warning's code standing as the one reason.
 // The snapshot is left as it is.
 func effectiveCapabilities(s snapshot.Snapshot) []snapshot.Capability {
 	out := slices.Clone(s.Quality.Capabilities)
 	for i, c := range out {
-		code, weakened := ambiguityWarnings[c.Name]
+		code, weakened := weakeningWarnings[c.Name]
 		if !weakened || c.State != discovery.StateAvailable {
 			continue
 		}
