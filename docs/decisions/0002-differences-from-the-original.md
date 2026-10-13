@@ -37,3 +37,13 @@ utilization where the original lists it as an interpretation, with the
 same coverage and remark. The comparison reads the row as the
 interpretation, only when the stored capability is available and the
 warning stands.
+
+### Node readiness and schedulability
+
+`NODE_NOT_READY` and `NODE_UNSCHEDULABLE`, of attention, mark a node whose
+Ready condition was false, or that was cordoned, at the end of the period.
+The original reads both states and writes them in its node table, but
+writes no finding, so a node that was not ready read as healthy. The
+recorded scenario `edge-scaling` holds one such node, `pool-a-2`; the
+comparison removes its two findings and their two recommendations, and
+lowers the counts of findings, recommendations, and attention by two.

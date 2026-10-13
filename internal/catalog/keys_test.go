@@ -198,6 +198,7 @@ func TestKeysHoldThePartFamilies(t *testing.T) {
 		"reason.usage_average.cpu", "reason.usage_average.memory",
 		"reason.request_high.cpu", "reason.request_high.memory",
 		"finding.node_overrequested.summary", "finding.node_low_utilization.summary",
+		"finding.node_not_ready.summary", "finding.node_unschedulable.summary",
 	}
 	for _, k := range want {
 		if !keys[k] {
@@ -239,7 +240,7 @@ func TestKeysHoldTheFindingKeys(t *testing.T) {
 			count++
 		}
 	}
-	if count != 75 {
-		t.Errorf("Keys() holds %d finding keys, want 75", count)
+	if count != 81 {
+		t.Errorf("Keys() holds %d finding keys, want 81", count)
 	}
 }

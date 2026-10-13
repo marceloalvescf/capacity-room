@@ -230,6 +230,8 @@ func clusterFindings() []Finding {
 	n4.CPURequestPercent = known(90)
 	n4.MemoryRequestPercent = known(72)
 	n5 := node("n5", "unknown", discovery.ConfidenceUnknown, collect.Statistics{}, collect.Statistics{})
+	n5.Ready = collect.Flag{Known: true}
+	n5.Schedulable = collect.Flag{Known: true}
 	nodes := []collect.Node{n1, n2, n3, n4, n5}
 
 	hpas := []collect.HPA{
@@ -284,7 +286,7 @@ func matchesSpecs(evidence []Evidence, specs []EvidenceSpec) bool {
 }
 
 // TestEveryFindingFollowsItsDefinition builds rows that give each of the
-// 66 codes and checks that each finding agrees with its registry
+// 68 codes and checks that each finding agrees with its registry
 // definition in severity, scope type, and evidence names and kinds. A
 // code of nodes may come from more than one node.
 func TestEveryFindingFollowsItsDefinition(t *testing.T) {

@@ -147,3 +147,43 @@ func TestNodepoolUnknownCountsOnce(t *testing.T) {
 		t.Errorf("evidence = %v, want affected_nodes 2", got)
 	}
 }
+
+// TestNodeReadinessFindings pins the two readiness findings: a known false
+// readiness or schedulability is a finding of attention, a known true one
+// is none, and an unknown one is none.
+func TestNodeReadinessFindings(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name        string
+		ready       collect.Flag
+		schedulable collect.Flag
+		want        []string
+	}{
+		{"ready and schedulable", collect.Flag{Value: true, Known: true}, collect.Flag{Value: true, Known: true}, nil},
+		{"not ready", collect.Flag{Value: false, Known: true}, collect.Flag{Value: true, Known: true}, []string{"NODE_NOT_READY"}},
+		{"cordoned", collect.Flag{Value: true, Known: true}, collect.Flag{Value: false, Known: true}, []string{"NODE_UNSCHEDULABLE"}},
+		{"not ready and cordoned", collect.Flag{Value: false, Known: true}, collect.Flag{Value: false, Known: true}, []string{"NODE_NOT_READY", "NODE_UNSCHEDULABLE"}},
+		{"unknown", collect.Flag{}, collect.Flag{}, nil},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			node := testNode("n1")
+			node.Ready = c.ready
+			node.Schedulable = c.schedulable
+			var got []string
+			for _, f := range Nodes([]collect.Node{node}, defaultThresholds()) {
+				if f.Code != "NODE_NOT_READY" && f.Code != "NODE_UNSCHEDULABLE" {
+					continue
+				}
+				got = append(got, f.Code)
+				if f.Severity != SeverityAttention || f.ScopeType != ScopeNode || f.ScopeName != "n1" ||
+					f.Confidence != discovery.ConfidenceExact || len(f.Evidence) != 0 {
+					t.Errorf("finding %+v, want attention, node n1, exact, no evidence", f)
+				}
+			}
+			if !slices.Equal(got, c.want) {
+				t.Errorf("codes = %v, want %v", got, c.want)
+			}
+		})
+	}
+}

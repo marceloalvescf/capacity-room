@@ -75,7 +75,8 @@ func requestHigh(percent collect.Number, t config.Thresholds) (string, bool) {
 
 // Nodes follows analyze_nodes of the original: per node, in name order,
 // the CPU and memory usage, the request high findings, the overrequested
-// finding, and the low utilisation finding; then one NODEPOOL_UNKNOWN for
+// finding, the low utilisation finding, the not ready finding, and the
+// unschedulable finding; then one NODEPOOL_UNKNOWN for
 // the nodes whose pool is unknown.
 func Nodes(nodes []collect.Node, t config.Thresholds) []Finding {
 	ordered := slices.Clone(nodes)
@@ -145,6 +146,27 @@ func Nodes(nodes []collect.Node, t config.Thresholds) []Finding {
 					Confidence: discovery.ConfidenceExact,
 				})
 			}
+		}
+
+		if node.Ready.Known && !node.Ready.Value {
+			findings = append(findings, Finding{
+				Code:       "NODE_NOT_READY",
+				Severity:   SeverityAttention,
+				ScopeType:  ScopeNode,
+				ScopeName:  node.Name,
+				Evidence:   []Evidence{},
+				Confidence: discovery.ConfidenceExact,
+			})
+		}
+		if node.Schedulable.Known && !node.Schedulable.Value {
+			findings = append(findings, Finding{
+				Code:       "NODE_UNSCHEDULABLE",
+				Severity:   SeverityAttention,
+				ScopeType:  ScopeNode,
+				ScopeName:  node.Name,
+				Evidence:   []Evidence{},
+				Confidence: discovery.ConfidenceExact,
+			})
 		}
 
 		if node.Pool == unknownPool || node.PoolConfidence == discovery.ConfidenceUnknown {

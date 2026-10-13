@@ -391,6 +391,16 @@ summary = "O node apresentou baixa utilização real média."
 action = "Avaliar consolidação e redução segura de capacidade."
 observation = "Baixa utilização média"
 
+[finding.node_not_ready]
+summary = "O node não estava pronto no fim do período."
+action = "Verificar as condições do node e mover os workloads se ele não se recuperar."
+observation = "Não pronto"
+
+[finding.node_unschedulable]
+summary = "O node estava marcado como não agendável no fim do período."
+action = "Confirmar que o cordon do node foi intencional e planejar o retorno ou a remoção dele."
+observation = "Não agendável"
+
 [finding.nodepool_unknown]
 summary = "O node pool não pôde ser determinado."
 action = "Confirmar o node pool sem inferir identidade do provedor."

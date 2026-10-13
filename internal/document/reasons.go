@@ -82,6 +82,10 @@ func reasonFragment(b *builder, f snapshot.Finding) string {
 		return strings.TrimRight(b.text(catalog.FindingSummary("node_overrequested", ""), nil), ".")
 	case "NODE_LOW_UTILIZATION":
 		return strings.TrimRight(b.text(catalog.FindingSummary("node_low_utilization", ""), nil), ".")
+	case "NODE_NOT_READY":
+		return strings.TrimRight(b.text(catalog.FindingSummary("node_not_ready", ""), nil), ".")
+	case "NODE_UNSCHEDULABLE":
+		return strings.TrimRight(b.text(catalog.FindingSummary("node_unschedulable", ""), nil), ".")
 	}
 	if b.err == nil {
 		b.err = fmt.Errorf("finding %s has no reason text", f.Code)

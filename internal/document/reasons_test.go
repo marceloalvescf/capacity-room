@@ -29,6 +29,8 @@ func TestReasonFragmentOfNodesUnchanged(t *testing.T) {
 		{nodeFinding("NODE_MEMORY_REQUEST_HIGH", "critical", "n", number("percent", 90)), "Memory: 90% of the allocatable requested"},
 		{nodeFinding("NODE_OVERREQUESTED", "attention", "n", snapshot.Evidence{Name: "resources", Value: snapshot.Value{Kind: "text", Text: "cpu"}}), "High requests coexist with low observed utilization"},
 		{nodeFinding("NODE_LOW_UTILIZATION", "attention", "n", number("maximum_average_percent", 12)), "The node showed low average utilization"},
+		{nodeFinding("NODE_NOT_READY", "attention", "n"), "The node was not ready at the end of the period"},
+		{nodeFinding("NODE_UNSCHEDULABLE", "attention", "n"), "The node was unschedulable at the end of the period"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.finding.Code, func(t *testing.T) {

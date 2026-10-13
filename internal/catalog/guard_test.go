@@ -1938,6 +1938,8 @@ var findingWordingTable = []struct {
 	{"node_request_high", "memory", "Requests de memória ocupam parcela elevada do node.", "Revisar requests e margem de agendamento.", "Memory requests take a high share of the node.", "Review the requests and the scheduling headroom."},
 	{"node_overrequested", "", "Requests elevados coexistem com baixa utilização real observada.", "Revisar o dimensionamento dos workloads agendados no node.", "High requests coexist with low observed utilization.", "Review the sizing of the workloads scheduled on the node."},
 	{"node_low_utilization", "", "O node apresentou baixa utilização real média.", "Avaliar consolidação e redução segura de capacidade.", "The node showed low average utilization.", "Assess consolidation and a safe reduction of capacity."},
+	{"node_not_ready", "", "O node não estava pronto no fim do período.", "Verificar as condições do node e mover os workloads se ele não se recuperar.", "The node was not ready at the end of the period.", "Check the conditions of the node and move its workloads if it does not recover."},
+	{"node_unschedulable", "", "O node estava marcado como não agendável no fim do período.", "Confirmar que o cordon do node foi intencional e planejar o retorno ou a remoção dele.", "The node was unschedulable at the end of the period.", "Confirm that the node was cordoned on purpose and plan its return or its removal."},
 	{"nodepool_unknown", "", "O node pool não pôde ser determinado.", "Confirmar o node pool sem inferir identidade do provedor.", "The node pool could not be determined.", "Confirm the node pool without inferring the identity of the provider."},
 	{"nodepool_uneven", "cpu", "A pressão de pico de CPU variou entre nodes do pool.", "Investigar distribuição de carga e restrições de agendamento.", "Peak CPU pressure varied among the nodes of the pool.", "Investigate the load distribution and the scheduling constraints."},
 	{"nodepool_uneven", "memory", "A pressão de pico de memória variou entre nodes do pool.", "Investigar distribuição de carga e restrições de agendamento.", "Peak memory pressure varied among the nodes of the pool.", "Investigate the load distribution and the scheduling constraints."},
@@ -1967,6 +1969,8 @@ var observationWordingTable = []struct {
 	{"node_request_high", "memory", "Requests de memória elevados", "High memory requests"},
 	{"node_overrequested", "", "Requests elevados com baixa utilização", "High requests with low utilization"},
 	{"node_low_utilization", "", "Baixa utilização média", "Low average utilization"},
+	{"node_not_ready", "", "Não pronto", "Not ready"},
+	{"node_unschedulable", "", "Não agendável", "Unschedulable"},
 	{"nodepool_uneven", "cpu", "Distribuição desigual de CPU", "Uneven CPU distribution"},
 	{"nodepool_uneven", "memory", "Distribuição desigual de memória", "Uneven memory distribution"},
 	{"nodepool_unknown", "", "Identificação do pool indisponível", "Pool identification unavailable"},
@@ -1974,8 +1978,8 @@ var observationWordingTable = []struct {
 
 func TestFindingPairs(t *testing.T) {
 	pairs := FindingPairs()
-	if len(pairs) != 33 {
-		t.Fatalf("FindingPairs() holds %d pairs, want 33", len(pairs))
+	if len(pairs) != 35 {
+		t.Fatalf("FindingPairs() holds %d pairs, want 35", len(pairs))
 	}
 	if first := (FindingPair{"resource_request_usage", "cpu"}); pairs[0] != first {
 		t.Errorf("first pair = %+v, want %+v", pairs[0], first)
@@ -2048,8 +2052,8 @@ func TestFindingActionsAreDistinct(t *testing.T) {
 func TestFindingWordingMatchesThePlan(t *testing.T) {
 	pt := fileEntries(t, PortugueseBrazil)
 	en := fileEntries(t, English)
-	if len(findingWordingTable) != 33 || len(observationWordingTable) != 9 {
-		t.Fatalf("tables hold %d and %d rows, want 33 and 9", len(findingWordingTable), len(observationWordingTable))
+	if len(findingWordingTable) != 35 || len(observationWordingTable) != 11 {
+		t.Fatalf("tables hold %d and %d rows, want 35 and 11", len(findingWordingTable), len(observationWordingTable))
 	}
 	for _, row := range findingWordingTable {
 		summary, action := FindingSummary(row.family, row.resource), FindingAction(row.family, row.resource)

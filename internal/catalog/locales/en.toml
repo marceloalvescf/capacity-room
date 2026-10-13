@@ -391,6 +391,16 @@ summary = "The node showed low average utilization."
 action = "Assess consolidation and a safe reduction of capacity."
 observation = "Low average utilization"
 
+[finding.node_not_ready]
+summary = "The node was not ready at the end of the period."
+action = "Check the conditions of the node and move its workloads if it does not recover."
+observation = "Not ready"
+
+[finding.node_unschedulable]
+summary = "The node was unschedulable at the end of the period."
+action = "Confirm that the node was cordoned on purpose and plan its return or its removal."
+observation = "Unschedulable"
+
 [finding.nodepool_unknown]
 summary = "The node pool could not be determined."
 action = "Confirm the node pool without inferring the identity of the provider."

@@ -238,6 +238,10 @@ func clusterDefinitions() []Definition {
 			Evidence: []EvidenceSpec{{Name: "resources", Kind: KindText}}, Confidence: fixedInferred},
 		Definition{Code: "NODE_LOW_UTILIZATION", Family: "node_low_utilization", Severities: []string{SeverityAttention}, ScopeType: ScopeNode, Params: map[string]string{},
 			Evidence: numbers("maximum_average_percent"), Confidence: fixedExact},
+		Definition{Code: "NODE_NOT_READY", Family: "node_not_ready", Severities: []string{SeverityAttention}, ScopeType: ScopeNode, Params: map[string]string{},
+			Evidence: []EvidenceSpec{}, Confidence: fixedExact},
+		Definition{Code: "NODE_UNSCHEDULABLE", Family: "node_unschedulable", Severities: []string{SeverityAttention}, ScopeType: ScopeNode, Params: map[string]string{},
+			Evidence: []EvidenceSpec{}, Confidence: fixedExact},
 		Definition{Code: "NODEPOOL_UNKNOWN", Family: "nodepool_unknown", Severities: []string{SeverityAttention}, ScopeType: ScopeNodepool, Params: map[string]string{},
 			Evidence: numbers("affected_nodes"), Confidence: fixedUnknown},
 	)

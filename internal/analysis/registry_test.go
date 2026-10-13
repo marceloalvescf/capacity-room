@@ -34,9 +34,9 @@ func TestClassifyBoundaries(t *testing.T) {
 	}
 }
 
-func TestRegistryHoldsSixtySixCodes(t *testing.T) {
-	if len(Registry) != 66 {
-		t.Fatalf("len(Registry) = %d, want 66", len(Registry))
+func TestRegistryHoldsSixtyEightCodes(t *testing.T) {
+	if len(Registry) != 68 {
+		t.Fatalf("len(Registry) = %d, want 68", len(Registry))
 	}
 
 	seen := make(map[string]bool, len(Registry))
@@ -136,6 +136,8 @@ var (
 		{"NODE_MEMORY_REQUEST_HIGH", "node_request_high", "node", []string{"attention", "critical"}, wantNumbers("percent")},
 		{"NODE_OVERREQUESTED", "node_overrequested", "node", one("attention"), []EvidenceSpec{{Name: "resources", Kind: KindText}}},
 		{"NODE_LOW_UTILIZATION", "node_low_utilization", "node", one("attention"), wantNumbers("maximum_average_percent")},
+		{"NODE_NOT_READY", "node_not_ready", "node", one("attention"), nil},
+		{"NODE_UNSCHEDULABLE", "node_unschedulable", "node", one("attention"), nil},
 		{"NODEPOOL_UNKNOWN", "nodepool_unknown", "nodepool", one("attention"), wantNumbers("affected_nodes")},
 		{"NODEPOOL_CPU_UNEVEN", "nodepool_uneven", "nodepool", one("attention"), wantNumbers("minimum_peak_percent", "maximum_peak_percent", "spread_percent")},
 		{"NODEPOOL_MEMORY_UNEVEN", "nodepool_uneven", "nodepool", one("attention"), wantNumbers("minimum_peak_percent", "maximum_peak_percent", "spread_percent")},
@@ -233,11 +235,11 @@ func evidenceNames(definition Definition) []string {
 
 // TestRegistryHoldsTheKindOfEveryEvidence covers the kind of each evidence
 // and the list of severities: the first 40 definitions carry one severity
-// and numbers only; the 26 after them are checked against the design in
-// TestRegistryHoldsSixtySixCodes.
+// and numbers only; the 28 after them are checked against the design in
+// TestRegistryHoldsSixtyEightCodes.
 func TestRegistryHoldsTheKindOfEveryEvidence(t *testing.T) {
-	if len(Registry) != 66 {
-		t.Fatalf("Registry holds %d definitions, want 66", len(Registry))
+	if len(Registry) != 68 {
+		t.Fatalf("Registry holds %d definitions, want 68", len(Registry))
 	}
 	for _, definition := range Registry[:40] {
 		if len(definition.Severities) != 1 {
@@ -331,6 +333,8 @@ func TestConfidenceRuleOfEveryCode(t *testing.T) {
 		"STATEFULSET_WITHOUT_HPA_INFO":       exact,
 		"NODE_OVERREQUESTED":                 inferred,
 		"NODE_LOW_UTILIZATION":               exact,
+		"NODE_NOT_READY":                     exact,
+		"NODE_UNSCHEDULABLE":                 exact,
 		"NODEPOOL_UNKNOWN":                   unknown,
 		"NODEPOOL_CPU_UNEVEN":                {FromPool: true},
 		"NODEPOOL_MEMORY_UNEVEN":             {FromPool: true},

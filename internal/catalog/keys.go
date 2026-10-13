@@ -484,7 +484,7 @@ func ScopeSummary(kind string) Key { return Key("scope_summary." + kind) }
 
 // ObservationFamilies lists the families that carry an observation: the
 // families of the codes of the node and nodepool scopes.
-var ObservationFamilies = []string{"node_usage", "node_request_high", "node_overrequested", "node_low_utilization", "nodepool_uneven", "nodepool_unknown"}
+var ObservationFamilies = []string{"node_usage", "node_request_high", "node_overrequested", "node_low_utilization", "node_not_ready", "node_unschedulable", "nodepool_uneven", "nodepool_unknown"}
 
 // findingKey returns finding.<family>[.<resource>].<part>.
 func findingKey(family, resource, part string) Key {

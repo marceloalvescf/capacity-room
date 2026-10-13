@@ -1564,7 +1564,7 @@ func compareCollectionStates(scenario string, collected collect.Collected, want 
 	return diffs
 }
 
-// compareNumbers compares snap and collected, the snapshot and the
+// compareNumbers compares snap, less the findings of ruledCodes, and collected, the snapshot and the
 // collectors' own result of one run of scenario, with want, a decoded
 // recorded file of the original, and returns every difference found: a
 // namespace row, a workload row, a finding, a warning, or a notice present
@@ -1572,6 +1572,7 @@ func compareCollectionStates(scenario string, collected collect.Collected, want 
 // that disagrees, each naming the scenario, the row or finding, and the
 // field, with both values.
 func compareNumbers(scenario string, snap snapshot.Snapshot, collected collect.Collected, want pythonRecording) []string {
+	snap, _ = withoutRuledCodes(snap)
 	var diffs []string
 	diffs = append(diffs, compareNamespaces(scenario, snap.Namespaces, collected.Namespaces.Rows, want.Namespaces)...)
 	diffs = append(diffs, compareWorkloads(scenario, snap.Workloads, collected.Workloads.Rows, want.Workloads)...)
@@ -2545,5 +2546,112 @@ func TestPartialNodeUtilizationRowIsRewritten(t *testing.T) {
 				t.Errorf("rows of the interpretation gained = %d, want %d", got, tt.before)
 			}
 		})
+	}
+}
+
+// ruledCodes holds the finding codes this project writes and the original
+// does not, each a decision of
+// docs/decisions/0002-differences-from-the-original.md.
+var ruledCodes = []string{"NODE_NOT_READY", "NODE_UNSCHEDULABLE"}
+
+// withoutRuledCodes returns a copy of snap without the findings and the
+// recommendations of ruledCodes, its summary counts lowered by what it
+// removed, and the number of findings removed for each ruled code. snap
+// itself is left as it is.
+func withoutRuledCodes(snap snapshot.Snapshot) (snapshot.Snapshot, map[string]int) {
+	removed := map[string]int{}
+	out := snap
+	out.Findings = nil
+	for _, f := range snap.Findings {
+		if !slices.Contains(ruledCodes, f.Code) {
+			out.Findings = append(out.Findings, f)
+			continue
+		}
+		removed[f.Code]++
+		out.Summary.Findings--
+		switch f.Severity {
+		case analysis.SeverityHealthy:
+			out.Summary.Healthy--
+		case analysis.SeverityAttention:
+			out.Summary.Attention--
+		case analysis.SeverityCritical:
+			out.Summary.Critical--
+		}
+	}
+	out.Recommendations = nil
+	for _, r := range snap.Recommendations {
+		if slices.Contains(ruledCodes, r.Code) {
+			out.Summary.Recommendations--
+			continue
+		}
+		out.Recommendations = append(out.Recommendations, r)
+	}
+	if out.Findings == nil {
+		out.Findings = []snapshot.Finding{}
+	}
+	if out.Recommendations == nil {
+		out.Recommendations = []snapshot.Recommendation{}
+	}
+	return out, removed
+}
+
+// TestRuledCodesAreWritten fails when a ruled code is written by no
+// recorded scenario, so that the table cannot outlive its decision.
+func TestRuledCodesAreWritten(t *testing.T) {
+	sums := map[string]int{}
+	for _, scenario := range promtest.Scenarios {
+		out, _, err := run(context.Background(), scenario)
+		if err != nil {
+			t.Fatalf("run(%s): %v", scenario.Name, err)
+		}
+		_, removed := withoutRuledCodes(out.Snapshot)
+		for code, n := range removed {
+			sums[code] += n
+		}
+	}
+	for _, code := range ruledCodes {
+		if sums[code] == 0 {
+			t.Errorf("ruled code %s is written by no recorded scenario", code)
+		}
+	}
+}
+
+// TestEdgeScalingWritesTheReadinessFindings checks that edge-scaling writes
+// both readiness findings for pool-a-2, which it reports not ready and
+// cordoned, and none for orphan, whose readiness is unknown, and that the
+// removal lowers the counts of findings, recommendations, and attention by
+// two.
+func TestEdgeScalingWritesTheReadinessFindings(t *testing.T) {
+	var scaling promtest.Scenario
+	for _, s := range promtest.Scenarios {
+		if s.Name == "edge-scaling" {
+			scaling = s
+		}
+	}
+	out, _, err := run(context.Background(), scaling)
+	if err != nil {
+		t.Fatalf("run(edge-scaling): %v", err)
+	}
+	var got []string
+	for _, f := range out.Snapshot.Findings {
+		if slices.Contains(ruledCodes, f.Code) {
+			got = append(got, f.Code+" "+f.ScopeName)
+		}
+	}
+	if want := []string{"NODE_NOT_READY pool-a-2", "NODE_UNSCHEDULABLE pool-a-2"}; !slices.Equal(got, want) {
+		t.Errorf("readiness findings = %v, want %v", got, want)
+	}
+	filtered, removed := withoutRuledCodes(out.Snapshot)
+	if removed["NODE_NOT_READY"] != 1 || removed["NODE_UNSCHEDULABLE"] != 1 {
+		t.Errorf("removed = %v, want one of each", removed)
+	}
+	if d := out.Snapshot.Summary.Findings - filtered.Summary.Findings; d != 2 {
+		t.Errorf("findings lowered by %v, want 2", d)
+	}
+	if d := out.Snapshot.Summary.Recommendations - filtered.Summary.Recommendations; d != 2 {
+		t.Errorf("recommendations lowered by %v, want 2", d)
+	}
+	if d := out.Snapshot.Summary.Attention - filtered.Summary.Attention; d != 2 {
+		t.Errorf("attention lowered by %v, want 2", d)
 	}
 }
