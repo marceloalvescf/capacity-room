@@ -329,7 +329,7 @@ takes no new job, waits `worker_drain_seconds` for the running ones, cancels
 them, and waits as long again; a cancelled job runs again from the start
 later. Compose gives `serve` 45 seconds and `worker` 75 seconds before it
 kills them. A second interrupt or `SIGTERM` during the stop ends the process
-at once, like a kill. If you raise `worker_drain_seconds`, raise the worker's
+at once, like a kill. A second interrupt also ends a one-shot command, such as the report command, at once; the file it was writing is then left beside its target as a hidden `.<name>.<random>.tmp` file, which you can delete. If you raise `worker_drain_seconds`, raise the worker's
 `stop_grace_period` in your limits file to at least twice that plus 15
 seconds. A worker killed before it stops leaves its jobs to be picked up
 again once the longer of the two job timeouts and one more minute have

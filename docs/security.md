@@ -124,7 +124,7 @@ reason.
 | The DSN shows in `docker inspect` | 7 | out of scope (needs the Docker socket) | documented | `docs/operations.md` |
 | The README made the server secret world-readable | 7 | hardening | documented: the guide gives the folder to user 10001 alone | `docs/operations.md` |
 | The profile tests tell ports apart within an allowed host or range | 3 | inherent | documented: an entry grants every port | `docs/operations.md` |
-| An answer of up to 256 MiB grows about 30 times in memory when decoded | 6 | hardening | fixed | decoded one series at a time; peak growth measured at 1.4 times the body |
+| An answer of up to 256 MiB grows about 30 times in memory when decoded | 6 | hardening | fixed | decoded one series at a time; the decode holds about 2 times the body while it reads the series one at a time, where the whole answer decoded at once held about 22 times; with every sample parsed the peak is about 10 times, against about 30 times before |
 | Samples near the largest float make an average infinite, and the collection fails | 6 | hardening | fixed | a code of its own, `SOURCE_VALUES_OUT_OF_RANGE`, not retried |
 | A cross-site navigation to the session route rotates the CSRF token | 2 | hardening | fixed | the route refuses a request from another site |
 | Two routes judge an id before the body | 2 | no security effect | deferred | every check of identity and role runs first |
