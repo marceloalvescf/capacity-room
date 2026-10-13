@@ -17,7 +17,7 @@
     faces: ("text", "num", "num", "num", "num", "num", "num"),
   ),
   workload-resources: (
-    columns: (1.28fr, 0.45fr, 0.95fr, 0.95fr, 0.72fr, 0.72fr, 0.95fr, 0.95fr, 0.72fr, 0.72fr),
+    columns: (1.28fr, 0.45fr, 0.95fr, 0.95fr, 0.72fr, 0.92fr, 0.95fr, 0.95fr, 0.72fr, 0.92fr),
     size: 6.8pt,
     inset-y: 3.5pt,
     faces: ("name", "num", "num", "num", "num", "num", "num", "num", "num", "num"),
@@ -59,7 +59,7 @@
     faces: ("name", "name", "num", "text"),
   ),
   namespaces-at-risk: (
-    columns: (1.35fr, 0.75fr, 0.75fr, 3fr, 1.25fr, 0.85fr),
+    columns: (1.35fr, 0.95fr, 0.95fr, 2.6fr, 1.25fr, 0.85fr),
     size: 7.2pt,
     inset-y: 3.5pt,
     faces: ("name", "num", "num", "text", "text", "mark"),
@@ -95,7 +95,7 @@
     faces: ("text", "mark", "text"),
   ),
   quality-appendix: (
-    columns: (1.6fr, 0.8fr, 1fr, 2fr, 2.4fr),
+    columns: (1.6fr, 0.9fr, 1fr, 2fr, 2.4fr),
     size: 7pt,
     inset-y: 3.5pt,
     faces: ("text", "mark", "text", "text", "text"),

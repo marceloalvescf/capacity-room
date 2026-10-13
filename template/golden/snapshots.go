@@ -147,7 +147,9 @@ var Snapshots = []Snapshot{
 		Protects: "the cover, the opening matter set small, the dense " +
 			"tables, and the executive-summary tables of the capacity " +
 			"report, in Portuguese, from a data file with no verdict " +
-			"block — every page of the document",
+			"block, a status mark and the first word of its label on one " +
+			"line in the narrow Coverage column of the appendix — every " +
+			"page of the document",
 	},
 	{
 		Name:   "capacity-en",
