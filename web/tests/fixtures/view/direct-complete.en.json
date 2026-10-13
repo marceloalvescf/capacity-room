@@ -116,7 +116,7 @@
       "scope_kind": "",
       "scope_name": "payments",
       "confidence": "exact",
-      "sentence": "Memory usage against the limit indicates an increased risk of OOMKill.",
+      "sentence": "Memory usage against the limit.",
       "action": "Review the memory limit and the observed consumption profile.",
       "evidence": [
         {
@@ -160,7 +160,7 @@
       "scope_kind": "Deployment",
       "scope_name": "payments/payments-web",
       "confidence": "exact",
-      "sentence": "Memory usage against the limit indicates an increased risk of OOMKill.",
+      "sentence": "Memory usage against the limit.",
       "action": "Review the memory limit and the observed consumption profile.",
       "evidence": [
         {
@@ -204,7 +204,7 @@
       "scope_kind": "",
       "scope_name": "cluster",
       "confidence": "inferred",
-      "sentence": "The number of nodes is close to the observed maximum.",
+      "sentence": "The number of nodes reached or came close to the observed maximum.",
       "action": "Review the configured maximum and the headroom of the cluster.",
       "evidence": [
         {
@@ -288,7 +288,7 @@
       "scope_name": "node-1",
       "confidence": "exact",
       "sentence": "Observed CPU usage on the node.",
-      "action": "Follow the pressure and the capacity of the node.",
+      "action": "",
       "evidence": [
         {
           "name": "average_percent",
@@ -310,7 +310,7 @@
       "scope_name": "node-1",
       "confidence": "exact",
       "sentence": "Observed memory usage on the node.",
-      "action": "Follow the pressure and the capacity of the node.",
+      "action": "",
       "evidence": [
         {
           "name": "average_percent",
@@ -331,8 +331,8 @@
       "scope_kind": "",
       "scope_name": "payments",
       "confidence": "exact",
-      "sentence": "CPU usage against the limit indicates an increased risk of CPU throttling.",
-      "action": "Review the CPU limit and the observed consumption profile.",
+      "sentence": "CPU usage against the limit.",
+      "action": "",
       "evidence": [
         {
           "name": "average_percent",
@@ -353,8 +353,8 @@
       "scope_kind": "Deployment",
       "scope_name": "payments/payments-web",
       "confidence": "exact",
-      "sentence": "CPU usage against the limit indicates an increased risk of CPU throttling.",
-      "action": "Review the CPU limit and the observed consumption profile.",
+      "sentence": "CPU usage against the limit.",
+      "action": "",
       "evidence": [
         {
           "name": "average_percent",
@@ -376,7 +376,7 @@
       "scope_name": "payments/payments-worker",
       "confidence": "exact",
       "sentence": "StatefulSet observed without HPA; for information.",
-      "action": "Confirm the scaling strategy suited to the StatefulSet.",
+      "action": "",
       "evidence": []
     }
   ],
@@ -1407,7 +1407,7 @@
           "container_cpu_usage_seconds_total",
           "container_memory_working_set_bytes"
         ],
-        "remark": "No remark"
+        "remark": ""
       },
       {
         "name": "workload_usage",
@@ -1418,7 +1418,7 @@
           "container_cpu_usage_seconds_total",
           "container_memory_working_set_bytes"
         ],
-        "remark": "No remark"
+        "remark": ""
       },
       {
         "name": "requests_limits",
@@ -1428,7 +1428,7 @@
           "kube_pod_container_resource_requests",
           "kube_pod_container_resource_limits"
         ],
-        "remark": "No remark"
+        "remark": ""
       },
       {
         "name": "hpa_history",
@@ -1441,7 +1441,7 @@
           "kube_horizontalpodautoscaler_status_current_replicas",
           "kube_horizontalpodautoscaler_status_desired_replicas"
         ],
-        "remark": "No remark"
+        "remark": ""
       },
       {
         "name": "workloads_without_hpa",
@@ -1452,7 +1452,7 @@
           "kube_statefulset_labels",
           "kube_horizontalpodautoscaler_info"
         ],
-        "remark": "No remark"
+        "remark": ""
       },
       {
         "name": "ip_node_mapping",
@@ -1461,7 +1461,7 @@
         "evidence": [
           "kube_node_info"
         ],
-        "remark": "No remark"
+        "remark": ""
       },
       {
         "name": "nodepool_discovery",
@@ -1470,7 +1470,7 @@
         "evidence": [
           "kube_node_labels"
         ],
-        "remark": "No remark"
+        "remark": ""
       },
       {
         "name": "node_utilization",
@@ -1480,7 +1480,7 @@
           "instance:node_cpu_utilisation:rate5m",
           "instance:node_memory_utilisation:ratio"
         ],
-        "remark": "No remark"
+        "remark": ""
       },
       {
         "name": "node_autoscaling",
@@ -1489,7 +1489,7 @@
         "evidence": [
           "cluster_autoscaler_*"
         ],
-        "remark": "No remark"
+        "remark": ""
       }
     ],
     "warnings": [],

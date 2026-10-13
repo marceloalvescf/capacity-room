@@ -72,7 +72,7 @@
         "finding": {
           "status": "attention",
           "label": "Atenção",
-          "sentence": "O número de nodes está próximo ao máximo observado."
+          "sentence": "O número de nodes atingiu ou ficou próximo do máximo observado."
         },
         "warning": "As evidências de capacidade dos nodes estão incompletas.",
         "facts": [
@@ -125,7 +125,7 @@
             "status": "critical",
             "label": "Crítico",
             "scope": "Namespaces",
-            "sentence": "O uso de CPU em relação ao limit indica risco aumentado de throttling de CPU.",
+            "sentence": "Uso de CPU em relação ao limit.",
             "name": [
               {
                 "kind": "ident",
@@ -148,7 +148,7 @@
             "status": "critical",
             "label": "Crítico",
             "scope": "Workloads",
-            "sentence": "O uso de memória em relação ao limit indica risco aumentado de OOMKill.",
+            "sentence": "Uso de memória em relação ao limit.",
             "name": [
               {
                 "kind": "ident",
@@ -2737,12 +2737,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2771,12 +2766,7 @@
               "text": "Recording rule"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2805,12 +2795,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2873,12 +2858,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2907,12 +2887,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2941,12 +2916,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -3009,12 +2979,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",

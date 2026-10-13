@@ -72,7 +72,7 @@
         "finding": {
           "status": "attention",
           "label": "Attention",
-          "sentence": "The number of nodes is close to the observed maximum."
+          "sentence": "The number of nodes reached or came close to the observed maximum."
         },
         "warning": "The capacity evidence of the nodes is incomplete.",
         "facts": [
@@ -125,7 +125,7 @@
             "status": "critical",
             "label": "Critical",
             "scope": "Namespaces",
-            "sentence": "CPU usage against the limit indicates an increased risk of CPU throttling.",
+            "sentence": "CPU usage against the limit.",
             "name": [
               {
                 "kind": "ident",
@@ -148,7 +148,7 @@
             "status": "critical",
             "label": "Critical",
             "scope": "Workloads",
-            "sentence": "Memory usage against the limit indicates an increased risk of OOMKill.",
+            "sentence": "Memory usage against the limit.",
             "name": [
               {
                 "kind": "ident",

@@ -64,7 +64,7 @@
         "finding": {
           "status": "attention",
           "label": "Attention",
-          "sentence": "The number of nodes is close to the observed maximum."
+          "sentence": "The number of nodes reached or came close to the observed maximum."
         },
         "warning": null,
         "facts": [
@@ -89,7 +89,7 @@
             "status": "critical",
             "label": "Critical",
             "scope": "Namespaces",
-            "sentence": "Memory usage against the limit indicates an increased risk of OOMKill.",
+            "sentence": "Memory usage against the limit.",
             "name": [
               {
                 "kind": "ident",
@@ -112,7 +112,7 @@
             "status": "critical",
             "label": "Critical",
             "scope": "Workloads",
-            "sentence": "Memory usage against the limit indicates an increased risk of OOMKill.",
+            "sentence": "Memory usage against the limit.",
             "name": [
               {
                 "kind": "ident",
@@ -1853,12 +1853,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "No remark"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -1887,12 +1882,7 @@
               "text": "Recording rule"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "No remark"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -1921,12 +1911,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "No remark"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -1955,12 +1940,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "No remark"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -1989,12 +1969,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "No remark"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2023,12 +1998,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "No remark"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2057,12 +2027,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "No remark"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2091,12 +2056,7 @@
               "text": "Recording rule"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "No remark"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2125,12 +2085,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "No remark"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",

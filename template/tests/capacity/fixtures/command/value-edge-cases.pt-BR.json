@@ -71,7 +71,7 @@
             "status": "critical",
             "label": "Crítico",
             "scope": "Namespaces",
-            "sentence": "O uso de memória em relação ao limit indica risco aumentado de OOMKill.",
+            "sentence": "Uso de memória em relação ao limit.",
             "name": [
               {
                 "kind": "ident",
@@ -94,7 +94,7 @@
             "status": "critical",
             "label": "Crítico",
             "scope": "Workloads",
-            "sentence": "O uso de memória em relação ao limit indica risco aumentado de OOMKill.",
+            "sentence": "Uso de memória em relação ao limit.",
             "name": [
               {
                 "kind": "ident",
@@ -1835,12 +1835,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -1869,12 +1864,7 @@
               "text": "Recording rule"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -1903,12 +1893,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -1937,12 +1922,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -1971,12 +1951,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2005,12 +1980,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2039,12 +2009,7 @@
               "text": "Raw metrics"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2073,12 +2038,7 @@
               "text": "Recording rule"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
@@ -2107,12 +2067,7 @@
               "text": "Configuração"
             }
           ],
-          [
-            {
-              "kind": "text",
-              "text": "Sem observação"
-            }
-          ],
+          [],
           [
             {
               "kind": "text",
