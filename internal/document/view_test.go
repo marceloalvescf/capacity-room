@@ -685,8 +685,8 @@ func TestViewMarksEveryNumberAsThePDFDoes(t *testing.T) {
 			t.Errorf("%s carries the mark %q, the PDF prints none", name, *status)
 		}
 	}
-	if got := statusText(direct.HPAs[0].SituationStatus); got != "healthy" {
-		t.Errorf("hpa situation mark %s, want healthy", got)
+	if got := statusText(direct.HPAs[0].SituationStatus); got != "attention" {
+		t.Errorf("hpa situation mark %s, want attention", got)
 	}
 	if got := statusText(nodes.ReasonStatus); got != "healthy" {
 		t.Errorf("node reason mark %s, want healthy", got)
