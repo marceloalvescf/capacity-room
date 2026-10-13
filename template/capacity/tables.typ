@@ -17,7 +17,7 @@
     faces: ("text", "num", "num", "num", "num", "num", "num"),
   ),
   workload-resources: (
-    columns: (2.2fr, 0.45fr, 0.65fr, 0.65fr, 0.72fr, 0.72fr, 0.72fr, 0.72fr, 0.72fr, 0.72fr),
+    columns: (1.28fr, 0.45fr, 0.95fr, 0.95fr, 0.72fr, 0.72fr, 0.95fr, 0.95fr, 0.72fr, 0.72fr),
     size: 6.8pt,
     inset-y: 3.5pt,
     faces: ("name", "num", "num", "num", "num", "num", "num", "num", "num", "num"),
