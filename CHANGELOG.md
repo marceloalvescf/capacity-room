@@ -6,6 +6,22 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- A report whose metric source's host name does not resolve is tried again, as a source that does not answer is.
+- A second interrupt ends `serve`, `worker`, or a command at once while it is stopping.
+
+### Fixed
+
+- A metric source that writes sample values as numbers is read, as the original program reads it.
+- A report whose source sends values too large to compute with fails with a reason of its own, no longer as an internal failure.
+- A change request with both a wrong id and a wrong body names the body's fault, as every other route does.
+
+### Security
+
+- The worker reads a large answer of a metric source one series at a time, with far less memory.
+- Opening the session address from another site no longer changes the token of an open page.
+
 ## [1.3.0] - 2026-10-13
 
 ### Added
