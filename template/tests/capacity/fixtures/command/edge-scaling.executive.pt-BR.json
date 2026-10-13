@@ -682,7 +682,7 @@
               },
               {
                 "kind": "text",
-                "text": " 8"
+                "text": " 7"
               }
             ],
             [
@@ -692,7 +692,7 @@
               },
               {
                 "kind": "text",
-                "text": " 1"
+                "text": " 2"
               }
             ],
             [
@@ -1456,7 +1456,7 @@
           [
             {
               "kind": "text",
-              "text": "Interpretação"
+              "text": "Utilização dos nodes"
             }
           ],
           [
@@ -1533,6 +1533,40 @@
             {
               "kind": "text",
               "text": "Os dados históricos e de configuração dos HPAs estão disponíveis parcialmente para o período analisado."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Utilização dos nodes"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Parcial",
+              "alt": "Atenção"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Recording rule"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "As evidências de capacidade dos nodes estão incompletas."
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Os dados de utilização dos nodes estão disponíveis parcialmente para o período analisado."
             }
           ]
         ]

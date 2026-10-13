@@ -682,7 +682,7 @@
               },
               {
                 "kind": "text",
-                "text": " 8"
+                "text": " 7"
               }
             ],
             [
@@ -692,7 +692,7 @@
               },
               {
                 "kind": "text",
-                "text": " 1"
+                "text": " 2"
               }
             ],
             [
@@ -1456,7 +1456,7 @@
           [
             {
               "kind": "text",
-              "text": "Interpretation"
+              "text": "Node utilization"
             }
           ],
           [
@@ -1533,6 +1533,40 @@
             {
               "kind": "text",
               "text": "HPA history and configuration data is partly available for the analysis period."
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "kind": "text",
+              "text": "Node utilization"
+            }
+          ],
+          [
+            {
+              "kind": "status",
+              "status": "attention",
+              "text": "Partial",
+              "alt": "Attention"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Recording rule"
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "The capacity evidence of the nodes is incomplete."
+            }
+          ],
+          [
+            {
+              "kind": "text",
+              "text": "Node utilization data is partly available for the analysis period."
             }
           ]
         ]

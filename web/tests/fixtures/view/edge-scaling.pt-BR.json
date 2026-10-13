@@ -2498,13 +2498,13 @@
       },
       {
         "name": "node_utilization",
-        "state": "available",
+        "state": "partial",
         "strategy": "recording_rule",
         "evidence": [
           "instance:node_cpu_utilisation:rate5m",
           "instance:node_memory_utilisation:ratio"
         ],
-        "remark": "Sem observação"
+        "remark": "As evidências de capacidade dos nodes estão incompletas."
       },
       {
         "name": "node_autoscaling",

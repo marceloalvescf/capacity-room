@@ -682,7 +682,7 @@
               },
               {
                 "kind": "text",
-                "text": " 8"
+                "text": " 7"
               }
             ],
             [
@@ -692,7 +692,7 @@
               },
               {
                 "kind": "text",
-                "text": " 1"
+                "text": " 2"
               }
             ],
             [
@@ -1440,7 +1440,7 @@
           [
             {
               "kind": "text",
-              "text": "Interpretação"
+              "text": "Utilização dos nodes"
             }
           ],
           [
@@ -2959,9 +2959,9 @@
           [
             {
               "kind": "status",
-              "status": "healthy",
-              "text": "Disponível",
-              "alt": "Saudável"
+              "status": "attention",
+              "text": "Parcial",
+              "alt": "Atenção"
             }
           ],
           [
@@ -2973,13 +2973,13 @@
           [
             {
               "kind": "text",
-              "text": "Sem observação"
+              "text": "As evidências de capacidade dos nodes estão incompletas."
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Os dados de utilização dos nodes estão disponíveis para o período analisado."
+              "text": "Os dados de utilização dos nodes estão disponíveis parcialmente para o período analisado."
             }
           ]
         ],

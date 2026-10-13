@@ -682,7 +682,7 @@
               },
               {
                 "kind": "text",
-                "text": " 8"
+                "text": " 7"
               }
             ],
             [
@@ -692,7 +692,7 @@
               },
               {
                 "kind": "text",
-                "text": " 1"
+                "text": " 2"
               }
             ],
             [
@@ -1440,7 +1440,7 @@
           [
             {
               "kind": "text",
-              "text": "Interpretation"
+              "text": "Node utilization"
             }
           ],
           [
@@ -2959,9 +2959,9 @@
           [
             {
               "kind": "status",
-              "status": "healthy",
-              "text": "Available",
-              "alt": "Healthy"
+              "status": "attention",
+              "text": "Partial",
+              "alt": "Attention"
             }
           ],
           [
@@ -2973,13 +2973,13 @@
           [
             {
               "kind": "text",
-              "text": "No remark"
+              "text": "The capacity evidence of the nodes is incomplete."
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Node utilization data is available for the analysis period."
+              "text": "Node utilization data is partly available for the analysis period."
             }
           ]
         ],
