@@ -201,6 +201,34 @@ func TestBurstyBoundary(t *testing.T) {
 	}
 }
 
+// TestCPUVariationNeedsOneMillicore pins the floor of the CPU variation:
+// an average below 1 mCPU is not judged, an average of exactly 1 mCPU is,
+// and memory keeps no floor.
+func TestCPUVariationNeedsOneMillicore(t *testing.T) {
+	t.Parallel()
+	unavailable := collect.Statistics{State: collect.StateUnavailable}
+
+	cases := []struct {
+		name     string
+		resource string
+		average  float64
+		peak     float64
+		want     bool
+	}{
+		{"cpu below one millicore", "cpu", 0.0009, 0.5, false},
+		{"cpu at one millicore", "cpu", 0.001, 0.5, true},
+		{"memory below one byte keeps being judged", "memory", 0.0009, 0.5, true},
+	}
+	for _, c := range cases {
+		findings := resourceFindings("NAMESPACE", ScopeNamespace, "payments", "", c.resource,
+			valueStats(c.average, c.peak), unavailable, unavailable, unavailable, unavailable,
+			discovery.StateUnavailable, false, defaultThresholds())
+		if got := codeSuffix(findings, "_BURSTY"); got != c.want {
+			t.Errorf("%s: BURSTY present = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
 // TestApproximateGivesInferred covers an approximate row with all six
 // kinds of finding: confidence is inferred on the request ratio, the
 // limit ratio, and OVERREQUESTED, and exact on REQUEST_MISSING,

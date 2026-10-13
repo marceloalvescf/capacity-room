@@ -8,10 +8,16 @@ import (
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 )
 
+// minimumCPUAverage is the CPU average, in cores, below which the variation
+// of CPU usage is not judged: one millicore, under which the gap between
+// the peak and the average is a ratio of rounding noise.
+const minimumCPUAverage = 0.001
+
 // resourceFindings judges one resource of one row, following
 // _resource_findings of the original, in this order: the request ratio,
 // the limit ratio, REQUEST_MISSING, LIMIT_MISSING, OVERREQUESTED, and
-// BURSTY.
+// BURSTY. BURSTY needs a usage average above zero, and for CPU at least
+// minimumCPUAverage.
 func resourceFindings(
 	prefix, scopeType, scopeName, scopeKind, resource string,
 	usage, requests, limits, requestPercent, limitPercent collect.Statistics,
@@ -88,7 +94,11 @@ func resourceFindings(
 		})
 	}
 
-	if usage.State == collect.StateValue && usage.Average > 0 {
+	judged := usage.Average > 0
+	if resource == "cpu" {
+		judged = usage.Average >= minimumCPUAverage
+	}
+	if usage.State == collect.StateValue && judged {
 		gapPercent := (usage.Peak - usage.Average) / usage.Average * 100.0
 		if gapPercent >= t.BurstyGapPercent {
 			findings = append(findings, Finding{
