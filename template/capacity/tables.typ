@@ -95,7 +95,7 @@
     faces: ("text", "mark", "text"),
   ),
   quality-appendix: (
-    columns: (1.6fr, 0.9fr, 1fr, 2fr, 2.4fr),
+    columns: (1.6fr, 0.95fr, 1fr, 2fr, 2.4fr),
     size: 7pt,
     inset-y: 3.5pt,
     faces: ("text", "mark", "text", "text", "text"),

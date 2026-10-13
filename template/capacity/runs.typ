@@ -49,7 +49,7 @@
   } else {
     let weight = if run.status == "critical" { "bold" } else { "regular" }
     box(text(fill: status-fill(run.status), weight: weight)[
-      #status-mark(run.status, run.at("alt", default: none))#if run.text != none { sym.wj; h(2pt); sym.wj; text(hyphenate: true, run.text) }
+      #status-mark(run.status, run.at("alt", default: none))#if run.text != none { sym.wj; h(2pt); sym.wj; text(hyphenate: " " not in run.text, run.text) }
     ])
   }
 }
