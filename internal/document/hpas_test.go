@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
@@ -170,7 +171,7 @@ func TestHPASectionSituation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assertStatus(t, hpaSituation(b, tt.hpa), tt.wantStatus, tt.wantText)
+			assertStatus(t, hpaSituation(b, tt.hpa, nil), tt.wantStatus, tt.wantText)
 		})
 	}
 	if b.err != nil {
@@ -365,5 +366,38 @@ func TestHPASectionWalksTheScopeNamespaces(t *testing.T) {
 	}
 	if names := hpaNames(t, blocks); names != nil {
 		t.Errorf("HPAs shown = %v, want none", names)
+	}
+}
+
+func TestHPASituationTakesTheWorstFinding(t *testing.T) {
+	b := &builder{cat: mustCatalog(t, catalog.English)}
+	below := hpaRow("h", floatPtr(2), floatPtr(10), hpaStat(7, 2, 9))
+	pinned := hpaRow("h", floatPtr(4), floatPtr(4), hpaStat(4, 4, 3))
+	maxReached := hpaRow("h", floatPtr(2), floatPtr(10), hpaStat(7, 2, 10))
+	unavailable := hpaRow("h", floatPtr(2), nil, hpaStat(7, 2, 9))
+	finding := func(code, severity, name string) snapshot.Finding {
+		return snapshot.Finding{Code: code, Severity: severity, ScopeType: analysis.ScopeHPA, ScopeName: name}
+	}
+	divergence := finding("HPA_REPLICA_DIVERGENCE", analysis.SeverityAttention, "payments/h")
+
+	tests := []struct {
+		name       string
+		hpa        snapshot.HPA
+		findings   []snapshot.Finding
+		wantStatus string
+		wantText   string
+	}{
+		{"below, no finding", below, nil, "healthy", "Below the maximum"},
+		{"below, divergence", below, []snapshot.Finding{divergence}, "attention", "Below the maximum"},
+		{"pinned, pinned finding", pinned, []snapshot.Finding{finding("HPA_PINNED_REPLICAS", analysis.SeverityHealthy, "payments/h")}, "healthy", "Pinned"},
+		{"maximum reached, divergence", maxReached, []snapshot.Finding{divergence}, "critical", "Maximum reached"},
+		{"unavailable, divergence", unavailable, []snapshot.Finding{divergence}, "attention", "Unavailable"},
+		{"unavailable, no finding", unavailable, nil, "unavailable", "Unavailable"},
+		{"finding of another namespace", below, []snapshot.Finding{finding("HPA_REPLICA_DIVERGENCE", analysis.SeverityAttention, "checkout/h")}, "healthy", "Below the maximum"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assertStatus(t, hpaSituation(b, tt.hpa, tt.findings), tt.wantStatus, tt.wantText)
+		})
 	}
 }

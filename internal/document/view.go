@@ -281,7 +281,7 @@ func buildView(s snapshot.Snapshot, c *catalog.Catalog, severity string) (View, 
 		Verdict:         vb.verdict(decideVerdict(s, findings)),
 		Namespaces:      vb.namespaces(s, minRank),
 		Workloads:       vb.workloads(s, minRank),
-		HPAs:            vb.hpas(s.HPAs),
+		HPAs:            vb.hpas(s.HPAs, s.Findings),
 		Nodes:           vb.nodes(s, minRank),
 		Nodepools:       vb.nodepools(s.Nodepools),
 		Quality:         vb.quality(s),
@@ -618,10 +618,10 @@ func (vb *viewBuilder) workloads(s snapshot.Snapshot, minRank int) []ViewWorkloa
 	return out
 }
 
-func (vb *viewBuilder) hpas(hpas []snapshot.HPA) []ViewHPA {
+func (vb *viewBuilder) hpas(hpas []snapshot.HPA, findings []snapshot.Finding) []ViewHPA {
 	out := make([]ViewHPA, 0, len(hpas))
 	for _, h := range hpas {
-		situationStatus, situation := hpaSituationText(vb.b, h)
+		situationStatus, situation := hpaSituationText(vb.b, h, findings)
 		out = append(out, ViewHPA{
 			Namespace:       h.Namespace,
 			Name:            h.Name,

@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
@@ -44,7 +45,7 @@ func buildHPAsSection(b *builder, s snapshot.Snapshot) []Block {
 			continue
 		}
 		if len(hpas) > 0 {
-			blocks = append(blocks, tableHeading(b, catalog.SectionsHPAsObservedHeading), hpaTable(b, hpas))
+			blocks = append(blocks, tableHeading(b, catalog.SectionsHPAsObservedHeading), hpaTable(b, hpas, s.Findings))
 		}
 		if len(uncovered) > 0 {
 			blocks = append(blocks, tableHeading(b, catalog.SectionsHPAsUncoveredHeading), uncoveredTable(b, uncovered))
@@ -129,7 +130,7 @@ func uncoveredWorkloads(workloads []snapshot.Workload, namespace string) []snaps
 }
 
 // hpaTable builds one "hpa-observed" table, one row for every HPA.
-func hpaTable(b *builder, hpas []snapshot.HPA) Table {
+func hpaTable(b *builder, hpas []snapshot.HPA, findings []snapshot.Finding) Table {
 	rows := make([][][]Run, len(hpas))
 	for i, h := range hpas {
 		rows[i] = [][]Run{
@@ -139,7 +140,7 @@ func hpaTable(b *builder, hpas []snapshot.HPA) Table {
 			{quantityRun(b, h.Current, h.Current.Average, func(v float64) string { return b.cat.Decimal(v, 1) })},
 			{quantityRun(b, h.Current, h.Current.Minimum, b.cat.Count)},
 			{quantityRun(b, h.Current, h.Current.Peak, b.cat.Count)},
-			{hpaSituation(b, h)},
+			{hpaSituation(b, h, findings)},
 		}
 	}
 	return Table{
@@ -178,13 +179,27 @@ func hpaAtMax(h snapshot.HPA) bool {
 // reached when the maximum and the peak are known and the HPA is not
 // pinned; pinned when both bounds are known and equal; below the maximum
 // when the maximum and the peak are known; unavailable otherwise.
-func hpaSituation(b *builder, h snapshot.HPA) Run {
-	status, text := hpaSituationText(b, h)
+func hpaSituation(b *builder, h snapshot.HPA, findings []snapshot.Finding) Run {
+	status, text := hpaSituationText(b, h, findings)
 	return StatusValue(status, text, statusWord(b, status))
 }
 
-// hpaSituationText is the status and the text of hpaSituation.
-func hpaSituationText(b *builder, h snapshot.HPA) (status, text string) {
+// hpaSituationText is the status and the text of hpaSituation: the text
+// says where the replicas stood against the maximum; the status is the
+// worse of that situation and the HPA's worst finding, an unavailable or
+// healthy situation yielding to a finding of attention or critical.
+func hpaSituationText(b *builder, h snapshot.HPA, findings []snapshot.Finding) (status, text string) {
+	status, text = hpaReplicaSituation(b, h)
+	worst := scopeSeverity(findings, analysis.ScopeHPA, h.Namespace+"/"+h.Name, "")
+	if worst != analysis.SeverityHealthy && (status == "unavailable" || analysis.Rank(worst) > analysis.Rank(status)) {
+		status = worst
+	}
+	return status, text
+}
+
+// hpaReplicaSituation is the status and the text of where the replicas
+// stood against the maximum.
+func hpaReplicaSituation(b *builder, h snapshot.HPA) (status, text string) {
 	maxKnown := h.SpecMax != nil
 	peakKnown := h.Current.State == stateValue && h.Current.Peak != nil
 	pinned := h.SpecMin != nil && maxKnown && *h.SpecMin == *h.SpecMax

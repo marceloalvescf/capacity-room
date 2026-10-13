@@ -402,7 +402,7 @@ func TestValueStatusRunsCarryTheLegendWord(t *testing.T) {
 		{"node state", func(b *builder) Run {
 			return nodeState(b, snapshot.Node{Name: "n1", Ready: no, Schedulable: no}, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1")})
 		}, "Attention", "Atenção"},
-		{"hpa situation", func(b *builder) Run { return hpaSituation(b, maxReached) }, "Critical", "Crítico"},
+		{"hpa situation", func(b *builder) Run { return hpaSituation(b, maxReached, nil) }, "Critical", "Crítico"},
 		{"no hpa", func(b *builder) Run {
 			return uncoveredTable(b, []snapshot.Workload{{Kind: deploymentKind, Name: "web"}}).Rows[0][3][0]
 		}, "Attention", "Atenção"},

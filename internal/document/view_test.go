@@ -1000,3 +1000,24 @@ func nodeViewSnapshot(t *testing.T, n snapshot.Node, findings []snapshot.Finding
 	s.Summary.Recommendations = float64(len(s.Recommendations))
 	return s
 }
+
+func TestViewIdleHPAReadsItsFinding(t *testing.T) {
+	want := map[string][2]string{
+		"payments/idle": {"Below the maximum", "attention"},
+		"payments/web":  {"Maximum reached", "critical"},
+	}
+	seen := 0
+	for _, h := range mustView(t, goldenSnapshot(t, "edge-scaling"), catalog.English).HPAs {
+		w, ok := want[h.Namespace+"/"+h.Name]
+		if !ok {
+			continue
+		}
+		seen++
+		if h.Situation != w[0] || statusText(h.SituationStatus) != w[1] {
+			t.Errorf("%s/%s reads %q, %s; want %q, %s", h.Namespace, h.Name, h.Situation, statusText(h.SituationStatus), w[0], w[1])
+		}
+	}
+	if seen != 2 {
+		t.Fatalf("edge-scaling holds %d of the two HPAs, want 2", seen)
+	}
+}
