@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-13
+
 ### Added
 
 - The PDF opens on a verdict page: the findings by severity, whether the cluster can grow, the pressure on each scope, and the first actions to take.
