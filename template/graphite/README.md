@@ -53,7 +53,7 @@ Inside this repository, other Typst files import the package by relative path:
 To use the package from another document, copy the package folder, without `examples/` and `README.md`, into `<data folder>/typst/packages/local/graphite-report/<version>/`. Then import it by name:
 
 ```typst
-#import "@local/graphite-report:1.4.0": graphite-report
+#import "@local/graphite-report:1.5.0": graphite-report
 
 #show: graphite-report.with(
   title: [Relatório mensal],
@@ -75,7 +75,7 @@ The entry point exports only the three documented symbols below. Modules under `
 Full usage:
 
 ```typst
-#import "@local/graphite-report:1.4.0": (
+#import "@local/graphite-report:1.5.0": (
   graphite-report,
   callout,
   keep-together,
