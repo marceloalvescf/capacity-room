@@ -78,4 +78,42 @@ describe("reports api", () => {
     });
     expect(checksOfB()).toBe(1);
   });
+
+  it("keeps its count of checks when the page is left and opened again", async () => {
+    const id = "report-a";
+    mock.reports = [report({ id, status: "running", phase: "collecting" })];
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    const api = createApi(queryClient, vi.fn());
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <ApiContext value={api}>{children}</ApiContext>
+      </QueryClientProvider>
+    );
+    const first = renderHook(() => useReport(id), { wrapper });
+    await waitFor(() => {
+      expect(first.result.current.data?.id).toBe(id);
+    });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
+    const checks = () => mock.calls.filter((call) => call.method === "GET" && call.path === `/reports/${id}`).length;
+    await act(async () => {
+      await first.result.current.refetch();
+    });
+    for (let round = 0; round < 40 && checks() < 25; round++) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+    }
+    expect(checks()).toBeGreaterThanOrEqual(25);
+    first.unmount();
+    const before = checks();
+    renderHook(() => useReport(id), { wrapper });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2999);
+    });
+    expect(checks()).toBe(before);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(checks()).toBe(before + 1);
+  });
 });

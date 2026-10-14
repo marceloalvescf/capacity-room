@@ -8,7 +8,6 @@ import {
   type UseInfiniteQueryResult,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import { useRef } from "react";
 import { useApi } from "@/api/context";
 import { ApiFailure } from "@/api/client";
 import type { components } from "@/api/schema.gen";
@@ -66,14 +65,14 @@ export function useReports(): UseInfiniteQueryResult<InfiniteData<ReportPage>> {
   });
 }
 
+// The update count at which each cached report query was first seen active.
+// It lives with the query, so a screen that leaves and returns keeps its count.
+const activeSince = new WeakMap<object, number>();
+
 // A screen that is deleting the report turns the checking off, so that none
 // reaches the report after it is gone.
 export function useReport(id: string, enabled = true): UseQueryResult<Report> {
   const api = useApi();
-  // The checks count from the answer that showed the report active again, so
-  // a PDF requested after a long run is followed as closely as a new report.
-  // The base names its report, so a screen that keeps this hook across ids starts over for each.
-  const activeSince = useRef<{ id: string; count: number } | null>(null);
   return useQuery({
     queryKey: [...reportsKey, id],
     enabled,
@@ -86,13 +85,14 @@ export function useReport(id: string, enabled = true): UseQueryResult<Report> {
     },
     refetchInterval: (query) => {
       if (ended(query.state.error) || query.state.data === undefined || !isActive(query.state.data)) {
-        activeSince.current = null;
+        activeSince.delete(query);
         return false;
       }
-      if (activeSince.current?.id !== id) {
-        activeSince.current = { id, count: query.state.dataUpdateCount - 1 };
-      }
-      return nextCheck(query.state.dataUpdateCount - activeSince.current.count);
+      // The checks count from the answer that showed the report active again, so
+      // a PDF requested after a long run is followed as closely as a new report.
+      const base = activeSince.get(query) ?? query.state.dataUpdateCount - 1;
+      activeSince.set(query, base);
+      return nextCheck(query.state.dataUpdateCount - base);
     },
   });
 }
