@@ -35,7 +35,18 @@ func (w *schemaWalk) resolve(path string, schema map[string]any) map[string]any 
 			w.fail(path, "allOf holds %d entries, want exactly one reference", len(entries))
 			return map[string]any{}
 		}
-		schema, _ = entries[0].(map[string]any)
+		for key := range schema {
+			if key != "allOf" && key != "description" && key != "nullable" {
+				w.fail(path, "allOf has the sibling key %q, want only description and nullable", key)
+				return map[string]any{}
+			}
+		}
+		entry, _ := entries[0].(map[string]any)
+		if _, ok := entry["$ref"].(string); !ok {
+			w.fail(path, "the allOf entry is not a map holding a $ref")
+			return map[string]any{}
+		}
+		schema = entry
 	}
 	ref, ok := schema["$ref"].(string)
 	if !ok {
@@ -275,6 +286,19 @@ func TestWalkerResolvesAnAllOfOfOneReference(t *testing.T) {
 	errs := w.check(two, "a")
 	if len(errs) != 1 || !strings.Contains(errs[0], "v: allOf") {
 		t.Errorf("an allOf of two entries is not refused with the property named: %v", errs)
+	}
+	malformed := map[string]map[string]any{
+		"an inline schema": {"allOf": []any{map[string]any{"type": "string"}}},
+		"a non-map entry":  {"allOf": []any{"#/components/schemas/Code"}},
+		"an unknown sibling": {
+			"allOf":    []any{map[string]any{"$ref": "#/components/schemas/Code"}},
+			"maxItems": 3,
+		},
+	}
+	for name, schema := range malformed {
+		if errs := w.check(schema, "zzz"); len(errs) != 1 || !strings.Contains(errs[0], "v: ") || !strings.Contains(errs[0], "allOf") {
+			t.Errorf("%s is not refused with the property named: %v", name, errs)
+		}
 	}
 }
 
