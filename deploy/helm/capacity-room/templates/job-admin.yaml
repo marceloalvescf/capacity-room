@@ -55,9 +55,9 @@ spec:
         {{- include "capacity-room.volumes" . | nindent 8 }}
         - name: admin
           secret:
-            secretName: {{ .Values.admin.existingSecret }}
+            secretName: {{ .Values.admin.existingSecret | quote }}
             defaultMode: 0440
             items:
-              - key: {{ .Values.admin.passwordKey }}
-                path: {{ .Values.admin.passwordKey }}
+              - key: {{ .Values.admin.passwordKey | quote }}
+                path: {{ .Values.admin.passwordKey | quote }}
 {{- end }}

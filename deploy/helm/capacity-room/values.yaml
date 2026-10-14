@@ -48,7 +48,7 @@ serve:
 
 worker:
   # The memory limit is written in Mi or Gi; GOMEMLIMIT is set at three
-  # quarters of it.
+  # quarters of it. The limit is at least 512Mi.
   resources:
     requests:
       cpu: 250m

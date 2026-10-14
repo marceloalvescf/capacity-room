@@ -1,3 +1,6 @@
+{{- if lt (include "capacity-room.workerMemoryMiB" . | int) 512 }}
+{{- fail "worker.resources.limits.memory must be at least 512Mi" }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,7 +20,7 @@ spec:
       labels:
         {{- include "capacity-room.selectorLabels" (dict "root" . "component" "worker") | nindent 8 }}
       annotations:
-        checksum/settings: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/settings: {{ include "capacity-room.platformToml" . | sha256sum }}
     spec:
       serviceAccountName: {{ include "capacity-room.fullname" . }}
       automountServiceAccountToken: false
@@ -45,13 +48,16 @@ spec:
           startupProbe:
             httpGet: {path: /health/ready, port: health}
             periodSeconds: 2
+            timeoutSeconds: 5
             failureThreshold: 150
           readinessProbe:
             httpGet: {path: /health/ready, port: health}
             periodSeconds: 5
+            timeoutSeconds: 5
           livenessProbe:
             httpGet: {path: /health/live, port: health}
             periodSeconds: 10
+            timeoutSeconds: 5
           securityContext:
             {{- include "capacity-room.containerSecurityContext" . | nindent 12 }}
           {{- with .Values.worker.resources }}

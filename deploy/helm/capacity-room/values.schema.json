@@ -14,7 +14,7 @@
       "type": "object", "additionalProperties": false,
       "properties": {
         "username": {"type": "string"},
-        "existingSecret": {"type": "string"},
+        "existingSecret": {"anyOf": [{"const": ""}, {"type": "string", "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"}]},
         "passwordKey": {"type": "string", "minLength": 1, "pattern": "^[-._a-zA-Z0-9]+$"},
         "language": {"enum": ["pt-BR", "en"]}
       },
@@ -101,38 +101,38 @@
     },
     "database": {
       "type": "object", "additionalProperties": false, "required": ["existingSecret", "key"],
-      "properties": {"existingSecret": {"type": "string", "minLength": 1}, "key": {"type": "string", "minLength": 1}}
+      "properties": {"existingSecret": {"type": "string", "minLength": 1, "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"}, "key": {"type": "string", "minLength": 1, "pattern": "^[-._a-zA-Z0-9]+$"}}
     },
     "serverSecret": {
       "type": "object", "additionalProperties": false, "required": ["existingSecret", "key"],
-      "properties": {"existingSecret": {"type": "string", "minLength": 1}, "key": {"type": "string", "minLength": 1}}
+      "properties": {"existingSecret": {"type": "string", "minLength": 1, "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"}, "key": {"type": "string", "minLength": 1, "pattern": "^[-._a-zA-Z0-9]+$"}}
     },
     "credentials": {
       "type": "object", "additionalProperties": false,
-      "properties": {"existingSecret": {"type": "string"}}
+      "properties": {"existingSecret": {"anyOf": [{"const": ""}, {"type": "string", "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"}]}}
     },
     "caBundles": {
       "type": "object", "additionalProperties": false,
-      "properties": {"existingConfigMap": {"type": "string"}}
+      "properties": {"existingConfigMap": {"anyOf": [{"const": ""}, {"type": "string", "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"}]}}
     },
     "platform": {
       "type": "object", "additionalProperties": false,
       "properties": {
-        "session_ttl_seconds": {"type": "integer"},
-        "session_idle_seconds": {"type": "integer"},
+        "session_ttl_seconds": {"type": "integer", "minimum": 60, "maximum": 2592000},
+        "session_idle_seconds": {"type": "integer", "minimum": 60, "maximum": 2592000},
         "trusted_proxies": {"type": "array", "items": {"type": "string"}},
         "allowed_endpoint_hostnames": {"type": "array", "items": {"type": "string"}},
         "allowed_endpoint_cidrs": {"type": "array", "items": {"type": "string"}},
-        "worker_slots": {"type": "integer"},
-        "worker_drain_seconds": {"type": "integer"},
-        "collect_timeout_seconds": {"type": "integer"},
-        "render_timeout_seconds": {"type": "integer"},
-        "job_max_attempts": {"type": "integer"},
-        "report_retention_days": {"type": "integer"},
-        "expired_report_days": {"type": "integer"},
-        "admission_limit": {"type": "integer"},
-        "admission_profile_limit": {"type": "integer"},
-        "admission_retry_seconds": {"type": "integer"}
+        "worker_slots": {"type": "integer", "minimum": 1, "maximum": 16},
+        "worker_drain_seconds": {"type": "integer", "minimum": 1, "maximum": 3600},
+        "collect_timeout_seconds": {"type": "integer", "minimum": 60, "maximum": 3600},
+        "render_timeout_seconds": {"type": "integer", "minimum": 10, "maximum": 3600},
+        "job_max_attempts": {"type": "integer", "minimum": 1, "maximum": 10},
+        "report_retention_days": {"type": "integer", "minimum": 1, "maximum": 365},
+        "expired_report_days": {"type": "integer", "minimum": 1, "maximum": 365},
+        "admission_limit": {"type": "integer", "minimum": 1, "maximum": 1000},
+        "admission_profile_limit": {"type": "integer", "minimum": 1, "maximum": 1000},
+        "admission_retry_seconds": {"type": "integer", "minimum": 1, "maximum": 300}
       }
     },
     "serve": {

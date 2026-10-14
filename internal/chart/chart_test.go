@@ -215,12 +215,63 @@ func TestSettingsChangeRecreatesThePods(t *testing.T) {
 		template := find(t, objects, "Deployment", name)["spec"].(map[string]any)["template"].(map[string]any)
 		return template["metadata"].(map[string]any)["annotations"].(map[string]any)["checksum/settings"].(string)
 	}
+	names := []string{"capacity-room-serve", "capacity-room-worker"}
 	before := render(t, "capacity-room", required...)
 	after := render(t, "capacity-room", append(required, "--set", "platform.worker_slots=4")...)
-	for _, name := range []string{"capacity-room-serve", "capacity-room-worker"} {
+	for _, name := range names {
 		if checksum(before, name) == checksum(after, name) {
 			t.Errorf("the checksum of %s did not change with the settings", name)
 		}
+	}
+	withProfiles := append(append([]string(nil), required...), "-f", "testdata/profiles.yaml")
+	profiles := render(t, "capacity-room", withProfiles...)
+	edited := render(t, "capacity-room", append(withProfiles, "--set", "profiles[0].display_name=Other")...)
+	for _, name := range names {
+		if checksum(profiles, name) != checksum(edited, name) {
+			t.Errorf("the checksum of %s changed with a profile", name)
+		}
+	}
+}
+
+func TestProbesHaveATimeout(t *testing.T) {
+	objects := render(t, "capacity-room", required...)
+	for _, name := range []string{"capacity-room-serve", "capacity-room-worker"} {
+		container := find(t, objects, "Deployment", name).podSpec()["containers"].([]any)[0].(map[string]any)
+		for _, probe := range []string{"startupProbe", "readinessProbe", "livenessProbe"} {
+			if got := container[probe].(map[string]any)["timeoutSeconds"]; got != 5 {
+				t.Errorf("%s %s timeoutSeconds %v, want 5", name, probe, got)
+			}
+		}
+	}
+}
+
+func TestPlatformBoundsAreRefused(t *testing.T) {
+	if stderr := renderError(t, append(required, "--set", "platform.worker_slots=17")...); !strings.Contains(stderr, "worker_slots") {
+		t.Errorf("the refusal does not name worker_slots: %s", stderr)
+	}
+}
+
+func TestNamesAreQuotedAndChecked(t *testing.T) {
+	objects := render(t, "capacity-room", append(required, "--set-string", "database.key=123")...)
+	env := find(t, objects, "Deployment", "capacity-room-serve").podSpec()["containers"].([]any)[0].(map[string]any)["env"].([]any)
+	ref := env[0].(map[string]any)["valueFrom"].(map[string]any)["secretKeyRef"].(map[string]any)
+	if ref["key"] != "123" {
+		t.Errorf("database key %#v, want the string 123", ref["key"])
+	}
+	if stderr := renderError(t, "--set", "database.existingSecret=Bad_Name", "--set", "serverSecret.existingSecret=server"); !strings.Contains(stderr, "existingSecret") {
+		t.Errorf("the refusal does not name existingSecret: %s", stderr)
+	}
+}
+
+func TestWorkerMemoryFloor(t *testing.T) {
+	stderr := renderError(t, append(required, "--set", "worker.resources.limits.memory=256Mi")...)
+	if !strings.Contains(stderr, "worker.resources.limits.memory must be at least 512Mi") {
+		t.Errorf("the refusal: %s", stderr)
+	}
+	objects := render(t, "capacity-room", append(required, "--set", "worker.resources.limits.memory=512Mi")...)
+	env := find(t, objects, "Deployment", "capacity-room-worker").podSpec()["containers"].([]any)[0].(map[string]any)["env"].([]any)
+	if !containsEnv(env, "GOMEMLIMIT", "384MiB") {
+		t.Errorf("worker env %v, want GOMEMLIMIT 384MiB", env)
 	}
 }
 

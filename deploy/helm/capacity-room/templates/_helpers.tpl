@@ -43,8 +43,8 @@ capabilities:
 - name: CAPACITYROOM_DATABASE_DSN
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.database.existingSecret }}
-      key: {{ .Values.database.key }}
+      name: {{ .Values.database.existingSecret | quote }}
+      key: {{ .Values.database.key | quote }}
 {{- end -}}
 
 {{/* platform.toml: the chart's three paths, then each key of
@@ -71,21 +71,21 @@ ca_bundle_dir = "/opt/capacity-room/ca"
     name: {{ include "capacity-room.fullname" . }}
 - name: server-secret
   secret:
-    secretName: {{ .Values.serverSecret.existingSecret }}
+    secretName: {{ .Values.serverSecret.existingSecret | quote }}
     defaultMode: 0440
     items:
-      - key: {{ .Values.serverSecret.key }}
-        path: {{ .Values.serverSecret.key }}
+      - key: {{ .Values.serverSecret.key | quote }}
+        path: {{ .Values.serverSecret.key | quote }}
 {{- with .Values.credentials.existingSecret }}
 - name: credentials
   secret:
-    secretName: {{ . }}
+    secretName: {{ . | quote }}
     defaultMode: 0440
 {{- end }}
 {{- with .Values.caBundles.existingConfigMap }}
 - name: ca
   configMap:
-    name: {{ . }}
+    name: {{ . | quote }}
 {{- end }}
 {{- end -}}
 

@@ -81,13 +81,13 @@ nothing that reads the Kubernetes API.
 - One replica each, fixed and not a value: the platform is one `serve` and
   one `worker` (guide section 10).
 - `strategy: Recreate`, so an old pod never runs against a newer schema.
-- The pod template carries a checksum of the ConfigMap, so a change of the
-  settings or the profiles recreates both pods.
+- The pod template carries a checksum of the rendered settings, so a change of the
+  settings recreates both pods, and a change of the profiles does not.
 - `serve` runs `serve --config /opt/capacity-room/platform.toml --listen :8080`,
   and `worker` runs `worker --config /opt/capacity-room/platform.toml
   --health-listen :8091`.
 - Probes are `httpGet`: a startup probe and readiness on `/health/ready`, and
-  liveness on `/health/live`, on 8080 for `serve` and 8091 for `worker`. The
+  liveness on `/health/live`, on 8080 for `serve` and 8091 for `worker`, each with a timeout of 5 seconds. The
   startup probe gives a migration room before liveness counts.
 - `terminationGracePeriodSeconds` is 45 for `serve`, which waits 30 seconds
   for the requests in flight. For `worker` it is twice `worker_drain_seconds`
@@ -191,7 +191,8 @@ no secret.
 The schema refuses an unknown value at every level, `route.enabled` and
 `ingress.enabled` together, and a missing `database.existingSecret` or
 `serverSecret.existingSecret`. `admin.existingSecret` is required when
-`admin.username` is set.
+`admin.username` is set. The schema holds the bounds of each integer key, equal to the program's by a test; the rules between keys (`session_idle_seconds` at most `session_ttl_seconds`, `admission_profile_limit` at most `admission_limit`) stay the program's.
+The schema holds the bounds of each integer key, equal to the program's by a test; the rules between keys (`session_idle_seconds` at most `session_ttl_seconds`, `admission_profile_limit` at most `admission_limit`) stay the program's.
 
 ## 2. The Jobs
 
