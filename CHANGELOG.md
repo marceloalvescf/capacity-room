@@ -13,7 +13,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- The Compose stack mounts its settings folder at `/opt/capacity-room`, with the server secret in a `secret` folder of its own; the operations guide says how to move an existing folder.
+- The Compose stack mounts its settings folder at `/opt/capacity-room`, with the server secret in a `secret` folder of its own; move the folder and edit its paths before upgrading, as the operations guide says.
 
 ## [2.0.0] - 2026-10-14
 

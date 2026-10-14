@@ -558,8 +558,10 @@ Check the render against the cluster first, then install.
 
 ```bash
 helm upgrade -i capacity-room deploy/helm/capacity-room -n capacity-room --dry-run=server -f values.yaml
-helm upgrade -i capacity-room deploy/helm/capacity-room -n capacity-room -f values.yaml
+helm upgrade -i capacity-room deploy/helm/capacity-room -n capacity-room -f values.yaml --wait --timeout 10m
 ```
+
+With `--wait`, Helm runs the Jobs once the new pods are ready, after the old ones are gone, so a Job never migrates while an old pod is still stopping.
 
 The values schema refuses an unknown key, a missing required Secret name,
 and a route and an Ingress enabled together, before anything reaches the
