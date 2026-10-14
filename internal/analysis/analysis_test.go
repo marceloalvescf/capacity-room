@@ -410,3 +410,55 @@ func TestSortRanksTheCodeBeforeTheKind(t *testing.T) {
 		t.Errorf("findings[0].Code = %q, want %q", got, want)
 	}
 }
+
+// TestReadinessFindingsAreNotNodePressure covers a cordoned node and a node
+// that is not ready: the autoscaling finding is the one of a cluster
+// without pressure.
+func TestReadinessFindingsAreNotNodePressure(t *testing.T) {
+	t.Parallel()
+	yes, no := collect.Flag{Value: true, Known: true}, collect.Flag{Value: false, Known: true}
+	disabled := evidenceOf("disabled", discovery.ConfidenceExact, collect.Number{}, collect.Number{}, collect.Number{})
+	atMin := evidenceOf("enabled", discovery.ConfidenceInferred, known(2), known(2), known(10))
+	cases := []struct {
+		name        string
+		evidence    collect.AutoscalingEvidence
+		ready       collect.Flag
+		schedulable collect.Flag
+		code        string
+		severity    string
+	}{
+		{"disabled, cordoned", disabled, yes, no, "NODE_AUTOSCALING_DISABLED", SeverityAttention},
+		{"disabled, not ready", disabled, no, yes, "NODE_AUTOSCALING_DISABLED", SeverityAttention},
+		{"at minimum, cordoned", atMin, yes, no, "NODE_AUTOSCALING_AT_MIN", SeverityHealthy},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			collected := collect.Collected{
+				Nodes: collect.Result[collect.Node]{Rows: []collect.Node{
+					{Name: "n1", Pool: "p", PoolConfidence: discovery.ConfidenceExact, CPUUsagePercent: valueStats(50, 50), Ready: c.ready, Schedulable: c.schedulable},
+				}},
+				Autoscaling: c.evidence,
+			}
+			var cluster []Finding
+			readiness := 0
+			for _, f := range All(collected, defaultThresholds()) {
+				if f.ScopeType == ScopeCluster {
+					cluster = append(cluster, f)
+				}
+				if f.Code == "NODE_NOT_READY" || f.Code == "NODE_UNSCHEDULABLE" {
+					readiness++
+				}
+			}
+			if readiness != 1 {
+				t.Fatalf("readiness findings = %d, want 1", readiness)
+			}
+			f := only(t, cluster)
+			if f.Code != c.code || f.Severity != c.severity {
+				t.Errorf("cluster finding = %s %s, want %s %s", f.Code, f.Severity, c.code, c.severity)
+			}
+			if c.code == "NODE_AUTOSCALING_DISABLED" && (len(f.Evidence) != 1 || f.Evidence[0].Name != "node_pressure" || f.Evidence[0].Value != Boolean(false)) {
+				t.Errorf("evidence = %+v, want node_pressure false", f.Evidence)
+			}
+		})
+	}
+}

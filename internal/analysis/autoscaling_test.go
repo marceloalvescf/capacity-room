@@ -26,6 +26,13 @@ func TestNodePressure(t *testing.T) {
 	if !NodePressure(healthy, pool) {
 		t.Error("a pool finding at attention is pressure")
 	}
+	readiness := []Finding{
+		{Code: "NODE_NOT_READY", Severity: SeverityAttention, ScopeType: ScopeNode},
+		{Code: "NODE_UNSCHEDULABLE", Severity: SeverityAttention, ScopeType: ScopeNode},
+	}
+	if NodePressure(readiness, nil) {
+		t.Error("readiness findings are not pressure")
+	}
 }
 
 func TestAutoscalingChain(t *testing.T) {

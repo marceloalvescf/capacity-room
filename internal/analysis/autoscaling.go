@@ -7,10 +7,15 @@ import (
 )
 
 // NodePressure follows node_pressure of analyze_evidence: true when any
-// finding of the node or pool lists carries attention or above.
+// finding of the node or pool lists carries attention or above. The
+// readiness findings of a node (not ready, cordoned) are left out: they say
+// nothing of how loaded the nodes are.
 func NodePressure(nodeFindings, poolFindings []Finding) bool {
 	for _, list := range [][]Finding{nodeFindings, poolFindings} {
 		for _, f := range list {
+			if f.Code == "NODE_NOT_READY" || f.Code == "NODE_UNSCHEDULABLE" {
+				continue
+			}
 			if Rank(f.Severity) >= Rank(SeverityAttention) {
 				return true
 			}
