@@ -201,6 +201,21 @@ describe("progress screen", () => {
     expect(screen.getByText(t("progress.elapsed", { time: "1:05" }))).toBeInTheDocument();
   });
 
+  it("shows no elapsed time for a report queued again after it started", async () => {
+    mock.reports = [
+      report({
+        ...running,
+        status: "queued",
+        phase: "waiting",
+        started_at: new Date(Date.now() - 65_000).toISOString(),
+      }),
+    ];
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await open();
+    expect(screen.getByRole("list", { name: t("progress.steps") })).toBeInTheDocument();
+    expect(screen.queryByText(t("progress.elapsed", { time: "1:05" }))).not.toBeInTheDocument();
+  });
+
   it("announces nothing for another report reached by a link", async () => {
     const other = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a02";
     mock.reports = [report(running), report({ id: other })];

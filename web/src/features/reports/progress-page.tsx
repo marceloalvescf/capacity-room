@@ -184,7 +184,7 @@ function ProgressPage() {
       {finished ? null : (
         <section className="flex flex-col gap-3">
           <Steps phase={data.phase} />
-          {data.started_at === null ? null : <Elapsed since={data.started_at} />}
+          {data.status === "running" && data.started_at !== null ? <Elapsed since={data.started_at} /> : null}
           <p className="text-sm text-muted-fg">{t("progress.closeable")}</p>
         </section>
       )}
