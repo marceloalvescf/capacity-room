@@ -944,6 +944,22 @@ describe("report scope", () => {
     expect(cell).toHaveTextContent("payments · 2026-10-01 00:00 to 2026-10-02 00:00");
   });
 
+  it("lets a range wrap between its wall times and never inside one", async () => {
+    mock.reports = many(1, () => ({
+      selection: selection({ namespaces: ["payments"], period: null, start: "2026-10-01 00:00", end: "2026-10-02 00:00" }),
+    }));
+    await renderApp("/reports");
+    const cell = (await screen.findByText("payments")).closest("td") as HTMLElement;
+    const times = [...cell.querySelectorAll("span")].filter((node) => /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(node.textContent));
+    expect(times).toHaveLength(2);
+    for (const time of times) {
+      expect(time).toHaveClass("whitespace-nowrap");
+    }
+    const period = times[0]?.parentElement as HTMLElement;
+    expect(period).toHaveTextContent("2026-10-01 00:00 to 2026-10-02 00:00");
+    expect(period).not.toHaveClass("whitespace-nowrap");
+  });
+
   it("shows no second line for a report whose request could not be read", async () => {
     mock.reports = many(1, () => ({ profile_id: "gone" })).map((row) => ({ ...row, selection: null }));
     await renderApp("/reports");

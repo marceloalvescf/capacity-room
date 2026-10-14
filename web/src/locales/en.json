@@ -218,6 +218,7 @@
       "from": "From",
       "to": "To",
       "value": "{{start}} to {{end}}",
+      "scope": "<date>{{start}}</date> to <date>{{end}}</date>",
       "hint": "Year-month-day and hour:minute, in the report's time zone, {{zone}}.",
       "pickFrom": "Pick the start day",
       "pickTo": "Pick the end day",

@@ -218,6 +218,7 @@
       "from": "De",
       "to": "Até",
       "value": "{{start}} a {{end}}",
+      "scope": "<date>{{start}}</date> a <date>{{end}}</date>",
       "hint": "Ano-mês-dia e hora:minuto, no fuso horário do relatório, {{zone}}.",
       "pickFrom": "Escolher o dia de início",
       "pickTo": "Escolher o dia de fim",

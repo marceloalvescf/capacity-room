@@ -294,7 +294,7 @@ export function ReportsPage() {
                       )}
                       {row.selection !== null ? (
                         <div className="text-xs text-muted-fg">
-                          <ReportScope selection={row.selection} period={scope(row.selection)} language={t(`language.${row.selection.language}`)} />
+                          <ReportScope selection={row.selection} lengthText={scope(row.selection)} language={t(`language.${row.selection.language}`)} />
                         </div>
                       ) : null}
                     </td>
@@ -419,9 +419,9 @@ export function ReportsPage() {
 
 const shownNamespaces = 3;
 
-// The namespaces a report covers, at most three, then the count of the rest, its period, and its language. Each part stays whole;
-// the line breaks only between them.
-function ReportScope({ selection, period, language }: { selection: ReportSelection; period: string; language: string }) {
+// The namespaces a report covers, at most three, then the count of the rest, its period, and its language. The namespaces, a length,
+// each wall time of a range, and the language stay whole; the line breaks between them.
+function ReportScope({ selection, lengthText, language }: { selection: ReportSelection; lengthText: string; language: string }) {
   const { t } = useTranslation();
   const { namespaces } = selection;
   const rest = namespaces.length - shownNamespaces;
@@ -434,7 +434,17 @@ function ReportScope({ selection, period, language }: { selection: ReportSelecti
           {" · "}
         </>
       ) : null}
-      <span className="whitespace-nowrap">{period}</span>
+      {selection.period === null ? (
+        <span>
+          <Trans
+            i18nKey="period.range.scope"
+            values={{ start: selection.start, end: selection.end }}
+            components={{ date: <span className="font-mono whitespace-nowrap" /> }}
+          />
+        </span>
+      ) : (
+        <span className="whitespace-nowrap">{lengthText}</span>
+      )}
       {" · "}
       <span className="whitespace-nowrap">{language}</span>
     </>
