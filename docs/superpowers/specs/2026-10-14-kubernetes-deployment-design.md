@@ -192,7 +192,6 @@ The schema refuses an unknown value at every level, `route.enabled` and
 `ingress.enabled` together, and a missing `database.existingSecret` or
 `serverSecret.existingSecret`. `admin.existingSecret` is required when
 `admin.username` is set. The schema holds the bounds of each integer key, equal to the program's by a test; the rules between keys (`session_idle_seconds` at most `session_ttl_seconds`, `admission_profile_limit` at most `admission_limit`) stay the program's.
-The schema holds the bounds of each integer key, equal to the program's by a test; the rules between keys (`session_idle_seconds` at most `session_ttl_seconds`, `admission_profile_limit` at most `admission_limit`) stay the program's.
 
 ## 2. The Jobs
 
