@@ -10,7 +10,7 @@ author_label = "Elaborado por"
 issued_label = "Emitido em"
 
 [colophon]
-text = "Gerado pelo k8s-capacity-report a partir de um snapshot de métricas compatíveis com o Prometheus. Emitido em {{.Issued}}."
+text = "Gerado pelo CapacityRoom a partir de um snapshot de métricas compatíveis com o Prometheus. Emitido em {{.Issued}}."
 
 [footer]
 page_label = "Página"
