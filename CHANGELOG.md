@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-14
+
 ### Added
 
 - A Helm chart runs the platform on Kubernetes, with a Gateway API route or an Ingress, and creates the first administrator and the profiles from its values.
