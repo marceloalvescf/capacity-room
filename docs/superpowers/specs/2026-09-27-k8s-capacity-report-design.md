@@ -983,10 +983,10 @@ data quality. Section 12.2.1 describes the report, and section 12.2.2
 the administration.
 
 - Report list: newest first, by page, with "Load more"; no filter. Columns:
-  requested, profile (with the namespaces, the period, and the language of the
-  report), cluster, worst severity, status, every PDF with its language, kept
-  until. A report collected before 1.6.0 shows a dash for its cluster and its
-  worst severity. Each row opens its progress screen; an expired report offers only delete.
+  requested (with the date the report is kept until), profile (with the cluster,
+  and the namespaces, the period, and the language of the report), status (with
+  the worst severity the report shows), every PDF with its language. A report
+  collected before 1.6.0 shows no cluster and no worst severity. Each row opens its progress screen; an expired report offers only delete.
   An operator selects rows and deletes them together. An empty list says so,
   with a link to the new report form for an operator.
 - Progress: the title, who requested the report and when, and its status;

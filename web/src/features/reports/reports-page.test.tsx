@@ -70,7 +70,7 @@ describe("report list", () => {
     const requested = screen
       .getAllByRole("row")
       .slice(1)
-      .map((row) => within(row).getAllByRole("cell")[1]?.textContent);
+      .map((row) => within(row).getAllByRole("cell")[1]?.firstElementChild?.textContent);
     expect(requested[0]).toBe(formatTime(mock.reports[0]?.created_at ?? ""));
     expect(requested[49]).toBe(formatTime(mock.reports[49]?.created_at ?? ""));
     await user.click(screen.getByRole("button", { name: t("reports.loadMore") }));
@@ -127,7 +127,7 @@ describe("report list", () => {
     });
     const rows = screen.getAllByRole("row");
     expect(rows).toHaveLength(61);
-    const times = rows.slice(1).map((row) => within(row).getAllByRole("cell")[1]?.textContent);
+    const times = rows.slice(1).map((row) => within(row).getAllByRole("cell")[1]?.firstElementChild?.textContent);
     expect(new Set(times).size).toBe(60);
     expect(screen.queryByText(t("reports.updating"))).not.toBeInTheDocument();
 
@@ -393,18 +393,44 @@ describe("report list", () => {
     await i18next.changeLanguage("en");
   });
 
-  it("the cluster and the worst severity, with a dash when the report has none", async () => {
-    mock.reports = many(2, (n) => (n === 0 ? { cluster_name: "prod", worst_severity: "critical" } : {}));
+  it("the cluster joins the profile cell and the worst severity the status cell", async () => {
+    mock.reports = many(1, () => ({ cluster_name: "prod", worst_severity: "critical" }));
     await renderApp("/reports");
     await screen.findAllByRole("row");
-    const full = within(rowOf(id(0)));
-    expect(full.getByText("prod")).toHaveClass("font-mono");
-    expect(full.getByText(t("status.critical"))).toBeInTheDocument();
-    const bare = within(rowOf(id(1))).getAllByRole("cell");
-    expect(bare[3]?.textContent).toBe("—");
-    expect(bare[4]?.textContent).toBe("—");
-    expect(screen.getByRole("columnheader", { name: t("reports.column.cluster") })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: t("reports.column.worst") })).toBeInTheDocument();
+    const cells = within(rowOf(id(0))).getAllByRole("cell");
+    const profile = within(cells[2] as HTMLElement);
+    expect(profile.getByText("prod")).toHaveClass("font-mono");
+    expect(cells[2]).toHaveTextContent(`${t("reports.column.cluster")}: prod`);
+    const status = within(cells[3] as HTMLElement);
+    expect(status.getByText(t("reportStatus.collected"))).toBeInTheDocument();
+    expect(status.getByText(t("status.critical"))).toBeInTheDocument();
+    expect(cells[3]).toHaveTextContent(`${t("reports.column.worst")}: `);
+    expect(screen.queryByRole("columnheader", { name: t("reports.column.cluster") })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: t("reports.column.worst") })).not.toBeInTheDocument();
+  });
+
+  it("a report with no cluster and no worst severity draws no line and no dash for them", async () => {
+    mock.reports = many(1, () => ({ cluster_name: null, worst_severity: null }));
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    const cells = within(rowOf(id(0))).getAllByRole("cell");
+    expect(cells[2]).not.toHaveTextContent(t("reports.column.cluster"));
+    expect(cells[3]).not.toHaveTextContent(t("reports.column.worst"));
+    expect(cells[3]).not.toHaveTextContent("—");
+    expect(cells[3]?.querySelectorAll("div")).toHaveLength(1);
+  });
+
+  it("the requested cell ends with the date the report is kept until, the date alone in mono", async () => {
+    mock.reports = many(1, () => ({ expires_at: "2026-10-21T00:00:00Z", expired: true }));
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    const cell = within(rowOf(id(0))).getAllByRole("cell")[1] as HTMLElement;
+    const date = within(cell).getByText("2026-10-21");
+    expect(date).toHaveClass("font-mono", "whitespace-nowrap");
+    const line = date.parentElement as HTMLElement;
+    expect(line).toHaveTextContent("Kept until 2026-10-21");
+    expect(line).not.toHaveClass("font-mono");
+    expect(within(cell).getByText(formatTime(mock.reports[0]?.created_at ?? ""))).toHaveClass("font-mono", "whitespace-nowrap");
   });
 
   it("two reports of one profile in one minute have six different control names", async () => {
@@ -874,23 +900,23 @@ describe("report list", () => {
     await screen.findAllByRole("row");
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     const headers = screen.getAllByRole("columnheader");
-    expect(headers).toHaveLength(8);
+    expect(headers).toHaveLength(5);
     expect(headers.every((header) => header.textContent !== "")).toBe(true);
-    expect(within(rowOf(id(0))).getAllByRole("cell")).toHaveLength(8);
+    expect(within(rowOf(id(0))).getAllByRole("cell")).toHaveLength(5);
   });
 });
 
 describe("date cells", () => {
-  it("never break inside a date", async () => {
+  it("never break inside a date or a time", async () => {
     mock.reports = [report()];
     await renderApp("/reports");
     await screen.findByRole("heading", { level: 1, name: t("reports.title") });
     const row = await waitFor(() => rowOf(mock.reports[0]?.id ?? ""));
-    const cells = within(row).getAllByRole("cell");
-    const dated = cells.filter((cell) => /^\d{4}-\d{2}-\d{2}( \d{2}:\d{2})?$/.test(cell.textContent));
+    const cell = within(row).getAllByRole("cell")[1] as HTMLElement;
+    const dated = [...cell.querySelectorAll("div, span")].filter((node) => /^\d{4}-\d{2}-\d{2}( \d{2}:\d{2})?$/.test(node.textContent));
     expect(dated.length).toBeGreaterThanOrEqual(2);
-    for (const cell of dated) {
-      expect(cell).toHaveClass("whitespace-nowrap");
+    for (const node of dated) {
+      expect(node).toHaveClass("whitespace-nowrap");
     }
   });
 });

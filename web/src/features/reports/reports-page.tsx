@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { ApiFailure } from "@/api/client";
 import { errorText, toError } from "@/api/errors";
@@ -242,19 +242,10 @@ export function ReportsPage() {
                   {t("reports.column.profile")}
                 </th>
                 <th scope="col" className="label px-3 py-2">
-                  {t("reports.column.cluster")}
-                </th>
-                <th scope="col" className="label px-3 py-2">
-                  {t("reports.column.worst")}
-                </th>
-                <th scope="col" className="label px-3 py-2">
                   {t("reports.column.status")}
                 </th>
                 <th scope="col" className="label px-3 py-2">
                   {t("reports.column.pdf")}
-                </th>
-                <th scope="col" className="label px-3 py-2">
-                  {t("reports.column.keptUntil")}
                 </th>
                 <th scope="col" className="px-3 py-2">
                   <span className="sr-only">{t("reports.column.actions")}</span>
@@ -283,24 +274,43 @@ export function ReportsPage() {
                         ) : null}
                       </td>
                     ) : null}
-                    <td className="px-3 py-2 font-mono whitespace-nowrap">{time}</td>
+                    <td className="px-3 py-2">
+                      <div className="font-mono whitespace-nowrap">{time}</div>
+                      <div className="text-xs text-muted-fg">
+                        <Trans
+                          i18nKey="progress.keptUntil"
+                          values={{ date: formatDate(row.expires_at) }}
+                          components={{ date: <span className="font-mono whitespace-nowrap" /> }}
+                        />
+                      </div>
+                    </td>
                     <td className="px-3 py-2">
                       <div className={cn(!names.has(row.profile_id) && "font-mono")}>{profileName(row)}</div>
+                      {row.cluster_name === null ? null : (
+                        <div className="text-xs">
+                          <span className="sr-only">{t("reports.column.cluster")}: </span>
+                          <span className="font-mono">{row.cluster_name}</span>
+                        </div>
+                      )}
                       {row.selection !== null ? (
                         <div className="text-xs text-muted-fg">
                           <ReportScope selection={row.selection} period={scope(row.selection)} language={t(`language.${row.selection.language}`)} />
                         </div>
                       ) : null}
                     </td>
-                    <td className="px-3 py-2 font-mono">{row.cluster_name ?? "—"}</td>
                     <td className="px-3 py-2">
-                      {row.worst_severity === null ? "—" : <StatusMark status={row.worst_severity} />}
-                    </td>
-                    <td className="px-3 py-2">
-                      <StatusMark
-                        status={reportMark(row)}
-                        label={row.expired ? t("reports.expired") : t(`reportStatus.${row.status}`)}
-                      />
+                      <div>
+                        <StatusMark
+                          status={reportMark(row)}
+                          label={row.expired ? t("reports.expired") : t(`reportStatus.${row.status}`)}
+                        />
+                      </div>
+                      {row.worst_severity === null ? null : (
+                        <div>
+                          <span className="sr-only">{t("reports.column.worst")}: </span>
+                          <StatusMark status={row.worst_severity} />
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       {row.pdfs.length > 0 && !row.expired ? (
@@ -318,7 +328,6 @@ export function ReportsPage() {
                         "—"
                       )}
                     </td>
-                    <td className="px-3 py-2 font-mono whitespace-nowrap">{formatDate(row.expires_at)}</td>
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-end gap-2">
                         {row.expired ? null : (

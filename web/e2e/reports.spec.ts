@@ -194,10 +194,34 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
       await expect(row.getByText("en", { exact: true })).toBeVisible();
       await expect(row.getByText("pt-BR", { exact: true })).toBeVisible();
       // The profile e2e-prod names the cluster "prod"; the scenario served has four critical findings under a detailed report with every severity.
-      await expect(row.getByRole("cell", { name: "prod", exact: true })).toBeVisible();
-      await expect(row.getByRole("cell", { name: en.status.critical, exact: true })).toBeVisible();
+      await expect(row.getByRole("cell").nth(2).getByText("prod", { exact: true })).toBeVisible();
+      await expect(row.getByRole("cell").nth(3).getByText(en.status.critical, { exact: true })).toBeVisible();
       await expect(row).toContainText(en.language.en);
       await expectNoViolations(page);
+    });
+
+    await test.step("the list fits the narrowest window", async () => {
+      const original = page.viewportSize();
+      await page.setViewportSize({ width: 1024, height: 768 });
+      const row = reportRow(page, reportId);
+      await expect(row).toHaveCount(1);
+      const fit = await page.evaluate(() => {
+        const table = document.querySelector("table");
+        return {
+          pageWidth: document.documentElement.scrollWidth,
+          windowWidth: document.documentElement.clientWidth,
+          tableWidth: table?.scrollWidth ?? Number.POSITIVE_INFINITY,
+          containerWidth: table?.parentElement?.clientWidth ?? 0,
+        };
+      });
+      expect(fit.pageWidth).toBeLessThanOrEqual(fit.windowWidth);
+      expect(fit.tableWidth).toBeLessThanOrEqual(fit.containerWidth);
+      const box = await row.getByRole("button", { name: deletePattern }).boundingBox();
+      expect(box).not.toBeNull();
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(1024);
+      if (original !== null) {
+        await page.setViewportSize(original);
+      }
     });
 
     await test.step("the reader sees no control that changes anything", async () => {
