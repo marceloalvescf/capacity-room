@@ -98,6 +98,7 @@
   "error": {
     "general": "Algo deu errado. Tente de novo.",
     "network": "Não foi possível falar com o servidor.",
+    "timeout": "O servidor não respondeu a tempo.",
     "REQUEST_INVALID": "Parte das informações enviadas não é válida.",
     "INVALID_CREDENTIALS": "Usuário ou senha incorretos.",
     "UNAUTHENTICATED": "Sua sessão terminou. Entre de novo.",

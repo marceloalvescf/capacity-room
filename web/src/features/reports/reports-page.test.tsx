@@ -8,6 +8,7 @@ import { i18next } from "@/i18n/i18n";
 import { installMockApi, profileSummary, report, server, signedIn } from "../../../tests/msw";
 import { renderApp } from "../../../tests/render";
 import { mockColourScheme } from "../../../tests/match-media";
+import { requestTimeout } from "@/api/client";
 import { reportsKey } from "./api";
 
 const mock = installMockApi(signedIn());
@@ -412,6 +413,26 @@ describe("report list", () => {
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
     await waitFor(() => {
       expect(screen.getAllByRole("row")).toHaveLength(2);
+    });
+  });
+
+  it("a delete with no answer ends with a timeout and the list is asked again", async () => {
+    mock.reports = many(2);
+    server.use(http.delete(`${window.location.origin}/api/v1/reports/${id(1)}`, () => new Promise(() => {})));
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
+    mock.calls.length = 0;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(requestTimeout);
+    });
+    expect(await screen.findByText(t("error.timeout"))).toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(listCalls()).not.toEqual([]);
     });
   });
 

@@ -1,9 +1,9 @@
 import { QueryClient } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { anonymous, errorBody, server, signedIn, installMockApi } from "../../tests/msw";
 import { sessionKey, type Session } from "@/session/session";
-import { createApi, ApiFailure } from "./client";
+import { createApi, ApiFailure, requestTimeout } from "./client";
 
 const mock = installMockApi(signedIn());
 const url = (path: string) => `${window.location.origin}/api/v1${path}`;
@@ -20,7 +20,26 @@ beforeEach(() => {
   mock.session = signedIn({}, "csrf-2");
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("client", () => {
+  it("a request with no answer rejects as a timeout once the wait is over", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { api } = setup();
+    server.use(http.get(url("/auth/session"), () => new Promise(() => {})));
+    let outcome: unknown = null;
+    void api.GET("/auth/session").catch((thrown: unknown) => {
+      outcome = thrown;
+    });
+    await vi.advanceTimersByTimeAsync(requestTimeout - 1);
+    expect(outcome).toBeNull();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(outcome).toMatchObject({ name: "TimeoutError" });
+    expect(outcome).not.toBeInstanceOf(ApiFailure);
+  });
+
   it("a state-changing call carries the session token and a read carries none", async () => {
     const { api } = setup(signedIn({}, "csrf-7"));
     await api.GET("/auth/session");

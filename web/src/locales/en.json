@@ -98,6 +98,7 @@
   "error": {
     "general": "Something went wrong. Try again.",
     "network": "The server could not be reached.",
+    "timeout": "The server did not answer in time.",
     "REQUEST_INVALID": "Some of the information sent is not valid.",
     "INVALID_CREDENTIALS": "The user name or the password is wrong.",
     "UNAUTHENTICATED": "Your session ended. Sign in again.",

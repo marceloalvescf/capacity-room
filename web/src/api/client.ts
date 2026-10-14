@@ -87,6 +87,11 @@ function isLogout(request: Request): boolean {
   return request.method === "POST" && new URL(request.url).pathname === `${apiPath}/auth/logout`;
 }
 
+// A request with no answer this long after it was sent fails, so that no
+// screen waits forever on a server that hangs. The timer is a plain timeout,
+// so tests drive it with fake timers.
+export const requestTimeout = 30_000;
+
 export function createApi(queryClient: QueryClient, navigate: (to: string) => void): Api {
   async function dispatch(request: Request): Promise<Response> {
     if (!readOnly.has(request.method)) {
@@ -95,7 +100,15 @@ export function createApi(queryClient: QueryClient, navigate: (to: string) => vo
         request.headers.set("X-CSRF-Token", token);
       }
     }
-    return globalThis.fetch(request);
+    const timer = new AbortController();
+    const id = setTimeout(() => {
+      timer.abort(new DOMException("no answer in time", "TimeoutError"));
+    }, requestTimeout);
+    try {
+      return await globalThis.fetch(request, { signal: AbortSignal.any([request.signal, timer.signal]) });
+    } finally {
+      clearTimeout(id);
+    }
   }
 
   async function refreshSession(): Promise<void> {

@@ -1,7 +1,8 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { requestTimeout } from "@/api/client";
 import { i18next } from "@/i18n/i18n";
 import type { Language } from "@/i18n/language";
 import { failure, installMockApi, profileSummary, report, server, signedIn } from "../../../tests/msw";
@@ -203,6 +204,37 @@ describe("new report form", () => {
       });
       expect(keys).toHaveLength(1);
       expect(posts()[0]?.key).toBe(keys[0]);
+    });
+
+    it("a resend after a timeout keeps the key and the body", async () => {
+      const { user } = await open();
+      await user.click(namespace("payments"));
+      const first: { key: string; body: unknown }[] = [];
+      server.use(
+        http.post(
+          reportsUrl,
+          async ({ request }) => {
+            first.push({ key: request.headers.get("Idempotency-Key") ?? "", body: await request.json() });
+            return new Promise<Response>(() => {});
+          },
+          { once: true },
+        ),
+      );
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      await user.click(submit());
+      await waitFor(() => {
+        expect(first).toHaveLength(1);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(requestTimeout);
+      });
+      expect(await screen.findByText(t("error.timeout"))).toBeInTheDocument();
+      await user.click(submit());
+      await waitFor(() => {
+        expect(posts()).toHaveLength(1);
+      });
+      expect(posts()[0]?.key).toBe(first[0]?.key);
+      expect(posts()[0]?.body).toEqual(first[0]?.body);
     });
 
     it("a resend after an answer with unchanged values keeps the key", async () => {

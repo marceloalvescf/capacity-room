@@ -30,7 +30,7 @@ import { themeChoices } from "@/theme/theme";
 
 // Each family of keys, with the list its members must equal.
 export const families: Readonly<Record<string, readonly string[]>> = {
-  error: [...errorCodeValues, "general", "network"],
+  error: [...errorCodeValues, "general", "network", "timeout"],
   role: roleValues,
   language: languageValues,
   status: statusValues,
