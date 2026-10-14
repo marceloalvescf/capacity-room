@@ -181,15 +181,7 @@ function GenerateForm({
     kept.current = null;
   }, []);
 
-  // A profile that left the list gives way to the first one; the request is a
-  // new one, so the reset counts and the key is renewed once it is committed.
   const profile = profiles.find((candidate) => candidate.id === values.profileId);
-  const [resets, setResets] = useState(0);
-  useEffect(() => {
-    if (resets > 0) {
-      renewKey();
-    }
-  }, [resets, renewKey]);
 
   useEffect(() => {
     if (optionsOpen && focusTimezoneOnOpen.current) {
@@ -198,9 +190,11 @@ function GenerateForm({
     }
   }, [optionsOpen]);
 
+  // A profile that left the list gives way to the first one. The reset clears
+  // the namespaces, so the next send follows an edit, which renews the key once
+  // an attempt was answered.
   if (profile === undefined) {
     setValues(defaultsOf(profiles[0] as ProfileSummary, values.language));
-    setResets((count) => count + 1);
     return null;
   }
 
