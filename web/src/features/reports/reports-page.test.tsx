@@ -355,6 +355,7 @@ describe("report list", () => {
       .getAllByRole("listitem")
       .map((line) => line.textContent);
     expect(lines).toEqual([`en${t("pdfStatus.ready")}`, `pt-BR${t("pdfStatus.pending")}`]);
+    expect(within(rowOf(id(0))).getByText("pt-BR")).toHaveClass("whitespace-nowrap");
     expect(within(rowOf(id(2))).getByText(t("reports.notGenerated"))).toBeInTheDocument();
     expect(within(rowOf(id(1))).queryByText(t("reports.notGenerated"))).not.toBeInTheDocument();
     expect(within(rowOf(id(1))).queryAllByRole("listitem")).toHaveLength(0);

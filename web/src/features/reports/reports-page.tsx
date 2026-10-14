@@ -304,10 +304,10 @@ export function ReportsPage() {
                     </td>
                     <td className="px-3 py-2">
                       {row.pdfs.length > 0 && !row.expired ? (
-                        <ul className="flex flex-col gap-1">
+                        <ul className="grid grid-cols-[max-content_1fr] gap-x-2 gap-y-1">
                           {row.pdfs.map((pdf) => (
-                            <li key={pdf.language} className="flex items-center gap-2">
-                              <span className="font-mono">{pdf.language}</span>
+                            <li key={pdf.language} className="col-span-2 grid grid-cols-subgrid items-center">
+                              <span className="font-mono whitespace-nowrap">{pdf.language}</span>
                               <StatusMark status={pdfMark(pdf.status)} label={t(`pdfStatus.${pdf.status}`)} />
                             </li>
                           ))}
