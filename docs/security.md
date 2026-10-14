@@ -52,9 +52,24 @@ including running the two commands that need `CAPACITYROOM_BOOTSTRAP_MODE=1`.
 | A render or collection attempt that River replaced writes nothing | A stale attempt overwriting a newer outcome | `internal/platform/store/reports.go`, `internal/platform/worker/` |
 | Content-Security-Policy `default-src 'self'`, no inline script or style, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'none'`; `X-Frame-Options: DENY`; `nosniff`; `Referrer-Policy: same-origin`; private, revalidated caching of reports | Script injection, framing, leaks through caches | `internal/platform/api/headers.go` |
 | Containers as user 10001, read-only root, no added privileges, every capability dropped; distroless runtime image; bases pinned by digest; PostgreSQL not published | A compromise spreading inside the host | `deploy/Containerfile`, `deploy/compose.yaml` |
+| The chart creates no Secret and takes none in its values, so no secret is in Helm's release state; the Secrets are named, and mounted as files | Secrets read from the values or from `helm get` | `deploy/helm/capacity-room/` |
+| No pod of the chart mounts a service account token | A compromised pod using the cluster's API | `deploy/helm/capacity-room/templates/` |
+| The admin password Secret is mounted on the admin Job alone, and `CAPACITYROOM_BOOTSTRAP_MODE` is set on that pod alone | The bootstrap command running in `serve` or `worker`, or the password staying mounted | `deploy/helm/capacity-room/templates/job-admin.yaml` |
+| The pull secret of a private registry is made by the operator with `kubectl`, and the chart only names it | A registry credential in the values or the release | `deploy/helm/capacity-room/` |
+| Every pod of the chart meets the `restricted` pod security level: non-root user, read-only root, no privilege escalation, every capability dropped, default seccomp profile | A compromise spreading inside the node | `deploy/helm/capacity-room/templates/` |
 | An append-only audit trail; deletion is deactivation | Erasing what was done | `internal/platform/store/migrations/` |
 | An answer of at most 256 MiB, decoded one series at a time | Memory exhaustion by a large or hostile answer | `internal/prom/client.go` |
 | `make audit` runs govulncheck, `npm audit`, and trivy at every release | Known vulnerabilities shipped | `Makefile` |
+
+## Trades
+
+- On Kubernetes, `trusted_proxies` may have to name the pod range when the
+  gateway's address is not fixed. Any pod of the cluster can then send `serve`
+  a forged `X-Forwarded-For`, which changes the client address that the
+  sign-in throttle counts and the address the audit records. It gains no
+  access, since the sender still needs a valid password. The chart ships no
+  NetworkPolicy; name the gateway's address alone when it has one (section 12
+  of the operations guide).
 
 ## What an operator must do
 

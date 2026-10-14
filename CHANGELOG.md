@@ -6,13 +6,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A Helm chart runs the platform on Kubernetes, with a Gateway API route or an Ingress, and creates the first administrator and the profiles from its values.
+- The first administrator can be created from a password file, with `admin bootstrap-admin --password-file`.
+
 ### Changed
 
 - The Compose stack mounts its settings folder at `/opt/capacity-room`, with the server secret in a `secret` folder of its own; the operations guide says how to move an existing folder.
-
-### Added
-
-- The first administrator can be created from a password file, with `admin bootstrap-admin --password-file`.
 
 ## [2.0.0] - 2026-10-14
 

@@ -49,7 +49,7 @@ WEB_STAMP := web/node_modules/.package-lock.json
 
 .PHONY: web build test lint image test-toolchain test-template test-golden test-chart \
 	update-golden update-testdata check-runtime gate postgres-up postgres-down \
-	test-postgres generate generate-check e2e audit
+	test-postgres generate generate-check e2e audit push
 
 $(WEB_STAMP): web/package-lock.json
 	cd web && npm ci
@@ -266,3 +266,14 @@ audit:
 	( trivy --version && trivy image --scanners vuln --no-progress --ignore-unfixed --ignorefile deploy/trivy-ignore.yaml --exit-code 1 $(IMAGE) ) > .cache/audit/trivy.log 2>&1 || status=1; \
 	for log in govulncheck npm-audit trivy; do echo "audit: .cache/audit/$$log.log"; done; \
 	exit $$status
+
+# Builds the runtime image for linux/amd64 and pushes it to Docker Hub under
+# the version. It refuses a working tree with changes, so the image is the
+# commit's. It is outward: run `docker login` first, and run it only on the
+# word of the owner. make gate never runs it.
+PUSH_IMAGE := alvesmarcelocf/capacity-room:$(VERSION)
+
+push:
+	@test -z "$$(git status --porcelain)" || { echo "push: the working tree has changes"; exit 1; }
+	docker build --platform linux/amd64 --file deploy/Containerfile --target runtime --tag $(PUSH_IMAGE) .
+	docker push $(PUSH_IMAGE)

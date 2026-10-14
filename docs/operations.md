@@ -439,8 +439,8 @@ raise the worker's limit with `worker_slots`.
 
 ## 10. Limits
 
-- The platform is one `serve` and one `worker` on one host, as the Compose
-  file runs them; no other layout is tested.
+- The platform is one `serve` and one `worker`, as the Compose
+  file or the chart runs them; no other layout is tested.
 - `serve` speaks plain HTTP: TLS is the proxy's.
 - No outbound proxy: the worker connects to the metric sources directly.
 - The sign-in throttle counts failures per user and client address. It does
@@ -451,6 +451,9 @@ raise the worker's limit with `worker_slots`.
   many times that in memory. The memory limits of section 2 keep such an
   answer from reaching the rest of the host.
 - An allowlist entry grants every port of its host or range (section 3).
+- The chart runs one `serve` and one `worker`, one replica each, and ships no
+  NetworkPolicy. Its Ingress is checked against the schema of the Ingress
+  kind alone; no cluster has served through it (section 12).
 
 ## 11. A lost administrator password
 
@@ -469,6 +472,158 @@ rm "$CAPACITYROOM_HOME/admin-password"
 ```
 
 A user blocked by the sign-in throttle is free again after five minutes.
+
+## 12. Kubernetes
+
+The Helm chart in `deploy/helm/capacity-room` runs the platform on a
+Kubernetes cluster. It is installed from a checkout and is not published.
+It needs Helm 3, a PostgreSQL database that the cluster reaches, and either a
+Gateway API gateway or an Ingress controller. Its values are documented by
+the comments of `deploy/helm/capacity-room/values.yaml`, which this section
+points at rather than repeats.
+
+### What runs
+
+The chart creates two Deployments (`serve` and `worker`, one replica each,
+strategy `Recreate`), a Service on port 8080, an HTTPRoute or an Ingress, a
+ConfigMap that holds `platform.toml`, a service account whose token no pod
+mounts, and two hook Jobs. It creates no Secret, no volume claim, and no
+NetworkPolicy: the Secrets are yours, the database is outside the chart, and
+the cluster's network policy is yours to write. Every pod meets the
+`restricted` pod security level.
+
+### Secrets to create first
+
+Create each in the namespace of the release before installing.
+
+```bash
+kubectl create namespace capacity-room
+
+# The database DSN. A CloudNativePG cluster already makes <cluster>-app, whose key uri holds it.
+kubectl -n capacity-room create secret generic capacity-room-db-app \
+  --from-literal=uri='postgres://capacityroom:CHANGE-ME@db.example.com:5432/capacityroom?sslmode=require'  # example: replace
+
+# The server secret: at least 32 random bytes.
+head -c 32 /dev/urandom > server-secret
+kubectl -n capacity-room create secret generic capacity-room-server-secret \
+  --from-file=server-secret=./server-secret
+rm server-secret
+
+# The first administrator's password, 12 to 1024 characters.
+printf '%s' 'a long administrator password' > admin-password  # example: replace
+kubectl -n capacity-room create secret generic capacity-room-admin \
+  --from-file=password=./admin-password
+rm admin-password
+
+# One key per credential file that a profile names, each a bearer token of 8 characters or more.
+kubectl -n capacity-room create secret generic capacity-room-credentials \
+  --from-file=prod=./prod-token  # example: replace
+
+# One key per CA bundle that a profile names, each PEM.
+kubectl -n capacity-room create configmap capacity-room-ca \
+  --from-file=internal-ca=./internal-ca.pem  # example: replace
+
+# The pull secret of a private registry.
+kubectl -n capacity-room create secret docker-registry registry-pull \
+  --docker-username=example --docker-password=CHANGE-ME  # example: replace
+```
+
+The credentials Secret and the CA ConfigMap are optional; a key of either
+is the file name that a profile gives. The pull secret is needed only when
+the registry is private. A key of the admin Secret other than `password`
+is named by `admin.passwordKey`, which takes the characters `-._a-zA-Z0-9`.
+
+### A values file
+
+Start from `deploy/helm/capacity-room/examples/gateway.yaml` for a Gateway API
+route, or `examples/ingress.yaml` for an Ingress. Replace the hosts, the
+Secret names, the gateway's `parentRefs`, and the profile.
+
+`platform` takes the keys of section 3, by their own names, and the schema
+refuses a key that section does not list. The chart writes
+`server_secret_path`, `credential_dir`, and `ca_bundle_dir` itself, so
+`platform` refuses those three. As in section 3, nothing is reachable until
+`allowed_endpoint_hostnames` or `allowed_endpoint_cidrs` lists a metric
+source.
+
+`profiles` takes the `[[profiles]]` tables of `admin import-profiles` as YAML,
+and a profile names its credential and its CA bundle by file name. No secret
+goes in the values, and none enters Helm's release state.
+
+### Install
+
+Check the render against the cluster first, then install.
+
+```bash
+helm upgrade -i capacity-room deploy/helm/capacity-room -n capacity-room --dry-run=server -f values.yaml
+helm upgrade -i capacity-room deploy/helm/capacity-room -n capacity-room --create-namespace -f values.yaml
+```
+
+The values schema refuses an unknown key, a missing required Secret name,
+and a route and an Ingress enabled together, before anything reaches the
+cluster. Check `kubectl -n capacity-room get pods` until both pods are ready.
+
+### The Jobs
+
+Two hook Jobs run the operator commands of the platform. Helm waits for each
+and removes it once it succeeds; a failed Job stays, so its log can be read.
+
+- The admin Job, `capacity-room-admin` for a release of that name, runs
+  `admin bootstrap-admin` after the first install only, when `admin.username`
+  is set. The bootstrap mode is set on its pod alone.
+- The profiles Job, `capacity-room-profiles`, runs `admin import-profiles`
+  after every install and upgrade, when `profiles` is not empty. It prints
+  `created`, `revised`, `recreated`, or `unchanged` for each profile. A
+  profile edited on the web holds only until the next upgrade, which revises
+  it back to the values; profiles the values do not name are left alone.
+
+```bash
+kubectl -n capacity-room logs job/capacity-room-admin
+kubectl -n capacity-room logs job/capacity-room-profiles
+```
+
+A Job that fails after its retries leaves the release failed. Correct the
+cause, then run the same `helm upgrade` again: it removes the failed Job
+first. The admin Job refuses when the database already holds a user, as it
+does in a reinstall over a kept database; leave `admin.username` empty then,
+and the Job is not rendered.
+
+### Probes, resources, and stop times
+
+Both pods have a startup, a readiness, and a liveness probe on
+`/health/ready` and `/health/live`. `serve` has the memory limit and request
+of `serve.resources`, and `worker` those of `worker.resources`; the worker's
+`GOMEMLIMIT` is set at three quarters of its memory limit, which must be
+written in `Mi` or `Gi`. `serve` has 45 seconds to stop. The worker has twice
+`worker_drain_seconds` plus 15 seconds, since it waits for running jobs, cancels
+the rest, and waits again. Size the memory as section 9 does.
+
+### Upgrade and uninstall
+
+To upgrade, check out the new version and run the same `helm upgrade -i`
+command. Both pods are recreated, and the schema is applied under the lock
+by the first command that starts. The image tag is the chart's `appVersion`
+unless `image.tag` is set.
+
+```bash
+helm uninstall capacity-room -n capacity-room
+```
+
+Uninstall removes what the chart made. The database and the Secrets stay, so
+a new install over the same database finds its users and reports; leave
+`admin.username` empty then.
+
+### Behind a gateway
+
+`trusted_proxies` must name the peers whose `X-Forwarded-For` is believed. When
+the gateway has a fixed address, name that address alone. When its pod
+address changes at every restart, the pod range of the cluster is the only
+stable name (`examples/gateway.yaml` uses `10.244.0.0/16`), and it is a
+trade: any pod of the cluster can then send `serve` a forged
+`X-Forwarded-For`. That changes the client address the sign-in throttle counts
+and the address the audit records, and gives no access, since the sender
+still needs a valid password. The chart ships no NetworkPolicy, so a cluster
+whose network can enforce one may narrow this.
 
 ## Reporting a vulnerability
 

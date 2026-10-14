@@ -36,6 +36,7 @@ make image            # runtime image and test image
 make test-toolchain   # checks typst and pdftotext inside the test image
 make test-template    # compiles the template and writes reports in the test image
 make test-golden      # compares rendered pages with the golden pages
+make test-chart       # helm lint, the chart's Go tests, and kubeconform in the test image
 make generate         # writes the Go types and the TypeScript types of api/openapi.yaml
 make generate-check   # fails when the committed generated file is stale
 make postgres-up      # starts PostgreSQL 18 for the platform tests, through Compose
@@ -46,6 +47,7 @@ make gate             # everything above, from freshly built images
 make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files
 make audit            # govulncheck, npm audit, and trivy over the image; needs the network and Docker
+make push             # the runtime image to Docker Hub; outward, main thread, on the owner's word
 ```
 
 `make audit` is not part of `make gate`, whose result must not change with a
@@ -182,6 +184,7 @@ Build tags in use:
 | `golden` | `typst`, with `template` | `make test-golden` |
 | `postgres` | PostgreSQL, through `CAPACITYROOM_TEST_DATABASE_DSN` | `make test-postgres`, over `internal/platform/...` but the worker |
 | `postgres` with `template` | PostgreSQL and `typst` | `make test-postgres`, over `internal/platform/worker` and `internal/cli`, so each of their postgres tests runs once |
+| `helm` | `helm`, `kubeconform` | `make test-chart` |
 
 With the native tools installed, a subagent runs the tagged tests itself:
 
@@ -223,6 +226,7 @@ rank, or of its own layer.
 | 150 | `internal/platform/api` |
 | 160 | `internal/platform/worker` |
 | 200 | `internal/cli` |
+| 210 | `internal/chart` |
 
 The snapshot is the only handover. Everything after `snapshot.Build` reads
 the snapshot and nothing else. The platform packages sit above the core and
@@ -887,6 +891,32 @@ looks.
   measured only by a decision of its own. Measure again when the pinned
   Typst version changes.
 
+## The chart
+
+`deploy/helm/capacity-room/` runs the platform on Kubernetes. Spec
+`docs/superpowers/specs/2026-10-14-kubernetes-deployment-design.md` is its
+design, and section 12 of `docs/operations.md` is the operator's guide to it.
+
+- **The chart lives in `deploy/helm/capacity-room/` and is not published.** An
+  operator installs it from a checkout.
+- **It creates no Secret, no PersistentVolumeClaim, and no NetworkPolicy.**
+  The operator makes the Secrets and the ConfigMap it names, and the pull
+  secret of a private registry.
+- **Nothing is mounted under `/etc`.**
+- **One version.** `Chart.yaml`'s `version` and `appVersion` equal `VERSION`,
+  held by a test.
+- **The schema follows the code.** The `platform` keys of `values.schema.json`,
+  with the three chart-owned keys (`server_secret_path`, `credential_dir`,
+  `ca_bundle_dir`), equal the settings keys, and its `profiles` keys equal
+  the keys of the import file, both held by tests.
+- **Every pod meets `restricted` and mounts no service account token.**
+- **The hooks.** The admin Job is `post-install` alone, and the profiles Job
+  is `post-install,post-upgrade`.
+- **kubeconform reads only the schemas of `deploy/helm/schemas/`,** so a new
+  kind needs its schema there.
+- **The homelab's own files never enter the repository.** The chart's examples
+  use `example.com` and placeholder names.
+
 ## Delegating to subagents
 
 The main thread plans, judges, and runs the gates. Subagents implement.
@@ -896,7 +926,7 @@ The main thread plans, judges, and runs the gates. Subagents implement.
 - A subagent must not run Docker, so `make image`, `make test-toolchain`,
   `make test-template`, `make test-golden`, `make update-golden`,
   `make postgres-up`, `make postgres-down`, `make test-postgres`,
-  `make e2e`, and `make gate` stay on the main thread. The main thread starts PostgreSQL
+  `make test-chart`, `make push`, `make e2e`, and `make gate` stay on the main thread. The main thread starts PostgreSQL
   with `make postgres-up` and gives the subagent the DSN; the subagent runs
   the tagged tests with `CAPACITYROOM_TEST_DATABASE_DSN` set.
 - Two agents in one checkout break each other's builds when they share a Go
