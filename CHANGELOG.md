@@ -6,6 +6,37 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The report list shows the cluster of each report under its profile, and the worst severity the report shows under its status; a report collected before this version shows neither.
+- The report list names the language of each report, and the language of each of its PDFs.
+- The API's report summary carries the worst severity and the cluster name of a collected report, or null when the report holds neither.
+- The new report form says when a report it copies names a profile, namespaces, or a period that no longer apply.
+- The action plan, a finding, and the cluster autoscaling explain what their confidence means.
+
+### Changed
+
+- The report list shows the date a report is kept until under its request time, so the list fits a window 1024 pixels wide.
+- The title of a report reads "Report · " followed by the profile's name.
+- A collection shorter than one second reads "under 1 s".
+- The progress page counts the elapsed time from the start of the collection, and shows none while the report waits in the queue.
+- The progress page offers Delete for every report the list lets you delete.
+- The period picker no longer highlights a quick range while a range is being typed.
+
+### Fixed
+
+- A request that gets no answer from the server ends after 30 seconds with a message, so a delete no longer leaves its dialog stuck.
+- A bulk delete cut short announces the reports that went and keeps the others selected.
+- The report list no longer flashes profile ids while the profile names load, and says when they could not be loaded.
+- The progress page checks often again after a PDF is requested, and announces nothing about a report you left.
+- A link to a finding scrolls it into view.
+- Screen readers tell apart the Open, Delete, and selection controls of each report in the list.
+- A tooltip lies inside the region of the page that holds its button.
+- The new report form keeps its submit button disabled while it opens the requested report.
+- When the server refuses a selection the profile does not permit, the new report form loads the profile's current choices.
+- An unknown report tab shows a single main heading.
+- The API contract describes the view's minimum severity and the status of each namespace, workload, and node again.
+
 ## [1.5.0] - 2026-10-13
 
 ### Added
