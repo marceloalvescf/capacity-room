@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -143,17 +143,105 @@ describe("progress screen", () => {
   }, 60_000);
 
   it("shows the elapsed time, and never a negative one", async () => {
-    mock.reports = [report({ ...running, created_at: new Date(Date.now() - 42_000).toISOString() })];
+    mock.reports = [report({ ...running, started_at: new Date(Date.now() - 42_000).toISOString() })];
     vi.useFakeTimers({ shouldAdvanceTime: true });
     await open();
     expect(screen.getByText(t("progress.elapsed", { time: "0:42" }))).toBeInTheDocument();
     expect(screen.getByText(t("progress.closeable"))).toBeInTheDocument();
     await advance(3000);
     await screen.findByText(t("progress.elapsed", { time: "0:45" }));
-    mock.reports = [report({ ...running, created_at: new Date(Date.now() + 5000).toISOString() })];
+    mock.reports = [report({ ...running, started_at: new Date(Date.now() + 5000).toISOString() })];
     await advance(1700);
     await screen.findByText(t("progress.elapsed", { time: "0:00" }));
   });
+
+  it("offers Delete wherever the list does, on a queued and a running report", async () => {
+    signIn("operator");
+    for (const state of [{ ...running, status: "queued", phase: "waiting", started_at: null }, running] as const) {
+      mock.reports = [report(state)];
+      const { unmount } = await open();
+      expect(screen.getByRole("button", { name: t("progress.deleteReport") })).toBeInTheDocument();
+      unmount();
+    }
+    signIn("reader");
+    mock.reports = [report(running)];
+    await open();
+    expect(screen.queryByRole("button", { name: t("progress.deleteReport") })).not.toBeInTheDocument();
+  });
+
+  it("counts the elapsed time from the start of the collection, and none while queued", async () => {
+    const now = Date.now();
+    mock.reports = [report({ ...running, status: "queued", phase: "waiting", started_at: null })];
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { unmount } = await open();
+    expect(screen.getByRole("list", { name: t("progress.steps") })).toBeInTheDocument();
+    expect(screen.queryByText(/^Elapsed/)).not.toBeInTheDocument();
+    unmount();
+    mock.reports = [
+      report({
+        ...running,
+        created_at: new Date(now - 600_000).toISOString(),
+        started_at: new Date(now - 65_000).toISOString(),
+      }),
+    ];
+    await open();
+    expect(screen.getByText(t("progress.elapsed", { time: "1:05" }))).toBeInTheDocument();
+  });
+
+  it("announces nothing for another report reached by a link", async () => {
+    const other = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a02";
+    mock.reports = [report(running), report({ id: other })];
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { router } = await open();
+    const heard = listen();
+    await act(async () => {
+      await router.navigate(`/jobs/${other}`);
+    });
+    await screen.findByRole("link", { name: t("report.open") });
+    await advance(5000);
+    expect(heard).toEqual([]);
+  });
+
+  it("counts the checks again when the report becomes active again", async () => {
+    mock.reports = [report(running)];
+    const realTimeout = globalThis.setTimeout;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
+    const settle = async () => {
+      await act(async () => {
+        await new Promise((resolve) => realTimeout(resolve, 15));
+        await vi.advanceTimersByTimeAsync(0);
+        await new Promise((resolve) => realTimeout(resolve, 15));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+    };
+    await renderApp(`/jobs/${id}`);
+    for (let turn = 0; turn < 80 && checks().length === 0; turn++) {
+      await settle();
+    }
+    await settle();
+    for (let made = 1; made < 45; made++) {
+      await advance(made < 20 ? 1500 : made < 40 ? 3000 : 6000);
+      await settle();
+    }
+    expect(checks()).toHaveLength(45);
+    mock.reports = [report()];
+    await advance(6000);
+    await settle();
+    expect(checks()).toHaveLength(46);
+    mock.reports = [report({ pdfs: [pdf("en", "pending")] })];
+    await advance(10_000);
+    await settle();
+    expect(checks()).toHaveLength(46);
+    fireEvent.click(within(group("en")).getByRole("button", { name: t("progress.generatePdf") }));
+    await settle();
+    expect(checks()).toHaveLength(47);
+    await advance(1499);
+    await settle();
+    expect(checks()).toHaveLength(47);
+    await advance(1);
+    await settle();
+    expect(checks()).toHaveLength(48);
+  }, 60_000);
 
   it("stops when final", async () => {
     for (const final of [{}, { status: "failed", failure_code: "ENDPOINT_UNREACHABLE" } as const]) {

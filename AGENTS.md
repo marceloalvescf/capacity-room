@@ -781,8 +781,9 @@ redactor the moment the settings are loaded, before the pool opens.
   refetches every loaded page every 5 seconds while a loaded row is queued,
   running, or has a pending PDF, and not otherwise. The progress page
   checks after 1.5 s for its first 20 answers, 3 s for the next 20, then
-  6 s, while the report is queued, running, or has a pending PDF; a 404 or
-  410 stops it.
+  6 s, while the report is queued, running, or has a pending PDF, and counts
+  again from the answer that shows the report active again, as after Generate
+  PDF; a 404 or 410 stops it.
 - **The screens show what the role allows.** A checkbox and Delete appear
   on a row only for an administrator, or for an operator on their own
   report; Generate PDF, Try again, and New report only for operators and

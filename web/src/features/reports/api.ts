@@ -8,6 +8,7 @@ import {
   type UseInfiniteQueryResult,
   type UseQueryResult,
 } from "@tanstack/react-query";
+import { useRef } from "react";
 import { useApi } from "@/api/context";
 import { ApiFailure } from "@/api/client";
 import type { components } from "@/api/schema.gen";
@@ -69,6 +70,9 @@ export function useReports(): UseInfiniteQueryResult<InfiniteData<ReportPage>> {
 // reaches the report after it is gone.
 export function useReport(id: string, enabled = true): UseQueryResult<Report> {
   const api = useApi();
+  // The checks count from the answer that showed the report active again, so
+  // a PDF requested after a long run is followed as closely as a new report.
+  const activeSince = useRef<number | null>(null);
   return useQuery({
     queryKey: [...reportsKey, id],
     enabled,
@@ -81,9 +85,11 @@ export function useReport(id: string, enabled = true): UseQueryResult<Report> {
     },
     refetchInterval: (query) => {
       if (ended(query.state.error) || query.state.data === undefined || !isActive(query.state.data)) {
+        activeSince.current = null;
         return false;
       }
-      return nextCheck(query.state.dataUpdateCount);
+      activeSince.current ??= query.state.dataUpdateCount - 1;
+      return nextCheck(query.state.dataUpdateCount - activeSince.current);
     },
   });
 }

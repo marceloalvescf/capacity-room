@@ -991,7 +991,8 @@ the administration.
   with a link to the new report form for an operator.
 - Progress: the title, who requested the report and when, and its status;
   never the values of the request. While the report runs, the steps of its
-  phase and the elapsed time. Once collected, the PDF of the interface
+  phase and the time elapsed since the collection started; while it is
+  queued, the steps alone. Once collected, the PDF of the interface
   language first, then the other language: "not generated" with a button
   to generate it, its state while pending, and a retry when it failed; a
   reader sees the downloads alone. A collected report has a link that opens

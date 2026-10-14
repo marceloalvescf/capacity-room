@@ -108,7 +108,7 @@ export function Gone({ message }: { message: string }) {
   );
 }
 
-export function ProgressPage() {
+function ProgressPage() {
   const { t } = useTranslation();
   const { id = "" } = useParams();
   const principal = usePrincipal();
@@ -184,7 +184,7 @@ export function ProgressPage() {
       {finished ? null : (
         <section className="flex flex-col gap-3">
           <Steps phase={data.phase} />
-          <Elapsed since={data.created_at} />
+          {data.started_at === null ? null : <Elapsed since={data.started_at} />}
           <p className="text-sm text-muted-fg">{t("progress.closeable")}</p>
         </section>
       )}
@@ -217,7 +217,7 @@ export function ProgressPage() {
           ) : null}
         </>
       ) : null}
-      {(data.status === "collected" || data.status === "failed") && canDelete(principal, data) ? (
+      {canDelete(principal, data) ? (
         <div>
           <Button
             ref={trigger}
@@ -245,4 +245,10 @@ export function ProgressPage() {
       />
     </div>
   );
+}
+
+// A new id mounts a new page, so nothing of the report before it carries over.
+export function ProgressRoute() {
+  const { id } = useParams();
+  return <ProgressPage key={id} />;
 }

@@ -10,7 +10,7 @@ import { ReportPage } from "@/features/report/report-page";
 import { FindingsTab } from "@/features/report/findings-tab";
 import { WorkloadsTab } from "@/features/report/workloads-tab";
 import { GeneratePage } from "@/features/reports/generate-page";
-import { ProgressPage } from "@/features/reports/progress-page";
+import { ProgressRoute } from "@/features/reports/progress-page";
 import { ReportsPage } from "@/features/reports/reports-page";
 import { ProfileFormPage } from "@/features/admin/profiles/profile-form-page";
 import { ProfilesPage } from "@/features/admin/profiles/profiles-page";
@@ -45,7 +45,7 @@ export const routes: RouteObject[] = [
               { path: "users", element: <UsersPage /> },
             ],
           },
-          { path: "jobs/:id", element: <ProgressPage /> },
+          { path: "jobs/:id", element: <ProgressRoute /> },
           {
             path: "reports/:id",
             element: <ReportPage />,
