@@ -30,6 +30,8 @@ program.
   phase 13).
 - The GitHub repository and the local folder are both renamed at the end of
   the phase. The owner moves the folder.
+- The hash domain of a profile fingerprint is renamed too, accepting one new
+  revision per profile at its next revise or import.
 
 ## The name map
 
@@ -52,6 +54,10 @@ program.
 | colophon pt-BR "Gerado pelo k8s-capacity-report a partir de um snapshot de métricas compatíveis com o Prometheus. Emitido em {{.Issued}}." | "Gerado pelo CapacityRoom a partir de um snapshot de métricas compatíveis com o Prometheus. Emitido em {{.Issued}}." |
 | title of `api/openapi.yaml` "k8s-capacity-report API" | "CapacityRoom API" |
 | description of `flake.nix` | "Development shell of CapacityRoom" |
+| root Go package `kcr` (`version.go`) | `capacityroom` |
+| hash domain of a profile fingerprint `kcr.profile.v1` | `capacityroom.profile.v1` |
+| browser storage keys `kcr.theme`, `kcr.language` | `capacityroom.theme`, `capacityroom.language` |
+| npm package `kcr-web` of `web/package.json` and its lock file | `capacity-room-web` |
 
 Every other identifier that holds `kcr` as a word or a prefix (fixture names,
 test secrets such as `kcr-keyring` or `kcr_e2e_only`) takes `capacityroom`
@@ -66,6 +72,7 @@ in the same form.
 - The Typst package `graphite-report` and its public surface.
 - The names of the original program (`kubernetes-report`,
   `kube_capacity_report`) wherever the documents cite it.
+- The fingerprints stored before 2.0.0 are not recomputed. A profile revised or imported again after the upgrade writes one new revision even when its document is unchanged, since its fingerprint now differs from the stored one; that is the owner's ruling of 2026-10-14.
 - The file names `report.toml`, `platform.toml`, `profiles.toml`, and the
   keys inside them.
 - The recorded answers of `testdata/prometheus/` and the records of
@@ -164,7 +171,8 @@ The changelog of 2.0.0 holds:
   new name.
 - **Removed:** reports stored by a Compose stack before 2.0.0 are not carried
   forward, since the new stack starts with a new volume; every signed-in
-  session ends at the upgrade.
+  session ends at the upgrade; a theme or a language chosen before sign-in
+  is forgotten once.
 
 The internal work (the guard, the renamed test scaffolding, the images of the
 tests) is left out, and the report of the phase says so.
