@@ -1,0 +1,51 @@
+{{- if .Values.profiles }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "capacity-room.fullname" . }}-profiles
+  labels:
+    {{- include "capacity-room.labels" . | nindent 4 }}
+    app.kubernetes.io/component: profiles
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "capacity-room.selectorLabels" (dict "root" . "component" "profiles") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "capacity-room.fullname" . }}
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "capacity-room.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: profiles
+          image: {{ include "capacity-room.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - admin
+            - import-profiles
+            - --file
+            - /opt/capacity-room/profiles.toml
+            - --config
+            - /opt/capacity-room/platform.toml
+          env:
+            {{- include "capacity-room.databaseEnv" . | nindent 12 }}
+          securityContext:
+            {{- include "capacity-room.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            {{- include "capacity-room.volumeMounts" . | nindent 12 }}
+            - name: settings
+              mountPath: /opt/capacity-room/profiles.toml
+              subPath: profiles.toml
+              readOnly: true
+      volumes:
+        {{- include "capacity-room.volumes" . | nindent 8 }}
+{{- end }}

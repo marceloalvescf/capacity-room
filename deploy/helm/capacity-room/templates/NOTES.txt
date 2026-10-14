@@ -7,3 +7,9 @@ The web answers at https://{{ first .Values.route.hostnames }}.
 {{- else if .Values.ingress.enabled }}
 The web answers at https://{{ first .Values.ingress.hosts }}.
 {{- end }}
+{{- if .Values.admin.username }}
+The administrator {{ .Values.admin.username }} is created by the Job {{ include "capacity-room.fullname" . }}-admin; Helm removes it once it succeeds, and a failure keeps it for its log.
+{{- end }}
+{{- if .Values.profiles }}
+The profiles are imported by the Job {{ include "capacity-room.fullname" . }}-profiles at every install and upgrade.
+{{- end }}

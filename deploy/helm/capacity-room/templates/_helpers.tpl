@@ -121,3 +121,22 @@ or Gi. */}}
 {{- trimSuffix "Mi" $memory | int -}}
 {{- end -}}
 {{- end -}}
+
+{{/* profiles.toml: one [[profiles]] table per profile, each value written
+as JSON, which TOML reads as the same string, number, boolean, or list. */}}
+{{- define "capacity-room.profilesToml" -}}
+{{- range .Values.profiles }}
+[[profiles]]
+{{- range $key, $value := . }}
+{{- if ne $key "thresholds" }}
+{{ $key }} = {{ toJson $value }}
+{{- end }}
+{{- end }}
+{{- with .thresholds }}
+[profiles.thresholds]
+{{- range $key, $value := . }}
+{{ $key }} = {{ toJson $value }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}

@@ -72,3 +72,23 @@ ingress:
   annotations: {}
   hosts: []
   tls: []
+
+# The first administrator, created by a Job at the first install. Leave
+# username empty when the database already holds a user, as in a reinstall
+# over a kept database: the command refuses then, and the install fails.
+admin:
+  username: ""
+  # The first administrator's password, 12 to 1024 characters, read once by
+  # the admin Job at the first install. Create the Secret before installing:
+  #   kubectl -n <namespace> create secret generic capacity-room-admin \
+  #     --from-file=password=./admin-password
+  existingSecret: ""
+  passwordKey: password
+  # pt-BR or en.
+  language: en
+
+# The profiles, as the [[profiles]] tables of admin import-profiles, written
+# as YAML. A Job imports them at every install and upgrade; an edit made on
+# the web to a profile named here holds until the next upgrade. A profile
+# names its credential and CA bundle by file name, so no secret goes here.
+profiles: []

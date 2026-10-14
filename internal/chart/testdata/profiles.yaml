@@ -1,0 +1,21 @@
+platform:
+  allowed_endpoint_hostnames: ["prometheus.monitoring.svc.cluster.local"]
+profiles:
+  - id: prod
+    display_name: 'Prod "east" \ ação <b> & co'
+    endpoint_url: http://prometheus.monitoring.svc.cluster.local:9090
+    endpoint_type: prometheus
+    cluster_name: prod
+    allowed_namespaces: ["payments"]
+    timeout_seconds: 30
+    active: true
+  - id: staging
+    display_name: Staging
+    endpoint_url: http://prometheus.monitoring.svc.cluster.local:9090
+    endpoint_type: prometheus
+    cluster_name: staging
+    allowed_namespaces: ["default"]
+    active: false
+    thresholds:
+      warning_percent: 70
+      critical_percent: 90

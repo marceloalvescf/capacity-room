@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "additionalProperties": false,
-  "required": ["image", "imagePullSecrets", "database", "serverSecret", "credentials", "caBundles", "platform", "serve", "worker", "route", "ingress"],
+  "required": ["image", "imagePullSecrets", "database", "serverSecret", "credentials", "caBundles", "platform", "serve", "worker", "route", "ingress", "admin", "profiles"],
   "not": {
     "properties": {
       "route": {"properties": {"enabled": {"const": true}}},
@@ -10,6 +10,61 @@
     }
   },
   "properties": {
+    "admin": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "username": {"type": "string"},
+        "existingSecret": {"type": "string"},
+        "passwordKey": {"type": "string", "minLength": 1},
+        "language": {"enum": ["pt-BR", "en"]}
+      },
+      "if": {"properties": {"username": {"minLength": 1}}},
+      "then": {"properties": {"existingSecret": {"minLength": 1}}}
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id"],
+        "properties": {
+          "id": {"type": "string"},
+          "display_name": {"type": "string"},
+          "active": {"type": "boolean"},
+          "endpoint_url": {"type": "string"},
+          "endpoint_type": {"type": "string"},
+          "timeout_seconds": {"type": "number"},
+          "tls_verify": {"type": "boolean"},
+          "credential_file": {"type": "string"},
+          "ca_bundle_file": {"type": "string"},
+          "cluster_name": {"type": "string"},
+          "cluster_label": {"type": "string"},
+          "filter_mode": {"type": "string"},
+          "nodepool_label": {"type": "string"},
+          "node_autoscaling": {"type": "string"},
+          "allowed_namespaces": {"type": "array", "items": {"type": "string"}},
+          "excluded_containers": {"type": "array", "items": {"type": "string"}},
+          "permitted_periods": {"type": "array", "items": {"type": "string"}},
+          "default_period": {"type": "string"},
+          "permitted_timezones": {"type": "array", "items": {"type": "string"}},
+          "default_timezone": {"type": "string"},
+          "permitted_report_profiles": {"type": "array", "items": {"type": "string"}},
+          "default_report_profile": {"type": "string"},
+          "permitted_min_severities": {"type": "array", "items": {"type": "string"}},
+          "default_min_severity": {"type": "string"},
+          "thresholds": {
+            "type": "object", "additionalProperties": false,
+            "properties": {
+              "warning_percent": {"type": "number"},
+              "critical_percent": {"type": "number"},
+              "low_utilization_percent": {"type": "number"},
+              "autoscaler_near_max_percent": {"type": "number"},
+              "nodepool_spread_points": {"type": "number"},
+              "bursty_gap_percent": {"type": "number"},
+              "hpa_replica_divergence": {"type": "number"}
+            }
+          }
+        }
+      }
+    },
     "route": {
       "type": "object", "additionalProperties": false,
       "properties": {

@@ -1,0 +1,63 @@
+{{- if .Values.admin.username }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "capacity-room.fullname" . }}-admin
+  labels:
+    {{- include "capacity-room.labels" . | nindent 4 }}
+    app.kubernetes.io/component: admin
+  annotations:
+    helm.sh/hook: post-install
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "capacity-room.selectorLabels" (dict "root" . "component" "admin") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "capacity-room.fullname" . }}
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "capacity-room.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: admin
+          image: {{ include "capacity-room.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - admin
+            - bootstrap-admin
+            - --username
+            - {{ .Values.admin.username | quote }}
+            - --language
+            - {{ .Values.admin.language | quote }}
+            - --password-file
+            - {{ printf "/opt/capacity-room/admin/%s" .Values.admin.passwordKey | quote }}
+            - --config
+            - /opt/capacity-room/platform.toml
+          env:
+            {{- include "capacity-room.databaseEnv" . | nindent 12 }}
+            - name: CAPACITYROOM_BOOTSTRAP_MODE
+              value: "1"
+          securityContext:
+            {{- include "capacity-room.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            {{- include "capacity-room.volumeMounts" . | nindent 12 }}
+            - name: admin
+              mountPath: /opt/capacity-room/admin
+              readOnly: true
+      volumes:
+        {{- include "capacity-room.volumes" . | nindent 8 }}
+        - name: admin
+          secret:
+            secretName: {{ .Values.admin.existingSecret }}
+            defaultMode: 0440
+            items:
+              - key: {{ .Values.admin.passwordKey }}
+                path: {{ .Values.admin.passwordKey }}
+{{- end }}

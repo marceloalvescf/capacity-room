@@ -235,3 +235,25 @@ func TestOpenErrorCode(t *testing.T) {
 		}
 	}
 }
+
+// TestResolveCredentialThroughSecretVolumeLinks lays the folder out as
+// Kubernetes writes a Secret volume: name -> ..data/name, ..data ->
+// ..<timestamp>, all inside the folder.
+func TestResolveCredentialThroughSecretVolumeLinks(t *testing.T) {
+	dir := t.TempDir()
+	stamped := "..2026_10_14_12_00_00.000000001"
+	if err := os.Mkdir(filepath.Join(dir, stamped), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(dir, stamped), "prometheus-bearer", []byte("a-bearer-token-value\n"))
+	if err := os.Symlink(stamped, filepath.Join(dir, "..data")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("..data/prometheus-bearer", filepath.Join(dir, "prometheus-bearer")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ResolveCredential(dir, "prometheus-bearer")
+	if err != nil || got != "a-bearer-token-value" {
+		t.Fatalf("ResolveCredential = %q, %v", got, err)
+	}
+}
