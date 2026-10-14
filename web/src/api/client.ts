@@ -92,6 +92,20 @@ function isLogout(request: Request): boolean {
 // so tests drive it with fake timers.
 export const requestTimeout = 30_000;
 
+// The routes that may legitimately wait longer: the server bounds a profile
+// test at 120 s, and the report view waits for a download slot.
+const longRequestTimeout = 150_000;
+const longRoutes: readonly RegExp[] = [
+  /^\/admin\/profiles\/test$/,
+  /^\/admin\/profiles\/[^/]+\/test$/,
+  /^\/reports\/[^/]+\/view$/,
+];
+
+function timeoutOf(request: Request): number {
+  const route = new URL(request.url).pathname.slice(apiPath.length);
+  return longRoutes.some((pattern) => pattern.test(route)) ? longRequestTimeout : requestTimeout;
+}
+
 export function createApi(queryClient: QueryClient, navigate: (to: string) => void): Api {
   async function dispatch(request: Request): Promise<Response> {
     if (!readOnly.has(request.method)) {
@@ -103,7 +117,7 @@ export function createApi(queryClient: QueryClient, navigate: (to: string) => vo
     const timer = new AbortController();
     const id = setTimeout(() => {
       timer.abort(new DOMException("no answer in time", "TimeoutError"));
-    }, requestTimeout);
+    }, timeoutOf(request));
     try {
       return await globalThis.fetch(request, { signal: AbortSignal.any([request.signal, timer.signal]) });
     } finally {

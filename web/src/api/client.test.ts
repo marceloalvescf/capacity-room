@@ -40,6 +40,135 @@ describe("client", () => {
     expect(outcome).not.toBeInstanceOf(ApiFailure);
   });
 
+  it("a profile test waits up to 150 s and then fails as a timeout", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { api } = setup();
+    server.use(
+      http.post(url("/admin/profiles/test"), () => new Promise(() => {})),
+      http.post(url("/admin/profiles/p-1/test"), () => new Promise(() => {})),
+    );
+    const outcomes: unknown[] = [null, null];
+    void api.POST("/admin/profiles/test", { body: {} as never }).catch((thrown: unknown) => {
+      outcomes[0] = thrown;
+    });
+    void api.POST("/admin/profiles/{id}/test", { params: { path: { id: "p-1" } } }).catch((thrown: unknown) => {
+      outcomes[1] = thrown;
+    });
+    await vi.advanceTimersByTimeAsync(149_999);
+    expect(outcomes).toEqual([null, null]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(outcomes[0]).toMatchObject({ name: "TimeoutError" });
+    expect(outcomes[1]).toMatchObject({ name: "TimeoutError" });
+  });
+
+  it("a profile test that answers at 100 s completes", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { api } = setup();
+    server.use(
+      http.post(
+        url("/admin/profiles/p-1/test"),
+        () =>
+          new Promise((resolve) => {
+            setTimeout(() => {
+              resolve(HttpResponse.json({ code: "ok" }));
+            }, 100_000);
+          }),
+      ),
+    );
+    let outcome: unknown = null;
+    void api.POST("/admin/profiles/{id}/test", { params: { path: { id: "p-1" } } }).then((result) => {
+      outcome = result.data;
+    });
+    await vi.advanceTimersByTimeAsync(100_000);
+    expect(outcome).toMatchObject({ code: "ok" });
+  });
+
+  it("a report view waits up to 150 s and then fails as a timeout", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { api } = setup();
+    server.use(http.get(url("/reports/r-1/view"), () => new Promise(() => {})));
+    let outcome: unknown = null;
+    void api.GET("/reports/{id}/view", { params: { path: { id: "r-1" }, query: { lang: "en" } } }).catch(
+      (thrown: unknown) => {
+        outcome = thrown;
+      },
+    );
+    await vi.advanceTimersByTimeAsync(149_999);
+    expect(outcome).toBeNull();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(outcome).toMatchObject({ name: "TimeoutError" });
+  });
+
+  it("an answer whose head came in time completes however late its body is read", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { api } = setup();
+    server.use(
+      http.get(url("/auth/session"), () => {
+        const encoder = new TextEncoder();
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(encoder.encode("{"));
+            setTimeout(() => {
+              controller.enqueue(encoder.encode('"late":true}'));
+              controller.close();
+            }, 31_000);
+          },
+        });
+        return new HttpResponse(body, { headers: { "Content-Type": "application/json" } });
+      }),
+    );
+    let outcome: unknown = null;
+    void api.GET("/auth/session").then((result) => {
+      outcome = result.data;
+    });
+    await vi.advanceTimersByTimeAsync(31_000);
+    expect(outcome).toEqual({ late: true });
+  });
+
+  it("a caller's own abort rejects with the caller's reason", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { api } = setup();
+    server.use(http.get(url("/auth/session"), () => new Promise(() => {})));
+    const caller = new AbortController();
+    let outcome: unknown = null;
+    void api.GET("/auth/session", { signal: caller.signal }).catch((thrown: unknown) => {
+      outcome = thrown;
+    });
+    await vi.advanceTimersByTimeAsync(1_000);
+    const reason = new Error("left the screen");
+    caller.abort(reason);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(outcome).toBe(reason);
+  });
+
+  it("the repeat after a rejected token has a timer of its own", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { api } = setup();
+    let patches = 0;
+    server.use(
+      http.patch(url("/account"), () => {
+        patches += 1;
+        if (patches === 2) {
+          return new Promise<never>(() => {});
+        }
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(HttpResponse.json(errorBody("CSRF_REJECTED"), { status: 403 }));
+          }, 20_000);
+        });
+      }),
+    );
+    let outcome: unknown = null;
+    void api.PATCH("/account", { body: { language: "en" } }).catch((thrown: unknown) => {
+      outcome = thrown;
+    });
+    await vi.advanceTimersByTimeAsync(20_000 + requestTimeout - 1);
+    expect(patches).toBe(2);
+    expect(outcome).toBeNull();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(outcome).toMatchObject({ name: "TimeoutError" });
+  });
+
   it("a state-changing call carries the session token and a read carries none", async () => {
     const { api } = setup(signedIn({}, "csrf-7"));
     await api.GET("/auth/session");
