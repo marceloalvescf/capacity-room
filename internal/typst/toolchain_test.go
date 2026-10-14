@@ -43,7 +43,7 @@ func unreachableLookPath(string) (string, error) {
 func TestLocateUsesEnvironment(t *testing.T) {
 	path := writeScript(t, "#!/bin/sh\nexit 0\n")
 	getenv := func(key string) string {
-		if key == "KCR_TYPST" {
+		if key == "CAPACITYROOM_TYPST" {
 			return path
 		}
 		return ""
@@ -60,7 +60,7 @@ func TestLocateUsesEnvironment(t *testing.T) {
 
 func TestLocateRejectsRelativeOverride(t *testing.T) {
 	getenv := func(key string) string {
-		if key == "KCR_TYPST" {
+		if key == "CAPACITYROOM_TYPST" {
 			return "bin/typst"
 		}
 		return ""
@@ -74,7 +74,7 @@ func TestLocateRejectsRelativeOverride(t *testing.T) {
 
 func TestLocateRejectsMissingOverride(t *testing.T) {
 	getenv := func(key string) string {
-		if key == "KCR_TYPST" {
+		if key == "CAPACITYROOM_TYPST" {
 			return "/nonexistent/typst"
 		}
 		return ""
@@ -89,7 +89,7 @@ func TestLocateRejectsMissingOverride(t *testing.T) {
 func TestLocateRejectsFolderOverride(t *testing.T) {
 	dir := t.TempDir()
 	getenv := func(key string) string {
-		if key == "KCR_TYPST" {
+		if key == "CAPACITYROOM_TYPST" {
 			return dir
 		}
 		return ""
@@ -130,7 +130,7 @@ func TestLocateNotFound(t *testing.T) {
 	}
 
 	_, err := Locate(getenv, lookPath)
-	want := "typst not found: set KCR_TYPST or add typst to PATH"
+	want := "typst not found: set CAPACITYROOM_TYPST or add typst to PATH"
 	if err == nil || err.Error() != want {
 		t.Fatalf("Locate() error = %v, want %q", err, want)
 	}
@@ -366,7 +366,7 @@ func TestLocateAcceptsSymbolicLinkOverride(t *testing.T) {
 		t.Fatalf("Symlink: %v", err)
 	}
 	getenv := func(key string) string {
-		if key == "KCR_TYPST" {
+		if key == "CAPACITYROOM_TYPST" {
 			return link
 		}
 		return ""

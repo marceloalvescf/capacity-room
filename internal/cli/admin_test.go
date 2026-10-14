@@ -27,8 +27,8 @@ const bootstrapPassword = "correct horse battery staple"
 func bootstrap(t *testing.T, pool *pgxpool.Pool, config, stdin string, extra ...string) (int, string, string) {
 	t.Helper()
 	env := platformEnv(map[string]string{
-		"KCR_BOOTSTRAP_MODE": "1",
-		"KCR_DATABASE_DSN":   pool.Config().ConnString(),
+		"CAPACITYROOM_BOOTSTRAP_MODE": "1",
+		"CAPACITYROOM_DATABASE_DSN":   pool.Config().ConnString(),
 	}, stdin)
 	args := append([]string{"admin", "bootstrap-admin", "--username", "Root", "--password-stdin", "--config", config}, extra...)
 	return runCommand(context.Background(), env, args...)
@@ -114,7 +114,7 @@ func TestBootstrapLanguage(t *testing.T) {
 
 func TestMigrate(t *testing.T) {
 	pool := storetest.NewEmpty(t)
-	env := platformEnv(map[string]string{"KCR_DATABASE_DSN": pool.Config().ConnString()}, "")
+	env := platformEnv(map[string]string{"CAPACITYROOM_DATABASE_DSN": pool.Config().ConnString()}, "")
 	config := writePlatformFiles(t)
 	for range 2 {
 		code, stdout, stderr := runCommand(context.Background(), env, "admin", "migrate", "--config", config)
@@ -177,7 +177,7 @@ func TestAdminImportProfilesCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	run := func() (int, string, string) {
-		env := platformEnv(map[string]string{"KCR_DATABASE_DSN": pool.Config().ConnString()}, "")
+		env := platformEnv(map[string]string{"CAPACITYROOM_DATABASE_DSN": pool.Config().ConnString()}, "")
 		return runCommand(context.Background(), env, "admin", "import-profiles", "--config", config, "--file", file)
 	}
 
@@ -211,8 +211,8 @@ func TestAdminImportProfilesCommand(t *testing.T) {
 func resetPasswordRun(t *testing.T, pool *pgxpool.Pool, config, username, stdin string) (int, string, string) {
 	t.Helper()
 	env := platformEnv(map[string]string{
-		"KCR_BOOTSTRAP_MODE": "1",
-		"KCR_DATABASE_DSN":   pool.Config().ConnString(),
+		"CAPACITYROOM_BOOTSTRAP_MODE": "1",
+		"CAPACITYROOM_DATABASE_DSN":   pool.Config().ConnString(),
 	}, stdin)
 	return runCommand(context.Background(), env,
 		"admin", "reset-password", "--username", username, "--password-stdin", "--config", config)

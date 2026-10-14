@@ -173,8 +173,8 @@ type bootstrapInput struct {
 // normalised username. Everything that needs no database is checked before
 // the database is opened.
 func bootstrapAdmin(ctx context.Context, env Env, redactor *redact.Redactor, in bootstrapInput) (string, error) {
-	if env.Getenv("KCR_BOOTSTRAP_MODE") != "1" {
-		return "", &exitError{1, errors.New("bootstrap-admin is off; set KCR_BOOTSTRAP_MODE=1 to run it")}
+	if env.Getenv("CAPACITYROOM_BOOTSTRAP_MODE") != "1" {
+		return "", &exitError{1, errors.New("bootstrap-admin is off; set CAPACITYROOM_BOOTSTRAP_MODE=1 to run it")}
 	}
 	if !in.passwordStdin {
 		return "", &exitError{2, errors.New("the administrator password is read from standard input; pass --password-stdin and write it there")}
@@ -275,8 +275,8 @@ type resetInput struct {
 // normalised username. Everything that needs no database is checked before
 // the database is opened.
 func resetPassword(ctx context.Context, env Env, redactor *redact.Redactor, in resetInput) (string, error) {
-	if env.Getenv("KCR_BOOTSTRAP_MODE") != "1" {
-		return "", &exitError{1, errors.New("reset-password is off; set KCR_BOOTSTRAP_MODE=1 to run it")}
+	if env.Getenv("CAPACITYROOM_BOOTSTRAP_MODE") != "1" {
+		return "", &exitError{1, errors.New("reset-password is off; set CAPACITYROOM_BOOTSTRAP_MODE=1 to run it")}
 	}
 	if !in.passwordStdin {
 		return "", &exitError{2, errors.New("the new password is read from standard input; pass --password-stdin and write it there")}

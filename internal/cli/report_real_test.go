@@ -29,7 +29,7 @@ import (
 
 // realEnv is testEnv with Getenv and LookPath replaced by the real process
 // environment and PATH, the way typst.Locate finds the compiler in
-// production (by KCR_TYPST, or on PATH); every other field keeps the fixed
+// production (by CAPACITYROOM_TYPST, or on PATH); every other field keeps the fixed
 // test value testEnv gives it: the clock, the report identifier, a fresh
 // TempDir, and the version.
 func realEnv(t *testing.T) Env {

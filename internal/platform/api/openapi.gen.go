@@ -430,7 +430,7 @@ type AnonymousSession struct {
 	// Authenticated Always false in this shape.
 	Authenticated bool `json:"authenticated"`
 
-	// LoginCsrf The sign-in CSRF token, also set as the cookie kcr_login_csrf.
+	// LoginCsrf The sign-in CSRF token, also set as the cookie capacityroom_login_csrf.
 	LoginCsrf string `json:"login_csrf"`
 }
 
@@ -1078,67 +1078,67 @@ type UsernameOrPasswordPolicy = Error
 
 // ChangeAccountParams defines parameters for ChangeAccount.
 type ChangeAccountParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
 // CreateProfileParams defines parameters for CreateProfile.
 type CreateProfileParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
 // TestProfileDraftParams defines parameters for TestProfileDraft.
 type TestProfileDraftParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
 // DeleteProfileParams defines parameters for DeleteProfile.
 type DeleteProfileParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
 // ReviseProfileParams defines parameters for ReviseProfile.
 type ReviseProfileParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
 // TestProfileParams defines parameters for TestProfile.
 type TestProfileParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
 // CreateUserParams defines parameters for CreateUser.
 type CreateUserParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
 // DeactivateUserParams defines parameters for DeactivateUser.
 type DeactivateUserParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
 // ChangeUserParams defines parameters for ChangeUser.
 type ChangeUserParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
 // LoginParams defines parameters for Login.
 type LoginParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
 // LogoutParams defines parameters for Logout.
 type LogoutParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
@@ -1151,7 +1151,7 @@ type ListReportsParams struct {
 
 // RequestReportParams defines parameters for RequestReport.
 type RequestReportParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 
 	// IdempotencyKey Chosen by the client for one request, and scoped to the requester; 1 to 128 letters, digits, dots, underscores, colons, or hyphens.
@@ -1160,13 +1160,13 @@ type RequestReportParams struct {
 
 // DeleteReportsParams defines parameters for DeleteReports.
 type DeleteReportsParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
 // DeleteReportParams defines parameters for DeleteReport.
 type DeleteReportParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 
@@ -1181,7 +1181,7 @@ type GetReportPDFParams struct {
 
 // RequestReportPDFParams defines parameters for RequestReportPDF.
 type RequestReportPDFParams struct {
-	// XCSRFToken On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session.
+	// XCSRFToken On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session.
 	XCSRFToken CSRFHeader `json:"X-CSRF-Token"`
 }
 

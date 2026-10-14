@@ -183,7 +183,7 @@ func TestGoldenCountMatchesSnapshots(t *testing.T) {
 
 // TestGoldenPagesMatch renders every snapshot and compares each page's
 // digest against the one recorded for it in SHA256SUMS. On a mismatch, if
-// KCR_GOLDEN_OUT is set, it writes the actual page and a difference image
+// CAPACITYROOM_GOLDEN_OUT is set, it writes the actual page and a difference image
 // under it and names both paths in the failure; otherwise the failure says
 // to set the variable.
 func TestGoldenPagesMatch(t *testing.T) {
@@ -195,7 +195,7 @@ func TestGoldenPagesMatch(t *testing.T) {
 		t.Fatalf("reading golden manifest: %v; run `make update-golden` to create it", err)
 	}
 
-	out := os.Getenv("KCR_GOLDEN_OUT")
+	out := os.Getenv("CAPACITYROOM_GOLDEN_OUT")
 
 	for _, name := range sortedNames(render.pages) {
 		actualPath := writeRendered(t, name, render.pages[name])
@@ -216,7 +216,7 @@ func TestGoldenPagesMatch(t *testing.T) {
 
 		if out == "" {
 			t.Errorf("%s: rendered digest %s does not match golden digest %s; "+
-				"set KCR_GOLDEN_OUT to a folder to save the actual page and a difference image",
+				"set CAPACITYROOM_GOLDEN_OUT to a folder to save the actual page and a difference image",
 				name, actualDigest, want)
 			continue
 		}

@@ -66,7 +66,7 @@ func TestServeWiresTheProfiles(t *testing.T) {
 }
 
 func TestServeRevealsACredential(t *testing.T) {
-	const token = "kcr-credential-for-the-test"
+	const token = "capacityroom-credential-for-the-test"
 	pool := storetest.New(t)
 	ctx := context.Background()
 	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)

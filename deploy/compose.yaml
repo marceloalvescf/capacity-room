@@ -1,10 +1,10 @@
 # The platform: PostgreSQL, the web server, and the worker. The image is the
-# runtime image of the version in KCR_VERSION. The postgres image is pinned by
+# runtime image of the version in CAPACITYROOM_VERSION. The postgres image is pinned by
 # tag and by index digest, as the Containerfile pins its bases.
 name: capacity-room
 
 x-app: &app
-  image: capacity-room:${KCR_VERSION:?set KCR_VERSION}
+  image: capacity-room:${CAPACITYROOM_VERSION:?set CAPACITYROOM_VERSION}
   read_only: true
   tmpfs:
     - /tmp
@@ -13,9 +13,9 @@ x-app: &app
   cap_drop:
     - ALL
   environment:
-    KCR_DATABASE_DSN: postgres://kcr:${KCR_POSTGRES_PASSWORD:?set KCR_POSTGRES_PASSWORD to the database password}@postgres:5432/kcr?sslmode=disable
+    CAPACITYROOM_DATABASE_DSN: postgres://capacityroom:${CAPACITYROOM_POSTGRES_PASSWORD:?set CAPACITYROOM_POSTGRES_PASSWORD to the database password}@postgres:5432/capacityroom?sslmode=disable
   volumes:
-    - ${KCR_CONFIG_DIR:?set KCR_CONFIG_DIR to the folder holding platform.toml and server-secret}:/etc/kcr:ro
+    - ${CAPACITYROOM_CONFIG_DIR:?set CAPACITYROOM_CONFIG_DIR to the folder holding platform.toml and server-secret}:/etc/capacity-room:ro
   depends_on:
     postgres:
       condition: service_healthy
@@ -24,15 +24,15 @@ services:
   postgres:
     image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
     environment:
-      POSTGRES_DB: kcr
-      POSTGRES_USER: kcr
-      POSTGRES_PASSWORD: ${KCR_POSTGRES_PASSWORD:?set KCR_POSTGRES_PASSWORD to the database password}
+      POSTGRES_DB: capacityroom
+      POSTGRES_USER: capacityroom
+      POSTGRES_PASSWORD: ${CAPACITYROOM_POSTGRES_PASSWORD:?set CAPACITYROOM_POSTGRES_PASSWORD to the database password}
     security_opt:
       - no-new-privileges:true
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kcr -d kcr"]
+      test: ["CMD-SHELL", "pg_isready -U capacityroom -d capacityroom"]
       interval: 1s
       timeout: 3s
       retries: 30
@@ -42,7 +42,7 @@ services:
     # The stop waits 30 seconds for the requests in flight, then closes the
     # rest; the grace period covers that wait with room to exit.
     stop_grace_period: 45s
-    command: ["serve", "--config", "/etc/kcr/platform.toml", "--listen", ":8080"]
+    command: ["serve", "--config", "/etc/capacity-room/platform.toml", "--listen", ":8080"]
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:
@@ -56,7 +56,7 @@ services:
     # The stop waits worker_drain_seconds (30 by default) for the jobs, cancels
     # the rest, and waits as long again; the grace period covers both waits.
     stop_grace_period: 75s
-    command: ["worker", "--config", "/etc/kcr/platform.toml", "--health-listen", ":8091"]
+    command: ["worker", "--config", "/etc/capacity-room/platform.toml", "--health-listen", ":8091"]
     healthcheck:
       test: ["CMD", "/usr/local/bin/capacity-room", "admin", "probe", "http://127.0.0.1:8091/health/ready"]
       interval: 2s

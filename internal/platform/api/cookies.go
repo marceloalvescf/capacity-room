@@ -4,8 +4,8 @@ import "net/http"
 
 // The cookies and the header of the sign-in and the session.
 const (
-	SessionCookie   = "kcr_session"
-	LoginCSRFCookie = "kcr_login_csrf"
+	SessionCookie   = "capacityroom_session"
+	LoginCSRFCookie = "capacityroom_login_csrf"
 	CSRFHeaderName  = "X-CSRF-Token"
 	CookiePath      = "/api"
 )

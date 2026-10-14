@@ -4,7 +4,7 @@ import { readStored, removeStored, writeStored } from "@/lib/storage";
 
 export type Language = components["schemas"]["Language"];
 
-const storageKey = "kcr.language";
+const storageKey = "capacityroom.language";
 
 export function isLanguage(value: unknown): value is Language {
   return languageValues.some((language) => language === value);

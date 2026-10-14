@@ -13,11 +13,11 @@ func TestBuildVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := strings.TrimSpace(string(raw))
-	m := regexp.MustCompile(`<meta name="kcr-version" content="([^"]*)"`).FindStringSubmatch(readIndex(t))
+	m := regexp.MustCompile(`<meta name="capacityroom-version" content="([^"]*)"`).FindStringSubmatch(readIndex(t))
 	if m == nil {
-		t.Fatal("index.html has no kcr-version meta")
+		t.Fatal("index.html has no capacityroom-version meta")
 	}
 	if m[1] != want {
-		t.Fatalf("kcr-version %q, want %q", m[1], want)
+		t.Fatalf("capacityroom-version %q, want %q", m[1], want)
 	}
 }

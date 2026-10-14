@@ -116,8 +116,8 @@ func TestReportThroughTheAPI(t *testing.T) {
 	// The administrator is bootstrapped and the profile imported by the
 	// commands of the program.
 	env := platformEnv(map[string]string{
-		"KCR_BOOTSTRAP_MODE": "1",
-		"KCR_DATABASE_DSN":   pool.Config().ConnString(),
+		"CAPACITYROOM_BOOTSTRAP_MODE": "1",
+		"CAPACITYROOM_DATABASE_DSN":   pool.Config().ConnString(),
 	}, "admin password one\n")
 	env.Now = clock
 	env.TempDir = t.TempDir()
@@ -137,7 +137,7 @@ func TestReportThroughTheAPI(t *testing.T) {
 	}
 
 	// The service and the worker are what the commands build.
-	env.Getenv = envFunc(map[string]string{"KCR_DATABASE_DSN": pool.Config().ConnString()})
+	env.Getenv = envFunc(map[string]string{"CAPACITYROOM_DATABASE_DSN": pool.Config().ConnString()})
 	loaded, err := settings.Load(config, env.Getenv)
 	if err != nil {
 		t.Fatal(err)

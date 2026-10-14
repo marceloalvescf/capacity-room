@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_KCR_VERSION: string;
+  readonly VITE_CAPACITYROOM_VERSION: string;
 }

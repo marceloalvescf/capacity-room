@@ -333,28 +333,28 @@ func wrongTypeError(err error) error {
 	return fmt.Errorf("configuration file has a wrong type: %s", err)
 }
 
-// applyEnvironment overrides cfg with every KCR_ variable of spec 5.2 that
+// applyEnvironment overrides cfg with every CAPACITYROOM_ variable of spec 5.2 that
 // is set to a non-empty value.
 func applyEnvironment(cfg *Config, getenv func(string) string) error {
-	if v := getenv("KCR_METRICS_URL"); v != "" {
+	if v := getenv("CAPACITYROOM_METRICS_URL"); v != "" {
 		cfg.Metrics.URL = v
 	}
-	if v := getenv("KCR_ENDPOINT_TYPE"); v != "" {
+	if v := getenv("CAPACITYROOM_ENDPOINT_TYPE"); v != "" {
 		cfg.Metrics.EndpointType = v
 	}
-	if v := getenv("KCR_CLUSTER"); v != "" {
+	if v := getenv("CAPACITYROOM_CLUSTER"); v != "" {
 		cfg.Cluster.Name = v
 	}
-	if v := getenv("KCR_CLUSTER_LABEL"); v != "" {
+	if v := getenv("CAPACITYROOM_CLUSTER_LABEL"); v != "" {
 		cfg.Cluster.Label = v
 	}
-	if v := getenv("KCR_CLUSTER_FILTER"); v != "" {
+	if v := getenv("CAPACITYROOM_CLUSTER_FILTER"); v != "" {
 		cfg.Cluster.FilterMode = v
 	}
-	if v := getenv("KCR_NAMESPACES"); v != "" {
+	if v := getenv("CAPACITYROOM_NAMESPACES"); v != "" {
 		cfg.Cluster.Namespaces = splitList(v)
 	}
-	period, start, end := getenv("KCR_PERIOD"), getenv("KCR_START"), getenv("KCR_END")
+	period, start, end := getenv("CAPACITYROOM_PERIOD"), getenv("CAPACITYROOM_START"), getenv("CAPACITYROOM_END")
 	if period != "" {
 		cfg.Analysis.Period = period
 	}
@@ -367,22 +367,22 @@ func applyEnvironment(cfg *Config, getenv func(string) string) error {
 	if err := setWindow(&cfg.Analysis, period != "", start != "", end != "", errEnvWindow); err != nil {
 		return err
 	}
-	if v := getenv("KCR_TIMEZONE"); v != "" {
+	if v := getenv("CAPACITYROOM_TIMEZONE"); v != "" {
 		cfg.Analysis.Timezone = v
 	}
-	if v := getenv("KCR_NODE_AUTOSCALING"); v != "" {
+	if v := getenv("CAPACITYROOM_NODE_AUTOSCALING"); v != "" {
 		cfg.Analysis.NodeAutoscaling = v
 	}
-	if v := getenv("KCR_MIN_SEVERITY"); v != "" {
+	if v := getenv("CAPACITYROOM_MIN_SEVERITY"); v != "" {
 		cfg.Report.MinSeverity = v
 	}
-	if v := getenv("KCR_REPORT_PROFILE"); v != "" {
+	if v := getenv("CAPACITYROOM_REPORT_PROFILE"); v != "" {
 		cfg.Report.Profile = v
 	}
-	if v := getenv("KCR_OUTPUT_DIRECTORY"); v != "" {
+	if v := getenv("CAPACITYROOM_OUTPUT_DIRECTORY"); v != "" {
 		cfg.Report.OutputDirectory = v
 	}
-	if v := getenv("KCR_LANGUAGE"); v != "" {
+	if v := getenv("CAPACITYROOM_LANGUAGE"); v != "" {
 		cfg.Report.Language = v
 	}
 	return nil
@@ -502,16 +502,16 @@ func LoadRenderOptions(getenv func(string) string, flags Flags) (RenderOptions, 
 
 	opts := RenderOptions{Language: "pt-BR"}
 
-	if v := getenv("KCR_LANGUAGE"); v != "" {
+	if v := getenv("CAPACITYROOM_LANGUAGE"); v != "" {
 		opts.Language = v
 	}
-	if v := getenv("KCR_REPORT_PROFILE"); v != "" {
+	if v := getenv("CAPACITYROOM_REPORT_PROFILE"); v != "" {
 		opts.Profile = v
 	}
-	if v := getenv("KCR_MIN_SEVERITY"); v != "" {
+	if v := getenv("CAPACITYROOM_MIN_SEVERITY"); v != "" {
 		opts.MinSeverity = v
 	}
-	if v := getenv("KCR_OUTPUT_DIRECTORY"); v != "" {
+	if v := getenv("CAPACITYROOM_OUTPUT_DIRECTORY"); v != "" {
 		opts.OutputDirectory = v
 	}
 

@@ -209,10 +209,10 @@ test("an injected inline script is blocked, and the headers and the cookie hold"
     expect(violations).toEqual([]);
     await page.evaluate(() => {
       const script = document.createElement("script");
-      script.textContent = "window.kcrInjected = true";
+      script.textContent = "window.capacityroomInjected = true";
       document.body.appendChild(script);
     });
-    expect(await page.evaluate(() => "kcrInjected" in window)).toBe(false);
+    expect(await page.evaluate(() => "capacityroomInjected" in window)).toBe(false);
     // The browser reports the refusal twice: its own console line and the page's listener.
     await expect.poll(() => violations.length).toBeGreaterThan(0);
     for (const violation of violations) {
@@ -240,7 +240,7 @@ test("an injected inline script is blocked, and the headers and the cookie hold"
       expect(response.headers(), path).toMatchObject({ ...headers, "cache-control": cacheControl });
     }
 
-    const cookie = (await context.cookies()).find((candidate) => candidate.name === "kcr_session");
+    const cookie = (await context.cookies()).find((candidate) => candidate.name === "capacityroom_session");
     expect(cookie).toMatchObject({ httpOnly: true, secure: true, sameSite: "Lax", path: "/api" });
   } finally {
     await closeAll(context, maker.context);

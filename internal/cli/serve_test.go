@@ -77,7 +77,7 @@ func startServe(t *testing.T, env Env, config string) (address string, stop func
 
 func TestServeListensAndStops(t *testing.T) {
 	pool := storetest.New(t)
-	env := platformEnv(map[string]string{"KCR_DATABASE_DSN": pool.Config().ConnString()}, "")
+	env := platformEnv(map[string]string{"CAPACITYROOM_DATABASE_DSN": pool.Config().ConnString()}, "")
 	address, stop := startServe(t, env, writePlatformFiles(t))
 
 	code, log := stop()
@@ -100,7 +100,7 @@ func TestServeCannotListen(t *testing.T) {
 	defer func() { _ = taken.Close() }()
 	address := taken.Addr().String()
 
-	env := platformEnv(map[string]string{"KCR_DATABASE_DSN": pool.Config().ConnString()}, "")
+	env := platformEnv(map[string]string{"CAPACITYROOM_DATABASE_DSN": pool.Config().ConnString()}, "")
 	code, stdout, stderr := runCommand(context.Background(), env,
 		"serve", "--config", writePlatformFiles(t), "--listen", address)
 	if code != 1 || stdout != "" || !strings.HasPrefix(stderr, "error: cannot listen on "+address+": ") {
@@ -194,8 +194,8 @@ func (r *reader) signIn(username, password string) string {
 func TestServeEndToEnd(t *testing.T) {
 	pool := storetest.New(t)
 	env := platformEnv(map[string]string{
-		"KCR_BOOTSTRAP_MODE": "1",
-		"KCR_DATABASE_DSN":   pool.Config().ConnString(),
+		"CAPACITYROOM_BOOTSTRAP_MODE": "1",
+		"CAPACITYROOM_DATABASE_DSN":   pool.Config().ConnString(),
 	}, "admin password one\n")
 	config := writePlatformFiles(t)
 
@@ -216,15 +216,15 @@ func TestServeEndToEnd(t *testing.T) {
 
 	operator := &reader{t: t, base: base, cookies: map[string]string{}}
 	operatorCSRF := operator.signIn("olivia", "olivia password one")
-	oldCookie := operator.cookies["kcr_session"]
+	oldCookie := operator.cookies["capacityroom_session"]
 	operator.mustStatus(200, "PATCH", "/api/v1/account", operatorCSRF, map[string]string{
 		"current_password": "olivia password one", "password": "olivia password two",
 	})
-	if _, kept := operator.cookies["kcr_session"]; kept {
+	if _, kept := operator.cookies["capacityroom_session"]; kept {
 		t.Fatal("the password change did not clear the session cookie")
 	}
 
-	stale := &reader{t: t, base: base, cookies: map[string]string{"kcr_session": oldCookie}}
+	stale := &reader{t: t, base: base, cookies: map[string]string{"capacityroom_session": oldCookie}}
 	if anonymous := stale.mustStatus(200, "GET", "/api/v1/auth/session", "", nil); anonymous["authenticated"] != false {
 		t.Fatalf("the old cookie still signs in: %v", anonymous)
 	}

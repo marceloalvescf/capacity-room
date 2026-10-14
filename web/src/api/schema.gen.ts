@@ -515,7 +515,7 @@ export interface components {
         AnonymousSession: {
             /** @description Always false in this shape. */
             authenticated: boolean;
-            /** @description The sign-in CSRF token, also set as the cookie kcr_login_csrf. */
+            /** @description The sign-in CSRF token, also set as the cookie capacityroom_login_csrf. */
             login_csrf: string;
         };
         SignedInSession: {
@@ -1160,7 +1160,7 @@ export interface components {
         IdempotencyKey: string;
         /** @description One entity tag, a list of them, or *, matched by the weak comparison of RFC 9110. It is read only after the reader is known to be allowed to read a report that is ready; it never turns a 404, 409, or 410 into a 304. */
         IfNoneMatch: string;
-        /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+        /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
         CSRFHeader: string;
         UserID: string;
         /** @description The identifier of a profile, a reference name of 1 to 63 characters. */
@@ -1188,7 +1188,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Anonymous (AnonymousSession, with the cookie kcr_login_csrf set) or signed in (SignedInSession, with a fresh csrf_token). */
+            /** @description Anonymous (AnonymousSession, with the cookie capacityroom_login_csrf set) or signed in (SignedInSession, with a fresh csrf_token). */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1213,7 +1213,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path?: never;
@@ -1225,7 +1225,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Signed in. Sets the cookie kcr_session and clears kcr_login_csrf. */
+            /** @description Signed in. Sets the cookie capacityroom_session and clears capacityroom_login_csrf. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1262,7 +1262,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path?: never;
@@ -1270,7 +1270,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Signed out. Clears the cookie kcr_session. */
+            /** @description Signed out. Clears the cookie capacityroom_session. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -1286,7 +1286,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path?: never;
@@ -1298,7 +1298,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The account after the change. When the password changed, every session of the reader is revoked and the cookie kcr_session is cleared in this response. */
+            /** @description The account after the change. When the password changed, every session of the reader is revoked and the cookie capacityroom_session is cleared in this response. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1359,7 +1359,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path?: never;
@@ -1426,7 +1426,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path: {
@@ -1462,7 +1462,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path: {
@@ -1551,7 +1551,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path?: never;
@@ -1611,7 +1611,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path: {
@@ -1639,7 +1639,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path: {
@@ -1676,7 +1676,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path: {
@@ -1706,7 +1706,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path?: never;
@@ -1773,7 +1773,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
                 /** @description Chosen by the client for one request, and scoped to the requester; 1 to 128 letters, digits, dots, underscores, colons, or hyphens. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
@@ -1860,7 +1860,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path?: never;
@@ -1926,7 +1926,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path: {
@@ -2083,7 +2083,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description On POST /auth/login, the value of the cookie kcr_login_csrf; on every other state-changing route, the csrf_token of the session. */
+                /** @description On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every other state-changing route, the csrf_token of the session. */
                 "X-CSRF-Token": components["parameters"]["CSRFHeader"];
             };
             path: {

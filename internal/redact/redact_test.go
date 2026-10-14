@@ -106,8 +106,8 @@ func TestTextRedactsQueryString(t *testing.T) {
 
 func TestTextRedactsUserInfo(t *testing.T) {
 	var r redact.Redactor
-	got := r.Text("connection failed: postgresql+psycopg://kcr_admin:SuperSecretPass123@10.0.0.5/kcr")
-	want := "connection failed: postgresql+psycopg://[redacted]@10.0.0.5/kcr"
+	got := r.Text("connection failed: postgresql+psycopg://capacityroom_admin:SuperSecretPass123@10.0.0.5/capacityroom")
+	want := "connection failed: postgresql+psycopg://[redacted]@10.0.0.5/capacityroom"
 	if got != want {
 		t.Fatalf("Text() = %q, want %q", got, want)
 	}
@@ -144,7 +144,7 @@ func TestTextIsStableWhenAppliedTwice(t *testing.T) {
 		"API_KEY=[redacted]",
 		"token=[redacted], next",
 		"https://h.example/p?[redacted] done",
-		"connection failed: postgresql+psycopg://[redacted]@10.0.0.5/kcr",
+		"connection failed: postgresql+psycopg://[redacted]@10.0.0.5/capacityroom",
 		"tokenizer",
 		"the token bucket",
 		"https://h.example/p",

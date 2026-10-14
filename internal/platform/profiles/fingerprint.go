@@ -30,7 +30,7 @@ func CanonicalJSON(d Document) ([]byte, error) {
 	return json.Marshal(tree)
 }
 
-// Fingerprint is the SHA-256, in hex, of "kcr.profile.v1\n", the canonical
+// Fingerprint is the SHA-256, in hex, of "capacityroom.profile.v1\n", the canonical
 // JSON of d, "\n", and the parent revision id ("" for the first revision).
 func Fingerprint(d Document, parent *uuid.UUID) string {
 	body, err := CanonicalJSON(d)
@@ -43,6 +43,6 @@ func Fingerprint(d Document, parent *uuid.UUID) string {
 	if parent != nil {
 		parentText = parent.String()
 	}
-	sum := sha256.Sum256([]byte("kcr.profile.v1\n" + string(body) + "\n" + parentText))
+	sum := sha256.Sum256([]byte("capacityroom.profile.v1\n" + string(body) + "\n" + parentText))
 	return hex.EncodeToString(sum[:])
 }

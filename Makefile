@@ -8,7 +8,7 @@ IMAGE := capacity-room:$(VERSION)
 TEST_IMAGE := capacity-room-test:$(VERSION)
 GOLANGCI := github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 TYPST_VERSION := 0.15.1
-TEST_DSN := postgres://kcr_test:kcr_test_only@127.0.0.1:55432/kcr_test?sslmode=disable
+TEST_DSN := postgres://capacityroom_test:capacityroom_test_only@127.0.0.1:55432/capacityroom_test?sslmode=disable
 
 # Every build tag of the repository, as declared in guard.BuildTags. The linter
 # runs once without tags and once with all of them, so that no file escapes it.
@@ -80,11 +80,11 @@ test-postgres: web
 	if [ $$status -ne 0 ] || [ -z "$$packages" ]; then \
 		echo "test-postgres: go list failed or found no package" >&2; status=1; \
 	else \
-		KCR_TEST_DATABASE_DSN="$(TEST_DSN)" go test $(TEST_FLAGS) -tags=postgres $$packages; \
+		CAPACITYROOM_TEST_DATABASE_DSN="$(TEST_DSN)" go test $(TEST_FLAGS) -tags=postgres $$packages; \
 		status=$$?; \
 	fi; \
 	if [ $$status -eq 0 ]; then \
-		KCR_TEST_DATABASE_DSN="$(TEST_DSN)" go test $(TEST_FLAGS) -tags='postgres template' ./internal/platform/worker ./internal/cli; \
+		CAPACITYROOM_TEST_DATABASE_DSN="$(TEST_DSN)" go test $(TEST_FLAGS) -tags='postgres template' ./internal/platform/worker ./internal/cli; \
 		status=$$?; \
 	fi; \
 	$(MAKE) postgres-down; exit $$status
@@ -137,7 +137,7 @@ test-golden: web $(IMAGE_DEP)
 	@mkdir -p $(GOLDEN_OUT)
 	docker run $(RUN_TEST_IMAGE_FLAGS) \
 		--user "$$(id -u):$$(id -g)" \
-		--volume "$(CURDIR)/$(GOLDEN_OUT):/out" --env KCR_GOLDEN_OUT=/out \
+		--volume "$(CURDIR)/$(GOLDEN_OUT):/out" --env CAPACITYROOM_GOLDEN_OUT=/out \
 		$(TEST_IMAGE) go test -v -tags='template golden' ./template/ -run 'Golden|Snapshots'
 
 # Rewrites every golden page. Run it only for an intended visual change, and
@@ -188,7 +188,7 @@ e2e: $(IMAGE_DEP)
 	docker build $(BUILD_FLAGS) --file deploy/Containerfile --target fake-prometheus --tag capacity-room-fake-prometheus:$(VERSION) .
 	docker build $(filter-out --pull,$(BUILD_FLAGS)) --file deploy/worker-e2e.Containerfile --build-arg RUNTIME_IMAGE=$(IMAGE) --tag capacity-room-worker-e2e:$(VERSION) .
 	@set -o pipefail; \
-	export KCR_VERSION=$(VERSION) KCR_CONFIG_DIR=$(CURDIR)/deploy/platform KCR_POSTGRES_PASSWORD=kcr_e2e_only; \
+	export CAPACITYROOM_VERSION=$(VERSION) CAPACITYROOM_CONFIG_DIR=$(CURDIR)/deploy/platform CAPACITYROOM_POSTGRES_PASSWORD=capacityroom_e2e_only; \
 	mkdir -p .cache/e2e; : > .cache/e2e/one-shot.log; \
 	$(E2E_COMPOSE) down --volumes; \
 	$(E2E_COMPOSE) up -d --wait postgres \
@@ -213,7 +213,7 @@ e2e: $(IMAGE_DEP)
 		echo 'e2e: the specs recorded no secret'; [ $$status -ne 0 ] || status=1; \
 	fi; \
 	cat .cache/e2e/secrets.txt deploy/platform/e2e-admin-password deploy/platform/credentials/e2e-recovery \
-		| { cat; echo kcr_e2e_only; } | grep -v '^$$' > .cache/e2e/secret-patterns \
+		| { cat; echo capacityroom_e2e_only; } | grep -v '^$$' > .cache/e2e/secret-patterns \
 		|| { echo 'e2e: the list of secrets could not be built'; [ $$status -ne 0 ] || status=1; }; \
 	grep -qF -f .cache/e2e/secret-patterns .cache/e2e/platform.log; found=$$?; \
 	if [ $$found -eq 0 ]; then \

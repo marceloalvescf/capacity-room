@@ -20,7 +20,7 @@ func fullConfig() Config {
 		Metrics: Metrics{
 			URL:            "https://prom.example.org/api/v1",
 			EndpointType:   "prometheus",
-			TokenEnv:       "KCR_FULL_TOKEN",
+			TokenEnv:       "CAPACITYROOM_FULL_TOKEN",
 			TLSVerify:      false,
 			CABundle:       "testdata/ca.pem",
 			TimeoutSeconds: 45,
@@ -59,12 +59,12 @@ func fullConfig() Config {
 	}
 }
 
-// getenvWithToken answers KCR_FULL_TOKEN (which full.toml's token_env
+// getenvWithToken answers CAPACITYROOM_FULL_TOKEN (which full.toml's token_env
 // names) and, optionally, one more variable, "" for everything else.
 func getenvWithToken(extraKey, extraVal string) func(string) string {
 	return func(key string) string {
 		switch key {
-		case "KCR_FULL_TOKEN":
+		case "CAPACITYROOM_FULL_TOKEN":
 			return "s3cr3t12"
 		case extraKey:
 			return extraVal
@@ -118,19 +118,19 @@ func TestLoadEnvironmentOverridesFile(t *testing.T) {
 		envVal func(t *testing.T) string
 		mutate func(*Config, string)
 	}{
-		{"metrics.url", "KCR_METRICS_URL", fixedVal("https://override.example/metrics"), func(c *Config, v string) { c.Metrics.URL = v }},
-		{"metrics.endpoint_type", "KCR_ENDPOINT_TYPE", fixedVal("auto"), func(c *Config, v string) { c.Metrics.EndpointType = v }},
-		{"cluster.name", "KCR_CLUSTER", fixedVal("staging"), func(c *Config, v string) { c.Cluster.Name = v }},
-		{"cluster.label", "KCR_CLUSTER_LABEL", fixedVal("team"), func(c *Config, v string) { c.Cluster.Label = v }},
-		{"cluster.filter_mode", "KCR_CLUSTER_FILTER", fixedVal("none"), func(c *Config, v string) { c.Cluster.FilterMode = v }},
-		{"cluster.namespaces", "KCR_NAMESPACES", fixedVal("alpha,beta"), func(c *Config, v string) { c.Cluster.Namespaces = splitList(v) }},
-		{"analysis.period", "KCR_PERIOD", fixedVal("4h"), func(c *Config, v string) { c.Analysis.Period = v }},
-		{"analysis.timezone", "KCR_TIMEZONE", fixedVal("Europe/Lisbon"), func(c *Config, v string) { c.Analysis.Timezone = v }},
-		{"analysis.node_autoscaling", "KCR_NODE_AUTOSCALING", fixedVal("disabled"), func(c *Config, v string) { c.Analysis.NodeAutoscaling = v }},
-		{"report.min_severity", "KCR_MIN_SEVERITY", fixedVal("critical"), func(c *Config, v string) { c.Report.MinSeverity = v }},
-		{"report.profile", "KCR_REPORT_PROFILE", fixedVal("detailed"), func(c *Config, v string) { c.Report.Profile = v }},
-		{"report.output_directory", "KCR_OUTPUT_DIRECTORY", func(t *testing.T) string { return t.TempDir() }, func(c *Config, v string) { c.Report.OutputDirectory = v }},
-		{"report.language", "KCR_LANGUAGE", fixedVal("pt-BR"), func(c *Config, v string) { c.Report.Language = v }},
+		{"metrics.url", "CAPACITYROOM_METRICS_URL", fixedVal("https://override.example/metrics"), func(c *Config, v string) { c.Metrics.URL = v }},
+		{"metrics.endpoint_type", "CAPACITYROOM_ENDPOINT_TYPE", fixedVal("auto"), func(c *Config, v string) { c.Metrics.EndpointType = v }},
+		{"cluster.name", "CAPACITYROOM_CLUSTER", fixedVal("staging"), func(c *Config, v string) { c.Cluster.Name = v }},
+		{"cluster.label", "CAPACITYROOM_CLUSTER_LABEL", fixedVal("team"), func(c *Config, v string) { c.Cluster.Label = v }},
+		{"cluster.filter_mode", "CAPACITYROOM_CLUSTER_FILTER", fixedVal("none"), func(c *Config, v string) { c.Cluster.FilterMode = v }},
+		{"cluster.namespaces", "CAPACITYROOM_NAMESPACES", fixedVal("alpha,beta"), func(c *Config, v string) { c.Cluster.Namespaces = splitList(v) }},
+		{"analysis.period", "CAPACITYROOM_PERIOD", fixedVal("4h"), func(c *Config, v string) { c.Analysis.Period = v }},
+		{"analysis.timezone", "CAPACITYROOM_TIMEZONE", fixedVal("Europe/Lisbon"), func(c *Config, v string) { c.Analysis.Timezone = v }},
+		{"analysis.node_autoscaling", "CAPACITYROOM_NODE_AUTOSCALING", fixedVal("disabled"), func(c *Config, v string) { c.Analysis.NodeAutoscaling = v }},
+		{"report.min_severity", "CAPACITYROOM_MIN_SEVERITY", fixedVal("critical"), func(c *Config, v string) { c.Report.MinSeverity = v }},
+		{"report.profile", "CAPACITYROOM_REPORT_PROFILE", fixedVal("detailed"), func(c *Config, v string) { c.Report.Profile = v }},
+		{"report.output_directory", "CAPACITYROOM_OUTPUT_DIRECTORY", func(t *testing.T) string { return t.TempDir() }, func(c *Config, v string) { c.Report.OutputDirectory = v }},
+		{"report.language", "CAPACITYROOM_LANGUAGE", fixedVal("pt-BR"), func(c *Config, v string) { c.Report.Language = v }},
 	}
 
 	for _, tt := range tests {
@@ -164,33 +164,33 @@ func TestLoadFlagOverridesEnvironment(t *testing.T) {
 		setFlag func(*Flags, string)
 		mutate  func(*Config, string)
 	}{
-		{"metrics.url", "KCR_METRICS_URL", "https://env.example/metrics", "https://flag.example/metrics",
+		{"metrics.url", "CAPACITYROOM_METRICS_URL", "https://env.example/metrics", "https://flag.example/metrics",
 			func(f *Flags, v string) { f.MetricsURL = &v }, func(c *Config, v string) { c.Metrics.URL = v }},
-		{"metrics.endpoint_type", "KCR_ENDPOINT_TYPE", "grafana", "auto",
+		{"metrics.endpoint_type", "CAPACITYROOM_ENDPOINT_TYPE", "grafana", "auto",
 			func(f *Flags, v string) { f.EndpointType = &v }, func(c *Config, v string) { c.Metrics.EndpointType = v }},
-		{"cluster.name", "KCR_CLUSTER", "envcluster", "flagcluster",
+		{"cluster.name", "CAPACITYROOM_CLUSTER", "envcluster", "flagcluster",
 			func(f *Flags, v string) { f.Cluster = &v }, func(c *Config, v string) { c.Cluster.Name = v }},
-		{"cluster.label", "KCR_CLUSTER_LABEL", "envlabel", "flaglabel",
+		{"cluster.label", "CAPACITYROOM_CLUSTER_LABEL", "envlabel", "flaglabel",
 			func(f *Flags, v string) { f.ClusterLabel = &v }, func(c *Config, v string) { c.Cluster.Label = v }},
-		{"cluster.filter_mode", "KCR_CLUSTER_FILTER", "none", "required",
+		{"cluster.filter_mode", "CAPACITYROOM_CLUSTER_FILTER", "none", "required",
 			func(f *Flags, v string) { f.ClusterFilter = &v }, func(c *Config, v string) { c.Cluster.FilterMode = v }},
-		{"cluster.namespaces", "KCR_NAMESPACES", "envns1,envns2", "flagns1,flagns2",
+		{"cluster.namespaces", "CAPACITYROOM_NAMESPACES", "envns1,envns2", "flagns1,flagns2",
 			func(f *Flags, v string) { f.Namespaces = &v }, func(c *Config, v string) { c.Cluster.Namespaces = splitList(v) }},
-		{"analysis.period", "KCR_PERIOD", "1h", "2h",
+		{"analysis.period", "CAPACITYROOM_PERIOD", "1h", "2h",
 			func(f *Flags, v string) { f.Period = &v }, func(c *Config, v string) { c.Analysis.Period = v }},
-		{"analysis.timezone", "KCR_TIMEZONE", "Asia/Tokyo", "Europe/Lisbon",
+		{"analysis.timezone", "CAPACITYROOM_TIMEZONE", "Asia/Tokyo", "Europe/Lisbon",
 			func(f *Flags, v string) { f.Timezone = &v }, func(c *Config, v string) { c.Analysis.Timezone = v }},
-		{"analysis.node_autoscaling", "KCR_NODE_AUTOSCALING", "auto", "disabled",
+		{"analysis.node_autoscaling", "CAPACITYROOM_NODE_AUTOSCALING", "auto", "disabled",
 			func(f *Flags, v string) { f.NodeAutoscaling = &v }, func(c *Config, v string) { c.Analysis.NodeAutoscaling = v }},
-		{"report.min_severity", "KCR_MIN_SEVERITY", "all", "critical",
+		{"report.min_severity", "CAPACITYROOM_MIN_SEVERITY", "all", "critical",
 			func(f *Flags, v string) { f.MinSeverity = &v }, func(c *Config, v string) { c.Report.MinSeverity = v }},
 		// report.profile has only two valid values; the file's own value
 		// ("executive") is reused for the flag so that reaching it proves
 		// the flag won rather than the file surviving untouched, since the
 		// intervening environment value ("detailed") differs from both.
-		{"report.profile", "KCR_REPORT_PROFILE", "detailed", "executive",
+		{"report.profile", "CAPACITYROOM_REPORT_PROFILE", "detailed", "executive",
 			func(f *Flags, v string) { f.ReportProfile = &v }, func(c *Config, v string) { c.Report.Profile = v }},
-		{"report.language", "KCR_LANGUAGE", "pt-BR", "en",
+		{"report.language", "CAPACITYROOM_LANGUAGE", "pt-BR", "en",
 			func(f *Flags, v string) { f.Language = &v }, func(c *Config, v string) { c.Report.Language = v }},
 	}
 
@@ -220,10 +220,10 @@ func TestLoadFlagOverridesEnvironment(t *testing.T) {
 
 func TestLoadEmptyVariableIsNotSet(t *testing.T) {
 	getenv := func(key string) string {
-		if key == "KCR_FULL_TOKEN" {
+		if key == "CAPACITYROOM_FULL_TOKEN" {
 			return "s3cr3t12"
 		}
-		if key == "KCR_CLUSTER" {
+		if key == "CAPACITYROOM_CLUSTER" {
 			return ""
 		}
 		return ""
@@ -254,7 +254,7 @@ func TestLoadSplitsNamespaces(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			getenv := func(key string) string {
-				if key == "KCR_NAMESPACES" {
+				if key == "CAPACITYROOM_NAMESPACES" {
 					return tt.input
 				}
 				return ""
@@ -301,14 +301,14 @@ func TestLoadTokenFromVariable(t *testing.T) {
 	path := writeFile(t, `
 [metrics]
 url = "https://prom.example.org"
-token_env = "KCR_TOKEN"
+token_env = "CAPACITYROOM_TOKEN"
 
 [cluster]
 name = "prod"
 namespaces = ["default"]
 `)
 	getenv := func(key string) string {
-		if key == "KCR_TOKEN" {
+		if key == "CAPACITYROOM_TOKEN" {
 			return "abcdefgh"
 		}
 		return ""
@@ -327,14 +327,14 @@ func TestLoadTokenFlagWins(t *testing.T) {
 	path := writeFile(t, `
 [metrics]
 url = "https://prom.example.org"
-token_env = "KCR_TOKEN"
+token_env = "CAPACITYROOM_TOKEN"
 
 [cluster]
 name = "prod"
 namespaces = ["default"]
 `)
 	getenv := func(key string) string {
-		if key == "KCR_TOKEN" {
+		if key == "CAPACITYROOM_TOKEN" {
 			return "abcdefgh"
 		}
 		return ""
@@ -357,14 +357,14 @@ func TestLoadRejectsATooShortTokenVariable(t *testing.T) {
 	path := writeFile(t, `
 [metrics]
 url = "https://prom.example.org"
-token_env = "KCR_TOKEN"
+token_env = "CAPACITYROOM_TOKEN"
 
 [cluster]
 name = "prod"
 namespaces = ["default"]
 `)
 	getenv := func(key string) string {
-		if key == "KCR_TOKEN" {
+		if key == "CAPACITYROOM_TOKEN" {
 			return "abc"
 		}
 		return ""
@@ -381,7 +381,7 @@ func TestLoadTokenVariableUnset(t *testing.T) {
 	path := writeFile(t, `
 [metrics]
 url = "https://prom.example.org"
-token_env = "KCR_TOKEN"
+token_env = "CAPACITYROOM_TOKEN"
 
 [cluster]
 name = "prod"
@@ -389,7 +389,7 @@ namespaces = ["default"]
 `)
 
 	_, err := Load(Source{File: path, Getenv: noEnv})
-	want := "metrics.token_env names KCR_TOKEN, which is unset or empty"
+	want := "metrics.token_env names CAPACITYROOM_TOKEN, which is unset or empty"
 	if err == nil || err.Error() != want {
 		t.Fatalf("Load() error = %v, want %q", err, want)
 	}
@@ -399,7 +399,7 @@ func TestLoadTokenVariableUnsetWithFlag(t *testing.T) {
 	path := writeFile(t, `
 [metrics]
 url = "https://prom.example.org"
-token_env = "KCR_TOKEN"
+token_env = "CAPACITYROOM_TOKEN"
 
 [cluster]
 name = "prod"
@@ -579,13 +579,13 @@ func TestLoadRenderOptions(t *testing.T) {
 	}{
 		{"nothing set", noEnv, Flags{}, RenderOptions{Language: "pt-BR"}, ""},
 		{"environment sets the language", func(key string) string {
-			if key == "KCR_LANGUAGE" {
+			if key == "CAPACITYROOM_LANGUAGE" {
 				return "en"
 			}
 			return ""
 		}, Flags{}, RenderOptions{Language: "en"}, ""},
 		{"flag wins over environment", func(key string) string {
-			if key == "KCR_LANGUAGE" {
+			if key == "CAPACITYROOM_LANGUAGE" {
 				return "en"
 			}
 			return ""
@@ -593,7 +593,7 @@ func TestLoadRenderOptions(t *testing.T) {
 		{"invalid language", noEnv, Flags{Language: strPtr("fr")}, RenderOptions{}, "report.language must be pt-BR or en"},
 		{"invalid profile", noEnv, Flags{ReportProfile: strPtr("Executive")}, RenderOptions{}, "report.profile must be detailed or executive"},
 		{"invalid profile from the environment", func(key string) string {
-			if key == "KCR_REPORT_PROFILE" {
+			if key == "CAPACITYROOM_REPORT_PROFILE" {
 				return "weird"
 			}
 			return ""

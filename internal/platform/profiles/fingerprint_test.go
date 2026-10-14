@@ -71,3 +71,10 @@ func TestCanonicalJSONIsStable(t *testing.T) {
 		t.Fatalf("keys not sorted: %s", first)
 	}
 }
+
+func TestFingerprintUsesTheCapacityRoomDomain(t *testing.T) {
+	const want = "d2586307634bff3fa133e3d74952eeda07c5908d35c6b3a0fc6e2a79298047ee"
+	if got := Fingerprint(validExample(), nil); got != want {
+		t.Fatalf("Fingerprint = %s, want %s", got, want)
+	}
+}

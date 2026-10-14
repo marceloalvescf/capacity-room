@@ -21,7 +21,7 @@ var (
 	errPeriodShape          = errors.New("analysis.period must look like 30m, 4h, 24h, or 7d")
 	errPeriodTooLong        = errors.New("analysis.period is too long")
 	errFileWindow           = errors.New("the configuration file sets both analysis.period and a range")
-	errEnvWindow            = errors.New("the environment sets both KCR_PERIOD and KCR_START or KCR_END")
+	errEnvWindow            = errors.New("the environment sets both CAPACITYROOM_PERIOD and CAPACITYROOM_START or CAPACITYROOM_END")
 	errFlagWindow           = errors.New("the flags set both --period and --start or --end")
 	errRangeTogether        = errors.New("analysis.start and analysis.end must be set together")
 	errRangeOrder           = errors.New("analysis.start must come before analysis.end")

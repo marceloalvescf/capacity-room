@@ -21,27 +21,27 @@ type Toolchain struct {
 	Binary string // absolute path
 }
 
-// Locate returns the binary named by KCR_TYPST, or "typst" found on PATH.
+// Locate returns the binary named by CAPACITYROOM_TYPST, or "typst" found on PATH.
 // getenv and lookPath are injected so tests never touch the real process
 // environment or PATH.
 func Locate(getenv func(string) string, lookPath func(string) (string, error)) (Toolchain, error) {
-	if override := getenv("KCR_TYPST"); override != "" {
+	if override := getenv("CAPACITYROOM_TYPST"); override != "" {
 		if !filepath.IsAbs(override) {
-			return Toolchain{}, fmt.Errorf("KCR_TYPST must be an absolute path: %q", override)
+			return Toolchain{}, fmt.Errorf("CAPACITYROOM_TYPST must be an absolute path: %q", override)
 		}
 		info, err := os.Stat(override)
 		if err != nil {
-			return Toolchain{}, fmt.Errorf("KCR_TYPST names no file: %q", override)
+			return Toolchain{}, fmt.Errorf("CAPACITYROOM_TYPST names no file: %q", override)
 		}
 		if !info.Mode().IsRegular() {
-			return Toolchain{}, fmt.Errorf("KCR_TYPST is not a regular file: %q", override)
+			return Toolchain{}, fmt.Errorf("CAPACITYROOM_TYPST is not a regular file: %q", override)
 		}
 		return Toolchain{Binary: override}, nil
 	}
 
 	found, err := lookPath("typst")
 	if err != nil {
-		return Toolchain{}, fmt.Errorf("typst not found: set KCR_TYPST or add typst to PATH")
+		return Toolchain{}, fmt.Errorf("typst not found: set CAPACITYROOM_TYPST or add typst to PATH")
 	}
 	abs, err := filepath.Abs(found)
 	if err != nil {

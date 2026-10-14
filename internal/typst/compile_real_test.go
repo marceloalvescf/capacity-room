@@ -46,7 +46,7 @@ func realFontPath(t *testing.T) string {
 }
 
 // realToolchain locates the real typst binary the same way production code
-// does, via KCR_TYPST or PATH.
+// does, via CAPACITYROOM_TYPST or PATH.
 func realToolchain(t *testing.T) Toolchain {
 	t.Helper()
 	tc, err := Locate(os.Getenv, exec.LookPath)

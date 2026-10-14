@@ -91,7 +91,7 @@ func baseSnapshot(t *testing.T) snapshot.Snapshot {
 		SchemaVersion: snapshot.SchemaVersion,
 		Report: snapshot.Report{
 			ID:               "run-001",
-			GeneratorVersion: "kcr-9.9.9",
+			GeneratorVersion: "capacityroom-9.9.9",
 			EmittedAt:        "2026-07-15T14:30:00-03:00",
 			PeriodStart:      "2026-07-14T14:30:00-03:00",
 			PeriodEnd:        "2026-07-15T14:30:00-03:00",

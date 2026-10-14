@@ -51,11 +51,11 @@ func writeScript(t *testing.T, script string) string {
 	return path
 }
 
-// envWithTypst returns env with KCR_TYPST pointed at binary.
+// envWithTypst returns env with CAPACITYROOM_TYPST pointed at binary.
 func envWithTypst(env Env, binary string) Env {
 	inner := env.Getenv
 	env.Getenv = func(k string) string {
-		if k == "KCR_TYPST" {
+		if k == "CAPACITYROOM_TYPST" {
 			return binary
 		}
 		return inner(k)
@@ -306,7 +306,7 @@ func TestExecutiveProfile(t *testing.T) {
 		if viaEnv {
 			inner := env.Getenv
 			env.Getenv = func(k string) string {
-				if k == "KCR_REPORT_PROFILE" {
+				if k == "CAPACITYROOM_REPORT_PROFILE" {
 					return "executive"
 				}
 				return inner(k)
@@ -349,7 +349,7 @@ func TestExecutiveProfile(t *testing.T) {
 		outPath := filepath.Join(t.TempDir(), "r.pdf")
 		env := testEnv(t)
 		env.Getenv = func(k string) string {
-			if k == "KCR_REPORT_PROFILE" {
+			if k == "CAPACITYROOM_REPORT_PROFILE" {
 				return "executive"
 			}
 			return ""
@@ -372,7 +372,7 @@ func TestExecutiveOutputName(t *testing.T) {
 	env := withTypst(t, testEnv(t))
 	inner := env.Getenv
 	env.Getenv = func(k string) string {
-		if k == "KCR_OUTPUT_DIRECTORY" {
+		if k == "CAPACITYROOM_OUTPUT_DIRECTORY" {
 			return outDir
 		}
 		return inner(k)
@@ -542,7 +542,7 @@ output_directory = %q
 			want: 6,
 			run: func(t *testing.T) (string, string, int) {
 				cfgPath := writeConfig(t, minimalConfig(t.TempDir()))
-				env := testEnv(t) // no KCR_TYPST, LookPath fails
+				env := testEnv(t) // no CAPACITYROOM_TYPST, LookPath fails
 				return runArgs(context.Background(), env, []string{"report", "--config", cfgPath})
 			},
 		},
@@ -799,11 +799,11 @@ func TestTokenNeverReachesAStream(t *testing.T) {
 	t.Run("via variable", func(t *testing.T) {
 		server, _, scenario := startScenario(t, "direct-complete")
 		defer server.Close()
-		text := scenarioConfig(server, scenario, t.TempDir(), "KCR_TEST_TOKEN")
+		text := scenarioConfig(server, scenario, t.TempDir(), "CAPACITYROOM_TEST_TOKEN")
 		cfgPath := writeConfig(t, text)
 		env := withTypst(t, testEnv(t))
 		env.Getenv = func(k string) string {
-			if k == "KCR_TEST_TOKEN" {
+			if k == "CAPACITYROOM_TEST_TOKEN" {
 				return token
 			}
 			return ""
@@ -952,7 +952,7 @@ func TestPanicWithATokenOfTheEnvironment(t *testing.T) {
 	server, _, scenario := startScenario(t, "direct-complete")
 	defer server.Close()
 
-	text := scenarioConfig(server, scenario, t.TempDir(), "KCR_TOKEN")
+	text := scenarioConfig(server, scenario, t.TempDir(), "CAPACITYROOM_TOKEN")
 	cfgPath := writeConfig(t, text)
 
 	env := testEnv(t)
@@ -966,7 +966,7 @@ func TestPanicWithATokenOfTheEnvironment(t *testing.T) {
 		panic("boom holding " + token)
 	}
 	env.Getenv = func(k string) string {
-		if k == "KCR_TOKEN" {
+		if k == "CAPACITYROOM_TOKEN" {
 			return token
 		}
 		return ""
@@ -1182,7 +1182,7 @@ func TestTokenLongEnoughIsAccepted(t *testing.T) {
 func TestTokenVariableTooShortStopsTheRun(t *testing.T) {
 	cfgPath := writeConfig(t, fmt.Sprintf(`[metrics]
 url = "http://127.0.0.1:1/api/v1"
-token_env = "KCR_TOKEN"
+token_env = "CAPACITYROOM_TOKEN"
 
 [cluster]
 name = "prod"
@@ -1193,7 +1193,7 @@ output_directory = %q
 `, t.TempDir()))
 
 	env := testEnv(t)
-	env.Getenv = envFunc(map[string]string{"KCR_TOKEN": "abc"})
+	env.Getenv = envFunc(map[string]string{"CAPACITYROOM_TOKEN": "abc"})
 
 	stdout, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath})
 	if code != 2 {
@@ -1589,7 +1589,7 @@ output_directory = %q
 // spring-forward gap empties stops every mode with exit code 2, one line
 // naming analysis.period, nothing on standard output, no request, and no
 // file written: the window is built before the preflight, in every mode,
-// check included. The mode that writes a PDF also points KCR_TYPST at a
+// check included. The mode that writes a PDF also points CAPACITYROOM_TYPST at a
 // compiler that does not exist, so the test itself fails, with exit code 6
 // and a different message, if the window ever moved back behind the
 // compiler being looked for.

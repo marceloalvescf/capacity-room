@@ -31,7 +31,7 @@ describe("theme", () => {
   ])("boot script: stored $stored, system dark $dark gives $expected", ({ stored, dark, expected }) => {
     mockColourScheme(dark);
     if (stored !== null) {
-      window.localStorage.setItem("kcr.theme", stored);
+      window.localStorage.setItem("capacityroom.theme", stored);
     }
     runBoot();
     expect(root.getAttribute("data-theme")).toBe(expected);
@@ -47,7 +47,7 @@ describe("theme", () => {
 
   it("boot script ignores the system once a choice is made", () => {
     const media = mockColourScheme(false);
-    window.localStorage.setItem("kcr.theme", "light");
+    window.localStorage.setItem("capacityroom.theme", "light");
     runBoot();
     media.setDark(true);
     expect(root.getAttribute("data-theme")).toBe("light");
@@ -58,14 +58,14 @@ describe("theme", () => {
     runBoot();
     chooseTheme("dark");
     expect(root.getAttribute("data-theme")).toBe("dark");
-    expect(window.localStorage.getItem("kcr.theme")).toBe("dark");
+    expect(window.localStorage.getItem("capacityroom.theme")).toBe("dark");
     media.setDark(false);
     expect(root.getAttribute("data-theme")).toBe("dark");
 
     media.setDark(true);
     chooseTheme("system");
     expect(root.getAttribute("data-theme")).toBe("dark");
-    expect(window.localStorage.getItem("kcr.theme")).toBe("system");
+    expect(window.localStorage.getItem("capacityroom.theme")).toBe("system");
     media.setDark(false);
     expect(root.getAttribute("data-theme")).toBe("light");
   });

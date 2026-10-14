@@ -92,7 +92,7 @@ func TestServeRefusesArguments(t *testing.T) {
 }
 
 func TestServeMissingConfig(t *testing.T) {
-	env := platformEnv(map[string]string{"KCR_DATABASE_DSN": closedPortDSN}, "")
+	env := platformEnv(map[string]string{"CAPACITYROOM_DATABASE_DSN": closedPortDSN}, "")
 	code, stdout, stderr := runCommand(context.Background(), env, "serve", "--config", "nope.toml")
 	if code != 2 || stdout != "" || !strings.HasPrefix(stderr, "error: cannot read nope.toml: ") {
 		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
@@ -100,7 +100,7 @@ func TestServeMissingConfig(t *testing.T) {
 }
 
 func TestServeRedactsDSN(t *testing.T) {
-	env := platformEnv(map[string]string{"KCR_DATABASE_DSN": closedPortDSN}, "")
+	env := platformEnv(map[string]string{"CAPACITYROOM_DATABASE_DSN": closedPortDSN}, "")
 	code, stdout, stderr := runCommand(context.Background(), env, "serve", "--config", writePlatformFiles(t))
 	if code != 1 || stdout != "" {
 		t.Fatalf("code = %d, stdout = %q, stderr = %q, want 1 and empty stdout", code, stdout, stderr)
@@ -117,7 +117,7 @@ func TestErrorLineIsOneLine(t *testing.T) {
 	// Without sslmode the driver tries TLS and then plain text, and its
 	// message names each attempt on a line of its own.
 	const dsn = "postgres://u:hunter2secret@127.0.0.1:1/x?connect_timeout=1"
-	env := platformEnv(map[string]string{"KCR_DATABASE_DSN": dsn}, "")
+	env := platformEnv(map[string]string{"CAPACITYROOM_DATABASE_DSN": dsn}, "")
 	code, stdout, stderr := runCommand(context.Background(), env, "admin", "migrate", "--config", writePlatformFiles(t))
 	if code != 1 || stdout != "" {
 		t.Fatalf("code = %d, stdout = %q, stderr = %q, want 1 and empty stdout", code, stdout, stderr)
@@ -141,7 +141,7 @@ func TestServerTimeouts(t *testing.T) {
 }
 
 func TestOpenPlatformArmsTheRedactor(t *testing.T) {
-	env := platformEnv(map[string]string{"KCR_DATABASE_DSN": closedPortDSN}, "")
+	env := platformEnv(map[string]string{"CAPACITYROOM_DATABASE_DSN": closedPortDSN}, "")
 	redactor := redact.New()
 	if _, _, err := openPlatform(context.Background(), env, redactor, writePlatformFiles(t)); err == nil {
 		t.Fatal("openPlatform succeeded against a closed port")
@@ -154,11 +154,11 @@ func TestOpenPlatformArmsTheRedactor(t *testing.T) {
 
 func TestBootstrapOff(t *testing.T) {
 	for _, value := range []string{"", "true"} {
-		env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": value}, "")
+		env := platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": value}, "")
 		env.Stdin = failingReader{t}
 		code, stdout, stderr := runCommand(context.Background(), env,
 			"admin", "bootstrap-admin", "--username", "root", "--password-stdin")
-		const want = "error: bootstrap-admin is off; set KCR_BOOTSTRAP_MODE=1 to run it\n"
+		const want = "error: bootstrap-admin is off; set CAPACITYROOM_BOOTSTRAP_MODE=1 to run it\n"
 		if code != 1 || stderr != want || stdout != "" {
 			t.Fatalf("value %q: code = %d, stdout = %q, stderr = %q", value, code, stdout, stderr)
 		}
@@ -166,7 +166,7 @@ func TestBootstrapOff(t *testing.T) {
 }
 
 func TestBootstrapNeedsStdinFlag(t *testing.T) {
-	env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1"}, "")
+	env := platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": "1"}, "")
 	env.Stdin = failingReader{t}
 	code, stdout, stderr := runCommand(context.Background(), env, "admin", "bootstrap-admin", "--username", "root")
 	const want = "error: the administrator password is read from standard input; pass --password-stdin and write it there\n"
@@ -176,7 +176,7 @@ func TestBootstrapNeedsStdinFlag(t *testing.T) {
 }
 
 func TestBootstrapNoPasswordFlag(t *testing.T) {
-	env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1"}, "")
+	env := platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": "1"}, "")
 	code, stdout, stderr := runCommand(context.Background(), env,
 		"admin", "bootstrap-admin", "--username", "root", "--password", "xsecretvalue")
 	if code != 2 || stdout != "" || stderr != "error: unknown flag; run the command with --help to see its flags\n" {
@@ -188,7 +188,7 @@ func TestBootstrapNoPasswordFlag(t *testing.T) {
 }
 
 func TestBootstrapValidatesBeforeDatabase(t *testing.T) {
-	env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1", "KCR_DATABASE_DSN": closedPortDSN},
+	env := platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": "1", "CAPACITYROOM_DATABASE_DSN": closedPortDSN},
 		"correct horse battery staple\n")
 	start := time.Now()
 	code, stdout, stderr := runCommand(context.Background(), env,
@@ -216,7 +216,7 @@ func TestBootstrapRefusesBadPasswordAndLanguage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1", "KCR_DATABASE_DSN": closedPortDSN}, tt.stdin)
+			env := platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": "1", "CAPACITYROOM_DATABASE_DSN": closedPortDSN}, tt.stdin)
 			args := append([]string{"admin", "bootstrap-admin", "--username", "root", "--password-stdin",
 				"--config", writePlatformFiles(t)}, tt.extra...)
 			code, stdout, stderr := runCommand(context.Background(), env, args...)
@@ -232,14 +232,14 @@ func TestResetPasswordIsOffWithoutTheMode(t *testing.T) {
 	env.Stdin = failingReader{t}
 	code, stdout, stderr := runCommand(context.Background(), env,
 		"admin", "reset-password", "--username", "root", "--password-stdin")
-	const want = "error: reset-password is off; set KCR_BOOTSTRAP_MODE=1 to run it\n"
+	const want = "error: reset-password is off; set CAPACITYROOM_BOOTSTRAP_MODE=1 to run it\n"
 	if code != 1 || stderr != want || stdout != "" {
 		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
 	}
 }
 
 func TestResetPasswordNeedsPasswordStdin(t *testing.T) {
-	env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1"}, "")
+	env := platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": "1"}, "")
 	env.Stdin = failingReader{t}
 	code, stdout, stderr := runCommand(context.Background(), env, "admin", "reset-password", "--username", "root")
 	const want = "error: the new password is read from standard input; pass --password-stdin and write it there\n"
@@ -249,7 +249,7 @@ func TestResetPasswordNeedsPasswordStdin(t *testing.T) {
 }
 
 func TestResetPasswordRefusesAnInvalidUsername(t *testing.T) {
-	env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1", "KCR_DATABASE_DSN": closedPortDSN},
+	env := platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": "1", "CAPACITYROOM_DATABASE_DSN": closedPortDSN},
 		"correct horse battery staple\n")
 	code, stdout, stderr := runCommand(context.Background(), env,
 		"admin", "reset-password", "--username", "a b", "--password-stdin", "--config", writePlatformFiles(t))
@@ -267,7 +267,7 @@ func TestResetPasswordAppliesThePolicy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1", "KCR_DATABASE_DSN": closedPortDSN}, tt.stdin)
+			env := platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": "1", "CAPACITYROOM_DATABASE_DSN": closedPortDSN}, tt.stdin)
 			code, stdout, stderr := runCommand(context.Background(), env,
 				"admin", "reset-password", "--username", "root", "--password-stdin", "--config", writePlatformFiles(t))
 			if code != 1 || stdout != "" || stderr != tt.want {
@@ -278,7 +278,7 @@ func TestResetPasswordAppliesThePolicy(t *testing.T) {
 }
 
 func TestResetPasswordRefusesAPasswordFlag(t *testing.T) {
-	env := platformEnv(map[string]string{"KCR_BOOTSTRAP_MODE": "1"}, "")
+	env := platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": "1"}, "")
 	code, stdout, stderr := runCommand(context.Background(), env,
 		"admin", "reset-password", "--username", "root", "--password", "xsecretvalue")
 	if code != 2 || stdout != "" || stderr != "error: unknown flag; run the command with --help to see its flags\n" {
@@ -320,7 +320,7 @@ func TestProbe(t *testing.T) {
 
 func TestAdminImportProfilesRefusals(t *testing.T) {
 	config := writePlatformFiles(t)
-	env := func() Env { return platformEnv(map[string]string{"KCR_DATABASE_DSN": closedPortDSN}, "") }
+	env := func() Env { return platformEnv(map[string]string{"CAPACITYROOM_DATABASE_DSN": closedPortDSN}, "") }
 	dir := t.TempDir()
 	invalid := filepath.Join(dir, "invalid.toml")
 	if err := os.WriteFile(invalid, []byte("[[profiles]]\nid = \"a\"\ntoken = \"hunter2value\"\n"), 0o600); err != nil {

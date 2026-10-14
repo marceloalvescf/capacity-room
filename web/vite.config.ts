@@ -6,7 +6,7 @@ import { configDefaults, defineConfig } from "vitest/config";
 
 // Vite reads its environment when the config is loaded, so the version is set
 // before that happens.
-process.env["VITE_KCR_VERSION"] = readFileSync(
+process.env["VITE_CAPACITYROOM_VERSION"] = readFileSync(
   fileURLToPath(new URL("../VERSION", import.meta.url)),
   "utf8",
 ).trim();

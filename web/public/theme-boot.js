@@ -3,7 +3,7 @@
   var dark = window.matchMedia("(prefers-color-scheme: dark)");
   var choice = "system";
   try {
-    var stored = window.localStorage.getItem("kcr.theme");
+    var stored = window.localStorage.getItem("capacityroom.theme");
     if (stored === "light" || stored === "dark") {
       choice = stored;
     }

@@ -18,12 +18,12 @@ import (
 	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
-const dsnVariable = "KCR_TEST_DATABASE_DSN"
+const dsnVariable = "CAPACITYROOM_TEST_DATABASE_DSN"
 
-var databaseName = regexp.MustCompile(`^kcr_test_[0-9a-f]{16}$`)
+var databaseName = regexp.MustCompile(`^capacityroom_test_[0-9a-f]{16}$`)
 
-// New creates a database on the server of KCR_TEST_DATABASE_DSN, named
-// kcr_test_<16 hex characters>, applies the migrations to it, and returns a
+// New creates a database on the server of CAPACITYROOM_TEST_DATABASE_DSN, named
+// capacityroom_test_<16 hex characters>, applies the migrations to it, and returns a
 // pool connected to it. The database is dropped when t ends. The test
 // fails when the variable is unset.
 func New(t *testing.T) *pgxpool.Pool {
@@ -55,7 +55,7 @@ func NewEmpty(t *testing.T) *pgxpool.Pool {
 		_ = admin.Close(ctx)
 		t.Fatalf("name the database: %v", err)
 	}
-	name := "kcr_test_" + hex.EncodeToString(suffix[:])
+	name := "capacityroom_test_" + hex.EncodeToString(suffix[:])
 	if !databaseName.MatchString(name) {
 		_ = admin.Close(ctx)
 		t.Fatalf("database name %q is not allowed", name)

@@ -42,7 +42,7 @@ func TestWorkerCommandErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	withDSN := func(dsn string, typst string) Env {
-		env := platformEnv(map[string]string{"KCR_DATABASE_DSN": dsn, "KCR_TYPST": typst}, "")
+		env := platformEnv(map[string]string{"CAPACITYROOM_DATABASE_DSN": dsn, "CAPACITYROOM_TYPST": typst}, "")
 		return env
 	}
 	cases := []struct {
@@ -53,7 +53,7 @@ func TestWorkerCommandErrors(t *testing.T) {
 		prefix string
 	}{
 		{"a bad settings file", withDSN(closedPortDSN, fakeTypstPath(t)), bad, 2, "error: "},
-		{"typst pointing at nothing", withDSN(closedPortDSN, "/nonexistent/typst"), good, 1, "error: KCR_TYPST names no file"},
+		{"typst pointing at nothing", withDSN(closedPortDSN, "/nonexistent/typst"), good, 1, "error: CAPACITYROOM_TYPST names no file"},
 		{"an unreachable database", withDSN(closedPortDSN, fakeTypstPath(t)), good, 1, "error: cannot connect to the database: "},
 	}
 	for _, tc := range cases {

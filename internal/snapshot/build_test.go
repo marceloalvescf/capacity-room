@@ -99,7 +99,7 @@ func baseCapabilities() []discovery.Capability {
 func baseInput() Input {
 	in := Input{
 		ID:               "run-001",
-		GeneratorVersion: "kcr-9.9.9",
+		GeneratorVersion: "capacityroom-9.9.9",
 		EmittedAt:        time.Date(2026, 7, 15, 14, 30, 0, 0, time.UTC),
 		Config: config.Config{
 			Metrics: config.Metrics{
@@ -313,7 +313,7 @@ func TestBuildEveryFieldChangesTheBytes(t *testing.T) {
 		mutate func(*Input)
 	}{
 		{"Input.ID", func(in *Input) { in.ID = "run-002" }},
-		{"Input.GeneratorVersion", func(in *Input) { in.GeneratorVersion = "kcr-1.0.0" }},
+		{"Input.GeneratorVersion", func(in *Input) { in.GeneratorVersion = "capacityroom-1.0.0" }},
 		{"Input.EmittedAt", func(in *Input) {
 			in.EmittedAt = in.EmittedAt.Add(time.Hour)
 			in.Window = windowFor(in.Config.Analysis, in.EmittedAt)
@@ -579,7 +579,7 @@ func TestBuildNeverWritesNull(t *testing.T) {
 func TestBuildKeepsSecretsOut(t *testing.T) {
 	in := baseInput()
 	in.Config.Metrics.URL = "https://metrics.internal.example:9443/prom"
-	in.Config.Metrics.TokenEnv = "KCR_SECRET_NAME"
+	in.Config.Metrics.TokenEnv = "CAPACITYROOM_SECRET_NAME"
 	in.Config.Metrics.CABundle = "/etc/ssl/private/ca.pem"
 	in.Config.Report.OutputDirectory = "/var/reports"
 
@@ -590,7 +590,7 @@ func TestBuildKeepsSecretsOut(t *testing.T) {
 	}
 
 	for _, secret := range []string{
-		"metrics.internal.example", "9443", "hunter2", "KCR_SECRET_NAME", "ca.pem", "/var/reports",
+		"metrics.internal.example", "9443", "hunter2", "CAPACITYROOM_SECRET_NAME", "ca.pem", "/var/reports",
 	} {
 		if strings.Contains(string(data), secret) {
 			t.Fatalf("Encode() contains %q: %s", secret, data)

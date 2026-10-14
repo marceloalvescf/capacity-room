@@ -16,7 +16,7 @@ const goodDSN = "postgres://u:p@h/db"
 
 func env(dsn string) func(string) string {
 	return func(name string) string {
-		if name == "KCR_DATABASE_DSN" {
+		if name == "CAPACITYROOM_DATABASE_DSN" {
 			return dsn
 		}
 		return ""
@@ -143,15 +143,18 @@ func TestLoadRefusesBadProxy(t *testing.T) {
 func TestLoadRequiresDSN(t *testing.T) {
 	for _, dsn := range []string{"", ""} {
 		_, err := loadText(t, secretLine, dsn)
-		wantError(t, err, "KCR_DATABASE_DSN is not set")
+		wantError(t, err, "CAPACITYROOM_DATABASE_DSN is not set")
 	}
 	_, err := Load(write(t, secretLine), func(string) string { return "" })
-	wantError(t, err, "KCR_DATABASE_DSN is not set")
+	wantError(t, err, "CAPACITYROOM_DATABASE_DSN is not set")
+	if strings.Contains(err.Error(), "KC"+"R_") {
+		t.Fatalf("error names the old prefix: %q", err)
+	}
 }
 
 func TestLoadRefusesDSNScheme(t *testing.T) {
 	_, err := loadText(t, secretLine, "mysql://x")
-	wantError(t, err, "KCR_DATABASE_DSN must be a postgres:// or postgresql:// URL")
+	wantError(t, err, "CAPACITYROOM_DATABASE_DSN must be a postgres:// or postgresql:// URL")
 	if strings.Contains(err.Error(), "mysql") {
 		t.Fatalf("error repeats the DSN: %q", err)
 	}
@@ -388,7 +391,7 @@ func TestLoadWorkerWrongType(t *testing.T) {
 
 func TestLoadRefusesFoldersThatHoldTheFileOrTheSecret(t *testing.T) {
 	root := t.TempDir()
-	etc := filepath.Join(root, "kcr")
+	etc := filepath.Join(root, "capacity-room")
 	if err := os.MkdirAll(etc, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -409,8 +412,8 @@ func TestLoadRefusesFoldersThatHoldTheFileOrTheSecret(t *testing.T) {
 	wantError(t, load("credential_dir = \""+etc+"/\"\n"), credentialMessage)
 	for _, extra := range []string{
 		"credential_dir = \"" + filepath.Join(etc, "credentials") + "\"\n",
-		"ca_bundle_dir = \"" + filepath.Join(root, "kcr-ca") + "\"\n",
-		"credential_dir = \"" + filepath.Join(root, "kcr-credentials") + "\"\n",
+		"ca_bundle_dir = \"" + filepath.Join(root, "capacity-room-ca") + "\"\n",
+		"credential_dir = \"" + filepath.Join(root, "capacity-room-credentials") + "\"\n",
 	} {
 		if err := load(extra); err != nil {
 			t.Fatalf("%s: %v", extra, err)

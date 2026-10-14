@@ -64,7 +64,7 @@ func recorded(t *testing.T) http.Handler {
 }
 
 // credentialToken is the credential the profile of the rig names.
-const credentialToken = "kcr-worker-credential-1"
+const credentialToken = "capacityroom-worker-credential-1"
 
 // requiring answers 401 to a request without the bearer credential and
 // passes every other to next.
@@ -128,8 +128,8 @@ func newRig(t *testing.T, slots, drain int) *rig {
 	}
 
 	env := platformEnv(map[string]string{
-		"KCR_DATABASE_DSN": pool.Config().ConnString(),
-		"KCR_TYPST":        fakeTypstPath(t),
+		"CAPACITYROOM_DATABASE_DSN": pool.Config().ConnString(),
+		"CAPACITYROOM_TYPST":        fakeTypstPath(t),
 	}, "")
 	env.TempDir = t.TempDir()
 	env.Version = "0.0.0-test"

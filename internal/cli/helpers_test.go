@@ -114,14 +114,14 @@ func testEnv(t *testing.T) Env {
 	}
 }
 
-// withTypst returns a copy of env whose Getenv also answers KCR_TYPST with
+// withTypst returns a copy of env whose Getenv also answers CAPACITYROOM_TYPST with
 // the fake compiler.
 func withTypst(t *testing.T, env Env) Env {
 	t.Helper()
 	path := fakeTypstPath(t)
 	inner := env.Getenv
 	env.Getenv = func(k string) string {
-		if k == "KCR_TYPST" {
+		if k == "CAPACITYROOM_TYPST" {
 			return path
 		}
 		return inner(k)

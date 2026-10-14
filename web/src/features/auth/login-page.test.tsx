@@ -98,12 +98,12 @@ describe("login", () => {
     await user.click(screen.getByRole("button", { name: /Idioma/ }));
     await user.click(await screen.findByRole("menuitemradio", { name: "English" }));
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
-    expect(window.localStorage.getItem("kcr.language")).toBe("en");
+    expect(window.localStorage.getItem("capacityroom.language")).toBe("en");
     expect(document.documentElement.lang).toBe("en");
   });
 
   it("the account language applies after sign-in and the stored choice goes", async () => {
-    window.localStorage.setItem("kcr.language", "en");
+    window.localStorage.setItem("capacityroom.language", "en");
     server.use(
       http.post(url("/auth/login"), () => {
         mock.session = signedIn({ language: "pt-BR" });
@@ -114,7 +114,7 @@ describe("login", () => {
     await renderApp("/login");
     await fill(user);
     expect(await screen.findByRole("heading", { name: "Relatórios", level: 1 })).toBeInTheDocument();
-    expect(window.localStorage.getItem("kcr.language")).toBeNull();
+    expect(window.localStorage.getItem("capacityroom.language")).toBeNull();
     expect(document.documentElement.lang).toBe("pt-BR");
   });
 

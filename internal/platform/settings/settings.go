@@ -22,7 +22,7 @@ const (
 	maxSessionSeconds = 2592000
 	minSecretBytes    = 32
 	maxSecretBytes    = 64 << 10
-	dsnVariable       = "KCR_DATABASE_DSN"
+	dsnVariable       = "CAPACITYROOM_DATABASE_DSN"
 
 	defaultCredentialDir = "/run/secrets/metrics"
 	defaultCABundleDir   = "/run/config/ca"
@@ -59,7 +59,7 @@ type Settings struct {
 	SessionIdle      time.Duration  // session_idle_seconds
 	ServerSecretPath string         // server_secret_path
 	TrustedProxies   []netip.Prefix // trusted_proxies
-	DatabaseDSN      string         // KCR_DATABASE_DSN; never written to a message
+	DatabaseDSN      string         // CAPACITYROOM_DATABASE_DSN; never written to a message
 
 	CredentialDir            string         // credential_dir
 	CABundleDir              string         // ca_bundle_dir
@@ -105,7 +105,7 @@ type tomlSettings struct {
 
 // Load reads the TOML file at path, then the environment through getenv,
 // and validates the result. An unknown key or section is an error that
-// names the key and not its value. The DSN is read from KCR_DATABASE_DSN
+// names the key and not its value. The DSN is read from CAPACITYROOM_DATABASE_DSN
 // and is required.
 func Load(path string, getenv func(string) string) (Settings, error) {
 	file := tomlSettings{

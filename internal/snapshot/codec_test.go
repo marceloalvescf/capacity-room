@@ -601,7 +601,7 @@ func TestBuildOutputAlwaysPassesDecode(t *testing.T) {
 
 	in := Input{
 		ID:               "run-defaults",
-		GeneratorVersion: "kcr-0.0.0",
+		GeneratorVersion: "capacityroom-0.0.0",
 		EmittedAt:        time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 		Config:           cfg,
 		EndpointKind:     "prometheus",

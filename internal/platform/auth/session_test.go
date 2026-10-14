@@ -480,7 +480,7 @@ func TestLogoutUnknownToken(t *testing.T) {
 func TestLoginHoldsNoConnectionDuringTheHash(t *testing.T) {
 	f := newSessionFixture(t)
 	ctx := context.Background()
-	cfg, err := pgxpool.ParseConfig(os.Getenv("KCR_TEST_DATABASE_DSN"))
+	cfg, err := pgxpool.ParseConfig(os.Getenv("CAPACITYROOM_TEST_DATABASE_DSN"))
 	if err != nil {
 		t.Fatal(err)
 	}

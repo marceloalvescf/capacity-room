@@ -121,7 +121,7 @@ func TestCheckNeedsNoTypst(t *testing.T) {
 	defer server.Close()
 
 	cfgPath := writeConfig(t, scenarioConfig(server, scenario, t.TempDir()))
-	env := testEnv(t) // LookPath always fails, no KCR_TYPST set
+	env := testEnv(t) // LookPath always fails, no CAPACITYROOM_TYPST set
 	_, stderr, code := runArgs(context.Background(), env, []string{"report", "--config", cfgPath, "--check"})
 	if code != 0 {
 		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
@@ -582,7 +582,7 @@ func modifiedSnapshot(t *testing.T, name string, modify func(*snapshot.Snapshot)
 // TestDefaultOutputName, end to end, through the mode from snapshot, which
 // needs no server: each row modifies a golden snapshot's own stored fields
 // (or passes a flag) and checks that the command writes a file under the
-// exact name defaultOutputName predicts, in KCR_OUTPUT_DIRECTORY.
+// exact name defaultOutputName predicts, in CAPACITYROOM_OUTPUT_DIRECTORY.
 func TestDefaultNameEndToEnd(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -605,7 +605,7 @@ func TestDefaultNameEndToEnd(t *testing.T) {
 			env := withTypst(t, testEnv(t))
 			inner := env.Getenv
 			env.Getenv = func(k string) string {
-				if k == "KCR_OUTPUT_DIRECTORY" {
+				if k == "CAPACITYROOM_OUTPUT_DIRECTORY" {
 					return outDir
 				}
 				return inner(k)

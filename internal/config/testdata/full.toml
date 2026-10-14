@@ -1,7 +1,7 @@
 [metrics]
 url = "https://prom.example.org/api/v1"
 endpoint_type = "prometheus"
-token_env = "KCR_FULL_TOKEN"
+token_env = "CAPACITYROOM_FULL_TOKEN"
 tls_verify = false
 ca_bundle = "testdata/ca.pem"
 timeout_seconds = 45

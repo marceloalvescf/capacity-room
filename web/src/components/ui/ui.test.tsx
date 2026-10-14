@@ -134,12 +134,12 @@ describe("ui", () => {
     expect(screen.getByRole("menuitemradio", { name: "System" }).querySelector("svg")).not.toBeNull();
     await user.click(screen.getByRole("menuitemradio", { name: "Dark" }));
     expect(root.getAttribute("data-theme")).toBe("dark");
-    expect(window.localStorage.getItem("kcr.theme")).toBe("dark");
+    expect(window.localStorage.getItem("capacityroom.theme")).toBe("dark");
 
     media.setDark(false);
     await user.click(screen.getByRole("button", { name: /Theme/ }));
     await user.click(await screen.findByRole("menuitemradio", { name: "System" }));
     expect(root.getAttribute("data-theme")).toBe("light");
-    expect(window.localStorage.getItem("kcr.theme")).toBe("system");
+    expect(window.localStorage.getItem("capacityroom.theme")).toBe("system");
   });
 });

@@ -31,15 +31,15 @@ describe("language", () => {
 
   it("stored choice wins before sign-in", () => {
     browser(["pt-BR"]);
-    window.localStorage.setItem("kcr.language", "en");
+    window.localStorage.setItem("capacityroom.language", "en");
     expect(initialLanguage()).toBe("en");
-    window.localStorage.setItem("kcr.language", "fr");
+    window.localStorage.setItem("capacityroom.language", "fr");
     expect(initialLanguage()).toBe("pt-BR");
   });
 
   it("choosing stores the choice and sets the html lang", () => {
     chooseLanguage("pt-BR");
-    expect(window.localStorage.getItem("kcr.language")).toBe("pt-BR");
+    expect(window.localStorage.getItem("capacityroom.language")).toBe("pt-BR");
     expect(document.documentElement.lang).toBe("pt-BR");
     expect(i18next.t("status.healthy")).toBe("Saudável");
     chooseLanguage("en");
@@ -49,7 +49,7 @@ describe("language", () => {
   it("signing in applies the principal's language and drops the stored choice", () => {
     chooseLanguage("en");
     adoptLanguage("pt-BR");
-    expect(window.localStorage.getItem("kcr.language")).toBeNull();
+    expect(window.localStorage.getItem("capacityroom.language")).toBeNull();
     expect(document.documentElement.lang).toBe("pt-BR");
   });
 

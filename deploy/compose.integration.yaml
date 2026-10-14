@@ -3,7 +3,7 @@
 name: capacity-room-e2e
 
 x-one-shot: &one-shot
-  image: capacity-room:${KCR_VERSION:?set KCR_VERSION}
+  image: capacity-room:${CAPACITYROOM_VERSION:?set CAPACITYROOM_VERSION}
   read_only: true
   tmpfs:
     - /tmp
@@ -12,15 +12,15 @@ x-one-shot: &one-shot
   cap_drop:
     - ALL
   environment:
-    KCR_DATABASE_DSN: postgres://kcr:${KCR_POSTGRES_PASSWORD:?set KCR_POSTGRES_PASSWORD to the database password}@postgres:5432/kcr?sslmode=disable
+    CAPACITYROOM_DATABASE_DSN: postgres://capacityroom:${CAPACITYROOM_POSTGRES_PASSWORD:?set CAPACITYROOM_POSTGRES_PASSWORD to the database password}@postgres:5432/capacityroom?sslmode=disable
   volumes:
-    - ${KCR_CONFIG_DIR:?set KCR_CONFIG_DIR to the folder holding platform.toml and server-secret}:/etc/kcr:ro
+    - ${CAPACITYROOM_CONFIG_DIR:?set CAPACITYROOM_CONFIG_DIR to the folder holding platform.toml and server-secret}:/etc/capacity-room:ro
   depends_on:
     postgres:
       condition: service_healthy
 
 x-fake: &fake
-  image: capacity-room-fake-prometheus:${KCR_VERSION:?set KCR_VERSION}
+  image: capacity-room-fake-prometheus:${CAPACITYROOM_VERSION:?set CAPACITYROOM_VERSION}
   read_only: true
   security_opt:
     - no-new-privileges:true
@@ -51,9 +51,9 @@ services:
         condition: service_healthy
 
   worker:
-    image: capacity-room-worker-e2e:${KCR_VERSION:?set KCR_VERSION}
+    image: capacity-room-worker-e2e:${CAPACITYROOM_VERSION:?set CAPACITYROOM_VERSION}
     environment:
-      KCR_TYPST: /usr/local/bin/typst-switch
+      CAPACITYROOM_TYPST: /usr/local/bin/typst-switch
     volumes:
       - switch:/switch:ro
     depends_on:
@@ -64,13 +64,13 @@ services:
 
   migrate:
     <<: *one-shot
-    command: ["admin", "migrate", "--config", "/etc/kcr/platform.toml"]
+    command: ["admin", "migrate", "--config", "/etc/capacity-room/platform.toml"]
 
   bootstrap:
     <<: *one-shot
     environment:
-      KCR_DATABASE_DSN: postgres://kcr:${KCR_POSTGRES_PASSWORD:?set KCR_POSTGRES_PASSWORD to the database password}@postgres:5432/kcr?sslmode=disable
-      KCR_BOOTSTRAP_MODE: "1"
+      CAPACITYROOM_DATABASE_DSN: postgres://capacityroom:${CAPACITYROOM_POSTGRES_PASSWORD:?set CAPACITYROOM_POSTGRES_PASSWORD to the database password}@postgres:5432/capacityroom?sslmode=disable
+      CAPACITYROOM_BOOTSTRAP_MODE: "1"
     command:
       - admin
       - bootstrap-admin
@@ -80,11 +80,11 @@ services:
       - en
       - --password-stdin
       - --config
-      - /etc/kcr/platform.toml
+      - /etc/capacity-room/platform.toml
 
   profiles:
     <<: *one-shot
-    command: ["admin", "import-profiles", "--config", "/etc/kcr/platform.toml", "--file", "/etc/kcr/profiles.toml"]
+    command: ["admin", "import-profiles", "--config", "/etc/capacity-room/platform.toml", "--file", "/etc/capacity-room/profiles.toml"]
 
   playwright:
     image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27

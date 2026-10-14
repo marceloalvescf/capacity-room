@@ -3,7 +3,7 @@ import { readStored, writeStored } from "@/lib/storage";
 export const themeChoices = ["system", "light", "dark"] as const;
 export type ThemeChoice = (typeof themeChoices)[number];
 
-const storageKey = "kcr.theme";
+const storageKey = "capacityroom.theme";
 
 export function isThemeChoice(value: unknown): value is ThemeChoice {
   return themeChoices.some((choice) => choice === value);

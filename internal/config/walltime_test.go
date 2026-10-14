@@ -107,7 +107,7 @@ func TestRangeReplacesALowerPeriod(t *testing.T) {
 func TestPeriodReplacesALowerRange(t *testing.T) {
 	loaded, err := Load(Source{
 		File:   writeFile(t, rangeFile("start = \"2026-09-01 00:00\"\nend = \"2026-10-01 00:00\"")),
-		Getenv: rangeEnv(map[string]string{"KCR_PERIOD": "36h"}),
+		Getenv: rangeEnv(map[string]string{"CAPACITYROOM_PERIOD": "36h"}),
 	})
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
@@ -126,8 +126,8 @@ func TestOneSourceSetsBoth(t *testing.T) {
 	}{
 		{"file", Source{File: writeFile(t, rangeFile("period = \"7d\"\nstart = \"2026-09-01 00:00\"")), Getenv: noEnv},
 			"the configuration file sets both analysis.period and a range"},
-		{"environment", Source{File: writeFile(t, rangeFile("")), Getenv: rangeEnv(map[string]string{"KCR_PERIOD": "7d", "KCR_START": "2026-09-01 00:00"})},
-			"the environment sets both KCR_PERIOD and KCR_START or KCR_END"},
+		{"environment", Source{File: writeFile(t, rangeFile("")), Getenv: rangeEnv(map[string]string{"CAPACITYROOM_PERIOD": "7d", "CAPACITYROOM_START": "2026-09-01 00:00"})},
+			"the environment sets both CAPACITYROOM_PERIOD and CAPACITYROOM_START or CAPACITYROOM_END"},
 		{"flags", Source{File: writeFile(t, rangeFile("")), Getenv: noEnv, Flags: Flags{Period: strPtr("7d"), Start: strPtr("2026-09-01 00:00")}},
 			"the flags set both --period and --start or --end"},
 	}
@@ -200,10 +200,10 @@ func TestASourceSetsBothEnds(t *testing.T) {
 		name string
 		src  Source
 	}{
-		{"file start with environment end", Source{File: writeFile(t, rangeFile("start = \"2026-09-01 00:00\"")), Getenv: rangeEnv(map[string]string{"KCR_END": "2026-10-01 00:00"})}},
+		{"file start with environment end", Source{File: writeFile(t, rangeFile("start = \"2026-09-01 00:00\"")), Getenv: rangeEnv(map[string]string{"CAPACITYROOM_END": "2026-10-01 00:00"})}},
 		{"file end alone", Source{File: writeFile(t, rangeFile("end = \"2026-10-01 00:00\"")), Getenv: noEnv}},
-		{"environment start with flag end", Source{File: writeFile(t, rangeFile("")), Getenv: rangeEnv(map[string]string{"KCR_START": "2026-09-01 00:00"}), Flags: Flags{End: strPtr("2026-10-01 00:00")}}},
-		{"environment end alone", Source{File: writeFile(t, rangeFile("")), Getenv: rangeEnv(map[string]string{"KCR_END": "2026-10-01 00:00"})}},
+		{"environment start with flag end", Source{File: writeFile(t, rangeFile("")), Getenv: rangeEnv(map[string]string{"CAPACITYROOM_START": "2026-09-01 00:00"}), Flags: Flags{End: strPtr("2026-10-01 00:00")}}},
+		{"environment end alone", Source{File: writeFile(t, rangeFile("")), Getenv: rangeEnv(map[string]string{"CAPACITYROOM_END": "2026-10-01 00:00"})}},
 		{"file range with flag start alone", Source{File: writeFile(t, rangeFile("start = \"2026-09-01 00:00\"\nend = \"2026-10-01 00:00\"")), Getenv: noEnv, Flags: Flags{Start: strPtr("2026-09-05 00:00")}}},
 		{"file range with flag end alone", Source{File: writeFile(t, rangeFile("start = \"2026-09-01 00:00\"\nend = \"2026-10-01 00:00\"")), Getenv: noEnv, Flags: Flags{End: strPtr("2026-09-20 00:00")}}},
 	}

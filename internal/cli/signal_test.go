@@ -15,7 +15,7 @@ import (
 // waits in SignalContext and then ignores its context for ten seconds, as a
 // long stop does; the first SIGTERM ends the context, the second the child.
 func TestSecondSignalEndsTheProcess(t *testing.T) {
-	if os.Getenv("KCR_SIGNAL_CHILD") == "1" {
+	if os.Getenv("CAPACITYROOM_SIGNAL_CHILD") == "1" {
 		ctx, stop := SignalContext(context.Background(), syscall.SIGTERM)
 		_ = stop // the child leaves through os.Exit, so the cancel is never needed
 		_, _ = fmt.Fprintln(os.Stdout, "ready")
@@ -25,7 +25,7 @@ func TestSecondSignalEndsTheProcess(t *testing.T) {
 		os.Exit(0)
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=^TestSecondSignalEndsTheProcess$")
-	cmd.Env = append(os.Environ(), "KCR_SIGNAL_CHILD=1")
+	cmd.Env = append(os.Environ(), "CAPACITYROOM_SIGNAL_CHILD=1")
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)

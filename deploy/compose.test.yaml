@@ -6,13 +6,13 @@ services:
   postgres:
     image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
     environment:
-      POSTGRES_DB: kcr_test
-      POSTGRES_USER: kcr_test
-      POSTGRES_PASSWORD: kcr_test_only
+      POSTGRES_DB: capacityroom_test
+      POSTGRES_USER: capacityroom_test
+      POSTGRES_PASSWORD: capacityroom_test_only
     ports:
       - "127.0.0.1:55432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kcr_test -d kcr_test"]
+      test: ["CMD-SHELL", "pg_isready -U capacityroom_test -d capacityroom_test"]
       interval: 1s
       timeout: 3s
       retries: 30

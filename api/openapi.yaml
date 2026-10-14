@@ -23,7 +23,7 @@ paths:
       responses:
         "200":
           description: >-
-            Anonymous (AnonymousSession, with the cookie kcr_login_csrf set) or
+            Anonymous (AnonymousSession, with the cookie capacityroom_login_csrf set) or
             signed in (SignedInSession, with a fresh csrf_token).
           content:
             application/json:
@@ -54,7 +54,7 @@ paths:
               $ref: "#/components/schemas/LoginRequest"
       responses:
         "200":
-          description: Signed in. Sets the cookie kcr_session and clears kcr_login_csrf.
+          description: Signed in. Sets the cookie capacityroom_session and clears capacityroom_login_csrf.
           content:
             application/json:
               schema:
@@ -89,7 +89,7 @@ paths:
         - $ref: "#/components/parameters/CSRFHeader"
       responses:
         "204":
-          description: Signed out. Clears the cookie kcr_session.
+          description: Signed out. Clears the cookie capacityroom_session.
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -112,7 +112,7 @@ paths:
         "200":
           description: >-
             The account after the change. When the password changed, every
-            session of the reader is revoked and the cookie kcr_session is
+            session of the reader is revoked and the cookie capacityroom_session is
             cleared in this response.
           content:
             application/json:
@@ -838,7 +838,7 @@ components:
     cookieAuth:
       type: apiKey
       in: cookie
-      name: kcr_session
+      name: capacityroom_session
   parameters:
     ReportID:
       name: id
@@ -900,7 +900,7 @@ components:
       in: header
       required: true
       description: >-
-        On POST /auth/login, the value of the cookie kcr_login_csrf; on every
+        On POST /auth/login, the value of the cookie capacityroom_login_csrf; on every
         other state-changing route, the csrf_token of the session.
       schema:
         type: string
@@ -1493,7 +1493,7 @@ components:
           description: Always false in this shape.
         login_csrf:
           type: string
-          description: The sign-in CSRF token, also set as the cookie kcr_login_csrf.
+          description: The sign-in CSRF token, also set as the cookie capacityroom_login_csrf.
     SignedInSession:
       type: object
       required: [authenticated, principal, csrf_token, expires_at]
