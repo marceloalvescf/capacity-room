@@ -6,6 +6,21 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-14
+
+### Changed
+
+- The program is now named CapacityRoom, and its command is now `capacity-room`.
+- Every environment variable now starts with `CAPACITYROOM_`.
+- The last line of the PDF names CapacityRoom.
+- The Compose stack, its database, its user, and its configuration folder take the new name, and the operations guide says to write the new environment file afresh.
+- A profile that is revised or imported again after the upgrade writes one new revision, even when its document is unchanged.
+
+### Removed
+
+- Reports stored by a Compose stack of an earlier version are not carried forward, since the new stack starts with a new volume.
+- Every signed-in session ends at the upgrade, and a theme or a language chosen before sign-in is forgotten once.
+
 ## [1.6.0] - 2026-10-14
 
 ### Added
