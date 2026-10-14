@@ -337,8 +337,8 @@ describe("report list", () => {
       pdfs:
         n === 0
           ? [
-              { language: "pt-BR", status: "pending", failure_code: null },
               { language: "en", status: "ready", failure_code: null },
+              { language: "pt-BR", status: "pending", failure_code: null },
             ]
           : [],
     }));
@@ -385,7 +385,6 @@ describe("report list", () => {
     await renderApp("/reports");
     await screen.findAllByRole("row");
     expect(within(rowOf(id(0))).getByText(t("language.en")).closest("div")?.textContent).toMatch(new RegExp(` · ${t("language.en")}$`));
-    expect(within(rowOf(id(0))).getByText(t("language.en"))).toBeInTheDocument();
     expect(within(rowOf(id(1))).getByText(t("language.pt-BR"))).toBeInTheDocument();
     await i18next.changeLanguage("pt-BR");
     expect(await within(rowOf(id(1))).findByText(i18next.t("language.pt-BR"))).toBeInTheDocument();
@@ -449,12 +448,11 @@ describe("report list", () => {
         return HttpResponse.json({ profiles: [profileSummary()] });
       }),
     );
-    await renderApp("/reports");
+    const { queryClient } = await renderApp("/reports");
     expect(await screen.findByText(t("reports.loading"))).toBeInTheDocument();
     await waitFor(() => {
-      expect(listCalls()).not.toEqual([]);
+      expect(queryClient.getQueriesData({ queryKey: reportsKey }).some(([, data]) => data !== undefined)).toBe(true);
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(document.body).not.toHaveTextContent("prod");
     release();

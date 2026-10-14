@@ -267,7 +267,6 @@ export function ReportsPage() {
                 const time = formatTime(row.created_at);
                 const exact = formatTimeSeconds(row.created_at);
                 const label = { profile: profileName(row), time: exact };
-                const pdfs = row.pdfs.toSorted((a, b) => a.language.localeCompare(b.language));
                 return (
                   <tr key={row.id} className="border-t border-border">
                     {selectable ? (
@@ -304,9 +303,9 @@ export function ReportsPage() {
                       />
                     </td>
                     <td className="px-3 py-2">
-                      {pdfs.length > 0 && !row.expired ? (
+                      {row.pdfs.length > 0 && !row.expired ? (
                         <ul className="flex flex-col gap-1">
-                          {pdfs.map((pdf) => (
+                          {row.pdfs.map((pdf) => (
                             <li key={pdf.language} className="flex items-center gap-2">
                               <span className="font-mono">{pdf.language}</span>
                               <StatusMark status={pdfMark(pdf.status)} label={t(`pdfStatus.${pdf.status}`)} />
