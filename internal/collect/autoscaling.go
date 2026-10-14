@@ -6,9 +6,9 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/arith"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/arith"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
 )
 
 // The states of the cluster autoscaling.

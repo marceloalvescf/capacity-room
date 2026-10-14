@@ -1,9 +1,9 @@
 # The end-to-end stack of `make e2e`, over compose.yaml. The one-shot services
 # are run by the make target, in order; serve does not wait for them.
-name: kcr-e2e
+name: capacity-room-e2e
 
 x-one-shot: &one-shot
-  image: k8s-capacity-report:${KCR_VERSION:?set KCR_VERSION}
+  image: capacity-room:${KCR_VERSION:?set KCR_VERSION}
   read_only: true
   tmpfs:
     - /tmp
@@ -20,7 +20,7 @@ x-one-shot: &one-shot
       condition: service_healthy
 
 x-fake: &fake
-  image: k8s-capacity-report-fake-prometheus:${KCR_VERSION:?set KCR_VERSION}
+  image: capacity-room-fake-prometheus:${KCR_VERSION:?set KCR_VERSION}
   read_only: true
   security_opt:
     - no-new-privileges:true
@@ -51,7 +51,7 @@ services:
         condition: service_healthy
 
   worker:
-    image: k8s-capacity-report-worker-e2e:${KCR_VERSION:?set KCR_VERSION}
+    image: capacity-room-worker-e2e:${KCR_VERSION:?set KCR_VERSION}
     environment:
       KCR_TYPST: /usr/local/bin/typst-switch
     volumes:

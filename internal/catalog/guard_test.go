@@ -18,9 +18,9 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/analysis"
+	"github.com/marceloalvescf/capacity-room/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
 )
 
 // fileEntries reads locales/<lang>.toml on its own, with toml.Unmarshal into
@@ -1790,7 +1790,7 @@ func TestKeyUsageGuardCatchesAnUnusedPlainKey(t *testing.T) {
 func TestKeyUsageGuardCatchesAnUncalledFunction(t *testing.T) {
 	dir := writeGoFile(t, "probe", `package probe
 
-import "github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
+import "github.com/marceloalvescf/capacity-room/internal/catalog"
 
 // stateFunc is never called: a key function that is named and not called
 // must not count as used.

@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
+	"github.com/marceloalvescf/capacity-room/internal/redact"
 )
 
 // syncBuffer is a bytes.Buffer safe for the server goroutine to write while

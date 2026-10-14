@@ -3,7 +3,7 @@ package api
 import (
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
 func TestSlotsEqualTheDownloadPool(t *testing.T) {

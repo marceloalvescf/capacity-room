@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/config"
 )
 
 func TestStepTable(t *testing.T) {

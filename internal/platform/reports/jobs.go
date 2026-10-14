@@ -4,7 +4,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/riverqueue/river"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
+	"github.com/marceloalvescf/capacity-room/internal/platform/settings"
 )
 
 // The queue and the priorities of the report jobs. A render runs before the

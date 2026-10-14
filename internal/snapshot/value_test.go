@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
 )
 
 // numberValue is a Value that holds a number.

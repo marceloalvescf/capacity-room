@@ -9,10 +9,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/audit"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/audit"
+	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
+	"github.com/marceloalvescf/capacity-room/internal/platform/reports"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
 // The codes the reconcile step stores for a job that River gave up on.

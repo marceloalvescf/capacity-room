@@ -13,9 +13,9 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/goldentest"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/goldentest"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
 )
 
 // moduleRoot walks up from the working directory to the first folder

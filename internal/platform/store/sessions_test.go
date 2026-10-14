@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/storetest"
 )
 
 func newSession(userID uuid.UUID, hash string, expires time.Time) store.Session {

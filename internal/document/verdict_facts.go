@@ -4,9 +4,9 @@ import (
 	"math"
 	"slices"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/analysis"
+	"github.com/marceloalvescf/capacity-room/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 // GaugeHazards are the severities a hazard of the depth gauge can hold.

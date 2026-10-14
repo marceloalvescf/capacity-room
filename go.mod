@@ -1,4 +1,4 @@
-module github.com/marceloalvescf/k8s-capacity-report
+module github.com/marceloalvescf/capacity-room
 
 go 1.27.2
 

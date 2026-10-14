@@ -12,7 +12,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
+	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
 )
 
 const usersPath = "/api/v1/admin/users"

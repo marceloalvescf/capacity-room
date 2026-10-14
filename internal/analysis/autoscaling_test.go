@@ -3,8 +3,8 @@ package analysis
 import (
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
 )
 
 func evidenceOf(status, confidence string, current, lowest, highest collect.Number) collect.AutoscalingEvidence {

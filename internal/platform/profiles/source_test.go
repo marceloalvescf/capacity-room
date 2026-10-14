@@ -15,8 +15,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
+	"github.com/marceloalvescf/capacity-room/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/platform/netpolicy"
 )
 
 func TestSourceReadsTheReferences(t *testing.T) {

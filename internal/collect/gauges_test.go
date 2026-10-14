@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
 )
 
 func gaugeSeries(name string, points ...prom.Point) prom.Series {

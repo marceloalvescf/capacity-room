@@ -1,6 +1,6 @@
-// Package kcr provides module-wide identity for k8s-capacity-report,
+// Package capacityroom provides module-wide identity for CapacityRoom,
 // currently limited to the single source of the program's version.
-package kcr
+package capacityroom
 
 import (
 	_ "embed"

@@ -9,11 +9,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
-	"github.com/marceloalvescf/k8s-capacity-report/template"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/document"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/typst"
+	"github.com/marceloalvescf/capacity-room/template"
 )
 
 // MaxPDFBytes is the largest PDF the platform stores.
@@ -86,7 +86,7 @@ func inWorkFolder(parent string, work func(dir string) error) error {
 	if parent == "" {
 		parent = os.TempDir()
 	}
-	dir, err := os.MkdirTemp(parent, "k8s-capacity-report-*")
+	dir, err := os.MkdirTemp(parent, "capacity-room-*")
 	if err != nil {
 		return err
 	}

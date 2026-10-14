@@ -7,8 +7,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/audit"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/audit"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
 const resetPassword = "a reset password"

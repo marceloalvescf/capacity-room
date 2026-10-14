@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/audit"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/platform/audit"
+	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
+	"github.com/marceloalvescf/capacity-room/internal/platform/netpolicy"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
 // The codes of a profile test.

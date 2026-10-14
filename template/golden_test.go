@@ -14,7 +14,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/template/golden"
+	"github.com/marceloalvescf/capacity-room/template/golden"
 )
 
 // goldenRender holds the result of rendering every snapshot exactly once

@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
+	"github.com/marceloalvescf/capacity-room/internal/platform/storetest"
 )
 
 // freeAddress returns a loopback address nothing listens on.

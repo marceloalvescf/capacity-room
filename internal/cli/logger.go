@@ -4,7 +4,7 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
+	"github.com/marceloalvescf/capacity-room/internal/redact"
 )
 
 // newLogger returns the logger of serve and worker, which River's logger

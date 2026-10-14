@@ -4,8 +4,8 @@
 SHELL := bash
 
 VERSION := $(shell tr -d '[:space:]' < VERSION)
-IMAGE := k8s-capacity-report:$(VERSION)
-TEST_IMAGE := k8s-capacity-report-test:$(VERSION)
+IMAGE := capacity-room:$(VERSION)
+TEST_IMAGE := capacity-room-test:$(VERSION)
 GOLANGCI := github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 TYPST_VERSION := 0.15.1
 TEST_DSN := postgres://kcr_test:kcr_test_only@127.0.0.1:55432/kcr_test?sslmode=disable
@@ -59,7 +59,7 @@ web: $(WEB_STAMP)
 	cd web && npm run build
 
 build: web
-	go build -o bin/k8s-capacity-report ./cmd/k8s-capacity-report
+	go build -o bin/capacity-room ./cmd/capacity-room
 
 test: web
 	go test $(TEST_FLAGS) ./...
@@ -157,7 +157,7 @@ update-testdata:
 	go run ./cmd/update-testdata
 
 check-runtime: $(IMAGE_DEP)
-	test "$$(docker run --rm $(IMAGE) --version)" = "k8s-capacity-report $(VERSION)"
+	test "$$(docker run --rm $(IMAGE) --version)" = "capacity-room $(VERSION)"
 	set -o pipefail; test "$$(docker run --rm --entrypoint /usr/local/bin/typst $(IMAGE) --version | cut -d' ' -f2)" = "$(TYPST_VERSION)"
 	test "$$(docker inspect --format '{{.Config.User}}' $(IMAGE))" = "10001:10001"
 	# The snapshot must exist: Docker makes a folder at a mount source that
@@ -185,8 +185,8 @@ E2E_COMPOSE := docker compose -f deploy/compose.yaml -f deploy/compose.integrati
 E2E_FAKES := fake-prometheus fake-recovery
 
 e2e: $(IMAGE_DEP)
-	docker build $(BUILD_FLAGS) --file deploy/Containerfile --target fake-prometheus --tag k8s-capacity-report-fake-prometheus:$(VERSION) .
-	docker build $(filter-out --pull,$(BUILD_FLAGS)) --file deploy/worker-e2e.Containerfile --build-arg RUNTIME_IMAGE=$(IMAGE) --tag k8s-capacity-report-worker-e2e:$(VERSION) .
+	docker build $(BUILD_FLAGS) --file deploy/Containerfile --target fake-prometheus --tag capacity-room-fake-prometheus:$(VERSION) .
+	docker build $(filter-out --pull,$(BUILD_FLAGS)) --file deploy/worker-e2e.Containerfile --build-arg RUNTIME_IMAGE=$(IMAGE) --tag capacity-room-worker-e2e:$(VERSION) .
 	@set -o pipefail; \
 	export KCR_VERSION=$(VERSION) KCR_CONFIG_DIR=$(CURDIR)/deploy/platform KCR_POSTGRES_PASSWORD=kcr_e2e_only; \
 	mkdir -p .cache/e2e; : > .cache/e2e/one-shot.log; \

@@ -271,7 +271,7 @@ func checkWritableDir(path string) error {
 		return errReportOutputDir
 	}
 
-	probe, err := os.CreateTemp(path, ".kcr-write-test-*")
+	probe, err := os.CreateTemp(path, ".capacity-room-write-test-*")
 	if err != nil {
 		return errReportOutputDir
 	}

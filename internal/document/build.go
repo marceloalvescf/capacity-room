@@ -5,8 +5,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 // severities lists the minimum severities Build accepts. internal/snapshot

@@ -18,8 +18,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
+	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
+	"github.com/marceloalvescf/capacity-room/internal/platform/netpolicy"
 )
 
 const secretToken = "s3cr3t-token-value"

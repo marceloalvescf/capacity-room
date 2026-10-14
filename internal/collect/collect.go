@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
 )
 
 // Querier is what a collector needs of the client.

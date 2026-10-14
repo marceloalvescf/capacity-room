@@ -13,8 +13,8 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/netpolicy"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
 // The actions an import reports.

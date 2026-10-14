@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/storetest"
 )
 
 func TestDownloadPoolSize(t *testing.T) {

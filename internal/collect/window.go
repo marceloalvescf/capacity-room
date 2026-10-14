@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/config"
 )
 
 // Window is the span of time the collectors ask about.

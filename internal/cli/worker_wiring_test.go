@@ -23,15 +23,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
+	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
+	"github.com/marceloalvescf/capacity-room/internal/platform/profiles"
+	"github.com/marceloalvescf/capacity-room/internal/platform/reports"
+	"github.com/marceloalvescf/capacity-room/internal/platform/settings"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/storetest"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
+	"github.com/marceloalvescf/capacity-room/internal/redact"
+	"github.com/marceloalvescf/capacity-room/internal/typst"
 )
 
 const workerWait = 20 * time.Second

@@ -11,9 +11,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/riverqueue/river/rivertype"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/reports"
+	"github.com/marceloalvescf/capacity-room/internal/platform/settings"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
 const (

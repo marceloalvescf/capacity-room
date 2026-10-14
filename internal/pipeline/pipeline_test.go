@@ -14,13 +14,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/goldentest"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/pipeline"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/goldentest"
+	"github.com/marceloalvescf/capacity-room/internal/pipeline"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 const (

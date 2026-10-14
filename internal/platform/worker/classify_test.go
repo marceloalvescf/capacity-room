@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 func TestClassifyValuesOutOfRange(t *testing.T) {

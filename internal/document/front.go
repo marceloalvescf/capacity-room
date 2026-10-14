@@ -3,9 +3,9 @@ package document
 import (
 	"fmt"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 // legendRow is one row of the status-legend table: the status mark and the

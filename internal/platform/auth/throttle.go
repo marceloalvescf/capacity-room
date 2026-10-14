@@ -9,7 +9,7 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
 // Throttle is the sign-in rate limit.

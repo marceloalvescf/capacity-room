@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/collect"
 )
 
 func TestNoticeChoosesTheEntry(t *testing.T) {

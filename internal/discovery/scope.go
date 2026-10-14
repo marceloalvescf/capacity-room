@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
 )
 
 // Querier is the part of the client that discovery needs.

@@ -13,9 +13,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
 )
 
 // originalText is one text of the original's executive tables and the

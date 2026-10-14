@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/storetest"
 )
 
 var base = time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)

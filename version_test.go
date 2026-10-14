@@ -1,4 +1,4 @@
-package kcr
+package capacityroom
 
 import (
 	"os"

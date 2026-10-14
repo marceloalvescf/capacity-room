@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
 )
 
 // The metric names the probes ask for, kept local to this file: a name

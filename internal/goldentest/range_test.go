@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
 )
 
 func rangeScenario(t *testing.T) promtest.Scenario {

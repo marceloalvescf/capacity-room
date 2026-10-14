@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/audit"
+	"github.com/marceloalvescf/capacity-room/internal/platform/audit"
 )
 
 func TestEncodeAcceptsScalars(t *testing.T) {

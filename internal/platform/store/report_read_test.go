@@ -20,8 +20,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/storetest"
 )
 
 func markDeleted(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, at time.Time) string {

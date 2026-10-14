@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
+	"github.com/marceloalvescf/capacity-room/internal/platform/settings"
+	"github.com/marceloalvescf/capacity-room/internal/platform/storetest"
+	"github.com/marceloalvescf/capacity-room/internal/redact"
 )
 
 func TestServeServesTheInterface(t *testing.T) {

@@ -12,11 +12,11 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/analysis"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/document"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 // schemaWalk checks a decoded JSON value against the schemas of the contract.

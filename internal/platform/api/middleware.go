@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
+	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
 )
 
 // SessionHandler is a handler of a route that needs a signed-in reader.

@@ -14,7 +14,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
+	"github.com/marceloalvescf/capacity-room/internal/platform/netpolicy"
 )
 
 const (

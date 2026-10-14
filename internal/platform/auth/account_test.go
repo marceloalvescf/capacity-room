@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/audit"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/audit"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
 type accountFixture struct {

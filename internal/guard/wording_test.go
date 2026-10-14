@@ -383,7 +383,7 @@ func TestReaderTextIgnoresTagsAndImports(t *testing.T) {
 
 const paramNamesSource = `package sample
 
-import "github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
+import "github.com/marceloalvescf/capacity-room/internal/catalog"
 
 func f() catalog.Params {
 	start := "x"
@@ -404,7 +404,7 @@ func TestReaderTextIgnoresParameterNames(t *testing.T) {
 
 const paramValueSource = `package sample
 
-import "github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
+import "github.com/marceloalvescf/capacity-room/internal/catalog"
 
 func f() catalog.Params {
 	return catalog.Params{"Start": "No remark"}

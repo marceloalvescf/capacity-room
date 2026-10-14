@@ -4,7 +4,7 @@ import (
 	"net/netip"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
+	"github.com/marceloalvescf/capacity-room/internal/platform/settings"
 )
 
 func TestOutboundNotice(t *testing.T) {

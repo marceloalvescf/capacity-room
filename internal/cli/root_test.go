@@ -3,7 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
-	kcr "github.com/marceloalvescf/k8s-capacity-report"
+	capacityroom "github.com/marceloalvescf/capacity-room"
 	"slices"
 	"sort"
 	"strings"
@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
+	"github.com/marceloalvescf/capacity-room/internal/redact"
 )
 
 func TestRunVersionFlag(t *testing.T) {
@@ -22,7 +22,7 @@ func TestRunVersionFlag(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("Run() code = %d, want 0", code)
 	}
-	if want := "k8s-capacity-report " + kcr.Version() + "\n"; stdout.String() != want {
+	if want := "capacity-room " + capacityroom.Version() + "\n"; stdout.String() != want {
 		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
 	}
 	if stderr.Len() != 0 {

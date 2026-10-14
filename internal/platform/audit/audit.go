@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/text/cases"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
 // The actions of this part. A later part appends its own; a constant is

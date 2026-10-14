@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
 )
 
 func main() {

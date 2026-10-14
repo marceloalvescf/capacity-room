@@ -3,8 +3,8 @@ package analysis
 import (
 	"sort"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/config"
 )
 
 // prefixOf returns the code prefix of scopeType: NAMESPACE or WORKLOAD.

@@ -19,12 +19,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/storetest"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
+	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
+	"github.com/marceloalvescf/capacity-room/internal/platform/netpolicy"
+	"github.com/marceloalvescf/capacity-room/internal/platform/settings"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/storetest"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
 )
 
 var fixedNow = time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)

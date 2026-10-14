@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 // evidenceNumber returns the number a finding carries under name.

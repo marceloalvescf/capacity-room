@@ -1,10 +1,10 @@
 package document
 
 import (
-	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/analysis"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 // The verdict is the first page of the document. It words the same rules as

@@ -14,7 +14,7 @@ import (
 // pulls in test-only support code. internal/promtest and
 // internal/goldentest exist to help tests build fixtures and pages;
 // cmd/fake-prometheus and cmd/update-testdata are tools built for the same
-// purpose. None of them may reach cmd/k8s-capacity-report through its
+// purpose. None of them may reach cmd/capacity-room through its
 // import graph. internal/goldentest and cmd/update-testdata do not exist
 // yet; the guard is written ahead of them so that neither package can slip
 // in unnoticed once it does.
@@ -30,11 +30,11 @@ func TestProductionBinaryHoldsNoTestSupport(t *testing.T) {
 		t.Fatalf("could not read module path from go.mod")
 	}
 
-	cmd := exec.Command("go", "list", "-deps", "./cmd/k8s-capacity-report")
+	cmd := exec.Command("go", "list", "-deps", "./cmd/capacity-room")
 	cmd.Dir = root
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("go list -deps ./cmd/k8s-capacity-report: %v\n%s", err, out)
+		t.Fatalf("go list -deps ./cmd/capacity-room: %v\n%s", err, out)
 	}
 
 	forbidden := []string{
@@ -49,7 +49,7 @@ func TestProductionBinaryHoldsNoTestSupport(t *testing.T) {
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		for _, pkg := range forbidden {
 			if line == pkg || strings.HasPrefix(line, pkg+"/") {
-				t.Fatalf("cmd/k8s-capacity-report depends on %s", line)
+				t.Fatalf("cmd/capacity-room depends on %s", line)
 			}
 		}
 	}
@@ -62,11 +62,11 @@ func TestProductionBinaryHoldsNoTestSupport(t *testing.T) {
 func TestProductionBinaryEmbedsZones(t *testing.T) {
 	root := moduleRoot(t)
 
-	cmd := exec.Command("go", "list", "-deps", "./cmd/k8s-capacity-report")
+	cmd := exec.Command("go", "list", "-deps", "./cmd/capacity-room")
 	cmd.Dir = root
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("go list -deps ./cmd/k8s-capacity-report: %v\n%s", err, out)
+		t.Fatalf("go list -deps ./cmd/capacity-room: %v\n%s", err, out)
 	}
 
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
@@ -74,7 +74,7 @@ func TestProductionBinaryEmbedsZones(t *testing.T) {
 			return
 		}
 	}
-	t.Fatalf("cmd/k8s-capacity-report does not depend on time/tzdata")
+	t.Fatalf("cmd/capacity-room does not depend on time/tzdata")
 }
 
 // TestFakePrometheusBuilds confirms cmd/fake-prometheus builds on its own,

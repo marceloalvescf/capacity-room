@@ -12,8 +12,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
-	"github.com/marceloalvescf/k8s-capacity-report/template/golden"
+	"github.com/marceloalvescf/capacity-room/internal/typst"
+	"github.com/marceloalvescf/capacity-room/template/golden"
 )
 
 // moduleRoot walks up from the working folder to the first folder holding
@@ -73,7 +73,7 @@ func run(ctx context.Context) error {
 	templateSrc := filepath.Join(root, "template")
 	goldenDir := filepath.Join(templateSrc, "tests", "golden")
 
-	scratch, err := os.MkdirTemp("", "kcr-update-golden-*")
+	scratch, err := os.MkdirTemp("", "capacity-room-update-golden-*")
 	if err != nil {
 		return fmt.Errorf("creating scratch folder: %w", err)
 	}

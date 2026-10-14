@@ -3,7 +3,7 @@ package analysis
 import (
 	"sort"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
 )
 
 // Recommendation is one action of the report: the findings of one code

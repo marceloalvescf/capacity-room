@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
+	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
 )
 
 // patchAccount changes the language or the password of the signed-in

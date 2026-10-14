@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
+	"github.com/marceloalvescf/capacity-room/internal/redact"
 )
 
 func TestTextRemovesLiteralSecret(t *testing.T) {

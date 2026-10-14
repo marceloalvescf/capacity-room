@@ -5,11 +5,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/goldentest"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/render"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/document"
+	"github.com/marceloalvescf/capacity-room/internal/goldentest"
+	"github.com/marceloalvescf/capacity-room/internal/render"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 func loadSnapshot(t *testing.T, scenario string) snapshot.Snapshot {

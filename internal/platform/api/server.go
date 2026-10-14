@@ -12,12 +12,12 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/health"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
+	"github.com/marceloalvescf/capacity-room/internal/platform/health"
+	"github.com/marceloalvescf/capacity-room/internal/platform/profiles"
+	"github.com/marceloalvescf/capacity-room/internal/platform/reports"
+	"github.com/marceloalvescf/capacity-room/internal/platform/settings"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
 // Server builds the handler of serve.

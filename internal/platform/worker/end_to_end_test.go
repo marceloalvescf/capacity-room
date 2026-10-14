@@ -15,16 +15,16 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/pipeline"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/render"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/document"
+	"github.com/marceloalvescf/capacity-room/internal/pipeline"
+	"github.com/marceloalvescf/capacity-room/internal/platform/reports"
+	"github.com/marceloalvescf/capacity-room/internal/platform/settings"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
+	"github.com/marceloalvescf/capacity-room/internal/render"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 const (

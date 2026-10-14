@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
+	"github.com/marceloalvescf/capacity-room/internal/typst"
 )
 
 // job builds the typst.Job that renders s from root (a compile root, i.e. a

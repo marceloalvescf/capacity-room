@@ -1,7 +1,7 @@
 package collect
 
 import (
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
 )
 
 // Number is a value that may be unknown.

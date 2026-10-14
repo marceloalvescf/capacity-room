@@ -6,7 +6,7 @@ package analysis
 import (
 	"strings"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/config"
 )
 
 // The severities a finding can carry.

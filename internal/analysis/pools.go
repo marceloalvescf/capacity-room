@@ -4,8 +4,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/config"
 )
 
 // Pools follows analyze_nodepools of the original: per pool, in the order

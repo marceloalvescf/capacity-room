@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/config"
 )
 
 // attempts is how many times one query is tried before it is given up on.

@@ -10,9 +10,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/auth"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
+	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
+	"github.com/marceloalvescf/capacity-room/internal/platform/netpolicy"
+	"github.com/marceloalvescf/capacity-room/internal/platform/profiles"
 )
 
 var profileLimits = map[string]int{"id": 63, "display_name": 128, "endpoint_url": 2048, "cluster_name": 253}

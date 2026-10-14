@@ -12,7 +12,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
 func (f *fixture) importFile(t *testing.T, content string) ([]Outcome, error) {

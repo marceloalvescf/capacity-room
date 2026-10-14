@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
 )
 
 // toolPath returns the absolute path of the named program, found on the

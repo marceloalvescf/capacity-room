@@ -18,15 +18,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/analysis"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/document"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 // DataFileScenarios names the scenarios that have golden data files. Of the

@@ -1,6 +1,6 @@
 # PostgreSQL alone, for `make test-postgres`. The image is pinned by tag
 # and by index digest, as the Containerfile pins its bases.
-name: kcr-test
+name: capacity-room-test
 
 services:
   postgres:

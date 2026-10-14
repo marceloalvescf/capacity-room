@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 func englishVerdict(t *testing.T, s snapshot.Snapshot, severity string) Verdict {

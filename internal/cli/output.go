@@ -50,7 +50,7 @@ func checkWritableTarget(path string) error {
 		return fmt.Errorf("output path is a folder: %s", path)
 	}
 
-	probe, err := os.CreateTemp(dir, ".kcr-write-test-*")
+	probe, err := os.CreateTemp(dir, ".capacity-room-write-test-*")
 	if err != nil {
 		return fmt.Errorf("output directory must exist and be writable: %s", dir)
 	}

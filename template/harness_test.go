@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
+	"github.com/marceloalvescf/capacity-room/internal/typst"
 )
 
 // moduleRoot walks up from the current working directory to the first

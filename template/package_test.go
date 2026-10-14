@@ -11,7 +11,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
+	"github.com/marceloalvescf/capacity-room/internal/typst"
 )
 
 // packageManifest mirrors the subset of typst.toml this harness relies on.

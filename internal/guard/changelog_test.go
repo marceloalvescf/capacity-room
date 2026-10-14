@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	kcr "github.com/marceloalvescf/k8s-capacity-report"
+	capacityroom "github.com/marceloalvescf/capacity-room"
 )
 
 // moduleRoot walks up from the current working directory to the first
@@ -447,13 +447,13 @@ func TestChangelogAgreesWithVersion(t *testing.T) {
 	}
 
 	if found {
-		if version != kcr.Version() {
-			t.Fatalf("CHANGELOG.md newest version = %q, want %q (kcr.Version())", version, kcr.Version())
+		if version != capacityroom.Version() {
+			t.Fatalf("CHANGELOG.md newest version = %q, want %q (capacityroom.Version())", version, capacityroom.Version())
 		}
 		return
 	}
 
-	if kcr.Version() != "0.0.0" {
-		t.Fatalf("CHANGELOG.md has no version heading, but kcr.Version() = %q, want %q", kcr.Version(), "0.0.0")
+	if capacityroom.Version() != "0.0.0" {
+		t.Fatalf("CHANGELOG.md has no version heading, but capacityroom.Version() = %q, want %q", capacityroom.Version(), "0.0.0")
 	}
 }

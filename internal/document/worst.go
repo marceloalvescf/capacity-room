@@ -1,8 +1,8 @@
 package document
 
 import (
-	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/analysis"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 // WorstSeverity is the worst severity among the findings the report shows:

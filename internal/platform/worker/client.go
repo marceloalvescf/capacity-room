@@ -12,8 +12,8 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/health"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
+	"github.com/marceloalvescf/capacity-room/internal/platform/health"
+	"github.com/marceloalvescf/capacity-room/internal/platform/reports"
 )
 
 // queueMaintenance runs the periodic job alone.

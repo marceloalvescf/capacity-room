@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/riverqueue/river/rivertype"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/reports"
+	"github.com/marceloalvescf/capacity-room/internal/platform/reports"
 )
 
 func TestExpiryBeforeRenderWritesNoPDF(t *testing.T) {

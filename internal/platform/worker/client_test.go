@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
+	"github.com/marceloalvescf/capacity-room/internal/platform/settings"
 )
 
 // newClient builds the client of the worker over the environment's pool.

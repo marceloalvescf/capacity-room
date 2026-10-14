@@ -13,14 +13,14 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/spf13/cobra"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/health"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/settings"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/worker"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
+	"github.com/marceloalvescf/capacity-room/internal/platform/health"
+	"github.com/marceloalvescf/capacity-room/internal/platform/netpolicy"
+	"github.com/marceloalvescf/capacity-room/internal/platform/profiles"
+	"github.com/marceloalvescf/capacity-room/internal/platform/settings"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/worker"
+	"github.com/marceloalvescf/capacity-room/internal/redact"
+	"github.com/marceloalvescf/capacity-room/internal/typst"
 )
 
 // typstProbeTimeout bounds the check of the Typst version at start.

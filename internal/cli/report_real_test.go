@@ -20,11 +20,11 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/goldentest"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/goldentest"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
 // realEnv is testEnv with Getenv and LookPath replaced by the real process

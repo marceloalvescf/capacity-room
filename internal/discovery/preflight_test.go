@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/promtest"
+	"github.com/marceloalvescf/capacity-room/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
 )
 
 // preflightConfig is the configuration the command builds for a scenario:

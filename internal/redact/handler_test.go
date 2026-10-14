@@ -10,7 +10,7 @@ import (
 	"testing"
 	"testing/slogtest"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
+	"github.com/marceloalvescf/capacity-room/internal/redact"
 )
 
 const handlerSecret = `s3cr3t"t0ken\value-123`

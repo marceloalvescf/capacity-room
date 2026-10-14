@@ -16,7 +16,7 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
+	"github.com/marceloalvescf/capacity-room/internal/typst"
 )
 
 // capacityFixture returns the absolute path of a positive fixture under

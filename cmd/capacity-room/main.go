@@ -1,4 +1,4 @@
-// Command k8s-capacity-report generates Kubernetes capacity reports from a Prometheus-compatible API.
+// Command capacity-room generates Kubernetes capacity reports from a Prometheus-compatible API.
 package main
 
 import (
@@ -6,7 +6,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/cli"
+	"github.com/marceloalvescf/capacity-room/internal/cli"
 )
 
 func main() {

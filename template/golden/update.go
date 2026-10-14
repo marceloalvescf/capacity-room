@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
+	"github.com/marceloalvescf/capacity-room/internal/typst"
 )
 
 // renderFunc renders one snapshot into dir, compiling from root. It is the
@@ -39,7 +39,7 @@ func Update(ctx context.Context, tc typst.Toolchain, templateDir, goldenDir stri
 // that fails, or a renderer that silently drops a page, leaves the
 // existing golden pages exactly as they were.
 func update(ctx context.Context, render renderFunc, snapshots []Snapshot, templateDir, goldenDir string) ([]string, error) {
-	scratch, err := os.MkdirTemp("", "kcr-golden-*")
+	scratch, err := os.MkdirTemp("", "capacity-room-golden-*")
 	if err != nil {
 		return nil, fmt.Errorf("creating scratch folder: %w", err)
 	}

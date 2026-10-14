@@ -4,9 +4,9 @@ import (
 	"context"
 	"sort"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/resolve"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/resolve"
 )
 
 // The metric names the node collector queries, following

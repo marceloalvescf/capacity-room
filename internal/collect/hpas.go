@@ -4,8 +4,8 @@ import (
 	"context"
 	"sort"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
 )
 
 // The metric names the HPA collector queries, following metrics/names.py

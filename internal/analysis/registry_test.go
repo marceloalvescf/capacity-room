@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/config"
 )
 
 func defaultThresholds() config.Thresholds {

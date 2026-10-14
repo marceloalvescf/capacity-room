@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
 )
 
 // Preflight is what every run shares before it collects: the client bound

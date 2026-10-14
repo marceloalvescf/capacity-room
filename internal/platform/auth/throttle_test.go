@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
 func TestThrottleKeyIsHMACWithNUL(t *testing.T) {

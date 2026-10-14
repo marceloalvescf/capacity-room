@@ -6,7 +6,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/collect"
 )
 
 func TestParseLanguage(t *testing.T) {

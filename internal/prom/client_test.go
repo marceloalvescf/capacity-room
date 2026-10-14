@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/config"
 )
 
 const emptySuccessVector = `{"status":"success","data":{"resultType":"vector","result":[]}}`

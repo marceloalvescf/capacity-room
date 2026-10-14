@@ -10,16 +10,16 @@ import (
 	"strings"
 	"testing"
 
-	kcr "github.com/marceloalvescf/k8s-capacity-report"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
+	capacityroom "github.com/marceloalvescf/capacity-room"
+	"github.com/marceloalvescf/capacity-room/internal/typst"
 )
 
 var packageIdentifierPattern = regexp.MustCompile(`@local/graphite-report:(\d+\.\d+\.\d+)`)
 
 func TestManifestVersionEqualsVersionFile(t *testing.T) {
 	manifest := readManifest(t, filepath.Join(moduleRoot(t), "template", "graphite", "typst.toml"))
-	if manifest.Package.Version != kcr.Version() {
-		t.Fatalf("typst.toml package.version = %q, want %q (kcr.Version())", manifest.Package.Version, kcr.Version())
+	if manifest.Package.Version != capacityroom.Version() {
+		t.Fatalf("typst.toml package.version = %q, want %q (capacityroom.Version())", manifest.Package.Version, capacityroom.Version())
 	}
 }
 
@@ -56,7 +56,7 @@ func templateFiles(t *testing.T, exts map[string]bool) []string {
 
 func TestEveryPackageIdentifierUsesTheVersion(t *testing.T) {
 	files := templateFiles(t, map[string]bool{".typ": true, ".toml": true, ".md": true})
-	version := kcr.Version()
+	version := capacityroom.Version()
 	found := false
 	for _, f := range files {
 		content, err := os.ReadFile(f)

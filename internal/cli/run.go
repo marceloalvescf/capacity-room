@@ -1,4 +1,4 @@
-// Package cli wires the k8s-capacity-report command line: argument parsing,
+// Package cli wires the capacity-room command line: argument parsing,
 // output routing, and exit codes.
 package cli
 
@@ -20,18 +20,18 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	kcr "github.com/marceloalvescf/k8s-capacity-report"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
-	collectpkg "github.com/marceloalvescf/k8s-capacity-report/internal/collect"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/config"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/discovery"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/pipeline"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/prom"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/redact"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/render"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/snapshot"
-	"github.com/marceloalvescf/k8s-capacity-report/internal/typst"
+	capacityroom "github.com/marceloalvescf/capacity-room"
+	"github.com/marceloalvescf/capacity-room/internal/catalog"
+	collectpkg "github.com/marceloalvescf/capacity-room/internal/collect"
+	"github.com/marceloalvescf/capacity-room/internal/config"
+	"github.com/marceloalvescf/capacity-room/internal/discovery"
+	"github.com/marceloalvescf/capacity-room/internal/document"
+	"github.com/marceloalvescf/capacity-room/internal/pipeline"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
+	"github.com/marceloalvescf/capacity-room/internal/redact"
+	"github.com/marceloalvescf/capacity-room/internal/render"
+	"github.com/marceloalvescf/capacity-room/internal/snapshot"
+	"github.com/marceloalvescf/capacity-room/internal/typst"
 )
 
 // Env is everything the command takes from outside itself. Every field is
@@ -61,7 +61,7 @@ func RealEnv() Env {
 			}
 			return id.String(), nil
 		},
-		Version: kcr.Version(),
+		Version: capacityroom.Version(),
 	}
 }
 
@@ -180,9 +180,9 @@ func oneLine(redactor *redact.Redactor, message string) string {
 
 func newRootCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "k8s-capacity-report",
+		Use:     "capacity-room",
 		Short:   "Generate Kubernetes capacity reports from Prometheus metrics.",
-		Version: kcr.Version(),
+		Version: capacityroom.Version(),
 		// No positional argument belongs at the root. Run's own check above
 		// (unknownRootCommand) catches every case this project's tests
 		// exercise before cobra ever gets here; this is the same check,

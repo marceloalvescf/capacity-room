@@ -1,10 +1,10 @@
 # The platform: PostgreSQL, the web server, and the worker. The image is the
 # runtime image of the version in KCR_VERSION. The postgres image is pinned by
 # tag and by index digest, as the Containerfile pins its bases.
-name: k8s-capacity-report
+name: capacity-room
 
 x-app: &app
-  image: k8s-capacity-report:${KCR_VERSION:?set KCR_VERSION}
+  image: capacity-room:${KCR_VERSION:?set KCR_VERSION}
   read_only: true
   tmpfs:
     - /tmp
@@ -46,7 +46,7 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:
-      test: ["CMD", "/usr/local/bin/k8s-capacity-report", "admin", "probe", "http://127.0.0.1:8080/health/ready"]
+      test: ["CMD", "/usr/local/bin/capacity-room", "admin", "probe", "http://127.0.0.1:8080/health/ready"]
       interval: 2s
       timeout: 6s
       retries: 30
@@ -58,7 +58,7 @@ services:
     stop_grace_period: 75s
     command: ["worker", "--config", "/etc/kcr/platform.toml", "--health-listen", ":8091"]
     healthcheck:
-      test: ["CMD", "/usr/local/bin/k8s-capacity-report", "admin", "probe", "http://127.0.0.1:8091/health/ready"]
+      test: ["CMD", "/usr/local/bin/capacity-room", "admin", "probe", "http://127.0.0.1:8091/health/ready"]
       interval: 2s
       timeout: 6s
       retries: 30
