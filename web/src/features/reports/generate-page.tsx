@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { useNavigate, useSearchParams } from "react-router";
 import { ApiFailure } from "@/api/client";
@@ -572,11 +572,7 @@ function FromForm({
       {error === null ? null : <Alert tone="error">{error}</Alert>}
       {notices.map((notice) => (
         <Alert key={notice.kind} tone="notice">
-          <Trans
-            i18nKey={noticeKeys[notice.kind]}
-            values={noticeValues(t, fallback, notice)}
-            components={{ name: <span className="font-mono" /> }}
-          />
+          {t(noticeKeys[notice.kind], noticeValues(t, fallback, notice))}
         </Alert>
       ))}
       <GenerateForm profiles={profiles} initial={values} reload={reload} />

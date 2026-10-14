@@ -298,8 +298,8 @@
     "profileChanged": "O perfil mudou. Suas opções foram carregadas de novo.",
     "longPeriod": "Períodos acima de 15 dias leem dados antigos pelo Thanos e podem elevar o uso de CPU e memória.",
     "from": {
-      "profileGone": "O perfil daquele relatório não está mais disponível; o formulário começa pelo perfil <name>{{profile}}</name>.",
-      "namespacesDropped": "Namespaces que o perfil não permite mais ficaram de fora: <name>{{names}}</name>.",
+      "profileGone": "O perfil daquele relatório não está mais disponível; o formulário começa pelo perfil {{profile}}.",
+      "namespacesDropped": "Namespaces que o perfil não permite mais ficaram de fora: {{names}}.",
       "periodDropped": "O perfil não permite mais o período daquele relatório; o formulário começa por {{period}}."
     }
   },

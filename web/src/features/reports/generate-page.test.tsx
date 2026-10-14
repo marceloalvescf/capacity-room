@@ -844,7 +844,7 @@ describe("what a copied report dropped", () => {
     expect(notice).toHaveTextContent(
       "The profile of that report is no longer available, so the form starts from Production.",
     );
-    expect(within(notice).getByText("Production")).toHaveClass("font-mono");
+    expect(notice.querySelector(".font-mono")).toBeNull();
   });
 
   it("a namespace the profile no longer allows is named", async () => {
@@ -854,7 +854,7 @@ describe("what a copied report dropped", () => {
     expect(namespace("payments")).toBeChecked();
     const notice = screen.getByText(/Namespaces the profile no longer allows/);
     expect(notice).toHaveTextContent("Namespaces the profile no longer allows were left out: retired.");
-    expect(within(notice).getByText("retired")).toHaveClass("font-mono");
+    expect(notice.querySelector(".font-mono")).toBeNull();
   });
 
   it("a range the profile no longer permits is named", async () => {
