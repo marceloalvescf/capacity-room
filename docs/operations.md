@@ -384,7 +384,7 @@ version; the changelog names every change.
 
 ### Upgrading from 1.x
 
-Version 2.0.0 renames the platform, and four facts follow from it.
+Version 2.0.0 renames the platform:
 
 - The Compose project, the volume, and the database are new, so the reports
   of a 1.x stack are not carried forward.

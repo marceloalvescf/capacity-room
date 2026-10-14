@@ -94,7 +94,7 @@ Accepted consequences:
 ### 4.1 Repository layout
 
 ```text
-cmd/capacity-room/   entry point; wires the commands
+cmd/capacity-room/         entry point; wires the commands
 cmd/fake-prometheus/       test fixture server; never in the production image
 internal/
   config/      file, then environment, then flags

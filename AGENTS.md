@@ -113,10 +113,10 @@ image build enforce.
 - **The operations guide equals the code.** Two tests compare the tables of
   `docs/operations.md`: every key of `platform.toml` both ways, and every
   failure code of a report or a PDF in the contract both ways.
-- **The old name is gone.** `k8s-capacity-report`, `KCR_`, and `kcr` as a word or a
-  prefix appear in no tracked file outside the history (the plans, the earlier
-  specs, `docs/decisions/`, `docs/reference/`, `testdata/python/`,
-  `testdata/prometheus/`, and the changelog of 1.x).
+- **The old name is gone.** No tracked file outside the history holds a name of
+  1.x. `internal/guard/oldname.go` holds the patterns and the history: the
+  plans, the earlier specs, `docs/decisions/`, `docs/reference/`,
+  `testdata/python/`, `testdata/prometheus/`, and the changelog of 1.x.
 - **One version.** `VERSION` holds it, and the newest changelog heading must
   equal it. The only level-two headings the changelog may hold are
   `## [Unreleased]` and `## [X.Y.Z] - YYYY-MM-DD`, and it holds no heading
