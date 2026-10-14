@@ -29,7 +29,14 @@ func (w *schemaWalk) fail(path, format string, args ...any) {
 	w.errs = append(w.errs, path+": "+fmt.Sprintf(format, args...))
 }
 
-func (w *schemaWalk) resolve(schema map[string]any) map[string]any {
+func (w *schemaWalk) resolve(path string, schema map[string]any) map[string]any {
+	if entries, ok := schema["allOf"].([]any); ok {
+		if len(entries) != 1 {
+			w.fail(path, "allOf holds %d entries, want exactly one reference", len(entries))
+			return map[string]any{}
+		}
+		schema, _ = entries[0].(map[string]any)
+	}
 	ref, ok := schema["$ref"].(string)
 	if !ok {
 		return schema
@@ -52,7 +59,7 @@ func (w *schemaWalk) matches(schema map[string]any, value any) bool {
 // walk follows the references, honours nullable, enum, and oneOf, and checks
 // each JSON type; a schema without a type or alternatives accepts anything.
 func (w *schemaWalk) walk(path string, schema map[string]any, value any) {
-	schema = w.resolve(schema)
+	schema = w.resolve(path, schema)
 	if alternatives, ok := schema["oneOf"].([]any); ok {
 		n := 0
 		for _, alternative := range alternatives {
@@ -248,6 +255,29 @@ func TestWalkerKnowsOneOfAndNullInAnEnum(t *testing.T) {
 	}
 }
 
+func TestWalkerResolvesAnAllOfOfOneReference(t *testing.T) {
+	w := &schemaWalk{schemas: map[string]map[string]any{
+		"Code": {"type": "string", "enum": []any{"a"}},
+	}}
+	one := map[string]any{
+		"allOf":       []any{map[string]any{"$ref": "#/components/schemas/Code"}},
+		"description": "A described code.",
+	}
+	if errs := w.check(one, "a"); len(errs) != 0 {
+		t.Errorf("an allOf of one reference refuses a member: %v", errs)
+	}
+	if errs := w.check(one, "b"); len(errs) == 0 {
+		t.Error("an allOf of one reference accepts a text outside the enum")
+	}
+	two := map[string]any{"allOf": []any{
+		map[string]any{"$ref": "#/components/schemas/Code"}, map[string]any{"type": "string"},
+	}}
+	errs := w.check(two, "a")
+	if len(errs) != 1 || !strings.Contains(errs[0], "v: allOf") {
+		t.Errorf("an allOf of two entries is not refused with the property named: %v", errs)
+	}
+}
+
 func TestViewContractRefusesAMutatedView(t *testing.T) {
 	walk := &schemaWalk{schemas: loadSchemas(t)}
 	root := map[string]any{"$ref": "#/components/schemas/ReportView"}
@@ -409,6 +439,10 @@ func TestViewFieldsTakeTheirEnums(t *testing.T) {
 		for field, target := range fields {
 			property, _ := properties[field].(map[string]any)
 			got, _ := property["$ref"].(string)
+			if entries, ok := property["allOf"].([]any); ok && len(entries) == 1 {
+				entry, _ := entries[0].(map[string]any)
+				got, _ = entry["$ref"].(string)
+			}
 			if want := "#/components/schemas/" + target; got != want {
 				t.Errorf("%s.%s: the reference is %q, want %q", schemaName, field, got, want)
 			}

@@ -693,6 +693,7 @@ export interface components {
         /** @description A report worded in one language for the web, narrowed as its PDF is: the findings, recommendations, and the namespace, workload, and node rows below the effective minimum are left out; the HPAs, node pools, summary counts, and quality are whole. Every text is the text the PDF prints for the same quantity. A closed set travels as its code, which a client words. */
         ReportView: {
             language: components["schemas"]["Language"];
+            /** @description The effective minimum, raised to attention for the executive profile. */
             min_severity: components["schemas"]["MinSeverity"];
             report: components["schemas"]["ViewReport"];
             summary: components["schemas"]["ViewSummary"];
@@ -859,6 +860,7 @@ export interface components {
         };
         ViewNamespace: {
             name: string;
+            /** @description The severity the PDF gives the namespace, healthy when it has no finding. */
             status: components["schemas"]["ViewSeverity"];
             pods: components["schemas"]["ViewValue"];
             approximate: boolean;
@@ -877,6 +879,7 @@ export interface components {
             namespace: string;
             kind: string;
             name: string;
+            /** @description The severity the PDF gives the workload, healthy when it has no finding. */
             status: components["schemas"]["ViewSeverity"];
             /** @description False for a workload with no usage observed, which the PDF's table leaves out. */
             observed_usage: boolean;
@@ -915,6 +918,7 @@ export interface components {
             /** @description The name of the node's pool, or the code unknown, which a client words. */
             pool: string;
             pool_confidence: components["schemas"]["ViewConfidence"];
+            /** @description The severity the PDF gives the node, healthy when it has no finding. */
             status: components["schemas"]["ViewSeverity"];
             cpu_capacity: components["schemas"]["ViewValue"];
             memory_capacity: components["schemas"]["ViewValue"];

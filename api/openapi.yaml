@@ -1932,7 +1932,9 @@ components:
         language:
           $ref: "#/components/schemas/Language"
         min_severity:
-          $ref: "#/components/schemas/MinSeverity"
+          allOf:
+            - $ref: "#/components/schemas/MinSeverity"
+          description: The effective minimum, raised to attention for the executive profile.
         report:
           $ref: "#/components/schemas/ViewReport"
         summary:
@@ -2341,7 +2343,9 @@ components:
         name:
           type: string
         status:
-          $ref: "#/components/schemas/ViewSeverity"
+          allOf:
+            - $ref: "#/components/schemas/ViewSeverity"
+          description: The severity the PDF gives the namespace, healthy when it has no finding.
         pods:
           $ref: "#/components/schemas/ViewValue"
         approximate:
@@ -2396,7 +2400,9 @@ components:
         name:
           type: string
         status:
-          $ref: "#/components/schemas/ViewSeverity"
+          allOf:
+            - $ref: "#/components/schemas/ViewSeverity"
+          description: The severity the PDF gives the workload, healthy when it has no finding.
         observed_usage:
           type: boolean
           description: False for a workload with no usage observed, which the PDF's table leaves out.
@@ -2486,7 +2492,9 @@ components:
         pool_confidence:
           $ref: "#/components/schemas/ViewConfidence"
         status:
-          $ref: "#/components/schemas/ViewSeverity"
+          allOf:
+            - $ref: "#/components/schemas/ViewSeverity"
+          description: The severity the PDF gives the node, healthy when it has no finding.
         cpu_capacity:
           $ref: "#/components/schemas/ViewValue"
         memory_capacity:
