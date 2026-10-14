@@ -14,7 +14,7 @@ x-one-shot: &one-shot
   environment:
     CAPACITYROOM_DATABASE_DSN: postgres://capacityroom:${CAPACITYROOM_POSTGRES_PASSWORD:?set CAPACITYROOM_POSTGRES_PASSWORD to the database password}@postgres:5432/capacityroom?sslmode=disable
   volumes:
-    - ${CAPACITYROOM_CONFIG_DIR:?set CAPACITYROOM_CONFIG_DIR to the folder holding platform.toml and server-secret}:/etc/capacity-room:ro
+    - ${CAPACITYROOM_CONFIG_DIR:?set CAPACITYROOM_CONFIG_DIR to the folder holding platform.toml and server-secret}:/opt/capacity-room:ro
   depends_on:
     postgres:
       condition: service_healthy
@@ -64,7 +64,7 @@ services:
 
   migrate:
     <<: *one-shot
-    command: ["admin", "migrate", "--config", "/etc/capacity-room/platform.toml"]
+    command: ["admin", "migrate", "--config", "/opt/capacity-room/platform.toml"]
 
   bootstrap:
     <<: *one-shot
@@ -78,13 +78,14 @@ services:
       - e2e-admin
       - --language
       - en
-      - --password-stdin
+      - --password-file
+      - /opt/capacity-room/e2e-admin-password
       - --config
-      - /etc/capacity-room/platform.toml
+      - /opt/capacity-room/platform.toml
 
   profiles:
     <<: *one-shot
-    command: ["admin", "import-profiles", "--config", "/etc/capacity-room/platform.toml", "--file", "/etc/capacity-room/profiles.toml"]
+    command: ["admin", "import-profiles", "--config", "/opt/capacity-room/platform.toml", "--file", "/opt/capacity-room/profiles.toml"]
 
   playwright:
     image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27

@@ -6,6 +6,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The Compose stack mounts its settings folder at `/opt/capacity-room`, with the server secret in a `secret` folder of its own; the operations guide says how to move an existing folder.
+
 ### Added
 
 - The first administrator can be created from a password file, with `admin bootstrap-admin --password-file`.

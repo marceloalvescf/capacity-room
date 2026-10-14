@@ -193,7 +193,7 @@ e2e: $(IMAGE_DEP)
 	$(E2E_COMPOSE) down --volumes; \
 	$(E2E_COMPOSE) up -d --wait postgres \
 		&& $(E2E_COMPOSE) run --rm -T migrate 2>&1 | tee -a .cache/e2e/one-shot.log \
-		&& $(E2E_COMPOSE) run --rm -T bootstrap < deploy/platform/e2e-admin-password 2>&1 | tee -a .cache/e2e/one-shot.log \
+		&& $(E2E_COMPOSE) run --rm -T bootstrap 2>&1 | tee -a .cache/e2e/one-shot.log \
 		&& $(E2E_COMPOSE) run --rm -T profiles 2>&1 | tee -a .cache/e2e/one-shot.log \
 		&& $(E2E_COMPOSE) up --abort-on-container-exit --exit-code-from playwright serve worker playwright; \
 	status=$$?; \

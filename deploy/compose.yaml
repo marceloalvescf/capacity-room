@@ -15,7 +15,7 @@ x-app: &app
   environment:
     CAPACITYROOM_DATABASE_DSN: postgres://capacityroom:${CAPACITYROOM_POSTGRES_PASSWORD:?set CAPACITYROOM_POSTGRES_PASSWORD to the database password}@postgres:5432/capacityroom?sslmode=disable
   volumes:
-    - ${CAPACITYROOM_CONFIG_DIR:?set CAPACITYROOM_CONFIG_DIR to the folder holding platform.toml and server-secret}:/etc/capacity-room:ro
+    - ${CAPACITYROOM_CONFIG_DIR:?set CAPACITYROOM_CONFIG_DIR to the folder holding platform.toml and server-secret}:/opt/capacity-room:ro
   depends_on:
     postgres:
       condition: service_healthy
@@ -42,7 +42,7 @@ services:
     # The stop waits 30 seconds for the requests in flight, then closes the
     # rest; the grace period covers that wait with room to exit.
     stop_grace_period: 45s
-    command: ["serve", "--config", "/etc/capacity-room/platform.toml", "--listen", ":8080"]
+    command: ["serve", "--config", "/opt/capacity-room/platform.toml", "--listen", ":8080"]
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:
@@ -56,7 +56,7 @@ services:
     # The stop waits worker_drain_seconds (30 by default) for the jobs, cancels
     # the rest, and waits as long again; the grace period covers both waits.
     stop_grace_period: 75s
-    command: ["worker", "--config", "/etc/capacity-room/platform.toml", "--health-listen", ":8091"]
+    command: ["worker", "--config", "/opt/capacity-room/platform.toml", "--health-listen", ":8091"]
     healthcheck:
       test: ["CMD", "/usr/local/bin/capacity-room", "admin", "probe", "http://127.0.0.1:8091/health/ready"]
       interval: 2s

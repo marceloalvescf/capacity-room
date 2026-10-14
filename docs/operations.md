@@ -26,7 +26,7 @@ The three run from `deploy/compose.yaml` as the Compose project
 `worker` run as user `10001`, with a read-only root file system, no added
 privileges, and every capability dropped; their only writable place is a
 temporary file system at `/tmp`. They read one folder from the host, mounted
-read-only at `/etc/capacity-room`.
+read-only at `/opt/capacity-room`.
 
 `serve` speaks plain HTTP and sets its session cookie `Secure`, so a browser
 reaches it only through a TLS proxy that you run on the host.
@@ -122,12 +122,12 @@ connection is not in this file: it comes from the environment
 
 ```bash
 cat > "$CAPACITYROOM_HOME/config/platform.toml" <<'EOF'
-server_secret_path = "/etc/capacity-room/server-secret"
+server_secret_path = "/opt/capacity-room/secret/server-secret"
 trusted_proxies = ["172.31.213.1/32"]
 allowed_endpoint_hostnames = ["prometheus.example.com"]  # example: replace
 allowed_endpoint_cidrs = []
-credential_dir = "/etc/capacity-room/credentials"
-ca_bundle_dir = "/etc/capacity-room/ca"
+credential_dir = "/opt/capacity-room/credentials"
+ca_bundle_dir = "/opt/capacity-room/ca"
 EOF
 ```
 
@@ -169,7 +169,8 @@ of files that profiles name: credentials (a bearer token, one per file) and
 CA bundles (PEM).
 
 ```bash
-head -c 32 /dev/urandom > "$CAPACITYROOM_HOME/config/server-secret"
+mkdir -p "$CAPACITYROOM_HOME/config/secret"
+head -c 32 /dev/urandom > "$CAPACITYROOM_HOME/config/secret/server-secret"
 printf '%s\n' 'the-bearer-token-of-the-source' > "$CAPACITYROOM_HOME/config/credentials/prometheus-bearer"  # example: replace
 ```
 
@@ -213,7 +214,7 @@ once any user exists. A password has 12 to 1024 characters.
 ```bash
 printf '%s\n' 'an administrator password' > "$CAPACITYROOM_HOME/admin-password"  # example: replace
 docker compose run --rm -T -e CAPACITYROOM_BOOTSTRAP_MODE=1 serve \
-  admin bootstrap-admin --username admin --password-stdin --config /etc/capacity-room/platform.toml \
+  admin bootstrap-admin --username admin --password-stdin --config /opt/capacity-room/platform.toml \
   < "$CAPACITYROOM_HOME/admin-password"
 rm "$CAPACITYROOM_HOME/admin-password"
 ```
@@ -237,7 +238,7 @@ allowed_namespaces = ["payments", "checkout"]  # example: replace
 credential_file = "prometheus-bearer"
 active = true
 EOF
-docker compose run --rm -T serve admin import-profiles --config /etc/capacity-room/platform.toml \
+docker compose run --rm -T serve admin import-profiles --config /opt/capacity-room/platform.toml \
   --file /dev/stdin < "$CAPACITYROOM_HOME/profiles.toml"
 ```
 
@@ -398,6 +399,27 @@ Version 2.0.0 renames the platform:
 - A profile that is revised or imported again writes one new revision, even
   when its document is unchanged.
 
+### Upgrading from 2.0.0
+
+The settings folder is mounted at `/opt/capacity-room` from 2.1.0, and the
+server secret lives in a folder of its own. Before you start 2.1.0, move the
+secret and edit the paths of `platform.toml`:
+
+```bash
+mkdir "$CAPACITYROOM_HOME/config/secret"
+mv "$CAPACITYROOM_HOME/config/server-secret" "$CAPACITYROOM_HOME/config/secret/server-secret"
+```
+
+```toml
+server_secret_path = "/opt/capacity-room/secret/server-secret"
+credential_dir = "/opt/capacity-room/credentials"
+ca_bundle_dir = "/opt/capacity-room/ca"
+```
+
+Then give the folder to user `10001` again, as section 4 does. A
+`platform.toml` that still names `/etc/capacity-room` stops `serve` at its
+start with a line naming the path it could not read.
+
 ## 9. Sizing
 
 A report stores its snapshot and one PDF per language asked for. On a real
@@ -441,7 +463,7 @@ does not change the role or reactivate an account.
 ```bash
 printf '%s\n' 'a new administrator password' > "$CAPACITYROOM_HOME/admin-password"  # example: replace
 docker compose run --rm -T -e CAPACITYROOM_BOOTSTRAP_MODE=1 serve \
-  admin reset-password --username admin --password-stdin --config /etc/capacity-room/platform.toml \
+  admin reset-password --username admin --password-stdin --config /opt/capacity-room/platform.toml \
   < "$CAPACITYROOM_HOME/admin-password"
 rm "$CAPACITYROOM_HOME/admin-password"
 ```
