@@ -164,18 +164,23 @@ export function useDeleteReports() {
     mutationFn: async (ids: string[]) => {
       const results: Schemas["ReportDeleteResult"][] = [];
       for (let start = 0; start < ids.length; start += deleteChunk) {
-        const { data } = await api.POST("/reports/delete", { body: { ids: ids.slice(start, start + deleteChunk) } });
-        if (data === undefined) {
-          throw new Error("the delete answer is empty");
+        try {
+          const { data } = await api.POST("/reports/delete", { body: { ids: ids.slice(start, start + deleteChunk) } });
+          if (data === undefined) {
+            throw new Error("the delete answer is empty");
+          }
+          results.push(...data.results);
+        } catch (failure) {
+          // The chunks already answered stand; the rest were not deleted.
+          return { results, failure };
         }
-        results.push(...data.results);
       }
-      return results;
+      return { results, failure: null as unknown };
     },
-    onSettled: (results) =>
+    onSettled: (outcome) =>
       settle(
         queryClient,
-        (results ?? []).filter((result) => result.outcome !== "forbidden").map((result) => result.id),
+        (outcome?.results ?? []).filter((result) => result.outcome !== "forbidden").map((result) => result.id),
       ),
   });
 }

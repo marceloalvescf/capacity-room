@@ -245,6 +245,8 @@
     "column": {
       "requested": "Criado em",
       "profile": "Perfil",
+      "cluster": "Cluster",
+      "worst": "Pior severidade",
       "status": "Status",
       "pdf": "PDF",
       "keptUntil": "Disponível até",
@@ -252,7 +254,9 @@
     },
     "open": "Abrir",
     "delete": "Excluir",
-    "select": "Selecionar o relatório de {{time}}",
+    "openOne": "Abrir o relatório de {{profile}}, solicitado em {{time}}",
+    "deleteOne": "Excluir o relatório de {{profile}}, solicitado em {{time}}",
+    "select": "Selecionar o relatório de {{profile}}, solicitado em {{time}}",
     "selectAll": "Selecionar todos",
     "selected": "Selecionados: {{count}}",
     "deleteSelected": "Excluir selecionados",
@@ -262,6 +266,8 @@
     "expired": "Expirado",
     "notGenerated": "Não gerado",
     "loadFailed": "Não foi possível carregar os relatórios.",
+    "loading": "Carregando relatórios…",
+    "profilesFailed": "Não foi possível carregar os nomes dos perfis; a lista mostra os ids.",
     "retry": "Tentar de novo",
     "deleteForbidden": "Alguns relatórios não puderam ser excluídos: seu papel não permite.",
     "deleted": "Excluídos: {{count}}"

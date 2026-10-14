@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "@/api/schema.gen";
-import { formatTime } from "@/lib/format";
+import { formatTime, formatTimeSeconds } from "@/lib/format";
 import { i18next } from "@/i18n/i18n";
-import { installMockApi, profileSummary, report, server, signedIn } from "../../../tests/msw";
+import { failure, installMockApi, profileSummary, report, server, signedIn } from "../../../tests/msw";
 import { renderApp } from "../../../tests/render";
 import { mockColourScheme } from "../../../tests/match-media";
 import { requestTimeout } from "@/api/client";
@@ -46,6 +46,7 @@ function listCalls() {
 }
 
 const t = (key: string, options: Record<string, string | number> = {}): string => i18next.t(key, options);
+const starts = (key: string): RegExp => new RegExp(`^${t(key).split("{{")[0] ?? ""}`);
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -178,9 +179,9 @@ describe("report list", () => {
     await screen.findAllByRole("row");
     expect(screen.getAllByRole("row")).toHaveLength(3);
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: t("reports.delete") })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: starts("reports.delete") })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: t("nav.generate") })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: t("reports.open") })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: starts("reports.open") })).toHaveLength(2);
   });
 
   it("an operator deletes only their own", async () => {
@@ -189,9 +190,9 @@ describe("report list", () => {
     await renderApp("/reports");
     await screen.findAllByRole("row");
     expect(within(rowOf(id(0))).getByRole("checkbox")).toBeInTheDocument();
-    expect(within(rowOf(id(0))).getByRole("button", { name: t("reports.delete") })).toBeInTheDocument();
+    expect(within(rowOf(id(0))).getByRole("button", { name: starts("reports.delete") })).toBeInTheDocument();
     expect(within(rowOf(id(1))).queryByRole("checkbox")).not.toBeInTheDocument();
-    expect(within(rowOf(id(1))).queryByRole("button", { name: t("reports.delete") })).not.toBeInTheDocument();
+    expect(within(rowOf(id(1))).queryByRole("button", { name: starts("reports.delete") })).not.toBeInTheDocument();
     expect(within(rowOf(id(2))).getByRole("checkbox")).toBeInTheDocument();
     expect(within(screen.getByRole("main")).getByRole("link", { name: t("nav.generate") })).toBeInTheDocument();
   });
@@ -203,7 +204,7 @@ describe("report list", () => {
     await screen.findAllByRole("row");
     queryClient.setQueryData([...reportsKey, id(1)], mock.reports[1]);
     mock.calls.length = 0;
-    await user.click(within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(rowOf(id(1))).getByRole("button", { name: starts("reports.delete") }));
     const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByText("Delete the report on Production?")).toBeInTheDocument();
     expect(
@@ -327,30 +328,20 @@ describe("report list", () => {
     await screen.findAllByRole("row");
     const row = rowOf(id(0));
     expect(within(row).getByText(t("reports.expired"))).toBeInTheDocument();
-    expect(within(row).queryByRole("link", { name: t("reports.open") })).not.toBeInTheDocument();
-    expect(within(row).getByRole("button", { name: t("reports.delete") })).toBeInTheDocument();
+    expect(within(row).queryByRole("link", { name: starts("reports.open") })).not.toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: starts("reports.delete") })).toBeInTheDocument();
   });
 
-  it("the interface language's PDF", async () => {
+  it("every PDF of a report shows with its language, whatever the interface language", async () => {
     mock.reports = many(3, (n) => ({
-      pdfs: [
-        {
-          language: "en",
-          status: n === 0 ? "ready" : "pending",
-          failure_code: null,
-        },
-        {
-          language: "pt-BR",
-          status: "failed",
-          failure_code: "PDF_COMPILE_FAILED",
-        },
-      ],
+      pdfs:
+        n === 0
+          ? [
+              { language: "pt-BR", status: "pending", failure_code: null },
+              { language: "en", status: "ready", failure_code: null },
+            ]
+          : [],
     }));
-    mock.reports[2] = report({
-      id: id(2),
-      created_at: many(3)[2]?.created_at ?? "",
-      pdfs: [{ language: "pt-BR", status: "ready", failure_code: null }],
-    });
     mock.reports[1] = report({
       id: id(1),
       created_at: many(3)[1]?.created_at ?? "",
@@ -360,9 +351,189 @@ describe("report list", () => {
     });
     await renderApp("/reports");
     await screen.findAllByRole("row");
-    expect(within(rowOf(id(0))).getByText(t("pdfStatus.ready"))).toBeInTheDocument();
+    const lines = within(rowOf(id(0)))
+      .getAllByRole("listitem")
+      .map((line) => line.textContent);
+    expect(lines).toEqual([`en${t("pdfStatus.ready")}`, `pt-BR${t("pdfStatus.pending")}`]);
     expect(within(rowOf(id(2))).getByText(t("reports.notGenerated"))).toBeInTheDocument();
     expect(within(rowOf(id(1))).queryByText(t("reports.notGenerated"))).not.toBeInTheDocument();
+    expect(within(rowOf(id(1))).queryAllByRole("listitem")).toHaveLength(0);
+  });
+
+  it("an expired report keeps a dash for its PDFs", async () => {
+    mock.reports = many(1, () => ({ expired: true, pdfs: [{ language: "en", status: "ready", failure_code: null }] }));
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    const row = rowOf(id(0));
+    expect(within(row).queryAllByRole("listitem")).toHaveLength(0);
+    expect(row).not.toHaveTextContent(t("pdfStatus.ready"));
+  });
+
+  it("the profile cell ends its second line with the report's language", async () => {
+    mock.reports = many(2, (n) => ({
+      selection: {
+        namespaces: ["payments"],
+        period: "24h",
+        start: null,
+        end: null,
+        timezone: "UTC",
+        report_profile: "detailed",
+        min_severity: "all",
+        language: n === 0 ? "en" : "pt-BR",
+      },
+    }));
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    expect(within(rowOf(id(0))).getByText(t("language.en")).closest("div")?.textContent).toMatch(new RegExp(` · ${t("language.en")}$`));
+    expect(within(rowOf(id(0))).getByText(t("language.en"))).toBeInTheDocument();
+    expect(within(rowOf(id(1))).getByText(t("language.pt-BR"))).toBeInTheDocument();
+    await i18next.changeLanguage("pt-BR");
+    expect(await within(rowOf(id(1))).findByText(i18next.t("language.pt-BR"))).toBeInTheDocument();
+    expect(within(rowOf(id(0))).getByText(i18next.t("language.en"))).toBeInTheDocument();
+    await i18next.changeLanguage("en");
+  });
+
+  it("the cluster and the worst severity, with a dash when the report has none", async () => {
+    mock.reports = many(2, (n) => (n === 0 ? { cluster_name: "prod", worst_severity: "critical" } : {}));
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    const full = within(rowOf(id(0)));
+    expect(full.getByText("prod")).toHaveClass("font-mono");
+    expect(full.getByText(t("status.critical"))).toBeInTheDocument();
+    const bare = within(rowOf(id(1))).getAllByRole("cell");
+    expect(bare[3]?.textContent).toBe("—");
+    expect(bare[4]?.textContent).toBe("—");
+    expect(screen.getByRole("columnheader", { name: t("reports.column.cluster") })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: t("reports.column.worst") })).toBeInTheDocument();
+  });
+
+  it("two reports of one profile in one minute have six different control names", async () => {
+    mock.reports = [
+      report({ id: id(0), created_at: "2026-10-13T22:08:15Z" }),
+      report({ id: id(1), created_at: "2026-10-13T22:08:40Z" }),
+    ];
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    const names = [
+      ...screen.getAllByRole("checkbox", { name: starts("reports.select") }),
+      ...screen.getAllByRole("link", { name: starts("reports.open") }),
+      ...screen.getAllByRole("button", { name: starts("reports.delete") }),
+    ].map((control) => control.getAttribute("aria-label") ?? control.closest("label")?.textContent);
+    expect(names).toHaveLength(6);
+    expect(new Set(names).size).toBe(6);
+    for (const created of [
+      mock.reports[0]?.created_at,
+      mock.reports[1]?.created_at,
+    ]) {
+      const time = formatTimeSeconds(created ?? "");
+      expect(time).toMatch(/:\d\d$/);
+      const link = screen.getByRole("link", { name: t("reports.openOne", { profile: "Production", time }) });
+      expect(link).toBeInTheDocument();
+      const row = within(link.closest("tr") as HTMLElement);
+      expect(row.getByRole("button", { name: t("reports.deleteOne", { profile: "Production", time }) })).toBeInTheDocument();
+      expect(row.getByRole("checkbox", { name: t("reports.select", { profile: "Production", time }) })).toBeInTheDocument();
+    }
+    expect(t("reports.openOne", { profile: "P", time: "T" })).toBe("Open the report on P, requested T");
+    expect(screen.getAllByRole("link", { name: starts("reports.open") })[0]).toHaveTextContent(t("reports.open"));
+  });
+
+  it("while the profile names load, a status line and no table, and no raw id", async () => {
+    mock.reports = many(1);
+    let release = (): void => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(`${window.location.origin}/api/v1/profiles`, async () => {
+        await held;
+        return HttpResponse.json({ profiles: [profileSummary()] });
+      }),
+    );
+    await renderApp("/reports");
+    expect(await screen.findByText(t("reports.loading"))).toBeInTheDocument();
+    await waitFor(() => {
+      expect(listCalls()).not.toEqual([]);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent("prod");
+    release();
+    await screen.findAllByRole("row");
+    expect(screen.queryByText(t("reports.loading"))).not.toBeInTheDocument();
+    expect(within(rowOf(id(0))).getByText("Production")).toBeInTheDocument();
+  });
+
+  it("when the profile names fail, a notice above the table, the id in mono, and a retry that asks again", async () => {
+    mock.reports = many(1);
+    let fail = true;
+    let asked = 0;
+    server.use(
+      http.get(`${window.location.origin}/api/v1/profiles`, () => {
+        asked += 1;
+        return fail ? failure(500, "INTERNAL_ERROR") : HttpResponse.json({ profiles: [profileSummary()] });
+      }),
+    );
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    expect(await screen.findByText(t("reports.profilesFailed"))).toBeInTheDocument();
+    await screen.findAllByRole("row");
+    expect(within(rowOf(id(0))).getByText("prod")).toHaveClass("font-mono");
+    expect(screen.getByText(t("reports.profilesFailed")).compareDocumentPosition(screen.getByRole("table")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fail = false;
+    mock.calls.length = 0;
+    asked = 0;
+    await user.click(screen.getByRole("button", { name: t("reports.retry") }));
+    await waitFor(() => {
+      expect(screen.queryByText(t("reports.profilesFailed"))).not.toBeInTheDocument();
+    });
+    expect(asked).toBe(1);
+    expect(mock.calls.some((call) => call.method === "GET" && call.path === "/reports")).toBe(true);
+    expect(within(rowOf(id(0))).getByText("Production")).toBeInTheDocument();
+  });
+
+  it("a bulk delete cut short announces what went, shows the error, and keeps the rest selected", async () => {
+    mock.reports = many(250);
+    let calls = 0;
+    server.use(
+      http.post(`${window.location.origin}/api/v1/reports/delete`, async ({ request }) => {
+        const body = (await request.json()) as { ids: string[] };
+        calls += 1;
+        if (calls === 2) {
+          return failure(500, "INTERNAL_ERROR");
+        }
+        return HttpResponse.json({ results: body.ids.map((one) => ({ id: one, outcome: "deleted" })) });
+      }),
+    );
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    for (let page = 1; page < 5; page += 1) {
+      await user.click(await screen.findByRole("button", { name: t("reports.loadMore") }));
+      await waitFor(() => {
+        expect(document.querySelectorAll("tbody tr")).toHaveLength(Math.min(50 * (page + 1), 250));
+      });
+    }
+    await user.click(screen.getByRole("checkbox", { name: t("reports.selectAll") }));
+    await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
+    expect(await screen.findByText(t("reports.deleted", { count: 200 }))).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(calls).toBe(2);
+    expect(screen.getByText(t("reports.selected", { count: 50 }))).toBeInTheDocument();
+  }, 20_000);
+
+  it("a bulk whose first chunk fails announces nothing gone and keeps every report selected", async () => {
+    mock.reports = many(3);
+    server.use(http.post(`${window.location.origin}/api/v1/reports/delete`, () => failure(500, "INTERNAL_ERROR")));
+    const user = userEvent.setup();
+    await renderApp("/reports");
+    await screen.findAllByRole("row");
+    await user.click(screen.getByRole("checkbox", { name: t("reports.selectAll") }));
+    await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText(t("reports.deleted", { count: 0 }))).not.toBeInTheDocument();
+    expect(screen.getByText(t("reports.selected", { count: 3 }))).toBeInTheDocument();
   });
 
   it("the profile's id when it is not listed", async () => {
@@ -409,7 +580,7 @@ describe("report list", () => {
     const user = userEvent.setup();
     await renderApp("/reports");
     await screen.findAllByRole("row");
-    await user.click(within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(rowOf(id(1))).getByRole("button", { name: starts("reports.delete") }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
     await waitFor(() => {
       expect(screen.getAllByRole("row")).toHaveLength(2);
@@ -423,7 +594,7 @@ describe("report list", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
     await renderApp("/reports");
     await screen.findAllByRole("row");
-    await user.click(within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(rowOf(id(1))).getByRole("button", { name: starts("reports.delete") }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
     mock.calls.length = 0;
     await act(async () => {
@@ -441,7 +612,7 @@ describe("report list", () => {
     const user = userEvent.setup();
     await renderApp("/reports");
     await screen.findAllByRole("row");
-    await user.click(within(rowOf(id(0))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(rowOf(id(0))).getByRole("button", { name: starts("reports.delete") }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
     await waitFor(() => {
       expect(screen.getByRole("heading", { level: 1, name: t("reports.title") })).toHaveFocus();
@@ -502,7 +673,7 @@ describe("report list", () => {
     const user = userEvent.setup();
     await renderApp("/reports");
     await screen.findAllByRole("row");
-    await user.click(within(rowOf(id(0))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(rowOf(id(0))).getByRole("button", { name: starts("reports.delete") }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
     expect(await screen.findByText(t("reports.deleted", { count: 1 }))).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -635,7 +806,7 @@ describe("report list", () => {
     const user = userEvent.setup();
     await renderApp("/reports");
     await screen.findAllByRole("row");
-    await user.click(within(rowOf(id(0))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(rowOf(id(0))).getByRole("button", { name: starts("reports.delete") }));
     const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: t("delete.confirm") }));
     await waitFor(() => {
@@ -650,7 +821,7 @@ describe("report list", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { level: 1, name: t("reports.title") })).toHaveFocus();
     });
-    const trigger = within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") });
+    const trigger = within(rowOf(id(1))).getByRole("button", { name: starts("reports.delete") });
     await user.click(trigger);
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.cancel") }));
     await waitFor(() => {
@@ -672,7 +843,7 @@ describe("report list", () => {
     const user = userEvent.setup();
     await renderApp("/reports");
     await screen.findAllByRole("row");
-    await user.click(within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(rowOf(id(1))).getByRole("button", { name: starts("reports.delete") }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
     expect(await screen.findByText(t("reports.deleted", { count: 1 }))).toBeInTheDocument();
     await waitFor(() => {
@@ -691,7 +862,7 @@ describe("report list", () => {
     const user = userEvent.setup();
     await renderApp("/reports");
     await screen.findAllByRole("row");
-    await user.click(within(rowOf(id(1))).getByRole("button", { name: t("reports.delete") }));
+    await user.click(within(rowOf(id(1))).getByRole("button", { name: starts("reports.delete") }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(screen.queryByText(t("reports.deleted", { count: 1 }))).not.toBeInTheDocument();
@@ -704,9 +875,9 @@ describe("report list", () => {
     await screen.findAllByRole("row");
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     const headers = screen.getAllByRole("columnheader");
-    expect(headers).toHaveLength(6);
+    expect(headers).toHaveLength(8);
     expect(headers.every((header) => header.textContent !== "")).toBe(true);
-    expect(within(rowOf(id(0))).getAllByRole("cell")).toHaveLength(6);
+    expect(within(rowOf(id(0))).getAllByRole("cell")).toHaveLength(8);
   });
 });
 

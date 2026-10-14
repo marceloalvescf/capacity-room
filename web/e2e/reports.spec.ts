@@ -12,6 +12,8 @@ const collectTimeout = 60_000;
 // zone of the profiles.
 const reportZone = "America/Sao_Paulo";
 
+const deletePattern = new RegExp(`^${en.reports.delete}`);
+
 const pdfGroup = (page: Page, language: string) => page.getByRole("group", { name: language, exact: true });
 
 test("an operator requests a report and a reader reads it", async ({ page, browser, baseURL }) => {
@@ -188,7 +190,13 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
       const row = reportRow(page, reportId);
       await expect(row).toHaveCount(1);
       await expect(row.getByText(en.reportStatus.collected, { exact: true })).toBeVisible();
-      await expect(row.getByText(en.pdfStatus.ready, { exact: true })).toBeVisible();
+      await expect(row.getByText(en.pdfStatus.ready, { exact: true })).toHaveCount(2);
+      await expect(row.getByText("en", { exact: true })).toBeVisible();
+      await expect(row.getByText("pt-BR", { exact: true })).toBeVisible();
+      // The profile e2e-prod names the cluster "prod"; the scenario served has four critical findings under a detailed report with every severity.
+      await expect(row.getByRole("cell", { name: "prod", exact: true })).toBeVisible();
+      await expect(row.getByRole("cell", { name: en.status.critical, exact: true })).toBeVisible();
+      await expect(row).toContainText(en.language.en);
       await expectNoViolations(page);
     });
 
@@ -198,7 +206,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
       await expect(reportRow(other, reportId)).toHaveCount(1);
       await expect(other.getByRole("link", { name: en.nav.generate, exact: true })).toHaveCount(0);
       await expect(other.getByRole("checkbox")).toHaveCount(0);
-      await expect(other.getByRole("button", { name: en.reports.delete, exact: true })).toHaveCount(0);
+      await expect(other.getByRole("button", { name: deletePattern })).toHaveCount(0);
       await expectNoViolations(other);
 
       await other.goto("/generate");
@@ -217,7 +225,7 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
   }
 
   await test.step("the operator deletes the report", async () => {
-    await page.getByRole("button", { name: en.reports.delete, exact: true }).click();
+    await reportRow(page, reportId).getByRole("button", { name: deletePattern }).click();
     const dialog = page.getByRole("alertdialog", { name: en.delete.oneTitle.replace("{{profile}}", "Production") });
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText(`by ${operator.username}, its data, and its PDFs are removed. This cannot be undone.`);

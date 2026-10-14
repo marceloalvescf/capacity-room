@@ -245,6 +245,8 @@
     "column": {
       "requested": "Requested",
       "profile": "Profile",
+      "cluster": "Cluster",
+      "worst": "Worst severity",
       "status": "Status",
       "pdf": "PDF",
       "keptUntil": "Kept until",
@@ -252,7 +254,9 @@
     },
     "open": "Open",
     "delete": "Delete",
-    "select": "Select the report of {{time}}",
+    "openOne": "Open the report on {{profile}}, requested {{time}}",
+    "deleteOne": "Delete the report on {{profile}}, requested {{time}}",
+    "select": "Select the report on {{profile}}, requested {{time}}",
     "selectAll": "Select all",
     "selected": "Selected: {{count}}",
     "deleteSelected": "Delete selected",
@@ -262,6 +266,8 @@
     "expired": "Expired",
     "notGenerated": "Not generated",
     "loadFailed": "The reports could not be loaded.",
+    "loading": "Loading reports…",
+    "profilesFailed": "The profile names could not be loaded, so the list shows their ids.",
     "retry": "Try again",
     "deleteForbidden": "Some reports could not be deleted: your role does not allow it.",
     "deleted": "Deleted: {{count}}"

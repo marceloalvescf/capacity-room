@@ -18,6 +18,14 @@ export function formatTime(iso: string): string {
   return `${formatDate(iso)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+export function formatTimeSeconds(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return none;
+  }
+  return `${formatTime(iso)}:${pad(date.getSeconds())}`;
+}
+
 // The time as formatTime shows it, in a named zone instead of the browser's.
 export function formatTimeIn(iso: string, timeZone: string): string {
   const date = new Date(iso);

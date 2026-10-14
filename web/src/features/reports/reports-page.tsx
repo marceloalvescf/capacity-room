@@ -10,7 +10,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/cn";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDate, formatTime, formatTimeSeconds } from "@/lib/format";
 import { usePrincipal } from "@/session/session";
 import {
   canDelete,
@@ -131,11 +131,21 @@ export function ReportsPage() {
         toggle(current.id, false);
         went = 1;
       } else {
-        const results = await deleteMany.mutateAsync(current.ids);
+        const { results, failure: cut } = await deleteMany.mutateAsync(current.ids);
         const refused = results.filter((result) => result.outcome === "forbidden").map((result) => result.id);
-        setSelected(new Set(refused));
+        const answered = new Set(results.map((result) => result.id));
+        // What was refused, and what no answer covers, stays selected.
+        setSelected(new Set([...refused, ...current.ids.filter((one) => !answered.has(one))]));
         setForbidden(refused.length > 0);
         went = results.filter((result) => result.outcome === "deleted" || result.outcome === "not_found").length;
+        if (cut !== null) {
+          setFailure(errorText(t, toError(cut)));
+          if (went === 0) {
+            focusHeading.current = true;
+            setTarget(null);
+            return;
+          }
+        }
       }
       announce(t("reports.deleted", { count: went }));
     } catch (thrown) {
@@ -151,20 +161,31 @@ export function ReportsPage() {
     </Link>
   ) : null;
 
+  const retry = (
+    <Button
+      onClick={() => {
+        void reports.refetch();
+        void profiles.refetch();
+      }}
+    >
+      {t("reports.retry")}
+    </Button>
+  );
+  const namesFailed = profiles.data === undefined && profiles.isError;
+  const loading = <p role="status" className="text-sm text-muted-fg">{t("reports.loading")}</p>;
+
   let content;
   if (reports.data === undefined) {
     content = reports.isError ? (
       <div className="flex flex-col items-start gap-3">
         <Alert tone="error">{t("reports.loadFailed")}</Alert>
-        <Button
-          onClick={() => {
-            void reports.refetch();
-          }}
-        >
-          {t("reports.retry")}
-        </Button>
+        {retry}
       </div>
-    ) : null;
+    ) : (
+      loading
+    );
+  } else if (profiles.data === undefined && !namesFailed) {
+    content = loading;
   } else if (rows.length === 0) {
     content = (
       <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-input-border p-7 text-center text-muted-fg">
@@ -175,6 +196,12 @@ export function ReportsPage() {
   } else {
     content = (
       <>
+        {namesFailed ? (
+          <div className="flex flex-col items-start gap-3">
+            <Alert tone="notice">{t("reports.profilesFailed")}</Alert>
+            {retry}
+          </div>
+        ) : null}
         {chosen.length === 0 ? null : (
           <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface px-3 py-2 text-sm text-surface-fg">
             <span>{t("reports.selected", { count: chosen.length })}</span>
@@ -215,6 +242,12 @@ export function ReportsPage() {
                   {t("reports.column.profile")}
                 </th>
                 <th scope="col" className="label px-3 py-2">
+                  {t("reports.column.cluster")}
+                </th>
+                <th scope="col" className="label px-3 py-2">
+                  {t("reports.column.worst")}
+                </th>
+                <th scope="col" className="label px-3 py-2">
                   {t("reports.column.status")}
                 </th>
                 <th scope="col" className="label px-3 py-2">
@@ -232,7 +265,9 @@ export function ReportsPage() {
               {rows.map((row) => {
                 const mine = canDelete(principal, row);
                 const time = formatTime(row.created_at);
-                const pdf = row.pdfs.find((state) => state.language === i18n.language);
+                const exact = formatTimeSeconds(row.created_at);
+                const label = { profile: profileName(row), time: exact };
+                const pdfs = row.pdfs.toSorted((a, b) => a.language.localeCompare(b.language));
                 return (
                   <tr key={row.id} className="border-t border-border">
                     {selectable ? (
@@ -240,7 +275,7 @@ export function ReportsPage() {
                         {mine ? (
                           <Checkbox
                             hideLabel
-                            label={t("reports.select", { time })}
+                            label={t("reports.select", label)}
                             checked={selected.has(row.id)}
                             onChange={(event) => {
                               toggle(row.id, event.target.checked);
@@ -254,9 +289,13 @@ export function ReportsPage() {
                       <div className={cn(!names.has(row.profile_id) && "font-mono")}>{profileName(row)}</div>
                       {row.selection !== null ? (
                         <div className="text-xs text-muted-fg">
-                          <ReportScope selection={row.selection} period={scope(row.selection)} />
+                          <ReportScope selection={row.selection} period={scope(row.selection)} language={t(`language.${row.selection.language}`)} />
                         </div>
                       ) : null}
+                    </td>
+                    <td className="px-3 py-2 font-mono">{row.cluster_name ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      {row.worst_severity === null ? "—" : <StatusMark status={row.worst_severity} />}
                     </td>
                     <td className="px-3 py-2">
                       <StatusMark
@@ -265,8 +304,15 @@ export function ReportsPage() {
                       />
                     </td>
                     <td className="px-3 py-2">
-                      {pdf !== undefined && !row.expired ? (
-                        <StatusMark status={pdfMark(pdf.status)} label={t(`pdfStatus.${pdf.status}`)} />
+                      {pdfs.length > 0 && !row.expired ? (
+                        <ul className="flex flex-col gap-1">
+                          {pdfs.map((pdf) => (
+                            <li key={pdf.language} className="flex items-center gap-2">
+                              <span className="font-mono">{pdf.language}</span>
+                              <StatusMark status={pdfMark(pdf.status)} label={t(`pdfStatus.${pdf.status}`)} />
+                            </li>
+                          ))}
+                        </ul>
                       ) : row.status === "collected" && !row.expired ? (
                         t("reports.notGenerated")
                       ) : (
@@ -277,12 +323,13 @@ export function ReportsPage() {
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-end gap-2">
                         {row.expired ? null : (
-                          <Link to={`/jobs/${row.id}`} className="text-accent underline">
+                          <Link to={`/jobs/${row.id}`} aria-label={t("reports.openOne", label)} className="text-accent underline">
                             {t("reports.open")}
                           </Link>
                         )}
                         {mine ? (
                           <Button
+                            aria-label={t("reports.deleteOne", label)}
                             onClick={() => {
                               open({ kind: "one", id: row.id, profile: profileName(row), time, username: row.owner_username });
                             }}
@@ -364,9 +411,9 @@ export function ReportsPage() {
 
 const shownNamespaces = 3;
 
-// The namespaces a report covers, at most three, then the count of the rest, and its period. Each part stays whole;
+// The namespaces a report covers, at most three, then the count of the rest, its period, and its language. Each part stays whole;
 // the line breaks only between them.
-function ReportScope({ selection, period }: { selection: ReportSelection; period: string }) {
+function ReportScope({ selection, period, language }: { selection: ReportSelection; period: string; language: string }) {
   const { t } = useTranslation();
   const { namespaces } = selection;
   const rest = namespaces.length - shownNamespaces;
@@ -380,6 +427,8 @@ function ReportScope({ selection, period }: { selection: ReportSelection; period
         </>
       ) : null}
       <span className="whitespace-nowrap">{period}</span>
+      {" · "}
+      <span className="whitespace-nowrap">{language}</span>
     </>
   );
 }
