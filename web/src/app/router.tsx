@@ -58,7 +58,7 @@ export const routes: RouteObject[] = [
               { path: "autoscaling", element: <AutoscalingTab /> },
               { path: "nodes", element: <NodesTab /> },
               { path: "quality", element: <QualityTab /> },
-              { path: "*", element: <NotFound /> },
+              { path: "*", element: <NotFound level={2} /> },
             ],
           },
           { path: "account", element: <AccountPage /> },

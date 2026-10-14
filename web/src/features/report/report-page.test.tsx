@@ -41,13 +41,24 @@ describe("report screen", () => {
     await open();
     const heading = screen.getByRole("heading", { level: 1 });
     const facts = heading.nextElementSibling as HTMLElement;
-    expect(heading).toHaveTextContent("Report on Production");
+    expect(heading).toHaveTextContent("Report · Production");
     expect(within(facts).getByText("prod")).toHaveClass("font-mono");
     expect(facts).toHaveTextContent(t("report.cluster"));
     expect(facts).toHaveTextContent(english.report.period_text);
     expect(facts).toHaveTextContent(t("reportProfile.detailed"));
     expect(facts).toHaveTextContent(/Requested \d{4}-\d{2}-\d{2} \d{2}:\d{2} by ana/);
     expect(facts).not.toHaveTextContent("America/Sao_Paulo");
+  });
+
+  it("titles the report with its profile", async () => {
+    await open();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Report · Production");
+  });
+
+  it("titles the report with its profile in Portuguese", async () => {
+    mock.session = signedIn({ language: "pt-BR" });
+    await open(`/reports/${id}/overview`, "pt-BR");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Relatório · Production");
   });
 
   it("seven tabs", async () => {
@@ -71,7 +82,8 @@ describe("report screen", () => {
 
   it("unknown tab", async () => {
     await open(`/reports/${id}/nope`);
-    expect(screen.getByRole("heading", { level: 1, name: t("notFound.title") })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 2, name: t("notFound.title") })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: t("report.tabs") })).toBeInTheDocument();
   });
 
@@ -182,8 +194,10 @@ describe("report screen", () => {
     const late = new Promise<void>((resolve) => {
       release = resolve;
     });
+    const asked: string[] = [];
     server.use(
       http.get(`${window.location.origin}/api/v1/reports/:id/view`, async () => {
+        asked.push(other);
         await late;
         return HttpResponse.json(second);
       }),
@@ -191,12 +205,10 @@ describe("report screen", () => {
     await act(async () => {
       await router.navigate(`/reports/${other}/overview`);
     });
-    // The report itself has answered; only its view is late.
+    // The report itself has answered; only its view is held.
     await waitFor(() => {
       expect(mock.calls.some((call) => call.path === `/reports/${other}`)).toBe(true);
-    });
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(asked).toContain(other);
     });
     expect(screen.queryByText(english.report.period_text)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: t("progress.screen") })).toBeInTheDocument();
@@ -207,15 +219,18 @@ describe("report screen", () => {
   it("does not refetch the view when a PDF is requested", async () => {
     await open();
     const views = () => mock.calls.filter((call) => call.path === `/reports/${id}/view`).length;
+    const reports = () => mock.calls.filter((call) => call.method === "GET" && call.path === `/reports/${id}`).length;
     expect(views()).toBe(1);
     await userEvent.click(screen.getByRole("button", { name: t("progress.pdf") }));
     const dialog = await screen.findByRole("dialog", { name: t("progress.pdf") });
+    const before = reports();
     await userEvent.click(within(dialog).getAllByRole("button", { name: t("progress.generatePdf") })[0] as HTMLElement);
     await waitFor(() => {
       expect(mock.calls.some((call) => call.method === "POST" && call.path === `/reports/${id}/pdfs`)).toBe(true);
     });
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
+    // The request refreshes the report; the view is not read again with it.
+    await waitFor(() => {
+      expect(reports()).toBeGreaterThan(before);
     });
     expect(views()).toBe(1);
   });
@@ -242,12 +257,9 @@ describe("report screen", () => {
         return HttpResponse.json(report());
       }),
     );
-    await renderApp(`/reports/${id}/overview`);
+    const { queryClient } = await renderApp(`/reports/${id}/overview`);
     await waitFor(() => {
-      expect(mock.calls.some((call) => call.path === `/reports/${id}/view`)).toBe(true);
-    });
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(queryClient.getQueryState(["report-view", id, "en"])?.status).toBe("error");
     });
     expect(screen.getByRole("heading", { level: 1, name: t("progress.screen") })).toBeInTheDocument();
     expect(screen.queryByText(t("error.INTERNAL_ERROR"))).not.toBeInTheDocument();

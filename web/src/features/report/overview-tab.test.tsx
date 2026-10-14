@@ -350,6 +350,15 @@ describe("overview tab", () => {
     expect(screen.getByRole("link", { name: "Qualidade dos dados, avisos: 2" })).toBeInTheDocument();
   });
 
+  it("explains the confidence under the action plan", async () => {
+    await open();
+    const table = screen.getByRole("table", { name: "Prioritized action plan" });
+    const note = screen.getByText(
+      "Confidence: exact, read from the metrics; inferred, deduced from approximate or partial evidence; unknown, not established by the metrics.",
+    );
+    expect(table.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("action plan", async () => {
     await open();
     const table = screen.getByRole("table", { name: "Prioritized action plan" });

@@ -104,7 +104,7 @@ export function QualityTab() {
       <p className="text-sm">
         <DatedText
           i18nKey="report.quality.collected"
-          values={{ start: formatTimeIn(quality.collection_started_at, report.timezone), end: formatTimeIn(quality.collection_completed_at, report.timezone), elapsed: formatElapsed(elapsed) }}
+          values={{ start: formatTimeIn(quality.collection_started_at, report.timezone), end: formatTimeIn(quality.collection_completed_at, report.timezone), elapsed: elapsed < 1000 ? t("report.quality.underOneSecond") : formatElapsed(elapsed) }}
         />
       </p>
       <DataTable

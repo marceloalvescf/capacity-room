@@ -305,7 +305,7 @@
   },
   "progress": {
     "screen": "Relatório",
-    "title": "Relatório de {{profile}}",
+    "title": "Relatório · {{profile}}",
     "requested": "Criado em <date>{{time}}</date> por {{username}}",
     "keptUntil": "Disponível até <date>{{date}}</date>",
     "steps": "Progresso",
@@ -370,7 +370,8 @@
       "scope": "Escopo",
       "confidence": "Confiança",
       "actionLink": "{{action}} ({{scope}})",
-      "empty": "Nenhuma ação priorizada foi identificada."
+      "empty": "Nenhuma ação priorizada foi identificada.",
+      "confidenceNote": "Confiança: exata, lida das métricas; inferida, deduzida de evidência aproximada ou parcial; desconhecida, não estabelecida pelas métricas."
     },
     "about": {
       "title": "Sobre este relatório",
@@ -456,7 +457,7 @@
       "action": "O que fazer",
       "evidence": "Evidências"
     },
-    "confidence": "Confiança: {{value}}",
+    "confidence": "Confiança: {{value}}.",
     "node": {
       "unknownPool": "Indeterminado",
       "ready": "Pronto",
@@ -490,6 +491,7 @@
     "copied": "Copiado: {{name}}",
     "copyFailed": "Não foi possível copiar o nome.",
     "quality": {
+      "underOneSecond": "menos de 1 s",
       "collected": "Coletado de <date>{{start}}</date> a <date>{{end}}</date>, em {{elapsed}}",
       "metrics": "Métricas lidas",
       "warnings": "Avisos",
@@ -503,6 +505,11 @@
     "exact": "Exata",
     "inferred": "Inferida",
     "unknown": "Desconhecida"
+  },
+  "confidenceMeaning": {
+    "exact": "Lida das métricas.",
+    "inferred": "Deduzida de evidência aproximada ou parcial.",
+    "unknown": "Não estabelecida pelas métricas."
   },
   "hpaCoverage": {
     "covered": "Coberto por um HPA",

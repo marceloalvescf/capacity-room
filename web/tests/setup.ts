@@ -11,6 +11,7 @@ afterEach(cleanup);
 // jsdom lays nothing out and implements neither scrolling nor media queries; a row that opens would otherwise fail.
 // A test that needs an answer stubs its own.
 Object.defineProperty(window, "scrollBy", { configurable: true, writable: true, value: () => undefined });
+Object.defineProperty(Element.prototype, "scrollIntoView", { configurable: true, writable: true, value: () => undefined });
 Object.defineProperty(window, "matchMedia", {
   configurable: true,
   writable: true,

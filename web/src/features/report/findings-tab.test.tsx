@@ -1,6 +1,6 @@
-import { act, cleanup, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "@/api/schema.gen";
 import { i18next } from "@/i18n/i18n";
 import { installMockApi, profileSummary, report, signedIn } from "../../../tests/msw";
@@ -209,6 +209,20 @@ describe("findings tab", () => {
     expect(router.state.location.search).toBe("");
   });
 
+  it("scrolls a finding named in the address into view once", async () => {
+    const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+    const user = userEvent.setup();
+    await open("?finding=5");
+    await waitFor(() => {
+      expect(scroll).toHaveBeenCalledTimes(1);
+    });
+    const entry = scroll.mock.contexts[0] as HTMLElement;
+    expect(entry).toHaveAttribute("aria-pressed", "true");
+    expect(entry).toHaveTextContent(sentenceOf(5));
+    await user.click(items()[0] as HTMLElement);
+    expect(scroll).toHaveBeenCalledTimes(1);
+  });
+
   it("select one", async () => {
     const user = userEvent.setup();
     const { router } = await open();
@@ -221,7 +235,7 @@ describe("findings tab", () => {
     const article = within(detail());
     expect(article.getByRole("heading", { name: "payments" })).toHaveClass("font-mono");
     expect(article.getByText("Namespace")).toBeInTheDocument();
-    expect(article.getByText("Confidence: Inferred")).toBeInTheDocument();
+    expect(article.getByText("Confidence: Inferred. Deduced from approximate or partial evidence.")).toBeInTheDocument();
     expect(article.getByText("Observed")).toBeInTheDocument();
     expect(article.getByText(finding?.sentence ?? "")).toBeInTheDocument();
     expect(article.getByText("What to do")).toBeInTheDocument();

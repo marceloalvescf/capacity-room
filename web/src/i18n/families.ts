@@ -45,6 +45,7 @@ export const families: Readonly<Record<string, readonly string[]>> = {
   "report.tab": reportTabs,
   "report.overview.scope": viewScopeTypeValues.filter((type) => type !== "cluster"),
   confidence: viewConfidenceValues,
+  confidenceMeaning: viewConfidenceValues,
   scope: viewScopeTypeValues,
   evidence: viewEvidenceNameValues,
   hpaCoverage: viewHPACoverageValues,

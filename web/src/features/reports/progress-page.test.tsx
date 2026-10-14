@@ -74,6 +74,19 @@ afterEach(() => {
 });
 
 describe("progress screen", () => {
+  it("titles the report with its profile", async () => {
+    mock.reports = [report({ ...running })];
+    await open();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Report · Production");
+  });
+
+  it("titles the report with its profile in Portuguese", async () => {
+    mock.session = signedIn({ language: "pt-BR" });
+    mock.reports = [report({ ...running })];
+    await open("pt-BR");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Relatório · Production");
+  });
+
   it("steps advance", async () => {
     mock.reports = [report({ ...running, status: "queued", phase: "waiting" })];
     vi.useFakeTimers({ shouldAdvanceTime: true });

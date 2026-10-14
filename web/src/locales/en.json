@@ -305,7 +305,7 @@
   },
   "progress": {
     "screen": "Report",
-    "title": "Report on {{profile}}",
+    "title": "Report · {{profile}}",
     "requested": "Requested <date>{{time}}</date> by {{username}}",
     "keptUntil": "Kept until <date>{{date}}</date>",
     "steps": "Progress",
@@ -370,7 +370,8 @@
       "scope": "Scope",
       "confidence": "Confidence",
       "actionLink": "{{action}} ({{scope}})",
-      "empty": "No prioritized action was identified."
+      "empty": "No prioritized action was identified.",
+      "confidenceNote": "Confidence: exact, read from the metrics; inferred, deduced from approximate or partial evidence; unknown, not established by the metrics."
     },
     "about": {
       "title": "About this report",
@@ -456,7 +457,7 @@
       "action": "What to do",
       "evidence": "Evidence"
     },
-    "confidence": "Confidence: {{value}}",
+    "confidence": "Confidence: {{value}}.",
     "node": {
       "unknownPool": "Undetermined",
       "ready": "Ready",
@@ -491,6 +492,7 @@
     "copyFailed": "The name could not be copied.",
     "quality": {
       "collected": "Collected from <date>{{start}}</date> to <date>{{end}}</date>, in {{elapsed}}",
+      "underOneSecond": "under 1 s",
       "metrics": "Metrics read",
       "warnings": "Warnings",
       "notices": "Notices",
@@ -503,6 +505,11 @@
     "exact": "Exact",
     "inferred": "Inferred",
     "unknown": "Unknown"
+  },
+  "confidenceMeaning": {
+    "exact": "Read from the metrics.",
+    "inferred": "Deduced from approximate or partial evidence.",
+    "unknown": "Not established by the metrics."
   },
   "hpaCoverage": {
     "covered": "Covered by an HPA",

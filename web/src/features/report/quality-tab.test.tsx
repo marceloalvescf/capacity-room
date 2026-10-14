@@ -38,6 +38,25 @@ describe("data quality tab", () => {
     expect(await screen.findByText(sentence("Collected from 2026-07-15 14:30 to 2026-07-15 14:30, in 0:42"))).toBeInTheDocument();
   });
 
+  it("a collection under a second reads under 1 s", async () => {
+    mock.views.set(`${id}:en`, { ...english, quality: { ...english.quality, collection_completed_at: english.quality.collection_started_at } });
+    await open();
+    expect(await screen.findByText(sentence("Collected from 2026-07-15 14:30 to 2026-07-15 14:30, in under 1 s"))).toBeInTheDocument();
+  });
+
+  it("a collection of 65 seconds reads 1:05", async () => {
+    mock.views.set(`${id}:en`, { ...english, quality: { ...english.quality, collection_completed_at: "2026-07-15T14:31:05-03:00" } });
+    await open();
+    expect(await screen.findByText(sentence("Collected from 2026-07-15 14:30 to 2026-07-15 14:31, in 1:05"))).toBeInTheDocument();
+  });
+
+  it("a collection under a second reads in Portuguese", async () => {
+    mock.session = signedIn({ language: "pt-BR" });
+    mock.views.set(`${id}:pt-BR`, { ...portuguese, quality: { ...portuguese.quality, collection_completed_at: portuguese.quality.collection_started_at } });
+    await renderApp(`/reports/${id}/quality`, "pt-BR");
+    expect(await screen.findByText(sentence("Coletado de 2026-07-15 14:30 a 2026-07-15 14:30, em menos de 1 s"))).toBeInTheDocument();
+  });
+
   it("collection line in the zone of the report", async () => {
     mock.views.set(`${id}:en`, { ...english, report: { ...english.report, timezone: "Asia/Tokyo" } });
     await open();

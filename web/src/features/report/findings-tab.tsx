@@ -1,9 +1,10 @@
-import { useId, useMemo } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 import { viewScopeTypeValues, viewSeverityValues } from "@/api/schema.gen";
 import { StatusMark } from "@/components/status-mark";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { scrollBehavior } from "@/components/reveal";
 import { cn } from "@/lib/cn";
 import { useAddress } from "@/lib/address";
 import type { ViewFinding } from "./api";
@@ -40,12 +41,23 @@ interface Entry {
   index: number;
 }
 
-function ListItem({ entry, selected, onSelect }: { entry: Entry; selected: boolean; onSelect: () => void }) {
+function ListItem({
+  entry,
+  selected,
+  onSelect,
+  buttonRef,
+}: {
+  entry: Entry;
+  selected: boolean;
+  onSelect: () => void;
+  buttonRef?: Ref<HTMLButtonElement> | undefined;
+}) {
   const { t } = useTranslation();
   const name = scopeName(entry.finding, t("report.node.unknownPool"));
   return (
     <li className="border-b border-border last:border-0">
       <button
+        ref={buttonRef}
         type="button"
         aria-pressed={selected}
         onClick={onSelect}
@@ -80,7 +92,9 @@ function Detail({ finding }: { finding: ViewFinding }) {
               ? t(`scope.${finding.scope_type}`)
               : `${t(`scope.${finding.scope_type}`)} · ${finding.scope_kind}`}
           </span>
-          <span className="text-muted-fg">{t("report.confidence", { value: t(`confidence.${finding.confidence}`) })}</span>
+          <span className="text-muted-fg">
+            {t("report.confidence", { value: t(`confidence.${finding.confidence}`) })} {t(`confidenceMeaning.${finding.confidence}`)}
+          </span>
         </p>
         {name === null ? null : (
           <h3 className={cn("text-lg font-semibold break-all", !isUnknownPool(finding) && "font-mono")}>{name}</h3>
@@ -142,6 +156,15 @@ export function FindingsTab() {
 
   const wanted = readIndex(params.get("finding"));
   const selected = shown.find((entry) => entry.index === wanted) ?? shown[0];
+
+  // A finding named in the address when the tab opens is brought into view once.
+  const selectedItem = useRef<HTMLButtonElement>(null);
+  const [deepLinked] = useState(wanted !== null);
+  useLayoutEffect(() => {
+    if (deepLinked) {
+      selectedItem.current?.scrollIntoView({ block: "nearest", behavior: scrollBehavior() });
+    }
+  }, [deepLinked]);
 
   function toggle(severity: Severity) {
     const kept = severityOrder.filter((name) => severities.has(name) !== (name === severity));
@@ -245,6 +268,7 @@ export function FindingsTab() {
                         key={entry.index}
                         entry={entry}
                         selected={entry === selected}
+                        buttonRef={entry === selected ? selectedItem : undefined}
                         onSelect={() => {
                           write((next) => {
                             next.set("finding", String(entry.index));

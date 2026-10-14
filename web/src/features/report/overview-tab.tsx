@@ -282,43 +282,46 @@ function Plan() {
       {recommendations.length === 0 ? (
         <p className="text-sm text-muted-fg">{t("report.plan.empty")}</p>
       ) : (
-        <div className="overflow-x-auto rounded-md border border-border bg-surface text-surface-fg">
-          <table aria-labelledby={headingId} className="w-full text-sm">
-            <thead className="border-b border-border text-left">
-              <tr>
-                <th className="label px-3 py-2">{t("report.plan.order")}</th>
-                <th className="label px-3 py-2">{t("report.plan.priority")}</th>
-                <th className="label px-3 py-2">{t("report.plan.action")}</th>
-                <th className="label px-3 py-2">{t("report.plan.scope")}</th>
-                <th className="label px-3 py-2">{t("report.plan.confidence")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recommendations.map((recommendation, index) => (
-                <tr key={index} className="border-b border-border last:border-0">
-                  <td className="px-3 py-2 font-mono">{index + 1}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <StatusMark status={recommendation.severity} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <PlanAction recommendation={recommendation} />
-                  </td>
-                  <td className="px-3 py-2">
-                    {recommendation.scopes.length <= 3 ? (
-                      <>
-                        <span className="text-muted-fg">{t(`scope.${recommendation.scope_type}`)}</span>{" "}
-                        <span className="font-mono [overflow-wrap:anywhere]">{scopeLabel(recommendation)}</span>
-                      </>
-                    ) : (
-                      scopeLabel(recommendation)
-                    )}
-                  </td>
-                  <td className="px-3 py-2">{t(`confidence.${recommendation.confidence}`)}</td>
+        <>
+          <div className="overflow-x-auto rounded-md border border-border bg-surface text-surface-fg">
+            <table aria-labelledby={headingId} className="w-full text-sm">
+              <thead className="border-b border-border text-left">
+                <tr>
+                  <th className="label px-3 py-2">{t("report.plan.order")}</th>
+                  <th className="label px-3 py-2">{t("report.plan.priority")}</th>
+                  <th className="label px-3 py-2">{t("report.plan.action")}</th>
+                  <th className="label px-3 py-2">{t("report.plan.scope")}</th>
+                  <th className="label px-3 py-2">{t("report.plan.confidence")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {recommendations.map((recommendation, index) => (
+                  <tr key={index} className="border-b border-border last:border-0">
+                    <td className="px-3 py-2 font-mono">{index + 1}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <StatusMark status={recommendation.severity} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <PlanAction recommendation={recommendation} />
+                    </td>
+                    <td className="px-3 py-2">
+                      {recommendation.scopes.length <= 3 ? (
+                        <>
+                          <span className="text-muted-fg">{t(`scope.${recommendation.scope_type}`)}</span>{" "}
+                          <span className="font-mono [overflow-wrap:anywhere]">{scopeLabel(recommendation)}</span>
+                        </>
+                      ) : (
+                        scopeLabel(recommendation)
+                      )}
+                    </td>
+                    <td className="px-3 py-2">{t(`confidence.${recommendation.confidence}`)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-sm text-muted-fg">{t("report.plan.confidenceNote")}</p>
+        </>
       )}
     </section>
   );
