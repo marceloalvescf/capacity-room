@@ -72,7 +72,8 @@ export function useReport(id: string, enabled = true): UseQueryResult<Report> {
   const api = useApi();
   // The checks count from the answer that showed the report active again, so
   // a PDF requested after a long run is followed as closely as a new report.
-  const activeSince = useRef<number | null>(null);
+  // The base names its report, so a screen that keeps this hook across ids starts over for each.
+  const activeSince = useRef<{ id: string; count: number } | null>(null);
   return useQuery({
     queryKey: [...reportsKey, id],
     enabled,
@@ -88,8 +89,10 @@ export function useReport(id: string, enabled = true): UseQueryResult<Report> {
         activeSince.current = null;
         return false;
       }
-      activeSince.current ??= query.state.dataUpdateCount - 1;
-      return nextCheck(query.state.dataUpdateCount - activeSince.current);
+      if (activeSince.current?.id !== id) {
+        activeSince.current = { id, count: query.state.dataUpdateCount - 1 };
+      }
+      return nextCheck(query.state.dataUpdateCount - activeSince.current.count);
     },
   });
 }

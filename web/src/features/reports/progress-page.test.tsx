@@ -175,7 +175,7 @@ describe("progress screen", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const { unmount } = await open();
     expect(screen.getByRole("list", { name: t("progress.steps") })).toBeInTheDocument();
-    expect(screen.queryByText(/^Elapsed/)).not.toBeInTheDocument();
+    expect(screen.queryByText(t("progress.elapsed", { time: "0:00" }).replace("0:00", ""), { exact: false })).not.toBeInTheDocument();
     unmount();
     mock.reports = [
       report({
@@ -192,7 +192,13 @@ describe("progress screen", () => {
     const other = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a02";
     mock.reports = [report(running), report({ id: other })];
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    const { router } = await open();
+    const { router } = await renderApp(`/jobs/${other}`);
+    await screen.findByRole("link", { name: t("report.open") });
+    await act(async () => {
+      await router.navigate(`/jobs/${id}`);
+    });
+    await screen.findByRole("list", { name: t("progress.steps") });
+    // The collected report is cached now, so the page shows it at once.
     const heard = listen();
     await act(async () => {
       await router.navigate(`/jobs/${other}`);
@@ -232,6 +238,7 @@ describe("progress screen", () => {
     await advance(10_000);
     await settle();
     expect(checks()).toHaveLength(46);
+    // userEvent waits on timers that do not run under these fake ones.
     fireEvent.click(within(group("en")).getByRole("button", { name: t("progress.generatePdf") }));
     await settle();
     expect(checks()).toHaveLength(47);
