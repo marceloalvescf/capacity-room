@@ -142,7 +142,18 @@ func pods(objects []object) map[string]map[string]any {
 }
 
 func TestPodSecurity(t *testing.T) {
-	for name, spec := range pods(render(t, "capacity-room", required...)) {
+	specs := pods(render(t, "capacity-room", append(required, "-f", "testdata/profiles.yaml",
+		"--set", "admin.username=admin", "--set", "admin.existingSecret=admin-secret")...))
+	for _, name := range []string{"Deployment capacity-room-serve", "Deployment capacity-room-worker",
+		"Job capacity-room-admin", "Job capacity-room-profiles"} {
+		if specs[name] == nil {
+			t.Fatalf("%s is not among the checked pods", name)
+		}
+	}
+	if len(specs) != 4 {
+		t.Fatalf("%d pods checked, want 4", len(specs))
+	}
+	for name, spec := range specs {
 		if spec["automountServiceAccountToken"] != false {
 			t.Errorf("%s mounts a service account token", name)
 		}

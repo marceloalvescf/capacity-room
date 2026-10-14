@@ -59,6 +59,9 @@ func TestAdminJob(t *testing.T) {
 	if out := renderError(t, append(required, "--set", "admin.username=admin")...); !strings.Contains(out, "existingSecret") {
 		t.Errorf("a missing existingSecret is refused without naming it:\n%s", out)
 	}
+	if out := renderError(t, append(required, "--set", "admin.username=admin", "--set", "admin.existingSecret=s", "--set", "admin.passwordKey=a/b")...); !strings.Contains(out, "passwordKey") {
+		t.Errorf("a passwordKey with a slash is refused without naming it:\n%s", out)
+	}
 	if out := renderError(t, append(required, "--set", "admin.username=admin", "--set", "admin.existingSecret=s", "--set", "admin.language=fr")...); !strings.Contains(out, "language") {
 		t.Errorf("language fr is refused without naming it:\n%s", out)
 	}
