@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-14
+
 ### Added
 
 - The report list shows the cluster of each report under its profile, and the worst severity the report shows under its status; a report collected before this version shows neither.
