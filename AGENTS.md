@@ -643,7 +643,9 @@ redactor the moment the settings are loaded, before the pool opens.
   floating layer is closed by a neat-line, and a modal dims the page through
   the `scrim` token.
 - **An icon button keeps its name.** `IconButton` puts the name in
-  `aria-label` and shows it in a tooltip on hover and on focus.
+  `aria-label` and shows it in a tooltip on hover and on focus. Its tooltip is
+  drawn inside the landmark that holds the button, or in the body when no
+  landmark does, and the app has one tooltip provider.
 - **The static handler answers what no route answers,** for `GET` and `HEAD`
   only, and never under `/api` or `/health/`: the built file at the cleaned
   path, a plain 404 for a missing file under `/assets/`, and `index.html`

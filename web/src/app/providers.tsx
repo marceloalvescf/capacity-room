@@ -1,4 +1,5 @@
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
+import { Tooltip } from "radix-ui";
 import { RouterProvider, type DataRouter } from "react-router";
 import { ApiContext } from "@/api/context";
 import type { Api } from "@/api/client";
@@ -11,7 +12,9 @@ export function Providers({ queryClient, api, router }: { queryClient: QueryClie
       <ApiContext value={api}>
         <LiveRegion>
           <SessionLanguage />
-          <RouterProvider router={router} />
+          <Tooltip.Provider>
+            <RouterProvider router={router} />
+          </Tooltip.Provider>
         </LiveRegion>
       </ApiContext>
     </QueryClientProvider>

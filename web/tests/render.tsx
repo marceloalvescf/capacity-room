@@ -1,3 +1,5 @@
+import { Tooltip } from "radix-ui";
+import type { ReactNode } from "react";
 import { QueryClient } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import { createMemoryRouter } from "react-router";
@@ -31,4 +33,9 @@ export function sentence(text: string | RegExp) {
     element !== null &&
     element.querySelector(":scope > span.whitespace-nowrap") !== null &&
     (typeof text === "string" ? element.textContent === text : text.test(element.textContent));
+}
+
+// Wraps a tree that holds an IconButton in the one tooltip provider the app renders.
+export function withTooltips(ui: ReactNode) {
+  return <Tooltip.Provider>{ui}</Tooltip.Provider>;
 }

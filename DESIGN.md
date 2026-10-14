@@ -285,7 +285,7 @@ Every radius is 2px: a near-square corner that keeps a hairline drawing from loo
 - **Secondary (default):** Sheet fill, Input Border stroke, Sheet ink.
 - **Danger:** Chart Magenta fill and border, Sheet text; only on the confirm button of a destructive dialog. The action that opens that dialog is a secondary button.
 - **Focus / Disabled:** 2px Sounding Blue outline offset 2px; disabled drops to 60% opacity with a not-allowed cursor. No hover colour shift.
-- **Icon button:** a secondary button 36px square with a 20px Phosphor icon; its name is in `aria-label` and in a tooltip on hover and focus.
+- **Icon button:** a secondary button 36px square with a 20px Phosphor icon; its name is in `aria-label` and in a tooltip on hover and focus. The tooltip is drawn inside the landmark that holds the button, or in the body when no landmark does; the app has one tooltip provider.
 
 ### Segmented control
 A row of radio labels joined edge to edge (-1px overlap), 2px outer corners, 16px padding, under a legend in the field-label style (0.875rem 500). The checked segment takes the Action Ink fill; focus outlines the segment.

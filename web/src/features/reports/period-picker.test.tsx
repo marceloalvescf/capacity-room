@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18next } from "@/i18n/i18n";
 import { PeriodPicker } from "./period-picker";
 import type { PeriodValue } from "./period";
+import { withTooltips } from "../../../tests/render";
 
 const t = (key: string, options: Record<string, string> = {}): string => i18next.t(key, options);
 
@@ -23,7 +24,7 @@ const range = (start: string, end: string): PeriodValue => ({ kind: "range", sta
 
 function open(permitted: string[], value: PeriodValue = length("24h")) {
   const onChange = vi.fn();
-  render(<PeriodPicker value={value} zone={zone} permitted={permitted} onChange={onChange} />);
+  render(withTooltips(<PeriodPicker value={value} zone={zone} permitted={permitted} onChange={onChange} />));
   return onChange;
 }
 
@@ -417,7 +418,7 @@ describe("period picker", () => {
   });
 
   it("a server error is shown beside the period", () => {
-    render(<PeriodPicker value={length("24h")} zone={zone} permitted={[]} error="Not allowed." onChange={vi.fn()} />);
+    render(withTooltips(<PeriodPicker value={length("24h")} zone={zone} permitted={[]} error="Not allowed." onChange={vi.fn()} />));
     expect(screen.getByText("Not allowed.")).toBeInTheDocument();
   });
 });

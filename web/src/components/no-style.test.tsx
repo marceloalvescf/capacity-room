@@ -11,7 +11,7 @@ import { PeriodPicker } from "@/features/reports/period-picker";
 import { reportTabs } from "@/features/report/tabs";
 import { i18next } from "@/i18n/i18n";
 import { adminProfile, installMockApi, profileSummary, report, signedIn } from "../../tests/msw";
-import { renderApp } from "../../tests/render";
+import { renderApp, withTooltips } from "../../tests/render";
 import { mockColourScheme } from "../../tests/match-media";
 import viewEn from "../../tests/fixtures/view/edge-scaling.en.json";
 import type { components } from "@/api/schema.gen";
@@ -74,7 +74,7 @@ it("an icon button shows its name on focus and on hover, opens its menu, and inj
   await i18next.changeLanguage("en");
   const stop = watchStyles();
   const user = userEvent.setup();
-  render(<ThemeToggle />);
+  render(withTooltips(<ThemeToggle />));
   const button = screen.getByRole("button", { name: "Theme: System" });
   expect(button).toHaveTextContent("");
 
@@ -171,12 +171,12 @@ it("the period picker on Range with a calendar open writes no style", async () =
   const stop = watchStyles();
   const user = userEvent.setup();
   render(
-    <PeriodPicker
+    withTooltips(<PeriodPicker
       value={{ kind: "range", start: "2026-09-01 00:00", end: "2026-10-01 00:00" }}
       zone="UTC"
       permitted={[]}
       onChange={() => undefined}
-    />,
+    />),
   );
   await user.click(screen.getByRole("button", { name: /Period/ }));
   await user.click(await screen.findByRole("button", { name: i18next.t("period.range.pickFrom") }));

@@ -6,6 +6,7 @@ import { LiveRegion } from "@/app/live-region";
 import "@/i18n/i18n";
 import { DataTable, type Column } from "./data-table";
 import * as reveal from "./reveal";
+import { withTooltips } from "../../tests/render";
 
 interface Row {
   key: string;
@@ -62,9 +63,9 @@ function mount(rows: Row[], path = "/", defaultOrder: "status" | "view" = "statu
     { initialEntries: [path] },
   );
   render(
-    <LiveRegion>
+    withTooltips(<LiveRegion>
       <RouterProvider router={router} />
-    </LiveRegion>,
+    </LiveRegion>),
   );
   return router;
 }
@@ -308,7 +309,7 @@ describe("data table", () => {
       { id: "tint", header: "Tint", cell: (row) => row.key, cellClassName: (row) => (row.pods > 1 ? "bg-depth-2" : "") },
     ];
     render(
-      <LiveRegion>
+      withTooltips(<LiveRegion>
         <RouterProvider
           router={createMemoryRouter(
             [
@@ -330,7 +331,7 @@ describe("data table", () => {
             { initialEntries: ["/"] },
           )}
         />
-      </LiveRegion>,
+      </LiveRegion>),
     );
     expect(screen.getByRole("cell", { name: "web-1" })).not.toHaveClass("bg-depth-2");
     expect(screen.getByRole("cell", { name: "api-1" })).toHaveClass("bg-depth-2");

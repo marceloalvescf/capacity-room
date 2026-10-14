@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockColourScheme } from "../../../tests/match-media";
+import { withTooltips } from "../../../tests/render";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,7 @@ describe("ui", () => {
     it(`axe: the primitives in the ${theme} theme`, async () => {
       root.setAttribute("data-theme", theme);
       const { container } = render(
-        <main>
+        withTooltips(<main>
           <Button>{i18next.t("login.submit")}</Button>
           <Button variant="primary" disabled>
             {i18next.t("login.submitting")}
@@ -49,7 +50,7 @@ describe("ui", () => {
           <Alert tone="error">{i18next.t("error.general")}</Alert>
           <Alert tone="notice">{i18next.t("login.sessionEnded")}</Alert>
           <ThemeToggle />
-        </main>,
+        </main>),
       );
       expect(await violations(container)).toEqual([]);
 
@@ -93,7 +94,7 @@ describe("ui", () => {
 
   it("a keyboard-highlighted item carries the focus outline", async () => {
     const user = userEvent.setup();
-    render(<ThemeToggle />);
+    render(withTooltips(<ThemeToggle />));
     screen.getByRole("button", { name: /Theme/ }).focus();
     await user.keyboard("{Enter}");
     await screen.findByRole("menu");
@@ -108,7 +109,7 @@ describe("ui", () => {
   it("the theme toggle chooses dark, then system", async () => {
     const media = mockColourScheme(false);
     const user = userEvent.setup();
-    render(<ThemeToggle />);
+    render(withTooltips(<ThemeToggle />));
 
     await user.click(screen.getByRole("button", { name: /Theme/ }));
     const items = await screen.findAllByRole("menuitemradio");
