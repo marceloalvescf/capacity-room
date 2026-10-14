@@ -794,7 +794,7 @@ export interface components {
             confidence: components["schemas"]["ViewConfidence"];
             /** @description What the finding observed, in the language of the view. */
             sentence: string;
-            /** @description What to do about it, in the language of the view. */
+            /** @description What to do about it, in the language of the view. Empty for a healthy finding. */
             action: string;
             evidence: components["schemas"]["ViewEvidence"][];
         };
@@ -943,7 +943,7 @@ export interface components {
             state: components["schemas"]["ViewCapabilityState"];
             strategy: components["schemas"]["ViewStrategy"];
             evidence: string[];
-            /** @description The remark of the PDF's appendix. */
+            /** @description The remark of the PDF's appendix. Empty when the capability has no remark. */
             remark: string;
         };
         ViewMessage: {

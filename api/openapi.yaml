@@ -2184,7 +2184,7 @@ components:
           description: What the finding observed, in the language of the view.
         action:
           type: string
-          description: What to do about it, in the language of the view.
+          description: What to do about it, in the language of the view. Empty for a healthy finding.
         evidence:
           type: array
           items:
@@ -2546,7 +2546,7 @@ components:
             type: string
         remark:
           type: string
-          description: The remark of the PDF's appendix.
+          description: The remark of the PDF's appendix. Empty when the capability has no remark.
     ViewMessage:
       type: object
       required: [code, text]
