@@ -74,6 +74,16 @@ func renderError(t *testing.T, args ...string) string {
 	return stderr.String()
 }
 
+// lint runs helm lint --strict on the chart with args and fails the test on
+// an error.
+func lint(t *testing.T, args ...string) {
+	t.Helper()
+	out, err := exec.Command("helm", append([]string{"lint", "--strict", chartDir}, args...)...).CombinedOutput()
+	if err != nil {
+		t.Fatalf("helm lint: %v\n%s", err, out)
+	}
+}
+
 // find returns the object of kind and name, failing the test when there is
 // none.
 func find(t *testing.T, objects []object, kind, name string) object {

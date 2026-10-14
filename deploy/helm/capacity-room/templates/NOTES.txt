@@ -1,3 +1,9 @@
 CapacityRoom {{ .Chart.AppVersion }} is installed as {{ .Release.Name }} in the namespace {{ .Release.Namespace }}.
 
 The web answers on the Service {{ include "capacity-room.fullname" . }}, port 8080.
+
+{{- if .Values.route.enabled }}
+The web answers at https://{{ first .Values.route.hostnames }}.
+{{- else if .Values.ingress.enabled }}
+The web answers at https://{{ first .Values.ingress.hosts }}.
+{{- end }}

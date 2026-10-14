@@ -1,0 +1,14 @@
+database:
+  existingSecret: capacity-room-db-app
+serverSecret:
+  existingSecret: capacity-room-server-secret
+platform:
+  trusted_proxies: ["10.244.0.0/16"]
+  allowed_endpoint_hostnames: ["prometheus.monitoring.svc.cluster.local"]
+ingress:
+  enabled: true
+  className: nginx
+  hosts: ["capacityroom.example.com"]
+  tls:
+    - hosts: ["capacityroom.example.com"]
+      secretName: capacityroom-example-com-tls

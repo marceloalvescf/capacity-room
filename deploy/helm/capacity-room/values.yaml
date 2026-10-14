@@ -55,3 +55,20 @@ worker:
       memory: 512Mi
     limits:
       memory: 4Gi
+
+# A Gateway API HTTPRoute to serve. parentRefs names the Gateway, for
+# example [{name: gateway, namespace: gateway-system, sectionName: https}];
+# TLS is the Gateway's. route and ingress exclude each other.
+route:
+  enabled: false
+  parentRefs: []
+  hostnames: []
+
+# An Ingress to serve, for a cluster with an Ingress controller. hosts is a
+# list of host names; tls is the Ingress tls list as Kubernetes writes it.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []

@@ -4,7 +4,6 @@ package chart
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -41,10 +40,7 @@ func TestChartVersionEqualsVERSION(t *testing.T) {
 }
 
 func TestLint(t *testing.T) {
-	out, err := exec.Command("helm", append([]string{"lint", "--strict", chartDir}, required...)...).CombinedOutput()
-	if err != nil {
-		t.Fatalf("helm lint: %v\n%s", err, out)
-	}
+	lint(t, required...)
 }
 
 // loadSettings writes the platform.toml of the rendered ConfigMap into a
@@ -111,15 +107,27 @@ func TestEverySettingLoads(t *testing.T) {
 
 func TestChartOwnedKeysAreRefused(t *testing.T) {
 	for _, key := range []string{"server_secret_path", "credential_dir", "ca_bundle_dir", "unknown_key"} {
-		renderError(t, append(required, "--set", "platform."+key+"=/x")...)
+		if stderr := renderError(t, append(required, "--set", "platform."+key+"=/x")...); !strings.Contains(stderr, key) {
+			t.Errorf("the refusal of %s does not name it: %s", key, stderr)
+		}
 	}
 }
 
 func TestRequiredValues(t *testing.T) {
-	renderError(t, "--set", "serverSecret.existingSecret=server")
-	renderError(t, "--set", "database.existingSecret=db")
-	renderError(t, append(required, "--set", "unknown=1")...)
-	renderError(t, append(required, "--set", "worker.resources.limits.memory=4G")...)
+	cases := []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--set", "serverSecret.existingSecret=server"}, "existingSecret"},
+		{[]string{"--set", "database.existingSecret=db"}, "existingSecret"},
+		{append(required, "--set", "unknown=1"), "unknown"},
+		{append(required, "--set", "worker.resources.limits.memory=4G"), "memory"},
+	}
+	for _, c := range cases {
+		if stderr := renderError(t, c.args...); !strings.Contains(stderr, c.want) {
+			t.Errorf("the refusal does not name %q: %s", c.want, stderr)
+		}
+	}
 }
 
 // pods returns the pod spec of every Deployment and Job rendered.
@@ -192,14 +200,16 @@ func containsEnv(env []any, name, value string) bool {
 }
 
 func TestSettingsChangeRecreatesThePods(t *testing.T) {
-	checksum := func(objects []object) string {
-		template := find(t, objects, "Deployment", "capacity-room-serve")["spec"].(map[string]any)["template"].(map[string]any)
+	checksum := func(objects []object, name string) string {
+		template := find(t, objects, "Deployment", name)["spec"].(map[string]any)["template"].(map[string]any)
 		return template["metadata"].(map[string]any)["annotations"].(map[string]any)["checksum/settings"].(string)
 	}
-	before := checksum(render(t, "capacity-room", required...))
-	after := checksum(render(t, "capacity-room", append(required, "--set", "platform.worker_slots=4")...))
-	if before == after {
-		t.Fatal("the checksum did not change with the settings")
+	before := render(t, "capacity-room", required...)
+	after := render(t, "capacity-room", append(required, "--set", "platform.worker_slots=4")...)
+	for _, name := range []string{"capacity-room-serve", "capacity-room-worker"} {
+		if checksum(before, name) == checksum(after, name) {
+			t.Errorf("the checksum of %s did not change with the settings", name)
+		}
 	}
 }
 
