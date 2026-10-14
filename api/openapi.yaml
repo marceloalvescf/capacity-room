@@ -1080,6 +1080,9 @@ components:
         snapshotting while running; rendering or complete once collected;
         complete once failed.
       enum: [waiting, preflight, collecting, analyzing, snapshotting, rendering, complete]
+    Severity:
+      type: string
+      enum: [healthy, attention, critical]
     ReportFailureCode:
       type: string
       description: Why a report failed; a client words the code.
@@ -1228,6 +1231,8 @@ components:
         - expires_at
         - expired
         - selection
+        - worst_severity
+        - cluster_name
       properties:
         id:
           type: string
@@ -1281,6 +1286,20 @@ components:
           description: >-
             null in the list when the stored request cannot be read; the
             report itself then answers 500.
+        worst_severity:
+          allOf:
+            - $ref: "#/components/schemas/Severity"
+          nullable: true
+          description: >-
+            The worst severity among the findings the report shows, its minimum
+            severity applied; healthy when it shows none. Set when the collection
+            is stored; null before, and for a report collected before 1.6.0.
+        cluster_name:
+          type: string
+          nullable: true
+          description: >-
+            The cluster name of the snapshot. Set when the collection is stored;
+            null before, and for a report collected before 1.6.0.
     Report:
       description: A report with its request and its progress.
       allOf:

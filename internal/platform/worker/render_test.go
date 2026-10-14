@@ -763,7 +763,7 @@ func TestNeedsRenderNamesEachSkip(t *testing.T) {
 	cases := []struct {
 		name, statement, want string
 	}{
-		{"not collected", `UPDATE reports SET status = 'failed', phase = 'complete', failure_code = 'INTERNAL_FAILURE'`, notCollected},
+		{"not collected", `UPDATE reports SET status = 'failed', phase = 'complete', failure_code = 'INTERNAL_FAILURE', worst_severity = NULL, cluster_name = NULL`, notCollected},
 		{"expired", `UPDATE reports SET expired_at = expires_at`, expired},
 		{"deleted", `UPDATE reports SET deleted_at = expires_at`, deleted},
 		{"no row", `DELETE FROM report_pdfs`, noRow},

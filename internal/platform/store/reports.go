@@ -30,6 +30,7 @@ type Report struct {
 	ExpiredAt                           *time.Time
 	DeletedAt                           *time.Time
 	UpdatedAt                           time.Time
+	WorstSeverity, ClusterName          *string
 }
 
 // ReportPDF is a row of the report_pdfs table, without its body.
@@ -55,7 +56,7 @@ var ErrStaleAttempt = errors.New("report attempt is stale")
 const ReportRequestLockID = 72427302
 
 const reportColumns = `id, owner_id, profile_id, profile_revision_id, request, status, phase, attempt, failure_code,
-collect_job_id, created_at, started_at, collected_at, completed_at, expires_at, expired_at, deleted_at, updated_at`
+collect_job_id, created_at, started_at, collected_at, completed_at, expires_at, expired_at, deleted_at, updated_at, worst_severity, cluster_name`
 
 // prefixColumns qualifies each column of a comma-separated list with alias.
 func prefixColumns(alias, list string) string {
@@ -82,7 +83,7 @@ func scanReportAfter(row pgx.Row, lead ...any) (Report, error) {
 	var r Report
 	err := row.Scan(append(lead, &r.ID, &r.OwnerID, &r.ProfileID, &r.ProfileRevisionID, &r.Request, &r.Status, &r.Phase, &r.Attempt,
 		&r.FailureCode, &r.CollectJobID, &r.CreatedAt, &r.StartedAt, &r.CollectedAt, &r.CompletedAt, &r.ExpiresAt,
-		&r.ExpiredAt, &r.DeletedAt, &r.UpdatedAt)...)
+		&r.ExpiredAt, &r.DeletedAt, &r.UpdatedAt, &r.WorstSeverity, &r.ClusterName)...)
 	if err != nil {
 		return Report{}, err
 	}
@@ -116,9 +117,9 @@ func LockReportRequests(ctx context.Context, tx pgx.Tx) error {
 func InsertReport(ctx context.Context, q Querier, r Report) error {
 	_, err := q.Exec(ctx, `
 INSERT INTO reports (`+reportColumns+`)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
 		r.ID, r.OwnerID, r.ProfileID, r.ProfileRevisionID, r.Request, r.Status, r.Phase, r.Attempt, r.FailureCode,
-		r.CollectJobID, r.CreatedAt, r.StartedAt, r.CollectedAt, r.CompletedAt, r.ExpiresAt, r.ExpiredAt, r.DeletedAt, r.UpdatedAt)
+		r.CollectJobID, r.CreatedAt, r.StartedAt, r.CollectedAt, r.CompletedAt, r.ExpiresAt, r.ExpiredAt, r.DeletedAt, r.UpdatedAt, r.WorstSeverity, r.ClusterName)
 	if err != nil {
 		return fmt.Errorf("insert report: %w", err)
 	}
@@ -218,11 +219,20 @@ UPDATE reports SET status = 'failed', phase = 'complete', failure_code = $3, com
 WHERE id = $1 AND attempt = $2 AND status = 'running'`, id, attempt, code, now)
 }
 
-// CollectReport marks a running report collected and waiting for its PDFs.
-func CollectReport(ctx context.Context, q Querier, id uuid.UUID, attempt int, now time.Time) error {
+// CollectedSummary is what the list shows of a collection: the worst
+// severity the report shows and the name of its cluster.
+type CollectedSummary struct {
+	WorstSeverity string
+	ClusterName   string
+}
+
+// CollectReport marks a running report collected and waiting for its PDFs,
+// and stores the summary the list shows.
+func CollectReport(ctx context.Context, q Querier, id uuid.UUID, attempt int, now time.Time, summary CollectedSummary) error {
 	return execGuarded(ctx, q, `
-UPDATE reports SET status = 'collected', phase = 'rendering', collected_at = $3, updated_at = $3
-WHERE id = $1 AND attempt = $2 AND status = 'running'`, id, attempt, now)
+UPDATE reports SET status = 'collected', phase = 'rendering', collected_at = $3, updated_at = $3,
+    worst_severity = $4, cluster_name = $5
+WHERE id = $1 AND attempt = $2 AND status = 'running'`, id, attempt, now, summary.WorstSeverity, summary.ClusterName)
 }
 
 // SetReportPhase sets the phase of a collected report, which is rendering or
@@ -384,7 +394,7 @@ type ReportCursor struct {
 
 const listColumns = `r.id, r.owner_id, r.profile_id, r.profile_revision_id, r.request, r.status, r.phase, r.attempt,
 r.failure_code, r.collect_job_id, r.created_at, r.started_at, r.collected_at, r.completed_at, r.expires_at,
-r.expired_at, r.deleted_at, r.updated_at, u.username`
+r.expired_at, r.deleted_at, r.updated_at, r.worst_severity, r.cluster_name, u.username`
 
 func scanItem(row pgx.Row) (ReportListItem, error) {
 	var (
@@ -393,7 +403,7 @@ func scanItem(row pgx.Row) (ReportListItem, error) {
 	)
 	err := row.Scan(&r.ID, &r.OwnerID, &r.ProfileID, &r.ProfileRevisionID, &r.Request, &r.Status, &r.Phase, &r.Attempt,
 		&r.FailureCode, &r.CollectJobID, &r.CreatedAt, &r.StartedAt, &r.CollectedAt, &r.CompletedAt, &r.ExpiresAt,
-		&r.ExpiredAt, &r.DeletedAt, &r.UpdatedAt, &it.OwnerUsername)
+		&r.ExpiredAt, &r.DeletedAt, &r.UpdatedAt, &r.WorstSeverity, &r.ClusterName, &it.OwnerUsername)
 	if err != nil {
 		return ReportListItem{}, err
 	}

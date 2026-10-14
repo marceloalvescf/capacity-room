@@ -709,3 +709,39 @@ func TestSweepTakesADeletedRunningReportWhoseJobEnded(t *testing.T) {
 		t.Fatalf("%d of the two reports with a live job are left", n)
 	}
 }
+
+func TestReportsCollectedBeforeTheSummaryListWithNone(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	f := newReportFixture(t, pool)
+	old := collectedReport(t, pool, f, now.Add(time.Hour), map[string]string{"en": "ready"}, nil)
+
+	items, err := store.ListReports(ctx, pool, nil, 10)
+	if err != nil || len(items) != 1 || items[0].ID != old.ID {
+		t.Fatalf("ListReports = %v, %v", itemIDs(items), err)
+	}
+	if items[0].WorstSeverity != nil || items[0].ClusterName != nil {
+		t.Fatalf("old report lists a summary: %v, %v", items[0].WorstSeverity, items[0].ClusterName)
+	}
+}
+
+func TestExpiryKeepsTheSummary(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	f := newReportFixture(t, pool)
+	at := now.Add(time.Hour)
+	r := claimedReport(t, pool, f, 1)
+	if err := store.CollectReport(ctx, pool, r.ID, 1, now, summary); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE reports SET expires_at = $2 WHERE id = $1`, r.ID, at); err != nil {
+		t.Fatal(err)
+	}
+	if ids := expireDue(t, pool, at, 100); len(ids) != 1 || ids[0] != r.ID {
+		t.Fatalf("expired %v, want %v", ids, r.ID)
+	}
+	got := getReportT(t, pool, r.ID)
+	if got.ExpiredAt == nil || got.WorstSeverity == nil || *got.WorstSeverity != "attention" || got.ClusterName == nil || *got.ClusterName != "prod" {
+		t.Fatalf("expired report: %+v", got)
+	}
+}

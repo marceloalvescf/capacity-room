@@ -123,7 +123,17 @@ func reportSummaryOf(s reports.Summary) ReportSummary {
 		Status: ReportStatus(s.Status), Phase: ReportPhase(s.Phase), FailureCode: failureCodeOf(s.FailureCode),
 		Pdfs: pdfStatesOf(s.PDFs), CreatedAt: s.CreatedAt.UTC(), CompletedAt: utc(s.CompletedAt),
 		ExpiresAt: s.ExpiresAt.UTC(), Expired: s.Expired,
+		WorstSeverity: severityOf(s.WorstSeverity), ClusterName: s.ClusterName,
 	}
+}
+
+// severityOf maps a stored severity to the contract type; nil stays null.
+func severityOf(s *string) *Severity {
+	if s == nil {
+		return nil
+	}
+	v := Severity(*s)
+	return &v
 }
 
 // nullable maps an empty string to null.
@@ -142,6 +152,7 @@ func reportOf(d reports.Detail) Report {
 		Pdfs: pdfStatesOf(d.PDFs), CreatedAt: d.CreatedAt.UTC(), StartedAt: utc(d.StartedAt),
 		CollectedAt: utc(d.CollectedAt), CompletedAt: utc(d.CompletedAt),
 		ExpiresAt: d.ExpiresAt.UTC(), Expired: d.Expired,
+		WorstSeverity: severityOf(d.WorstSeverity), ClusterName: d.ClusterName,
 		Selection: reportSelectionOf(*d.Selection),
 	}
 }

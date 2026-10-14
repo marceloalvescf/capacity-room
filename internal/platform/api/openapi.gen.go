@@ -71,19 +71,19 @@ func (e Language) Valid() bool {
 
 // Defines values for MinSeverity.
 const (
-	All       MinSeverity = "all"
-	Attention MinSeverity = "attention"
-	Critical  MinSeverity = "critical"
+	MinSeverityAll       MinSeverity = "all"
+	MinSeverityAttention MinSeverity = "attention"
+	MinSeverityCritical  MinSeverity = "critical"
 )
 
 // Valid indicates whether the value is a known member of the MinSeverity enum.
 func (e MinSeverity) Valid() bool {
 	switch e {
-	case All:
+	case MinSeverityAll:
 		return true
-	case Attention:
+	case MinSeverityAttention:
 		return true
-	case Critical:
+	case MinSeverityCritical:
 		return true
 	default:
 		return false
@@ -390,6 +390,27 @@ func (e Role) Valid() bool {
 	case Operator:
 		return true
 	case Reader:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Severity.
+const (
+	SeverityAttention Severity = "attention"
+	SeverityCritical  Severity = "critical"
+	SeverityHealthy   Severity = "healthy"
+)
+
+// Valid indicates whether the value is a known member of the Severity enum.
+func (e Severity) Valid() bool {
+	switch e {
+	case SeverityAttention:
+		return true
+	case SeverityCritical:
+		return true
+	case SeverityHealthy:
 		return true
 	default:
 		return false
@@ -769,7 +790,10 @@ type ProfileThresholds struct {
 // Report A report with its request and its progress.
 type Report struct {
 	// Attempt The collection attempt that runs or ran it; 0 before the first.
-	Attempt     int        `json:"attempt"`
+	Attempt int `json:"attempt"`
+
+	// ClusterName The cluster name of the snapshot. Set when the collection is stored; null before, and for a report collected before 1.6.0.
+	ClusterName *string    `json:"cluster_name"`
 	CollectedAt *time.Time `json:"collected_at"`
 	CompletedAt *time.Time `json:"completed_at"`
 	CreatedAt   time.Time  `json:"created_at"`
@@ -796,6 +820,9 @@ type Report struct {
 	Selection ReportSelection `json:"selection"`
 	StartedAt *time.Time      `json:"started_at"`
 	Status    ReportStatus    `json:"status"`
+
+	// WorstSeverity The worst severity among the findings the report shows, its minimum severity applied; healthy when it shows none. Set when the collection is stored; null before, and for a report collected before 1.6.0.
+	WorstSeverity *Severity `json:"worst_severity"`
 }
 
 // ReportAccepted defines model for ReportAccepted.
@@ -900,6 +927,8 @@ type ReportStatus string
 
 // ReportSummary A report as the list shows it.
 type ReportSummary struct {
+	// ClusterName The cluster name of the snapshot. Set when the collection is stored; null before, and for a report collected before 1.6.0.
+	ClusterName *string    `json:"cluster_name"`
 	CompletedAt *time.Time `json:"completed_at"`
 	CreatedAt   time.Time  `json:"created_at"`
 
@@ -923,10 +952,16 @@ type ReportSummary struct {
 	// Selection null in the list when the stored request cannot be read; the report itself then answers 500.
 	Selection *ReportSelection `json:"selection"`
 	Status    ReportStatus     `json:"status"`
+
+	// WorstSeverity The worst severity among the findings the report shows, its minimum severity applied; healthy when it shows none. Set when the collection is stored; null before, and for a report collected before 1.6.0.
+	WorstSeverity *Severity `json:"worst_severity"`
 }
 
 // Role defines model for Role.
 type Role string
+
+// Severity defines model for Severity.
+type Severity string
 
 // SignedInSession defines model for SignedInSession.
 type SignedInSession struct {

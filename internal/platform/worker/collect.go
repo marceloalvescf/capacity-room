@@ -15,6 +15,7 @@ import (
 
 	"github.com/marceloalvescf/k8s-capacity-report/internal/catalog"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/collect"
+	"github.com/marceloalvescf/k8s-capacity-report/internal/document"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/pipeline"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/audit"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/netpolicy"
@@ -248,6 +249,11 @@ func (w *CollectWorker) collect(ctx context.Context, job *river.Job[reports.Coll
 	if err := checkSnapshotSize(len(body)); err != nil {
 		return err
 	}
+	worst, err := document.WorstSeverity(result.Snapshot)
+	if err != nil {
+		return err
+	}
+	summary := store.CollectedSummary{WorstSeverity: worst, ClusterName: result.Snapshot.Scope.ClusterName}
 	if h := w.hooks.beforeCollected; h != nil {
 		h(ctx, attempt)
 	}
@@ -256,7 +262,7 @@ func (w *CollectWorker) collect(ctx context.Context, job *river.Job[reports.Coll
 	defer cancel()
 	err = store.Transact(wctx, d.Pool, func(tx pgx.Tx) error {
 		now := d.Now().UTC()
-		if err := store.CollectReport(wctx, tx, id, attempt, now); err != nil {
+		if err := store.CollectReport(wctx, tx, id, attempt, now, summary); err != nil {
 			return err
 		}
 		if h := w.hooks.insideCollected; h != nil {

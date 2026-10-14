@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -153,7 +154,7 @@ func TestWritesOfAStaleAttempt(t *testing.T) {
 	writes := map[string]error{
 		"advance": store.AdvanceReport(ctx, pool, r.ID, 1, "collecting", later),
 		"fail":    store.FailReport(ctx, pool, r.ID, 1, "INTERNAL_FAILURE", later),
-		"collect": store.CollectReport(ctx, pool, r.ID, 1, later),
+		"collect": store.CollectReport(ctx, pool, r.ID, 1, later, summary),
 		"requeue": store.RequeueReport(ctx, pool, r.ID, 1, later),
 	}
 	for name, err := range writes {
@@ -198,7 +199,7 @@ func TestOutcomesOfARunningReport(t *testing.T) {
 	}
 
 	collected := claimedReport(t, pool, f, 1)
-	if err := store.CollectReport(ctx, pool, collected.ID, 1, at); err != nil {
+	if err := store.CollectReport(ctx, pool, collected.ID, 1, at, summary); err != nil {
 		t.Fatal(err)
 	}
 	got, _ = store.GetReport(ctx, pool, collected.ID)
@@ -236,7 +237,7 @@ func TestClaimRefusesATerminalReport(t *testing.T) {
 	f := newReportFixture(t, pool)
 
 	collected := claimedReport(t, pool, f, 1)
-	if err := store.CollectReport(ctx, pool, collected.ID, 1, now); err != nil {
+	if err := store.CollectReport(ctx, pool, collected.ID, 1, now, summary); err != nil {
 		t.Fatal(err)
 	}
 	failed := claimedReport(t, pool, f, 1)
@@ -312,7 +313,7 @@ func TestGuardedWritesRefuseWhatIsNotRunningAtTheirAttempt(t *testing.T) {
 	at := now.Add(time.Hour)
 
 	collected := claimedReport(t, pool, f, 2)
-	if err := store.CollectReport(ctx, pool, collected.ID, 2, now.Add(time.Minute)); err != nil {
+	if err := store.CollectReport(ctx, pool, collected.ID, 2, now.Add(time.Minute), summary); err != nil {
 		t.Fatal(err)
 	}
 	failed := claimedReport(t, pool, f, 2)
@@ -329,7 +330,7 @@ func TestGuardedWritesRefuseWhatIsNotRunningAtTheirAttempt(t *testing.T) {
 		"advance": func(id uuid.UUID, a int) error { return store.AdvanceReport(ctx, pool, id, a, "collecting", at) },
 		"requeue": func(id uuid.UUID, a int) error { return store.RequeueReport(ctx, pool, id, a, at) },
 		"fail":    func(id uuid.UUID, a int) error { return store.FailReport(ctx, pool, id, a, "INTERNAL_FAILURE", at) },
-		"collect": func(id uuid.UUID, a int) error { return store.CollectReport(ctx, pool, id, a, at) },
+		"collect": func(id uuid.UUID, a int) error { return store.CollectReport(ctx, pool, id, a, at, summary) },
 	}
 	cases := []struct {
 		name    string
@@ -402,7 +403,7 @@ func TestCountActiveReports(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := store.CollectReport(ctx, pool, collected.ID, 1, now); err != nil {
+	if err := store.CollectReport(ctx, pool, collected.ID, 1, now, summary); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.FailReport(ctx, pool, failed.ID, 1, "INTERNAL_FAILURE", now); err != nil {
@@ -589,4 +590,41 @@ func TestIdempotencyKeyPerOwner(t *testing.T) {
 	}
 	err = store.InsertIdempotencyKey(ctx, pool, f.owner, "k", "sha-c", c.ID, now)
 	wantSQLState(t, "second insert for one owner", err, "23505")
+}
+
+var summary = store.CollectedSummary{WorstSeverity: "attention", ClusterName: "prod"}
+
+func TestCollectReportStoresTheSummary(t *testing.T) {
+	ctx := context.Background()
+	pool := storetest.New(t)
+	f := newReportFixture(t, pool)
+	r := claimedReport(t, pool, f, 1)
+
+	running, _ := store.GetReport(ctx, pool, r.ID)
+	if running.WorstSeverity != nil || running.ClusterName != nil {
+		t.Fatalf("running report holds a summary: %+v", running)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE reports SET worst_severity = 'attention', cluster_name = 'prod' WHERE id = $1`, r.ID); err == nil ||
+		!strings.Contains(err.Error(), "ck_reports_summary_collected") {
+		t.Fatalf("summary on a running row: %v, want ck_reports_summary_collected", err)
+	}
+
+	if err := store.CollectReport(ctx, pool, r.ID, 1, now.Add(time.Hour), summary); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.GetReport(ctx, pool, r.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.WorstSeverity == nil || *got.WorstSeverity != "attention" || got.ClusterName == nil || *got.ClusterName != "prod" {
+		t.Fatalf("GetReport summary = %v, %v; want attention, prod", got.WorstSeverity, got.ClusterName)
+	}
+	items, err := store.ListReports(ctx, pool, nil, 10)
+	if err != nil || len(items) != 1 {
+		t.Fatalf("ListReports = %d items, %v", len(items), err)
+	}
+	it := items[0]
+	if it.WorstSeverity == nil || *it.WorstSeverity != "attention" || it.ClusterName == nil || *it.ClusterName != "prod" {
+		t.Fatalf("ListReports summary = %v, %v; want attention, prod", it.WorstSeverity, it.ClusterName)
+	}
 }

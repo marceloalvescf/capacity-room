@@ -73,6 +73,8 @@ export function report(overrides: Partial<Report> = {}): Report {
     completed_at: "2026-10-07T17:05:00Z",
     expires_at: "2026-11-06T17:05:00Z",
     expired: false,
+    worst_severity: null,
+    cluster_name: null,
     profile_revision_id: "1c7d4c63-3f1f-4e1b-9e68-7f7f7d2f1b02",
     attempt: 1,
     started_at: "2026-10-07T17:02:05Z",

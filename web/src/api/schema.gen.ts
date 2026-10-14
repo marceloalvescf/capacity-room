@@ -352,6 +352,8 @@ export interface components {
          * @enum {string}
          */
         ReportPhase: "waiting" | "preflight" | "collecting" | "analyzing" | "snapshotting" | "rendering" | "complete";
+        /** @enum {string} */
+        Severity: "healthy" | "attention" | "critical";
         /**
          * @description Why a report failed; a client words the code.
          * @enum {string}
@@ -434,6 +436,10 @@ export interface components {
             expired: boolean;
             /** @description null in the list when the stored request cannot be read; the report itself then answers 500. */
             selection: components["schemas"]["ReportSelection"] | null;
+            /** @description The worst severity among the findings the report shows, its minimum severity applied; healthy when it shows none. Set when the collection is stored; null before, and for a report collected before 1.6.0. */
+            worst_severity: components["schemas"]["Severity"] | null;
+            /** @description The cluster name of the snapshot. Set when the collection is stored; null before, and for a report collected before 1.6.0. */
+            cluster_name: string | null;
         };
         /** @description A report with its request and its progress. */
         Report: components["schemas"]["ReportSummary"] & {
@@ -2125,6 +2131,7 @@ type ReadonlyArray<T> = [
 ] ? Readonly<Exclude<T, undefined>> : Readonly<Exclude<T, undefined>[]>;
 export const reportStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportStatus"]> = ["queued", "running", "collected", "failed"];
 export const reportPhaseValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportPhase"]> = ["waiting", "preflight", "collecting", "analyzing", "snapshotting", "rendering", "complete"];
+export const severityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Severity"]> = ["healthy", "attention", "critical"];
 export const reportFailureCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportFailureCode"]> = ["ENDPOINT_URL_REJECTED", "ENDPOINT_ADDRESS_REJECTED", "ENDPOINT_RESOLUTION_FAILED", "ENDPOINT_CONNECTION_REJECTED", "ENDPOINT_REDIRECT_REJECTED", "PROFILE_CREDENTIAL_UNAVAILABLE", "PROFILE_CA_BUNDLE_UNAVAILABLE", "ENDPOINT_TLS_FAILED", "ENDPOINT_AUTH_REJECTED", "ENDPOINT_API_NOT_FOUND", "ENDPOINT_UNREACHABLE", "CLUSTER_SCOPE_NOT_FOUND", "CAPABILITIES_INSUFFICIENT", "SOURCE_VALUES_OUT_OF_RANGE", "NOTHING_TO_REPORT", "SNAPSHOT_TOO_LARGE", "COLLECTION_TIMEOUT", "JOB_ATTEMPTS_EXHAUSTED", "INTERNAL_FAILURE"];
 export const pDFStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PDFStatus"]> = ["pending", "ready", "failed"];
 export const pDFFailureCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PDFFailureCode"]> = ["PDF_COMPILE_FAILED", "PDF_TOO_LARGE", "PDF_ATTEMPTS_EXHAUSTED", "INTERNAL_FAILURE"];

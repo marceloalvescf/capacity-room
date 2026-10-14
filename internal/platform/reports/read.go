@@ -32,6 +32,8 @@ type Summary struct {
 	ExpiresAt     time.Time
 	Expired       bool
 	Selection     *Resolved
+	WorstSeverity *string
+	ClusterName   *string
 }
 
 // PDFState is the state of the PDF of one language.
@@ -119,7 +121,8 @@ func summaryOf(it store.ReportListItem, now time.Time) Summary {
 		Selection: decodeSelection(it.Request), ID: it.ID, OwnerID: it.OwnerID, OwnerUsername: it.OwnerUsername, ProfileID: it.ProfileID,
 		Status: it.Status, Phase: it.Phase, FailureCode: it.FailureCode, PDFs: pdfs,
 		CreatedAt: it.CreatedAt, CompletedAt: it.CompletedAt, ExpiresAt: it.ExpiresAt,
-		Expired: isExpired(it.ExpiresAt, it.ExpiredAt, now),
+		Expired:       isExpired(it.ExpiresAt, it.ExpiredAt, now),
+		WorstSeverity: it.WorstSeverity, ClusterName: it.ClusterName,
 	}
 }
 

@@ -454,6 +454,9 @@ func TestCollectStoresTheSnapshot(t *testing.T) {
 	if got.CollectedAt == nil || !got.CollectedAt.Equal(fixedNow) {
 		t.Fatalf("collected_at %v", got.CollectedAt)
 	}
+	if got.WorstSeverity == nil || *got.WorstSeverity != "critical" || got.ClusterName == nil || *got.ClusterName != "prod" {
+		t.Fatalf("summary = %v, %v; want critical, prod", got.WorstSeverity, got.ClusterName)
+	}
 	_, body, sum, err := store.GetSnapshot(context.Background(), e.pool, report.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -1182,7 +1185,7 @@ func TestCollectSkipsATerminalReport(t *testing.T) {
 			if err := store.ClaimReport(ctx, tx, id, 1, fixedNow); err != nil {
 				return err
 			}
-			return store.CollectReport(ctx, tx, id, 1, fixedNow)
+			return store.CollectReport(ctx, tx, id, 1, fixedNow, store.CollectedSummary{WorstSeverity: "healthy", ClusterName: "c"})
 		},
 		"deleted": func(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 			_, err := store.MarkReportDeleted(ctx, tx, id, fixedNow)

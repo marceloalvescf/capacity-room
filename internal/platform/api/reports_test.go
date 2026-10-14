@@ -162,7 +162,8 @@ type stored struct {
 	created  time.Time
 	snapshot []byte
 	pdfBody  []byte
-	language string // en when empty
+	language string                  // en when empty
+	summary  *store.CollectedSummary // the stored summary of a collected report; none when nil
 }
 
 var pdfBody = []byte("%PDF-1.7 stored body")
@@ -194,6 +195,9 @@ func (ts *testServer) seedReport(t *testing.T, o stored) uuid.UUID {
 	if o.status == "collected" && o.phase == "complete" {
 		done := o.created
 		r.CompletedAt = &done
+	}
+	if o.summary != nil {
+		r.WorstSeverity, r.ClusterName = &o.summary.WorstSeverity, &o.summary.ClusterName
 	}
 	if o.status == "failed" {
 		code := "INTERNAL_FAILURE"
@@ -977,5 +981,58 @@ func TestListItemsCarryTheirSelection(t *testing.T) {
 	if len(sel.Namespaces) != 1 || sel.Namespaces[0] != "payments" || sel.Period == nil || *sel.Period != "24h" ||
 		sel.Start != nil || sel.End != nil {
 		t.Fatalf("selection %+v", sel)
+	}
+}
+
+func TestReportsCarryTheirSummary(t *testing.T) {
+	ts := newTestServer(t)
+	c := ts.cast(t)
+	withSummary := ts.seedReport(t, stored{owner: c.ops.user.ID, summary: &store.CollectedSummary{WorstSeverity: "critical", ClusterName: "prod-east"}})
+	without := ts.seedReport(t, stored{owner: c.ops.user.ID})
+	queued := ts.seedReport(t, stored{owner: c.ops.user.ID, status: "queued", phase: "waiting"})
+
+	w := ts.as(t, &c.eve, "GET", "/api/v1/reports", "", nil)
+	if w.Code != 200 {
+		t.Fatalf("list: %d %s", w.Code, w.Body.String())
+	}
+	var raw struct {
+		Items []map[string]any `json:"items"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &raw); err != nil {
+		t.Fatal(err)
+	}
+	type pair struct{ severity, cluster any }
+	got := map[string]pair{}
+	for _, it := range raw.Items {
+		severity, hasSeverity := it["worst_severity"]
+		cluster, hasCluster := it["cluster_name"]
+		if !hasSeverity || !hasCluster {
+			t.Fatalf("item without the summary keys: %v", it)
+		}
+		got[it["id"].(string)] = pair{severity, cluster}
+	}
+	want := map[uuid.UUID]pair{
+		withSummary: {"critical", "prod-east"},
+		without:     {nil, nil},
+		queued:      {nil, nil},
+	}
+	for id, p := range want {
+		if got[id.String()] != p {
+			t.Errorf("list %s: %v, want %v", id, got[id.String()], p)
+		}
+	}
+
+	for id, p := range want {
+		w := ts.as(t, &c.eve, "GET", "/api/v1/reports/"+id.String(), "", nil)
+		if w.Code != 200 {
+			t.Fatalf("get %s: %d %s", id, w.Code, w.Body.String())
+		}
+		var one map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &one); err != nil {
+			t.Fatal(err)
+		}
+		if one["worst_severity"] != p.severity || one["cluster_name"] != p.cluster {
+			t.Errorf("get %s: %v, %v; want %v", id, one["worst_severity"], one["cluster_name"], p)
+		}
 	}
 }

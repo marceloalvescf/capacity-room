@@ -56,8 +56,8 @@ func TestMigrateIsIdempotent(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if version != 4 {
-			t.Fatalf("version = %d, want 4", version)
+		if version != 5 {
+			t.Fatalf("version = %d, want 5", version)
 		}
 		pending, err := store.HasPending(ctx, pool)
 		if err != nil {
@@ -224,15 +224,15 @@ const insertProfile = `INSERT INTO profiles (id, current_revision_id, created_at
 const insertRevision = `INSERT INTO profile_revisions (id, profile_id, revision, fingerprint, display_name, active, document, credential_file, ca_bundle_file, created_by, created_at)
 VALUES ($1, $2, $3, $4, 'name', true, '{}', '', '', NULL, now())`
 
-func TestMigrateToVersionFour(t *testing.T) {
+func TestMigrateToVersionFive(t *testing.T) {
 	ctx := context.Background()
 	pool := storetest.NewEmpty(t)
 	version, err := store.Migrate(ctx, pool)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != 4 {
-		t.Fatalf("version = %d, want 4", version)
+	if version != 5 {
+		t.Fatalf("version = %d, want 5", version)
 	}
 	for _, table := range []string{"profiles", "profile_revisions", "river_job", "reports", "report_snapshots", "report_pdfs", "report_idempotency_keys"} {
 		var exists bool
@@ -356,7 +356,7 @@ func TestProfileIDCheck(t *testing.T) {
 	}
 }
 
-// TestMigrateDownAndUp runs the two newest Down sections through goose, over the
+// TestMigrateDownAndUp runs the three newest Down sections through goose, over the
 // migration files of the folder, and applies the migrations again.
 func TestMigrateDownAndUp(t *testing.T) {
 	ctx := context.Background()
@@ -375,6 +375,25 @@ func TestMigrateDownAndUp(t *testing.T) {
 			t.Fatal(err)
 		}
 		return found
+	}
+	columnExists := func(table, column string) bool {
+		var found bool
+		if err := pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2)`, table, column).Scan(&found); err != nil {
+			t.Fatal(err)
+		}
+		return found
+	}
+	if !columnExists("reports", "worst_severity") {
+		t.Fatal("reports.worst_severity does not exist at version 5")
+	}
+	if _, err := provider.Down(ctx); err != nil {
+		t.Fatalf("down to 4: %v", err)
+	}
+	if version, err := provider.GetDBVersion(ctx); err != nil || version != 4 {
+		t.Fatalf("version after down = %d, %v; want 4", version, err)
+	}
+	if columnExists("reports", "worst_severity") || columnExists("reports", "cluster_name") || !exists("reports") {
+		t.Fatal("at version 4 the summary columns must be gone and reports must remain")
 	}
 	for _, step := range []struct {
 		version int64
@@ -397,8 +416,8 @@ func TestMigrateDownAndUp(t *testing.T) {
 	}
 
 	version, err := store.Migrate(ctx, pool)
-	if err != nil || version != 4 {
-		t.Fatalf("version after up = %d, %v; want 4", version, err)
+	if err != nil || version != 5 {
+		t.Fatalf("version after up = %d, %v; want 5", version, err)
 	}
 	for _, table := range []string{"profiles", "profile_revisions", "river_job", "reports", "report_snapshots", "report_pdfs", "report_idempotency_keys"} {
 		if !exists(table) {

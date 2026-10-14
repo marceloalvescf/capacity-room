@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/marceloalvescf/k8s-capacity-report/internal/analysis"
 	"github.com/marceloalvescf/k8s-capacity-report/internal/platform/profiles"
 
 	"gopkg.in/yaml.v3"
@@ -158,5 +159,19 @@ func TestProfileTestCodesEqualTheService(t *testing.T) {
 	}
 	if !slices.Equal(got, profiles.TestCodes) {
 		t.Fatalf("contract %v, service %v", got, profiles.TestCodes)
+	}
+}
+
+func TestSeverityEqualsTheRegistry(t *testing.T) {
+	var got []string
+	enum, ok := loadSchemas(t)["Severity"]["enum"].([]any)
+	if !ok {
+		t.Fatal("the contract has no Severity enum")
+	}
+	for _, v := range enum {
+		got = append(got, v.(string))
+	}
+	if !slices.Equal(got, analysis.Severities) {
+		t.Fatalf("contract %v, registry %v", got, analysis.Severities)
 	}
 }

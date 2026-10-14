@@ -911,6 +911,9 @@ All routes are under `/api/v1` and are described in `api/openapi.yaml`.
 `/health/ready` are outside the contract and need no session.
 
 - Lists use a cursor on creation time and identifier.
+- A report summary carries the worst severity among the findings the report
+  shows and the cluster name of its snapshot, both stored when the collection
+  is stored; both are null before, and for a report collected before 1.6.0.
 - Report view, snapshot, and PDF answers carry an `ETag`.
 - PDFs are streamed by the BFF. No link bypasses the permission check.
 - Errors have one shape: `{ "error": { "code", "message", "fields" } }`. The
