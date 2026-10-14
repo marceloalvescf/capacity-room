@@ -2,7 +2,7 @@
 
 This file guides LLMs and people working in this repository.
 
-`k8s-capacity-report` generates Kubernetes capacity reports from a
+`capacity-room` generates Kubernetes capacity reports from a
 Prometheus-compatible API, using metrics only. The design is in
 `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, and it is
 the authority when this file and the code disagree with it.
@@ -29,7 +29,7 @@ the authority when this file and the code disagree with it.
 
 ```bash
 make web              # npm ci when the lock file changed, then the frontend build in web/dist
-make build            # bin/k8s-capacity-report, with the frontend embedded
+make build            # bin/capacity-room, with the frontend embedded
 make test             # Go tests that need no service and no tool, then the frontend tests
 make lint             # gofmt, go vet, golangci-lint, then tsc and ESLint over web/
 make image            # runtime image and test image
@@ -113,6 +113,10 @@ image build enforce.
 - **The operations guide equals the code.** Two tests compare the tables of
   `docs/operations.md`: every key of `platform.toml` both ways, and every
   failure code of a report or a PDF in the contract both ways.
+- **The old name is gone.** `k8s-capacity-report`, `KCR_`, and `kcr` as a word or a
+  prefix appear in no tracked file outside the history (the plans, the earlier
+  specs, `docs/decisions/`, `docs/reference/`, `testdata/python/`,
+  `testdata/prometheus/`, and the changelog of 1.x).
 - **One version.** `VERSION` holds it, and the newest changelog heading must
   equal it. The only level-two headings the changelog may hold are
   `## [Unreleased]` and `## [X.Y.Z] - YYYY-MM-DD`, and it holds no heading
@@ -176,7 +180,7 @@ Build tags in use:
 | `toolchain` | `typst`, `pdftotext` | `make test-toolchain` |
 | `template` | `typst`, `pdftotext` | `make test-template`, which also runs `internal/cli` |
 | `golden` | `typst`, with `template` | `make test-golden` |
-| `postgres` | PostgreSQL, through `KCR_TEST_DATABASE_DSN` | `make test-postgres`, over `internal/platform/...` but the worker |
+| `postgres` | PostgreSQL, through `CAPACITYROOM_TEST_DATABASE_DSN` | `make test-postgres`, over `internal/platform/...` but the worker |
 | `postgres` with `template` | PostgreSQL and `typst` | `make test-postgres`, over `internal/platform/worker` and `internal/cli`, so each of their postgres tests runs once |
 
 With the native tools installed, a subagent runs the tagged tests itself:
@@ -302,7 +306,7 @@ below the command; the core never imports `internal/platform/`.
 
 `serve` is the web platform's backend, `worker` runs its report jobs, and
 `admin` holds its operator commands. All three read one TOML deployment file, `--config` (default `platform.toml`),
-and the database DSN from `KCR_DATABASE_DSN` alone. The DSN enters the
+and the database DSN from `CAPACITYROOM_DATABASE_DSN` alone. The DSN enters the
 redactor the moment the settings are loaded, before the pool opens.
 
 - **The deployment file refuses what it does not know,** as `report.toml`
@@ -337,7 +341,7 @@ redactor the moment the settings are loaded, before the pool opens.
   language change writes its column alone, and a password write is a
   compare-and-set on the hash it verified.
 - **A test gets a fresh database.** `storetest.New(t)` creates
-  `kcr_test_<16 hex>` on the server of `KCR_TEST_DATABASE_DSN`, migrates
+  `capacityroom_test_<16 hex>` on the server of `CAPACITYROOM_TEST_DATABASE_DSN`, migrates
   it, and drops it when the test ends; `NewEmpty(t)` skips the migration. A
   tagged test fails when the variable is unset.
 - **The contract is `api/openapi.yaml`.** `make generate` writes the Go types
@@ -428,9 +432,9 @@ redactor the moment the settings are loaded, before the pool opens.
   at run time (the database, the listener, Typst for `worker`, jobs that did
   not stop after the drain, a refusal of `bootstrap-admin`), 2 for the
   arguments or the settings file.
-- **`admin bootstrap-admin` runs only with `KCR_BOOTSTRAP_MODE=1`,** reads
+- **`admin bootstrap-admin` runs only with `CAPACITYROOM_BOOTSTRAP_MODE=1`,** reads
   the password from standard input alone, and refuses when any user exists.
-- **`admin reset-password` runs only with `KCR_BOOTSTRAP_MODE=1`,** reads
+- **`admin reset-password` runs only with `CAPACITYROOM_BOOTSTRAP_MODE=1`,** reads
   the new password from standard input alone, refuses an unknown or
   deactivated user, revokes every session of the user, writes
   `user.password_reset` with no actor, and changes neither the role nor the
@@ -630,8 +634,10 @@ redactor the moment the settings are loaded, before the pool opens.
   under `motion-safe:`.
 - **The look is recorded in `DESIGN.md`,** derived from the built code; a
   change of a token, a face, or a component rule updates it in the same
-  commit. The web app is named CapacityRoom; nothing outside `web/` and the
-  documents takes that name.
+  commit. The product is CapacityRoom. The command, the Go module, the images, and
+  the deploy names are `capacity-room`; environment variables start with
+  `CAPACITYROOM_`; a lowercase identifier starts with `capacityroom_` or
+  `capacityroom-`.
 - **A tint follows a status the view gives.** The depth tint of a value (a
   peak cell, by the worse of its peak and its share) and the hazard of the
   depth gauge (by the worst cluster finding) follow a status the view gives,
@@ -678,11 +684,11 @@ redactor the moment the settings are loaded, before the pool opens.
   `web/src/api/schema.gen.ts` from `api/openapi.yaml`, and
   `make generate-check` fails when the committed file is stale.
 - **The built version equals `VERSION`.** Vite reads `../VERSION` into the
-  meta `kcr-version` of `index.html`, and a Go test compares the embedded
+  meta `capacityroom-version` of `index.html`, and a Go test compares the embedded
   file with it.
 - **`make e2e` runs the real stack.** `deploy/compose.yaml` holds
-  `postgres`, `serve`, and `worker`, and requires `KCR_VERSION`,
-  `KCR_CONFIG_DIR`, and `KCR_POSTGRES_PASSWORD`, with no default.
+  `postgres`, `serve`, and `worker`, and requires `CAPACITYROOM_VERSION`,
+  `CAPACITYROOM_CONFIG_DIR`, and `CAPACITYROOM_POSTGRES_PASSWORD`, with no default.
   `deploy/compose.integration.yaml` adds the one-shot `migrate` and
   `bootstrap` services and the Playwright service, which shares the network
   of `serve`, and the fake Prometheus, built by `make e2e` from the
@@ -704,8 +710,8 @@ redactor the moment the settings are loaded, before the pool opens.
   `TestDirectCompleteLeavesTheRecordedAnswerUnused`.
 - **The test worker's typst is a switch.** `make e2e` builds
   `deploy/worker-e2e.Containerfile` on the runtime image as
-  `k8s-capacity-report-worker-e2e`, whose worker runs `cmd/typst-switch`
-  through `KCR_TYPST`: it passes every call to typst, unless
+  `capacity-room-worker-e2e`, whose worker runs `cmd/typst-switch`
+  through `CAPACITYROOM_TYPST`: it passes every call to typst, unless
   `/switch/fail` exists, which makes every compile fail. The Playwright
   service writes the volume `switch`, and the worker reads it.
   `make gate` builds the fakes and the test worker with no cache.
@@ -892,7 +898,7 @@ The main thread plans, judges, and runs the gates. Subagents implement.
   `make postgres-up`, `make postgres-down`, `make test-postgres`,
   `make e2e`, and `make gate` stay on the main thread. The main thread starts PostgreSQL
   with `make postgres-up` and gives the subagent the DSN; the subagent runs
-  the tagged tests with `KCR_TEST_DATABASE_DSN` set.
+  the tagged tests with `CAPACITYROOM_TEST_DATABASE_DSN` set.
 - Two agents in one checkout break each other's builds when they share a Go
   package. Give a reviewer a diff file, and let it run tests only on packages
   nobody is editing.

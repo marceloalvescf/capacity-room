@@ -3,9 +3,9 @@
 These files serve the integration stack of `make e2e` alone: the deployment
 file, the server secret, the password of the test administrator, and
 `profiles.toml`, the profiles that point at the stack's fake Prometheus servers.
-They are public and weak by design. `make e2e` points `KCR_CONFIG_DIR` at this folder.
+They are public and weak by design. `make e2e` points `CAPACITYROOM_CONFIG_DIR` at this folder.
 Never use them for a deployment: a deployment provides its own folder, and its
-own database password in `KCR_POSTGRES_PASSWORD`.
+own database password in `CAPACITYROOM_POSTGRES_PASSWORD`.
 
 `credentials/` holds the credential file that the profile `e2e-recovery` names.
 `e2e-recovery` points at the second fake Prometheus, which answers slowly so

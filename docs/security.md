@@ -1,6 +1,6 @@
 # Security
 
-This document says whom the k8s-capacity-report platform defends against,
+This document says whom the CapacityRoom platform defends against,
 how, and what an operator must do for it, and records the security review of
 version 1.0.0. `docs/operations.md` is the guide to running the platform.
 
@@ -26,7 +26,7 @@ trail, and the platform's availability.
 
 Out of scope: whoever holds the host, the Docker socket, the containers'
 files, or the database. Such an attacker can already do anything,
-including running the two commands that need `KCR_BOOTSTRAP_MODE=1`.
+including running the two commands that need `CAPACITYROOM_BOOTSTRAP_MODE=1`.
 
 ## Controls
 
@@ -67,7 +67,7 @@ including running the two commands that need `KCR_BOOTSTRAP_MODE=1`.
   settings file and the server secret; the platform refuses otherwise.
 - List the metric sources in the allowlists, not whole networks: an entry
   grants every port of its host or range.
-- Treat `kcr.env`, the output of `docker inspect` and
+- Treat `capacity-room.env`, the output of `docker inspect` and
   `docker compose config`, and every database dump as secrets: they hold the
   database password or the password hashes.
 - Set memory limits on the services, as the guide does: a metric source the

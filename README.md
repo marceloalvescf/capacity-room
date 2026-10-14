@@ -1,10 +1,10 @@
-# k8s-capacity-report
+# CapacityRoom
 
-`k8s-capacity-report` generates Kubernetes capacity reports from a
+`capacity-room` generates Kubernetes capacity reports from a
 Prometheus-compatible API. It reads metrics only: it never uses a kubeconfig,
 the Kubernetes API, or cloud credentials. Reports are produced as PDF through
-Typst, in Portuguese (Brazil) or English. Its web app is called CapacityRoom;
-the command, the image, and the PDF keep the name `k8s-capacity-report`.
+Typst, in Portuguese (Brazil) or English. The product is called CapacityRoom;
+the command and the image are named `capacity-room`.
 
 The project is under construction. This file documents what exists today; the
 full design is in
@@ -57,7 +57,7 @@ full design is in
 - For `serve`, `worker`, and `admin`: PostgreSQL 18
 - For `worker`: `typst` 0.15.1, as for a PDF
 - To write a PDF outside the container: `typst` 0.15.1 on `PATH`, or its path
-  in `KCR_TYPST`. Any other version is refused.
+  in `CAPACITYROOM_TYPST`. Any other version is refused.
 
 ## Generating a report
 
@@ -69,7 +69,7 @@ namespaces:
 ```toml
 [metrics]
 url = "https://prometheus.example.org"
-token_env = "KCR_TOKEN"
+token_env = "CAPACITYROOM_TOKEN"
 
 [cluster]
 name = "prod"
@@ -87,9 +87,9 @@ is refused: a text that short cannot be told from ordinary words, so it could
 not be removed from the messages the program prints.
 
 A report covers the last 24 hours by default. `analysis.period` (`--period`,
-`KCR_PERIOD`) sets another length, such as `7d`, ending when the run starts.
-`analysis.start` and `analysis.end` (`--start` and `--end`, `KCR_START` and
-`KCR_END`) set a calendar range instead, such as `2026-09-01 00:00` to
+`CAPACITYROOM_PERIOD`) sets another length, such as `7d`, ending when the run starts.
+`analysis.start` and `analysis.end` (`--start` and `--end`, `CAPACITYROOM_START` and
+`CAPACITYROOM_END`) set a calendar range instead, such as `2026-09-01 00:00` to
 `2026-10-01 00:00`. Each is a date and a time to the minute, read in
 `analysis.timezone`. The start must come before the end, and the end may not
 be after the run starts. A time that does not exist in the zone, or occurs
@@ -101,19 +101,19 @@ one replaces the other.
 
 ```bash
 # Check the endpoint, the cluster scope, and the metrics it offers.
-k8s-capacity-report report --config report.toml --check
+capacity-room report --config report.toml --check
 
 # Write a PDF.
-k8s-capacity-report report --config report.toml --lang en --output report.pdf
+capacity-room report --config report.toml --lang en --output report.pdf
 
 # Store what was found, without writing a PDF. Needs no typst.
-k8s-capacity-report report --config report.toml --snapshot cluster.json
+capacity-room report --config report.toml --snapshot cluster.json
 
 # Write a PDF of a calendar range that has ended.
-k8s-capacity-report report --config report.toml --start "2026-09-01 00:00" --end "2026-10-01 00:00" --output september.pdf
+capacity-room report --config report.toml --start "2026-09-01 00:00" --end "2026-10-01 00:00" --output september.pdf
 
 # Write a PDF from a stored snapshot. Makes no request to the endpoint.
-k8s-capacity-report report --from-snapshot cluster.json --lang pt-BR --output report.pdf
+capacity-room report --from-snapshot cluster.json --lang pt-BR --output report.pdf
 ```
 
 The modes exclude each other. One collection gives a PDF in both languages
@@ -121,8 +121,8 @@ through `--snapshot` followed by `--from-snapshot`, once for each language.
 
 `--from-snapshot` reads no configuration file. It takes `--lang`,
 `--report-profile`, `--min-severity`, and `--output`, and the variables
-`KCR_LANGUAGE`, `KCR_REPORT_PROFILE`, `KCR_MIN_SEVERITY`, and
-`KCR_OUTPUT_DIRECTORY`. The profile and the minimum severity come from the
+`CAPACITYROOM_LANGUAGE`, `CAPACITYROOM_REPORT_PROFILE`, `CAPACITYROOM_MIN_SEVERITY`, and
+`CAPACITYROOM_OUTPUT_DIRECTORY`. The profile and the minimum severity come from the
 flag, else from the variable, else from the stored snapshot.
 
 Without `--output`, the PDF is written to `report.output_directory` under the
@@ -131,7 +131,7 @@ minimum severity is not `all`, it comes after the cluster:
 `report-resources-<cluster>-<severity>-<language>-<date>-<time>.pdf`.
 
 The report profile is `detailed`, the default, or `executive`. Set it with
-`report.profile`, `--report-profile`, or `KCR_REPORT_PROFILE`. The `executive`
+`report.profile`, `--report-profile`, or `CAPACITYROOM_REPORT_PROFILE`. The `executive`
 profile writes the verdict page, the opening page, the executive summary as its only
 numbered section, 1, and the appendix as section 2. Its minimum severity is
 raised to at least attention for the whole report, the appendix included. Its
@@ -272,7 +272,7 @@ name = "prod"
 namespaces = ["payments"]
 EOF
 
-bin/k8s-capacity-report report --config .cache/report.toml --check
+bin/capacity-room report --config .cache/report.toml --check
 kill %1
 ```
 
@@ -294,8 +294,8 @@ to `serve` on port 8080:
 
 ```bash
 make postgres-up
-export KCR_DATABASE_DSN='postgres://kcr_test:kcr_test_only@127.0.0.1:55432/kcr_test?sslmode=disable'
-make build && bin/k8s-capacity-report serve --config platform.toml --listen 127.0.0.1:8080
+export CAPACITYROOM_DATABASE_DSN='postgres://capacityroom_test:capacityroom_test_only@127.0.0.1:55432/capacityroom_test?sslmode=disable'
+make build && bin/capacity-room serve --config platform.toml --listen 127.0.0.1:8080
 cd web && npm run dev    # http://localhost:5173
 ```
 
@@ -303,7 +303,7 @@ cd web && npm run dev    # http://localhost:5173
 
 ```bash
 make web              # the interface, built into web/dist
-make build            # bin/k8s-capacity-report, with the interface embedded
+make build            # bin/capacity-room, with the interface embedded
 make test             # Go tests that need no service and no tool, and the interface's tests
 make lint             # gofmt, go vet, golangci-lint, and tsc and ESLint over web/
 make image            # runtime image and test image

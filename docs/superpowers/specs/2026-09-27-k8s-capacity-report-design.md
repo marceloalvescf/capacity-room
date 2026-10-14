@@ -1,11 +1,11 @@
-# k8s-capacity-report: design
+# CapacityRoom: design
 
 Date: 2026-09-27
 Status: approved by the owner on 2026-09-27
 
 ## 1. Purpose
 
-`k8s-capacity-report` generates Kubernetes capacity reports from a
+`capacity-room` generates Kubernetes capacity reports from a
 Prometheus-compatible API. It reads metrics only. It never uses a kubeconfig,
 the Kubernetes API, or cloud credentials.
 
@@ -42,7 +42,7 @@ reference. That folder is never tracked by Git.
 |---|---|
 | Language | Go 1.27 |
 | Repository | One, branch `main` |
-| Binary | One, named `k8s-capacity-report`, with commands `report`, `serve`, `worker`, `admin` |
+| Binary | One, named `capacity-room`, with commands `report`, `serve`, `worker`, `admin` |
 | PDF | Typst, pinned at exactly 0.15.1, template inside the repository |
 | Template input | A JSON data file, not generated Typst source |
 | Report language | Chosen by the reader for interface, report view, and PDF |
@@ -94,7 +94,7 @@ Accepted consequences:
 ### 4.1 Repository layout
 
 ```text
-cmd/k8s-capacity-report/   entry point; wires the commands
+cmd/capacity-room/   entry point; wires the commands
 cmd/fake-prometheus/       test fixture server; never in the production image
 internal/
   config/      file, then environment, then flags
@@ -178,17 +178,17 @@ Tests enforce the first, third, and fourth rules (section 13).
 ### 5.1 Usage
 
 ```bash
-k8s-capacity-report report --config report.toml --lang en --output report.pdf
-k8s-capacity-report report --config report.toml --check
-k8s-capacity-report report --config report.toml --snapshot cluster.json
-k8s-capacity-report report --config report.toml --start "2026-09-01 00:00" --end "2026-10-01 00:00"
-k8s-capacity-report report --from-snapshot cluster.json --lang pt-BR --output report.pdf
+capacity-room report --config report.toml --lang en --output report.pdf
+capacity-room report --config report.toml --check
+capacity-room report --config report.toml --snapshot cluster.json
+capacity-room report --config report.toml --start "2026-09-01 00:00" --end "2026-10-01 00:00"
+capacity-room report --from-snapshot cluster.json --lang pt-BR --output report.pdf
 ```
 
 - `--check` runs the preflight only: endpoint, cluster scope, capabilities.
 - `--snapshot` writes the snapshot and needs no `typst`.
 - `--from-snapshot` makes no Prometheus call.
-- A PDF needs `typst` 0.15.1 on `PATH`, or the path in `KCR_TYPST`. Any other
+- A PDF needs `typst` 0.15.1 on `PATH`, or the path in `CAPACITYROOM_TYPST`. Any other
   version is an error.
 - Output files are written atomically.
 
@@ -235,12 +235,12 @@ column.
 `metrics.token` in the file is rejected. The token comes from the variable
 named by `metrics.token_env` or from `--token`, and is held in memory only.
 
-Environment variables keep the `KCR_` prefix of the original:
-`KCR_METRICS_URL`, `KCR_ENDPOINT_TYPE`, `KCR_CLUSTER`, `KCR_CLUSTER_LABEL`,
-`KCR_CLUSTER_FILTER`, `KCR_NAMESPACES`, `KCR_PERIOD`, `KCR_TIMEZONE`,
-`KCR_NODE_AUTOSCALING`, `KCR_MIN_SEVERITY`, `KCR_REPORT_PROFILE`,
-`KCR_OUTPUT_DIRECTORY`, plus the new `KCR_LANGUAGE`, `KCR_TYPST`,
-`KCR_START`, and `KCR_END`.
+Environment variables carry the prefix `CAPACITYROOM_`:
+`CAPACITYROOM_METRICS_URL`, `CAPACITYROOM_ENDPOINT_TYPE`, `CAPACITYROOM_CLUSTER`, `CAPACITYROOM_CLUSTER_LABEL`,
+`CAPACITYROOM_CLUSTER_FILTER`, `CAPACITYROOM_NAMESPACES`, `CAPACITYROOM_PERIOD`, `CAPACITYROOM_TIMEZONE`,
+`CAPACITYROOM_NODE_AUTOSCALING`, `CAPACITYROOM_MIN_SEVERITY`, `CAPACITYROOM_REPORT_PROFILE`,
+`CAPACITYROOM_OUTPUT_DIRECTORY`, plus the new `CAPACITYROOM_LANGUAGE`, `CAPACITYROOM_TYPST`,
+`CAPACITYROOM_START`, and `CAPACITYROOM_END`.
 
 Flags: `--config`, `--metrics-url`, `--endpoint-type`, `--token`, `--insecure`,
 `--cluster`, `--cluster-label`, `--cluster-filter`, `--namespaces`, `--period`,
@@ -689,8 +689,8 @@ present in the container image.
 
 | Service | Runs | Notes |
 |---|---|---|
-| `serve` | `k8s-capacity-report serve` | BFF on port 8080 |
-| `worker` | `k8s-capacity-report worker` | Two slots by default; health on port 8091 |
+| `serve` | `capacity-room serve` | BFF on port 8080 |
+| `worker` | `capacity-room worker` | Two slots by default; health on port 8091 |
 | `postgres` | PostgreSQL | |
 
 - `serve`, asked to stop, waits 30 seconds for the requests in flight, then
@@ -699,7 +699,7 @@ present in the container image.
 
 ### 11.2 Deployment settings
 
-One TOML file mounted into `serve` and `worker`, plus `KCR_DATABASE_DSN` in the
+One TOML file mounted into `serve` and `worker`, plus `CAPACITYROOM_DATABASE_DSN` in the
 environment. The file sets:
 
 - session lifetimes, retention days, worker slots, lease and drain times;
@@ -723,10 +723,10 @@ that the throttle table never lists attempted user names in readable form.
 | Change own password and language | Yes | Yes | Yes |
 
 - The first administrator is created by `admin bootstrap-admin`. The password
-  is read from standard input only. The command needs `KCR_BOOTSTRAP_MODE=1`
+  is read from standard input only. The command needs `CAPACITYROOM_BOOTSTRAP_MODE=1`
   and refuses when any user exists.
 - A lost password of the last administrator is reset by
-  `admin reset-password --username <name>`. It needs `KCR_BOOTSTRAP_MODE=1`,
+  `admin reset-password --username <name>`. It needs `CAPACITYROOM_BOOTSTRAP_MODE=1`,
   reads the new password from standard input only, applies the password
   policy of 11.4, revokes every session of the user, and writes the audit
   row `user.password_reset` with no actor. It changes neither the role nor
@@ -962,7 +962,7 @@ answers `index.html`, so that a client route loads; an unknown path under
 `/api/` keeps its JSON 404. Files under `/assets/`, whose names carry a hash,
 are cached for a year as immutable; `index.html` is never cached.
 
-The interface is named "kcr - Kubernetes Capacity Report" in both languages.
+The interface is named CapacityRoom in both languages.
 
 ### 12.2 Screens
 

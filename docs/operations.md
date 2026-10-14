@@ -1,12 +1,12 @@
 # Operations guide
 
-This guide is for the person who installs and runs the k8s-capacity-report
-platform: the web server, the worker, and their database. The web app it
-serves is called CapacityRoom; every command, setting, and variable keeps
-the name `k8s-capacity-report` or the prefix `KCR_`. The guide covers the
+This guide is for the person who installs and runs the CapacityRoom
+platform: the web server, the worker, and their database. The product is
+called CapacityRoom; the command is named `capacity-room` and every
+variable has the prefix `CAPACITYROOM_`. The guide covers the
 install behind a TLS proxy, the settings, the first start, the day to day,
 backups, upgrades, sizing, and the limits of the platform. The command-line
-tool, `k8s-capacity-report report`, needs none of this; the README describes
+tool, `capacity-room report`, needs none of this; the README describes
 it.
 
 Commands are written for a Linux host with a shell, and are meant to be run
@@ -17,16 +17,16 @@ a value you choose: change it before you run the line.
 
 | Service | Runs | Listens | Role |
 |---|---|---|---|
-| `serve` | `k8s-capacity-report serve` | `127.0.0.1:8080` on the host, plain HTTP | The web interface and the API under `/api/v1`; applies the database schema before it listens |
-| `worker` | `k8s-capacity-report worker` | `:8091` inside its container, health only | Collects reports from the metric sources and compiles their PDFs; runs the maintenance job every minute |
+| `serve` | `capacity-room serve` | `127.0.0.1:8080` on the host, plain HTTP | The web interface and the API under `/api/v1`; applies the database schema before it listens |
+| `worker` | `capacity-room worker` | `:8091` inside its container, health only | Collects reports from the metric sources and compiles their PDFs; runs the maintenance job every minute |
 | `postgres` | PostgreSQL 18 | Inside the Compose network only | Accounts, profiles, reports, snapshots, PDFs, the job queue, the audit trail |
 
 The three run from `deploy/compose.yaml` as the Compose project
-`k8s-capacity-report`, on the network `172.31.213.0/24`. `serve` and
+`capacity-room`, on the network `172.31.213.0/24`. `serve` and
 `worker` run as user `10001`, with a read-only root file system, no added
 privileges, and every capability dropped; their only writable place is a
 temporary file system at `/tmp`. They read one folder from the host, mounted
-read-only at `/etc/kcr`.
+read-only at `/etc/capacity-room`.
 
 `serve` speaks plain HTTP and sets its session cookie `Secure`, so a browser
 reaches it only through a TLS proxy that you run on the host.
@@ -39,8 +39,8 @@ release tag on the host; nothing is downloaded from a registry but the base
 images it names by digest.
 
 ```bash
-git clone https://github.com/marceloalvescf/k8s-capacity-report.git  # example: replace
-cd k8s-capacity-report
+git clone https://github.com/marceloalvescf/capacity-room.git  # example: replace
+cd capacity-room
 git checkout v1.0.0  # example: replace
 make image
 ```
@@ -50,29 +50,29 @@ environment file that you keep outside it. The file holds the database
 password, so only you read it.
 
 ```bash
-export KCR_HOME=/srv/kcr  # example: replace
-mkdir -p "$KCR_HOME/config/credentials" "$KCR_HOME/config/ca" "$KCR_HOME/backups"
+export CAPACITYROOM_HOME=/srv/capacity-room  # example: replace
+mkdir -p "$CAPACITYROOM_HOME/config/credentials" "$CAPACITYROOM_HOME/config/ca" "$CAPACITYROOM_HOME/backups"
 umask 077
-cat > "$KCR_HOME/kcr.env" <<EOF
-KCR_VERSION=$(cat VERSION)
-KCR_CONFIG_DIR=$KCR_HOME/config
-KCR_POSTGRES_PASSWORD=$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
-COMPOSE_FILE=deploy/compose.yaml:$KCR_HOME/compose.limits.yaml
+cat > "$CAPACITYROOM_HOME/capacity-room.env" <<EOF
+CAPACITYROOM_VERSION=$(cat VERSION)
+CAPACITYROOM_CONFIG_DIR=$CAPACITYROOM_HOME/config
+CAPACITYROOM_POSTGRES_PASSWORD=$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
+COMPOSE_FILE=deploy/compose.yaml:$CAPACITYROOM_HOME/compose.limits.yaml
 EOF
-set -a; . "$KCR_HOME/kcr.env"; set +a
+set -a; . "$CAPACITYROOM_HOME/capacity-room.env"; set +a
 ```
 
 The database password is written in hexadecimal on purpose: it is placed in
 a connection URL, where `@ / : ? # %` would break it. PostgreSQL takes it
-when its volume is first created; a password changed in `kcr.env` later
+when its volume is first created; a password changed in `capacity-room.env` later
 does not reach the database, and `serve` then fails to connect. Keep
-`kcr.env` with your backups.
+`capacity-room.env` with your backups.
 
 `COMPOSE_FILE` adds a second file of your own to the shipped one, holding
 the limits of section 10. Create it now, and adjust the numbers to the host:
 
 ```bash
-cat > "$KCR_HOME/compose.limits.yaml" <<'EOF'
+cat > "$CAPACITYROOM_HOME/compose.limits.yaml" <<'EOF'
 services:
   serve:
     mem_limit: 1g
@@ -112,22 +112,22 @@ change `trusted_proxies` to its first address.
 
 ## 3. Settings
 
-`$KCR_HOME/config/platform.toml` is the one settings file of `serve` and
+`$CAPACITYROOM_HOME/config/platform.toml` is the one settings file of `serve` and
 `worker`. A key it does not know is refused, and so is a value of the wrong
 type or out of its bounds; the service then exits with code 2 and says what
 it refused. The database
 connection is not in this file: it comes from the environment
-(`KCR_DATABASE_DSN`), which `deploy/compose.yaml` builds from
-`KCR_POSTGRES_PASSWORD`.
+(`CAPACITYROOM_DATABASE_DSN`), which `deploy/compose.yaml` builds from
+`CAPACITYROOM_POSTGRES_PASSWORD`.
 
 ```bash
-cat > "$KCR_HOME/config/platform.toml" <<'EOF'
-server_secret_path = "/etc/kcr/server-secret"
+cat > "$CAPACITYROOM_HOME/config/platform.toml" <<'EOF'
+server_secret_path = "/etc/capacity-room/server-secret"
 trusted_proxies = ["172.31.213.1/32"]
 allowed_endpoint_hostnames = ["prometheus.example.com"]  # example: replace
 allowed_endpoint_cidrs = []
-credential_dir = "/etc/kcr/credentials"
-ca_bundle_dir = "/etc/kcr/ca"
+credential_dir = "/etc/capacity-room/credentials"
+ca_bundle_dir = "/etc/capacity-room/ca"
 EOF
 ```
 
@@ -169,8 +169,8 @@ of files that profiles name: credentials (a bearer token, one per file) and
 CA bundles (PEM).
 
 ```bash
-head -c 32 /dev/urandom > "$KCR_HOME/config/server-secret"
-printf '%s\n' 'the-bearer-token-of-the-source' > "$KCR_HOME/config/credentials/prometheus-bearer"  # example: replace
+head -c 32 /dev/urandom > "$CAPACITYROOM_HOME/config/server-secret"
+printf '%s\n' 'the-bearer-token-of-the-source' > "$CAPACITYROOM_HOME/config/credentials/prometheus-bearer"  # example: replace
 ```
 
 A credential is UTF-8, at least 8 characters, on one line. A file name
@@ -184,7 +184,7 @@ to no one else. Docker access is root on the host, so a short container does
 it:
 
 ```bash
-docker run --rm -v "$KCR_HOME/config:/config" --entrypoint sh \
+docker run --rm -v "$CAPACITYROOM_HOME/config:/config" --entrypoint sh \
   postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873 \
   -c 'chown -R 10001:10001 /config && chmod -R u=rwX,go= /config'
 ```
@@ -192,7 +192,7 @@ docker run --rm -v "$KCR_HOME/config:/config" --entrypoint sh \
 From then on you change a file of the folder as root, and run the same
 command again after a change.
 
-The other secrets live in `$KCR_HOME/kcr.env` (the database password) and in
+The other secrets live in `$CAPACITYROOM_HOME/capacity-room.env` (the database password) and in
 the database (password hashes, session digests). The output of
 `docker inspect` and of `docker compose config` shows the database password;
 treat both as secrets.
@@ -207,15 +207,15 @@ docker compose up -d --wait
 the schema by then.
 
 Create the first administrator. The command runs only with
-`KCR_BOOTSTRAP_MODE=1`, reads the password from standard input, and refuses
+`CAPACITYROOM_BOOTSTRAP_MODE=1`, reads the password from standard input, and refuses
 once any user exists. A password has 12 to 1024 characters.
 
 ```bash
-printf '%s\n' 'an administrator password' > "$KCR_HOME/admin-password"  # example: replace
-docker compose run --rm -T -e KCR_BOOTSTRAP_MODE=1 serve \
-  admin bootstrap-admin --username admin --password-stdin --config /etc/kcr/platform.toml \
-  < "$KCR_HOME/admin-password"
-rm "$KCR_HOME/admin-password"
+printf '%s\n' 'an administrator password' > "$CAPACITYROOM_HOME/admin-password"  # example: replace
+docker compose run --rm -T -e CAPACITYROOM_BOOTSTRAP_MODE=1 serve \
+  admin bootstrap-admin --username admin --password-stdin --config /etc/capacity-room/platform.toml \
+  < "$CAPACITYROOM_HOME/admin-password"
+rm "$CAPACITYROOM_HOME/admin-password"
 ```
 
 Profiles can be created on the web by the administrator, or imported from a
@@ -224,7 +224,7 @@ the others alone; it can be run again. The file is checked whole before
 anything is written.
 
 ```bash
-cat > "$KCR_HOME/profiles.toml" <<'EOF'
+cat > "$CAPACITYROOM_HOME/profiles.toml" <<'EOF'
 [[profiles]]
 id = "prod"
 display_name = "Production"
@@ -235,8 +235,8 @@ allowed_namespaces = ["payments", "checkout"]  # example: replace
 credential_file = "prometheus-bearer"
 active = true
 EOF
-docker compose run --rm -T serve admin import-profiles --config /etc/kcr/platform.toml \
-  --file /dev/stdin < "$KCR_HOME/profiles.toml"
+docker compose run --rm -T serve admin import-profiles --config /etc/capacity-room/platform.toml \
+  --file /dev/stdin < "$CAPACITYROOM_HOME/profiles.toml"
 ```
 
 Then sign in at `https://reports.example.com` as `admin`, open Profiles, and
@@ -341,7 +341,7 @@ Everything the platform stores is in PostgreSQL. The settings folder holds
 the rest: back it up with your host's own backups, as root.
 
 ```bash
-docker compose exec -T postgres pg_dump -U kcr -Fc kcr > "$KCR_HOME/backups/kcr.dump"
+docker compose exec -T postgres pg_dump -U capacityroom -Fc capacityroom > "$CAPACITYROOM_HOME/backups/capacity-room.dump"
 ```
 
 The dump holds password hashes and the reports' data; keep it as you keep
@@ -355,7 +355,7 @@ them:
 ```bash
 docker compose stop serve worker
 docker compose up -d --wait postgres
-docker compose exec -T postgres pg_restore -U kcr -d kcr --clean --if-exists < "$KCR_HOME/backups/kcr.dump"
+docker compose exec -T postgres pg_restore -U capacityroom -d capacityroom --clean --if-exists < "$CAPACITYROOM_HOME/backups/capacity-room.dump"
 docker compose up -d --wait
 ```
 
@@ -365,12 +365,12 @@ later one, which migrates it when it starts.
 ## 8. Upgrade
 
 ```bash
-docker compose exec -T postgres pg_dump -U kcr -Fc kcr > "$KCR_HOME/backups/kcr-before-upgrade.dump"
+docker compose exec -T postgres pg_dump -U capacityroom -Fc capacityroom > "$CAPACITYROOM_HOME/backups/capacity-room-before-upgrade.dump"
 git fetch --tags  # example: replace
 git checkout v1.0.1  # example: replace
 make image
-sed -i "s/^KCR_VERSION=.*/KCR_VERSION=$(cat VERSION)/" "$KCR_HOME/kcr.env"
-set -a; . "$KCR_HOME/kcr.env"; set +a
+sed -i "s/^CAPACITYROOM_VERSION=.*/CAPACITYROOM_VERSION=$(cat VERSION)/" "$CAPACITYROOM_HOME/capacity-room.env"
+set -a; . "$CAPACITYROOM_HOME/capacity-room.env"; set +a
 docker compose up -d --wait
 ```
 
@@ -381,6 +381,18 @@ upgrade, and check the version at the bottom of the sidebar. From 1.0.0 on,
 an upgrade keeps the stored reports, and a change that would break the API,
 the command line, the settings files, or the snapshot file waits for a major
 version; the changelog names every change.
+
+### Upgrading from 1.x
+
+Version 2.0.0 renames the platform, and four facts follow from it.
+
+- The Compose project, the volume, and the database are new, so the reports
+  of a 1.x stack are not carried forward.
+- Every environment variable now starts with `CAPACITYROOM_`, and the command
+  is now `capacity-room`.
+- Sessions end at the upgrade, and everyone signs in again.
+- A profile that is revised or imported again writes one new revision, even
+  when its document is unchanged.
 
 ## 9. Sizing
 
@@ -418,16 +430,16 @@ raise the worker's limit with `worker_slots`.
 
 An administrator resets another user's password on the web. When the only
 administrator has lost theirs, reset it on the host. The command needs
-`KCR_BOOTSTRAP_MODE=1` and the password on standard input, ends every
+`CAPACITYROOM_BOOTSTRAP_MODE=1` and the password on standard input, ends every
 session of that user, and writes the audit record `user.password_reset`. It
 does not change the role or reactivate an account.
 
 ```bash
-printf '%s\n' 'a new administrator password' > "$KCR_HOME/admin-password"  # example: replace
-docker compose run --rm -T -e KCR_BOOTSTRAP_MODE=1 serve \
-  admin reset-password --username admin --password-stdin --config /etc/kcr/platform.toml \
-  < "$KCR_HOME/admin-password"
-rm "$KCR_HOME/admin-password"
+printf '%s\n' 'a new administrator password' > "$CAPACITYROOM_HOME/admin-password"  # example: replace
+docker compose run --rm -T -e CAPACITYROOM_BOOTSTRAP_MODE=1 serve \
+  admin reset-password --username admin --password-stdin --config /etc/capacity-room/platform.toml \
+  < "$CAPACITYROOM_HOME/admin-password"
+rm "$CAPACITYROOM_HOME/admin-password"
 ```
 
 A user blocked by the sign-in throttle is free again after five minutes.

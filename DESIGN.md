@@ -390,4 +390,4 @@ One block at the head of the first page: the title at 18pt Bold and, 10pt under 
 Each table layout names a face for every column. A `num` column is set in mono and aligned right; a `name`, `text`, or `mark` column is aligned from the left. Cells sit at the middle of the row. The header is SemiBold, repeats at a page break, and is closed by a 0.8pt black rule; every other row is parted by a 0.5pt `luma(78%)` hairline.
 
 ### The colophon
-The last block of the document: a hairline rule, then the load-line disc (a ring crossed by a line, drawn in black at 8pt) and the line naming the program, k8s-capacity-report, at 7pt Muted.
+The last block of the document: a hairline rule, then the load-line disc (a ring crossed by a line, drawn in black at 8pt) and the line naming the program, CapacityRoom, at 7pt Muted.

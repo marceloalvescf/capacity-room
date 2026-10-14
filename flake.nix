@@ -1,5 +1,5 @@
 {
-  description = "Development shell of k8s-capacity-report";
+  description = "Development shell of CapacityRoom";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 

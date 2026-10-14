@@ -63,8 +63,8 @@ where, and what to do first, and trusts every mark enough to act on it.
 
 - Product name in the web app and the documentation: **CapacityRoom**
   (owner, 2026-10-11). The command, the binary, the image, the repository,
-  the `KCR_` environment variables, and the PDF keep the name
-  `k8s-capacity-report`.
+  the environment variables, and the PDF carry the name CapacityRoom since
+  2.0.0.
 - No company branding: each deployment sits inside someone else's
   organisation.
 - The PDF carries the load-line disc in its colophon and shares the faces of

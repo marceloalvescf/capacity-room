@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: k8s-capacity-report API
+  title: CapacityRoom API
   version: "1"
   description: >-
     The HTTP contract of the serve command. Every route is under /api/v1.
