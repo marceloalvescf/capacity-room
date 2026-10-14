@@ -2,13 +2,17 @@ package cli
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -87,6 +91,7 @@ func newMigrateCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cob
 func newBootstrapAdminCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobra.Command {
 	var username, language, config string
 	var passwordStdin bool
+	var passwordFile string
 	cmd := &cobra.Command{
 		Use:           "bootstrap-admin",
 		Short:         "Create the first administrator.",
@@ -95,7 +100,8 @@ func newBootstrapAdminCmd(ctx context.Context, env Env, redactor *redact.Redacto
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			name, err := bootstrapAdmin(ctx, env, redactor, bootstrapInput{
-				username: username, language: language, config: config, passwordStdin: passwordStdin,
+				username: username, language: language, config: config,
+				passwordStdin: passwordStdin, passwordFile: passwordFile,
 			})
 			if err != nil {
 				return err
@@ -107,6 +113,7 @@ func newBootstrapAdminCmd(ctx context.Context, env Env, redactor *redact.Redacto
 	flags := cmd.Flags()
 	flags.StringVar(&username, "username", "", "Username of the administrator.")
 	flags.BoolVar(&passwordStdin, "password-stdin", false, "Read the password from one line of standard input.")
+	flags.StringVar(&passwordFile, "password-file", "", "Read the password from the first line of this file.")
 	flags.StringVar(&language, "language", "pt-BR", "Language of the administrator: pt-BR or en.")
 	flags.StringVar(&config, "config", platformConfigDefault, "Path of the TOML settings file.")
 	_ = cmd.MarkFlagRequired("username")
@@ -167,6 +174,7 @@ func newImportProfilesCmd(ctx context.Context, env Env, redactor *redact.Redacto
 type bootstrapInput struct {
 	username, language, config string
 	passwordStdin              bool
+	passwordFile               string
 }
 
 // bootstrapAdmin creates the first user, an administrator, and returns its
@@ -176,11 +184,19 @@ func bootstrapAdmin(ctx context.Context, env Env, redactor *redact.Redactor, in 
 	if env.Getenv("CAPACITYROOM_BOOTSTRAP_MODE") != "1" {
 		return "", &exitError{1, errors.New("bootstrap-admin is off; set CAPACITYROOM_BOOTSTRAP_MODE=1 to run it")}
 	}
-	if !in.passwordStdin {
-		return "", &exitError{2, errors.New("the administrator password is read from standard input; pass --password-stdin and write it there")}
+	if in.passwordStdin == (in.passwordFile != "") {
+		return "", &exitError{2, errors.New("pass one of --password-stdin and --password-file")}
+	}
+	source := env.Stdin
+	if in.passwordFile != "" {
+		data, err := readPasswordFile(in.passwordFile)
+		if err != nil {
+			return "", &exitError{1, err}
+		}
+		source = bytes.NewReader(data)
 	}
 
-	name, password, err := readCredentials(env, redactor, in.username)
+	name, password, err := readCredentials(source, redactor, in.username)
 	if err != nil {
 		return "", err
 	}
@@ -281,7 +297,7 @@ func resetPassword(ctx context.Context, env Env, redactor *redact.Redactor, in r
 	if !in.passwordStdin {
 		return "", &exitError{2, errors.New("the new password is read from standard input; pass --password-stdin and write it there")}
 	}
-	name, password, err := readCredentials(env, redactor, in.username)
+	name, password, err := readCredentials(env.Stdin, redactor, in.username)
 	if err != nil {
 		return "", err
 	}
@@ -305,10 +321,10 @@ func resetPassword(ctx context.Context, env Env, redactor *redact.Redactor, in r
 	return name, nil
 }
 
-// readCredentials reads one line of standard input as a password and checks
+// readCredentials reads one line of source as a password and checks
 // it, and the username, against their policies.
-func readCredentials(env Env, redactor *redact.Redactor, username string) (name, password string, err error) {
-	line, err := bufio.NewReader(env.Stdin).ReadString('\n')
+func readCredentials(source io.Reader, redactor *redact.Redactor, username string) (name, password string, err error) {
+	line, err := bufio.NewReader(source).ReadString('\n')
 	if err != nil && !errors.Is(err, io.EOF) {
 		return "", "", &exitError{1, errors.New("cannot read the password from standard input")}
 	}
@@ -328,6 +344,47 @@ func readCredentials(env Env, redactor *redact.Redactor, username string) (name,
 	}
 	redactor.Add(password)
 	return name, password, nil
+}
+
+// maxPasswordFileBytes bounds a password file; a password holds at most 1024
+// characters, so a larger file is a mistake.
+const maxPasswordFileBytes = 4 << 10
+
+// readPasswordFile reads the regular file at path whole, at most 4 KiB. The
+// open does not block on a FIFO. A message repeats the path the user gave and
+// never the content.
+func readPasswordFile(path string) ([]byte, error) {
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, passwordFileError(path, err)
+	}
+	defer func() { _ = f.Close() }()
+	info, err := f.Stat()
+	if err != nil {
+		return nil, passwordFileError(path, err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("the password file at %s is not a regular file", path)
+	}
+	data, err := io.ReadAll(io.LimitReader(f, maxPasswordFileBytes+1))
+	if err != nil {
+		return nil, passwordFileError(path, err)
+	}
+	if len(data) > maxPasswordFileBytes {
+		return nil, fmt.Errorf("the password file at %s is larger than 4 KiB", path)
+	}
+	return data, nil
+}
+
+// passwordFileError words a failure to read the password file with the
+// user's own path and the system's cause.
+func passwordFileError(path string, err error) error {
+	cause := err.Error()
+	var pathErr *fs.PathError
+	if errors.As(err, &pathErr) {
+		cause = pathErr.Err.Error()
+	}
+	return fmt.Errorf("cannot read the password file at %s: %s", path, cause)
 }
 
 func newProbeCmd(ctx context.Context) *cobra.Command {

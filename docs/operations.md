@@ -218,6 +218,8 @@ docker compose run --rm -T -e CAPACITYROOM_BOOTSTRAP_MODE=1 serve \
 rm "$CAPACITYROOM_HOME/admin-password"
 ```
 
+`--password-file <path>` reads the password from the first line of a file instead, as the Kubernetes chart does.
+
 Profiles can be created on the web by the administrator, or imported from a
 file. An import creates or revises each profile the file names and leaves
 the others alone; it can be run again. The file is checked whole before

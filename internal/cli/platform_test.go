@@ -165,13 +165,78 @@ func TestBootstrapOff(t *testing.T) {
 	}
 }
 
-func TestBootstrapNeedsStdinFlag(t *testing.T) {
-	env := platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": "1"}, "")
-	env.Stdin = failingReader{t}
-	code, stdout, stderr := runCommand(context.Background(), env, "admin", "bootstrap-admin", "--username", "root")
-	const want = "error: the administrator password is read from standard input; pass --password-stdin and write it there\n"
-	if code != 2 || stderr != want || stdout != "" {
-		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+func TestBootstrapNeedsOnePasswordSource(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "password")
+	if err := os.WriteFile(file, []byte("correct horse battery staple\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	const want = "error: pass one of --password-stdin and --password-file\n"
+	for name, extra := range map[string][]string{
+		"neither": nil,
+		"both":    {"--password-stdin", "--password-file", file},
+	} {
+		t.Run(name, func(t *testing.T) {
+			env := platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": "1"}, "")
+			env.Stdin = failingReader{t}
+			args := append([]string{"admin", "bootstrap-admin", "--username", "root"}, extra...)
+			code, stdout, stderr := runCommand(context.Background(), env, args...)
+			if code != 2 || stderr != want || stdout != "" {
+				t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+			}
+		})
+	}
+}
+
+func TestBootstrapPasswordFileRefusals(t *testing.T) {
+	dir := t.TempDir()
+	large := filepath.Join(dir, "large")
+	if err := os.WriteFile(large, bytes.Repeat([]byte("a"), 4097), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	short := filepath.Join(dir, "short")
+	if err := os.WriteFile(short, []byte("tooshort\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	missing := filepath.Join(dir, "missing")
+	tests := []struct {
+		name, path, want string
+	}{
+		{"missing", missing, "error: cannot read the password file at " + missing + ": no such file or directory\n"},
+		{"folder", dir, "error: the password file at " + dir + " is not a regular file\n"},
+		{"large", large, "error: the password file at " + large + " is larger than 4 KiB\n"},
+		{"short", short, "error: the password is too short\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": "1", "CAPACITYROOM_DATABASE_DSN": closedPortDSN}, "")
+			env.Stdin = failingReader{t}
+			code, stdout, stderr := runCommand(context.Background(), env,
+				"admin", "bootstrap-admin", "--username", "root", "--password-file", tt.path, "--config", writePlatformFiles(t))
+			if code != 1 || stdout != "" || stderr != tt.want {
+				t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+			}
+			if strings.Contains(stderr, "tooshort") {
+				t.Fatalf("stderr = %q holds the content of the file", stderr)
+			}
+		})
+	}
+}
+
+func TestBootstrapPasswordFileArmsTheRedactor(t *testing.T) {
+	const password = "correct horse battery staple"
+	file := filepath.Join(t.TempDir(), "password")
+	if err := os.WriteFile(file, []byte(password+"\r\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	redactor := redact.New()
+	_, err := bootstrapAdmin(context.Background(),
+		platformEnv(map[string]string{"CAPACITYROOM_BOOTSTRAP_MODE": "1", "CAPACITYROOM_DATABASE_DSN": closedPortDSN}, ""),
+		redactor, bootstrapInput{username: "root", language: "en", config: writePlatformFiles(t), passwordFile: file})
+	if err == nil {
+		t.Fatal("bootstrapAdmin succeeded against a closed port")
+	}
+	if got := redactor.Text(password); strings.Contains(got, password) {
+		t.Fatalf("redactor.Text(password) = %q, want it redacted", got)
 	}
 }
 

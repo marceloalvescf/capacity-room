@@ -6,6 +6,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The first administrator can be created from a password file, with `admin bootstrap-admin --password-file`.
+
 ## [2.0.0] - 2026-10-14
 
 ### Changed

@@ -77,6 +77,49 @@ func TestBootstrapRefusesSecondUser(t *testing.T) {
 	}
 }
 
+// bootstrapFromFile runs bootstrap-admin against pool with the password in a
+// file and returns the code and both streams.
+func bootstrapFromFile(t *testing.T, pool *pgxpool.Pool, content string) (int, string, string) {
+	t.Helper()
+	file := filepath.Join(t.TempDir(), "password")
+	if err := os.WriteFile(file, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	env := platformEnv(map[string]string{
+		"CAPACITYROOM_BOOTSTRAP_MODE": "1",
+		"CAPACITYROOM_DATABASE_DSN":   pool.Config().ConnString(),
+	}, "")
+	return runCommand(context.Background(), env,
+		"admin", "bootstrap-admin", "--username", "Root", "--password-file", file, "--config", writePlatformFiles(t))
+}
+
+func TestBootstrapPasswordFileReadsOneLine(t *testing.T) {
+	pool := storetest.New(t)
+	code, stdout, stderr := bootstrapFromFile(t, pool, bootstrapPassword+"\r\nmore\n")
+	if code != 0 || stdout != "created administrator root\n" || stderr != "" {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
+	}
+	user, err := store.FindActiveUserByUsername(context.Background(), pool, "root")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if match, _, _ := auth.VerifyPassword(context.Background(), bootstrapPassword, user.PasswordHash); !match {
+		t.Fatal("the stored password is not the first line of the file without its line ending")
+	}
+}
+
+func TestBootstrapPasswordFileRefusesSecondUser(t *testing.T) {
+	pool := storetest.New(t)
+	if code, _, stderr := bootstrapFromFile(t, pool, bootstrapPassword); code != 0 {
+		t.Fatalf("first bootstrap: code = %d, stderr = %q", code, stderr)
+	}
+	code, stdout, stderr := bootstrapFromFile(t, pool, bootstrapPassword)
+	const want = "error: a user already exists; bootstrap-admin creates only the first\n"
+	if code != 1 || stdout != "" || stderr != want {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q, want %q and code 1", code, stdout, stderr, want)
+	}
+}
+
 func TestBootstrapAudits(t *testing.T) {
 	pool := storetest.New(t)
 	if code, _, stderr := bootstrap(t, pool, writePlatformFiles(t), bootstrapPassword+"\n"); code != 0 {

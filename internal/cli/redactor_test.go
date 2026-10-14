@@ -13,8 +13,8 @@ import (
 func TestReadCredentialsAddsAValidPasswordToTheRedactor(t *testing.T) {
 	password := "Correct-Horse-9-Battery"
 	redactor := redact.New()
-	env := Env{Stdin: strings.NewReader(password + "\n")}
-	if _, _, err := readCredentials(env, redactor, "root"); err != nil {
+	source := strings.NewReader(password + "\n")
+	if _, _, err := readCredentials(source, redactor, "root"); err != nil {
 		t.Fatal(err)
 	}
 	if got := redactor.Text("the password is " + password); strings.Contains(got, password) {
@@ -24,8 +24,8 @@ func TestReadCredentialsAddsAValidPasswordToTheRedactor(t *testing.T) {
 
 func TestReadCredentialsLeavesARefusalWhole(t *testing.T) {
 	redactor := redact.New()
-	env := Env{Stdin: strings.NewReader("short\n")}
-	_, _, err := readCredentials(env, redactor, "root")
+	source := strings.NewReader("short\n")
+	_, _, err := readCredentials(source, redactor, "root")
 	if err == nil {
 		t.Fatal("want a refusal")
 	}
