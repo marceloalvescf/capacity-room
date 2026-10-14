@@ -9,7 +9,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - A node that was not ready, or was cordoned, at the end of the period has a finding of attention, in the PDF and on the web.
-- The report view gives each node's state its own status, so the State column marks a node that is not ready or cordoned, and one whose readiness is unknown.
+- The State column of the nodes marks a node that is not ready or cordoned, and one whose readiness is unknown, in the PDF and on the web.
 
 ### Changed
 
@@ -20,6 +20,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Every date of the report, in the PDF and on the web, is written as an ISO date and time.
 - A healthy finding shows no action, and a capability with no remark shows an empty cell in place of "No remark".
 - CPU variation is judged only from an average of 1 mCPU, so a near-zero average no longer reports an absurd variation.
+- A report collected before this version shows a node that was not ready without a mark, since that report holds no readiness finding.
 
 ### Fixed
 
