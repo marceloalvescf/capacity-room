@@ -914,6 +914,7 @@ func TestNodeStateStatus(t *testing.T) {
 		{"unknown", nil, nil, nil, "unavailable", "unavailable"},
 		{"not ready", no, yes, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1")}, "attention", "attention"},
 		{"cordoned", yes, no, []snapshot.Finding{nodeFinding("NODE_UNSCHEDULABLE", analysis.SeverityAttention, "n1")}, "attention", "attention"},
+		{"readiness unknown, cordoned", nil, no, []snapshot.Finding{nodeFinding("NODE_UNSCHEDULABLE", analysis.SeverityAttention, "n1")}, "attention", "attention"},
 		{"fine", yes, yes, nil, "", "null"},
 		{"usage finding only", yes, yes, []snapshot.Finding{nodeFinding("NODE_LOW_UTILIZATION", analysis.SeverityAttention, "n1", number("maximum_average_percent", 10))}, "", "null"},
 		{"stored without the finding", no, yes, nil, "", "null"},

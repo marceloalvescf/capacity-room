@@ -343,7 +343,7 @@ func TestNodeDetailState(t *testing.T) {
 		{"not ready, schedulability unknown", no, nil, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1")}, "Not ready; Unavailable", "status", "attention"},
 		{"not ready and cordoned", no, no, []snapshot.Finding{nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1"), nodeFinding("NODE_UNSCHEDULABLE", analysis.SeverityAttention, "n1")}, "Not ready; Unschedulable", "status", "attention"},
 		{"readiness unknown, schedulable", nil, yes, nil, "Unavailable; Schedulable", "status", "unavailable"},
-		{"readiness unknown, cordoned", nil, no, nil, "Unavailable; Unschedulable", "status", "unavailable"},
+		{"readiness unknown, cordoned", nil, no, []snapshot.Finding{nodeFinding("NODE_UNSCHEDULABLE", analysis.SeverityAttention, "n1")}, "Unavailable; Unschedulable", "status", "attention"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -312,13 +312,10 @@ func nodeRow(b *builder, n snapshot.Node, findings []snapshot.Finding, threshold
 // readinessCodes are the findings of a node's state.
 var readinessCodes = []string{"NODE_NOT_READY", "NODE_UNSCHEDULABLE"}
 
-// nodeStateStatus is the status of a node's state: unavailable when its
-// readiness is unknown, else the worst severity of its readiness findings,
-// else none ("").
+// nodeStateStatus is the status of a node's state: the worst severity of its
+// readiness findings when it has any, else unavailable when its readiness is
+// unknown, else none ("").
 func nodeStateStatus(n snapshot.Node, findings []snapshot.Finding) string {
-	if n.Ready == nil {
-		return "unavailable"
-	}
 	status := ""
 	for _, f := range findings {
 		if f.ScopeType != analysis.ScopeNode || f.ScopeName != n.Name || !slices.Contains(readinessCodes, f.Code) {
@@ -327,6 +324,9 @@ func nodeStateStatus(n snapshot.Node, findings []snapshot.Finding) string {
 		if status == "" || analysis.Rank(f.Severity) > analysis.Rank(status) {
 			status = f.Severity
 		}
+	}
+	if status == "" && n.Ready == nil {
+		return "unavailable"
 	}
 	return status
 }
