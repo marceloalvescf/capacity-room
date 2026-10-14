@@ -528,6 +528,8 @@ kubectl -n capacity-room create secret docker-registry registry-pull \
   --docker-username=example --docker-password=CHANGE-ME  # example: replace
 ```
 
+List the pull secret in the values as `imagePullSecrets: [{name: registry-pull}]`.
+
 The credentials Secret and the CA ConfigMap are optional; a key of either
 is the file name that a profile gives. The pull secret is needed only when
 the registry is private. A key of the admin Secret other than `password`
@@ -556,7 +558,7 @@ Check the render against the cluster first, then install.
 
 ```bash
 helm upgrade -i capacity-room deploy/helm/capacity-room -n capacity-room --dry-run=server -f values.yaml
-helm upgrade -i capacity-room deploy/helm/capacity-room -n capacity-room --create-namespace -f values.yaml
+helm upgrade -i capacity-room deploy/helm/capacity-room -n capacity-room -f values.yaml
 ```
 
 The values schema refuses an unknown key, a missing required Secret name,
@@ -582,11 +584,19 @@ kubectl -n capacity-room logs job/capacity-room-admin
 kubectl -n capacity-room logs job/capacity-room-profiles
 ```
 
-A Job that fails after its retries leaves the release failed. Correct the
-cause, then run the same `helm upgrade` again: it removes the failed Job
-first. The admin Job refuses when the database already holds a user, as it
-does in a reinstall over a kept database; leave `admin.username` empty then,
-and the Job is not rendered.
+A Job that fails after its retries leaves the release failed.
+
+- A failed admin Job runs at the first install only, so an upgrade neither
+  removes it nor runs it again. Read its log, correct the cause (the Secret,
+  the password policy, the database), then run
+  `helm uninstall capacity-room -n capacity-room` and install again; the Job
+  runs again at that install. A failed bootstrap writes no user, so the new
+  install finds the database empty, and uninstalling keeps the database and
+  the Secrets. Over a database that already holds a user, as in a reinstall
+  over a kept database, the command refuses; leave `admin.username` empty
+  then, and the Job is not rendered.
+- A failed profiles Job: correct the values and run `helm upgrade` again.
+  `before-hook-creation` removes the failed Job before the new one runs.
 
 ### Probes, resources, and stop times
 
@@ -595,7 +605,7 @@ Both pods have a startup, a readiness, and a liveness probe on
 of `serve.resources`, and `worker` those of `worker.resources`; the worker's
 `GOMEMLIMIT` is set at three quarters of its memory limit, which must be
 written in `Mi` or `Gi`. `serve` has 45 seconds to stop. The worker has twice
-`worker_drain_seconds` plus 15 seconds, since it waits for running jobs, cancels
+`worker_drain_seconds` (30 by default) plus 15 seconds, since it waits for running jobs, cancels
 the rest, and waits again. Size the memory as section 9 does.
 
 ### Upgrade and uninstall

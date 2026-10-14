@@ -222,8 +222,11 @@ command applies the schema under the lock itself, so neither waits for
   a profile the values name holds until the next upgrade, which revises it
   back. A refused file fails the hook, with the cause in the Job's log.
 
-A failed hook leaves the release failed until the values are corrected and
-the release is upgraded; `before-hook-creation` removes the failed Job first.
+A failed hook leaves the release failed. A failed profiles Job is recovered by
+correcting the values and upgrading; `before-hook-creation` removes the failed
+Job first. The admin Job runs at the first install only, so a failed one is
+recovered by correcting the cause, uninstalling, and installing again; a failed
+bootstrap writes no user.
 
 ## 3. The one change to the command
 
