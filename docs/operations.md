@@ -390,6 +390,8 @@ Version 2.0.0 renames the platform:
   of a 1.x stack are not carried forward.
 - Every environment variable now starts with `CAPACITYROOM_`, and the command
   is now `capacity-room`.
+- The environment file is now `capacity-room.env`. Write it afresh as section 2
+  shows: the variables of a 1.x file are not read.
 - Sessions end at the upgrade, and everyone signs in again.
 - A profile that is revised or imported again writes one new revision, even
   when its document is unchanged.
