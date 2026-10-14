@@ -23,6 +23,8 @@
             pkgs.gnumake
             pkgs.govulncheck
             pkgs.trivy
+            pkgs.kubernetes-helm
+            pkgs.kubeconform
           ];
         };
       });

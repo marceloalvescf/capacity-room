@@ -1,0 +1,19 @@
+platform:
+  session_ttl_seconds: 2592000
+  session_idle_seconds: 2592000
+  worker_slots: 16
+  worker_drain_seconds: 3600
+  collect_timeout_seconds: 3600
+  render_timeout_seconds: 3600
+  job_max_attempts: 10
+  report_retention_days: 365
+  expired_report_days: 365
+  admission_limit: 1000
+  admission_profile_limit: 1000
+  admission_retry_seconds: 300
+  trusted_proxies:
+    - 10.244.0.0/16
+  allowed_endpoint_hostnames:
+    - prometheus.monitoring.svc.cluster.local
+  allowed_endpoint_cidrs:
+    - 10.96.0.0/12

@@ -470,3 +470,27 @@ func TestReadServerSecretCapsTheSize(t *testing.T) {
 	_, err = Settings{ServerSecretPath: over}.ReadServerSecret()
 	wantError(t, err, "the server secret at "+over+" is larger than 64 KiB")
 }
+
+// TestReadServerSecretThroughSecretVolumeLinks lays the file out as Kubernetes
+// writes a Secret volume: name -> ..data/name, ..data -> ..<timestamp>.
+func TestReadServerSecretThroughSecretVolumeLinks(t *testing.T) {
+	dir := t.TempDir()
+	stamped := filepath.Join(dir, "..2026_10_14_12_00_00.000000001")
+	if err := os.Mkdir(stamped, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	secret := bytes.Repeat([]byte("k"), 32)
+	if err := os.WriteFile(filepath.Join(stamped, "server-secret"), secret, 0o440); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Base(stamped), filepath.Join(dir, "..data")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("..data/server-secret", filepath.Join(dir, "server-secret")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Settings{ServerSecretPath: filepath.Join(dir, "server-secret")}.ReadServerSecret()
+	if err != nil || !bytes.Equal(got, secret) {
+		t.Fatalf("ReadServerSecret = %q, %v", got, err)
+	}
+}

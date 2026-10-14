@@ -332,6 +332,7 @@ func TestLayersHoldEveryPackageOfThisPart(t *testing.T) {
 		"internal/platform/api":       150,
 		"internal/platform/worker":    160,
 		"internal/cli":                200,
+		"internal/chart":              210,
 	}
 
 	got := checkLayerRanks(t, want)

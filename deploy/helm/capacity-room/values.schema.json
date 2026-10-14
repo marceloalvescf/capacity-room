@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["image", "imagePullSecrets", "database", "serverSecret", "credentials", "caBundles", "platform", "serve", "worker"],
+  "properties": {
+    "image": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "tag": {"type": "string"},
+        "pullPolicy": {"enum": ["Always", "IfNotPresent", "Never"]}
+      }
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": {"type": "object", "additionalProperties": false, "required": ["name"], "properties": {"name": {"type": "string", "minLength": 1}}}
+    },
+    "database": {
+      "type": "object", "additionalProperties": false, "required": ["existingSecret", "key"],
+      "properties": {"existingSecret": {"type": "string", "minLength": 1}, "key": {"type": "string", "minLength": 1}}
+    },
+    "serverSecret": {
+      "type": "object", "additionalProperties": false, "required": ["existingSecret", "key"],
+      "properties": {"existingSecret": {"type": "string", "minLength": 1}, "key": {"type": "string", "minLength": 1}}
+    },
+    "credentials": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"existingSecret": {"type": "string"}}
+    },
+    "caBundles": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"existingConfigMap": {"type": "string"}}
+    },
+    "platform": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "session_ttl_seconds": {"type": "integer"},
+        "session_idle_seconds": {"type": "integer"},
+        "trusted_proxies": {"type": "array", "items": {"type": "string"}},
+        "allowed_endpoint_hostnames": {"type": "array", "items": {"type": "string"}},
+        "allowed_endpoint_cidrs": {"type": "array", "items": {"type": "string"}},
+        "worker_slots": {"type": "integer"},
+        "worker_drain_seconds": {"type": "integer"},
+        "collect_timeout_seconds": {"type": "integer"},
+        "render_timeout_seconds": {"type": "integer"},
+        "job_max_attempts": {"type": "integer"},
+        "report_retention_days": {"type": "integer"},
+        "expired_report_days": {"type": "integer"},
+        "admission_limit": {"type": "integer"},
+        "admission_profile_limit": {"type": "integer"},
+        "admission_retry_seconds": {"type": "integer"}
+      }
+    },
+    "serve": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"resources": {"type": "object"}}
+    },
+    "worker": {
+      "type": "object", "additionalProperties": false, "required": ["resources"],
+      "properties": {
+        "resources": {
+          "type": "object", "required": ["limits"],
+          "properties": {
+            "limits": {
+              "type": "object", "required": ["memory"],
+              "properties": {"memory": {"type": "string", "pattern": "^[1-9][0-9]*(Mi|Gi)$"}}
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -39,6 +39,15 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=typst /bin/typst /usr/local/bin/typst
 RUN test "$(typst --version | cut -d' ' -f2)" = "0.15.1"
+ADD --checksum=sha256:86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb \
+    https://get.helm.sh/helm-v4.3.0-linux-amd64.tar.gz /opt/helm.tar.gz
+ADD --checksum=sha256:9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883 \
+    https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz /opt/kubeconform.tar.gz
+RUN tar -xzf /opt/helm.tar.gz -C /usr/local/bin --strip-components=1 linux-amd64/helm \
+    && tar -xzf /opt/kubeconform.tar.gz -C /usr/local/bin kubeconform \
+    && rm /opt/helm.tar.gz /opt/kubeconform.tar.gz
+RUN test "$(helm version --template '{{.Version}}')" = "v4.3.0"
+RUN test "$(kubeconform -v)" = "v0.8.0"
 RUN useradd --uid 10001 --user-group --no-create-home runner
 # Dependencies are downloaded into the image because the source is mounted
 # read-only when the tests run.

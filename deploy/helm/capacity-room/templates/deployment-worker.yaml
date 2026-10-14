@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "capacity-room.fullname" . }}-worker
+  labels:
+    {{- include "capacity-room.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "capacity-room.selectorLabels" (dict "root" . "component" "worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "capacity-room.selectorLabels" (dict "root" . "component" "worker") | nindent 8 }}
+      annotations:
+        checksum/settings: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "capacity-room.fullname" . }}
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "capacity-room.podSecurityContext" . | nindent 8 }}
+      # The stop waits worker_drain_seconds for the jobs, cancels the rest,
+      # and waits as long again; the grace period covers both waits.
+      terminationGracePeriodSeconds: {{ add (mul (.Values.platform.worker_drain_seconds | default 30 | int) 2) 15 }}
+      containers:
+        - name: worker
+          image: {{ include "capacity-room.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["worker", "--config", "/opt/capacity-room/platform.toml", "--health-listen", ":8091"]
+          env:
+            {{- include "capacity-room.databaseEnv" . | nindent 12 }}
+            - name: GOMEMLIMIT
+              value: {{ printf "%dMiB" (div (mul (include "capacity-room.workerMemoryMiB" . | int) 3) 4) | quote }}
+          ports:
+            - name: health
+              containerPort: 8091
+          startupProbe:
+            httpGet: {path: /health/ready, port: health}
+            periodSeconds: 2
+            failureThreshold: 150
+          readinessProbe:
+            httpGet: {path: /health/ready, port: health}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /health/live, port: health}
+            periodSeconds: 10
+          securityContext:
+            {{- include "capacity-room.containerSecurityContext" . | nindent 12 }}
+          {{- with .Values.worker.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "capacity-room.volumeMounts" . | nindent 12 }}
+      volumes:
+        {{- include "capacity-room.volumes" . | nindent 8 }}

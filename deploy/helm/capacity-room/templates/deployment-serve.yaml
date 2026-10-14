@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "capacity-room.fullname" . }}-serve
+  labels:
+    {{- include "capacity-room.labels" . | nindent 4 }}
+    app.kubernetes.io/component: serve
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "capacity-room.selectorLabels" (dict "root" . "component" "serve") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "capacity-room.selectorLabels" (dict "root" . "component" "serve") | nindent 8 }}
+      annotations:
+        checksum/settings: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "capacity-room.fullname" . }}
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- include "capacity-room.podSecurityContext" . | nindent 8 }}
+      # The stop waits 30 seconds for the requests in flight, then closes the
+      # rest; the grace period covers that wait with room to exit.
+      terminationGracePeriodSeconds: 45
+      containers:
+        - name: serve
+          image: {{ include "capacity-room.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["serve", "--config", "/opt/capacity-room/platform.toml", "--listen", ":8080"]
+          env:
+            {{- include "capacity-room.databaseEnv" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8080
+          startupProbe:
+            httpGet: {path: /health/ready, port: http}
+            periodSeconds: 2
+            failureThreshold: 150
+          readinessProbe:
+            httpGet: {path: /health/ready, port: http}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /health/live, port: http}
+            periodSeconds: 10
+          securityContext:
+            {{- include "capacity-room.containerSecurityContext" . | nindent 12 }}
+          {{- with .Values.serve.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- include "capacity-room.volumeMounts" . | nindent 12 }}
+      volumes:
+        {{- include "capacity-room.volumes" . | nindent 8 }}

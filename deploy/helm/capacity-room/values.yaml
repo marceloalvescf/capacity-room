@@ -1,0 +1,57 @@
+# The runtime image. An empty tag means the chart's appVersion.
+image:
+  repository: alvesmarcelocf/capacity-room
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Secrets that let the cluster pull a private image, as
+# [{name: <secret>}]. The chart creates none.
+imagePullSecrets: []
+
+# The Secret that holds the database DSN, at key. Required. A CloudNativePG
+# cluster's <cluster>-app Secret holds it at uri.
+database:
+  existingSecret: ""
+  key: uri
+
+# The Secret that holds the server secret, at least 32 random bytes, at key.
+# Required. For example:
+#   head -c 32 /dev/urandom > server-secret
+#   kubectl -n <namespace> create secret generic capacity-room-server-secret \
+#     --from-file=server-secret=./server-secret
+serverSecret:
+  existingSecret: ""
+  key: server-secret
+
+# The Secret whose keys are the credential files that profiles name, each a
+# bearer token. Empty: no credential folder.
+credentials:
+  existingSecret: ""
+
+# The ConfigMap whose keys are the CA bundles that profiles name, each PEM.
+# Empty: no CA folder.
+caBundles:
+  existingConfigMap: ""
+
+# The keys of platform.toml, by their own names, as the operations guide
+# lists them. A key left out keeps the program's default. The chart writes
+# server_secret_path, credential_dir, and ca_bundle_dir itself.
+platform: {}
+
+serve:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+worker:
+  # The memory limit is written in Mi or Gi; GOMEMLIMIT is set at three
+  # quarters of it.
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 4Gi

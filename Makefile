@@ -12,7 +12,7 @@ TEST_DSN := postgres://capacityroom_test:capacityroom_test_only@127.0.0.1:55432/
 
 # Every build tag of the repository, as declared in guard.BuildTags. The linter
 # runs once without tags and once with all of them, so that no file escapes it.
-BUILD_TAGS := golden,postgres,template,toolchain
+BUILD_TAGS := golden,helm,postgres,template,toolchain
 GATE_LOGS := .cache/gate
 
 # Extra flags for `docker build`; the gate sets them to build from scratch.
@@ -47,7 +47,7 @@ CHECK_RUNTIME_OUT := .cache/check-runtime
 # is newer than the lock file once they are.
 WEB_STAMP := web/node_modules/.package-lock.json
 
-.PHONY: web build test lint image test-toolchain test-template test-golden \
+.PHONY: web build test lint image test-toolchain test-template test-golden test-chart \
 	update-golden update-testdata check-runtime gate postgres-up postgres-down \
 	test-postgres generate generate-check e2e audit
 
@@ -117,6 +117,7 @@ lint: web
 	go vet ./...
 	go vet -tags=postgres ./...
 	go vet -tags=toolchain ./...
+	go vet -tags=helm ./...
 	go vet -tags=template ./...
 	go vet -tags='template golden' ./...
 	go run $(GOLANGCI) run
@@ -139,6 +140,12 @@ test-golden: web $(IMAGE_DEP)
 		--user "$$(id -u):$$(id -g)" \
 		--volume "$(CURDIR)/$(GOLDEN_OUT):/out" --env CAPACITYROOM_GOLDEN_OUT=/out \
 		$(TEST_IMAGE) go test -v -tags='template golden' ./template/ -run 'Golden|Snapshots'
+
+# The chart's tests: helm lint, the rendered manifests read back by the
+# program's own parsers, and kubeconform against the schemas kept in
+# deploy/helm/schemas. They run in the test image, which holds both tools.
+test-chart: $(IMAGE_DEP)
+	$(RUN_TEST_IMAGE) go test -v -count=1 -tags=helm ./internal/chart/
 
 # Rewrites every golden page. Run it only for an intended visual change, and
 # review each page before committing it. Both golden targets run as the
@@ -243,6 +250,7 @@ gate:
 	@set -o pipefail; $(MAKE) test-toolchain IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-toolchain.log
 	@set -o pipefail; $(MAKE) test-template IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-template.log
 	@set -o pipefail; $(MAKE) test-golden IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-golden.log
+	@set -o pipefail; $(MAKE) test-chart IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/test-chart.log
 	@set -o pipefail; $(MAKE) check-runtime IMAGE_DEP= 2>&1 | tee $(GATE_LOGS)/check-runtime.log
 	@set -o pipefail; $(MAKE) e2e IMAGE_DEP= BUILD_FLAGS="--no-cache --pull" 2>&1 | tee $(GATE_LOGS)/e2e.log
 	@echo "gate passed for version $(VERSION)"
