@@ -2595,23 +2595,25 @@ func withoutRuledCodes(snap snapshot.Snapshot) (snapshot.Snapshot, map[string]in
 	return out, removed
 }
 
-// TestRuledCodesAreWritten fails when a ruled code is written by no
-// recorded scenario, so that the table cannot outlive its decision.
+// TestRuledCodesAreWritten pins what the removal takes out of each recorded
+// scenario: edge-scaling holds one finding of each ruled code and their two
+// recommendations, and no other scenario holds any.
 func TestRuledCodesAreWritten(t *testing.T) {
-	sums := map[string]int{}
 	for _, scenario := range promtest.Scenarios {
 		out, _, err := run(context.Background(), scenario)
 		if err != nil {
 			t.Fatalf("run(%s): %v", scenario.Name, err)
 		}
-		_, removed := withoutRuledCodes(out.Snapshot)
-		for code, n := range removed {
-			sums[code] += n
+		filtered, removed := withoutRuledCodes(out.Snapshot)
+		wantNotReady, wantUnschedulable, wantRecommendations := 0, 0, 0
+		if scenario.Name == "edge-scaling" {
+			wantNotReady, wantUnschedulable, wantRecommendations = 1, 1, 2
 		}
-	}
-	for _, code := range ruledCodes {
-		if sums[code] == 0 {
-			t.Errorf("ruled code %s is written by no recorded scenario", code)
+		if removed["NODE_NOT_READY"] != wantNotReady || removed["NODE_UNSCHEDULABLE"] != wantUnschedulable {
+			t.Errorf("%s: removed findings = %v, want NODE_NOT_READY %d and NODE_UNSCHEDULABLE %d", scenario.Name, removed, wantNotReady, wantUnschedulable)
+		}
+		if got := len(out.Snapshot.Recommendations) - len(filtered.Recommendations); got != wantRecommendations {
+			t.Errorf("%s: removed recommendations = %d, want %d", scenario.Name, got, wantRecommendations)
 		}
 	}
 }
