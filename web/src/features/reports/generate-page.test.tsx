@@ -872,6 +872,27 @@ describe("what a copied report dropped", () => {
     );
   });
 
+  it("the notices stay as first shown when the profiles load again", async () => {
+    const source = report({ status: "failed", selection: { ...selection, namespaces: ["payments", "retired"] } });
+    mock.reports = [source];
+    const { user } = await open(`/generate?from=${source.id}`);
+    const notice = /Namespaces the profile no longer allows/;
+    const text = "Namespaces the profile no longer allows were left out: retired.";
+    expect(screen.getByText(notice)).toHaveTextContent(text);
+    server.use(
+      http.post(
+        reportsUrl,
+        () => failure(422, "REPORT_SELECTION_NOT_PERMITTED", { fields: { namespaces: "not_permitted" } }),
+        { once: true },
+      ),
+    );
+    mock.profiles = [profileSummary({ allowed_namespaces: ["payments", "retired", "catalog"] }), staging];
+    mock.calls.length = 0;
+    await user.click(submit());
+    await screen.findByRole("checkbox", { name: "catalog" });
+    expect(screen.getByText(notice)).toHaveTextContent(text);
+  });
+
   it("a copy that dropped nothing says nothing", async () => {
     const source = report({ status: "failed", selection: { ...selection, namespaces: ["payments"] } });
     mock.reports = [source];
@@ -922,10 +943,13 @@ describe("the send lock", () => {
     const user = userEvent.setup();
     await user.click(namespace("payments"));
     await user.click(submit());
-    const locked = await screen.findByRole("button", { name: t("generate.submitting") });
+    await waitFor(() => {
+      expect(posts()).toHaveLength(1);
+      expect(router.state.navigation.state).toBe("loading");
+    });
+    const locked = screen.getByRole("button", { name: t("generate.submitting") });
     expect(locked).toBeDisabled();
     await user.click(locked);
-    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(posts()).toHaveLength(1);
   });
 });

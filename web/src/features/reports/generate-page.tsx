@@ -531,19 +531,45 @@ function noticeValues(t: TFunction, language: Language, notice: FromNotice): Rec
 }
 
 function FromReport({ id, profiles, reload }: { id: string; profiles: ProfileSummary[]; reload: () => void }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const source = useReport(id);
-  const fallback = isLanguage(i18n.language) ? i18n.language : "en";
   if (source.data === undefined && !source.isError) {
     return null;
   }
-  const { values, notices } =
-    source.data === undefined
+  return (
+    <FromForm
+      key={id}
+      source={source.data}
+      error={source.error === null ? null : errorText(t, toError(source.error))}
+      profiles={profiles}
+      reload={reload}
+    />
+  );
+}
+
+// The form's first values and the notices that go with them are worked out
+// once, from the profiles as they were when the copy opened.
+function FromForm({
+  source,
+  error,
+  profiles,
+  reload,
+}: {
+  source: Report | undefined;
+  error: string | null;
+  profiles: ProfileSummary[];
+  reload: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const fallback = isLanguage(i18n.language) ? i18n.language : "en";
+  const [{ values, notices }] = useState(() =>
+    source === undefined
       ? { values: defaultsOf(profiles[0] as ProfileSummary, fallback), notices: [] }
-      : fromReport(source.data, profiles, fallback);
+      : fromReport(source, profiles, fallback),
+  );
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      {source.error === null ? null : <Alert tone="error">{errorText(t, toError(source.error))}</Alert>}
+      {error === null ? null : <Alert tone="error">{error}</Alert>}
       {notices.map((notice) => (
         <Alert key={notice.kind} tone="notice">
           <Trans
