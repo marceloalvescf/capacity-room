@@ -8,7 +8,7 @@ import { scrollBehavior } from "@/components/reveal";
 import { cn } from "@/lib/cn";
 import { useAddress } from "@/lib/address";
 import type { ViewFinding } from "./api";
-import { isUnknownPool, scopeName } from "./pieces";
+import { ConfidenceText, isUnknownPool, scopeName } from "./pieces";
 import { useView } from "./report-page";
 import { SearchField, useSearchText } from "@/components/search-field";
 
@@ -93,7 +93,7 @@ function Detail({ finding }: { finding: ViewFinding }) {
               : `${t(`scope.${finding.scope_type}`)} · ${finding.scope_kind}`}
           </span>
           <span className="text-muted-fg">
-            {t("report.confidence", { value: t(`confidence.${finding.confidence}`) })} {t(`confidenceMeaning.${finding.confidence}`)}
+            <ConfidenceText confidence={finding.confidence} />
           </span>
         </p>
         {name === null ? null : (

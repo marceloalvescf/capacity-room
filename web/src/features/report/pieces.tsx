@@ -287,3 +287,13 @@ export function FindingStatus({ status, hasFinding }: { status: Status; hasFindi
   const { t } = useTranslation();
   return hasFinding ? <StatusMark status={status} /> : <span className="text-muted-fg">{t("report.noFinding")}</span>;
 }
+
+// The sentence that gives a confidence and what it means.
+export function ConfidenceText({ confidence }: { confidence: ViewFinding["confidence"] }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      {t("report.confidence", { value: t(`confidence.${confidence}`) })} {t(`confidenceMeaning.${confidence}`)}
+    </>
+  );
+}

@@ -49,7 +49,7 @@ describe("autoscaling tab", () => {
     expect(screen.getByRole("heading", { name: "Cluster autoscaling" })).toBeInTheDocument();
     expect(screen.getByText("Enabled")).toBeInTheDocument();
     expect(screen.getByText("Source: Raw metrics")).toBeInTheDocument();
-    expect(screen.getByText("Confidence: Inferred.")).toBeInTheDocument();
+    expect(screen.getByText("Confidence: Inferred. Deduced from approximate or partial evidence.")).toBeInTheDocument();
     const counts = screen.getByText("Current nodes", { selector: "dt" }).closest("dl");
     const list = within(counts as HTMLElement);
     const names = list.getAllByRole("term").map((term) => term.textContent);

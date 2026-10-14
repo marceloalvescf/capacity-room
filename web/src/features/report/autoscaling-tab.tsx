@@ -4,7 +4,7 @@ import { StatusMark } from "@/components/status-mark";
 import type { ViewHPA, ViewValue } from "./api";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
 import { ClusterVerdict } from "./cluster-verdict";
-import { Counts, FindingStatus, hpaKey, matchHPA, RowFindings, StatGrid, useWorstFindingIndex, ValueText } from "./pieces";
+import { ConfidenceText, Counts, FindingStatus, hpaKey, matchHPA, RowFindings, StatGrid, useWorstFindingIndex, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewHPA) => `${row.namespace}/${row.name}`;
@@ -116,7 +116,7 @@ export function AutoscalingTab() {
             {t("report.autoscaling.source", { value: t(`strategy.${autoscaling.source}`) })}
           </span>
           <span className="text-sm text-muted-fg">
-            {t("report.confidence", { value: t(`confidence.${autoscaling.confidence}`) })}
+            <ConfidenceText confidence={autoscaling.confidence} />
           </span>
         </div>
         <ClusterVerdict />
