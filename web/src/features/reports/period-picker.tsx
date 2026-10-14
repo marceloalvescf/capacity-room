@@ -87,7 +87,7 @@ function withDay(wall: string, day: Date): string {
   return `${String(day.getFullYear()).padStart(4, "0")}-${twoDigits(day.getMonth() + 1)}-${twoDigits(day.getDate())} ${time}`;
 }
 
-function Length({ initial, onApply }: { initial: string; onApply: (period: string) => void }) {
+function Length({ initial, onEdit, onApply }: { initial: string; onEdit: () => void; onApply: (period: string) => void }) {
   const { t } = useTranslation();
   const [text, setText] = useState(initial);
   const parsed = parsePeriod(text);
@@ -112,6 +112,7 @@ function Length({ initial, onApply }: { initial: string; onApply: (period: strin
         error={parsed === null ? t("period.invalid") : undefined}
         onChange={(event) => {
           setText(event.target.value);
+          onEdit();
         }}
       />
       <Button type="submit" variant="primary" className="self-start" disabled={parsed === null}>
@@ -174,10 +175,11 @@ interface RangeProps {
   calendar: Side | null;
   buttons: Record<Side, React.RefObject<HTMLButtonElement | null>>;
   onCalendar: (side: Side | null) => void;
+  onEdit: () => void;
   onApply: (start: string, end: string) => void;
 }
 
-function Range({ initial, zone, calendar, buttons, onCalendar, onApply }: RangeProps) {
+function Range({ initial, zone, calendar, buttons, onCalendar, onEdit, onApply }: RangeProps) {
   const { t, i18n } = useTranslation();
   const hintId = useId();
   const [text, setText] = useState<Record<Side, string>>({ from: initial.start, to: initial.end });
@@ -193,6 +195,7 @@ function Range({ initial, zone, calendar, buttons, onCalendar, onApply }: RangeP
   const edit = (side: Side, next: string) => {
     setText((current) => ({ ...current, [side]: next }));
     setProblems({});
+    onEdit();
   };
 
   const calendarOf = (side: Side) => {
@@ -284,6 +287,8 @@ function Range({ initial, zone, calendar, buttons, onCalendar, onApply }: RangeP
   );
 }
 
+const modeOf = (value: PeriodValue): Mode => (value.kind === "length" ? "length" : "range");
+
 function initialRange(value: PeriodValue, zone: string): { start: string; end: string } {
   if (value.kind === "range") {
     return { start: value.start, end: value.end };
@@ -296,6 +301,7 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("length");
   const [calendar, setCalendar] = useState<Side | null>(null);
+  const [edited, setEdited] = useState(false);
   const [range, setRange] = useState({ start: "", end: "" });
   const buttons = { from: useRef<HTMLButtonElement>(null), to: useRef<HTMLButtonElement>(null) };
   const labelId = useId();
@@ -303,6 +309,7 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
   const errorId = useId();
   const lang = language(i18n.language);
   const restricted = permitted.length > 0;
+  const unedited = mode === modeOf(value) && !edited;
   const lengths = restricted ? permitted : quickRanges;
 
   const pick = (next: PeriodValue) => {
@@ -312,11 +319,16 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
 
   const openChanged = (next: boolean) => {
     if (next) {
-      setMode(value.kind === "length" ? "length" : "range");
+      setMode(modeOf(value));
+      setEdited(false);
       setRange(initialRange(value, zone));
       setCalendar(null);
     }
     setOpen(next);
+  };
+
+  const markEdited = () => {
+    setEdited(true);
   };
 
   const switchMode = (next: Mode) => {
@@ -380,6 +392,7 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
                 {mode === "length" ? (
                   <Length
                     initial={value.kind === "length" ? value.period : "24h"}
+                    onEdit={markEdited}
                     onApply={(period) => {
                       pick({ kind: "length", period });
                     }}
@@ -391,6 +404,7 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
                     calendar={calendar}
                     buttons={buttons}
                     onCalendar={setCalendar}
+                    onEdit={markEdited}
                     onApply={(start, end) => {
                       pick({ kind: "range", start, end });
                     }}
@@ -405,7 +419,7 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
                     <button
                       key={length}
                       type="button"
-                      aria-pressed={value.kind === "length" && value.period === length}
+                      aria-pressed={unedited && value.kind === "length" && value.period === length}
                       className={choice}
                       onClick={() => {
                         pick({ kind: "length", period: length });
@@ -421,7 +435,7 @@ export function PeriodPicker({ value, zone, permitted, error, triggerRef, onChan
                       <button
                         key={name}
                         type="button"
-                        aria-pressed={value.kind === "calendar" && value.name === name}
+                        aria-pressed={unedited && value.kind === "calendar" && value.name === name}
                         className={choice}
                         onClick={() => {
                           pick({ kind: "calendar", name });

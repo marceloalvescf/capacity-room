@@ -170,6 +170,28 @@ describe("period picker", () => {
       expect(within(dialog).getByRole("textbox", { name: t("period.custom.label") })).toHaveValue("7d");
     });
 
+    it("a length is pressed only on Length", async () => {
+      const user = userEvent.setup();
+      open([], length("24h"));
+      const dialog = await trigger(user);
+      const quick = within(dialog).getByRole("button", { name: t("period.quick.24h") });
+      expect(quick).toHaveAttribute("aria-pressed", "true");
+      await user.click(within(dialog).getByRole("radio", { name: t("period.mode.range") }));
+      expect(within(dialog).queryAllByRole("button", { pressed: true })).toHaveLength(0);
+      await user.click(within(dialog).getByRole("radio", { name: t("period.mode.length") }));
+      expect(quick).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("a calendar name is unpressed once the draft is edited", async () => {
+      const user = userEvent.setup();
+      open([], { kind: "calendar", name: "yesterday" });
+      const dialog = await trigger(user);
+      const quick = within(dialog).getByRole("button", { name: t("period.calendar.yesterday") });
+      expect(quick).toHaveAttribute("aria-pressed", "true");
+      await user.type(from(dialog), "1");
+      expect(quick).toHaveAttribute("aria-pressed", "false");
+    });
+
     it("the switch opens Range on yesterday", async () => {
       const user = userEvent.setup();
       open([], length("7d"));
