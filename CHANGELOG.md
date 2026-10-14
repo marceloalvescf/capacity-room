@@ -25,7 +25,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- A request that gets no answer from the server ends after 30 seconds with a message, so a delete no longer leaves its dialog stuck.
+- A request that gets no answer from the server ends with a message, so a delete no longer leaves its dialog stuck; a profile test and a report's view wait up to two and a half minutes, every other request 30 seconds.
 - A bulk delete cut short announces the reports that went and keeps the others selected.
 - The report list no longer flashes profile ids while the profile names load, and says when they could not be loaded.
 - The progress page checks often again after a PDF is requested, and announces nothing about a report you left.

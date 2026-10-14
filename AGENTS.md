@@ -660,6 +660,11 @@ redactor the moment the settings are loaded, before the pool opens.
   cache and opens sign-in with `ended=1` and the current path in `next`,
   except on sign-out, where it means the reader is already out. `next` is
   followed only when it is a path that starts with a single `/`.
+- **Every request of the API client has a time bound.** It fails with
+  `error.timeout` when no answer has come 30 seconds after it was sent; the
+  two profile tests and the report view allow 150 seconds, from one table in
+  `web/src/api/client.ts`. A timed-out request counts as unanswered, so a
+  resend replays.
 - **The language and the theme survive refused storage.** Before sign-in
   the language is the stored choice or the browser's; after it, the
   account's, and the stored choice is removed. A refusal of `localStorage`
