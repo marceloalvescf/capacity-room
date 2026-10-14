@@ -1,8 +1,12 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
+import { createMemoryRouter } from "react-router";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { requestTimeout } from "@/api/client";
+import { createApi, requestTimeout } from "@/api/client";
+import { Providers } from "@/app/providers";
+import { routes } from "@/app/router";
 import { i18next } from "@/i18n/i18n";
 import type { Language } from "@/i18n/language";
 import { failure, installMockApi, profileSummary, report, server, signedIn } from "../../../tests/msw";
@@ -825,5 +829,103 @@ describe("calendar ranges", () => {
     const dialog = await openPeriod(user);
     await user.click(within(dialog).getByRole("button", { name: t("period.calendar.thisMonth") }));
     expect(screen.getByText(t("generate.longPeriod"))).toBeInTheDocument();
+  });
+});
+
+describe("what a copied report dropped", () => {
+  const selection = report().selection;
+
+  it("a profile that is gone starts the form on the first one and says so", async () => {
+    const source = report({ status: "failed", profile_id: "retired", selection });
+    mock.reports = [source];
+    await open(`/generate?from=${source.id}`);
+    expect(profileSelect().value).toBe("prod");
+    const notice = screen.getByText(/The profile of that report is no longer available/);
+    expect(notice).toHaveTextContent(
+      "The profile of that report is no longer available, so the form starts from Production.",
+    );
+    expect(within(notice).getByText("Production")).toHaveClass("font-mono");
+  });
+
+  it("a namespace the profile no longer allows is named", async () => {
+    const source = report({ status: "failed", selection: { ...selection, namespaces: ["payments", "retired"] } });
+    mock.reports = [source];
+    await open(`/generate?from=${source.id}`);
+    expect(namespace("payments")).toBeChecked();
+    const notice = screen.getByText(/Namespaces the profile no longer allows/);
+    expect(notice).toHaveTextContent("Namespaces the profile no longer allows were left out: retired.");
+    expect(within(notice).getByText("retired")).toHaveClass("font-mono");
+  });
+
+  it("a range the profile no longer permits is named", async () => {
+    mock.profiles = [
+      profileSummary({ allowed_namespaces: ["payments"], permitted_periods: ["24h", "7d"], default_period: "7d" }),
+    ];
+    const source = report({
+      status: "failed",
+      selection: { ...selection, period: null, start: "2026-09-01 00:00", end: "2026-10-01 00:00" },
+    });
+    mock.reports = [source];
+    await open(`/generate?from=${source.id}`);
+    expect(screen.getByText(/The profile no longer permits that report's period/)).toHaveTextContent(
+      "The profile no longer permits that report's period, so the form starts from Last 7 days.",
+    );
+  });
+
+  it("a copy that dropped nothing says nothing", async () => {
+    const source = report({ status: "failed", selection: { ...selection, namespaces: ["payments"] } });
+    mock.reports = [source];
+    await open(`/generate?from=${source.id}`);
+    expect(namespace("payments")).toBeChecked();
+    expect(screen.queryByText(/no longer/)).not.toBeInTheDocument();
+  });
+
+  it("a selection the profile no longer permits loads the profiles again", async () => {
+    mock.profiles = [profileSummary({ allowed_namespaces: ["payments", "checkout"] })];
+    const { user } = await open();
+    await user.click(namespace("payments"));
+    server.use(
+      http.post(
+        reportsUrl,
+        () => failure(422, "REPORT_SELECTION_NOT_PERMITTED", { fields: { namespaces: "not_permitted" } }),
+        { once: true },
+      ),
+    );
+    mock.profiles = [profileSummary({ allowed_namespaces: ["checkout", "catalog"] })];
+    mock.calls.length = 0;
+    await user.click(submit());
+    await screen.findByText(t("validation.notPermitted"));
+    await waitFor(() => {
+      expect(mock.calls.filter((call) => call.path === "/profiles")).toHaveLength(1);
+    });
+    expect(await screen.findByRole("checkbox", { name: "catalog" })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "payments" })).not.toBeInTheDocument();
+  });
+});
+
+describe("the send lock", () => {
+  it("shows on the button while the page is being left", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity, refetchOnWindowFocus: false } },
+    });
+    await i18next.changeLanguage("en");
+    const router = createMemoryRouter(
+      [{ path: "/jobs/:id", loader: () => new Promise<never>(() => undefined), element: null }, ...routes],
+      { initialEntries: ["/generate"] },
+    );
+    window.history.replaceState(null, "", "/generate");
+    const api = createApi(queryClient, (to) => {
+      void router.navigate(to);
+    });
+    render(<Providers queryClient={queryClient} api={api} router={router} />);
+    await screen.findByRole("button", { name: t("generate.submit") });
+    const user = userEvent.setup();
+    await user.click(namespace("payments"));
+    await user.click(submit());
+    const locked = await screen.findByRole("button", { name: t("generate.submitting") });
+    expect(locked).toBeDisabled();
+    await user.click(locked);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(posts()).toHaveLength(1);
   });
 });

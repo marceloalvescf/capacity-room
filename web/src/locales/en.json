@@ -296,7 +296,12 @@
     "noProfiles": "No profile is available. An administrator creates profiles.",
     "profilesFailed": "The profiles could not be loaded.",
     "profileChanged": "The profile changed. Its choices were loaded again.",
-    "longPeriod": "Periods over 15 days read older data through Thanos and can raise CPU and memory use."
+    "longPeriod": "Periods over 15 days read older data through Thanos and can raise CPU and memory use.",
+    "from": {
+      "profileGone": "The profile of that report is no longer available, so the form starts from <name>{{profile}}</name>.",
+      "namespacesDropped": "Namespaces the profile no longer allows were left out: <name>{{names}}</name>.",
+      "periodDropped": "The profile no longer permits that report's period, so the form starts from {{period}}."
+    }
   },
   "progress": {
     "screen": "Report",

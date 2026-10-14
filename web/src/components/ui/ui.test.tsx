@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
+import { Select } from "@/components/ui/select";
 import { TextArea } from "@/components/ui/textarea";
 import { Menu, MenuContent, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "@/components/ui/menu";
 import { i18next } from "@/i18n/i18n";
@@ -74,6 +75,22 @@ describe("ui", () => {
     expect(box).toHaveAccessibleDescription("One per line. Fill in this field.");
     expect(box).toHaveClass("font-mono", "py-2");
     expect(await violations(container)).toEqual([]);
+  });
+
+  it("a select keeps a caller's description beside its own", () => {
+    render(
+      <main>
+        <Select label="Zone" hint="Pick one." error="Not allowed." aria-describedby="x" aria-invalid={false}>
+          <option>{"a"}</option>
+        </Select>
+      </main>,
+    );
+    const select = screen.getByLabelText("Zone");
+    const ids = (select.getAttribute("aria-describedby") ?? "").split(" ");
+    expect(ids).toHaveLength(3);
+    expect(ids[0]).toBe("x");
+    expect(select).toHaveAccessibleDescription("Pick one. Not allowed.");
+    expect(select).toHaveAttribute("aria-invalid", "true");
   });
 
   it("a menu holds radio items", async () => {

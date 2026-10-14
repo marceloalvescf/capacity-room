@@ -7,12 +7,20 @@ interface SelectProps extends Omit<ComponentProps<"select">, "id"> {
   error?: string | undefined;
 }
 
-export function Select({ label, hint, error, className, children, ...rest }: SelectProps) {
+export function Select({
+  label,
+  hint,
+  error,
+  className,
+  children,
+  "aria-describedby": describedBy,
+  ...rest
+}: SelectProps) {
   const id = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
-  const described = [hint === undefined ? null : hintId, error === undefined ? null : errorId]
-    .filter((value) => value !== null)
+  const described = [describedBy ?? null, hint === undefined ? null : hintId, error === undefined ? null : errorId]
+    .filter((value) => value !== null && value !== "")
     .join(" ");
   return (
     <div className="flex flex-col gap-1">
@@ -20,6 +28,7 @@ export function Select({ label, hint, error, className, children, ...rest }: Sel
         {label}
       </label>
       <select
+        {...rest}
         id={id}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={described === "" ? undefined : described}
@@ -28,7 +37,6 @@ export function Select({ label, hint, error, className, children, ...rest }: Sel
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
           className,
         )}
-        {...rest}
       >
         {children}
       </select>

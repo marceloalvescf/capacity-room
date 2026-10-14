@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type SyntheticEvent } from "react";
-import { useTranslation } from "react-i18next";
+import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { useNavigate, useSearchParams } from "react-router";
 import { ApiFailure } from "@/api/client";
 import { errorText, toError } from "@/api/errors";
@@ -13,7 +14,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { Select } from "@/components/ui/select";
 import { isLanguage, type Language } from "@/i18n/language";
 import { useProfiles, useReport, useRequestReport, type ProfileSummary, type Report } from "./api";
-import { periodDays, resolveCalendar, type PeriodValue } from "./period";
+import { periodDays, periodText, resolveCalendar, type PeriodValue } from "./period";
 import { PeriodPicker } from "./period-picker";
 
 interface Values {
@@ -57,27 +58,53 @@ function defaultsOf(profile: ProfileSummary, language: Language): Values {
   };
 }
 
-function fromReport(source: Report, profiles: ProfileSummary[], fallback: Language): Values {
+// What a copy of a report left behind, to be told to the reader.
+type FromNotice =
+  | { kind: "profileGone"; profile: string }
+  | { kind: "namespacesDropped"; names: string[] }
+  | { kind: "periodDropped"; period: PeriodValue };
+
+function fromReport(
+  source: Report,
+  profiles: ProfileSummary[],
+  fallback: Language,
+): { values: Values; notices: FromNotice[] } {
   const profile = profiles.find((candidate) => candidate.id === source.profile_id);
   if (profile === undefined) {
-    return defaultsOf(profiles[0] as ProfileSummary, fallback);
+    const first = profiles[0] as ProfileSummary;
+    return {
+      values: defaultsOf(first, fallback),
+      notices: [{ kind: "profileGone", profile: first.display_name }],
+    };
   }
   const { selection } = source;
-  // A profile that now limits its periods allows no range.
-  const period: PeriodValue =
-    selection.period !== null
-      ? { kind: "length", period: selection.period }
-      : profile.permitted_periods.length > 0
-        ? defaultsOf(profile, fallback).period
-        : { kind: "range", start: selection.start ?? "", end: selection.end ?? "" };
+  const notices: FromNotice[] = [];
+  let period: PeriodValue;
+  if (selection.period !== null) {
+    period = { kind: "length", period: selection.period };
+  } else if (profile.permitted_periods.length > 0) {
+    // A profile that now limits its periods allows no range.
+    period = defaultsOf(profile, fallback).period;
+    notices.push({ kind: "periodDropped", period });
+  } else {
+    period = { kind: "range", start: selection.start ?? "", end: selection.end ?? "" };
+  }
+  const namespaces = selection.namespaces.filter((name) => profile.allowed_namespaces.includes(name));
+  const dropped = selection.namespaces.filter((name) => !namespaces.includes(name));
+  if (dropped.length > 0) {
+    notices.unshift({ kind: "namespacesDropped", names: dropped });
+  }
   return {
-    profileId: profile.id,
-    namespaces: selection.namespaces.filter((name) => profile.allowed_namespaces.includes(name)),
-    language: selection.language,
-    period,
-    timezone: selection.timezone,
-    reportProfile: selection.report_profile,
-    minSeverity: selection.min_severity,
+    values: {
+      profileId: profile.id,
+      namespaces,
+      language: selection.language,
+      period,
+      timezone: selection.timezone,
+      reportProfile: selection.report_profile,
+      minSeverity: selection.min_severity,
+    },
+    notices,
   };
 }
 
@@ -132,6 +159,7 @@ function GenerateForm({
   // as its key is kept, so a resend carries the body its key was made for.
   const kept = useRef<ReturnType<typeof bodyPeriod>>(null);
   const sending = useRef(false);
+  const [locked, setLocked] = useState(false);
   const form = useRef<HTMLFormElement>(null);
   const periodTrigger = useRef<HTMLButtonElement>(null);
   const timezoneSelect = useRef<HTMLSelectElement>(null);
@@ -147,16 +175,21 @@ function GenerateForm({
     }
   }, [marks]);
 
-  // A profile that vanished resets the form to the first one, which is a new
-  // request: its key and its kept body go too.
-  const vanished = !profiles.some((candidate) => candidate.id === values.profileId);
+  const renewKey = useCallback(() => {
+    key.current = crypto.randomUUID();
+    answered.current = false;
+    kept.current = null;
+  }, []);
+
+  // A profile that left the list gives way to the first one; the request is a
+  // new one, so the reset counts and the key is renewed once it is committed.
+  const profile = profiles.find((candidate) => candidate.id === values.profileId);
+  const [resets, setResets] = useState(0);
   useEffect(() => {
-    if (vanished) {
-      key.current = crypto.randomUUID();
-      answered.current = false;
-      kept.current = null;
+    if (resets > 0) {
+      renewKey();
     }
-  }, [vanished]);
+  }, [resets, renewKey]);
 
   useEffect(() => {
     if (optionsOpen && focusTimezoneOnOpen.current) {
@@ -165,16 +198,10 @@ function GenerateForm({
     }
   }, [optionsOpen]);
 
-  const profile = profiles.find((candidate) => candidate.id === values.profileId);
   if (profile === undefined) {
     setValues(defaultsOf(profiles[0] as ProfileSummary, values.language));
+    setResets((count) => count + 1);
     return null;
-  }
-
-  function renewKey() {
-    key.current = crypto.randomUUID();
-    answered.current = false;
-    kept.current = null;
   }
 
   function edit(next: Partial<Values>, cleared: Marked[] = []) {
@@ -227,6 +254,9 @@ function GenerateForm({
       }
     }
     setProblems(marked);
+    if (error.code === "REPORT_SELECTION_NOT_PERMITTED") {
+      reload();
+    }
     if (Object.keys(marked).some((name) => name !== "namespaces" && name !== "period")) {
       setOptionsOpen(true);
     }
@@ -255,6 +285,7 @@ function GenerateForm({
     }
     kept.current = when;
     sending.current = true;
+    setLocked(true);
     setFailure(null);
     setProblems({});
     try {
@@ -270,11 +301,12 @@ function GenerateForm({
           min_severity: values.minSeverity,
         },
       });
-      // The form stays locked: the page is left, and a second click in the
-      // meantime must not send again.
+      // The lock stays on after an accepted request: the page is being left,
+      // and a second click in the meantime must not send again.
       void navigate(`/jobs/${accepted.id}`);
     } catch (thrown) {
       sending.current = false;
+      setLocked(false);
       const error = toError(thrown);
       if (!(error instanceof ApiFailure)) {
         setFailure(errorText(t, error));
@@ -479,12 +511,29 @@ function GenerateForm({
       {days !== null && days > 15 ? <Alert tone="notice">{t("generate.longPeriod")}</Alert> : null}
 
       <div>
-        <Button type="submit" variant="primary" disabled={request.isPending}>
-          {request.isPending ? t("generate.submitting") : t("generate.submit")}
+        <Button type="submit" variant="primary" disabled={locked}>
+          {locked ? t("generate.submitting") : t("generate.submit")}
         </Button>
       </div>
     </form>
   );
+}
+
+const noticeKeys: Record<FromNotice["kind"], string> = {
+  profileGone: "generate.from.profileGone",
+  namespacesDropped: "generate.from.namespacesDropped",
+  periodDropped: "generate.from.periodDropped",
+};
+
+function noticeValues(t: TFunction, language: Language, notice: FromNotice): Record<string, string> {
+  switch (notice.kind) {
+    case "profileGone":
+      return { profile: notice.profile };
+    case "namespacesDropped":
+      return { names: notice.names.join(", ") };
+    case "periodDropped":
+      return { period: periodText(t, language, notice.period) };
+  }
 }
 
 function FromReport({ id, profiles, reload }: { id: string; profiles: ProfileSummary[]; reload: () => void }) {
@@ -494,14 +543,23 @@ function FromReport({ id, profiles, reload }: { id: string; profiles: ProfileSum
   if (source.data === undefined && !source.isError) {
     return null;
   }
-  const initial =
+  const { values, notices } =
     source.data === undefined
-      ? defaultsOf(profiles[0] as ProfileSummary, fallback)
+      ? { values: defaultsOf(profiles[0] as ProfileSummary, fallback), notices: [] }
       : fromReport(source.data, profiles, fallback);
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       {source.error === null ? null : <Alert tone="error">{errorText(t, toError(source.error))}</Alert>}
-      <GenerateForm profiles={profiles} initial={initial} reload={reload} />
+      {notices.map((notice) => (
+        <Alert key={notice.kind} tone="notice">
+          <Trans
+            i18nKey={noticeKeys[notice.kind]}
+            values={noticeValues(t, fallback, notice)}
+            components={{ name: <span className="font-mono" /> }}
+          />
+        </Alert>
+      ))}
+      <GenerateForm profiles={profiles} initial={values} reload={reload} />
     </div>
   );
 }
