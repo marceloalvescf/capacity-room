@@ -13,10 +13,11 @@ Pins, all in `update.sh`:
 Kinds: ConfigMap, Deployment, Job, Ingress, Service, ServiceAccount, and
 HTTPRoute.
 
-Regenerate from the repository root, inside `nix develop`, with the network:
+Regenerate from the repository root. The script needs the network and nix;
+it takes python from the nixpkgs that `flake.lock` pins:
 
 ```bash
-nix develop -c deploy/helm/schemas/update.sh
+deploy/helm/schemas/update.sh
 ```
 
 A new kind the chart emits needs its schema here before kubeconform accepts

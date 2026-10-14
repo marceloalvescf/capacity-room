@@ -5,6 +5,7 @@ package chart
 import (
 	"bytes"
 	"os/exec"
+	"regexp"
 	"testing"
 )
 
@@ -20,6 +21,10 @@ func renderRaw(t *testing.T, args ...string) []byte {
 	return stdout.Bytes()
 }
 
+// summaryLine captures the Valid, Invalid, Errors, and Skipped counts of
+// kubeconform's summary.
+var summaryLine = regexp.MustCompile(`Valid: (\d+), Invalid: (\d+), Errors: (\d+), Skipped: (\d+)`)
+
 // kubeconform checks manifests against the schemas kept in the repository
 // alone; a kind with no schema there fails.
 func kubeconform(t *testing.T, manifests ...[]byte) {
@@ -33,6 +38,10 @@ func kubeconform(t *testing.T, manifests ...[]byte) {
 	if err != nil {
 		t.Fatalf("kubeconform: %v\n%s", err, out)
 	}
+	summary := summaryLine.FindSubmatch(out)
+	if summary == nil || string(summary[1]) == "0" || string(summary[2]) != "0" || string(summary[3]) != "0" || string(summary[4]) != "0" {
+		t.Fatalf("kubeconform validated nothing, or not everything:\n%s", out)
+	}
 	t.Logf("%s", out)
 }
 
@@ -44,10 +53,14 @@ func TestKubeconform(t *testing.T) {
 
 func TestKubeconformRefusesAWrongManifest(t *testing.T) {
 	wrong := []byte("apiVersion: v1\nkind: Service\nmetadata:\n  name: x\nspec:\n  portz: []\n")
-	cmd := exec.Command("kubeconform", "-strict",
+	cmd := exec.Command("kubeconform", "-strict", "-summary",
 		"-schema-location", "../../deploy/helm/schemas/kubernetes/{{.ResourceKind}}{{.KindSuffix}}.json", "-")
 	cmd.Stdin = bytes.NewReader(wrong)
-	if err := cmd.Run(); err == nil {
+	out, err := cmd.CombinedOutput()
+	if err == nil {
 		t.Fatal("kubeconform accepted a Service with an unknown field")
+	}
+	if !bytes.Contains(out, []byte("additional properties 'portz' not allowed")) {
+		t.Fatalf("kubeconform refused it for another reason:\n%s", out)
 	}
 }
