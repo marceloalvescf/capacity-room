@@ -2204,7 +2204,7 @@
     },
     {
       "type": "colophon",
-      "text": "Gerado pelo k8s-capacity-report a partir de um snapshot de métricas compatíveis com o Prometheus. Emitido em 2026-07-15 14:30."
+      "text": "Gerado pelo CapacityRoom a partir de um snapshot de métricas compatíveis com o Prometheus. Emitido em 2026-07-15 14:30."
     }
   ]
 }
