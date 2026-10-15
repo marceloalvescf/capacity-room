@@ -46,7 +46,21 @@ export const test = base.extend<{ cspGuard: undefined }>({
   ],
 });
 
+// axe reads the page at rest: a layer still fading in blends its colours with the page behind it. A pulse never
+// ends, so only the animations with an end are awaited.
+async function settle(page: Page) {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
+}
+
 export async function expectNoViolations(page: Page) {
+  await settle(page);
   const result = await new AxeBuilder({ page }).analyze();
   expect(result.violations).toEqual([]);
 }

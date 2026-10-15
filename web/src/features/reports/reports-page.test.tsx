@@ -359,15 +359,18 @@ describe("report list", () => {
     expect(within(rowOf(id(2))).getByText(t("reports.notGenerated"))).toBeInTheDocument();
     expect(within(rowOf(id(1))).queryByText(t("reports.notGenerated"))).not.toBeInTheDocument();
     expect(within(rowOf(id(1))).queryAllByRole("listitem")).toHaveLength(0);
+    expect(within(rowOf(id(1))).getByText(t("reports.noPdf"))).toHaveRole("cell");
+    expect(t("reports.noPdf")).toBe("-");
   });
 
-  it("an expired report keeps a dash for its PDFs", async () => {
+  it("an expired report keeps a hyphen for its PDFs", async () => {
     mock.reports = many(1, () => ({ expired: true, pdfs: [{ language: "en", status: "ready", failure_code: null }] }));
     await renderApp("/reports");
     await screen.findAllByRole("row");
     const row = rowOf(id(0));
     expect(within(row).queryAllByRole("listitem")).toHaveLength(0);
     expect(row).not.toHaveTextContent(t("pdfStatus.ready"));
+    expect(within(row).getByText(t("reports.noPdf"))).toHaveRole("cell");
   });
 
   it("the profile cell ends its second line with the report's language", async () => {

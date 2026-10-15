@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -13,13 +14,19 @@ interface DeleteDialogProps {
 
 export function DeleteDialog({ target, busy, onConfirm, onCancel, onCloseAutoFocus }: DeleteDialogProps) {
   const { t } = useTranslation();
+  // The last target stays after the dialog closes, so its title and body do not go blank while it fades.
+  const [last, setLast] = useState(target);
+  if (target !== null && target !== last) {
+    setLast(target);
+  }
+  const shown = target ?? last;
   let title = "";
   let body = "";
-  if (target?.kind === "one") {
-    title = t("delete.oneTitle", { profile: target.profile });
-    body = t("delete.oneBody", { time: target.time, username: target.username });
-  } else if (target?.kind === "many") {
-    title = t("delete.manyTitle", { count: target.ids.length });
+  if (shown?.kind === "one") {
+    title = t("delete.oneTitle", { profile: shown.profile });
+    body = t("delete.oneBody", { time: shown.time, username: shown.username });
+  } else if (shown?.kind === "many") {
+    title = t("delete.manyTitle", { count: shown.ids.length });
     body = t("delete.manyBody");
   }
   return (
