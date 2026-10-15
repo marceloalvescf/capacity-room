@@ -5,7 +5,7 @@ type Evidence = ViewFinding["evidence"][number];
 // What the evidence of a finding draws: a value read against its reference, from zero or from the start of a
 // range; the evidence printed large beside it, then the rest of what it shows. Every number is the view's own: a
 // percent is read against 100, a count against the maximum its evidence names, a range against 100 from its
-// lowest value. A count is drawn in whole units.
+// lowest value. A count divides its track into units; an average count stays where it falls between them.
 export interface Proof {
   from: number;
   value: number;
@@ -15,11 +15,12 @@ export interface Proof {
   rest: Evidence[];
 }
 
-// The count a finding reaches, then the maximum it is read against.
+// The count a finding reaches, then the maximum it is read against. A pinned HPA, whose minimum equals its
+// maximum, reaches nothing, so its range is not drawn.
 const counts = [
   ["current_peak", "spec_max"],
+  ["current_average", "spec_max"],
   ["current_nodes", "max_nodes"],
-  ["spec_min", "spec_max"],
 ] as const;
 
 // A percent drawn alone, then the evidence printed after it.

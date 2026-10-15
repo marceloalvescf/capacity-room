@@ -15,6 +15,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A peak cell in attention or critical is tinted in the colour of its status, in place of the blue depth tint and the hatch.
 - On the Findings tab a selected severity shows a dark outline and its coloured shape, in place of a blue fill.
 - Page titles are larger, and menus, popovers, and dialogs float on a soft shadow.
+- The current page and tab are marked in ink rather than blue, a status word keeps the colour of the text beside its coloured shape, and italic numbers are gone.
 
 ## [2.2.0] - 2026-10-15
 

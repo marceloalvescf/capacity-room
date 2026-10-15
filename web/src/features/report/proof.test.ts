@@ -56,8 +56,21 @@ describe("proof", () => {
     expect(names(proof)).toEqual({ lead: "current_nodes", rest: ["max_nodes"] });
   });
 
-  it("a pinned HPA draws its minimum against its maximum", () => {
-    expect(names(proofOf(first("HPA_PINNED_REPLICAS")))).toEqual({ lead: "spec_min", rest: ["spec_max"] });
+  it("a pinned HPA reaches nothing, so it draws nothing", () => {
+    expect(proofOf(first("HPA_PINNED_REPLICAS"))).toBeNull();
+  });
+
+  it("an HPA near its maximum draws its average replicas against the maximum, where they fall", () => {
+    const proof = proofOf({
+      ...first("HPA_MAX_REPLICAS_REACHED"),
+      code: "HPA_NEAR_MAX_REPLICAS",
+      evidence: [
+        { name: "current_average", raw: 3.5, text: "3.5" },
+        { name: "spec_max", raw: 4, text: "4" },
+      ],
+    });
+    expect(proof && { value: proof.value, reference: proof.reference, count: proof.count }).toEqual({ value: 3.5, reference: 4, count: true });
+    expect(names(proof)).toEqual({ lead: "current_average", rest: ["spec_max"] });
   });
 
   it("an uneven pool draws its peaks as a range from the lowest, the spread printed after", () => {

@@ -53,6 +53,12 @@ export const pairs: readonly Pair[] = [
   text("info-surface-fg", "info-surface"),
   ...onTint,
   ...onTrack,
+  // The ink outline of a pressed severity toggle, at rest and under the pointer, and the underline of the current tab.
+  line("fg", "surface"),
+  line("fg", "hover"),
+  line("fg", "bg"),
+  // A link on the opened row of a table.
+  text("accent", "info-surface"),
   // A control under the pointer: a secondary button, a released segment or severity toggle with its status mark,
   // a period choice, its stroke, and the focus ring around it.
   text("surface-fg", "hover"),

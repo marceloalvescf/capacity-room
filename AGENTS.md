@@ -643,16 +643,20 @@ redactor the moment the settings are loaded, before the pool opens.
   the deploy names are `capacity-room`; environment variables start with
   `CAPACITYROOM_`; a lowercase identifier starts with `capacityroom_` or
   `capacityroom-`.
-- **A tint follows a status the view gives.** The depth tint of a value (a
-  peak cell, by the worse of its peak and its share) and the hazard of the
-  depth gauge (by the worst cluster finding) follow a status the view gives,
-  never a threshold of the web app. The tints of the gauge's bands mark only
-  position on its own scale. The State column of the nodes takes the
-  status the view gives the node's state: the severity of its readiness
-  findings, or unavailable when readiness is unknown. Filled actions use the `action` tokens; `accent`
-  is for links, focus, and the current-level line. Nothing casts a shadow: a
-  floating layer is closed by a neat-line, and a modal dims the page through
-  the `scrim` token.
+- **A tint follows a status the view gives.** The tint of a peak cell (by
+  the worse of the statuses of its peak and its share) and the colour of a
+  proof bar (the severity of its finding; for the nodes of the cluster, the
+  hazard the view gives the gauge) follow a status the view gives, never a
+  threshold of the web app. A proof bar draws only the view's numbers
+  against the reference its evidence names: 100 for a percent, the maximum
+  of a count, a range from its lowest value. The State column of the nodes
+  takes the status the view gives the node's state: the severity of its
+  readiness findings, or unavailable when readiness is unknown. A status
+  colour sits on its shape and on a proof bar, never on words. Filled
+  actions use the `action` tokens; `accent` is for links and focus. One
+  shadow, `shadow-float`, lifts a floating layer (menu, popover, dialog);
+  nothing else casts one, and a modal dims the page through the `scrim`
+  token.
 - **An icon button keeps its name.** `IconButton` puts the name in
   `aria-label` and shows it in a tooltip on hover and on focus. Its tooltip is
   drawn inside the landmark that holds the button, or in the body when no
@@ -746,8 +750,8 @@ redactor the moment the settings are loaded, before the pool opens.
 - **The overview opens on its answer, built from the view alone.** First the
   answer strip: the severity totals and any data-quality warnings. Then the
   verdict band, which comes from `view.verdict` and keeps no rule of the web
-  app: whether the cluster can grow (the gauge of its nodes against the
-  autoscaler's maximum, the worst cluster finding, and the node-evidence
+  app: whether the cluster can grow (its nodes against the autoscaler's
+  maximum as a proof bar, the worst cluster finding, and the node-evidence
   warning when the report has it) and the pressure of each scope, the scopes
   worst first (its worst severity, the first finding of that severity,
   linked to the findings tab). Then the action plan, whose rows open the
