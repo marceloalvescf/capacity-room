@@ -137,8 +137,9 @@ No guard checks these. The reviewer of each task does.
   forward by a migration, and the code keeps one path, never a reader of an
   earlier shape; data that cannot be carried forward is dropped on purpose,
   named under `Removed`, with a major version.
-- **`docs/operations.md` is the operator's one document, and
-  `docs/security.md` records the threat model, the controls, and each
+- **`docs/operations.md` is the operator's full document, and the chart's
+  README (`deploy/helm/capacity-room/README.md`) is its quick start, links to
+  it, and changes with it in the same commit. `docs/security.md` records the threat model, the controls, and each
   review.** A change to a setting, a failure code, a command, or the Compose
   file updates the guide in the same commit; a new control or a new
   attacker updates the security document.
@@ -899,6 +900,8 @@ design, and section 12 of `docs/operations.md` is the operator's guide to it.
 
 - **The chart lives in `deploy/helm/capacity-room/` and is not published.** An
   operator installs it from a checkout.
+- **The chart's README is the quick start of section 12.** It links to
+  `docs/operations.md` and changes with it in the same commit.
 - **It creates no Secret, no PersistentVolumeClaim, and no NetworkPolicy.**
   The operator makes the Secrets and the ConfigMap it names, and the pull
   secret of a private registry.

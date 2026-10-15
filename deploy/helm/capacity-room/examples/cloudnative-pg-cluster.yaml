@@ -1,0 +1,23 @@
+# A CloudNativePG Cluster for CapacityRoom. This is a manifest for
+# `kubectl apply -f`, not a values file for helm. It needs the CloudNativePG
+# operator and the namespace capacity-room.
+#
+# Pin the image by digest before you apply it:
+#   docker buildx imagetools inspect ghcr.io/cloudnative-pg/postgresql:18
+# then write ghcr.io/cloudnative-pg/postgresql:18@sha256:<digest>.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: capacity-room-db
+  namespace: capacity-room
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:18  # example: replace with the digest form
+  storage:
+    size: 5Gi
+    # Name a storage class here if the cluster has no default one.
+    # storageClass: <class>
+  bootstrap:
+    initdb:
+      database: capacityroom
+      owner: capacityroom

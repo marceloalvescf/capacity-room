@@ -282,7 +282,8 @@ The platform puts the reports on the web: `serve` holds the interface and the
 API, `worker` collects the reports and compiles their PDFs, and PostgreSQL
 keeps everything, run together by `deploy/compose.yaml` behind a TLS proxy
 of your own. A Helm chart in `deploy/helm/capacity-room` runs the platform on
-Kubernetes; section 12 of the operations guide says how.
+Kubernetes; its quick start is `deploy/helm/capacity-room/README.md`, and
+section 12 of the operations guide is the full text.
 [`docs/operations.md`](docs/operations.md) is the guide to
 install, configure, back up, upgrade, and troubleshoot it, and
 [`docs/security.md`](docs/security.md) describes what it defends against.

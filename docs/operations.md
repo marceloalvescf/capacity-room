@@ -492,14 +492,61 @@ NetworkPolicy: the Secrets are yours, the database is outside the chart, and
 the cluster's network policy is yours to write. Every pod meets the
 `restricted` pod security level.
 
-### Secrets to create first
+### A database with CloudNativePG
 
-Create each in the namespace of the release before installing.
+The chart ships no database. It reads the DSN from an existing Secret named
+by `database.existingSecret`, at the key `database.key` (default `uri`). Any
+PostgreSQL 18 the cluster reaches will do; CloudNativePG is one way to run it
+inside the cluster. Create the namespace first, for either way:
 
 ```bash
 kubectl create namespace capacity-room
+```
 
-# The database DSN. A CloudNativePG cluster already makes <cluster>-app, whose key uri holds it.
+Install the operator once per cluster. It is the chart `cloudnative-pg`,
+version 0.29.1 (operator 1.30.1), and it watches every namespace.
+
+```bash
+helm repo add cnpg https://cloudnative-pg.github.io/charts
+helm upgrade -i cnpg cnpg/cloudnative-pg --version 0.29.1 -n cnpg-system --create-namespace --wait
+```
+
+Then make the database from `deploy/helm/capacity-room/examples/cloudnative-pg-cluster.yaml`.
+It is a manifest for `kubectl apply`, not a values file: one instance of
+PostgreSQL 18, a `capacityroom` database owned by `capacityroom`, and 5Gi of
+storage. Set `storage.size` to your need, name a `storage.storageClass` if the
+cluster has no default one, and pin the image by digest,
+`ghcr.io/cloudnative-pg/postgresql:18@sha256:<digest>`, which
+`docker buildx imagetools inspect ghcr.io/cloudnative-pg/postgresql:18`
+prints.
+
+```bash
+kubectl apply -f deploy/helm/capacity-room/examples/cloudnative-pg-cluster.yaml
+kubectl -n capacity-room wait cluster/capacity-room-db --for=condition=Ready --timeout=300s
+```
+
+The operator then creates the Secret `capacity-room-db-app`, whose key `uri`
+holds the DSN. In the values, write `database.existingSecret: capacity-room-db-app`
+and keep the default key `uri`; there is no database Secret to create by
+hand. The example runs one instance, with no backups, no pooler, and no
+monitoring; if the data matters, set up backups as CloudNativePG's own
+documentation describes.
+
+For any other PostgreSQL 18, make the Secret yourself and name it in
+`database.existingSecret`.
+
+```bash
+kubectl -n capacity-room create secret generic capacity-room-db \
+  --from-literal=uri='postgres://user:password@host:5432/capacityroom'  # example: replace
+```
+
+### Secrets to create first
+
+Create each in the namespace of the release before installing. The namespace
+exists from the previous subsection.
+
+```bash
+# The database DSN. Skip it when CloudNativePG made capacity-room-db-app, as the previous subsection shows.
 kubectl -n capacity-room create secret generic capacity-room-db-app \
   --from-literal=uri='postgres://capacityroom:CHANGE-ME@db.example.com:5432/capacityroom?sslmode=require'  # example: replace
 

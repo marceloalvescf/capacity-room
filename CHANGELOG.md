@@ -6,6 +6,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The Helm chart has a README with a quick start, and the operations guide shows how to run its database on CloudNativePG.
+
 ## [2.1.0] - 2026-10-14
 
 ### Added
