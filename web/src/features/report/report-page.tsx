@@ -109,7 +109,7 @@ export function ReportPage() {
                 className={({ isActive }) =>
                   cn(
                     "inline-flex items-center gap-1.5 border-b-2 px-2.5 py-2 text-sm focus-visible:outline-2 focus-visible:outline-accent",
-                    isActive ? "border-accent font-semibold text-fg" : "border-transparent text-muted-fg",
+                    isActive ? "border-accent font-semibold text-fg" : "border-transparent text-muted-fg hover:border-input-border hover:text-fg",
                   )
                 }
               >

@@ -202,7 +202,10 @@ export function FindingsTab() {
                   }}
                   className={cn(
                     "inline-flex min-h-9 items-center gap-2 rounded-md border px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-                    pressed ? "border-action bg-action text-action-fg" : "border-neatline bg-surface text-surface-fg",
+                    "active:translate-y-px motion-safe:transition-transform motion-safe:duration-100 motion-safe:ease-out",
+                    pressed
+                      ? "border-action bg-action text-action-fg hover:border-action-hover hover:bg-action-hover"
+                      : "border-neatline bg-surface text-surface-fg hover:bg-hover",
                   )}
                 >
                   <StatusMark status={severity} plain={pressed} />

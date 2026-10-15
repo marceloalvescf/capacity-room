@@ -12,9 +12,10 @@ import { Brand } from "./brand";
 import { LanguageMenu } from "./language-menu";
 import { useAnnounce } from "./live-region";
 
-// The page in view: the active tint, semibold, and a neat-line frame on every side.
+// The page in view: the active tint, semibold, and a neat-line frame on every side. Another page under the pointer
+// takes a lighter tint.
 const navLink =
-  "block rounded-md px-3 py-2 text-sm aria-[current=page]:bg-sidebar-active aria-[current=page]:font-semibold aria-[current=page]:ring-1 aria-[current=page]:ring-neatline aria-[current=page]:ring-inset aria-[current=page]:text-sidebar-active-fg";
+  "block rounded-md px-3 py-2 text-sm not-aria-[current=page]:hover:bg-sidebar-hover not-aria-[current=page]:hover:text-sidebar-active-fg aria-[current=page]:bg-sidebar-active aria-[current=page]:font-semibold aria-[current=page]:ring-1 aria-[current=page]:ring-neatline aria-[current=page]:ring-inset aria-[current=page]:text-sidebar-active-fg";
 
 const version = import.meta.env.VITE_CAPACITYROOM_VERSION;
 

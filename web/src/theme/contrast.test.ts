@@ -76,7 +76,7 @@ describe("contrast", () => {
   });
 
   it("every token has a dark twin", () => {
-    expect(themes.light.size).toBe(28);
+    expect(themes.light.size).toBe(32);
     expect([...themes.dark.keys()].sort()).toEqual([...themes.light.keys()].sort());
   });
 });

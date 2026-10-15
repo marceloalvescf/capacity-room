@@ -4,22 +4,25 @@ description: Kubernetes capacity reports read as a hydrographic chart reads wate
 colors:
   chart-ground: "#f5f9fb"
   chart-ink: "#0e1a22"
-  sheet: "#ffffff"
+  sheet: "#fdfefe"
   sheet-ink: "#0e1a22"
+  sheet-hover: "#e9f2f7"
   shallows: "#deedf4"
   shallows-ink: "#26404f"
+  shallows-hover: "#cde4ef"
   shallows-active: "#bcdbe9"
   shallows-active-ink: "#0b1f2b"
   muted-ink: "#455560"
   hairline: "#cfdbe2"
   neatline: "#22323d"
   input-border: "#6c808d"
-  sounding-blue: "#14375c"
-  action-ink: "#22323d"
-  action-ink-fg: "#ffffff"
+  sounding-blue: "#235c95"
+  sounding-blue-hover: "#1b4d80"
+  sounding-blue-fg: "#fdfefe"
   sea-green: "#155e46"
-  ochre: "#784800"
+  ochre: "#6f4a10"
   chart-magenta: "#a0135a"
+  chart-magenta-hover: "#87104c"
   slate-neutral: "#445661"
   hazard-surface: "#fbe8f1"
   hazard-border: "#e9b1cd"
@@ -80,8 +83,8 @@ spacing:
   "10": "40px"
 components:
   button-primary:
-    backgroundColor: "{colors.action-ink}"
-    textColor: "{colors.action-ink-fg}"
+    backgroundColor: "{colors.sounding-blue}"
+    textColor: "{colors.sounding-blue-fg}"
     typography: "{typography.body}"
     rounded: "{rounded.hairline}"
     padding: "0 12px"
@@ -113,8 +116,8 @@ components:
     padding: "0 12px"
     height: "36px"
   segmented-checked:
-    backgroundColor: "{colors.action-ink}"
-    textColor: "{colors.action-ink-fg}"
+    backgroundColor: "{colors.sounding-blue}"
+    textColor: "{colors.sounding-blue-fg}"
     rounded: "{rounded.hairline}"
     padding: "0 16px"
     height: "36px"
@@ -139,8 +142,8 @@ components:
   peak-cell-attention:
     backgroundColor: "{colors.depth-1}"
   severity-toggle-pressed:
-    backgroundColor: "{colors.action-ink}"
-    textColor: "{colors.action-ink-fg}"
+    backgroundColor: "{colors.sounding-blue}"
+    textColor: "{colors.sounding-blue-fg}"
     rounded: "{rounded.hairline}"
     padding: "0 12px"
     height: "36px"
@@ -197,18 +200,19 @@ The visual system answers to two binding project rules. Status is a shape, then 
 - Hatching is the one hazard device, and it follows a status of the report: magenta for critical, ochre for attention on the gauge.
 - Monospace for every name and number, and only for them; mono italic for secondary soundings.
 - One uppercase tracked label size for table headers and small section headings.
-- Motion only under reduced-motion-safe conditions: the gauge sounds once, and a pulse marks work in progress.
+- One blue for every "act here" and "you are here": the primary action, a checked choice, a link, the active tab, and the focus ring.
+- Motion only under reduced-motion-safe conditions: the gauge sounds once, a pulse marks work in progress, and a layer or a pressed button answers the hand that moved it.
 
 ## Colors
 
 A cool chart palette: blue-cast neutrals, three blue depth tints, and three chart status hues. Each token has a light value (frontmatter) and a night-chart value (sidecar), switched by `data-theme="dark"` on the root.
 
 ### Primary
-- **Sounding Blue** (accent): links, the active tab rule, the focus ring, the current-level line of the depth gauge, and the load-line stroke of the brand disc. It is the chart's own ink for navigation, not a fill.
-- **Action Ink** (action / action-fg): the filled primary button, the checked segment, and the native control accent. In light it is the neat-line ink; in dark it inverts to a pale slate with dark text.
+- **Sounding Blue** (accent, and action / action-fg): links, the active tab rule, the focus ring, the current-level line of the depth gauge, and the load-line stroke of the brand disc; as a fill, the primary button, the checked segment, a pressed severity toggle, a chosen period, and the native control accent. It stands about 2.5:1 from Chart Ink in both themes, so it reads as blue beside text, never as a second black. Light #235c95 with Sheet text; night #5494d4 with Chart Ground text, a muted blue rather than the brightest thing on the night chart.
+- **Sounding Blue Hover** (action-hover): the primary fill under the pointer, a step deeper in light (#1b4d80) and a step paler at night (#6ea6de).
 
 ### Secondary
-- **Chart Magenta** (critical): the critical status, field error text, the danger button, and the hazard hatching. Critical labels are set bold.
+- **Chart Magenta** (critical): the critical status, field error text, the danger button, and the hazard hatching. Critical labels are set bold. Its hover twin (critical-hover) fills the danger button under the pointer.
 - **Ochre** (attention): the attention status, and the gauge hatch when the cluster finding is attention.
 - **Sea Green** (healthy): the healthy status.
 - **Slate Neutral** (neutral): the undefined and unavailable statuses.
@@ -219,8 +223,10 @@ A cool chart palette: blue-cast neutrals, three blue depth tints, and three char
 ### Neutral
 - **Chart Ground** (bg): page background.
 - **Chart Ink** (fg): body text; also the tooltip ground.
-- **Sheet** (surface / surface-fg): tables, inputs, secondary buttons, dialogs, popovers, menus.
+- **Sheet** (surface / surface-fg): tables, inputs, secondary buttons, dialogs, popovers, menus. An off-white (#fdfefe), never pure white.
+- **Sheet Hover** (hover): a secondary button, an icon button, a released segment or severity toggle, and a period choice under the pointer.
 - **Shallows** (sidebar / sidebar-fg): the side shell and the sign-in header.
+- **Shallows Hover** (sidebar-hover): a navigation entry under the pointer, between Shallows and Shallows Active.
 - **Shallows Active** (sidebar-active / sidebar-active-fg): the current navigation entry and a highlighted menu item.
 - **Muted Ink** (muted-fg): captions, meta lines, labels, secondary values.
 - **Hairline** (border): row rules, table frames, the tab baseline.
@@ -281,27 +287,28 @@ Every radius is 2px: a near-square corner that keeps a hairline drawing from loo
 
 ### Buttons
 - **Shape:** gently squared (2px), 1px border, min height 36px, 12px horizontal padding, 0.875rem weight 500.
-- **Primary:** Action Ink fill and border with Action Ink foreground.
-- **Secondary (default):** Sheet fill, Input Border stroke, Sheet ink.
-- **Danger:** Chart Magenta fill and border, Sheet text; only on the confirm button of a destructive dialog. The action that opens that dialog is a secondary button.
-- **Focus / Disabled:** 2px Sounding Blue outline offset 2px; disabled drops to 60% opacity with a not-allowed cursor. No hover colour shift.
+- **Primary:** Sounding Blue fill and border with Sounding Blue Foreground text; under the pointer, Sounding Blue Hover.
+- **Secondary (default):** Sheet fill, Input Border stroke, Sheet ink; under the pointer, Sheet Hover.
+- **Danger:** Chart Magenta fill and border, Sheet text, and its hover twin under the pointer; only on the confirm button of a destructive dialog. The action that opens that dialog is a secondary button.
+- **Hover / Press:** the pointer is a hand on every enabled button. The hover colour changes at once, with no fade. A press sinks the button by 1px, which glides over 100ms under `motion-safe:`.
+- **Focus / Disabled:** 2px Sounding Blue outline offset 2px; disabled drops to 60% opacity with a not-allowed cursor, and takes neither the hover colour nor the press.
 - **Icon button:** a secondary button 36px square with a 20px Phosphor icon; its name is in `aria-label` and in a tooltip on hover and focus. The tooltip is drawn inside the landmark that holds the button, or in the body when no landmark does; the app has one tooltip provider.
 
 ### Segmented control
-A row of radio labels joined edge to edge (-1px overlap), 2px outer corners, 16px padding, under a legend in the field-label style (0.875rem 500). The checked segment takes the Action Ink fill; focus outlines the segment.
+A row of radio labels joined edge to edge (-1px overlap), 2px outer corners, 16px padding, under a legend in the field-label style (0.875rem 500). The checked segment takes the Sounding Blue fill; a released segment takes Sheet Hover under the pointer; focus outlines the segment.
 
 ### Severity toggles
-The findings filter: one 2px-cornered toggle per severity, the status mark then its count in mono italic. A pressed toggle takes the checked-segment style, Action Ink fill and Action Ink Foreground text, and its mark takes that text colour while keeping its shape and word; a released toggle is Sheet with a Neatline outline and the mark in its status colour. When the filters leave no finding, a secondary button "Show all findings" clears the severities, the scope, and the search.
+The findings filter: one 2px-cornered toggle per severity, the status mark then its count in mono italic. A pressed toggle takes the checked-segment style, Sounding Blue fill and Sounding Blue Foreground text, and its mark takes that text colour while keeping its shape and word; a released toggle is Sheet with a Neatline outline and the mark in its status colour. Under the pointer a pressed toggle takes Sounding Blue Hover and a released one Sheet Hover, and a press sinks it by 1px as it does a button. When the filters leave no finding, a secondary button "Show all findings" clears the severities, the scope, and the search.
 
 ### Inputs / Fields
 - **Style:** Sheet fill, 1px Input Border, 2px radius, min height 36px, 12px padding. The label sits above at 0.875rem 500; a hint below in Muted Ink; an error below in Chart Magenta. A select is the browser's own `<select>`, styled the same.
 - **Focus:** 2px Sounding Blue outline, 2px offset.
-- **Period (New report form):** a field of its own above the report language, at most 24rem wide and full width below that; its trigger is an input-style button naming the period. The popover opens below the trigger at up to 46rem (the window less 2rem when narrower), Sheet with the Neatline frame: the length and the typed range on the left, the quick lengths and the calendar periods side by side in two columns of a 24rem pane on the right, each choice on one line in both languages, with no divider between them. A profile that limits its periods gets a single column of those periods in a 36rem popover. The Options box under the form holds the time zone, the report profile, and the minimum severity only; its closed summary lists those three.
-- **Checkbox:** native box tinted with Action Ink.
+- **Period (New report form):** a field of its own above the report language, at most 24rem wide and full width below that; its trigger is an input-style button naming the period. The popover opens below the trigger at up to 46rem (the window less 2rem when narrower), Sheet with the Neatline frame: the length and the typed range on the left, the quick lengths and the calendar periods side by side in two columns of a 24rem pane on the right, each choice on one line in both languages, with no divider between them. A choice takes Sheet Hover under the pointer, and the chosen one the Sounding Blue fill. A profile that limits its periods gets a single column of those periods in a 36rem popover. The Options box under the form holds the time zone, the report profile, and the minimum severity only; its closed summary lists those three.
+- **Checkbox:** native box tinted with Sounding Blue.
 
 ### Navigation
-- **Shell:** Shallows column, brand at the top, links at 0.875rem with 8px by 12px padding. The current page takes the Shallows Active tint, weight 600, and an inset Neatline frame; Reports stays current on a report and on a job in progress. The user name sits at the foot in mono, and the version as the word "Version" upright beside its number in mono.
-- **Report tabs:** a row of 0.875rem tabs, 10px apart in padding, over a Neatline baseline; the active tab is Chart Ink 600 with a 2px Sounding Blue underline, the rest Muted Ink. When the report has data-quality warnings, the Data quality tab carries a 10px attention shape and the count in mono italic after its word, and its accessible name states the count. The seven tabs hold one line at 1024px in both languages.
+- **Shell:** Shallows column, brand at the top, links at 0.875rem with 8px by 12px padding. The current page takes the Shallows Active tint, weight 600, and an inset Neatline frame; another entry under the pointer takes Shallows Hover with Shallows Active Ink, and no frame; Reports stays current on a report and on a job in progress. The user name sits at the foot in mono, and the version as the word "Version" upright beside its number in mono.
+- **Report tabs:** a row of 0.875rem tabs, 10px apart in padding, over a Neatline baseline; the active tab is Chart Ink 600 with a 2px Sounding Blue underline, the rest Muted Ink; an inactive tab under the pointer turns Chart Ink over a 2px Input Border underline. When the report has data-quality warnings, the Data quality tab carries a 10px attention shape and the count in mono italic after its word, and its accessible name states the count. The seven tabs hold one line at 1024px in both languages.
 
 ### Data table
 The one table of the app: a Sheet container with a 1px Hairline frame and 2px corners, uppercase labels in the sticky header, Hairline rules between rows, an expander column of 48px. An opened row is tinted Info Surface and its detail row sits on Chart Ground at 24px by 16px padding. A peak cell stacks the peak in mono over its share in mono italic, and takes the depth tint its statuses earn. A peak with no number shows its placeholder word alone, upright in Muted Ink, with no share under it. On the nodes tab and the HPA table the Status cell carries a line under the severity, in Sheet ink at the small size on a 14rem measure, that says why: a node's reason, an HPA's worst finding sentence. A row with no finding has none. The node pools table has a Status column after the pool's name, drawn the same way from the pool's worst finding, with no line under it. In the findings list each entry's sentence clamps at two lines, so the key words of a long sentence stay; the name above it stays on one.
@@ -313,7 +320,7 @@ Shape, then label, then colour. The 12px shape and the word share the status hue
 2px corners, 1px border, 8px by 12px padding, 0.875rem. Error: Hazard Surface, Hazard Border, Hazard Ink. Notice: Info Surface, Hairline border, Info Ink.
 
 ### Floating layers
-Menu, popover, dialog, and alert dialog are Sheet with a 1px Neatline frame and 2px corners; a dialog pads 24px and caps at 36rem wide (28rem for a confirmation). A highlighted menu item takes Shallows Active with an inset Sounding Blue outline. The tooltip inverts: Chart Ink ground, Chart Ground text, 0.75rem.
+Menu, popover, dialog, and alert dialog are Sheet with a 1px Neatline frame and 2px corners; a dialog pads 24px and caps at 36rem wide (28rem for a confirmation). A highlighted menu item takes Shallows Active; the item reached by the keyboard also takes an inset Sounding Blue outline, which the item under the pointer does not (Radix focuses an item from either, and the browser counts both as visible focus). The tooltip inverts: Chart Ink ground, Chart Ground text, 0.75rem.
 
 ### Depth gauge (signature)
 The cluster's nodes drawn as a sounded depth scale 360px wide: one band per node up to the autoscaler maximum, inside a 1px Neatline frame; above 60 nodes the level is one band in the tints of its thirds. The gauge draws the view's `gauge` as given: the program counts whole nodes, held between none and the maximum, and sets the hazard from the cluster's worst finding. Filled bands are tinted Depth 1 to Depth 3 toward the maximum and parted by hairlines in the ground colour. A 2px Sounding Blue line marks the current level; the minimum is a dashed Neatline contour. Once no room is left, a 2px line closes the scale, and the last band and that line take the hazard: hatched and drawn in Chart Magenta for critical, in Ochre for attention; with no hazard, the band stays plain Depth 3 and the line is Neatline. Ticks below carry mono italic soundings (`text-sounding`), at most ten. The drawing is hidden from assistive technology because the numbers stand in the headline above it.
@@ -334,12 +341,14 @@ In the PDF popover and on the progress page: one row per language at 0.875rem, p
 The Profile cell of a row carries a second line under the profile name, in Muted Ink at the small size: the namespaces in mono (the first three, then a +N count of the rest), a middle dot, and the period in words. Cells wrap, so the table fits 1024px.
 
 ## Motion
-Motion appears only under `motion-safe:`; under reduced motion everything is drawn at once and nothing pulses.
+Motion appears only under `motion-safe:` or `prefers-reduced-motion: no-preference`; under reduced motion everything is drawn at once, nothing pulses, and every layer opens and closes at once. Motion moves only `transform` and `opacity`; a test fails on any animation of the stylesheet outside that condition.
+- **Layers:** a menu, a popover, or a tooltip fades in over 140ms (cubic-bezier(0.16, 1, 0.3, 1)), growing from 97% out of the point Radix names and 4px off the side of its trigger, and fades out over 90ms. A dialog or a confirmation fades and settles from 98% over 160ms over a scrim that fades over 150ms; both leave over 100ms. The classes are `layer-motion`, `dialog-motion`, and `scrim-motion` of `theme.css`, keyed on the `data-state` and `data-side` that Radix writes, so no style is set at run time.
+- **Press:** a button and a severity toggle sink 1px while pressed (100ms ease-out).
 - **Sounding:** the gauge level rises once from the left (`sounding`, 600ms, cubic-bezier(0.16, 1, 0.3, 1)), then the hatched band and the closing line fade in (`hazard-in`, 200ms after 600ms).
 - **Updating ring:** while a report on the list is queued, running, or has a pending PDF, a 10px Sounding Blue ring (an outline circle, not a filled dot) pulses beside the words that say the list is updating.
 - **Failed report:** below the failure alert sit Back to reports, then the next step; on a failure of the profile test the administrator's primary action is Check the profile and Request again turns secondary. A failed report offers Delete report as a collected one does.
 - **Progress step:** on the progress page the current step pulses.
-- Navigation links have no transition.
+- Hover colours, on buttons, navigation links, and tabs, change at once with no transition.
 
 ## Do's and Don'ts
 
@@ -349,7 +358,7 @@ Motion appears only under `motion-safe:`; under reduced motion everything is dra
 - **Do** set every cluster name and number in JetBrains Mono, and secondary numbers in its italic; set every interface word upright, placeholders included.
 - **Do** keep every corner at 2px and separate layers with a Neatline frame.
 - **Do** tint a value only by the statuses the report gives it: Depth 1 for attention, the hazard hatch for critical.
-- **Do** put motion only under `motion-safe:` and keep it to the sounding of the gauge and the pulses of work in progress.
+- **Do** put motion only under `motion-safe:` and keep it to the sounding of the gauge, the pulses of work in progress, the opening and closing of a layer, and the press of a button: motion that answers the reader or reports work, never decoration.
 - **Do** style through classes and the theme's utilities; the CSP allows no inline style and no injected style element.
 
 ### Don't:

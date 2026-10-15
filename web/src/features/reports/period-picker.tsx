@@ -37,7 +37,7 @@ type Mode = "length" | "range";
 type Side = "from" | "to";
 
 const choice =
-  "min-h-9 px-3 text-left text-sm text-surface-fg hover:underline aria-pressed:bg-action aria-pressed:text-action-fg " +
+  "min-h-9 px-3 text-left text-sm text-surface-fg not-aria-pressed:hover:bg-hover aria-pressed:bg-action aria-pressed:text-action-fg " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 const calendarClasses: Partial<ClassNames> = {

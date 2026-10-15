@@ -3,10 +3,12 @@
 :root {
   --bg: #f5f9fb;
   --fg: #0e1a22;
-  --surface: #ffffff;
+  --surface: #fdfefe;
   --surface-fg: #0e1a22;
+  --hover: #e9f2f7;
   --sidebar: #deedf4;
   --sidebar-fg: #26404f;
+  --sidebar-hover: #cde4ef;
   --sidebar-active: #bcdbe9;
   --sidebar-active-fg: #0b1f2b;
   --muted-fg: #455560;
@@ -14,12 +16,14 @@
   --neatline: #22323d;
   --scrim: rgb(14 26 34 / 0.45);
   --input-border: #6c808d;
-  --accent: #14375c;
-  --action: #22323d;
-  --action-fg: #ffffff;
+  --accent: #235c95;
+  --action: #235c95;
+  --action-hover: #1b4d80;
+  --action-fg: #fdfefe;
   --healthy: #155e46;
-  --attention: #784800;
+  --attention: #6f4a10;
   --critical: #a0135a;
+  --critical-hover: #87104c;
   --neutral: #445661;
   --critical-surface: #fbe8f1;
   --critical-border: #e9b1cd;
@@ -38,21 +42,25 @@
   --fg: #d5e0e8;
   --surface: #0f1922;
   --surface-fg: #d5e0e8;
+  --hover: #162636;
   --sidebar: #0e2030;
   --sidebar-fg: #9fb7c8;
+  --sidebar-hover: #142b40;
   --sidebar-active: #1a3650;
   --sidebar-active-fg: #e4eef4;
   --muted-fg: #97aab8;
-  --border: #1f2f3c;
-  --neatline: #68849a;
+  --border: #283a48;
+  --neatline: #879fb2;
   --scrim: rgb(0 0 0 / 0.65);
   --input-border: #5d7585;
-  --accent: #8fb9e2;
-  --action: #c9d6df;
+  --accent: #5494d4;
+  --action: #5494d4;
+  --action-hover: #6ea6de;
   --action-fg: #0a1118;
   --healthy: #6cc0a0;
   --attention: #d6a24a;
   --critical: #e38db9;
+  --critical-hover: #eba8ca;
   --neutral: #97aab8;
   --critical-surface: #2a1222;
   --critical-border: #6a2a4c;
@@ -71,8 +79,10 @@
   --color-fg: var(--fg);
   --color-surface: var(--surface);
   --color-surface-fg: var(--surface-fg);
+  --color-hover: var(--hover);
   --color-sidebar: var(--sidebar);
   --color-sidebar-fg: var(--sidebar-fg);
+  --color-sidebar-hover: var(--sidebar-hover);
   --color-sidebar-active: var(--sidebar-active);
   --color-sidebar-active-fg: var(--sidebar-active-fg);
   --color-muted-fg: var(--muted-fg);
@@ -82,10 +92,12 @@
   --color-input-border: var(--input-border);
   --color-accent: var(--accent);
   --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
   --color-action-fg: var(--action-fg);
   --color-healthy: var(--healthy);
   --color-attention: var(--attention);
   --color-critical: var(--critical);
+  --color-critical-hover: var(--critical-hover);
   --color-neutral: var(--neutral);
   --color-critical-surface: var(--critical-surface);
   --color-critical-border: var(--critical-border);
@@ -161,8 +173,107 @@
   background-image: repeating-linear-gradient(135deg, var(--hazard-stripe) 0 1.5px, transparent 1.5px 6px);
 }
 
+/* A floating layer (menu, popover, tooltip) opens from the side of its trigger: it fades in and grows from the
+   point Radix names, a few pixels off its side, and fades out quicker. Under reduced motion it shows at once. */
+@utility layer-motion {
+  transform-origin: var(--radix-popper-transform-origin);
+
+  &[data-side="top"] {
+    --layer-dy: 4px;
+  }
+  &[data-side="bottom"] {
+    --layer-dy: -4px;
+  }
+  &[data-side="left"] {
+    --layer-dx: 4px;
+  }
+  &[data-side="right"] {
+    --layer-dx: -4px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    &:not([data-state="closed"]) {
+      animation: layer-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    &[data-state="closed"] {
+      animation: layer-out 90ms ease-in forwards;
+    }
+  }
+}
+
+/* A modal: the scrim fades, and the dialog fades and settles to its size. */
+@utility scrim-motion {
+  @media (prefers-reduced-motion: no-preference) {
+    &[data-state="open"] {
+      animation: fade-in 150ms ease-out;
+    }
+    &[data-state="closed"] {
+      animation: fade-out 100ms ease-in forwards;
+    }
+  }
+}
+
+@utility dialog-motion {
+  @media (prefers-reduced-motion: no-preference) {
+    &[data-state="open"] {
+      animation: dialog-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    &[data-state="closed"] {
+      animation: dialog-out 100ms ease-in forwards;
+    }
+  }
+}
+
+@keyframes layer-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--layer-dx, 0), var(--layer-dy, 0)) scale(0.97);
+  }
+}
+
+@keyframes layer-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes dialog-out {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
 :root {
   accent-color: var(--action);
+}
+
+/* Anything that acts on a press shows the hand, as a link does. In the base layer, so a utility still wins. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
 }
 
 :focus-visible {

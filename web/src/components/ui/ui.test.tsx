@@ -118,9 +118,20 @@ describe("ui", () => {
     await user.keyboard("{ArrowDown}");
     const highlighted = document.querySelector("[data-highlighted]");
     expect(highlighted).not.toBeNull();
-    for (const name of ["data-[highlighted]:outline-solid", "data-[highlighted]:outline-2", "data-[highlighted]:outline-accent", "data-[highlighted]:-outline-offset-2"]) {
+    for (const name of ["focus-visible:outline-solid", "focus-visible:outline-2", "focus-visible:outline-accent", "focus-visible:-outline-offset-2!"]) {
       expect(highlighted?.classList.contains(name)).toBe(true);
     }
+  });
+
+  it("an item under the pointer keeps the tint and drops the focus ring", async () => {
+    const user = userEvent.setup();
+    render(withTooltips(<ThemeToggle />));
+    await user.click(screen.getByRole("button", { name: /Theme/ }));
+    const item = (await screen.findAllByRole("menuitemradio"))[0];
+    const classes = [...(item?.classList ?? [])];
+    expect(classes).toContain("data-[highlighted]:bg-sidebar-active");
+    expect(classes).toContain("hover:outline-none!");
+    expect(classes.filter((name) => name.startsWith("data-[highlighted]:outline"))).toEqual([]);
   });
 
   it("the theme toggle chooses dark, then system", async () => {

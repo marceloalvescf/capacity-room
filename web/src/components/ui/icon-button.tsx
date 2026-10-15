@@ -19,7 +19,7 @@ export function IconButton({ label, className, ...rest }: ComponentProps<typeof 
         <Button aria-label={label} className={cn("w-9 px-0", className)} {...rest} />
       </Tooltip.Trigger>
       <Tooltip.Portal container={container}>
-        <Tooltip.Content sideOffset={4} className="z-50 rounded-md bg-fg px-2 py-1 text-xs text-bg">
+        <Tooltip.Content sideOffset={4} className="layer-motion z-50 rounded-md bg-fg px-2 py-1 text-xs text-bg">
           {label}
         </Tooltip.Content>
       </Tooltip.Portal>
