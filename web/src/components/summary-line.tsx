@@ -1,7 +1,8 @@
 import { Fragment } from "react";
 import { cn } from "@/lib/cn";
+import { Separator } from "./separator";
 
-// A summary line: entries parted by a middle dot, each made of parts parted by a space. A value is set in the
+// A summary line: entries parted by a gap (a middle dot for screen readers), each made of parts parted by a space. A value is set in the
 // monospaced font and a word is not.
 export interface SummaryPart {
   text: string;
@@ -22,7 +23,7 @@ export function SummaryLine({ summary, className }: { summary: Summary; classNam
     <span className={className}>
       {summary.map((entry, index) => (
         <Fragment key={index}>
-          {index > 0 ? " · " : null}
+          {index > 0 ? <Separator /> : null}
           {entry.map((part, at) => (
             <Fragment key={at}>
               {at > 0 ? " " : null}

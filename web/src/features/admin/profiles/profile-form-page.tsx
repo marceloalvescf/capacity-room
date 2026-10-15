@@ -21,6 +21,7 @@ import {
 } from "@/api/schema.gen";
 import { useAnnounce } from "@/app/live-region";
 import { useScreenTitle } from "@/app/title";
+import { Separator } from "@/components/separator";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -573,9 +574,9 @@ function Header({ profile }: { profile: Profile | undefined }) {
       <h1 className="text-xl font-semibold">{profile.display_name}</h1>
       <p className="text-sm text-muted-fg">
         {t("admin.profile.kind")}
-        {" · "}
+        <Separator />
         <span className="font-mono">{profile.id}</span>
-        {" · "}
+        <Separator />
         <DatedText i18nKey="admin.profile.revision" values={{ revision: profile.revision, time: formatTime(profile.created_at) }} />
       </p>
     </div>

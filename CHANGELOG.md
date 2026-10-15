@@ -12,6 +12,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Menus, popovers, tooltips, and dialogs now fade in and out, and open at once when the system asks for reduced motion.
 - The interface blue is now clearly blue in both themes and fills primary buttons and chosen options, and the dark theme draws its frames and table rules more clearly.
 - An empty cell in the web app now shows a hyphen instead of a long dash.
+- A line of three or more items in the web app, such as the severity totals and the summary of a report, now parts them with space instead of dots.
 
 ## [2.1.1] - 2026-10-15
 

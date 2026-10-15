@@ -5,6 +5,7 @@ import { ApiFailure } from "@/api/client";
 import { errorText, toError } from "@/api/errors";
 import { useAnnounce } from "@/app/live-region";
 import { useScreenTitle } from "@/app/title";
+import { Separator } from "@/components/separator";
 import { StatusMark } from "@/components/status-mark";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonStyles } from "@/components/ui/button";
@@ -431,7 +432,7 @@ function ReportScope({ selection, lengthText, language }: { selection: ReportSel
         <>
           <span className="font-mono">{namespaces.slice(0, shownNamespaces).join(", ")}</span>
           {rest > 0 ? <span className="font-mono"> {t("reports.moreNamespaces", { count: rest })}</span> : null}
-          {" · "}
+          <Separator />
         </>
       ) : null}
       {selection.period === null ? (
@@ -445,7 +446,7 @@ function ReportScope({ selection, lengthText, language }: { selection: ReportSel
       ) : (
         <span className="whitespace-nowrap">{lengthText}</span>
       )}
-      {" · "}
+      <Separator />
       <span className="whitespace-nowrap">{language}</span>
     </>
   );

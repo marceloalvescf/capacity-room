@@ -2,6 +2,7 @@ import { CaretRightIcon } from "@phosphor-icons/react";
 import { Fragment, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
+import { Separator } from "@/components/separator";
 import { StatusMark, StatusShape } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
 import type { ViewPressure, ViewRecommendation } from "./api";
@@ -49,14 +50,14 @@ function Growth() {
               <ValueText value={autoscaling.min_nodes} />
             </span>
           </span>
-          {" · "}
+          <Separator />
           <span className="whitespace-nowrap">
             {t("report.autoscaling.unschedulablePods")}{" "}
             <span className="font-mono italic">
               <ValueText value={autoscaling.unschedulable_pods} />
             </span>
           </span>
-          {" · "}
+          <Separator />
           <span className="whitespace-nowrap">
             {t("report.autoscaling.scaleEvents")}{" "}
             <span className="font-mono italic">
@@ -112,15 +113,17 @@ function PressureLine({ pressure }: { pressure: ViewPressure }) {
             )}
           </p>
         )}
-        <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted-fg">
+        <p className="text-sm text-muted-fg">
           {counts
             .filter(({ count }) => count > 0)
             .map(({ severity: reached, count }, position) => (
-              <span key={reached} className="inline-flex items-center gap-1.5">
-                {position > 0 ? <span aria-hidden="true">·</span> : null}
-                <StatusShape status={reached} />
-                {t(`status.${reached}`)} <span className="font-mono italic">{count}</span>
-              </span>
+              <Fragment key={reached}>
+                {position > 0 ? <Separator /> : null}
+                <span className="inline-flex items-center gap-1.5">
+                  <StatusShape status={reached} />
+                  {t(`status.${reached}`)} <span className="font-mono italic">{count}</span>
+                </span>
+              </Fragment>
             ))}
         </p>
       </div>
@@ -175,8 +178,8 @@ function AnswerStrip() {
   }
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-      <div role="group" aria-label={t("report.overview.totals")} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xl">
-        {severities.map((severity, position) => {
+      <div role="group" aria-label={t("report.overview.totals")} className="flex flex-wrap items-center gap-x-8 gap-y-1 text-xl">
+        {severities.map((severity) => {
           const item = cn("inline-flex items-center gap-2", severity === worst ? `${statusText[severity]} font-semibold` : "text-fg");
           const content = (
             <>
@@ -187,11 +190,6 @@ function AnswerStrip() {
           );
           return (
             <Fragment key={severity}>
-              {position > 0 ? (
-                <span aria-hidden="true" className="text-muted-fg">
-                  ·
-                </span>
-              ) : null}
               {rank[severity] < (minimum[floor] ?? 0) ? (
                 <span className={item}>{content}</span>
               ) : (
