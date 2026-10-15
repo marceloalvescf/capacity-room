@@ -249,6 +249,12 @@
 
 /* Anything that acts on a press shows the hand, as a link does. In the base layer, so a utility still wins. */
 @layer base {
+  /* Mona Sans sets its underline on the baseline, where skipping the ink of the letters cuts it into dashes. Every
+     underline sits below the letters instead; a utility that names its own offset still wins. */
+  html {
+    text-underline-offset: 0.22em;
+  }
+
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]) {
     cursor: pointer;

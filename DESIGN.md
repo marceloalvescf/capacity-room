@@ -310,6 +310,8 @@ A neutral grey scale, one blue, three status hues, and their quiet surfaces. Eac
 
 **The Upright Rule.** No italic, in either face. A secondary number is told apart by size and Muted Ink, never by slant.
 
+**The Clear Underline Rule.** Every underline sits 0.22em below the baseline, set once on the root, because Mona Sans draws its own on the baseline, where skipping the ink of the letters cuts it into dashes. A link that names its own offset (`underline-offset-4`) keeps it.
+
 **The One Label Rule.** Uppercase tracked text has exactly one size, the `label` utility. It names a column or a section; it never sits as a decorative tag above a title.
 
 **The One Dot Rule.** A line of three or more items parts them by a gap, through `Separator`: 1rem and a space where the line may wrap, the middle dot kept for screen readers alone.
