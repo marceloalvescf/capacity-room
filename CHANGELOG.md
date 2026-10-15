@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-15
+
 ### Changed
 
 - Buttons, navigation links, report tabs, and menu items now show where the pointer is, and a button sinks slightly when pressed.
