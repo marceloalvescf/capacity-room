@@ -6,9 +6,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-10-15
+
 ### Changed
 
-- The web app has a new look: neutral greys with blue kept for actions, links, and the current place, softer corners, and Mona Sans for words, while names and numbers stay in JetBrains Mono.
+- The web app has a new look: neutral greys with blue kept for actions and links, softer corners, and Mona Sans for words, while names and numbers stay in JetBrains Mono.
 - The report overview opens on the severity totals at a larger size, then shows the worst finding of each scope beside a bar that draws its evidence against its limit, request, capacity, or maximum.
 - The nodes of the cluster against the autoscaler's maximum are drawn as the same bar, divided per node, in place of the depth gauge.
 - The findings detail and the findings under an opened table row show the same evidence bar.
