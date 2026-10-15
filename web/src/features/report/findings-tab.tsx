@@ -83,7 +83,7 @@ function Detail({ finding }: { finding: ViewFinding }) {
   const { t } = useTranslation();
   const name = scopeName(finding, t("report.node.unknownPool"));
   return (
-    <article className="flex flex-col gap-4 rounded-md border border-border bg-surface p-4 text-surface-fg lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+    <article className="flex flex-col gap-4 rounded-md border border-border bg-surface p-4 text-surface-fg lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto">
       <header className="flex flex-col gap-1">
         <p className="flex flex-wrap items-center gap-x-3 text-sm">
           <StatusMark status={finding.severity} />

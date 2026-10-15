@@ -62,7 +62,7 @@ export function LoginPage() {
   const fieldError = (message: string | undefined) => (message === undefined ? undefined : t(message));
 
   return (
-    <div className="min-h-screen bg-bg text-fg">
+    <div className="min-h-dvh bg-bg text-fg">
       <header className="flex items-center justify-between gap-4 border-b border-neatline bg-sidebar px-6 py-3 text-sidebar-fg">
         <Brand />
         <LanguageMenu />

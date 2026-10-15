@@ -48,7 +48,7 @@ export function Shell() {
   }
 
   return (
-    <div className="min-h-screen bg-bg text-fg md:grid md:grid-cols-[16rem_1fr]">
+    <div className="min-h-dvh bg-bg text-fg md:grid md:grid-cols-[16rem_1fr]">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-10 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2"
