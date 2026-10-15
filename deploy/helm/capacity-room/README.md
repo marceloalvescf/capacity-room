@@ -12,7 +12,7 @@ is not published. This page is the quick start; section 12 of
 ## Prerequisites
 
 - A Kubernetes cluster and `kubectl` pointed at it.
-- Helm 3.
+- Helm 3 or 4 (the chart's tests use Helm 4.3.0).
 - A Gateway API gateway or an Ingress controller.
 - A PostgreSQL 18 database the cluster reaches. Step 1 shows how to run one
   with CloudNativePG.

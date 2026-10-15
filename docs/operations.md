@@ -477,7 +477,7 @@ A user blocked by the sign-in throttle is free again after five minutes.
 
 The Helm chart in `deploy/helm/capacity-room` runs the platform on a
 Kubernetes cluster. It is installed from a checkout and is not published.
-It needs Helm 3, a PostgreSQL database that the cluster reaches, and either a
+It needs Helm 3 or 4 (the chart's tests use Helm 4.3.0), a PostgreSQL database that the cluster reaches, and either a
 Gateway API gateway or an Ingress controller. Its values are documented by
 the comments of `deploy/helm/capacity-room/values.yaml`, which this section
 points at rather than repeats.
@@ -546,10 +546,6 @@ Create each in the namespace of the release before installing. The namespace
 exists from the previous subsection.
 
 ```bash
-# The database DSN. Skip it when CloudNativePG made capacity-room-db-app, as the previous subsection shows.
-kubectl -n capacity-room create secret generic capacity-room-db-app \
-  --from-literal=uri='postgres://capacityroom:CHANGE-ME@db.example.com:5432/capacityroom?sslmode=require'  # example: replace
-
 # The server secret: at least 32 random bytes.
 head -c 32 /dev/urandom > server-secret
 kubectl -n capacity-room create secret generic capacity-room-server-secret \
