@@ -430,7 +430,7 @@ function GenerateForm({
         }}
       />
 
-      <div className="flex flex-col gap-4 rounded-md border border-border bg-surface p-3 text-surface-fg">
+      <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-3 text-surface-fg">
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-0">
             <p className="font-semibold">{t("generate.options")}</p>
@@ -616,7 +616,7 @@ export function GeneratePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">{t("generate.title")}</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">{t("generate.title")}</h1>
       {content}
     </div>
   );

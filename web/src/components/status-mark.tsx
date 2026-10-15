@@ -37,8 +37,8 @@ export function StatusShape({ status, className }: { status: Status; className?:
 }
 
 // With a label of its own, `withStatus` adds the status word for screen readers, as the values of the report view do.
-// `plain` takes the colour of its container, for a mark on a filled control whose own text colour it must share;
-// the shape and the word still name the status.
+// The colour of the status is the shape's alone; the label keeps the colour of the text around it. `plain` draws the
+// shape in that colour too, for a control that mutes it; the shape and the word still name the status.
 export function StatusMark({
   status,
   label,
@@ -52,12 +52,12 @@ export function StatusMark({
 }) {
   const { t } = useTranslation();
   return (
-    <span className={cn("inline-flex items-center gap-1.5", !plain && colour[status])}>
-      <svg aria-hidden="true" viewBox="0 0 12 12" className="size-3 shrink-0">
+    <span className="inline-flex items-center gap-1.5">
+      <svg aria-hidden="true" viewBox="0 0 12 12" className={cn("size-3 shrink-0", !plain && colour[status])}>
         <Shape status={status} />
       </svg>
       {label === undefined || !withStatus ? null : <span className="sr-only">{t(`status.${status}`)}</span>}
-      <span className={cn("whitespace-nowrap", status === "critical" && "font-bold")}>{label ?? t(`status.${status}`)}</span>
+      <span className={cn("whitespace-nowrap", status === "critical" && "font-semibold")}>{label ?? t(`status.${status}`)}</span>
     </span>
   );
 }

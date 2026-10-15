@@ -204,7 +204,7 @@ export function ReportsPage() {
           </div>
         ) : null}
         {chosen.length === 0 ? null : (
-          <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface px-3 py-2 text-sm text-surface-fg">
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-surface-fg">
             <span>{t("reports.selected", { count: chosen.length })}</span>
             <Button variant="danger" onClick={askBulk}>
               {t("reports.deleteSelected")}
@@ -218,7 +218,7 @@ export function ReportsPage() {
             </Button>
           </div>
         )}
-        <div className="overflow-x-auto rounded-md border border-border bg-surface text-surface-fg">
+        <div className="overflow-x-auto rounded-lg border border-border bg-surface text-surface-fg">
           <table className="w-full border-collapse text-sm">
             <caption className="sr-only">{t("reports.title")}</caption>
             <thead>
@@ -374,7 +374,7 @@ export function ReportsPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 ref={heading} tabIndex={-1} className="text-xl font-semibold outline-none">
+          <h1 ref={heading} tabIndex={-1} className="text-3xl font-semibold tracking-tight outline-none">
             {t("reports.title")}
           </h1>
           {updating ? (

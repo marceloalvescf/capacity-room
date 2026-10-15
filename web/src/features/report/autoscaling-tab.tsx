@@ -110,7 +110,7 @@ export function AutoscalingTab() {
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h2 className="text-base font-semibold">{t("report.autoscaling.title")}</h2>
+          <h2 className="text-lg font-semibold">{t("report.autoscaling.title")}</h2>
           <span className="text-sm">{t(`autoscalingStatus.${autoscaling.status}`)}</span>
           <span className="text-sm text-muted-fg">
             {t("report.autoscaling.source", { value: t(`strategy.${autoscaling.source}`) })}
@@ -134,7 +134,7 @@ export function AutoscalingTab() {
         />
       </section>
       <section className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold">{t("report.hpas.title")}</h2>
+        <h2 className="text-lg font-semibold">{t("report.hpas.title")}</h2>
         <DataTable
           label={t("report.hpas.title")}
           empty={t("report.table.empty")}

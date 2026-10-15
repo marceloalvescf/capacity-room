@@ -1,3 +1,4 @@
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { useId, type ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
@@ -27,19 +28,25 @@ export function Select({
       <label htmlFor={id} className="text-sm font-medium">
         {label}
       </label>
-      <select
-        {...rest}
-        id={id}
-        aria-invalid={error === undefined ? undefined : true}
-        aria-describedby={described === "" ? undefined : described}
-        className={cn(
-          "min-h-9 rounded-md border border-input-border bg-surface px-3 text-sm text-surface-fg",
-          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-          className,
-        )}
-      >
-        {children}
-      </select>
+      <div className="relative">
+        <select
+          {...rest}
+          id={id}
+          aria-invalid={error === undefined ? undefined : true}
+          aria-describedby={described === "" ? undefined : described}
+          className={cn(
+            "min-h-9 w-full appearance-none rounded-md border border-input-border bg-surface pr-9 pl-3 text-sm text-surface-fg",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+            className,
+          )}
+        >
+          {children}
+        </select>
+        <CaretDownIcon
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-fg"
+        />
+      </div>
       {hint === undefined ? null : (
         <p id={hintId} className="text-sm text-muted-fg">
           {hint}

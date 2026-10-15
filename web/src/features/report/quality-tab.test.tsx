@@ -78,7 +78,7 @@ describe("data quality tab", () => {
     const words = within(cell).getAllByText("Unavailable");
     expect(words).toHaveLength(2);
     expect(words[0]).toHaveClass("sr-only");
-    expect(words[0]?.closest("span.inline-flex")).toHaveClass("text-neutral");
+    expect(words[0]?.closest("span.inline-flex")?.querySelector("svg")).toHaveClass("text-neutral");
     expect(cell.querySelector("svg line")).not.toBeNull();
     expect(cell.querySelector("svg polygon")).toBeNull();
   });
@@ -101,7 +101,7 @@ describe("data quality tab", () => {
     ]);
     const hpa = within(rows[3] as HTMLElement).getAllByRole("cell");
     const state = within(hpa[2] as HTMLElement).getByText("Partial");
-    expect(state.closest("span.inline-flex")).toHaveClass("text-attention");
+    expect(state.closest("span.inline-flex")?.querySelector("svg")).toHaveClass("text-attention");
     expect(hpa[2]?.querySelector("svg polygon")).not.toBeNull();
     expect(hpa[3]).toHaveTextContent("Raw metrics");
     expect(hpa[4]).toHaveTextContent("Ambiguous HPA configuration or target values were omitted.");
@@ -138,7 +138,7 @@ describe("data quality tab", () => {
       "AttentionThe capacity evidence of the nodes is incomplete.",
     ]);
     for (const item of items) {
-      expect(item.querySelector("span.inline-flex")).toHaveClass("text-attention");
+      expect(item.querySelector("span.inline-flex svg")).toHaveClass("text-attention");
       expect(within(item).getByText("Attention")).toHaveClass("sr-only");
     }
     const notices = within(screen.getByRole("list", { name: "Notices" })).getAllByRole("listitem");

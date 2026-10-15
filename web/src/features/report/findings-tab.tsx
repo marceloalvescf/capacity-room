@@ -1,7 +1,7 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 import { viewScopeTypeValues, viewSeverityValues } from "@/api/schema.gen";
-import { StatusMark } from "@/components/status-mark";
+import { StatusMark, StatusShape } from "@/components/status-mark";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { scrollBehavior } from "@/components/reveal";
@@ -9,6 +9,8 @@ import { cn } from "@/lib/cn";
 import { useAddress } from "@/lib/address";
 import type { ViewFinding } from "./api";
 import { ConfidenceText, isUnknownPool, scopeName } from "./pieces";
+import { proofOf } from "./proof";
+import { FindingProof } from "./proof-bar";
 import { useView } from "./report-page";
 import { SearchField, useSearchText } from "@/components/search-field";
 
@@ -67,7 +69,8 @@ function ListItem({
         )}
       >
         <span className="flex flex-wrap items-center gap-x-3">
-          <StatusMark status={entry.finding.severity} />
+          <StatusShape status={entry.finding.severity} />
+          <span className="sr-only">{t(`status.${entry.finding.severity}`)}</span>
           <span className="text-muted-fg">{t(`scope.${entry.finding.scope_type}`)}</span>
           {name === null ? null : (
             <span className={cn("min-w-0 truncate", !isUnknownPool(entry.finding) && "font-mono")}>{name}</span>
@@ -82,8 +85,11 @@ function ListItem({
 function Detail({ finding }: { finding: ViewFinding }) {
   const { t } = useTranslation();
   const name = scopeName(finding, t("report.node.unknownPool"));
+  const proof = proofOf(finding);
+  const proved = proof === null ? [] : [proof.lead.name, ...proof.rest.map((item) => item.name)];
+  const listed = finding.evidence.filter((item) => !proved.includes(item.name));
   return (
-    <article className="flex flex-col gap-4 rounded-md border border-border bg-surface p-4 text-surface-fg lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto">
+    <article className="flex flex-col gap-5 rounded-lg border border-border bg-surface p-5 text-surface-fg lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto">
       <header className="flex flex-col gap-1">
         <p className="flex flex-wrap items-center gap-x-3 text-sm">
           <StatusMark status={finding.severity} />
@@ -102,7 +108,7 @@ function Detail({ finding }: { finding: ViewFinding }) {
       </header>
       <section className="flex flex-col gap-1">
         <h4 className="label">{t("report.findings.observed")}</h4>
-        <p className="text-sm">{finding.sentence}</p>
+        <p className="text-base">{finding.sentence}</p>
       </section>
       {finding.action === "" ? null : (
         <section className="flex flex-col gap-1">
@@ -113,14 +119,17 @@ function Detail({ finding }: { finding: ViewFinding }) {
       {finding.evidence.length === 0 ? null : (
         <section className="flex flex-col gap-1">
           <h4 className="label">{t("report.findings.evidence")}</h4>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
-            {finding.evidence.map((item) => (
-              <div key={item.name} className="contents">
-                <dt className="text-muted-fg">{t(`evidence.${item.name}`)}</dt>
-                <dd className="font-mono">{item.text}</dd>
-              </div>
-            ))}
-          </dl>
+          <FindingProof finding={finding} className="mt-1" />
+          {listed.length === 0 ? null : (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
+              {listed.map((item) => (
+                <div key={item.name} className="contents">
+                  <dt className="text-muted-fg">{t(`evidence.${item.name}`)}</dt>
+                  <dd className="font-mono">{item.text}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
         </section>
       )}
     </article>
@@ -204,12 +213,12 @@ export function FindingsTab() {
                     "inline-flex min-h-9 items-center gap-2 rounded-md border px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
                     "active:translate-y-px motion-safe:transition-transform motion-safe:duration-100 motion-safe:ease-out",
                     pressed
-                      ? "border-action bg-action text-action-fg hover:border-action-hover hover:bg-action-hover"
-                      : "border-neatline bg-surface text-surface-fg hover:bg-hover",
+                      ? "border-fg bg-surface text-surface-fg hover:bg-hover"
+                      : "border-border bg-transparent text-muted-fg hover:bg-hover hover:text-fg",
                   )}
                 >
-                  <StatusMark status={severity} plain={pressed} />
-                  <span className="font-mono italic">{findings.filter((finding) => finding.severity === severity).length}</span>
+                  <StatusMark status={severity} plain={!pressed} />
+                  <span className="font-mono">{findings.filter((finding) => finding.severity === severity).length}</span>
                 </button>
               );
             })}
@@ -263,9 +272,9 @@ export function FindingsTab() {
                 <section key={severity} className="flex flex-col gap-1">
                   <h2 className="flex items-center justify-between text-base font-semibold">
                     <StatusMark status={severity} />
-                    <span className="font-mono text-muted-fg italic">{group.length}</span>
+                    <span className="font-mono text-muted-fg">{group.length}</span>
                   </h2>
-                  <ul className="rounded-md border border-border bg-surface text-surface-fg">
+                  <ul className="rounded-lg border border-border bg-surface text-surface-fg">
                     {group.map((entry) => (
                       <ListItem
                         key={entry.index}

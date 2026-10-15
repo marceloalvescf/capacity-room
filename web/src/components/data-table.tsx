@@ -196,9 +196,9 @@ export function DataTable<Row extends RowData>({
       {data.length === 0 ? (
         <p className="text-sm text-muted-fg">{t("table.noMatch")}</p>
       ) : (
-        <div className="rounded-md border border-border bg-surface text-surface-fg">
+        <div className="rounded-lg border border-border bg-surface text-surface-fg">
           <table aria-label={label} className="w-full border-separate border-spacing-0 text-sm">
-            <thead ref={head} className="sticky top-0 z-10 bg-surface [&>tr>th]:border-b [&>tr>th]:border-border">
+            <thead ref={head} className="sticky top-0 z-10 [&>tr>th]:border-b [&>tr>th]:border-border [&>tr>th]:bg-surface [&>tr>th:first-child]:rounded-tl-lg [&>tr>th:last-child]:rounded-tr-lg">
               {table.getHeaderGroups().map((group) => (
                 <tr key={group.id}>
                   <th scope="col" className="w-12 px-3 py-2">

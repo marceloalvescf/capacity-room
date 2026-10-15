@@ -13,6 +13,7 @@ import type {
   ViewValue,
   ViewWorkload,
 } from "./api";
+import { FindingProof } from "./proof-bar";
 import { useView } from "./report-page";
 
 // A workload's name, with its kind and namespace beneath.
@@ -87,7 +88,7 @@ export function PeakCell({ peak, share, word }: { peak: ViewValue; share: ViewVa
       <span className="font-mono">
         <ValueText value={peak} />
       </span>
-      <span className="font-mono text-xs text-muted-fg italic">
+      <span className="font-mono text-xs text-muted-fg">
         <ValueText value={{ ...share, text }} />
       </span>
     </div>
@@ -95,10 +96,10 @@ export function PeakCell({ peak, share, word }: { peak: ViewValue; share: ViewVa
 }
 
 // The tint of a peak cell follows the worse of the statuses the view gives the peak and its share, never a
-// threshold of its own: attention takes the first depth, critical the second hatched as a hazard, any other none.
+// threshold of its own: the critical surface, the attention surface, or none.
 export function peakTint(peak: ViewValue, share: ViewValue): string {
   const statuses = [peak.status, share.status];
-  return statuses.includes("critical") ? "hazard" : statuses.includes("attention") ? "bg-depth-1" : "";
+  return statuses.includes("critical") ? "bg-critical-surface" : statuses.includes("attention") ? "bg-attention-surface" : "";
 }
 
 const statistics = ["average", "minimum", "peak", "current"] as const;
@@ -171,7 +172,7 @@ export function Facts({ items }: { items: { label: string; value: ReactNode }[] 
   );
 }
 
-// The findings of the view that a row owns, each a link to the finding.
+// The findings of the view that a row owns, each a link to the finding beside the proof its evidence draws.
 export function RowFindings({ match }: { match: (finding: ViewFinding) => boolean }) {
   const { t } = useTranslation();
   const headingId = useId();
@@ -182,19 +183,20 @@ export function RowFindings({ match }: { match: (finding: ViewFinding) => boolea
   }
   return (
     <section className="flex flex-col gap-2">
-      <h2 id={headingId} className="text-base font-semibold">
+      <h2 id={headingId} className="text-lg font-semibold">
         {t("report.tab.findings")}
       </h2>
-      <ul aria-labelledby={headingId} className="flex flex-col gap-1">
+      <ul aria-labelledby={headingId} className="flex flex-col">
         {kept.map(({ finding, index }) => (
-          <li key={index}>
+          <li key={index} className="grid items-center gap-x-6 gap-y-1 border-b border-border py-2 last:border-0 lg:grid-cols-[1fr_20rem]">
             <Link
               to={`../findings?finding=${String(index)}`}
-              className="flex flex-wrap items-baseline gap-x-3 rounded-md px-2 py-1 text-sm hover:underline focus-visible:outline-2 focus-visible:outline-accent"
+              className="flex flex-wrap items-baseline gap-x-3 self-start rounded-md text-sm hover:underline focus-visible:outline-2 focus-visible:outline-accent"
             >
               <StatusMark status={finding.severity} />
               <span>{finding.sentence}</span>
             </Link>
+            <FindingProof finding={finding} />
           </li>
         ))}
       </ul>

@@ -1,56 +1,58 @@
 ---
 name: CapacityRoom
-description: Kubernetes capacity reports read as a hydrographic chart reads water; room left is depth under the keel.
+description: Kubernetes capacity reports in which every finding is a claim set beside its proof, drawn.
 colors:
-  chart-ground: "#f5f9fb"
-  chart-ink: "#0e1a22"
-  sheet: "#fdfefe"
-  sheet-ink: "#0e1a22"
-  sheet-hover: "#e9f2f7"
-  shallows: "#deedf4"
-  shallows-ink: "#26404f"
-  shallows-hover: "#cde4ef"
-  shallows-active: "#bcdbe9"
-  shallows-active-ink: "#0b1f2b"
-  muted-ink: "#455560"
-  hairline: "#cfdbe2"
-  neatline: "#22323d"
-  input-border: "#6c808d"
-  sounding-blue: "#235c95"
-  sounding-blue-hover: "#1b4d80"
-  sounding-blue-fg: "#fdfefe"
-  sea-green: "#155e46"
-  ochre: "#6f4a10"
-  chart-magenta: "#a0135a"
-  chart-magenta-hover: "#87104c"
-  slate-neutral: "#445661"
-  hazard-surface: "#fbe8f1"
-  hazard-border: "#e9b1cd"
-  hazard-surface-ink: "#76104a"
-  info-surface: "#e3f0f7"
-  info-surface-ink: "#1b4870"
-  depth-1: "#c5deea"
-  depth-2: "#aacee0"
-  depth-3: "#8bbcd5"
+  bg: "#f8f8f8"
+  fg: "#0e0e0f"
+  surface: "#ffffff"
+  surface-fg: "#0e0e0f"
+  hover: "#f0f0f1"
+  sidebar: "#f8f8f8"
+  sidebar-fg: "#5c5c5e"
+  sidebar-hover: "#f0f0f1"
+  sidebar-active: "#e7e7e8"
+  sidebar-active-fg: "#0e0e0f"
+  muted-fg: "#5c5c5e"
+  border: "#e2e2e3"
+  neatline: "#2e2e30"
+  input-border: "#828284"
+  track: "#eaeaeb"
+  scrim: "rgb(13 14 16 / 0.4)"
+  accent: "#2c55dc"
+  action: "#2c55dc"
+  action-hover: "#2346bd"
+  action-fg: "#ffffff"
+  critical: "#be1e45"
+  critical-hover: "#a3183a"
+  attention: "#8f5b00"
+  healthy: "#24774a"
+  neutral: "#5c5c5e"
+  critical-surface: "#fdedf0"
+  critical-border: "#f2b9c6"
+  critical-surface-fg: "#8c1431"
+  attention-surface: "#fdf4e3"
+  info-surface: "#eef2fd"
+  info-surface-fg: "#2042b0"
 typography:
   display:
     fontFamily: "JetBrains Mono Variable, ui-monospace, monospace"
-    fontSize: "3.5rem"
+    fontSize: "2.25rem"
     fontWeight: 600
     lineHeight: 1
-    letterSpacing: "-0.025em"
+    letterSpacing: "-0.03em"
   headline:
-    fontFamily: "Public Sans Variable, system-ui, sans-serif"
-    fontSize: "1.25rem"
+    fontFamily: "Mona Sans Variable, system-ui, sans-serif"
+    fontSize: "1.875rem"
     fontWeight: 600
-    lineHeight: 1.4
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
   title:
-    fontFamily: "Public Sans Variable, system-ui, sans-serif"
+    fontFamily: "Mona Sans Variable, system-ui, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
-    lineHeight: 1.55
+    lineHeight: 1.556
   body:
-    fontFamily: "Public Sans Variable, system-ui, sans-serif"
+    fontFamily: "Mona Sans Variable, system-ui, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.43
@@ -59,19 +61,20 @@ typography:
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.43
-  sounding:
+  evidence-lead:
     fontFamily: "JetBrains Mono Variable, ui-monospace, monospace"
-    fontSize: "0.6875rem"
-    fontStyle: "italic"
-    fontWeight: 400
+    fontSize: "1.125rem"
+    fontWeight: 600
+    lineHeight: 1.556
   label:
-    fontFamily: "Public Sans Variable, system-ui, sans-serif"
+    fontFamily: "Mona Sans Variable, system-ui, sans-serif"
     fontSize: "0.6875rem"
     fontWeight: 600
     lineHeight: 1.45
     letterSpacing: "0.08em"
 rounded:
-  hairline: "2px"
+  md: "6px"
+  lg: "8px"
 spacing:
   "0.5": "2px"
   "1": "4px"
@@ -79,302 +82,360 @@ spacing:
   "2": "8px"
   "3": "12px"
   "4": "16px"
+  "5": "20px"
   "6": "24px"
-  "10": "40px"
+  "7": "28px"
+  "8": "32px"
 components:
   button-primary:
-    backgroundColor: "{colors.sounding-blue}"
-    textColor: "{colors.sounding-blue-fg}"
+    backgroundColor: "{colors.action}"
+    textColor: "{colors.action-fg}"
     typography: "{typography.body}"
-    rounded: "{rounded.hairline}"
+    rounded: "{rounded.md}"
     padding: "0 12px"
     height: "36px"
+  button-primary-hover:
+    backgroundColor: "{colors.action-hover}"
   button-secondary:
-    backgroundColor: "{colors.sheet}"
-    textColor: "{colors.sheet-ink}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.surface-fg}"
     typography: "{typography.body}"
-    rounded: "{rounded.hairline}"
+    rounded: "{rounded.md}"
     padding: "0 12px"
     height: "36px"
+  button-secondary-hover:
+    backgroundColor: "{colors.hover}"
   button-danger:
-    backgroundColor: "{colors.chart-magenta}"
-    textColor: "{colors.sheet}"
+    backgroundColor: "{colors.critical}"
+    textColor: "{colors.surface}"
     typography: "{typography.body}"
-    rounded: "{rounded.hairline}"
+    rounded: "{rounded.md}"
     padding: "0 12px"
     height: "36px"
+  button-danger-hover:
+    backgroundColor: "{colors.critical-hover}"
   icon-button:
-    backgroundColor: "{colors.sheet}"
-    textColor: "{colors.sheet-ink}"
-    rounded: "{rounded.hairline}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.surface-fg}"
+    rounded: "{rounded.md}"
     size: "36px"
   input:
-    backgroundColor: "{colors.sheet}"
-    textColor: "{colors.sheet-ink}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.surface-fg}"
     typography: "{typography.body}"
-    rounded: "{rounded.hairline}"
+    rounded: "{rounded.md}"
     padding: "0 12px"
     height: "36px"
+  segmented-track:
+    backgroundColor: "{colors.hover}"
+    textColor: "{colors.muted-fg}"
+    rounded: "{rounded.md}"
+    padding: "2px"
   segmented-checked:
-    backgroundColor: "{colors.sounding-blue}"
-    textColor: "{colors.sounding-blue-fg}"
-    rounded: "{rounded.hairline}"
-    padding: "0 16px"
-    height: "36px"
-  nav-item-active:
-    backgroundColor: "{colors.shallows-active}"
-    textColor: "{colors.shallows-active-ink}"
-    rounded: "{rounded.hairline}"
-    padding: "8px 12px"
-  tab:
-    textColor: "{colors.muted-ink}"
-    typography: "{typography.body}"
-    padding: "8px 10px"
-  tab-active:
-    textColor: "{colors.chart-ink}"
-    padding: "8px 10px"
-  table-container:
-    backgroundColor: "{colors.sheet}"
-    textColor: "{colors.sheet-ink}"
-    rounded: "{rounded.hairline}"
-  table-row-open:
-    backgroundColor: "{colors.info-surface}"
-  peak-cell-attention:
-    backgroundColor: "{colors.depth-1}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.surface-fg}"
+    rounded: "5px"
+    padding: "0 14px"
+    height: "32px"
   severity-toggle-pressed:
-    backgroundColor: "{colors.sounding-blue}"
-    textColor: "{colors.sounding-blue-fg}"
-    rounded: "{rounded.hairline}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.surface-fg}"
+    rounded: "{rounded.md}"
     padding: "0 12px"
     height: "36px"
   severity-toggle:
-    backgroundColor: "{colors.sheet}"
-    textColor: "{colors.sheet-ink}"
-    rounded: "{rounded.hairline}"
+    textColor: "{colors.muted-fg}"
+    rounded: "{rounded.md}"
     padding: "0 12px"
     height: "36px"
+  nav-item:
+    textColor: "{colors.sidebar-fg}"
+    typography: "{typography.body}"
+    rounded: "{rounded.md}"
+    padding: "8px 12px"
+  nav-item-hover:
+    backgroundColor: "{colors.sidebar-hover}"
+    textColor: "{colors.sidebar-active-fg}"
+  nav-item-active:
+    backgroundColor: "{colors.sidebar-active}"
+    textColor: "{colors.sidebar-active-fg}"
+    rounded: "{rounded.md}"
+    padding: "8px 12px"
+  tab:
+    textColor: "{colors.muted-fg}"
+    typography: "{typography.body}"
+    padding: "10px 10px"
+  tab-active:
+    textColor: "{colors.fg}"
+    padding: "10px 10px"
+  claim-proof-pair:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.surface-fg}"
+    rounded: "{rounded.lg}"
+    padding: "16px"
+  proof-track:
+    backgroundColor: "{colors.track}"
+    height: "8px"
+  table-container:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.surface-fg}"
+    rounded: "{rounded.lg}"
+  table-row-open:
+    backgroundColor: "{colors.info-surface}"
+  peak-cell-critical:
+    backgroundColor: "{colors.critical-surface}"
+  peak-cell-attention:
+    backgroundColor: "{colors.attention-surface}"
+  finding-detail:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.surface-fg}"
+    rounded: "{rounded.lg}"
+    padding: "20px"
   alert-error:
-    backgroundColor: "{colors.hazard-surface}"
-    textColor: "{colors.hazard-surface-ink}"
-    rounded: "{rounded.hairline}"
+    backgroundColor: "{colors.critical-surface}"
+    textColor: "{colors.critical-surface-fg}"
+    rounded: "{rounded.md}"
     padding: "8px 12px"
   alert-notice:
     backgroundColor: "{colors.info-surface}"
-    textColor: "{colors.info-surface-ink}"
-    rounded: "{rounded.hairline}"
+    textColor: "{colors.info-surface-fg}"
+    rounded: "{rounded.md}"
     padding: "8px 12px"
   tooltip:
-    backgroundColor: "{colors.chart-ink}"
-    textColor: "{colors.chart-ground}"
-    rounded: "{rounded.hairline}"
+    backgroundColor: "{colors.fg}"
+    textColor: "{colors.bg}"
+    rounded: "{rounded.md}"
     padding: "4px 8px"
   dialog:
-    backgroundColor: "{colors.sheet}"
-    textColor: "{colors.sheet-ink}"
-    rounded: "{rounded.hairline}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.surface-fg}"
+    rounded: "{rounded.lg}"
     padding: "24px"
     width: "min(36rem, calc(100vw - 2rem))"
   popover:
-    backgroundColor: "{colors.sheet}"
-    textColor: "{colors.sheet-ink}"
-    rounded: "{rounded.hairline}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.surface-fg}"
+    rounded: "{rounded.lg}"
     padding: "12px"
+  menu:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.surface-fg}"
+    rounded: "{rounded.lg}"
+    padding: "4px"
 ---
 
 # Design System: CapacityRoom
 
 ## Overview
 
-**Creative North Star: "The Nautical Chart"**
+**Creative North Star: "Claim and proof"**
 
-CapacityRoom reads a cluster the way a hydrographic chart reads water. Room left is depth under the keel. The ground is white deep water with a faint blue cast. The shell is a pale shallow-water tint closed by dark neat-lines. Graded blue depth tints appear only where room runs out. Chart magenta marks a hazard (critical), ochre marks attention, and sea-green marks healthy. The dark theme is a night chart: muted and never glowing.
+Every finding is a claim set beside its proof: the sentence first, then the measured value against its reference, drawn as a bar. The world is the neutral developer-tool register, won on craft rather than on ornament: one grey scale from near-white to near-black, hairline frames, a single blue for the place where the reader acts, and status colour that lives only on shapes and on the bars that prove a finding. The dark theme is the same scale inverted, not a neon observability board.
 
-The system is flat, dense, and drawn with hairlines. Every radius is 2px and nothing casts a shadow. Structure comes from neat-lines, hairline rules, and tonal tints. Names and numbers are set in JetBrains Mono, and its italic is the soundings voice of secondary numbers. Interface text is set in Public Sans. The signature drawing is the depth gauge: the cluster's nodes as a sounded depth scale, whose last band is hatched once no room is left and the report gives the cluster a finding.
+The overview opens on its answer. The severity totals stand at display size in mono beside their shapes; then "where room runs short" deals one claim-and-proof pair per scope, the cluster's growth first. The proof bar is the signature: it recurs in the overview, in the detail of a finding, and in the findings of an opened table row, and it always draws the numbers and the status the report view gives, never a threshold of the web app's own.
 
-The visual system answers to two binding project rules. Status is a shape, then a label, then a colour, so no status is ever carried by colour alone. Every foreground and background drawn together is a listed token pair that passes a contrast test in both themes.
+The visual system answers to two binding project rules. Status is a shape, then a label, then a colour, so no status is carried by colour alone. Every foreground and background drawn together is a listed token pair that passes a contrast test in both themes.
 
 **Key Characteristics:**
-- White chart ground, pale shallows shell, dark neat-lines.
-- Hairline shapes: 2px radius everywhere, no shadows anywhere.
-- Three depth tints that follow the status the report gives a value, never a threshold of the web app's own.
-- Hatching is the one hazard device, and it follows a status of the report: magenta for critical, ochre for attention on the gauge.
-- Monospace for every name and number, and only for them; mono italic for secondary soundings.
-- One uppercase tracked label size for table headers and small section headings.
-- One blue for every "act here" and "you are here": the primary action, a checked choice, a link, the active tab, and the focus ring.
-- Motion only under reduced-motion-safe conditions: the gauge sounds once, a pulse marks work in progress, and a layer or a pressed button answers the hand that moved it.
+- One neutral grey scale whose red, green, and blue sit within 3 units of each other, in both themes.
+- One blue accent for the primary action, links, focus, and a chosen value; the current page and tab are marked in ink.
+- Critical, attention, and healthy colour shapes and proof bars, never words.
+- Mona Sans for words, JetBrains Mono for every name and number, no italic anywhere.
+- Hairline frames, 6px controls, 8px panels; one soft shadow, for floating layers only.
+- The proof bar: a value against its reference on a grey track, coloured by the finding's severity.
+- Motion only under reduced-motion-safe conditions: a layer opens, a bar fills once, a button sinks.
 
 ## Colors
 
-A cool chart palette: blue-cast neutrals, three blue depth tints, and three chart status hues. Each token has a light value (frontmatter) and a night-chart value (sidecar), switched by `data-theme="dark"` on the root.
+A neutral grey scale, one blue, three status hues, and their quiet surfaces. Each token has a light value (frontmatter) and a dark value (given here and in the sidecar), switched by `data-theme="dark"` on the root; `web/src/theme/theme.css` is the source.
 
 ### Primary
-- **Sounding Blue** (accent, and action / action-fg): links, the active tab rule, the focus ring, the current-level line of the depth gauge, and the load-line stroke of the brand disc; as a fill, the primary button, the checked segment, a pressed severity toggle, a chosen period, and the native control accent. It stands about 2.5:1 from Chart Ink in both themes, so it reads as blue beside text, never as a second black. Light #235c95 with Sheet text; night #5494d4 with Chart Ground text, a muted blue rather than the brightest thing on the night chart.
-- **Sounding Blue Hover** (action-hover): the primary fill under the pointer, a step deeper in light (#1b4d80) and a step paler at night (#6ea6de).
+- **Signal Blue** (accent, action / action-fg): the primary button fill, a chosen period and calendar day, the native control accent, links, the focus ring, the summary of a disclosure, the pulsing ring of a list that is updating, and the line across the brand disc. Light #2c55dc with white text; dark #86a2ff with #0d0d0e text. It is used sparingly: one filled primary action per view, the rest as text links.
+- **Signal Blue Hover** (action-hover): the primary fill under the pointer, deeper in light (#2346bd) and paler in dark (#a1b6ff).
 
 ### Secondary
-- **Chart Magenta** (critical): the critical status, field error text, the danger button, and the hazard hatching. Critical labels are set bold. Its hover twin (critical-hover) fills the danger button under the pointer.
-- **Ochre** (attention): the attention status, and the gauge hatch when the cluster finding is attention.
-- **Sea Green** (healthy): the healthy status.
-- **Slate Neutral** (neutral): the undefined and unavailable statuses.
+- **Critical** (critical): the critical shape, critical proof bars, field error text, and the danger button fill (with critical-hover under the pointer). Dark #f47c95, hover #f799ac.
+- **Attention** (attention): the attention shape and attention proof bars. Dark #e3a84a.
+- **Healthy** (healthy): the healthy shape and healthy proof bars. Dark #5fc48f.
+- **Neutral** (neutral): the shapes of the undefined and unavailable statuses. Dark #a0a0a3.
 
 ### Tertiary
-- **Depth 1 / Depth 2 / Depth 3** (depth-1..3): graded water. Depth 1 tints a peak cell in attention and is the ground of the hazard hatch on a critical peak cell. Depth 2 and Depth 3 lie only under the gauge and carry no text. The gauge tints its filled bands from Depth 1 to Depth 3 toward the maximum; those tints mark position on its own scale, not a status. Night values: #17324a, #1b3f5e, #1f4b70. Each step stands at least about 1.2:1 from the next, and Depth 1 as far from Sheet and from Info Surface, so a tint stays visible on an opened row in both themes.
+- **Critical Surface / Border / Ink** (critical-surface, critical-border, critical-surface-fg): the error alert; the critical surface also tints a peak cell whose status is critical. Dark #2b1419, #6b2a38, #f6b3c1.
+- **Attention Surface** (attention-surface): tints a peak cell whose status is attention. Dark #2a2112.
+- **Info Surface / Ink** (info-surface, info-surface-fg): the notice alert, an opened table row, the selected entry of the findings list, and the span of a typed range in the calendar. Dark #151d33, #aebfff.
 
 ### Neutral
-- **Chart Ground** (bg): page background.
-- **Chart Ink** (fg): body text; also the tooltip ground.
-- **Sheet** (surface / surface-fg): tables, inputs, secondary buttons, dialogs, popovers, menus. An off-white (#fdfefe), never pure white.
-- **Sheet Hover** (hover): a secondary button, an icon button, a released segment or severity toggle, and a period choice under the pointer.
-- **Shallows** (sidebar / sidebar-fg): the side shell and the sign-in header.
-- **Shallows Hover** (sidebar-hover): a navigation entry under the pointer, between Shallows and Shallows Active.
-- **Shallows Active** (sidebar-active / sidebar-active-fg): the current navigation entry and a highlighted menu item.
-- **Muted Ink** (muted-fg): captions, meta lines, labels, secondary values.
-- **Hairline** (border): row rules, table frames, the tab baseline.
-- **Neatline** (neatline): the shell's closing lines, the baseline of the report tabs, the frame of every floating layer, the double frame of the sign-in card, the outline of a released severity toggle, and the gauge outline and ticks.
-- **Input Border** (input-border): field and secondary-button strokes, held at 3:1.
-- **Scrim** (`rgb(14 26 34 / 0.45)` light, `rgb(0 0 0 / 0.65)` dark): the overlay behind a modal.
-- **Hazard Surface / Border / Ink** and **Info Surface / Ink**: the error alert and the notice alert. Info Surface is also the ground of an opened table row; its night value is #122332, kept apart from the night depth tints.
+- **Ground** (bg): the page and the side column (sidebar shares it); also the ground of the detail row under an opened row. Dark #0d0d0e.
+- **Ink** (fg, surface-fg, sidebar-active-fg): body text; the tooltip ground; the active tab underline and the outline of a pressed severity toggle. Dark #ededee.
+- **Panel** (surface): tables, claim-and-proof pairs, inputs, secondary buttons, the checked segment, dialogs, popovers, menus. Dark #151516.
+- **Hover** (hover, sidebar-hover): a control under the pointer, and the track of the segmented control. Dark #1e1e20.
+- **Current** (sidebar-active): the current navigation entry and a highlighted menu item. Dark #27272a.
+- **Muted Ink** (muted-fg, sidebar-fg): captions, meta lines, labels, navigation entries at rest, evidence names. Dark #a0a0a3.
+- **Hairline** (border): row rules, panel and table frames, the frame of every floating layer, the tab baseline, the split of a pair. Dark #29292b.
+- **Strong Line** (neatline): the ink of a proof bar with no status, its reference tick and its dashed floor. Dark #cdcdcf.
+- **Input Border** (input-border): field and secondary-button strokes and the checked segment's edge, held at 3:1. Dark #727275.
+- **Track** (track): the ground of a proof bar. Dark #262628.
+- **Scrim** (scrim): behind a modal, `rgb(0 0 0 / 0.6)` in dark.
 
 ### Named Rules
-**The Token Pair Rule.** A colour is a token pair. Every foreground drawn on a background is listed in `web/src/theme/pairs.ts` and must reach 4.5:1 for text, or 3:1 for a large heading, an input border, a focus ring, or a line, in both themes. A new pair on screen enters the list first.
+**The One Scale Rule.** Every neutral is a grey whose red, green, and blue sit within 3 units of each other (2 in the light theme). No tinted neutral, no warm or cool cast, in either theme.
 
-**The Status-Led Depth Rule.** A depth tint follows the statuses the report view gives a value. A peak cell takes the worse of the status of its peak and the status of its share of the request: attention takes Depth 1, critical takes the hazard hatch over Depth 1, and every other status takes none. The hazard of the gauge follows the worst cluster finding. The web app never computes a threshold of its own. The State column of the nodes follows it too: it takes the status the view gives the node's state, the severity of its readiness findings, or unavailable when readiness is unknown.
+**The One Blue Rule.** Blue means "act here": the primary action, a link, focus, the chosen value. The current page and tab are marked in ink and the current tint, not in blue. Blue never marks a status and never decorates.
 
-**The One Hazard Rule.** Hatching marks a status of the report and nothing else. In a cell it is magenta: 135 degrees, 1.5px lines every 6px, in the `--hazard-stripe` token, the critical colour laid over Depth 1 at 10% in light and 12% in dark, so every text on the cell reaches 4.5:1 on the stripe as well as on the ground. On the gauge, the last band of a full scale takes 2.2px lines over Depth 3 in the colour of the worst cluster finding: magenta for critical, ochre for attention. With no such finding a full scale is plain Depth 3, closed by a Neatline; the numbers alone never hatch it.
+**The Colour On Shapes Rule.** A status hue colours a status shape, a proof bar, and a peak cell's tint, and nothing else of a status. The word beside a shape keeps the colour of the text around it; critical words are set semibold instead.
+
+**The Token Pair Rule.** A colour is a token pair. Every foreground drawn on a background is listed in `web/src/theme/pairs.ts` and must reach 4.5:1 for text, or 3:1 for a line, an input border, a focus ring, or a proof bar against its track, in both themes. A new pair on screen enters the list first.
+
+**The Status-Led Tint Rule.** A tint follows a status the view gives. A peak cell takes the worse of the status of its peak and of its share: critical takes the critical surface, attention the attention surface, every other status none. A proof bar takes the severity of its finding, or ink when it has none. The web app never computes a threshold of its own.
 
 ## Typography
 
 **Display Font:** JetBrains Mono Variable (with ui-monospace, monospace)
-**Body Font:** Public Sans Variable (with system-ui, sans-serif)
-**Label/Mono Font:** JetBrains Mono Variable for data; Public Sans for labels
+**Body Font:** Mona Sans Variable (with system-ui, sans-serif)
+**Label/Mono Font:** JetBrains Mono Variable for every name and number; Mona Sans for labels
 
-**Character:** Public Sans stands upright for names of things in the interface: navigation, headings, sentences. JetBrains Mono carries every name and number of the cluster, and its italic speaks the secondary soundings: shares, counts, gauge scale numbers. Both faces are self-hosted from npm packages, because the CSP allows no outside source.
+**Character:** Mona Sans is a tight grotesque that carries the interface's words at 400, 500, and 600 (the brand word alone at 700); JetBrains Mono carries every name and number the cluster produced, so the answer reads as data. Both are self-hosted from `@fontsource-variable` npm packages, because the CSP allows no outside source. Mona Sans ships weights 200 to 900, JetBrains Mono 100 to 800; only the upright styles are loaded.
 
 ### Hierarchy
-- **Display** (`text-display`: mono 600, 3.5rem, line-height 1, tracking -0.025em): the verdict numeral "current / maximum" of the overview. One per screen; the slash between is set in Public Sans 400 in Muted Ink.
-- **Headline** (600, 1.25rem): the page title of every screen and the sign-in card.
-- **Title** (600, 1.125rem): dialog titles and the brand word (700, tracking tight). Section headings inside a page step down to 1rem 600, the severity groups of the findings list among them; the title of a finding detail stays at 1.125rem.
-- **Body** (400, 0.875rem / 1.25rem): sentences, table cells, controls, captions. Small meta under a name is 0.75rem.
-- **Data** (mono 400, 0.875rem): every cluster name, number, version, user name, and time zone. Count rows set it at 1.25rem 600.
-- **Sounding** (mono italic): the share under a peak, every count after its status word, the minimum-node and event figures, and the gauge scale (`text-sounding`, 0.6875rem). A count always follows its word: "Critical 9".
-- **Label** (600, 0.6875rem, line-height 1rem, tracking 0.08em, uppercase, Muted Ink): table headers and small section headings, among them the detail headings of a finding (Observed, What to do, Evidence). A sort button inside a header takes it whole.
+- **Display** (`text-display`: mono 600, 2.25rem, line-height 1, tracking -0.03em): the size of the answer. The three severity totals of the answer strip and the cluster's "current / maximum" nodes in the growth pair, where the slash is 400 in Muted Ink.
+- **Headline** (600, 1.875rem, tracking tight): the page title of every signed-in screen. The sign-in card title steps down to 1.5rem.
+- **Title** (600, 1.125rem): section headings inside a page ("Where room runs short", the action plan, the findings of a row), dialog titles, and the name of a finding in its detail. The brand word is 1.125rem 700, tracking tight. Claim headings and the severity groups of the findings list are 1rem 600.
+- **Body** (400, 0.875rem / 1.25rem): sentences, table cells, controls, captions. A finding's sentence in its detail is 1rem. Small meta under a name is 0.75rem.
+- **Data** (mono 400, 0.875rem): every cluster name, number, version, user name, time zone, and count. A count row sets it at 1.25rem 600.
+- **Evidence lead** (mono 600, 1.125rem): the leading evidence value of a proof, in Ink beside its muted name; the rest of the evidence follows in mono at body size.
+- **Label** (`label` utility: 600, 0.6875rem, line-height 1rem, tracking 0.08em, uppercase, Muted Ink): table headers and the detail headings of a finding (Observed, What to do, Evidence). A sort button inside a header takes it whole.
 
 ### Named Rules
-**The Mono Names Rule.** Every name and number a cluster produced is set in JetBrains Mono, and only those. Interface words never are: a placeholder such as "Unavailable", the unknown node pool, a workload kind, a profile's display name, the word "Version" beside its number. A summary line mixes the two, its values in mono and its words upright.
+**The Mono Names Rule.** Every name and number a cluster produced is set in JetBrains Mono, and only those. Interface words never are: a placeholder such as "Unavailable", the unknown node pool, a workload kind, a scope type, the word "Version" beside its number.
 
-**The One Label Rule.** Uppercase tracked text has exactly one size (0.6875rem). It names a column or a section; it is never a decorative tag above a title.
+**The Upright Rule.** No italic, in either face. A secondary number is told apart by size and Muted Ink, never by slant.
 
-**The One Dot Rule.** A line holds at most one middle dot, as in a title or "Nodes · current / maximum". A line of three or more items parts them by a gap, through `Separator`: 1rem and a space, the space being where the line may wrap, and the middle dot kept for screen readers alone, so the line still reads as its items. A row of links parts them by the gap of its flex row instead. A test refuses a middle dot drawn between items.
+**The One Label Rule.** Uppercase tracked text has exactly one size, the `label` utility. It names a column or a section; it never sits as a decorative tag above a title.
+
+**The One Dot Rule.** A line of three or more items parts them by a gap, through `Separator`: 1rem and a space where the line may wrap, the middle dot kept for screen readers alone.
 
 ## Layout
 
-The signed-in screen is a two-column grid at `md` (768px) and above: a 16rem shallows column on the left, the working area on the right. Below `md` the shell stacks on top, closed by a neat-line underneath instead of at its side. The working area has a header row of icon buttons at the right, closed by a neat-line, and a main region with 24px padding.
+The signed-in screen is a two-column grid from `md` (768px): a side column of 14rem (16rem from `xl`, 1280px) on the Ground, closed by a Hairline at its right, and the working area. Below `md` the side column stacks on top, closed by a Hairline underneath. The working area has a header row of icon buttons at the right, closed by a Hairline, and a main region padded 24px (32px from `xl`) at the sides and 28px top and bottom. The app is built for desktop from 1024px.
 
-Spacing follows a 4px step: 2, 4, 6, 8, 12, 16, 24, and 40px are the values in use. Controls and table cells use 12px horizontal and 8px vertical padding; stacks of sections use 16px gaps; the overview verdict uses 24px vertical padding and a 40px column gap. At `lg` (1024px) the verdict splits 4fr to 7fr: growth on the left, pressure by scope on the right.
+Spacing follows Tailwind's 4px step; 2, 4, 6, 8, 12, 16, 20, 24, 28, and 32px are the values in use. Controls and table cells pad 12px by 8px; a pair's halves pad 16px; a finding detail 20px; a dialog 24px; the sign-in card 28px. Stacks of pairs part by 12px, overview sections by 32px. Forms keep to 48rem (`max-w-3xl`), the account page to 36rem.
 
-Tables never scroll sideways. Cells wrap between words and never inside one; only a mono name may break anywhere, and a status word never breaks. The header sticks under the window top. An opened row reveals itself between the sticky header and the window bottom, and only a value longer than the table breaks inside it. Report screens have seven tabs under the title, over a Neatline baseline that also closes the top of the overview verdict; the PDF action sits at the right end of the title row. On the findings tab at `lg` and above, the detail of the selected finding sticks 16px under the window top and scrolls within the window height.
+A report screen stacks the title row (title, the meta line of cluster and period, the PDF action at the right), the seven tabs over a Hairline baseline, then the tab. A claim-and-proof pair splits into two equal halves from `lg` (1024px) and stacks below it. On the findings tab from `lg` the list takes up to 26rem and the detail the rest, sticking 16px under the window top and scrolling within the window height. In an opened row, a finding and its proof sit side by side from `lg`, the proof in a 20rem column.
+
+Tables never scroll sideways. Cells wrap between words; only a mono name or a value longer than the table breaks inside it. The header sticks under the window top. An opened row reveals itself between the sticky header and the window bottom.
 
 ## Elevation & Depth
 
-The system is flat. The theme resets every Tailwind shadow scale (`--shadow-*`, `--inset-shadow-*`, `--drop-shadow-*`, `--text-shadow-*`) to nothing. Depth is conveyed by three means only: neat-line frames, tonal tints (shallows, info surface, the three depth tints), and stacking order. Floating layers (menu, popover, tooltip, dialog, alert dialog) sit at z-50 above the sticky table header, framed by a Neatline border on Sheet; modals add the Scrim.
+The system is flat at rest. The theme resets every Tailwind shadow scale (`--shadow-*`, `--inset-shadow-*`, `--drop-shadow-*`, `--text-shadow-*`) and defines one: `shadow-float`. Panels, tables, and pairs separate from the Ground by a Hairline frame and the Panel tone alone. Floating layers sit at z-50 above the sticky table header.
+
+### Shadow Vocabulary
+- **Float** (`box-shadow: 0 10px 28px -8px rgb(13 14 16 / 0.16), 0 2px 6px -2px rgb(13 14 16 / 0.08)`; dark `0 12px 32px -8px rgb(0 0 0 / 0.6), 0 2px 6px -2px rgb(0 0 0 / 0.4)`): menus, popovers, dialogs, and confirmations, over a Hairline frame. The tooltip takes none: it inverts to an Ink ground instead.
 
 ### Named Rules
-**The No-Shadow Rule.** Nothing casts a shadow. A layer separates from the page by its neat-line frame alone.
+**The One Elevation Rule.** Only a floating layer casts a shadow, and only `shadow-float`. Nothing at rest on the page is lifted.
 
 ## Shapes
 
-Every radius is 2px: a near-square corner that keeps a hairline drawing from looking cut. Borders are 1px; the active tab rule is 2px; the focus ring is a 2px Sounding Blue outline with a 2px offset. The active navigation entry gets an inset 1px Neatline ring. The sign-in card has a double neat-line frame: a 1px Neatline border and a 1px Hairline outline 4px outside it. The brand mark is a load-line (Plimsoll) disc: a 2.25px circle crossed at the centre by a Sounding Blue line. Status shapes are drawn as 12px SVGs: a filled circle (healthy), a filled triangle (attention), a filled diamond (critical), an open circle (undefined), and a dash (unavailable).
+Two radii, from Tailwind's own scale: controls take 6px (`rounded-md`: buttons, inputs, selects, alerts, navigation entries, menu items, tooltips, the segmented track), panels and floating layers take 8px (`rounded-lg`: tables, claim-and-proof pairs, the finding detail, the sign-in card, dialogs, popovers, menus). The checked segment takes 5px so it nests inside the track's 2px inset. Borders are 1px Hairline; the active tab rule is 2px Ink; the focus ring is a 2px accent outline with a 2px offset (inset on menu items and list entries).
+
+Status shapes are 12px SVGs (16px in the answer strip, 10px on the data quality tab): a filled diamond (critical), a filled triangle (attention), a filled circle (healthy), an open circle (undefined), and a dash (unavailable). The brand mark is the load-line disc: a 2.25px Ink circle crossed at its centre by a line in the accent.
 
 ## Components
 
 ### Buttons
-- **Shape:** gently squared (2px), 1px border, min height 36px, 12px horizontal padding, 0.875rem weight 500.
-- **Primary:** Sounding Blue fill and border with Sounding Blue Foreground text; under the pointer, Sounding Blue Hover.
-- **Secondary (default):** Sheet fill, Input Border stroke, Sheet ink; under the pointer, Sheet Hover.
-- **Danger:** Chart Magenta fill and border, Sheet text, and its hover twin under the pointer; only on the confirm button of a destructive dialog. The action that opens that dialog is a secondary button.
-- **Hover / Press:** the pointer is a hand on every enabled button. The hover colour changes at once, with no fade. A press sinks the button by 1px, which glides over 100ms under `motion-safe:`.
-- **Focus / Disabled:** 2px Sounding Blue outline offset 2px; disabled drops to 60% opacity with a not-allowed cursor, and takes neither the hover colour nor the press.
-- **Icon button:** a secondary button 36px square with a 20px Phosphor icon; its name is in `aria-label` and in a tooltip on hover and focus. The tooltip is drawn inside the landmark that holds the button, or in the body when no landmark does; the app has one tooltip provider.
+- **Shape:** gently rounded (6px), 1px border, min height 36px, 12px horizontal padding, 0.875rem weight 500.
+- **Primary:** Signal Blue fill and border with its foreground; Signal Blue Hover under the pointer.
+- **Secondary (default):** Panel fill, Input Border stroke, Ink; Hover under the pointer.
+- **Danger:** Critical fill and border with Panel text, its hover twin under the pointer; only on the confirm button of a destructive dialog. The action that opens that dialog is secondary.
+- **Hover / Press:** the hand cursor on every enabled button; the hover colour changes at once; a press sinks the button 1px, which glides over 100ms only under `motion-safe:`.
+- **Focus / Disabled:** 2px accent outline offset 2px; disabled drops to 60% opacity with a not-allowed cursor and takes neither hover nor press.
+- **Icon button:** a secondary button 36px square with a 20px Phosphor icon; its name is in `aria-label` and in a tooltip on hover and focus, drawn inside the landmark that holds the button.
 
 ### Segmented control
-A row of radio labels joined edge to edge (-1px overlap), 2px outer corners, 16px padding, under a legend in the field-label style (0.875rem 500). The checked segment takes the Sounding Blue fill; a released segment takes Sheet Hover under the pointer; focus outlines the segment.
+A grey track (Hover) with a 2px inset and 6px corners; each option is muted text at 0.875rem 500, 32px high. The checked option is a raised chip: Panel fill, Input Border edge, Ink text. A released option turns Ink under the pointer; focus outlines the option.
 
 ### Severity toggles
-The findings filter: one 2px-cornered toggle per severity, the status mark then its count in mono italic. A pressed toggle takes the checked-segment style, Sounding Blue fill and Sounding Blue Foreground text, and its mark takes that text colour while keeping its shape and word; a released toggle is Sheet with a Neatline outline and the mark in its status colour. Under the pointer a pressed toggle takes Sounding Blue Hover and a released one Sheet Hover, and a press sinks it by 1px as it does a button. When the filters leave no finding, a secondary button "Show all findings" clears the severities, the scope, and the search.
+The findings filter: one 6px-cornered toggle per severity, its status mark then its count in mono. Pressed: an Ink outline on Panel, the shape in its status colour. Released: a Hairline outline on no fill, Muted Ink, and a plain shape in the text colour (the shape and the word still name the status). Under the pointer both take Hover, and a press sinks 1px as a button does.
 
 ### Inputs / Fields
-- **Style:** Sheet fill, 1px Input Border, 2px radius, min height 36px, 12px padding. The label sits above at 0.875rem 500; a hint below in Muted Ink; an error below in Chart Magenta. A select is the browser's own `<select>`, styled the same.
-- **Focus:** 2px Sounding Blue outline, 2px offset.
-- **Period (New report form):** a field of its own above the report language, at most 24rem wide and full width below that; its trigger is an input-style button naming the period. The popover opens below the trigger at up to 46rem (the window less 2rem when narrower), Sheet with the Neatline frame: the length and the typed range on the left, the quick lengths and the calendar periods side by side in two columns of a 24rem pane on the right, each choice on one line in both languages, with no divider between them. A choice takes Sheet Hover under the pointer, and the chosen one the Sounding Blue fill. A profile that limits its periods gets a single column of those periods in a 36rem popover. The Options box under the form holds the time zone, the report profile, and the minimum severity only; its closed summary lists those three.
-- **Checkbox:** native box tinted with Sounding Blue.
+- **Style:** Panel fill, 1px Input Border, 6px radius, min height 36px, 12px padding. The label sits above at 0.875rem 500; a hint below in Muted Ink; an error below in Critical.
+- **Select:** the browser's own `<select>`, styled like a field with its native arrow removed and a 16px Phosphor caret drawn in Muted Ink at the right.
+- **Focus:** 2px accent outline, 2px offset.
+- **Checkbox:** the native box tinted with Signal Blue.
+- **Period picker:** a choice is a 36px row that takes Hover under the pointer and the Signal Blue fill when chosen; the calendar's days are mono, the chosen ends filled Signal Blue and the span between them on Info Surface.
 
 ### Navigation
-- **Shell:** Shallows column, brand at the top, links at 0.875rem with 8px by 12px padding. The current page takes the Shallows Active tint, weight 600, and an inset Neatline frame; another entry under the pointer takes Shallows Hover with Shallows Active Ink, and no frame; Reports stays current on a report and on a job in progress. The user name sits at the foot in mono, and the version as the word "Version" upright beside its number in mono.
-- **Report tabs:** a row of 0.875rem tabs, 10px apart in padding, over a Neatline baseline; the active tab is Chart Ink 600 with a 2px Sounding Blue underline, the rest Muted Ink; an inactive tab under the pointer turns Chart Ink over a 2px Input Border underline. When the report has data-quality warnings, the Data quality tab carries a 10px attention shape and the count in mono italic after its word, and its accessible name states the count. The seven tabs hold one line at 1024px in both languages.
+- **Side column:** brand at the top, entries at 0.875rem 500 in Muted Ink with 8px by 12px padding and 6px corners. The current page takes the Current tint and Ink; another entry under the pointer takes Hover and Ink. The user name sits at the foot in mono, and the version as the word upright beside its number in mono.
+- **Report tabs:** 0.875rem 500 tabs over a Hairline baseline; the active tab is Ink with a 2px Ink underline, the rest Muted Ink; an inactive tab under the pointer turns Ink over a 2px Input Border underline. The data quality tab carries a 10px attention shape and the count in mono when the report has warnings.
 
-### Data table
-The one table of the app: a Sheet container with a 1px Hairline frame and 2px corners, uppercase labels in the sticky header, Hairline rules between rows, an expander column of 48px. An opened row is tinted Info Surface and its detail row sits on Chart Ground at 24px by 16px padding. A peak cell stacks the peak in mono over its share in mono italic, and takes the depth tint its statuses earn. A peak with no number shows its placeholder word alone, upright in Muted Ink, with no share under it. On the nodes tab and the HPA table the Status cell carries a line under the severity, in Sheet ink at the small size on a 14rem measure, that says why: a node's reason, an HPA's worst finding sentence. A row with no finding has none. The node pools table has a Status column after the pool's name, drawn the same way from the pool's worst finding, with no line under it. In the findings list each entry's sentence clamps at two lines, so the key words of a long sentence stay; the name above it stays on one.
+### Claim-and-proof pair (signature)
+A Panel with a Hairline frame and 8px corners, split in two equal halves from `lg` by a Hairline (stacked below it, parted by a Hairline underneath). The claim on the left: a 1rem 600 heading (a scope type as a status mark), the finding's sentence as a link underlined in Hairline that turns accent on hover, the scope name in mono and Muted Ink, then the counts of its findings. The proof on the right, centred vertically: the evidence and its proof bar. A finding with nothing to draw lets the claim take the whole row. The cluster's growth pair comes first: the worst cluster finding and the autoscaler's facts as the claim; the caption, the nodes at display size, and the nodes' proof bar as the proof.
 
-### Status mark
-Shape, then label, then colour. The 12px shape and the word share the status hue; critical words are bold. Where the label is not the status word, the status word is added for screen readers.
-
-### Alerts
-2px corners, 1px border, 8px by 12px padding, 0.875rem. Error: Hazard Surface, Hazard Border, Hazard Ink. Notice: Info Surface, Hairline border, Info Ink.
-
-### Floating layers
-Menu, popover, dialog, and alert dialog are Sheet with a 1px Neatline frame and 2px corners; a dialog pads 24px and caps at 36rem wide (28rem for a confirmation). A highlighted menu item takes Shallows Active; the item reached by the keyboard also takes an inset Sounding Blue outline, which the item under the pointer does not (Radix focuses an item from either, and the browser counts both as visible focus). The tooltip inverts: Chart Ink ground, Chart Ground text, 0.75rem.
-
-### Depth gauge (signature)
-The cluster's nodes drawn as a sounded depth scale 360px wide: one band per node up to the autoscaler maximum, inside a 1px Neatline frame; above 60 nodes the level is one band in the tints of its thirds. The gauge draws the view's `gauge` as given: the program counts whole nodes, held between none and the maximum, and sets the hazard from the cluster's worst finding. Filled bands are tinted Depth 1 to Depth 3 toward the maximum and parted by hairlines in the ground colour. A 2px Sounding Blue line marks the current level; the minimum is a dashed Neatline contour. Once no room is left, a 2px line closes the scale, and the last band and that line take the hazard: hatched and drawn in Chart Magenta for critical, in Ochre for attention; with no hazard, the band stays plain Depth 3 and the line is Neatline. Ticks below carry mono italic soundings (`text-sounding`), at most ten. The drawing is hidden from assistive technology because the numbers stand in the headline above it.
+### Proof bar (signature)
+A value drawn against its reference on one track, as SVG whose lengths are attributes, never styles.
+- **Track:** an 8px Track band across the full width.
+- **Fill:** full track height from the start (zero, or the low end of a range) up to the reference.
+- **Overrun:** past the reference, the fill runs on at half height.
+- **Reference tick:** a 2px Strong Line tick where the reference falls, drawn once the value reaches it.
+- **Ceiling:** the scale holds at most 4 times the reference; a value beyond ends in a break of two Panel slashes near the end, and the printed numbers carry the size of the overrun.
+- **Units:** a count up to 40 is divided per unit by 2px Panel gaps.
+- **Floor:** the minimum of nodes is a dashed 1.5px Strong Line tick.
+- **Colour:** the finding's severity (critical, attention, healthy), or Strong Line ink when the view gives none.
+- **Evidence above:** the leading value at 1.125rem mono 600 beside its muted name, the rest after it at body size.
+- **Motion:** the fill grows once from the left (`animate-proof`) only under `motion-safe:`. The drawing is hidden from assistive technology; the numbers beside it carry the meaning.
 
 ### Answer strip
-The first thing under the report tabs, 8px lower than the tab stack's gap: one row at 1.25rem of the three severity totals, each a 16px shape, its word, and its count in mono italic, parted by a 2rem gap. The worst severity present is drawn in its status colour and weight 600; the others in Chart Ink. Each total links to the findings of its severity unless the view's minimum severity leaves it out, and a 0.875rem "See all findings" link follows; the totals wrap as whole items. A report with no finding says so in the strip instead. Under it, only when the data has warnings, a notice: an attention shape, the label "Data quality" in 600 with the count in mono italic, up to three warnings one per line, "+N" in Muted Ink for the rest, and a link to the data quality tab.
+The first row of the overview: the three severity totals, each a 16px shape, the count at display size in mono, and its word in Muted Ink at 0.875rem, parted by 32px. Each links to the findings of its severity unless the view's minimum leaves it out, and a "See all findings" accent link follows. When the data has warnings, a notice sits at its right from `xl`: an attention shape, the tab's name in 600 with the count in mono, up to three warnings in Muted Ink, the rest as a count, and a link.
 
-### Overview verdict
-A section under the answer strip, closed by a Hairline bottom rule. Left: a label, the display numeral, the depth gauge, a caption, the cluster verdict (the worst cluster finding, under it the node-evidence warning when the report has it, in the attention shape and colour; the same verdict also heads the Autoscaling tab, under its title row), mono italic secondary figures, and a link. The link to the autoscaling tab sits at the start of its line, so its focus ring hugs the text. The gauge, the cluster verdict, and the pressure are the view's verdict, drawn as given. Right: pressure by scope, one row per scope type, worst severity first and the fixed order among equals, with a Hairline top rule, the scope label as a status mark in an 8rem column, then the leading finding as an underlined link, its name and peak in mono, and its severity counts, which count rows as the tabs tell them apart (a workload by its kind too).
+### Data table
+The one table of the app: a Panel with a 1px Hairline frame and 8px corners, labels in the sticky header, Hairline rules between rows, a 48px expander column of transparent icon buttons. An opened row is tinted Info Surface; its detail row sits on Ground at 24px by 16px padding and holds the row's findings, each a status mark and sentence beside its proof bar. A peak cell stacks the peak in mono over its share in mono 0.75rem Muted Ink, each with its status shape, and takes the critical or attention surface by the view's status. A row with no finding reads "No finding" in Muted Ink with no mark.
 
-### Action plan
-The overview's table of recommendations. The Scope cell reads the scope type as a muted word in the sans face, then the full name of the scope in mono (a workload as namespace/name), wrapping rather than scrolling. Above three scopes the cell shows the summary alone, with no kind word. An action whose finding the view names (`finding`) is a link to that finding, underlined in Hairline and in Sounding Blue on hover, like a pressure line; the web app matches nothing of its own, and an action with no finding stays plain text.
+### Findings list and detail
+The list groups findings by severity under 1rem 600 headings with their counts in mono, each group a Panel with Hairline rows. An entry shows its status shape, scope type muted, the name in mono on one line, and the sentence clamped at two lines; the selected entry is tinted Info Surface. The detail is a Panel with 20px padding and 8px corners: the name at 1.125rem, then Observed, What to do, and Evidence under labels, the evidence led by its proof bar.
 
-### PDF block
-In the PDF popover and on the progress page: one row per language at 0.875rem, parted by Hairline dividers inside the layer's Neatline frame, with no box of their own. The rows share three columns, the language, the status, and the action, so they line up from row to row, and the action never wraps under the status.
+### Status mark
+Shape, then label, then colour. The 12px shape carries the status hue; the word keeps the surrounding text colour and is semibold for critical. Where the label is not the status word, the status word is added for screen readers.
 
-### Reports list
-The Profile cell of a row carries a second line under the profile name, in Muted Ink at the small size: the namespaces in mono (the first three, then a +N count of the rest), the period in words, and the report's language, parted by gaps. Cells wrap, so the table fits 1024px.
+### Alerts
+6px corners, 1px border, 8px by 12px padding, 0.875rem. Error: Critical Surface, Critical Border, Critical Ink. Notice: Info Surface, Hairline border, Info Ink.
 
-## Motion
-Motion appears only under `motion-safe:` or `prefers-reduced-motion: no-preference`; under reduced motion everything is drawn at once, nothing pulses, and every layer opens and closes at once. Motion moves only `transform` and `opacity`; a test fails on any animation of the stylesheet outside that condition.
-- **Layers:** a menu, a popover, or a tooltip fades in over 140ms (cubic-bezier(0.16, 1, 0.3, 1)), growing from 97% out of the point Radix names and 4px off the side of its trigger, and fades out over 90ms. A dialog or a confirmation fades and settles from 98% over 160ms over a scrim that fades over 150ms; both leave over 100ms. The classes are `layer-motion`, `dialog-motion`, and `scrim-motion` of `theme.css`, keyed on the `data-state` and `data-side` that Radix writes, so no style is set at run time.
-- **Press:** a button and a severity toggle sink 1px while pressed (100ms ease-out).
-- **Sounding:** the gauge level rises once from the left (`sounding`, 600ms, cubic-bezier(0.16, 1, 0.3, 1)), then the hatched band and the closing line fade in (`hazard-in`, 200ms after 600ms).
-- **Updating ring:** while a report on the list is queued, running, or has a pending PDF, a 10px Sounding Blue ring (an outline circle, not a filled dot) pulses beside the words that say the list is updating.
-- **Failed report:** below the failure alert sit Back to reports, then the next step; on a failure of the profile test the administrator's primary action is Check the profile and Request again turns secondary. A failed report offers Delete report as a collected one does.
-- **Progress step:** on the progress page the current step pulses.
-- Hover colours, on buttons, navigation links, and tabs, change at once with no transition.
+### Floating layers
+Menu, popover, dialog, and confirmation are Panel with a 1px Hairline frame, 8px corners, and `shadow-float`; a dialog pads 24px and caps at 36rem (28rem for a confirmation) over the Scrim. A highlighted menu item takes the Current tint; the item reached by the keyboard also takes an inset accent outline. The tooltip inverts: Ink ground, Ground text, 0.75rem, 6px corners, no shadow.
+
+### Motion
+Motion appears only under `motion-safe:` or `prefers-reduced-motion: no-preference`, and moves only `transform` and `opacity`.
+- **Layers** (`layer-motion`): a menu, popover, or tooltip fades in over 140ms (cubic-bezier(0.16, 1, 0.3, 1)), growing from 97% out of the point Radix names and 4px off its side, and fades out over 90ms.
+- **Modals** (`scrim-motion`, `dialog-motion`): the scrim fades in over 150ms; the dialog fades and settles from 98% over 160ms; both leave over 100ms.
+- **Proof** (`animate-proof`): a bar's fill scales in from the left once, 700ms, cubic-bezier(0.16, 1, 0.3, 1).
+- **Press:** a button and a severity toggle sink 1px over 100ms ease-out.
+- **Work in progress:** the current step of the progress page and the accent ring beside "updating" on the reports list pulse.
 
 ## Do's and Don'ts
 
 ### Do:
 - **Do** take every colour from a token in `web/src/theme/theme.css` and add each new foreground and background pair to `web/src/theme/pairs.ts` before shipping it.
-- **Do** draw a status as its shape first, then its word, then its colour, through the status mark.
-- **Do** set every cluster name and number in JetBrains Mono, and secondary numbers in its italic; set every interface word upright, placeholders included.
-- **Do** keep every corner at 2px and separate layers with a Neatline frame.
-- **Do** tint a value only by the statuses the report gives it: Depth 1 for attention, the hazard hatch for critical.
-- **Do** put motion only under `motion-safe:` and keep it to the sounding of the gauge, the pulses of work in progress, the opening and closing of a layer, and the press of a button: motion that answers the reader or reports work, never decoration.
-- **Do** style through classes and the theme's utilities; the CSP allows no inline style and no injected style element.
+- **Do** draw a status as its shape first, then its word, then its colour, through `StatusMark` or `StatusShape`.
+- **Do** set a finding's proof beside its claim: the sentence, then the evidence and its proof bar, drawn from the numbers the view gives.
+- **Do** colour a proof bar by its finding's severity, or in ink when the view gives none.
+- **Do** set every cluster name and number in JetBrains Mono and every interface word in Mona Sans, upright.
+- **Do** keep controls at 6px corners and panels and layers at 8px, framed by a Hairline.
+- **Do** reserve Signal Blue for the primary action, links, focus, and the chosen or current value.
+- **Do** put motion only under `motion-safe:` and keep it to layers opening, a proof filling once, a press, and work in progress.
+- **Do** style through classes and the theme's utilities, and give a bar its length as an SVG attribute; the CSP allows no inline style and no injected style element.
 
 ### Don't:
-- **Don't** add a shadow, a glow, or a gradient to any surface; the theme resets every shadow scale.
-- **Don't** use magenta hatching or Chart Magenta for anything but critical, and never hatch the gauge by its numbers alone.
-- **Don't** let a depth tint carry Depth 3 under text; Depth 3 lies only under the gauge.
-- **Don't** set a label in uppercase at any size other than 0.6875rem, or use it as a decorative tag above a title.
-- **Don't** compute a threshold in the web app to decide a tint or a status.
+- **Don't** colour a word with a status hue; the colour belongs to the shape and the bar.
+- **Don't** cast a shadow from anything but a floating layer, and never one other than `shadow-float`; no glow, no gradient.
+- **Don't** tint a neutral: every grey keeps its channels within 3 units.
+- **Don't** use blue for a status or for decoration.
+- **Don't** compute a threshold in the web app to decide a tint, a bar's colour, or a status.
+- **Don't** set anything in italic.
+- **Don't** set uppercase text at any size other than the `label` utility, or use it as a tag above a title.
 - **Don't** load a font, a stylesheet, or an icon from outside the bundle.
-- **Don't** make the dark theme glow: night-chart hues stay muted.
 
 ## The PDF
 
-The report on paper is the same instrument drawn in ink alone. It is monochrome: every fill, rule, and glyph is `black`, `white`, or a `luma(...)` grey, and no page holds a coloured pixel. It shares the faces of the web app, so a name or a number reads the same on both.
+The report on paper keeps its own look: the instrument drawn in ink alone. It is monochrome: every fill, rule, and glyph is `black`, `white`, or a `luma(...)` grey, and no page holds a coloured pixel. It shares JetBrains Mono and the load-line disc with the web app, so a name or a number reads the same on both; its words stay in Public Sans.
 
 ### Faces and sizes
 - **Words:** Public Sans (Regular, SemiBold, Bold, and their italics) at 9pt on the verdict page and 7pt to 8.5pt in tables. Title 18pt Bold; the plan heading 11pt SemiBold; the totals line 13pt.

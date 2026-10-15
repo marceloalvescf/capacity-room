@@ -76,7 +76,7 @@ export function AccountPage() {
   return (
     <div className="flex max-w-xl flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold">{t("account.title")}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("account.title")}</h1>
         <p>{t("account.signedInAs", { username: principal.username, role: t(`role.${principal.role}`) })}</p>
       </div>
 

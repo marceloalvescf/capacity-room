@@ -28,7 +28,7 @@ describe("status mark", () => {
         expect(shapes[status](svg as SVGSVGElement)).toBe(true);
         const label = container.querySelector("svg + span");
         expect(label?.textContent).toBe(file.status[status]);
-        expect(label?.classList.contains("font-bold")).toBe(status === "critical");
+        expect(label?.classList.contains("font-semibold")).toBe(status === "critical");
       });
     }
   }

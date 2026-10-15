@@ -13,7 +13,7 @@ function LoadLine() {
 export function Brand() {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center gap-2.5 px-3 text-fg">
       <LoadLine />
       <span className="text-lg font-bold tracking-tight">{t("app.short")}</span>
     </div>

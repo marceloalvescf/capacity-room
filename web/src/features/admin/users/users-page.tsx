@@ -74,7 +74,7 @@ export function UsersPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">{t("admin.users.title")}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("admin.users.title")}</h1>
         <Button
           ref={opener}
           variant="primary"

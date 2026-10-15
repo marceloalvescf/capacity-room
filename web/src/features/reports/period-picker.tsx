@@ -255,7 +255,7 @@ function Range({ initial, zone, calendar, buttons, onCalendar, onEdit, onApply }
           onCalendar(calendar === which ? null : which);
         }}
       />
-      {calendar === which ? <div className="rounded-md border border-border p-2">{calendarOf(which)}</div> : null}
+      {calendar === which ? <div className="rounded-lg border border-border p-2">{calendarOf(which)}</div> : null}
     </>
   );
 

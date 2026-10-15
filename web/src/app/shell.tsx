@@ -12,10 +12,10 @@ import { Brand } from "./brand";
 import { LanguageMenu } from "./language-menu";
 import { useAnnounce } from "./live-region";
 
-// The page in view: the active tint, semibold, and a neat-line frame on every side. Another page under the pointer
-// takes a lighter tint.
+// The page in view takes the active tint and the ink of the page; another page under the pointer takes a lighter
+// tint.
 const navLink =
-  "block rounded-md px-3 py-2 text-sm not-aria-[current=page]:hover:bg-sidebar-hover not-aria-[current=page]:hover:text-sidebar-active-fg aria-[current=page]:bg-sidebar-active aria-[current=page]:font-semibold aria-[current=page]:ring-1 aria-[current=page]:ring-neatline aria-[current=page]:ring-inset aria-[current=page]:text-sidebar-active-fg";
+  "block rounded-md px-3 py-2 text-sm font-medium not-aria-[current=page]:hover:bg-sidebar-hover not-aria-[current=page]:hover:text-sidebar-active-fg aria-[current=page]:bg-sidebar-active aria-[current=page]:text-sidebar-active-fg";
 
 const version = import.meta.env.VITE_CAPACITYROOM_VERSION;
 
@@ -48,14 +48,14 @@ export function Shell() {
   }
 
   return (
-    <div className="min-h-dvh bg-bg text-fg md:grid md:grid-cols-[16rem_1fr]">
+    <div className="min-h-dvh bg-bg text-fg md:grid md:grid-cols-[14rem_1fr] xl:grid-cols-[16rem_1fr]">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-10 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2"
       >
         {t("app.skip")}
       </a>
-      <aside aria-label={t("app.name")} className="flex flex-col gap-6 bg-sidebar p-4 text-sidebar-fg border-b border-neatline md:border-r md:border-b-0">
+      <aside aria-label={t("app.name")} className="flex flex-col gap-7 border-b border-border bg-sidebar px-3 py-5 text-sidebar-fg md:border-r md:border-b-0">
         <Brand />
         <nav aria-label={t("nav.label")} className="flex-1">
           <ul>
@@ -92,7 +92,7 @@ export function Shell() {
             </li>
           </ul>
         </nav>
-        <div className="flex flex-col text-sm">
+        <div className="flex flex-col px-3 text-sm">
           <span className="font-mono">{principal.username}</span>
           <span>{t(`role.${principal.role}`)}</span>
           <span className="mt-3">
@@ -101,7 +101,7 @@ export function Shell() {
         </div>
       </aside>
       <div className="flex min-w-0 flex-col">
-        <header className="flex flex-wrap items-center justify-end gap-2 border-b border-neatline px-6 py-3">
+        <header className="flex flex-wrap items-center justify-end gap-2 border-b border-border px-6 py-3 xl:px-8">
           <LanguageMenu />
           <ThemeToggle />
           <IconButton
@@ -113,7 +113,7 @@ export function Shell() {
             <SignOutIcon aria-hidden="true" className="size-5" />
           </IconButton>
         </header>
-        <main id="main" tabIndex={-1} className="flex-1 p-6 outline-none">
+        <main id="main" tabIndex={-1} className="flex-1 px-6 py-7 outline-none xl:px-8">
           <Outlet />
         </main>
       </div>

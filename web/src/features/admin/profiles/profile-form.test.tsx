@@ -363,7 +363,7 @@ describe("the profile form", () => {
     const user = await fillNew();
     await user.click(screen.getByRole("button", { name: "Test connection" }));
     const line = await findShown("Connected. The source answers every query the report needs.");
-    expect(line.parentElement).toHaveClass("text-healthy");
+    expect(line.parentElement?.querySelector("svg")).toHaveClass("text-healthy");
     expect(line.parentElement?.querySelector("circle")).not.toBeNull();
     expect(screen.getByRole("status")).toHaveTextContent("Connected. The source answers every query the report needs.");
     const tests = mock.calls.filter((call) => call.path === "/admin/profiles/test");
@@ -443,7 +443,7 @@ describe("the profile form", () => {
     mock.profileTests.set("draft", { ok: false, code: "ENDPOINT_UNREACHABLE", capabilities: [] });
     await user.click(screen.getByRole("button", { name: "Test connection" }));
     const line = await findShown("The source could not be reached, or did not answer.");
-    expect(line.parentElement).toHaveClass("text-critical");
+    expect(line.parentElement?.querySelector("svg")).toHaveClass("text-critical");
     expect(line.parentElement?.querySelector("polygon")).not.toBeNull();
   });
 

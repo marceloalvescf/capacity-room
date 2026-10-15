@@ -23,7 +23,7 @@ export function Folded({
   const titleId = `${body}-title`;
   const buttonId = `${body}-button`;
   return (
-    <section className="rounded-md border border-border bg-surface p-3">
+    <section className="rounded-lg border border-border bg-surface p-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 id={titleId} className="font-semibold">{title}</h2>

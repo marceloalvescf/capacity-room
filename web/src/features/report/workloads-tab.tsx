@@ -70,11 +70,11 @@ function Unobserved() {
   }
   return (
     <section className="flex flex-col gap-3">
-      <h2 id={heading} className="text-base font-semibold">
+      <h2 id={heading} className="text-lg font-semibold">
         {t("report.unobserved.title")}
       </h2>
       <p className="text-sm text-muted-fg">{t("report.unobserved.hint")}</p>
-      <div className="rounded-md border border-border bg-surface text-surface-fg">
+      <div className="rounded-lg border border-border bg-surface text-surface-fg">
         <table aria-labelledby={heading} className="w-full text-sm">
           <thead className="border-b border-border">
             <tr>

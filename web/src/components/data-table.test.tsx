@@ -306,7 +306,7 @@ describe("data table", () => {
   it("a column gives a cell the classes of its row", () => {
     const tinted: Column<Row>[] = [
       ...columns,
-      { id: "tint", header: "Tint", cell: (row) => row.key, cellClassName: (row) => (row.pods > 1 ? "bg-depth-2" : "") },
+      { id: "tint", header: "Tint", cell: (row) => row.key, cellClassName: (row) => (row.pods > 1 ? "bg-attention-surface" : "") },
     ];
     render(
       withTooltips(<LiveRegion>
@@ -333,8 +333,8 @@ describe("data table", () => {
         />
       </LiveRegion>),
     );
-    expect(screen.getByRole("cell", { name: "web-1" })).not.toHaveClass("bg-depth-2");
-    expect(screen.getByRole("cell", { name: "api-1" })).toHaveClass("bg-depth-2");
+    expect(screen.getByRole("cell", { name: "web-1" })).not.toHaveClass("bg-attention-surface");
+    expect(screen.getByRole("cell", { name: "api-1" })).toHaveClass("bg-attention-surface");
   });
 
   it("a cell breaks no word; an opened row breaks only a value longer than the table", () => {

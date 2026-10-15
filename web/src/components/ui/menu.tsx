@@ -13,7 +13,7 @@ export function MenuContent({ className, ...rest }: ComponentProps<typeof Dropdo
       <DropdownMenu.Content
         align="end"
         sideOffset={4}
-        className={cn("layer-motion z-50 min-w-40 rounded-md border border-neatline bg-surface p-1 text-surface-fg", className)}
+        className={cn("layer-motion z-50 min-w-40 rounded-lg border border-border bg-surface p-1 text-surface-fg shadow-float", className)}
         {...rest}
       />
     </DropdownMenu.Portal>
@@ -24,7 +24,7 @@ export function MenuRadioItem({ className, children, ...rest }: ComponentProps<t
   return (
     <DropdownMenu.RadioItem
       className={cn(
-        "flex min-h-9 cursor-pointer items-center gap-2 rounded px-2 text-sm outline-none",
+        "flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-2 text-sm outline-none",
         // The highlighted item takes the tint. Radix focuses it from the pointer and from the keyboard alike, and the
         // browser counts both as visible focus, so the ring is taken off the item under the pointer: only the item
         // reached by the keyboard keeps it, inset.

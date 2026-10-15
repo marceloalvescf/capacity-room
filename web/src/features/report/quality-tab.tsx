@@ -47,7 +47,7 @@ function Messages({
   const heading = useId();
   return (
     <section className="flex flex-col gap-3">
-      <h2 id={heading} className="text-base font-semibold">
+      <h2 id={heading} className="text-lg font-semibold">
         {title}
       </h2>
       {messages.length === 0 ? (

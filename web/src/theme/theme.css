@@ -1,76 +1,74 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f5f9fb;
-  --fg: #0e1a22;
-  --surface: #fdfefe;
-  --surface-fg: #0e1a22;
-  --hover: #e9f2f7;
-  --sidebar: #deedf4;
-  --sidebar-fg: #26404f;
-  --sidebar-hover: #cde4ef;
-  --sidebar-active: #bcdbe9;
-  --sidebar-active-fg: #0b1f2b;
-  --muted-fg: #455560;
-  --border: #cfdbe2;
-  --neatline: #22323d;
-  --scrim: rgb(14 26 34 / 0.45);
-  --input-border: #6c808d;
-  --accent: #235c95;
-  --action: #235c95;
-  --action-hover: #1b4d80;
-  --action-fg: #fdfefe;
-  --healthy: #155e46;
-  --attention: #6f4a10;
-  --critical: #a0135a;
-  --critical-hover: #87104c;
-  --neutral: #445661;
-  --critical-surface: #fbe8f1;
-  --critical-border: #e9b1cd;
-  --critical-surface-fg: #76104a;
-  --info-surface: #e3f0f7;
-  --info-surface-fg: #1b4870;
-  --depth-1: #c5deea;
-  --depth-2: #aacee0;
-  --depth-3: #8bbcd5;
-  --hazard-stripe: #c1cadc;
+  --bg: #f8f8f8;
+  --fg: #0e0e0f;
+  --surface: #ffffff;
+  --surface-fg: #0e0e0f;
+  --hover: #f0f0f1;
+  --sidebar: #f8f8f8;
+  --sidebar-fg: #5c5c5e;
+  --sidebar-hover: #f0f0f1;
+  --sidebar-active: #e7e7e8;
+  --sidebar-active-fg: #0e0e0f;
+  --muted-fg: #5c5c5e;
+  --border: #e2e2e3;
+  --neatline: #2e2e30;
+  --scrim: rgb(13 14 16 / 0.4);
+  --input-border: #828284;
+  --accent: #2c55dc;
+  --action: #2c55dc;
+  --action-hover: #2346bd;
+  --action-fg: #ffffff;
+  --healthy: #24774a;
+  --attention: #8f5b00;
+  --critical: #be1e45;
+  --critical-hover: #a3183a;
+  --neutral: #5c5c5e;
+  --critical-surface: #fdedf0;
+  --critical-border: #f2b9c6;
+  --critical-surface-fg: #8c1431;
+  --attention-surface: #fdf4e3;
+  --info-surface: #eef2fd;
+  --info-surface-fg: #2042b0;
+  --track: #eaeaeb;
+  --float-shadow: 0 10px 28px -8px rgb(13 14 16 / 0.16), 0 2px 6px -2px rgb(13 14 16 / 0.08);
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  --bg: #0a1118;
-  --fg: #d5e0e8;
-  --surface: #0f1922;
-  --surface-fg: #d5e0e8;
-  --hover: #162636;
-  --sidebar: #0e2030;
-  --sidebar-fg: #9fb7c8;
-  --sidebar-hover: #142b40;
-  --sidebar-active: #1a3650;
-  --sidebar-active-fg: #e4eef4;
-  --muted-fg: #97aab8;
-  --border: #283a48;
-  --neatline: #879fb2;
-  --scrim: rgb(0 0 0 / 0.65);
-  --input-border: #5d7585;
-  --accent: #5494d4;
-  --action: #5494d4;
-  --action-hover: #6ea6de;
-  --action-fg: #0a1118;
-  --healthy: #6cc0a0;
-  --attention: #d6a24a;
-  --critical: #e38db9;
-  --critical-hover: #eba8ca;
-  --neutral: #97aab8;
-  --critical-surface: #2a1222;
-  --critical-border: #6a2a4c;
-  --critical-surface-fg: #f1bad6;
-  --info-surface: #122332;
-  --info-surface-fg: #a9cbea;
-  --depth-1: #17324a;
-  --depth-2: #1b3f5e;
-  --depth-3: #1f4b70;
-  --hazard-stripe: #2f3d57;
+  --bg: #0d0d0e;
+  --fg: #ededee;
+  --surface: #151516;
+  --surface-fg: #ededee;
+  --hover: #1e1e20;
+  --sidebar: #0d0d0e;
+  --sidebar-fg: #a0a0a3;
+  --sidebar-hover: #1e1e20;
+  --sidebar-active: #27272a;
+  --sidebar-active-fg: #ededee;
+  --muted-fg: #a0a0a3;
+  --border: #29292b;
+  --neatline: #cdcdcf;
+  --scrim: rgb(0 0 0 / 0.6);
+  --input-border: #727275;
+  --accent: #86a2ff;
+  --action: #86a2ff;
+  --action-hover: #a1b6ff;
+  --action-fg: #0d0d0e;
+  --healthy: #5fc48f;
+  --attention: #e3a84a;
+  --critical: #f47c95;
+  --critical-hover: #f799ac;
+  --neutral: #a0a0a3;
+  --critical-surface: #2b1419;
+  --critical-border: #6b2a38;
+  --critical-surface-fg: #f6b3c1;
+  --attention-surface: #2a2112;
+  --info-surface: #151d33;
+  --info-surface-fg: #aebfff;
+  --track: #262628;
+  --float-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.6), 0 2px 6px -2px rgb(0 0 0 / 0.4);
   color-scheme: dark;
 }
 
@@ -102,38 +100,31 @@
   --color-critical-surface: var(--critical-surface);
   --color-critical-border: var(--critical-border);
   --color-critical-surface-fg: var(--critical-surface-fg);
+  --color-attention-surface: var(--attention-surface);
   --color-info-surface: var(--info-surface);
   --color-info-surface-fg: var(--info-surface-fg);
-  --color-depth-1: var(--depth-1);
-  --color-depth-2: var(--depth-2);
-  --color-depth-3: var(--depth-3);
-  --font-sans: "Public Sans Variable", system-ui, sans-serif;
+  --color-track: var(--track);
+  --font-sans: "Mona Sans Variable", system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
 }
 
-/* Hairline shapes: every radius is 2px, and nothing casts a shadow. */
+/* Controls take a 6px corner (rounded-md) and panels an 8px one (rounded-lg), from Tailwind's own scale. Only a
+   floating layer casts a shadow, shadow-float; every other shadow scale is empty. */
 @theme {
-  --radius: 2px;
-  --radius-xs: 2px;
-  --radius-sm: 2px;
-  --radius-md: 2px;
-  --radius-lg: 2px;
   --shadow-*: initial;
   --inset-shadow-*: initial;
   --drop-shadow-*: initial;
   --text-shadow-*: initial;
 
-  /* The verdict numeral, and the soundings of the gauge scale at the size of a label. */
-  --text-display: 3.5rem;
+  /* The size of the answer: the severity totals and the nodes of the cluster. */
+  --text-display: 2.25rem;
   --text-display--line-height: 1;
-  --text-display--letter-spacing: -0.025em;
-  --text-sounding: 0.6875rem;
+  --text-display--letter-spacing: -0.03em;
 
-  /* The depth gauge sounds once: the level rises to the nodes in use, then the hazard shows. */
-  --animate-sounding: sounding 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  --animate-hazard-in: hazard-in 200ms ease-out 600ms both;
+  /* A proof bar fills once, from the left, to its value. */
+  --animate-proof: proof 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
 
-  @keyframes sounding {
+  @keyframes proof {
     from {
       transform: scaleX(0);
     }
@@ -141,15 +132,10 @@
       transform: scaleX(1);
     }
   }
+}
 
-  @keyframes hazard-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
+@theme inline {
+  --shadow-float: var(--float-shadow);
 }
 
 /* The one size of every label: a table header, a small heading. A sort button inside takes it whole. */
@@ -164,13 +150,6 @@
   & button {
     text-transform: inherit;
   }
-}
-
-/* A critical value: Depth 1 hatched in the critical colour. The stripe is the critical colour laid over Depth 1
-   at 10% (light) or 12% (dark), written out as a token so every text on it is a tested pair. */
-@utility hazard {
-  background-color: var(--depth-1);
-  background-image: repeating-linear-gradient(135deg, var(--hazard-stripe) 0 1.5px, transparent 1.5px 6px);
 }
 
 /* A floating layer (menu, popover, tooltip) opens from the side of its trigger: it fades in and grows from the

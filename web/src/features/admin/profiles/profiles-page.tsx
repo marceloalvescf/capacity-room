@@ -225,7 +225,7 @@ export function ProfilesPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 ref={heading} tabIndex={-1} className="text-xl font-semibold outline-none">
+        <h1 ref={heading} tabIndex={-1} className="text-3xl font-semibold tracking-tight outline-none">
           {t("admin.profiles.title")}
         </h1>
         <Link to="/profiles/new" className={buttonStyles("primary")}>

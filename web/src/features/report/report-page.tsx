@@ -49,14 +49,14 @@ export function ReportPage() {
     return <Navigate to={`/jobs/${id}`} replace />;
   }
   if (report.isPending || view.isPending) {
-    return <h1 className="text-xl font-semibold">{t("progress.screen")}</h1>;
+    return <h1 className="text-3xl font-semibold tracking-tight">{t("progress.screen")}</h1>;
   }
   // A view or a report that failed to reload leaves the one already held in place.
   const failed = (view.data === undefined ? view.error : null) ?? (report.data === undefined ? report.error : null);
   if (failed !== null) {
     return (
       <div className="flex flex-col items-start gap-3">
-        <h1 className="text-xl font-semibold">{t("progress.screen")}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("progress.screen")}</h1>
         <Alert tone="error">{errorText(t, toError(failed))}</Alert>
         <Link to="/reports" className={buttonStyles()}>
           {t("progress.back")}
@@ -65,17 +65,17 @@ export function ReportPage() {
     );
   }
   if (report.data === undefined || view.data === undefined) {
-    return <h1 className="text-xl font-semibold">{t("progress.screen")}</h1>;
+    return <h1 className="text-3xl font-semibold tracking-tight">{t("progress.screen")}</h1>;
   }
 
   const data = report.data;
   const warnings = view.data.quality.warnings.length;
   const profile = profiles.data?.find((candidate) => candidate.id === data.profile_id)?.display_name ?? data.profile_id;
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h1 className="text-xl font-semibold">{t("progress.title", { profile })}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{t("progress.title", { profile })}</h1>
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-fg">
             <span>
               {t("report.cluster")} <span className="font-mono text-fg">{view.data.report.cluster_name}</span>
@@ -97,7 +97,7 @@ export function ReportPage() {
           </PopoverContent>
         </Popover>
       </div>
-      <div className="border-b border-neatline">
+      <div className="border-b border-border">
         <nav aria-label={t("report.tabs")} className="-mb-px flex flex-wrap">
           {reportTabs.map((tab) => {
             // The data quality tab carries the count of warnings; its name keeps the visible word and adds the count.
@@ -108,8 +108,8 @@ export function ReportPage() {
                 to={tab}
                 className={({ isActive }) =>
                   cn(
-                    "inline-flex items-center gap-1.5 border-b-2 px-2.5 py-2 text-sm focus-visible:outline-2 focus-visible:outline-accent",
-                    isActive ? "border-accent font-semibold text-fg" : "border-transparent text-muted-fg hover:border-input-border hover:text-fg",
+                    "inline-flex items-center gap-1.5 border-b-2 px-2.5 py-2.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-accent",
+                    isActive ? "border-fg text-fg" : "border-transparent text-muted-fg hover:border-input-border hover:text-fg",
                   )
                 }
               >
@@ -117,7 +117,7 @@ export function ReportPage() {
                   // One text names the tab with its count, so no reader joins the parts with a stray space.
                   <>
                     <span aria-hidden="true">{t(`report.tab.${tab}`)}</span>
-                    <span aria-hidden="true" className="inline-flex items-center gap-1 font-mono text-xs text-attention italic">
+                    <span aria-hidden="true" className="inline-flex items-center gap-1 font-mono text-xs text-muted-fg">
                       <StatusShape status="attention" className="size-2.5" />
                       {warnings}
                     </span>

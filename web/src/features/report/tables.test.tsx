@@ -179,12 +179,12 @@ describe("workloads tab", () => {
   it("a peak cell takes the worse of the statuses of its peak and its share", async () => {
     await open("workloads");
     const cpu = within(bodyRows()[0] as HTMLElement).getAllByRole("cell")[4] as HTMLElement;
-    expect(cpu).toHaveClass("bg-depth-1");
+    expect(cpu).toHaveClass("bg-attention-surface");
     cleanup();
     await open("namespaces");
     const nsCpu = within(bodyRows()[0] as HTMLElement).getAllByRole("cell")[4] as HTMLElement;
     expect(nsCpu).toHaveTextContent("660%");
-    expect(nsCpu).toHaveClass("hazard");
+    expect(nsCpu).toHaveClass("bg-critical-surface");
   });
 
   it("every workload observed leaves no such section", async () => {

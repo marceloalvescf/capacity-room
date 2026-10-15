@@ -19,7 +19,7 @@ export function ClusterVerdict() {
         </div>
       )}
       {evidenceWarning === null ? null : (
-        <p className="flex items-baseline gap-1.5 text-sm text-attention">
+        <p className="flex items-baseline gap-1.5 text-sm">
           <StatusShape status="attention" />
           <span>{evidenceWarning.text}</span>
         </p>

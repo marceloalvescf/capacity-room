@@ -99,7 +99,7 @@ export function Gone({ message }: { message: string }) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col items-start gap-3">
-      <h1 className="text-xl font-semibold">{t("progress.screen")}</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">{t("progress.screen")}</h1>
       <Alert tone="error">{message}</Alert>
       <Link to="/reports" className={buttonStyles()}>
         {t("progress.back")}
@@ -133,7 +133,7 @@ function ProgressPage() {
   if (data === undefined) {
     return error === null ? null : (
       <div className="flex flex-col items-start gap-3">
-        <h1 className="text-xl font-semibold">{t("progress.screen")}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("progress.screen")}</h1>
         <Alert tone="error">{errorText(t, toError(error))}</Alert>
       </div>
     );
@@ -166,7 +166,7 @@ function ProgressPage() {
   return (
     <div className="flex max-w-3xl flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">{t("progress.title", { profile })}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("progress.title", { profile })}</h1>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-fg">
           <span><DatedText i18nKey="progress.requested" values={{ time: formatTime(data.created_at), username: data.owner_username }} /></span>
           <StatusMark status={reportMark(data)} label={t(`reportStatus.${data.status}`)} />

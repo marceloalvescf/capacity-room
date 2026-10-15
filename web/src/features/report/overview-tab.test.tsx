@@ -29,6 +29,14 @@ beforeEach(() => {
   mock.views.set(`${id}:pt-BR`, portuguese);
 });
 
+function growth(): HTMLElement {
+  return screen.getByRole("heading", { level: 3, name: "Cluster autoscaling" }).closest("li") as HTMLElement;
+}
+
+function pairs(): HTMLElement[] {
+  return within(screen.getByRole("list", { name: "Pressure by scope" })).getAllByRole("listitem");
+}
+
 async function open(language: "en" | "pt-BR" = "en") {
   const view = await renderApp(`/reports/${id}/overview`, language);
   await screen.findByRole("heading", { level: 2, name: language === "en" ? "Prioritized action plan" : "Plano de ação priorizado" });
@@ -38,13 +46,18 @@ async function open(language: "en" | "pt-BR" = "en") {
 describe("overview tab", () => {
   it("growth side", async () => {
     await open();
-    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
-    expect(band).toHaveTextContent("3/3");
-    expect(within(band).getByText("Nodes · current / maximum")).toBeInTheDocument();
-    expect(within(band).getByText("The number of nodes reached or came close to the observed maximum.")).toBeInTheDocument();
-    expect(within(band).getByText("Attention")).toBeInTheDocument();
-    expect(band).toHaveTextContent("Minimum nodes 2 · Unschedulable pods 2 · Scale events 1");
-    const link = within(band).getByRole("link", { name: "See autoscaling" });
+    const pair = growth();
+    expect(pair).toHaveTextContent("3/3");
+    expect(within(pair).getByText("Nodes · current / maximum")).toBeInTheDocument();
+    expect(within(pair).getByText("The number of nodes reached or came close to the observed maximum.")).toBeInTheDocument();
+    expect(within(pair).getByText("Attention")).toBeInTheDocument();
+    expect(pair).toHaveTextContent("Minimum nodes 2 · Unschedulable pods 2 · Scale events 1");
+    const values = pair.querySelectorAll("span.font-mono");
+    expect(values).toHaveLength(3);
+    for (const value of values) {
+      expect(value).not.toHaveClass("italic");
+    }
+    const link = within(pair).getByRole("link", { name: "See autoscaling" });
     expect(link.getAttribute("href")).toMatch(/autoscaling$/);
   });
 
@@ -54,61 +67,86 @@ describe("overview tab", () => {
       summary: { ...english.summary, autoscaling: { ...english.summary.autoscaling, status: "unknown" } },
     });
     await open();
-    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
-    expect(within(band).getByText("Unknown")).toHaveClass("text-2xl");
-    expect(band).not.toHaveTextContent("Nodes · current / maximum");
-    expect(band).not.toHaveTextContent("Minimum nodes");
-    expect(band.querySelector("svg[aria-hidden=true] [data-band]")).toBeNull();
-    expect(within(band).getByRole("link", { name: "See autoscaling" })).toBeInTheDocument();
+    const pair = growth();
+    expect(within(pair).getByText("Unknown")).toHaveClass("text-2xl");
+    expect(pair).not.toHaveTextContent("Nodes · current / maximum");
+    expect(pair).not.toHaveTextContent("Minimum nodes");
+    expect(pair.querySelector("svg[viewBox='0 0 1000 16']")).toBeNull();
+    expect(within(pair).getByRole("link", { name: "See autoscaling" })).toBeInTheDocument();
   });
 
-  it("a depth gauge under the nodes, hatched at the maximum in the colour of the cluster finding", async () => {
+  it("the headings of the overview are sized as headings, not labels", async () => {
     await open();
-    const heading = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" });
-    expect(heading).toHaveClass("label");
-    expect(screen.getByRole("heading", { level: 2, name: "Pressure by scope" })).toHaveClass("label");
-    const band = heading.parentElement as HTMLElement;
-    expect(band.querySelectorAll("[data-band]")).toHaveLength(3);
-    expect(band.querySelectorAll("[data-hazard]")).toHaveLength(1);
-    expect(band.querySelector("pattern line")).toHaveClass("stroke-attention");
-    expect(band.querySelector("[data-contour]")).not.toBeNull();
+    expect(screen.getByRole("heading", { level: 3, name: "Cluster autoscaling" })).toHaveClass("font-semibold");
+    const pressure = screen.getByRole("heading", { level: 2, name: "Pressure by scope" });
+    expect(pressure).toHaveClass("text-lg", "font-semibold");
+    expect(pressure).not.toHaveClass("label");
   });
 
-  it("a full scale with no cluster finding is not hatched", async () => {
-    mock.views.set(`${id}:en`, {
-      ...english,
-      verdict: { ...english.verdict, cluster_finding: null, gauge: { ...(english.verdict.gauge as Gauge), hazard: null } },
-    });
+  it("a proof bar under the nodes, filled to the nodes in the colour of the gauge hazard", async () => {
     await open();
-    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
-    expect(band.querySelectorAll("[data-band]")).toHaveLength(3);
-    expect(band.querySelector("[data-hazard]")).toBeNull();
-    expect(band.querySelector("[data-closing]")).toHaveClass("stroke-neatline");
+    const bar = growth().querySelector("svg[viewBox='0 0 1000 16']") as SVGElement;
+    const fill = bar.querySelector("[data-fill]") as SVGElement;
+    expect(fill).toHaveClass("fill-attention");
+    expect(fill.getAttribute("width")).toBe("1000");
+    expect(fill.parentElement).toHaveClass("motion-safe:animate-proof");
+    expect(bar.querySelectorAll("[data-unit]")).toHaveLength(2);
+    expect(bar.querySelectorAll("[data-floor]")).toHaveLength(1);
+    expect(bar.querySelector("[data-reference]")?.getAttribute("x1")).toBe("1000");
+    expect(bar.querySelector("[data-overrun]")).toBeNull();
   });
 
-  it("the hazard of the gauge is the view's, whatever the cluster finding", async () => {
+  it("the fill of the gauge is the view's hazard, whatever the cluster finding", async () => {
     const gauge = english.verdict.gauge as Gauge;
     expect(english.findings[english.verdict.cluster_finding as number]?.severity).toBe("attention");
     mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: { ...gauge, hazard: "critical" } } });
     await open();
-    let band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
-    expect(band.querySelectorAll("[data-hazard]")).toHaveLength(1);
-    expect(band.querySelector("pattern line")).toHaveClass("stroke-critical");
+    expect(growth().querySelector("[data-fill]")).toHaveClass("fill-critical");
 
-    mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: { ...gauge, hazard: null } } });
+    mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, cluster_finding: null, gauge: { ...gauge, hazard: null } } });
     cleanup();
     await open();
-    band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
-    expect(band.querySelectorAll("[data-band]")).toHaveLength(3);
-    expect(band.querySelector("[data-hazard]")).toBeNull();
+    const fill = growth().querySelector("[data-fill]");
+    expect(fill).toHaveClass("fill-neatline");
+    expect(fill).not.toHaveClass("fill-attention");
   });
 
-  it("no depth gauge when the view gives none, though autoscaling is enabled", async () => {
+  it("the bar divides the maximum into units and draws the floor only between zero and the maximum", async () => {
+    const gauge = english.verdict.gauge as Gauge;
+    const draw = async (next: Gauge) => {
+      mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: next } });
+      cleanup();
+      await open();
+      return growth().querySelector("svg[viewBox='0 0 1000 16']") as SVGElement;
+    };
+    let bar = await draw({ ...gauge, current: 3, max: 5, min: 1 });
+    expect(bar.querySelectorAll("[data-unit]")).toHaveLength(4);
+    expect(bar.querySelectorAll("[data-floor]")).toHaveLength(1);
+    expect(bar.querySelector("[data-fill]")?.getAttribute("width")).toBe("600");
+    bar = await draw({ ...gauge, current: 3, max: 5, min: 0 });
+    expect(bar.querySelector("[data-floor]")).toBeNull();
+    bar = await draw({ ...gauge, current: 3, max: 5, min: 5 });
+    expect(bar.querySelector("[data-floor]")).toBeNull();
+  });
+
+  it("a count past its maximum runs past the reference line", async () => {
+    const gauge = english.verdict.gauge as Gauge;
+    mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: { ...gauge, current: 4, max: 3 } } });
+    await open();
+    const bar = growth().querySelector("svg[viewBox='0 0 1000 16']") as SVGElement;
+    expect(bar.querySelectorAll("[data-reference]")).toHaveLength(1);
+    expect(bar.querySelector("[data-reference]")?.getAttribute("x1")).toBe("750");
+    expect(bar.querySelector("[data-fill]")?.getAttribute("width")).toBe("750");
+    expect(bar.querySelector("[data-overrun]")?.getAttribute("x")).toBe("750");
+    expect(bar.querySelector("[data-overrun]")?.getAttribute("width")).toBe("250");
+  });
+
+  it("no proof bar when the view gives no gauge, though autoscaling is enabled", async () => {
     mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: null } });
     await open();
-    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
-    expect(band).toHaveTextContent("Nodes · current / maximum");
-    expect(band.querySelector("[data-band]")).toBeNull();
+    const pair = growth();
+    expect(pair).toHaveTextContent("Nodes · current / maximum");
+    expect(pair.querySelector("svg[viewBox='0 0 1000 16']")).toBeNull();
   });
 
   it("the pressure follows the order of the view and the cluster sentence follows its index", async () => {
@@ -118,19 +156,20 @@ describe("overview tab", () => {
       verdict: { ...english.verdict, cluster_finding: 12, pressure: [second as Pressure, first as Pressure, ...rest] },
     });
     await open();
-    const list = screen.getByRole("heading", { level: 2, name: "Pressure by scope" }).parentElement?.querySelector("ul") as HTMLElement;
-    const lines = within(list).getAllByRole("listitem");
-    expect(lines.slice(0, 2).map((line) => line.querySelector("span.inline-flex")?.textContent)).toEqual(["CriticalNamespaces", "CriticalNodes"]);
-    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
-    expect(band).toHaveTextContent(english.findings[12]?.sentence ?? "");
-    expect(band).not.toHaveTextContent(english.findings[10]?.sentence ?? "");
+    expect(pairs().slice(0, 3).map((line) => line.querySelector("h3")?.textContent)).toEqual([
+      "Cluster autoscaling",
+      "CriticalNamespaces",
+      "CriticalNodes",
+    ]);
+    const pair = growth();
+    expect(pair).toHaveTextContent(english.findings[12]?.sentence ?? "");
+    expect(pair).not.toHaveTextContent(english.findings[10]?.sentence ?? "");
   });
 
   it("pressure lines, the worst scopes first and the fixed order among equals", async () => {
     await open();
-    const list = screen.getByRole("heading", { level: 2, name: "Pressure by scope" }).parentElement?.querySelector("ul") as HTMLElement;
-    const lines = within(list).getAllByRole("listitem");
-    expect(lines.map((line) => line.querySelector("span.inline-flex")?.textContent)).toEqual([
+    const lines = pairs().slice(1);
+    expect(lines.map((line) => line.querySelector("h3")?.textContent)).toEqual([
       "CriticalNodes",
       "CriticalNamespaces",
       "CriticalWorkloads",
@@ -148,11 +187,23 @@ describe("overview tab", () => {
     expect(within(lines[0] as HTMLElement).getByText("Peak")).toBeInTheDocument();
     expect(within(lines[0] as HTMLElement).getByText("95%")).toHaveClass("font-mono");
     expect(within(lines[1] as HTMLElement).queryByText("Peak")).toBeInTheDocument();
-    expect(lines[0]).toHaveTextContent(/Critical 2\s*·\s*Attention 1$/);
-    expect(lines[1]).toHaveTextContent(/Critical 1$/);
-    expect(lines[2]).toHaveTextContent(/Critical 1\s*·\s*Attention 1$/);
-    expect(lines[3]).toHaveTextContent(/Critical 1\s*·\s*Attention 1$/);
-    expect(lines[4]).toHaveTextContent(/Attention 2$/);
+    expect(lines[0]).toHaveTextContent(/Critical 2\s*·\s*Attention 1/);
+    expect(lines[1]).toHaveTextContent(/Critical 1/);
+    expect(lines[2]).toHaveTextContent(/Critical 1\s*·\s*Attention 1/);
+    expect(lines[3]).toHaveTextContent(/Critical 1\s*·\s*Attention 1/);
+    expect(lines[4]).toHaveTextContent(/Attention 2/);
+  });
+
+  it("a pressure pair with no proof gives its claim the whole row", async () => {
+    mock.views.set(`${id}:en`, {
+      ...english,
+      verdict: { ...english.verdict, pressure: [{ scope_type: "nodepool", severity: "attention", finding: 20, critical: 0, attention: 1 }] },
+    });
+    await open();
+    const only = pairs()[1] as HTMLElement;
+    expect(only.children).toHaveLength(1);
+    expect(only.children[0]).toHaveClass("lg:col-span-2");
+    expect(pairs()[0]?.children).toHaveLength(2);
   });
 
   it("the counts of a pressure line are the view's, whatever the findings", async () => {
@@ -162,14 +213,15 @@ describe("overview tab", () => {
       verdict: { ...english.verdict, pressure: [{ ...(first as Pressure), critical: 7, attention: 4 }, ...rest] },
     });
     await open();
-    const list = screen.getByRole("heading", { level: 2, name: "Pressure by scope" }).parentElement?.querySelector("ul") as HTMLElement;
-    expect(within(list).getAllByRole("listitem")[0]).toHaveTextContent(/Critical 7\s*·\s*Attention 4$/);
+    const line = pairs()[1] as HTMLElement;
+    expect(line).toHaveTextContent(/Critical 7\s*·\s*Attention 4/);
+    expect(within(line).getByText("7")).toHaveClass("font-mono");
+    expect(within(line).getByText("7")).not.toHaveClass("italic");
   });
 
   it("a pressure link names the node it leads to", async () => {
     await open();
-    const list = screen.getByRole("heading", { level: 2, name: "Pressure by scope" }).parentElement?.querySelector("ul") as HTMLElement;
-    const first = within(within(list).getAllByRole("listitem")[0] as HTMLElement).getAllByRole("link")[0];
+    const first = within(pairs()[1] as HTMLElement).getAllByRole("link")[0];
     expect(first).toHaveAccessibleName("Observed CPU usage on the node. (aks-agentpool-12345678-vmss000000)");
   });
 
@@ -185,15 +237,13 @@ describe("overview tab", () => {
 
   it("the node evidence warning stands under the verdict of the growth side", async () => {
     await open();
-    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
-    expect(within(band).getByText("The capacity evidence of the nodes is incomplete.").parentElement).toHaveClass("text-attention");
+    expect(within(growth()).getByText("The capacity evidence of the nodes is incomplete.").parentElement?.querySelector("svg")).toHaveClass("text-attention");
   });
 
   it("no node evidence warning when the view holds none", async () => {
     mock.views.set(`${id}:en`, directComplete as View);
     await open();
-    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement as HTMLElement;
-    expect(band).not.toHaveTextContent("The capacity evidence of the nodes is incomplete.");
+    expect(growth()).not.toHaveTextContent("The capacity evidence of the nodes is incomplete.");
   });
 
   it("two workloads of one name and two kinds count as two rows", async () => {
@@ -210,10 +260,9 @@ describe("overview tab", () => {
       },
     });
     await open();
-    const list = screen.getByRole("heading", { level: 2, name: "Pressure by scope" }).parentElement?.querySelector("ul") as HTMLElement;
-    const lines = within(list).getAllByRole("listitem");
-    expect(lines).toHaveLength(1);
-    expect(lines[0]).toHaveTextContent(/Critical 1\s*·\s*Attention 1$/);
+    const lines = pairs();
+    expect(lines).toHaveLength(2);
+    expect(lines[1]).toHaveTextContent(/Critical 1\s*·\s*Attention 1/);
   });
 
   it("an unknown node pool shows its word", async () => {
@@ -245,36 +294,43 @@ describe("overview tab", () => {
     });
     await open();
     expect(screen.getByText("Nothing needs attention.")).toBeInTheDocument();
-    const heading = screen.getByRole("heading", { level: 2, name: "Pressure by scope" });
-    expect(heading.parentElement?.querySelector("ul")).toBeNull();
+    expect(pairs()).toHaveLength(1);
+    expect(pairs()[0]).toBe(growth());
   });
 
-  it("the answer strip: the three totals above the band, the worst one in its colour, each a link", async () => {
+  it("the answer strip: the three totals above the band, each a link with its shape in colour", async () => {
     await open();
     const totals = screen.getByRole("group", { name: "Findings by severity" });
-    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" });
+    const band = screen.getByRole("heading", { level: 3, name: "Cluster autoscaling" });
     expect(totals.compareDocumentPosition(band) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const links = within(totals).getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual(["Critical9", "Attention12", "Healthy7"]);
+    expect(links.map((link) => link.textContent)).toEqual(["9Critical", "12Attention", "7Healthy"]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       expect.stringMatching(/findings\?severity=critical$/),
       expect.stringMatching(/findings\?severity=attention$/),
       expect.stringMatching(/findings\?severity=healthy$/),
     ]);
-    expect(links[0]).toHaveClass("text-critical", "font-semibold");
-    expect(links[1]).toHaveClass("text-fg");
-    expect(links[1]).not.toHaveClass("font-semibold");
-    expect(within(links[0] as HTMLElement).getByText("9")).toHaveClass("font-mono", "italic");
-    expect(totals).toHaveClass("text-xl");
+    for (const link of links) {
+      expect(link).toHaveClass("text-fg");
+    }
+    expect(links.map((link) => link.querySelector("svg")?.getAttribute("class"))).toEqual([
+      expect.stringContaining("text-critical"),
+      expect.stringContaining("text-attention"),
+      expect.stringContaining("text-healthy"),
+    ]);
+    expect(within(links[0] as HTMLElement).getByText("9")).toHaveClass("font-mono", "text-display", "font-semibold");
+    expect(within(links[0] as HTMLElement).getByText("9")).not.toHaveClass("italic");
+    expect(within(links[0] as HTMLElement).getByText("Critical")).toHaveClass("text-sm", "text-muted-fg");
     expect(screen.getByRole("link", { name: "See all findings" }).getAttribute("href")).toMatch(/\/findings$/);
   });
 
-  it("the worst severity present leads the strip", async () => {
+  it("the worst severity present is not coloured in the strip", async () => {
     mock.views.set(`${id}:en`, { ...english, summary: { ...english.summary, critical: { raw: 0, text: "0", status: null } } });
     await open();
     const links = within(screen.getByRole("group", { name: "Findings by severity" })).getAllByRole("link");
-    expect(links[0]).not.toHaveClass("font-semibold");
-    expect(links[1]).toHaveClass("text-attention", "font-semibold");
+    expect(links[0]?.querySelector("svg")?.getAttribute("class")).toContain("text-critical");
+    expect(links[1]).toHaveClass("text-fg");
+    expect(links[1]).not.toHaveClass("text-attention");
   });
 
   it("a total below the minimum severity keeps its count and no link", async () => {
@@ -286,7 +342,7 @@ describe("overview tab", () => {
       expect.stringMatching(/findings\?severity=attention$/),
     ]);
     const healthy = within(totals).getByText("Healthy").parentElement as HTMLElement;
-    expect(healthy).toHaveTextContent("Healthy7");
+    expect(healthy).toHaveTextContent("7Healthy");
     expect(healthy.closest("a")).toBeNull();
     expect(within(healthy).getByText("7")).toHaveClass("font-mono");
 
@@ -316,7 +372,8 @@ describe("overview tab", () => {
     await open();
     const notice = screen.getByRole("group", { name: "Data quality" });
     expect(notice).toHaveTextContent(/^Data quality2/);
-    expect(within(notice).getByText("2")).toHaveClass("font-mono", "italic");
+    expect(within(notice).getByText("2")).toHaveClass("font-mono");
+    expect(within(notice).getByText("2")).not.toHaveClass("italic");
     for (const warning of english.quality.warnings) {
       expect(within(notice).getByText(warning.text)).toBeInTheDocument();
     }
@@ -336,7 +393,7 @@ describe("overview tab", () => {
     const notice = screen.getByRole("group", { name: "Data quality" });
     expect(within(notice).getByText("Warning c.")).toBeInTheDocument();
     expect(within(notice).queryByText("Warning d.")).toBeNull();
-    expect(within(notice).getByText("+2")).toHaveClass("text-muted-fg");
+    expect(within(notice).getByText("+2").closest("ul")).toHaveClass("text-muted-fg");
   });
 
   it("portuguese words", async () => {

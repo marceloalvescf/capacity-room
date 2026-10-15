@@ -72,7 +72,7 @@ describe("autoscaling tab", () => {
     const web = within(rowOf("HPAs", "web")).getAllByRole("cell");
     expect(web[1]).toHaveTextContent("Deployment payments-web · payments");
     expect(web[3]).toHaveTextContent("Maximum reached");
-    expect(within(web[3] as HTMLElement).getByText("Maximum reached").closest("span.inline-flex")).toHaveClass("text-critical");
+    expect(within(web[3] as HTMLElement).getByText("Maximum reached").closest("span.inline-flex")?.querySelector("svg")).toHaveClass("text-critical");
     expect(web[4]).toHaveTextContent("2 / 4");
     expect(web[4]?.querySelector(".font-mono")).not.toBeNull();
     expect(web[4]).toHaveClass("text-right");
@@ -196,21 +196,22 @@ describe("nodes tab", () => {
     mock.views.set(`${id}:en`, { ...english, nodes });
     await open("nodes");
     const cpu = (name: string) => within(rowOf("Nodes", name)).getAllByRole("cell")[4] as HTMLElement;
-    expect(cpu("n-attention")).toHaveClass("bg-depth-1");
-    expect(cpu("n-attention")).not.toHaveClass("hazard");
-    expect(cpu("n-critical")).toHaveClass("hazard");
-    expect(cpu("n-healthy")).not.toHaveClass("bg-depth-1");
-    expect(cpu("n-healthy")).not.toHaveClass("hazard");
+    expect(cpu("n-attention")).toHaveClass("bg-attention-surface");
+    expect(cpu("n-attention")).not.toHaveClass("bg-critical-surface");
+    expect(cpu("n-critical")).toHaveClass("bg-critical-surface");
+    expect(cpu("n-critical")).not.toHaveClass("bg-attention-surface");
+    expect(cpu("n-healthy")).not.toHaveClass("bg-attention-surface");
+    expect(cpu("n-healthy")).not.toHaveClass("bg-critical-surface");
   });
 
-  it("a peak cell is hatched and its share marked critical by the status the view gives the share", async () => {
+  it("a peak cell is tinted critical and its share marked critical by the status the view gives the share", async () => {
     await open("nodes");
     const cpu = within(rowOf("Nodes", "pool-a-1")).getAllByRole("cell")[4] as HTMLElement;
-    expect(cpu).toHaveClass("hazard");
+    expect(cpu).toHaveClass("bg-critical-surface");
     const share = within(cpu).getByText("90% requested");
     expect(share).toHaveTextContent(/^Critical90% requested$/);
     const memory = within(rowOf("Nodes", "pool-a-1")).getAllByRole("cell")[5] as HTMLElement;
-    expect(memory).not.toHaveClass("hazard");
+    expect(memory).not.toHaveClass("bg-critical-surface");
   });
 
   it("the state of a node", async () => {
@@ -230,7 +231,7 @@ describe("nodes tab", () => {
     expect(state("n-ready")).toHaveTextContent(/^Ready$/);
     expect(state("n-down")).toHaveTextContent(/^AttentionNot ready$/);
     expect(state("n-cordoned")).toHaveTextContent(/^AttentionReady · Unschedulable$/);
-    expect(state("n-cordoned").querySelector("svg")?.parentElement).toHaveClass("text-attention");
+    expect(state("n-cordoned").querySelector("svg")).toHaveClass("text-attention");
     expect(state("n-down-unmarked")).toHaveTextContent(/^Not ready · Schedulable$/);
     expect(state("n-down-unmarked").querySelector("svg")).toBeNull();
     expect(state("n-unknown-ready")).toHaveTextContent(/^UnavailableUnknown$/);
@@ -264,11 +265,11 @@ describe("nodes tab", () => {
   it("the state of a node carries a shape", async () => {
     await open("nodes");
     const down = within(rowOf("Nodes", "pool-a-2")).getAllByRole("cell")[3] as HTMLElement;
-    expect(down.querySelector("svg")?.parentElement).toHaveClass("text-attention");
+    expect(down.querySelector("svg")).toHaveClass("text-attention");
     expect(down).toHaveTextContent("AttentionNot ready · Unschedulable");
     expect(within(down).getByText("Attention")).toHaveClass("sr-only");
     const unknown = within(rowOf("Nodes", "orphan")).getAllByRole("cell")[3] as HTMLElement;
-    expect(unknown.querySelector("svg")?.parentElement).toHaveClass("text-neutral");
+    expect(unknown.querySelector("svg")).toHaveClass("text-neutral");
     expect(unknown).toHaveTextContent(/^UnavailableUnknown$/);
   });
 
@@ -391,7 +392,7 @@ describe("autoscaling tab verdict", () => {
     const section = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement?.parentElement as HTMLElement;
     const sentence = within(section).getByText("The number of nodes reached or came close to the observed maximum.");
     expect(within(sentence.parentElement as HTMLElement).getByText("Attention")).toBeInTheDocument();
-    expect(within(section).getByText("The capacity evidence of the nodes is incomplete.").parentElement).toHaveClass("text-attention");
+    expect(within(section).getByText("The capacity evidence of the nodes is incomplete.").parentElement?.querySelector("svg")).toHaveClass("text-attention");
   });
 
   it("shows the cluster finding alone when the evidence is complete", async () => {

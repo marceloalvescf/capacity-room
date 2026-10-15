@@ -93,6 +93,20 @@ describe("ui", () => {
     expect(select).toHaveAttribute("aria-invalid", "true");
   });
 
+  it("a select is the browser's own control with the caret of the icon set drawn over it", () => {
+    render(
+      <Select label="Zone">
+        <option>{"a"}</option>
+      </Select>,
+    );
+    const select = screen.getByLabelText("Zone");
+    expect(select.tagName).toBe("SELECT");
+    expect(select).toHaveClass("appearance-none", "pr-9");
+    const caret = select.parentElement?.querySelector("svg");
+    expect(caret).toHaveAttribute("aria-hidden", "true");
+    expect(caret).toHaveClass("pointer-events-none", "absolute");
+  });
+
   it("a menu holds radio items", async () => {
     const user = userEvent.setup();
     render(

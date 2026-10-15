@@ -77,7 +77,7 @@ function Pools({ pools }: { pools: ViewNodepool[] }) {
     return <p className="text-sm text-muted-fg">{t("report.table.empty")}</p>;
   }
   return (
-    <div className="rounded-md border border-border bg-surface text-surface-fg">
+    <div className="rounded-lg border border-border bg-surface text-surface-fg">
       <table aria-label={t("report.pools.title")} className="w-full text-sm">
         <thead className="border-b border-border">
           <tr>
@@ -201,7 +201,7 @@ export function NodesTab() {
         status={status}
       />
       <section className="flex flex-col gap-3">
-        <h2 className="text-base font-semibold">{t("report.pools.title")}</h2>
+        <h2 className="text-lg font-semibold">{t("report.pools.title")}</h2>
         <Pools pools={nodepools} />
       </section>
     </div>

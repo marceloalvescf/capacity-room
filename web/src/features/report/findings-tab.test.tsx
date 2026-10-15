@@ -172,7 +172,7 @@ describe("findings tab", () => {
     cleanup();
     await open("?finding=1");
     expect(within(detail()).getByText("Namespace")).toBeInTheDocument();
-    expect(detail()).not.toHaveTextContent("·");
+    expect(detail().querySelector("header")).not.toHaveTextContent("·");
   });
 
   it("an empty severity shows no finding", async () => {
@@ -223,6 +223,14 @@ describe("findings tab", () => {
     expect(scroll).toHaveBeenCalledTimes(1);
   });
 
+  it("a row shows the shape of its severity and names it to screen readers alone", async () => {
+    await open();
+    const row = items()[0] as HTMLElement;
+    const word = within(row).getByText("Critical");
+    expect(word).toHaveClass("sr-only");
+    expect(row.querySelector("svg")).toHaveClass("text-critical");
+  });
+
   it("select one", async () => {
     const user = userEvent.setup();
     const { router } = await open();
@@ -241,12 +249,22 @@ describe("findings tab", () => {
     expect(article.getByText("What to do")).toBeInTheDocument();
     expect(article.getByText(finding?.action ?? "")).toBeInTheDocument();
     expect(article.getByText("Evidence")).toBeInTheDocument();
+    expect(detail().querySelector("dl")).toBeNull();
+    expect(article.getByText("660%")).toHaveClass("font-mono");
+    expect(article.getByText("440%")).toHaveClass("font-mono");
+    expect(detail().querySelector("svg[viewBox='0 0 1000 16']")).not.toBeNull();
+    expect(document.body.textContent).not.toContain(finding?.code ?? "?");
+  });
+
+  it("evidence the proof does not show is listed beneath it", async () => {
+    await open("?finding=12");
+    const finding = english.findings[12];
     const terms = detail().querySelectorAll("dt");
-    expect(terms).toHaveLength(finding?.evidence.length ?? 0);
+    expect(terms).toHaveLength(1);
     const first = finding?.evidence[0];
     expect(terms[0]).toHaveTextContent(i18next.t(`evidence.${first?.name ?? "peak"}`));
     expect(within(terms[0]?.parentElement as HTMLElement).getByText(first?.text ?? "")).toHaveClass("font-mono");
-    expect(document.body.textContent).not.toContain(finding?.code ?? "?");
+    expect(detail().querySelector("svg[viewBox='0 0 1000 16']")).toBeNull();
   });
 
   it("stale finding", async () => {
@@ -287,13 +305,13 @@ describe("findings tab", () => {
     expect(screen.getByRole("searchbox", { name: i18next.t("report.findings.search") })).toHaveValue("");
   });
 
-  it("a pressed severity takes the selected fill; a released one a neat-line outline", async () => {
+  it("a pressed severity is outlined in ink with its coloured shape; a released one is muted with a plain shape", async () => {
     await open("?severity=critical");
-    expect(chip("Critical")).toHaveClass("bg-action", "text-action-fg");
-    expect(chip("Critical").querySelector(".text-critical")).toBeNull();
-    expect(chip("Attention")).toHaveClass("border-neatline", "bg-surface");
-    expect(chip("Attention").querySelector(".text-attention")).not.toBeNull();
-    expect(chip("Critical").querySelector(".font-mono")).toHaveClass("italic");
+    expect(chip("Critical")).toHaveClass("border-fg", "bg-surface", "text-surface-fg", "hover:bg-hover");
+    expect(chip("Critical").querySelector(".text-critical")).not.toBeNull();
+    expect(chip("Attention")).toHaveClass("border-border", "bg-transparent", "text-muted-fg", "hover:bg-hover", "hover:text-fg");
+    expect(chip("Attention").querySelector(".text-attention")).toBeNull();
+    expect(chip("Critical").querySelector(".font-mono")).not.toHaveClass("italic");
   });
 
   it("unknown pool and cluster scopes", async () => {
@@ -368,7 +386,7 @@ describe("links into the findings tab", () => {
 });
 
 describe("findings type scale", () => {
-  it("groups at 16px, detail title at 18px, section labels as labels, body at 14px", async () => {
+  it("groups at 16px, detail title at 18px, section labels as labels, observed sentence at 16px, list at 14px", async () => {
     await open();
     const group = screen.getAllByRole("heading", { level: 2 }).find((h) => /^Critical/.test(h.textContent));
     expect(group).toHaveClass("text-base", "font-semibold");
@@ -377,8 +395,17 @@ describe("findings type scale", () => {
     for (const name of ["Observed", "What to do"]) {
       expect(screen.getByRole("heading", { level: 4, name })).toHaveClass("label");
     }
-    expect(screen.getByText(sentenceOf(0), { selector: "p" })).toHaveClass("text-sm");
+    expect(screen.getByText(sentenceOf(0), { selector: "p" })).toHaveClass("text-base");
+    expect(title.closest("article")).toHaveClass("rounded-lg", "p-5", "gap-5");
     expect(items()[0]).toHaveClass("text-sm");
+  });
+
+  it("the detail draws the proof of its finding in the colour of its severity", async () => {
+    await open();
+    const bar = detail().querySelector("svg[viewBox='0 0 1000 16']") as SVGElement;
+    expect(bar.querySelector("[data-fill]")).toHaveClass("fill-critical");
+    expect(bar.querySelector("[data-fill]")?.getAttribute("width")).toBe("950");
+    expect(bar.querySelector("[data-reference]")).toBeNull();
   });
 
   it("a sentence in the list keeps two lines before it is cut", async () => {

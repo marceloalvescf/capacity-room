@@ -39,7 +39,7 @@ export function ConfirmDialog({
         <AlertDialog.Overlay className="scrim-motion fixed inset-0 z-50 bg-scrim" />
         <AlertDialog.Content
           onCloseAutoFocus={onCloseAutoFocus}
-          className="dialog-motion fixed top-1/2 z-50 left-1/2 flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-md border border-neatline bg-surface p-6 text-surface-fg"
+          className="dialog-motion fixed top-1/2 z-50 left-1/2 flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-lg border border-border bg-surface p-6 text-surface-fg shadow-float"
         >
           <AlertDialog.Title className="text-lg font-semibold">{title}</AlertDialog.Title>
           <AlertDialog.Description>{body}</AlertDialog.Description>

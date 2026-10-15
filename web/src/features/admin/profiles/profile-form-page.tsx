@@ -567,11 +567,11 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
 function Header({ profile }: { profile: Profile | undefined }) {
   const { t } = useTranslation();
   if (profile === undefined) {
-    return <h1 className="text-xl font-semibold">{t("admin.profile.newTitle")}</h1>;
+    return <h1 className="text-3xl font-semibold tracking-tight">{t("admin.profile.newTitle")}</h1>;
   }
   return (
     <div>
-      <h1 className="text-xl font-semibold">{profile.display_name}</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">{profile.display_name}</h1>
       <p className="text-sm text-muted-fg">
         {t("admin.profile.kind")}
         <Separator />

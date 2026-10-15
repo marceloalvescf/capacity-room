@@ -145,7 +145,8 @@ describe("report screen", () => {
     const tab = within(nav).getByRole("link", { name: "Data quality, warnings: 2" });
     expect(tab).toHaveTextContent(/^Data quality/);
     const count = within(tab).getByText("2");
-    expect(count).toHaveClass("font-mono", "italic");
+    expect(count).toHaveClass("inline-flex", "items-center", "gap-1", "font-mono", "text-xs", "text-muted-fg");
+    expect(count).not.toHaveClass("italic");
     expect(count).toHaveAttribute("aria-hidden", "true");
     expect(tab).not.toHaveAttribute("aria-label");
     expect(tab.querySelector("svg.text-attention")).not.toBeNull();

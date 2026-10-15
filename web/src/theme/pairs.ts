@@ -12,11 +12,14 @@ function line(fg: string, bg: string): Pair {
   return { fg, bg, min: 3 };
 }
 
-// The texts a peak cell carries, its value and its share with the shape of their status, on Depth 1 and on the
-// stripe of the hazard hatch over it. Depth 2 and Depth 3 lie only under the gauge, which holds no text.
-const onDepth = ["depth-1", "hazard-stripe"].flatMap((depth) =>
-  ["fg", "muted-fg", "healthy", "attention", "critical", "neutral"].map((fg) => text(fg, depth)),
+// The texts a peak cell carries, its value and its share with the shape of their status, on the tint of an
+// attention or a critical peak.
+const onTint = ["attention-surface", "critical-surface"].flatMap((tint) =>
+  ["fg", "muted-fg", "healthy", "attention", "critical", "neutral"].map((fg) => text(fg, tint)),
 );
+
+// The fill of a proof bar, in the colour of its status or in ink, and its reference tick, against the track.
+const onTrack = ["critical", "attention", "healthy", "neatline"].map((fg) => line(fg, "track"));
 
 export const pairs: readonly Pair[] = [
   text("fg", "bg"),
@@ -48,7 +51,8 @@ export const pairs: readonly Pair[] = [
   text("surface", "critical"),
   text("critical-surface-fg", "critical-surface"),
   text("info-surface-fg", "info-surface"),
-  ...onDepth,
+  ...onTint,
+  ...onTrack,
   // A control under the pointer: a secondary button, a released segment or severity toggle with its status mark,
   // a period choice, its stroke, and the focus ring around it.
   text("surface-fg", "hover"),
@@ -83,6 +87,4 @@ export const pairs: readonly Pair[] = [
   line("action", "surface"),
   line("action", "bg"),
   line("critical", "bg"),
-  line("critical", "depth-3"),
-  line("attention", "depth-3"),
 ];
