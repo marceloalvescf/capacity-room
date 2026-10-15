@@ -325,7 +325,7 @@ export function ReportsPage() {
                       ) : row.status === "collected" && !row.expired ? (
                         t("reports.notGenerated")
                       ) : (
-                        "—"
+                        t("reports.noPdf")
                       )}
                     </td>
                     <td className="px-3 py-2">

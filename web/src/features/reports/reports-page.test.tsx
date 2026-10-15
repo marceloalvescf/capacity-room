@@ -416,7 +416,7 @@ describe("report list", () => {
     const cells = within(rowOf(id(0))).getAllByRole("cell");
     expect(cells[2]).not.toHaveTextContent(t("reports.column.cluster"));
     expect(cells[3]).not.toHaveTextContent(t("reports.column.worst"));
-    expect(cells[3]).not.toHaveTextContent("—");
+    expect(cells[3]).not.toHaveTextContent("-");
     expect(cells[3]?.querySelectorAll("div")).toHaveLength(1);
   });
 

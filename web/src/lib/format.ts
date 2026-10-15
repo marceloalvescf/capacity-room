@@ -1,6 +1,6 @@
 const pad = (value: number, width = 2): string => String(value).padStart(width, "0");
 
-const none = "—";
+const none = "-";
 
 export function formatDate(iso: string): string {
   const date = new Date(iso);

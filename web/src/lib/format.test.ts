@@ -15,7 +15,7 @@ describe("format", () => {
     process.env.TZ = "America/Sao_Paulo";
     expect(formatTime("2026-10-07T17:02:00Z")).toBe("2026-10-07 14:02");
     expect(formatTimeSeconds("2026-10-07T17:02:09Z")).toBe("2026-10-07 14:02:09");
-    expect(formatTimeSeconds("not a date")).toBe("—");
+    expect(formatTimeSeconds("not a date")).toBe("-");
     expect(formatDate("2026-11-06T12:00:00Z")).toBe("2026-11-06");
     expect(formatElapsed(42_000)).toBe("0:42");
     expect(formatElapsed(3_725_000)).toBe("1:02:05");
@@ -28,7 +28,7 @@ describe("format", () => {
       expect(formatTimeIn("2026-07-15T17:30:00Z", "Asia/Tokyo")).toBe("2026-07-16 02:30");
       expect(formatTimeIn("2026-07-15T00:05:00Z", "UTC")).toBe("2026-07-15 00:05");
     }
-    expect(formatTimeIn("not a date", "UTC")).toBe("—");
+    expect(formatTimeIn("not a date", "UTC")).toBe("-");
   });
 
   it("clamps an elapsed time that is negative or not a number to 0:00", () => {
@@ -37,7 +37,7 @@ describe("format", () => {
   });
 
   it("shows a dash for a date that is not valid", () => {
-    expect(formatTime("not a date")).toBe("—");
-    expect(formatDate("")).toBe("—");
+    expect(formatTime("not a date")).toBe("-");
+    expect(formatDate("")).toBe("-");
   });
 });

@@ -265,6 +265,7 @@
     "empty": "Nenhum relatório ainda.",
     "expired": "Expirado",
     "notGenerated": "Não gerado",
+    "noPdf": "-",
     "loadFailed": "Não foi possível carregar os relatórios.",
     "loading": "Carregando relatórios…",
     "profilesFailed": "Não foi possível carregar os nomes dos perfis; a lista mostra os ids.",

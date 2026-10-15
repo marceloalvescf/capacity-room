@@ -265,6 +265,7 @@
     "empty": "No reports yet.",
     "expired": "Expired",
     "notGenerated": "Not generated",
+    "noPdf": "-",
     "loadFailed": "The reports could not be loaded.",
     "loading": "Loading reports…",
     "profilesFailed": "The profile names could not be loaded, so the list shows their ids.",
