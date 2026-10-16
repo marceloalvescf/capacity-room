@@ -87,6 +87,7 @@ func allInput() Input {
 		workloadCapability(discovery.StateAvailable, discovery.StrategyRawMetrics),
 		hpaCapability("hpa_history", discovery.StateAvailable, nil, nil),
 		hpaCapability("workloads_without_hpa", discovery.StateAvailable, labelsEvidence, nil),
+		nodeCapability("node_autoscaling", discovery.StateAvailable, discovery.StrategyRawMetrics, []string{"kube_configmap_info"}, nil),
 	)
 	in.Analysis.NodeAutoscaling = AutoscalingUnknown
 	return in
@@ -115,8 +116,8 @@ func TestAllRunsTheFiveInOrder(t *testing.T) {
 	if len(hpas) != 7 {
 		t.Fatalf("the HPA collector sent %d queries, want 7", len(hpas))
 	}
-	if len(autoscaling) != 6 {
-		t.Fatalf("the autoscaling collector sent %d queries, want 6", len(autoscaling))
+	if len(autoscaling) != 5 {
+		t.Fatalf("the autoscaling collector sent %d queries, want 5", len(autoscaling))
 	}
 	if len(namespaces) == 0 || len(workloads) == 0 || len(nodes) == 0 {
 		t.Fatalf("a collector sent nothing: namespaces %d, workloads %d, nodes %d", len(namespaces), len(workloads), len(nodes))
@@ -159,7 +160,7 @@ func TestAllStopsAtTheFirstError(t *testing.T) {
 		t.Errorf("All sent %d queries, want %d", len(q.queries), before+1)
 	}
 	for _, query := range q.queries {
-		if strings.Contains(query, "cluster_autoscaler") {
+		if strings.Contains(query, "kube_configmap_info") {
 			t.Errorf("All sent an autoscaling query after the node collector failed: %q", query)
 		}
 	}

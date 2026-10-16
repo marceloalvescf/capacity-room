@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"sort"
@@ -2359,9 +2360,9 @@ func TestCheckRefusesAnAutoscalingShape(t *testing.T) {
 		{"configured with inferred", func(a *Autoscaling) {
 			a.Status, a.Source, a.Confidence = "enabled", "configured", "inferred"
 		}, fmt.Sprintf(shape, "enabled", "configured", "inferred")},
-		{"raw_metrics with disabled", func(a *Autoscaling) {
-			a.Status = "disabled"
-		}, fmt.Sprintf(shape, "disabled", "raw_metrics", "inferred")},
+		{"raw_metrics with exact", func(a *Autoscaling) {
+			a.Confidence = "exact"
+		}, fmt.Sprintf(shape, "enabled", "raw_metrics", "exact")},
 		{"configured with a count", func(a *Autoscaling) {
 			*a = Autoscaling{Status: "enabled", Source: "configured", Confidence: "exact", MinNodes: ptr(1)}
 		}, fmt.Sprintf(count, "configured")},
@@ -2390,13 +2391,13 @@ func TestCheckAcceptsTheAutoscalingShapesAnalysisWrites(t *testing.T) {
 }
 
 func TestCheckRefusesAContraryAutoscalingFinding(t *testing.T) {
-	snap := decodeGolden(t, "edge-scaling")
+	snap := decodeGolden(t, "direct-complete")
 	snap.Summary.Autoscaling = Autoscaling{Status: "disabled", Source: "configured", Confidence: "exact"}
-	contrary := slices.IndexFunc(snap.Findings, func(f Finding) bool { return f.Code == "NODE_AUTOSCALING_NEAR_MAX" })
+	contrary := slices.IndexFunc(snap.Findings, func(f Finding) bool { return f.Code == "NODE_AUTOSCALING_ENABLED" })
 	if contrary < 0 {
-		t.Fatal("the snapshot holds no NODE_AUTOSCALING_NEAR_MAX finding")
+		t.Fatal("the snapshot holds no NODE_AUTOSCALING_ENABLED finding")
 	}
-	checkRefusesWith(t, snap, fmt.Sprintf("findings[%d] is NODE_AUTOSCALING_NEAR_MAX, which the autoscaling status disabled never gives", contrary))
+	checkRefusesWith(t, snap, fmt.Sprintf("findings[%d] is NODE_AUTOSCALING_ENABLED, which the autoscaling status disabled never gives", contrary))
 }
 
 func TestCheckRefusesAValueMissingANumber(t *testing.T) {
@@ -2487,13 +2488,13 @@ func TestCheckBindsAFindingConfidenceToItsSource(t *testing.T) {
 		checkRefusesWith(t, snap, fmt.Sprintf("findings[%d].confidence unknown does not match the definition of %s", index, code))
 	})
 	t.Run("an autoscaling finding takes the confidence of the autoscaling", func(t *testing.T) {
-		snap := decodeGolden(t, "edge-scaling")
-		index := slices.IndexFunc(snap.Findings, func(f Finding) bool { return f.Code == "NODE_AUTOSCALING_NEAR_MAX" })
+		snap := decodeGolden(t, "direct-complete")
+		index := slices.IndexFunc(snap.Findings, func(f Finding) bool { return f.Code == "NODE_AUTOSCALING_ENABLED" })
 		if index < 0 {
-			t.Fatal("the snapshot holds no NODE_AUTOSCALING_NEAR_MAX finding")
+			t.Fatal("the snapshot holds no NODE_AUTOSCALING_ENABLED finding")
 		}
-		setConfidence(t, &snap, "NODE_AUTOSCALING_NEAR_MAX", "exact")
-		checkRefusesWith(t, snap, fmt.Sprintf("findings[%d].confidence exact does not match the definition of NODE_AUTOSCALING_NEAR_MAX", index))
+		setConfidence(t, &snap, "NODE_AUTOSCALING_ENABLED", "exact")
+		checkRefusesWith(t, snap, fmt.Sprintf("findings[%d].confidence exact does not match the definition of NODE_AUTOSCALING_ENABLED", index))
 	})
 	t.Run("an approximate row gives inferred", func(t *testing.T) {
 		snap := decodeGolden(t, "raw-fallback")
@@ -2645,5 +2646,50 @@ func TestEncodeNamesANumberThatIsNotFinite(t *testing.T) {
 	}
 	if _, err := Encode(validSnapshotWithRows(t)); err != nil {
 		t.Fatalf("a finite snapshot: %v", err)
+	}
+}
+
+func TestDecodesAReportStoredBy230(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "stored-2.3.0-direct-complete.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := Decode(raw)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	a := s.Summary.Autoscaling
+	if a.Status != "enabled" || a.MaxNodes == nil || *a.MaxNodes != 3 || a.MinNodes == nil || *a.MinNodes != 1 {
+		t.Fatalf("autoscaling = %+v, want enabled with min 1 and max 3", a)
+	}
+	if !slices.ContainsFunc(s.Findings, func(f Finding) bool { return f.Code == "NODE_AUTOSCALING_NEAR_MAX" }) {
+		t.Fatal("no NODE_AUTOSCALING_NEAR_MAX finding")
+	}
+}
+
+func TestDecodesADisabledAutoscalingFromRawMetrics(t *testing.T) {
+	in := clusterInput()
+	in.Collected.Autoscaling = collect.AutoscalingEvidence{
+		Status: collect.AutoscalingDisabled, Source: discovery.StrategyRawMetrics, Confidence: discovery.ConfidenceInferred,
+		CurrentNodes: known(4), ScaleEvents: known(0), UnschedulablePods: known(0),
+	}
+	last := len(in.Findings) - 1
+	in.Findings[last] = analysis.Finding{
+		Code: "NODE_AUTOSCALING_DISABLED_PRESSURE", Severity: analysis.SeverityCritical,
+		ScopeType: analysis.ScopeCluster, ScopeName: "cluster", Confidence: discovery.ConfidenceInferred,
+		Evidence: []analysis.Evidence{{Name: "node_pressure", Value: analysis.Boolean(true)}},
+	}
+	analysis.Sort(in.Findings)
+	raw, err := Encode(mustBuild(t, in))
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	s, err := Decode(raw)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	a := s.Summary.Autoscaling
+	if a.Status != "disabled" || a.Source != "raw_metrics" || a.Confidence != "inferred" || a.CurrentNodes == nil || *a.CurrentNodes != 4 {
+		t.Fatalf("autoscaling = %+v, want disabled from raw_metrics, inferred, with 4 current nodes", a)
 	}
 }

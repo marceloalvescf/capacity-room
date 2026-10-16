@@ -62,20 +62,22 @@ func TestEdgeScenarioLeavesNoAnswerUnused(t *testing.T) {
 	}
 }
 
-// TestEdgeScenariosLeaveNoAnswerUnused runs each scenario written by this
-// project through the whole chain and pins the number of scripted answers
-// the server holds once the run is over. edge-values keeps one answer that
-// the program never asks: a second kube_horizontalpodautoscaler_info answer
-// copied from direct-complete, because the history of the autoscalers and
-// their coverage share one info answer. The file is not edited once its
-// numbers are recorded. edge-scaling keeps none.
-func TestEdgeScenariosLeaveNoAnswerUnused(t *testing.T) {
+// TestEdgeScenariosLeaveOnlyTheUnusedAnswers runs each scenario written by
+// this project through the whole chain and pins the number of scripted
+// answers the server holds once the run is over. Seven of them are the
+// recorded answers of the old cluster autoscaler probe and queries, which the
+// program no longer sends. edge-values keeps, besides, a second
+// kube_horizontalpodautoscaler_info answer copied from direct-complete,
+// because the history of the autoscalers and their coverage share one info
+// answer. The file is not edited once its numbers are recorded. edge-scaling
+// keeps only the seven.
+func TestEdgeScenariosLeaveOnlyTheUnusedAnswers(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		want int
 	}{
-		{"edge-values", 1},
-		{"edge-scaling", 0},
+		{"edge-values", 8},
+		{"edge-scaling", 7},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, fake, err := run(context.Background(), scenarioByName(t, tc.name))
@@ -90,19 +92,21 @@ func TestEdgeScenariosLeaveNoAnswerUnused(t *testing.T) {
 }
 
 // TestDirectCompleteLeavesTheRecordedAnswerUnused pins the number of scripted
-// answers the server holds once a whole run of direct-complete is over: one.
-// The recording holds three plain kube_horizontalpodautoscaler_info answers
-// and the program sends two requests naming that metric, the count of the
-// probe and the query of the autoscalers; the history of the autoscalers and
-// their coverage share that second answer, so the third is never asked. The
-// e2e target of the Makefile runs the same scenario against the fake
-// Prometheus of the stack and expects the same number.
+// answers the server holds once a whole run of direct-complete is over: eight.
+// Seven are the recorded answers of the old cluster autoscaler probe and
+// queries, which the program no longer sends. The eighth: the recording holds
+// three plain kube_horizontalpodautoscaler_info answers and the program sends
+// two requests naming that metric, the count of the probe and the query of
+// the autoscalers; the history of the autoscalers and their coverage share
+// that second answer, so the third is never asked. The e2e target of the
+// Makefile runs the same scenario against the fake Prometheus of the stack
+// and expects the same number.
 func TestDirectCompleteLeavesTheRecordedAnswerUnused(t *testing.T) {
 	_, fake, err := run(context.Background(), scenarioByName(t, "direct-complete"))
 	if err != nil {
 		t.Fatalf("run(direct-complete): %v", err)
 	}
-	if got := fake.Remaining(); got != 1 {
-		t.Errorf("Remaining() = %d, want 1", got)
+	if got := fake.Remaining(); got != 8 {
+		t.Errorf("Remaining() = %d, want 8", got)
 	}
 }

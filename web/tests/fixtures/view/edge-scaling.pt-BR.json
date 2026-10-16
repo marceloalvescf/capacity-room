@@ -58,13 +58,13 @@
       "status": null
     },
     "attention": {
-      "raw": 12,
-      "text": "12",
+      "raw": 11,
+      "text": "11",
       "status": null
     },
     "critical": {
-      "raw": 9,
-      "text": "9",
+      "raw": 10,
+      "text": "10",
       "status": null
     },
     "workloads_without_hpa": {
@@ -73,32 +73,32 @@
       "status": null
     },
     "autoscaling": {
-      "status": "enabled",
+      "status": "disabled",
       "source": "raw_metrics",
       "confidence": "inferred",
       "managed_node_groups": {
-        "raw": 2,
-        "text": "2",
+        "raw": null,
+        "text": "Indisponível",
         "status": null
       },
       "current_nodes": {
-        "raw": 3,
-        "text": "3",
+        "raw": 4,
+        "text": "4",
         "status": null
       },
       "min_nodes": {
-        "raw": 2,
-        "text": "2",
+        "raw": null,
+        "text": "Indisponível",
         "status": null
       },
       "max_nodes": {
-        "raw": 3,
-        "text": "3",
+        "raw": null,
+        "text": "Indisponível",
         "status": null
       },
       "scale_events": {
-        "raw": 1,
-        "text": "1",
+        "raw": 2,
+        "text": "2",
         "status": null
       },
       "unschedulable_pods": {
@@ -128,6 +128,23 @@
           "name": "peak_percent",
           "raw": 95,
           "text": "95%"
+        }
+      ]
+    },
+    {
+      "code": "NODE_AUTOSCALING_DISABLED_PRESSURE",
+      "severity": "critical",
+      "scope_type": "cluster",
+      "scope_kind": "",
+      "scope_name": "cluster",
+      "confidence": "inferred",
+      "sentence": "O autoscaling de nodes está configurado como desabilitado.",
+      "action": "Planejar capacidade manual e revisar a decisão de autoscaling.",
+      "evidence": [
+        {
+          "name": "node_pressure",
+          "raw": true,
+          "text": "sim"
         }
       ]
     },
@@ -321,28 +338,6 @@
           "name": "peak_percent",
           "raw": 72,
           "text": "72%"
-        }
-      ]
-    },
-    {
-      "code": "NODE_AUTOSCALING_NEAR_MAX",
-      "severity": "attention",
-      "scope_type": "cluster",
-      "scope_kind": "",
-      "scope_name": "cluster",
-      "confidence": "inferred",
-      "sentence": "O número de nodes atingiu ou ficou próximo do máximo observado.",
-      "action": "Revisar o máximo configurado e a margem do cluster.",
-      "evidence": [
-        {
-          "name": "current_nodes",
-          "raw": 3,
-          "text": "3"
-        },
-        {
-          "name": "max_nodes",
-          "raw": 3,
-          "text": "3"
         }
       ]
     },
@@ -678,7 +673,7 @@
         "payments/web"
       ],
       "scope_text": "payments/web",
-      "finding": 7
+      "finding": 8
     },
     {
       "code": "NAMESPACE_CPU_LIMIT_CRITICAL",
@@ -690,7 +685,7 @@
         "payments"
       ],
       "scope_text": "payments",
-      "finding": 1
+      "finding": 2
     },
     {
       "code": "NAMESPACE_CPU_REQUEST_CRITICAL",
@@ -702,7 +697,7 @@
         "payments"
       ],
       "scope_text": "payments",
-      "finding": 2
+      "finding": 3
     },
     {
       "code": "NAMESPACE_MEMORY_LIMIT_CRITICAL",
@@ -714,7 +709,7 @@
         "payments"
       ],
       "scope_text": "payments",
-      "finding": 3
+      "finding": 4
     },
     {
       "code": "NAMESPACE_MEMORY_REQUEST_CRITICAL",
@@ -726,7 +721,7 @@
         "payments"
       ],
       "scope_text": "payments",
-      "finding": 4
+      "finding": 5
     },
     {
       "code": "WORKLOAD_MEMORY_LIMIT_CRITICAL",
@@ -738,7 +733,7 @@
         "payments/payments-web"
       ],
       "scope_text": "payments/payments-web",
-      "finding": 5
+      "finding": 6
     },
     {
       "code": "WORKLOAD_MEMORY_REQUEST_CRITICAL",
@@ -750,7 +745,7 @@
         "payments/payments-web"
       ],
       "scope_text": "payments/payments-web",
-      "finding": 6
+      "finding": 7
     },
     {
       "code": "DEPLOYMENT_WITHOUT_HPA",
@@ -790,14 +785,9 @@
     }
   ],
   "verdict": {
-    "cluster_finding": 10,
+    "cluster_finding": 1,
     "node_evidence_warning": 1,
-    "gauge": {
-      "current": 3,
-      "max": 3,
-      "min": 2,
-      "hazard": "attention"
-    },
+    "gauge": null,
     "pressure": [
       {
         "scope_type": "node",
@@ -809,21 +799,21 @@
       {
         "scope_type": "namespace",
         "severity": "critical",
-        "finding": 1,
+        "finding": 2,
         "critical": 1,
         "attention": 0
       },
       {
         "scope_type": "workload",
         "severity": "critical",
-        "finding": 5,
+        "finding": 6,
         "critical": 1,
         "attention": 1
       },
       {
         "scope_type": "hpa",
         "severity": "critical",
-        "finding": 7,
+        "finding": 8,
         "critical": 1,
         "attention": 1
       },
@@ -2537,7 +2527,7 @@
         "state": "available",
         "strategy": "raw_metrics",
         "evidence": [
-          "cluster_autoscaler_*"
+          "kube_configmap_info"
         ],
         "remark": ""
       }

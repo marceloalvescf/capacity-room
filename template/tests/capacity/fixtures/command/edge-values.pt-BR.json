@@ -51,36 +51,18 @@
       "quality": null,
       "growth": {
         "title": "Autoscaling do cluster",
-        "current": "3",
-        "max": "3",
-        "state": null,
-        "gauge": {
-          "current": 3,
-          "max": 3,
-          "min": 1,
-          "hazard": true
-        },
-        "caption": "Nodes · atual / máximo",
+        "current": null,
+        "max": null,
+        "state": "Inativo",
+        "gauge": null,
+        "caption": null,
         "finding": {
           "status": "attention",
           "label": "Atenção",
-          "sentence": "O número de nodes atingiu ou ficou próximo do máximo observado."
+          "sentence": "O autoscaling de nodes está configurado como desabilitado."
         },
         "warning": null,
-        "facts": [
-          {
-            "label": "Mínimo de nodes",
-            "value": "1"
-          },
-          {
-            "label": "Pods não agendáveis",
-            "value": "1"
-          },
-          {
-            "label": "Eventos de escala",
-            "value": "1"
-          }
-        ]
+        "facts": []
       },
       "pressure": {
         "title": "Pressão por escopo",

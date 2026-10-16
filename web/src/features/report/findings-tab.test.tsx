@@ -65,15 +65,15 @@ describe("findings tab", () => {
   it("grouped, critical first", async () => {
     await open();
     const headings = screen.getAllByRole("heading", { level: 2 }).filter((h) => /^(Critical|Attention|Healthy)/.test(h.textContent));
-    expect(headings.map((h) => h.textContent)).toEqual(["Critical9", "Attention12", "Healthy7"]);
+    expect(headings.map((h) => h.textContent)).toEqual(["Critical10", "Attention11", "Healthy7"]);
     const lists = headings.map((h) => (h.parentElement as HTMLElement).querySelector("ul") as HTMLElement);
     const critical = within(lists[0] as HTMLElement).getAllByRole("button");
-    expect(critical).toHaveLength(9);
+    expect(critical).toHaveLength(10);
     expect(critical[0]).toHaveTextContent(sentenceOf(0));
-    expect(critical[8]).toHaveTextContent(sentenceOf(8));
+    expect(critical[9]).toHaveTextContent(sentenceOf(9));
     expect(within(lists[2] as HTMLElement).getAllByRole("button")[0]).toHaveTextContent(sentenceOf(21));
-    expect(chips().map((c) => c.textContent)).toEqual(["Critical9", "Attention12", "Healthy7"]);
-    expect(within(chip("Critical")).getByText("9")).toHaveClass("font-mono");
+    expect(chips().map((c) => c.textContent)).toEqual(["Critical10", "Attention11", "Healthy7"]);
+    expect(within(chip("Critical")).getByText("10")).toHaveClass("font-mono");
   });
 
   it("chips", async () => {
@@ -92,7 +92,7 @@ describe("findings tab", () => {
   it("see findings arrives", async () => {
     await open("?severity=critical");
     expect(chips().map((c) => c.getAttribute("aria-pressed"))).toEqual(["true", "false", "false"]);
-    expect(items()).toHaveLength(9);
+    expect(items()).toHaveLength(10);
   });
 
   it("scope select", async () => {
@@ -167,10 +167,10 @@ describe("findings tab", () => {
   });
 
   it("the detail shows the kind of a workload beside its scope", async () => {
-    await open("?finding=5");
+    await open("?finding=6");
     expect(within(detail()).getByText("Workload · Deployment")).toBeInTheDocument();
     cleanup();
-    await open("?finding=1");
+    await open("?finding=2");
     expect(within(detail()).getByText("Namespace")).toBeInTheDocument();
     expect(detail().querySelector("header")).not.toHaveTextContent("·");
   });
@@ -185,7 +185,7 @@ describe("findings tab", () => {
   it("a severity list with a stranger presses the known one alone", async () => {
     await open("?severity=critical,bogus");
     expect(chips().map((c) => c.getAttribute("aria-pressed"))).toEqual(["true", "false", "false"]);
-    expect(items()).toHaveLength(9);
+    expect(items()).toHaveLength(10);
   });
 
   it("a stale scope is ignored", async () => {
@@ -196,7 +196,7 @@ describe("findings tab", () => {
 
   it("a finding the filters hide gives way to the first one shown", async () => {
     await open("?finding=19&severity=critical");
-    expect(items()).toHaveLength(9);
+    expect(items()).toHaveLength(10);
     expect(items()[0]).toHaveAttribute("aria-pressed", "true");
     expect(within(detail()).getByText(sentenceOf(0))).toBeInTheDocument();
     expect(within(detail()).getByText(english.findings[0]?.action ?? "")).toBeInTheDocument();
@@ -234,12 +234,12 @@ describe("findings tab", () => {
   it("select one", async () => {
     const user = userEvent.setup();
     const { router } = await open();
-    const third = items()[2] as HTMLElement;
+    const third = items()[3] as HTMLElement;
     await user.click(third);
     expect(third).toHaveAttribute("aria-pressed", "true");
     expect(items()[0]).toHaveAttribute("aria-pressed", "false");
-    expect(params(router).get("finding")).toBe("2");
-    const finding = english.findings[2];
+    expect(params(router).get("finding")).toBe("3");
+    const finding = english.findings[3];
     const article = within(detail());
     expect(article.getByRole("heading", { name: "payments" })).toHaveClass("font-mono");
     expect(article.getByText("Namespace")).toBeInTheDocument();
@@ -323,7 +323,7 @@ describe("findings tab", () => {
     expect(poolItem).toHaveTextContent("Undetermined");
     expect(within(poolItem).getByText("Undetermined")).not.toHaveClass("font-mono");
     expect(within(detail()).getByRole("heading", { name: "Undetermined" })).not.toHaveClass("font-mono");
-    const clusterItem = items().find((button) => button.textContent.includes(sentenceOf(10))) as HTMLElement;
+    const clusterItem = items().find((button) => button.textContent.includes(sentenceOf(1))) as HTMLElement;
     expect(clusterItem).toHaveTextContent("Cluster");
     expect(clusterItem.querySelector(".font-mono")).toBeNull();
     const user = userEvent.setup();
@@ -357,7 +357,7 @@ describe("links into the findings tab", () => {
     await user.click(within(totals).getAllByRole("link")[0] as HTMLElement);
     expect(location(router)).toBe(`/reports/${id}/findings?severity=critical`);
     await screen.findByRole("searchbox", { name: "Search findings" });
-    expect(items()).toHaveLength(9);
+    expect(items()).toHaveLength(10);
   });
 
   it("a finding of a workloads row", async () => {

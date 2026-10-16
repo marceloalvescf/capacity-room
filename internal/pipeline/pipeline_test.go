@@ -141,7 +141,7 @@ func TestPreflightRequestsComeFromTheRecordedQueries(t *testing.T) {
 }
 
 // emptyCollectors answers the preflight of direct-complete as recorded,
-// except the probe of the cluster autoscaler metrics, and every later
+// except the probe of the ConfigMaps, and every later
 // request with an empty result.
 func emptyCollectors(t *testing.T) fixture {
 	t.Helper()
@@ -160,7 +160,7 @@ func emptyCollectors(t *testing.T) fixture {
 		received++
 		inPreflight := received <= preflight
 		mu.Unlock()
-		if inPreflight && !strings.Contains(r.PostFormValue("query"), "cluster_autoscaler_") {
+		if inPreflight && !strings.Contains(r.PostFormValue("query"), "kube_configmap_info") {
 			fake.ServeHTTP(w, r)
 			return
 		}

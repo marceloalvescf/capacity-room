@@ -50,7 +50,7 @@ var detectQueries = []string{
 	`count(node_cpu_seconds_total)`,
 	`count(node_memory_MemAvailable_bytes)`,
 	`count(node_memory_MemTotal_bytes)`,
-	`count({__name__=~"cluster_autoscaler_.+"})`,
+	`count(kube_configmap_info)`,
 }
 
 // detectQuerier answers every query in present with one valid sample above

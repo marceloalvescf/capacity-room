@@ -26,8 +26,8 @@ func TestVerdictOfEdgeScalingTotalsAndQuality(t *testing.T) {
 	v := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "all")
 
 	wantTotals := []VerdictCount{
-		{"critical", "Critical", "9"},
-		{"attention", "Attention", "12"},
+		{"critical", "Critical", "10"},
+		{"attention", "Attention", "11"},
 		{"healthy", "Healthy", "7"},
 	}
 	if !reflect.DeepEqual(v.Totals.Items, wantTotals) || v.Totals.None != nil {
@@ -47,22 +47,26 @@ func TestVerdictOfEdgeScalingTotalsAndQuality(t *testing.T) {
 	}
 }
 
+// scalingWithBounds is the golden snapshot of edge-scaling with an enabled
+// autoscaling that holds the bounds of a cluster autoscaler: three nodes of a
+// maximum of three, a minimum of two, and one node added.
+func scalingWithBounds(t *testing.T) snapshot.Snapshot {
+	t.Helper()
+	s := goldenSnapshot(t, "edge-scaling")
+	a := &s.Summary.Autoscaling
+	a.Status = "enabled"
+	a.CurrentNodes, a.MinNodes, a.MaxNodes, a.ScaleEvents = floatPtr(3), floatPtr(2), floatPtr(3), floatPtr(1)
+	return s
+}
+
 func TestVerdictOfEdgeScalingGrowth(t *testing.T) {
 	g := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "all").Growth
 
 	want := VerdictGrowth{
 		Title:   "Cluster autoscaling",
-		Current: strPtr("3"),
-		Max:     strPtr("3"),
-		Gauge:   &VerdictGauge{Current: 3, Max: 3, Min: intPtr(2), Hazard: true},
-		Caption: strPtr("Nodes · current / maximum"),
-		Finding: &VerdictFinding{"attention", "Attention", "The number of nodes reached or came close to the observed maximum."},
+		State:   strPtr("Disabled"),
+		Finding: &VerdictFinding{"critical", "Critical", "Node autoscaling is configured as disabled."},
 		Warning: strPtr("The capacity evidence of the nodes is incomplete."),
-		Facts: []VerdictFact{
-			{"Minimum nodes", "2"},
-			{"Unschedulable pods", "2"},
-			{"Scale events", "1"},
-		},
 	}
 	if !reflect.DeepEqual(g, want) {
 		t.Errorf("Growth = %+v, want %+v", g, want)
@@ -182,8 +186,8 @@ func TestVerdictOfDirectComplete(t *testing.T) {
 
 	wantTotals := []VerdictCount{
 		{"critical", "Critical", "4"},
-		{"attention", "Attention", "4"},
-		{"healthy", "Healthy", "5"},
+		{"attention", "Attention", "3"},
+		{"healthy", "Healthy", "6"},
 	}
 	if !reflect.DeepEqual(v.Totals.Items, wantTotals) {
 		t.Errorf("Totals = %+v, want %+v", v.Totals.Items, wantTotals)
@@ -191,8 +195,8 @@ func TestVerdictOfDirectComplete(t *testing.T) {
 	if v.Quality != nil {
 		t.Errorf("Quality = %+v, want none", v.Quality)
 	}
-	if want := (&VerdictGauge{Current: 3, Max: 3, Min: intPtr(1), Hazard: true}); !reflect.DeepEqual(v.Growth.Gauge, want) {
-		t.Errorf("Gauge = %+v, want %+v", v.Growth.Gauge, want)
+	if v.Growth.Gauge != nil {
+		t.Errorf("Gauge = %+v, want none: the snapshot holds no maximum", v.Growth.Gauge)
 	}
 	wantMore := "5 of 7 actions. The full plan is in the executive summary."
 	if v.Plan.More == nil || *v.Plan.More != wantMore {
@@ -214,7 +218,7 @@ func TestVerdictWithoutAutoscaling(t *testing.T) {
 }
 
 func TestVerdictWithoutAMaximum(t *testing.T) {
-	s := goldenSnapshot(t, "edge-scaling")
+	s := scalingWithBounds(t)
 	s.Summary.Autoscaling.MaxNodes = nil
 	g := englishVerdict(t, s, "all").Growth
 
@@ -233,7 +237,7 @@ func TestVerdictWithoutAMaximum(t *testing.T) {
 }
 
 func TestVerdictWithoutACurrentCount(t *testing.T) {
-	s := goldenSnapshot(t, "edge-scaling")
+	s := scalingWithBounds(t)
 	s.Summary.Autoscaling.CurrentNodes = nil
 	g := englishVerdict(t, s, "all").Growth
 
@@ -261,7 +265,7 @@ func TestVerdictDrawsTheMinimumOnlyBetweenNoneAndTheMaximum(t *testing.T) {
 		{"inside", 2, intPtr(2)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			s := goldenSnapshot(t, "edge-scaling")
+			s := scalingWithBounds(t)
 			s.Summary.Autoscaling.MinNodes = floatPtr(tc.minimum)
 			g := englishVerdict(t, s, "all").Growth.Gauge
 			if g == nil {
@@ -275,7 +279,7 @@ func TestVerdictDrawsTheMinimumOnlyBetweenNoneAndTheMaximum(t *testing.T) {
 }
 
 func TestVerdictRoundsTheGaugeToWholeNodes(t *testing.T) {
-	s := goldenSnapshot(t, "edge-scaling")
+	s := scalingWithBounds(t)
 	s.Summary.Autoscaling.CurrentNodes = floatPtr(7.4)
 	s.Summary.Autoscaling.MaxNodes = floatPtr(5.6)
 	g := englishVerdict(t, s, "all").Growth
@@ -286,7 +290,7 @@ func TestVerdictRoundsTheGaugeToWholeNodes(t *testing.T) {
 }
 
 func TestVerdictWritesAnAbsentFactAsUnavailable(t *testing.T) {
-	s := goldenSnapshot(t, "edge-scaling")
+	s := scalingWithBounds(t)
 	s.Summary.Autoscaling.ScaleEvents = nil
 	facts := englishVerdict(t, s, "all").Growth.Facts
 
@@ -324,8 +328,8 @@ func TestVerdictOfTheExecutiveProfileRaisesTheMinimum(t *testing.T) {
 	}
 
 	wantTotals := []VerdictCount{
-		{"critical", "Critical", "9"},
-		{"attention", "Attention", "12"},
+		{"critical", "Critical", "10"},
+		{"attention", "Attention", "11"},
 		{"healthy", "Healthy", "7"},
 	}
 	if !reflect.DeepEqual(v.Totals.Items, wantTotals) {
@@ -344,7 +348,7 @@ func TestVerdictOfTheExecutiveProfileRaisesTheMinimum(t *testing.T) {
 }
 
 func TestVerdictOfAttentionMinimumLeavesOutAHealthyClusterFinding(t *testing.T) {
-	s := goldenSnapshot(t, "edge-scaling")
+	s := scalingWithBounds(t)
 	for i := range s.Findings {
 		if s.Findings[i].ScopeType == "cluster" {
 			s.Findings[i].Severity = "healthy"

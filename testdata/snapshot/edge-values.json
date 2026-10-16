@@ -135,7 +135,7 @@
         "state": "available",
         "strategy": "raw_metrics",
         "evidence": [
-          "cluster_autoscaler_*"
+          "kube_configmap_info"
         ],
         "reasons": []
       }
@@ -171,15 +171,15 @@
     "critical": 2,
     "workloads_without_hpa": 1,
     "autoscaling": {
-      "status": "enabled",
+      "status": "disabled",
       "source": "raw_metrics",
       "confidence": "inferred",
-      "managed_node_groups": 2,
-      "current_nodes": 3,
-      "min_nodes": 1,
-      "max_nodes": 3,
-      "scale_events": 1,
-      "unschedulable_pods": 1
+      "managed_node_groups": null,
+      "current_nodes": 1,
+      "min_nodes": null,
+      "max_nodes": null,
+      "scale_events": 0,
+      "unschedulable_pods": 0
     }
   },
   "namespaces": [
@@ -598,19 +598,15 @@
       "confidence": "exact"
     },
     {
-      "code": "NODE_AUTOSCALING_NEAR_MAX",
+      "code": "NODE_AUTOSCALING_DISABLED",
       "severity": "attention",
       "scope_type": "cluster",
       "scope_kind": "",
       "scope_name": "cluster",
       "evidence": [
         {
-          "name": "current_nodes",
-          "value": 3
-        },
-        {
-          "name": "max_nodes",
-          "value": 3
+          "name": "node_pressure",
+          "value": false
         }
       ],
       "confidence": "inferred"
@@ -884,7 +880,7 @@
       "confidence": "exact"
     },
     {
-      "code": "NODE_AUTOSCALING_NEAR_MAX",
+      "code": "NODE_AUTOSCALING_DISABLED",
       "severity": "attention",
       "scope_type": "cluster",
       "scopes": [

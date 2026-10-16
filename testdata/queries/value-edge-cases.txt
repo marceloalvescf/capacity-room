@@ -26,7 +26,7 @@
 /api/v1/query	count(node_cpu_seconds_total{cluster="prod"})
 /api/v1/query	count(node_memory_MemAvailable_bytes{cluster="prod"})
 /api/v1/query	count(node_memory_MemTotal_bytes{cluster="prod"})
-/api/v1/query	count({__name__=~"cluster_autoscaler_.+",cluster="prod"})
+/api/v1/query	count(kube_configmap_info{cluster="prod"})
 /api/v1/query_range	sum by (namespace) (rate(container_cpu_usage_seconds_total{cluster="prod",namespace=~"(?:payments)",container!~"(?:|POD|istio\\-proxy)"}[5m]))
 /api/v1/query_range	sum by (namespace) (max by (namespace, pod, container) (container_memory_working_set_bytes{cluster="prod",namespace=~"(?:payments)",container!~"(?:|POD|istio\\-proxy)"}))
 /api/v1/query_range	sum by (namespace) (kube_pod_container_resource_requests{cluster="prod",resource="cpu",namespace=~"(?:payments)",container!~"(?:|POD|istio\\-proxy)"})

@@ -263,7 +263,7 @@ func clusterFindings() []Finding {
 		{evidenceOf("enabled", discovery.ConfidenceInferred, known(2), known(2), known(10)), false},
 		{evidenceOf("enabled", discovery.ConfidenceInferred, known(3), known(2), known(10)), false},
 	} {
-		findings = append(findings, Autoscaling(e.evidence, thresholds, e.pressure)...)
+		findings = append(findings, Autoscaling(e.evidence, e.pressure)...)
 	}
 	return findings
 }
@@ -288,7 +288,9 @@ func matchesSpecs(evidence []Evidence, specs []EvidenceSpec) bool {
 // TestEveryFindingFollowsItsDefinition builds rows that give each of the
 // 68 codes and checks that each finding agrees with its registry
 // definition in severity, scope type, and evidence names and kinds. A
-// code of nodes may come from more than one node.
+// code of nodes may come from more than one node. The three codes that
+// node autoscaling no longer gives, kept for reports stored before, must
+// give no finding.
 func TestEveryFindingFollowsItsDefinition(t *testing.T) {
 	t.Parallel()
 	thresholds := defaultThresholds()
@@ -313,6 +315,12 @@ func TestEveryFindingFollowsItsDefinition(t *testing.T) {
 			if f.Code == definition.Code {
 				matches = append(matches, f)
 			}
+		}
+		if slices.Contains(retiredAutoscalingCodes, definition.Code) {
+			if len(matches) != 0 {
+				t.Errorf("%s: found %d findings, want none", definition.Code, len(matches))
+			}
+			continue
 		}
 		if len(matches) == 0 {
 			t.Errorf("%s: no finding", definition.Code)
@@ -429,7 +437,7 @@ func TestReadinessFindingsAreNotNodePressure(t *testing.T) {
 	}{
 		{"disabled, cordoned", disabled, yes, no, "NODE_AUTOSCALING_DISABLED", SeverityAttention},
 		{"disabled, not ready", disabled, no, yes, "NODE_AUTOSCALING_DISABLED", SeverityAttention},
-		{"at minimum, cordoned", atMin, yes, no, "NODE_AUTOSCALING_AT_MIN", SeverityHealthy},
+		{"at minimum, cordoned", atMin, yes, no, "NODE_AUTOSCALING_ENABLED", SeverityHealthy},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -462,3 +470,7 @@ func TestReadinessFindingsAreNotNodePressure(t *testing.T) {
 		})
 	}
 }
+
+// retiredAutoscalingCodes are the codes of node autoscaling that the registry
+// keeps and analysis no longer gives.
+var retiredAutoscalingCodes = []string{"NODE_AUTOSCALING_NEAR_MAX", "NODE_AUTOSCALING_BOUNDS_UNKNOWN", "NODE_AUTOSCALING_AT_MIN"}

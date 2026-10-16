@@ -17,6 +17,18 @@ function first(code: string): ViewFinding {
   return found;
 }
 
+// The golden views no longer hold a finding of near maximum, which a report
+// stored before still can.
+const nearMax: ViewFinding = {
+  ...first("HPA_MAX_REPLICAS_REACHED"),
+  code: "NODE_AUTOSCALING_NEAR_MAX",
+  scope_type: "cluster",
+  evidence: [
+    { name: "current_nodes", raw: 3, text: "3" },
+    { name: "max_nodes", raw: 3, text: "3" },
+  ],
+};
+
 const names = (proof: ReturnType<typeof proofOf>) =>
   proof === null ? null : { lead: proof.lead.name, rest: proof.rest.map((item) => item.name) };
 
@@ -30,7 +42,7 @@ describe("proof", () => {
 
   it("a count is drawn in whole units, a percent is not", () => {
     expect(proofOf(first("HPA_MAX_REPLICAS_REACHED"))?.count).toBe(true);
-    expect(proofOf(first("NODE_AUTOSCALING_NEAR_MAX"))?.count).toBe(true);
+    expect(proofOf(nearMax)?.count).toBe(true);
     expect(proofOf(first("NODE_CPU_REQUEST_HIGH"))?.count).toBe(false);
   });
 
@@ -51,7 +63,7 @@ describe("proof", () => {
   });
 
   it("the nodes of the cluster are read against the autoscaler's maximum", () => {
-    const proof = proofOf(first("NODE_AUTOSCALING_NEAR_MAX"));
+    const proof = proofOf(nearMax);
     expect(proof && { value: proof.value, reference: proof.reference }).toEqual({ value: 3, reference: 3 });
     expect(names(proof)).toEqual({ lead: "current_nodes", rest: ["max_nodes"] });
   });

@@ -2,11 +2,9 @@ package collect
 
 import (
 	"context"
-	"math"
-	"slices"
+	"maps"
 	"strconv"
 
-	"github.com/marceloalvescf/capacity-room/internal/arith"
 	"github.com/marceloalvescf/capacity-room/internal/discovery"
 	"github.com/marceloalvescf/capacity-room/internal/prom"
 )
@@ -17,24 +15,6 @@ const (
 	AutoscalingDisabled = "disabled"
 	AutoscalingUnknown  = "unknown"
 )
-
-// The metrics of the cluster autoscaler, following AUTOSCALER_METRICS of
-// collectors/autoscaling.py.
-const (
-	autoscalerNodeGroups        = "cluster_autoscaler_node_groups_count"
-	autoscalerNodes             = "cluster_autoscaler_nodes_count"
-	autoscalerMinNodes          = "cluster_autoscaler_node_group_min_nodes_count"
-	autoscalerMaxNodes          = "cluster_autoscaler_node_group_max_nodes_count"
-	autoscalerScaledUp          = "cluster_autoscaler_scaled_up_nodes_total"
-	autoscalerUnschedulablePods = "cluster_autoscaler_unschedulable_pods_count"
-)
-
-// autoscalerGroupLabels are the labels that name a node group, in the order
-// the first non-empty one wins.
-var autoscalerGroupLabels = []string{"node_group", "nodegroup", "node_group_name", "node_group_id"}
-
-// autoscalerGroupKey is the one label the series of a group are reduced by.
-const autoscalerGroupKey = "autoscaler_group"
 
 // AutoscalingEvidence is what the cluster autoscaling of the scope is known
 // to be.
@@ -47,127 +27,85 @@ type AutoscalingEvidence struct {
 	ScaleEvents, UnschedulablePods                      Number
 }
 
-// Autoscaling follows AutoscalingCollector.collect of
-// collectors/autoscaling.py. With the mode configured as enabled or disabled
-// it sends nothing.
+// statusConfigMap names the ConfigMap the cluster autoscaler writes its
+// status to by default, on AKS and in the OKE add-on alike.
+var statusConfigMap = map[string]string{"namespace": "kube-system", "configmap": "cluster-autoscaler-status"}
+
+// Autoscaling reads the node autoscaling of the scope from kube-state-metrics
+// (design, node autoscaling): enabled when the status ConfigMap of the
+// cluster autoscaler was written during the window, or appeared in it when
+// no resource version is exported; disabled otherwise. With the mode
+// configured, or with no ConfigMap collected at all, it sends nothing.
 func Autoscaling(ctx context.Context, q Querier, in Input) (AutoscalingEvidence, error) {
 	if mode := in.Analysis.NodeAutoscaling; mode == AutoscalingEnabled || mode == AutoscalingDisabled {
 		return AutoscalingEvidence{Status: mode, Source: discovery.StrategyConfigured, Confidence: discovery.ConfidenceExact}, nil
 	}
-
-	seconds := max(1, in.Window.End.Unix()-in.Window.Start.Unix())
-	metrics := []struct {
-		name string
-		sum  bool
-	}{
-		{autoscalerNodeGroups, true},
-		{autoscalerNodes, true},
-		{autoscalerMinNodes, true},
-		{autoscalerMaxNodes, true},
-		{autoscalerScaledUp, true},
-		{autoscalerUnschedulablePods, false},
+	capability, err := findCapability(in.Capabilities, "node_autoscaling")
+	if err != nil {
+		return AutoscalingEvidence{}, err
 	}
-	var values [6]Number
-	for i, metric := range metrics {
-		query := prom.Selector{Metric: metric.name, Equal: in.Scope.Matchers()}.String()
-		if metric.name == autoscalerScaledUp {
-			query = "increase(" + query + "[" + strconv.FormatInt(seconds, 10) + "s])"
-		}
-		series, err := q.QueryRange(ctx, query, in.Window.Start, in.Window.End, in.Window.Step)
+	if capability.State != discovery.StateAvailable {
+		return AutoscalingEvidence{Status: AutoscalingUnknown, Source: discovery.StrategyNone, Confidence: discovery.ConfidenceUnknown}, nil
+	}
+
+	seconds := strconv.FormatInt(max(1, in.Window.End.Unix()-in.Window.Start.Unix()), 10)
+	scope := in.Scope.Matchers()
+	configMap := maps.Clone(statusConfigMap)
+	maps.Copy(configMap, scope)
+	queries := []string{
+		"max_over_time(" + prom.Selector{Metric: "kube_configmap_info", Equal: configMap}.String() + "[" + seconds + "s])",
+		"changes(" + prom.Selector{Metric: "kube_configmap_metadata_resource_version", Equal: configMap}.String() + "[" + seconds + "s])",
+		"count(count by (node) (" + prom.Selector{Metric: "kube_node_info", Equal: scope}.String() + "))",
+		"count(count by (node) (max_over_time(" + prom.Selector{Metric: "kube_node_created", Equal: scope}.String() + "[" + seconds + "s]) > time() - " + seconds + "))",
+		"count(count by (namespace, pod) (" + prom.Selector{Metric: "kube_pod_status_unschedulable", Equal: scope}.String() + " == 1))",
+	}
+	var values [5]Number
+	for i, query := range queries {
+		answer, err := q.Query(ctx, query, in.Window.End)
 		if err != nil {
 			return AutoscalingEvidence{}, err
 		}
-		values[i] = observedValue(series, metric.sum)
+		values[i] = largest(answer)
 	}
+	info, writes, nodes, added, unschedulable := values[0], values[1], values[2], values[3], values[4]
 
-	anyKnown := false
-	for _, value := range values {
-		anyKnown = anyKnown || value.Known
+	status := AutoscalingDisabled
+	if (writes.Known && writes.Value > 0) || (!writes.Known && info.Known) {
+		status = AutoscalingEnabled
 	}
-	if !anyKnown {
-		return AutoscalingEvidence{Status: AutoscalingUnknown, Source: discovery.StrategyNone, Confidence: discovery.ConfidenceUnknown}, nil
+	if !nodes.Known {
+		added, unschedulable = Number{}, Number{}
+	} else {
+		added, unschedulable = orZero(added), orZero(unschedulable)
 	}
 	return AutoscalingEvidence{
-		Status:            AutoscalingEnabled,
+		Status:            status,
 		Source:            discovery.StrategyRawMetrics,
 		Confidence:        discovery.ConfidenceInferred,
-		ManagedNodeGroups: truncated(values[0]),
-		CurrentNodes:      truncated(values[1]),
-		MinNodes:          truncated(values[2]),
-		MaxNodes:          truncated(values[3]),
-		ScaleEvents:       values[4],
-		UnschedulablePods: values[5],
+		CurrentNodes:      nodes,
+		ScaleEvents:       added,
+		UnschedulablePods: unschedulable,
 	}, nil
 }
 
-// truncated drops the fraction of a known number, toward zero. The sum with
-// zero turns a negative zero into a positive one, as int() does.
-func truncated(n Number) Number {
-	if n.Known {
-		n.Value = math.Trunc(n.Value) + 0
+// largest returns the largest valid, finite value of an instant answer, or
+// an unknown number when it holds none: each replica of kube-state-metrics
+// answers with a sample of its own.
+func largest(samples []prom.Sample) Number {
+	var n Number
+	for _, s := range samples {
+		if s.Valid && isFinite(s.Value) && (!n.Known || s.Value > n.Value) {
+			n = Number{Value: s.Value, Known: true}
+		}
 	}
 	return n
 }
 
-// observedValue follows _observed_value of the original. The group of a
-// series is its first non-empty group label. With grouped series and sum,
-// the current of each group is taken and the currents are added in the order
-// the groups first hold a sample; without sum, the grouped series alone are merged
-// into one. With no grouped series, every series is merged into one. The
-// merge takes the maximum per timestamp.
-func observedValue(series []prom.Series, sum bool) Number {
-	var groupedSeries []prom.Series
-	var order []string
-	for _, item := range series {
-		group := groupOf(item.Labels)
-		if group == "" {
-			continue
-		}
-		groupedSeries = append(groupedSeries, prom.Series{Labels: map[string]string{autoscalerGroupKey: group}, Points: item.Points})
-		if !hasFinitePoint(item) || slices.Contains(order, group) {
-			continue
-		}
-		order = append(order, group)
+// orZero reads an empty answer as zero: once kube-state-metrics answered for
+// the nodes, no created node or no unschedulable pod is a count of none.
+func orZero(n Number) Number {
+	if n.Known {
+		return n
 	}
-
-	if len(groupedSeries) > 0 && sum {
-		reduced := ReduceMax(groupedSeries, []string{autoscalerGroupKey})
-		var currents []float64
-		for _, group := range order {
-			if current := currentOf(reduced, Key{group}); current.Known {
-				currents = append(currents, current.Value)
-			}
-		}
-		if len(currents) == 0 {
-			return Number{}
-		}
-		return Number{Value: arith.Sum(currents), Known: true}
-	}
-	if len(groupedSeries) > 0 {
-		series = groupedSeries
-	}
-	for _, statistics := range ReduceMax(series, nil) {
-		if statistics.State == StateValue {
-			return Number{Value: statistics.Current, Known: true}
-		}
-	}
-	return Number{}
-}
-
-// hasFinitePoint reports whether the series holds a point that the reduction
-// keeps: a valid one, with a finite time and a finite value.
-func hasFinitePoint(series prom.Series) bool {
-	return slices.ContainsFunc(series.Points, func(p prom.Point) bool {
-		return p.Valid && isFinite(p.Time) && isFinite(p.Value)
-	})
-}
-
-// groupOf returns the first non-empty node group label, or the empty text.
-func groupOf(labels map[string]string) string {
-	for _, label := range autoscalerGroupLabels {
-		if labels[label] != "" {
-			return labels[label]
-		}
-	}
-	return ""
+	return Number{Value: 0, Known: true}
 }

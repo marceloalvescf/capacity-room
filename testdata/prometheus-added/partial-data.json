@@ -1,1 +1,4 @@
-{"requests": []}
+{"requests": [
+    {"method": "POST", "path": "/api/v1/query", "query_contains": "count(kube_configmap_info", "status": 200,
+     "body": {"status": "success", "data": {"resultType": "vector", "result": []}}}
+  ]}

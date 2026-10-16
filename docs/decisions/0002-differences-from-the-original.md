@@ -47,3 +47,21 @@ writes no finding, so a node that was not ready read as healthy. The
 recorded scenario `edge-scaling` holds one such node, `pool-a-2`; the
 comparison removes its two findings and their two recommendations, and
 lowers the counts of findings, recommendations, and attention by two.
+
+## Node autoscaling from kube-state-metrics
+
+The original reads node autoscaling from the metrics of the cluster
+autoscaler: a probe `count({__name__=~"cluster_autoscaler_.+"})` and six
+range queries of `cluster_autoscaler_*`. A managed autoscaler, as on AKS,
+exports none of them to a Prometheus inside the cluster, so the original
+says on every such cluster that the state could not be determined. This
+project reads the status ConfigMap of the cluster autoscaler and the nodes
+from kube-state-metrics instead (design, node autoscaling, 2026-10-16).
+
+The comparison with `testdata/python` therefore leaves out, on both sides:
+the node autoscaling probe and the collector's queries in the lists of
+queries; `summary.autoscaling` and the autoscaling collection state; and
+every `NODE_AUTOSCALING_*` finding, with its recommendation, its executive
+row, and its count in the severity totals; and the row of the node
+autoscaling capability in the executive material limitations. Every other
+query, number, and finding is still compared.

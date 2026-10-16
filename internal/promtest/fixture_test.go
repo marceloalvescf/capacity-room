@@ -335,3 +335,37 @@ func TestMergeKeepsTheOrderOfEachFixture(t *testing.T) {
 		t.Fatalf("paths = %q, want %q", paths, want)
 	}
 }
+
+// TestLoadScenarioHoldsTheAddedAnswersFirst pins the requests of a scenario
+// as the added answers and then the recorded ones: six added answers for
+// each scenario whose collector asks node autoscaling questions, one (the
+// probe) for the two that do not.
+func TestLoadScenarioHoldsTheAddedAnswersFirst(t *testing.T) {
+	cases := []struct {
+		name     string
+		requests int
+	}{
+		{"direct-complete", 76},
+		{"grafana-authenticated", 76},
+		{"thanos-multicluster", 76},
+		{"raw-fallback", 79},
+		{"partial-data", 64},
+		{"value-edge-cases", 71},
+		{"edge-values", 76},
+		{"edge-scaling", 76},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			fixture, err := LoadScenario(c.name)
+			if err != nil {
+				t.Fatalf("LoadScenario(%q): %v", c.name, err)
+			}
+			if got := len(fixture.Requests); got != c.requests {
+				t.Fatalf("len(fixture.Requests) = %d, want %d", got, c.requests)
+			}
+			if got := fixture.Requests[0].QueryContains; got != "count(kube_configmap_info" {
+				t.Fatalf("first request answers %q, want the probe of the ConfigMaps", got)
+			}
+		})
+	}
+}

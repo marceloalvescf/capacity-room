@@ -48,18 +48,18 @@
       "status": null
     },
     "recommendations": {
-      "raw": 8,
-      "text": "8",
+      "raw": 7,
+      "text": "7",
       "status": null
     },
     "healthy": {
-      "raw": 5,
-      "text": "5",
+      "raw": 6,
+      "text": "6",
       "status": null
     },
     "attention": {
-      "raw": 4,
-      "text": "4",
+      "raw": 3,
+      "text": "3",
       "status": null
     },
     "critical": {
@@ -77,23 +77,23 @@
       "source": "raw_metrics",
       "confidence": "inferred",
       "managed_node_groups": {
-        "raw": 2,
-        "text": "2",
+        "raw": null,
+        "text": "Indisponível",
         "status": null
       },
       "current_nodes": {
-        "raw": 3,
-        "text": "3",
-        "status": null
-      },
-      "min_nodes": {
         "raw": 1,
         "text": "1",
         "status": null
       },
+      "min_nodes": {
+        "raw": null,
+        "text": "Indisponível",
+        "status": null
+      },
       "max_nodes": {
-        "raw": 3,
-        "text": "3",
+        "raw": null,
+        "text": "Indisponível",
         "status": null
       },
       "scale_events": {
@@ -198,28 +198,6 @@
       ]
     },
     {
-      "code": "NODE_AUTOSCALING_NEAR_MAX",
-      "severity": "attention",
-      "scope_type": "cluster",
-      "scope_kind": "",
-      "scope_name": "cluster",
-      "confidence": "inferred",
-      "sentence": "O número de nodes atingiu ou ficou próximo do máximo observado.",
-      "action": "Revisar o máximo configurado e a margem do cluster.",
-      "evidence": [
-        {
-          "name": "current_nodes",
-          "raw": 3,
-          "text": "3"
-        },
-        {
-          "name": "max_nodes",
-          "raw": 3,
-          "text": "3"
-        }
-      ]
-    },
-    {
       "code": "NAMESPACE_CPU_REQUEST_ATTENTION",
       "severity": "attention",
       "scope_type": "namespace",
@@ -279,6 +257,17 @@
           "text": "80%"
         }
       ]
+    },
+    {
+      "code": "NODE_AUTOSCALING_ENABLED",
+      "severity": "healthy",
+      "scope_type": "cluster",
+      "scope_kind": "",
+      "scope_name": "cluster",
+      "confidence": "inferred",
+      "sentence": "Autoscaling de nodes habilitado com margem observada.",
+      "action": "",
+      "evidence": []
     },
     {
       "code": "NODE_CPU_USAGE_HEALTHY",
@@ -439,7 +428,7 @@
         "payments/payments-web"
       ],
       "scope_text": "payments/payments-web",
-      "finding": 6
+      "finding": 5
     },
     {
       "code": "NAMESPACE_CPU_REQUEST_ATTENTION",
@@ -451,7 +440,7 @@
         "payments"
       ],
       "scope_text": "payments",
-      "finding": 5
+      "finding": 4
     },
     {
       "code": "WORKLOAD_CPU_REQUEST_ATTENTION",
@@ -463,18 +452,13 @@
         "payments/payments-web"
       ],
       "scope_text": "payments/payments-web",
-      "finding": 7
+      "finding": 6
     }
   ],
   "verdict": {
-    "cluster_finding": 4,
+    "cluster_finding": 7,
     "node_evidence_warning": null,
-    "gauge": {
-      "current": 3,
-      "max": 3,
-      "min": 1,
-      "hazard": "attention"
-    },
+    "gauge": null,
     "pressure": [
       {
         "scope_type": "namespace",
@@ -493,7 +477,7 @@
       {
         "scope_type": "hpa",
         "severity": "attention",
-        "finding": 6,
+        "finding": 5,
         "critical": 0,
         "attention": 1
       }
@@ -1487,7 +1471,7 @@
         "state": "available",
         "strategy": "raw_metrics",
         "evidence": [
-          "cluster_autoscaler_*"
+          "kube_configmap_info"
         ],
         "remark": ""
       }

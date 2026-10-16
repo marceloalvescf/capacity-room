@@ -1418,12 +1418,14 @@ type autoscalingShape struct {
 }
 
 // autoscalingShapes are the combinations analysis writes: a configured
-// mode, no evidence at all, and the evidence of the raw metrics.
+// mode, no evidence at all, and the evidence of kube-state-metrics, enabled
+// or disabled.
 var autoscalingShapes = []autoscalingShape{
 	{collect.AutoscalingEnabled, discovery.StrategyConfigured, discovery.ConfidenceExact},
 	{collect.AutoscalingDisabled, discovery.StrategyConfigured, discovery.ConfidenceExact},
 	{collect.AutoscalingUnknown, discovery.StrategyNone, discovery.ConfidenceUnknown},
 	{collect.AutoscalingEnabled, discovery.StrategyRawMetrics, discovery.ConfidenceInferred},
+	{collect.AutoscalingDisabled, discovery.StrategyRawMetrics, discovery.ConfidenceInferred},
 }
 
 // checkAutoscaling refuses an autoscaling whose status, source, or

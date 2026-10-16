@@ -51,36 +51,18 @@
       "quality": null,
       "growth": {
         "title": "Cluster autoscaling",
-        "current": "3",
-        "max": "3",
-        "state": null,
-        "gauge": {
-          "current": 3,
-          "max": 3,
-          "min": 1,
-          "hazard": true
-        },
-        "caption": "Nodes · current / maximum",
+        "current": null,
+        "max": null,
+        "state": "Disabled",
+        "gauge": null,
+        "caption": null,
         "finding": {
           "status": "attention",
           "label": "Attention",
-          "sentence": "The number of nodes reached or came close to the observed maximum."
+          "sentence": "Node autoscaling is configured as disabled."
         },
         "warning": null,
-        "facts": [
-          {
-            "label": "Minimum nodes",
-            "value": "1"
-          },
-          {
-            "label": "Unschedulable pods",
-            "value": "1"
-          },
-          {
-            "label": "Scale events",
-            "value": "1"
-          }
-        ]
+        "facts": []
       },
       "pressure": {
         "title": "Pressure by scope",

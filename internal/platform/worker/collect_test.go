@@ -377,7 +377,7 @@ func closedEndpoint(t *testing.T) string {
 const preflightRequests = 29
 
 // emptyCollectors answers the preflight of direct-complete as recorded,
-// except the probe of the cluster autoscaler metrics, and every later
+// except the probe of the ConfigMaps, and every later
 // request with an empty result.
 func emptyCollectors(t *testing.T) http.Handler {
 	t.Helper()
@@ -386,7 +386,7 @@ func emptyCollectors(t *testing.T) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		n := received.Add(1)
-		if n <= preflightRequests && !strings.Contains(r.PostFormValue("query"), "cluster_autoscaler_") {
+		if n <= preflightRequests && !strings.Contains(r.PostFormValue("query"), "kube_configmap_info") {
 			fake.ServeHTTP(w, r)
 			return
 		}

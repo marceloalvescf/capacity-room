@@ -1,1 +1,14 @@
-{"requests": []}
+{"requests": [
+    {"method": "POST", "path": "/api/v1/query", "query_contains": "count(kube_configmap_info", "status": 200,
+     "body": {"status": "success", "data": {"resultType": "vector", "result": [{"metric": {}, "value": [1784136600, "5"]}]}}},
+    {"method": "POST", "path": "/api/v1/query", "query_contains": "max_over_time(kube_configmap_info", "status": 200,
+     "body": {"status": "success", "data": {"resultType": "vector", "result": []}}},
+    {"method": "POST", "path": "/api/v1/query", "query_contains": "changes(kube_configmap_metadata_resource_version", "status": 200,
+     "body": {"status": "success", "data": {"resultType": "vector", "result": []}}},
+    {"method": "POST", "path": "/api/v1/query", "query_contains": "count(count by (node) (kube_node_info", "status": 200,
+     "body": {"status": "success", "data": {"resultType": "vector", "result": [{"metric": {}, "value": [1784136600, "1"]}]}}},
+    {"method": "POST", "path": "/api/v1/query", "query_contains": "max_over_time(kube_node_created", "status": 200,
+     "body": {"status": "success", "data": {"resultType": "vector", "result": []}}},
+    {"method": "POST", "path": "/api/v1/query", "query_contains": "kube_pod_status_unschedulable", "status": 200,
+     "body": {"status": "success", "data": {"resultType": "vector", "result": []}}}
+  ]}

@@ -33,12 +33,12 @@
           {
             "status": "critical",
             "label": "Critical",
-            "count": "9"
+            "count": "10"
           },
           {
             "status": "attention",
             "label": "Attention",
-            "count": "12"
+            "count": "11"
           },
           {
             "status": "healthy",
@@ -59,36 +59,18 @@
       },
       "growth": {
         "title": "Cluster autoscaling",
-        "current": "3",
-        "max": "3",
-        "state": null,
-        "gauge": {
-          "current": 3,
-          "max": 3,
-          "min": 2,
-          "hazard": true
-        },
-        "caption": "Nodes · current / maximum",
+        "current": null,
+        "max": null,
+        "state": "Disabled",
+        "gauge": null,
+        "caption": null,
         "finding": {
-          "status": "attention",
-          "label": "Attention",
-          "sentence": "The number of nodes reached or came close to the observed maximum."
+          "status": "critical",
+          "label": "Critical",
+          "sentence": "Node autoscaling is configured as disabled."
         },
         "warning": "The capacity evidence of the nodes is incomplete.",
-        "facts": [
-          {
-            "label": "Minimum nodes",
-            "value": "2"
-          },
-          {
-            "label": "Unschedulable pods",
-            "value": "2"
-          },
-          {
-            "label": "Scale events",
-            "value": "1"
-          }
-        ]
+        "facts": []
       },
       "pressure": {
         "title": "Pressure by scope",

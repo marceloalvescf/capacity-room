@@ -914,6 +914,8 @@ func compareExecutive(scenario string, snap snapshot.Snapshot, want map[string]p
 	nodeUtilization := title(catalog.CapabilityName("node_utilization"))
 	interpretation := title(catalog.SectionsExecutiveInterpretation)
 	partialTitle := title(catalog.SectionsHPAsNotePartialTitle)
+	nodeAutoscaling := title(catalog.CapabilityName("node_autoscaling"))
+	const originalNodeAutoscaling = "Escalonamento autom\u00e1tico de n\u00f3s"
 
 	for _, minimum := range []string{"attention", "critical"} {
 		recorded, ok := want[minimum]
@@ -953,7 +955,13 @@ func compareExecutive(scenario string, snap snapshot.Snapshot, want map[string]p
 			if table, ok := doc.Blocks[pos+1].(document.Table); ok {
 				rows = table.Rows
 			}
-			diffs = append(diffs, compareExecutiveRows(label, indexes, nodeUtilizationAsInterpretation(snap, sub.name, nodeUtilization, interpretation, rows), originalPlanCells(sub.name, rows, originalLimitationMarks(sub.name, sub.rows(recorded))))...)
+			gotRows := nodeUtilizationAsInterpretation(snap, sub.name, nodeUtilization, interpretation, rows)
+			wantRows := originalPlanCells(sub.name, rows, originalLimitationMarks(sub.name, sub.rows(recorded)))
+			if sub.name == "material_limitations" {
+				gotRows = withoutNodeAutoscalingLimitation(gotRows, nodeAutoscaling)
+				wantRows = withoutRecordedNodeAutoscalingLimitation(wantRows, originalNodeAutoscaling)
+			}
+			diffs = append(diffs, compareExecutiveRows(label, indexes, gotRows, wantRows)...)
 
 			if sub.name == "replica_ceiling" && pos+2 < len(doc.Blocks) {
 				if callout, ok := doc.Blocks[pos+2].(document.Callout); ok {
@@ -1511,29 +1519,6 @@ func compareNodepools(scenario string, got []snapshot.NodePool, want []pythonNod
 	return append(diffs, compareKeyOrder(scenario, "nodepools", gotNames, wantNames)...)
 }
 
-// compareAutoscaling compares the autoscaling of the snapshot summary with
-// the recorded one, field by field.
-func compareAutoscaling(scenario string, got snapshot.Autoscaling, want pythonAutoscaling) []string {
-	label := scenario + ": autoscaling"
-	var diffs []string
-	if got.Status != want.Status {
-		diffs = append(diffs, fmt.Sprintf("%s: status: got %q, want %q", label, got.Status, want.Status))
-	}
-	if got.Source != want.Source {
-		diffs = append(diffs, fmt.Sprintf("%s: source: got %q, want %q", label, got.Source, want.Source))
-	}
-	if got.Confidence != want.Confidence {
-		diffs = append(diffs, fmt.Sprintf("%s: confidence: got %q, want %q", label, got.Confidence, want.Confidence))
-	}
-	diffs = append(diffs, comparePointer(label, "managed_node_groups", got.ManagedNodeGroups, want.ManagedNodeGroups)...)
-	diffs = append(diffs, comparePointer(label, "current_nodes", got.CurrentNodes, want.CurrentNodes)...)
-	diffs = append(diffs, comparePointer(label, "min_nodes", got.MinNodes, want.MinNodes)...)
-	diffs = append(diffs, comparePointer(label, "max_nodes", got.MaxNodes, want.MaxNodes)...)
-	diffs = append(diffs, comparePointer(label, "scale_events", got.ScaleEvents, want.ScaleEvents)...)
-	diffs = append(diffs, comparePointer(label, "unschedulable_pods", got.UnschedulablePods, want.UnschedulablePods)...)
-	return diffs
-}
-
 // nodePressure reports whether any finding of scope node or nodepool is at
 // attention or above.
 func nodePressure(findings []snapshot.Finding) bool {
@@ -1545,8 +1530,9 @@ func nodePressure(findings []snapshot.Finding) bool {
 	return false
 }
 
-// compareCollectionStates compares the states of the five collectors and
-// the status of the cluster autoscaling evidence with the recorded ones.
+// compareCollectionStates compares the states of the five collectors with
+// the recorded ones. The status of the node autoscaling is left out: this
+// project reads it from kube-state-metrics (decision 0002).
 func compareCollectionStates(scenario string, collected collect.Collected, want pythonRecording) []string {
 	var diffs []string
 	for _, c := range []struct{ name, got, want string }{
@@ -1555,7 +1541,6 @@ func compareCollectionStates(scenario string, collected collect.Collected, want 
 		{"hpa_collection", collected.HPAs.State, want.HPACollection},
 		{"hpa_coverage_collection", collected.Coverage.State, want.HPACoverageCollection},
 		{"node_collection", collected.Nodes.State, want.NodeCollection},
-		{"autoscaling_status", collected.Autoscaling.Status, want.AutoscalingStatus},
 	} {
 		if c.got != c.want {
 			diffs = append(diffs, fmt.Sprintf("%s: %s: got %q, want %q", scenario, c.name, c.got, c.want))
@@ -1573,6 +1558,8 @@ func compareCollectionStates(scenario string, collected collect.Collected, want 
 // field, with both values.
 func compareNumbers(scenario string, snap snapshot.Snapshot, collected collect.Collected, want pythonRecording) []string {
 	snap, _ = withoutRuledCodes(snap)
+	snap = withoutNodeAutoscaling(snap)
+	want = withoutNodeAutoscalingRecording(want)
 	var diffs []string
 	diffs = append(diffs, compareNamespaces(scenario, snap.Namespaces, collected.Namespaces.Rows, want.Namespaces)...)
 	diffs = append(diffs, compareWorkloads(scenario, snap.Workloads, collected.Workloads.Rows, want.Workloads)...)
@@ -1580,7 +1567,6 @@ func compareNumbers(scenario string, snap snapshot.Snapshot, collected collect.C
 	diffs = append(diffs, compareUncovered(scenario, snap.Workloads, want.WorkloadsWithoutHPA)...)
 	diffs = append(diffs, compareNodes(scenario, snap.Nodes, want.Nodes)...)
 	diffs = append(diffs, compareNodepools(scenario, snap.Nodepools, want.Nodepools)...)
-	diffs = append(diffs, compareAutoscaling(scenario, snap.Summary.Autoscaling, want.Autoscaling)...)
 	if got := nodePressure(snap.Findings); got != want.NodePressure {
 		diffs = append(diffs, fmt.Sprintf("%s: node_pressure: got %v, want %v", scenario, got, want.NodePressure))
 	}
@@ -1630,8 +1616,8 @@ func TestNumbersEqualTheOriginal(t *testing.T) {
 
 // TestCollectionStatesEqualTheOriginal checks, for each of the eight
 // scenarios, that the states of the five collectors equal the five
-// collection states of the recorded file, and that the status of the
-// cluster autoscaling evidence equals autoscaling_status.
+// collection states of the recorded file. The status of the node autoscaling
+// is not compared: see docs/decisions/0002-differences-from-the-original.md.
 func TestCollectionStatesEqualTheOriginal(t *testing.T) {
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
@@ -1663,9 +1649,6 @@ func TestCollectionStatesEqualTheOriginal(t *testing.T) {
 			}
 			if out.Collected.Nodes.State != want.NodeCollection {
 				t.Errorf("%s: node collector state: got %q, want %q", scenario.Name, out.Collected.Nodes.State, want.NodeCollection)
-			}
-			if out.Collected.Autoscaling.Status != want.AutoscalingStatus {
-				t.Errorf("%s: autoscaling status: got %q, want %q", scenario.Name, out.Collected.Autoscaling.Status, want.AutoscalingStatus)
 			}
 		})
 	}
@@ -1725,20 +1708,58 @@ func readQueriesLines(t *testing.T, path string) []string {
 	return strings.Split(strings.TrimRight(string(data), "\n"), "\n")
 }
 
+// originalAutoscalerQueries and projectAutoscalerQueries say how many lines
+// of its list of queries each side loses to the difference of node
+// autoscaling (docs/decisions/0002-differences-from-the-original.md): the
+// original asks the probe and six range queries of the cluster autoscaler,
+// this project the probe of the ConfigMaps and five instant queries; with the
+// mode configured, or no ConfigMap found, only the probe is asked.
+var (
+	originalAutoscalerQueries = map[string]int{
+		"direct-complete": 7, "grafana-authenticated": 7, "thanos-multicluster": 7, "raw-fallback": 7,
+		"partial-data": 7, "value-edge-cases": 1, "edge-values": 7, "edge-scaling": 7,
+	}
+	projectAutoscalerQueries = map[string]int{
+		"direct-complete": 6, "grafana-authenticated": 6, "thanos-multicluster": 6, "raw-fallback": 6,
+		"partial-data": 1, "value-edge-cases": 1, "edge-values": 6, "edge-scaling": 6,
+	}
+)
+
+// withoutLinesHolding returns lines without those that hold one of parts, and
+// how many it left out.
+func withoutLinesHolding(lines []string, parts ...string) ([]string, int) {
+	var kept []string
+	for _, line := range lines {
+		if slices.ContainsFunc(parts, func(part string) bool { return strings.Contains(line, part) }) {
+			continue
+		}
+		kept = append(kept, line)
+	}
+	return kept, len(lines) - len(kept)
+}
+
 // TestQueriesEqualTheOriginal checks, for each of the eight scenarios,
 // that the project's own golden queries file equals the recorded queries
 // file of the original line for line, whole, and that neither is longer
-// than the other.
+// than the other, once each side has lost the lines of node autoscaling,
+// whose number is pinned for each scenario.
 func TestQueriesEqualTheOriginal(t *testing.T) {
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
-			projectLines := queriesLines(t, scenario)
 			originalPath, err := pythonQueriesPath(scenario.Name)
 			if err != nil {
 				t.Fatalf("pythonQueriesPath(%s): %v", scenario.Name, err)
 			}
-			originalLines := readQueriesLines(t, originalPath)
+			projectLines, projectLeft := withoutLinesHolding(queriesLines(t, scenario),
+				"kube_configmap_", "kube_node_created", "kube_pod_status_unschedulable", "count(count by (node) (kube_node_info")
+			originalLines, originalLeft := withoutLinesHolding(readQueriesLines(t, originalPath), "cluster_autoscaler_")
 
+			if projectLeft != projectAutoscalerQueries[scenario.Name] {
+				t.Errorf("%s: the project lost %d lines of node autoscaling, want %d", scenario.Name, projectLeft, projectAutoscalerQueries[scenario.Name])
+			}
+			if originalLeft != originalAutoscalerQueries[scenario.Name] {
+				t.Errorf("%s: the original lost %d lines of node autoscaling, want %d", scenario.Name, originalLeft, originalAutoscalerQueries[scenario.Name])
+			}
 			if len(projectLines) != len(originalLines) {
 				t.Errorf("%s: the project's list holds %d lines, the original's %d", scenario.Name, len(projectLines), len(originalLines))
 			}
@@ -1965,7 +1986,7 @@ func TestComparisonCanFail(t *testing.T) {
 		want := fresh(t)
 		idx := -1
 		for i := range want.Findings {
-			if want.Findings[i].Confidence == "inferred" {
+			if want.Findings[i].Confidence == "inferred" && !isNodeAutoscalingCode(want.Findings[i].Code) {
 				idx = i
 				break
 			}
@@ -2145,11 +2166,17 @@ func TestComparisonCanFail(t *testing.T) {
 		})
 	})
 
-	t.Run("a number of the autoscaling changed", func(t *testing.T) {
+	t.Run("a finding of the nodes changed", func(t *testing.T) {
 		want := freshScaling(t)
-		want.Autoscaling.MaxNodes = floatPtr(4)
+		idx := slices.IndexFunc(want.Findings, func(f pythonFinding) bool { return f.Code == "NODE_OVERREQUESTED" })
+		if idx < 0 {
+			t.Fatal("edge-scaling holds no finding NODE_OVERREQUESTED")
+		}
+		f := want.Findings[idx]
+		key := findingKey{f.Code, f.ScopeType, f.ScopeName, f.ScopeKind}
+		want.Findings[idx].Severity = analysis.SeverityCritical
 		checkScaling(t, want, []string{
-			scaling.Name + ": autoscaling: max_nodes: got 3, want 4",
+			findingLabel(scaling.Name, key) + `: severity: got "attention", want "critical"`,
 		})
 	})
 
@@ -2201,7 +2228,9 @@ func TestComparisonCanFail(t *testing.T) {
 		want := freshScaling(t)
 		want.Summary.Recommendations = 20
 		checkScaling(t, want, []string{
-			scaling.Name + ": summary.recommendations: got 19, want 20",
+			// The recording holds one recommendation of node autoscaling less
+			// than it says once the comparison leaves those out.
+			scaling.Name + ": summary.recommendations: got 18, want 19",
 		})
 	})
 
@@ -2559,11 +2588,34 @@ var ruledCodes = []string{"NODE_NOT_READY", "NODE_UNSCHEDULABLE"}
 // removed, and the number of findings removed for each ruled code. snap
 // itself is left as it is.
 func withoutRuledCodes(snap snapshot.Snapshot) (snapshot.Snapshot, map[string]int) {
+	return withoutCodes(snap, func(code string) bool { return slices.Contains(ruledCodes, code) })
+}
+
+// withoutNodeAutoscaling returns a copy of snap without the findings and the
+// recommendations of node autoscaling, its summary counts lowered by what it
+// removed. This project reads node autoscaling from kube-state-metrics and
+// the original from the cluster autoscaler, a decision of
+// docs/decisions/0002-differences-from-the-original.md.
+func withoutNodeAutoscaling(snap snapshot.Snapshot) snapshot.Snapshot {
+	out, _ := withoutCodes(snap, isNodeAutoscalingCode)
+	return out
+}
+
+// isNodeAutoscalingCode reports whether code is a finding of node
+// autoscaling.
+func isNodeAutoscalingCode(code string) bool {
+	return strings.HasPrefix(code, "NODE_AUTOSCALING_")
+}
+
+// withoutCodes returns a copy of snap without the findings and the
+// recommendations whose code ruled holds, its summary counts lowered by what
+// it removed, and the number of findings removed for each code.
+func withoutCodes(snap snapshot.Snapshot, ruled func(code string) bool) (snapshot.Snapshot, map[string]int) {
 	removed := map[string]int{}
 	out := snap
 	out.Findings = nil
 	for _, f := range snap.Findings {
-		if !slices.Contains(ruledCodes, f.Code) {
+		if !ruled(f.Code) {
 			out.Findings = append(out.Findings, f)
 			continue
 		}
@@ -2580,7 +2632,7 @@ func withoutRuledCodes(snap snapshot.Snapshot) (snapshot.Snapshot, map[string]in
 	}
 	out.Recommendations = nil
 	for _, r := range snap.Recommendations {
-		if slices.Contains(ruledCodes, r.Code) {
+		if ruled(r.Code) {
 			out.Summary.Recommendations--
 			continue
 		}
@@ -2656,4 +2708,93 @@ func TestEdgeScalingWritesTheReadinessFindings(t *testing.T) {
 	if d := out.Snapshot.Summary.Attention - filtered.Summary.Attention; d != 2 {
 		t.Errorf("attention lowered by %v, want 2", d)
 	}
+}
+
+// withoutNodeAutoscalingRecording returns a copy of the recorded file without
+// the node autoscaling of the original: its findings and recommendations,
+// their counts in the summary, and the rows of the action plan that carry the
+// action of a removed recommendation, the rows after them numbered again. The
+// recorded file itself is left as it is.
+func withoutNodeAutoscalingRecording(want pythonRecording) pythonRecording {
+	out := want
+	out.Findings = nil
+	for _, f := range want.Findings {
+		if !isNodeAutoscalingCode(f.Code) {
+			out.Findings = append(out.Findings, f)
+			continue
+		}
+		out.Summary.Findings--
+		switch f.Severity {
+		case analysis.SeverityHealthy:
+			out.Summary.Healthy--
+		case analysis.SeverityAttention:
+			out.Summary.Attention--
+		case analysis.SeverityCritical:
+			out.Summary.Critical--
+		}
+	}
+	var actions []string
+	out.Recommendations = nil
+	for _, r := range want.Recommendations {
+		if isNodeAutoscalingCode(r.Code) {
+			out.Summary.Recommendations--
+			actions = append(actions, r.Action)
+			continue
+		}
+		out.Recommendations = append(out.Recommendations, r)
+	}
+	out.Executive = make(map[string]pythonExecutive, len(want.Executive))
+	for minimum, executive := range want.Executive {
+		executive.ActionPlan = withoutActions(executive.ActionPlan, actions)
+		out.Executive[minimum] = executive
+	}
+	return out
+}
+
+// withoutActions returns the rows of an action plan without those whose
+// action cell holds one of actions, a parenthesised qualifier of the original
+// left out, the others numbered again from one.
+func withoutActions(rows [][][]pythonRun, actions []string) [][][]pythonRun {
+	var out [][][]pythonRun
+	for _, row := range rows {
+		text := row[2][0].Text
+		for _, qualifier := range originalQualifiers {
+			text = strings.TrimSuffix(text, " ("+qualifier+")")
+		}
+		if slices.Contains(actions, text) {
+			continue
+		}
+		renumbered := slices.Clone(row)
+		renumbered[0] = []pythonRun{{Kind: row[0][0].Kind, Text: strconv.Itoa(len(out) + 1)}}
+		out = append(out, renumbered)
+	}
+	return out
+}
+
+// withoutNodeAutoscalingLimitation returns the rows of the material
+// limitations without the one for the node autoscaling capability, whose name
+// is the text of its first cell. The project and the original read that
+// capability from different metrics.
+func withoutNodeAutoscalingLimitation(rows [][][]document.Run, name string) [][][]document.Run {
+	var out [][][]document.Run
+	for _, row := range rows {
+		if runs, err := runsOf(row[0]); err == nil && len(runs) == 1 && runs[0].Text == name {
+			continue
+		}
+		out = append(out, row)
+	}
+	return out
+}
+
+// withoutRecordedNodeAutoscalingLimitation is withoutNodeAutoscalingLimitation
+// for the recorded rows.
+func withoutRecordedNodeAutoscalingLimitation(rows [][][]pythonRun, name string) [][][]pythonRun {
+	var out [][][]pythonRun
+	for _, row := range rows {
+		if len(row[0]) == 1 && row[0][0].Text == name {
+			continue
+		}
+		out = append(out, row)
+	}
+	return out
 }

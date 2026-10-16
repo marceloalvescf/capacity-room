@@ -2,7 +2,6 @@ package analysis
 
 import (
 	"github.com/marceloalvescf/capacity-room/internal/collect"
-	"github.com/marceloalvescf/capacity-room/internal/config"
 	"github.com/marceloalvescf/capacity-room/internal/discovery"
 )
 
@@ -24,12 +23,12 @@ func NodePressure(nodeFindings, poolFindings []Finding) bool {
 	return false
 }
 
-// Autoscaling follows analyze_autoscaling of the original: no finding when
-// the evidence holds no status, as when the original has no evidence;
-// otherwise one finding, the
-// first that holds of unknown, disabled, near maximum, bounds unknown, at
-// minimum, and enabled.
-func Autoscaling(a collect.AutoscalingEvidence, t config.Thresholds, nodePressure bool) []Finding {
+// Autoscaling gives no finding when the evidence holds no status, as when
+// the original has no evidence; otherwise one finding, the first that holds
+// of unknown, disabled, and enabled. The registry keeps the codes of near
+// maximum, bounds unknown, and at minimum for reports stored before; they are
+// no longer given.
+func Autoscaling(a collect.AutoscalingEvidence, nodePressure bool) []Finding {
 	finding := func(code, severity string, evidence ...Evidence) []Finding {
 		return []Finding{{
 			Code:       code,
@@ -56,16 +55,5 @@ func Autoscaling(a collect.AutoscalingEvidence, t config.Thresholds, nodePressur
 		return finding("NODE_AUTOSCALING_DISABLED", SeverityAttention, evidence)
 	}
 
-	current, lowest, highest := a.CurrentNodes, a.MinNodes, a.MaxNodes
-	if highest.Known && highest.Value > 0 && current.Known && current.Value/highest.Value*100 >= t.AutoscalerNearMaxPercent {
-		return finding("NODE_AUTOSCALING_NEAR_MAX", SeverityAttention,
-			Evidence{Name: "current_nodes", Value: Number(current.Value)}, Evidence{Name: "max_nodes", Value: Number(highest.Value)})
-	}
-	if !highest.Known || !lowest.Known {
-		return finding("NODE_AUTOSCALING_BOUNDS_UNKNOWN", SeverityHealthy)
-	}
-	if current.Known && current.Value == lowest.Value && !nodePressure {
-		return finding("NODE_AUTOSCALING_AT_MIN", SeverityHealthy, Evidence{Name: "min_nodes", Value: Number(lowest.Value)})
-	}
 	return finding("NODE_AUTOSCALING_ENABLED", SeverityHealthy)
 }

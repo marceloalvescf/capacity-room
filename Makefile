@@ -184,8 +184,10 @@ check-runtime: $(IMAGE_DEP)
 # The end-to-end stack: PostgreSQL, the schema, the first administrator, the
 # profiles, then serve, worker, two fake Prometheus servers, and the Playwright
 # container, whose exit status is the target's. The worker runs the test image
-# whose typst the specs can make fail. Each fake stops with one answer unasked,
-# as a whole run of direct-complete does in internal/goldentest, and no log of
+# whose typst the specs can make fail. Each fake stops with eight answers
+# unasked: the seven recorded answers of the old cluster autoscaler, which the
+# program no longer asks, and the one of an HPA info that nothing asks, as a
+# whole run of direct-complete does in internal/goldentest. No log of
 # the stack holds a secret the run used. The stack is removed with its volumes
 # first and last.
 E2E_COMPOSE := docker compose -f deploy/compose.yaml -f deploy/compose.integration.yaml
@@ -207,8 +209,8 @@ e2e: $(IMAGE_DEP)
 	$(E2E_COMPOSE) stop $(E2E_FAKES); \
 	for fake in $(E2E_FAKES); do \
 		$(E2E_COMPOSE) logs --no-log-prefix $$fake > .cache/e2e/$$fake.log; \
-		grep -qx 'remaining: 1' .cache/e2e/$$fake.log \
-			|| { echo "e2e: $$fake did not leave exactly the one unasked answer; its last lines:"; \
+		grep -qx 'remaining: 8' .cache/e2e/$$fake.log \
+			|| { echo "e2e: $$fake did not leave exactly the eight unasked answers; its last lines:"; \
 			$(E2E_COMPOSE) logs --no-log-prefix --tail 5 $$fake; [ $$status -ne 0 ] || status=1; }; \
 	done; \
 	$(E2E_COMPOSE) logs --no-log-prefix serve worker > .cache/e2e/platform.log \

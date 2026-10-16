@@ -51,15 +51,16 @@ func TestAutoscalingChain(t *testing.T) {
 		{"unknown", evidenceOf("unknown", discovery.ConfidenceUnknown, none, none, none), false, "NODE_AUTOSCALING_UNKNOWN", SeverityAttention, discovery.ConfidenceUnknown, nil, nil},
 		{"disabled", evidenceOf("disabled", discovery.ConfidenceExact, none, none, none), false, "NODE_AUTOSCALING_DISABLED", SeverityAttention, discovery.ConfidenceExact, ptr(false), nil},
 		{"disabled under pressure", evidenceOf("disabled", discovery.ConfidenceExact, none, none, none), true, "NODE_AUTOSCALING_DISABLED_PRESSURE", SeverityCritical, discovery.ConfidenceExact, ptr(true), nil},
-		{"near max", evidenceOf("enabled", discovery.ConfidenceInferred, known(4), known(1), known(5)), false, "NODE_AUTOSCALING_NEAR_MAX", SeverityAttention, discovery.ConfidenceInferred, nil, map[string]float64{"current_nodes": 4, "max_nodes": 5}},
-		{"bounds unknown", evidenceOf("enabled", discovery.ConfidenceExact, none, none, none), false, "NODE_AUTOSCALING_BOUNDS_UNKNOWN", SeverityHealthy, discovery.ConfidenceExact, nil, nil},
-		{"at min", evidenceOf("enabled", discovery.ConfidenceInferred, known(2), known(2), known(10)), false, "NODE_AUTOSCALING_AT_MIN", SeverityHealthy, discovery.ConfidenceInferred, nil, map[string]float64{"min_nodes": 2}},
+		{"near max", evidenceOf("enabled", discovery.ConfidenceInferred, known(4), known(1), known(5)), false, "NODE_AUTOSCALING_ENABLED", SeverityHealthy, discovery.ConfidenceInferred, nil, nil},
+		{"bounds unknown", evidenceOf("enabled", discovery.ConfidenceExact, none, none, none), false, "NODE_AUTOSCALING_ENABLED", SeverityHealthy, discovery.ConfidenceExact, nil, nil},
+		{"at min", evidenceOf("enabled", discovery.ConfidenceInferred, known(2), known(2), known(10)), false, "NODE_AUTOSCALING_ENABLED", SeverityHealthy, discovery.ConfidenceInferred, nil, nil},
 		{"at min under pressure", evidenceOf("enabled", discovery.ConfidenceInferred, known(2), known(2), known(10)), true, "NODE_AUTOSCALING_ENABLED", SeverityHealthy, discovery.ConfidenceInferred, nil, nil},
 		{"enabled", evidenceOf("enabled", discovery.ConfidenceInferred, known(3), known(2), known(10)), false, "NODE_AUTOSCALING_ENABLED", SeverityHealthy, discovery.ConfidenceInferred, nil, nil},
-		{"near max under pressure", evidenceOf("enabled", discovery.ConfidenceInferred, known(4), known(1), known(5)), true, "NODE_AUTOSCALING_NEAR_MAX", SeverityAttention, discovery.ConfidenceInferred, nil, map[string]float64{"current_nodes": 4, "max_nodes": 5}},
+		{"near max under pressure", evidenceOf("enabled", discovery.ConfidenceInferred, known(4), known(1), known(5)), true, "NODE_AUTOSCALING_ENABLED", SeverityHealthy, discovery.ConfidenceInferred, nil, nil},
+		{"current beyond the nodes, no bounds", evidenceOf("enabled", discovery.ConfidenceInferred, known(4), none, none), false, "NODE_AUTOSCALING_ENABLED", SeverityHealthy, discovery.ConfidenceInferred, nil, nil},
 	}
 	for _, c := range cases {
-		f := only(t, Autoscaling(c.evidence, defaultThresholds(), c.pressure))
+		f := only(t, Autoscaling(c.evidence, c.pressure))
 		if f.Code != c.code || f.Severity != c.severity || f.Confidence != c.confidence || f.ScopeType != ScopeCluster || f.ScopeName != "cluster" || f.ScopeKind != "" {
 			t.Errorf("%s: finding = %+v", c.name, f)
 		}
@@ -83,23 +84,9 @@ func TestAutoscalingChain(t *testing.T) {
 
 func ptr(b bool) *bool { return &b }
 
-func TestAutoscalingNearMaxIsIntegerDivision(t *testing.T) {
-	t.Parallel()
-	e := evidenceOf("enabled", discovery.ConfidenceInferred, known(3), known(1), known(3))
-
-	f := only(t, Autoscaling(e, defaultThresholds(), false))
-
-	if f.Code != "NODE_AUTOSCALING_NEAR_MAX" {
-		t.Errorf("Code = %q, want NODE_AUTOSCALING_NEAR_MAX", f.Code)
-	}
-	if got := numberEvidence(t, f); got["current_nodes"] != 3 || got["max_nodes"] != 3 {
-		t.Errorf("evidence = %v", got)
-	}
-}
-
 func TestAutoscalingWithoutStatusGivesNothing(t *testing.T) {
 	t.Parallel()
-	if got := Autoscaling(collect.AutoscalingEvidence{}, defaultThresholds(), false); len(got) != 0 {
+	if got := Autoscaling(collect.AutoscalingEvidence{}, false); len(got) != 0 {
 		t.Errorf("findings = %+v, want none", got)
 	}
 }

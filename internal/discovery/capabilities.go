@@ -85,19 +85,14 @@ func (p *prober) has(metric string, extra map[string]string) bool {
 	return false
 }
 
-// hasAutoscaler runs the node_autoscaling probe: a single regex-name
-// selector, with the scope's matcher appended as a second matcher when it
-// is on. It is built by hand because it names no exact metric, only a
-// family.
-func (p *prober) hasAutoscaler() bool {
+// hasConfigMaps runs the node_autoscaling probe: whether kube-state-metrics
+// exports any ConfigMap, the ground the collector reads the status ConfigMap
+// of the cluster autoscaler on.
+func (p *prober) hasConfigMaps() bool {
 	if p.err != nil {
 		return false
 	}
-	selector := `{__name__=~"cluster_autoscaler_.+"}`
-	if p.scope.MatcherEnabled {
-		selector = fmt.Sprintf(`{__name__=~"cluster_autoscaler_.+",%s="%s"}`, p.scope.ClusterLabel, prom.Quote(p.scope.ClusterName))
-	}
-	query := fmt.Sprintf("count(%s)", selector)
+	query := "count(" + prom.Selector{Metric: "kube_configmap_info", Equal: p.scope.Matchers()}.String() + ")"
 	samples, err := p.q.Query(p.ctx, query, p.at)
 	if err != nil {
 		p.err = err
@@ -165,7 +160,7 @@ func Detect(ctx context.Context, q Querier, scope Scope, analysis config.Analysi
 		p.has(metricNodeMemoryMemAvailableBytes, nil) &&
 		p.has(metricNodeMemoryMemTotalBytes, nil)
 
-	autoscalerMetrics := p.hasAutoscaler()
+	configMaps := p.hasConfigMaps()
 
 	if p.err != nil {
 		return nil, p.err
@@ -180,7 +175,7 @@ func Detect(ctx context.Context, q Querier, scope Scope, analysis config.Analysi
 		ipNodeMappingCapability(nodeInfo, nodeRules, nodeRaw),
 		nodepoolDiscoveryCapability(nodeLabels, nodeInfo),
 		nodeUtilizationCapability(nodeRules, nodeRaw),
-		nodeAutoscalingCapability(analysis.NodeAutoscaling, autoscalerMetrics),
+		nodeAutoscalingCapability(analysis.NodeAutoscaling, configMaps),
 	}, nil
 }
 
@@ -356,15 +351,16 @@ func nodeUtilizationCapability(nodeRules, nodeRaw bool) Capability {
 	}
 }
 
-// nodeAutoscalingCapability reports whether node autoscaling activity can
-// be measured. A configured answer never depends on the probe, even though
-// the probe is always asked.
-func nodeAutoscalingCapability(configured string, autoscalerMetrics bool) Capability {
+// nodeAutoscalingCapability reports whether node autoscaling can be read. A
+// configured answer never depends on the probe, even though the probe is
+// always asked. Otherwise it is available when kube-state-metrics collects
+// ConfigMaps, the ground of the status of the cluster autoscaler.
+func nodeAutoscalingCapability(configured string, configMaps bool) Capability {
 	if configured == "enabled" || configured == "disabled" {
 		return Capability{Name: "node_autoscaling", State: StateAvailable, Strategy: StrategyConfigured, Evidence: []string{}, Reasons: []string{}}
 	}
-	if autoscalerMetrics {
-		return Capability{Name: "node_autoscaling", State: StateAvailable, Strategy: StrategyRawMetrics, Evidence: []string{"cluster_autoscaler_*"}, Reasons: []string{}}
+	if configMaps {
+		return Capability{Name: "node_autoscaling", State: StateAvailable, Strategy: StrategyRawMetrics, Evidence: []string{"kube_configmap_info"}, Reasons: []string{}}
 	}
 	return Capability{Name: "node_autoscaling", State: StatePartial, Strategy: StrategyNone, Evidence: []string{}, Reasons: []string{reasonNodeAutoscalingUndetermined}}
 }

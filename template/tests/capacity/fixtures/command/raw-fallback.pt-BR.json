@@ -38,12 +38,12 @@
           {
             "status": "attention",
             "label": "Atenção",
-            "count": "3"
+            "count": "2"
           },
           {
             "status": "healthy",
             "label": "Saudável",
-            "count": "6"
+            "count": "7"
           }
         ],
         "none": null
@@ -58,30 +58,25 @@
       },
       "growth": {
         "title": "Autoscaling do cluster",
-        "current": "3",
-        "max": "3",
+        "current": "1",
+        "max": "Indisponível",
         "state": null,
-        "gauge": {
-          "current": 3,
-          "max": 3,
-          "min": 1,
-          "hazard": true
-        },
+        "gauge": null,
         "caption": "Nodes · atual / máximo",
         "finding": {
-          "status": "attention",
-          "label": "Atenção",
-          "sentence": "O número de nodes atingiu ou ficou próximo do máximo observado."
+          "status": "healthy",
+          "label": "Saudável",
+          "sentence": "Autoscaling de nodes habilitado com margem observada."
         },
         "warning": null,
         "facts": [
           {
             "label": "Mínimo de nodes",
-            "value": "1"
+            "value": "Indisponível"
           },
           {
             "label": "Pods não agendáveis",
-            "value": "1"
+            "value": "0"
           },
           {
             "label": "Eventos de escala",
@@ -628,7 +623,7 @@
               },
               {
                 "kind": "text",
-                "text": " 7"
+                "text": " 8"
               }
             ],
             [
@@ -638,7 +633,7 @@
               },
               {
                 "kind": "text",
-                "text": " 2"
+                "text": " 1"
               }
             ],
             [
@@ -1135,28 +1130,6 @@
             {
               "kind": "text",
               "text": "A associação histórica entre pods e workloads não pôde ser reconstruída com exatidão."
-            }
-          ]
-        ],
-        [
-          [
-            {
-              "kind": "text",
-              "text": "Autoscaling de nodes"
-            }
-          ],
-          [
-            {
-              "kind": "status",
-              "status": "attention",
-              "text": "Parcial",
-              "alt": "Atenção"
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "O estado do autoscaling de nodes não pôde ser determinado."
             }
           ]
         ],
@@ -2122,27 +2095,22 @@
           [
             {
               "kind": "status",
-              "status": "attention",
-              "text": "Parcial",
-              "alt": "Atenção"
+              "status": "healthy",
+              "text": "Disponível",
+              "alt": "Saudável"
             }
           ],
           [
             {
               "kind": "text",
-              "text": "Sem fonte"
+              "text": "Raw metrics"
             }
           ],
+          [],
           [
             {
               "kind": "text",
-              "text": "O estado do autoscaling de nodes não pôde ser determinado."
-            }
-          ],
-          [
-            {
-              "kind": "text",
-              "text": "Os dados de autoscaling dos nodes estão disponíveis parcialmente para o período analisado."
+              "text": "Os dados de autoscaling dos nodes estão disponíveis para o período analisado."
             }
           ]
         ]

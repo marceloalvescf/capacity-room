@@ -578,3 +578,16 @@ func TestGoldenFailureNamesTheCommand(t *testing.T) {
 		}
 	})
 }
+
+// TestNoQueryNamesTheClusterAutoscaler holds that no query of any scenario
+// asks for the metrics of the cluster autoscaler: node autoscaling is read
+// from kube-state-metrics alone.
+func TestNoQueryNamesTheClusterAutoscaler(t *testing.T) {
+	for _, s := range slices.Concat(promtest.Scenarios, promtest.RangeScenarios) {
+		for _, line := range queriesLines(t, s) {
+			if strings.Contains(line, "cluster_autoscaler_") {
+				t.Errorf("%s: %q names the cluster autoscaler", s.Name, line)
+			}
+		}
+	}
+}

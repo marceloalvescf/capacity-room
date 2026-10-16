@@ -756,10 +756,10 @@ func TestWorkloadRowsAreSorted(t *testing.T) {
 
 // TestAllRunsNamespacesFirst covers a run where requests_limits and
 // workload_usage are available and the HPA and node discovery capabilities
-// are not. The thirty queries are: seven of the namespace collector, seven of
-// the workload collector, none of the HPA collector (both capabilities
+// are not. The twenty-nine queries are: seven of the namespace collector,
+// seven of the workload collector, none of the HPA collector (both capabilities
 // unavailable), ten of the node collector (the eight of identity, capacity,
-// allocatable, ready and unschedulable, and the two requests queries), and six
+// allocatable, ready and unschedulable, and the two requests queries), and five
 // of the autoscaling collector.
 func TestAllRunsNamespacesFirst(t *testing.T) {
 	capabilities := []discovery.Capability{
@@ -769,6 +769,7 @@ func TestAllRunsNamespacesFirst(t *testing.T) {
 		hpaCapability("workloads_without_hpa", discovery.StateUnavailable, nil, nil),
 		nodeCapability("node_utilization", discovery.StateUnavailable, discovery.StrategyNone, nil, nil),
 		nodeCapability("nodepool_discovery", discovery.StateUnavailable, discovery.StrategyNone, nil, nil),
+		nodeCapability("node_autoscaling", discovery.StateAvailable, discovery.StrategyRawMetrics, []string{"kube_configmap_info"}, nil),
 	}
 	in := Input{
 		Scope: testScope(true), Cluster: defaultCluster(), Analysis: defaultAnalysis(), Capabilities: capabilities,
@@ -796,7 +797,7 @@ func TestAllRunsNamespacesFirst(t *testing.T) {
 		"namespaces": len(nsQuerier.queries), "workloads": len(workloadQuerier.queries),
 		"nodes": len(nodeQuerier.queries), "autoscaling": len(autoscalingQuerier.queries),
 	} {
-		want := map[string]int{"namespaces": 7, "workloads": 7, "nodes": 10, "autoscaling": 6}[name]
+		want := map[string]int{"namespaces": 7, "workloads": 7, "nodes": 10, "autoscaling": 5}[name]
 		if got != want {
 			t.Fatalf("the %s collector alone sent %d queries, want %d", name, got, want)
 		}
@@ -811,8 +812,8 @@ func TestAllRunsNamespacesFirst(t *testing.T) {
 	for _, group := range [][]string{nsQuerier.queries, workloadQuerier.queries, nodeQuerier.queries, autoscalingQuerier.queries} {
 		want = append(want, group...)
 	}
-	if len(allQuerier.queries) != 30 {
-		t.Fatalf("len(queries) = %d, want 30\nqueries: %v", len(allQuerier.queries), allQuerier.queries)
+	if len(allQuerier.queries) != 29 {
+		t.Fatalf("len(queries) = %d, want 29\nqueries: %v", len(allQuerier.queries), allQuerier.queries)
 	}
 	for i := range want {
 		if allQuerier.queries[i] != want[i] {
@@ -839,6 +840,7 @@ func TestAllJoinsMessagesOnce(t *testing.T) {
 		hpaCapability("workloads_without_hpa", discovery.StateUnavailable, nil, nil),
 		nodeCapability("node_utilization", discovery.StateUnavailable, discovery.StrategyNone, nil, nil),
 		nodeCapability("nodepool_discovery", discovery.StateUnavailable, discovery.StrategyNone, nil, nil),
+		nodeCapability("node_autoscaling", discovery.StatePartial, discovery.StrategyNone, nil, []string{"NODE_AUTOSCALING_UNDETERMINED"}),
 	}
 	in := Input{
 		Scope: scope, Cluster: cluster, Analysis: analysis, Capabilities: capabilities,

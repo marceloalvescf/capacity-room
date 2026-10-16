@@ -38,12 +38,12 @@
           {
             "status": "attention",
             "label": "Attention",
-            "count": "4"
+            "count": "3"
           },
           {
             "status": "healthy",
             "label": "Healthy",
-            "count": "5"
+            "count": "6"
           }
         ],
         "none": null
@@ -51,26 +51,17 @@
       "quality": null,
       "growth": {
         "title": "Cluster autoscaling",
-        "current": "3",
-        "max": "3",
+        "current": "1",
+        "max": "Unavailable",
         "state": null,
-        "gauge": {
-          "current": 3,
-          "max": 3,
-          "min": 1,
-          "hazard": true
-        },
+        "gauge": null,
         "caption": "Nodes · current / maximum",
-        "finding": {
-          "status": "attention",
-          "label": "Attention",
-          "sentence": "The number of nodes reached or came close to the observed maximum."
-        },
+        "finding": null,
         "warning": null,
         "facts": [
           {
             "label": "Minimum nodes",
-            "value": "1"
+            "value": "Unavailable"
           },
           {
             "label": "Unschedulable pods",

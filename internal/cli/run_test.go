@@ -1438,9 +1438,9 @@ func TestEachLineIsOneWrite(t *testing.T) {
 // as the first requests of a --snapshot run of the same scenario.
 //
 // For direct-complete the check sends 29 requests: the connect probe, the
-// scope query, and the probes of the nine capabilities. The run sends 40
-// more, 69 in all: 14 of the namespace and workload collectors, 7 of the
-// HPA and coverage collector, 13 of the node collector, and 6 of the
+// scope query, and the probes of the nine capabilities. The run sends 39
+// more, 68 in all: 14 of the namespace and workload collectors, 7 of the
+// HPA and coverage collector, 13 of the node collector, and 5 of the
 // cluster autoscaling collector.
 func TestCheckSendsNoRangeQuery(t *testing.T) {
 	checkServer, checkHandler, checkScenario := startScenario(t, "direct-complete")
@@ -1478,8 +1478,8 @@ func TestCheckSendsNoRangeQuery(t *testing.T) {
 	}
 	snapSeen := snapHandler.Seen()
 
-	if len(snapSeen) != 69 {
-		t.Fatalf("snapshot sent %d requests, want 69 (the check's 29, plus 40 of the collectors)", len(snapSeen))
+	if len(snapSeen) != 68 {
+		t.Fatalf("snapshot sent %d requests, want 68 (the check's 29, plus 39 of the collectors)", len(snapSeen))
 	}
 	for i, wantSeen := range checkSeen {
 		gotSeen := snapSeen[i]
@@ -1490,10 +1490,10 @@ func TestCheckSendsNoRangeQuery(t *testing.T) {
 }
 
 // TestSnapshotRunSendsTheCollectorQueries proves a --snapshot run of
-// direct-complete sends 69 requests, and a --check run 29. The 29 are the
+// direct-complete sends 68 requests, and a --check run 29. The 29 are the
 // connect probe, the scope query, and the probes of the nine capabilities.
-// The 40 of the collectors are 14 of the namespace and workload collectors,
-// 7 of the HPA and coverage collector, 13 of the node collector, and 6 of
+// The 39 of the collectors are 14 of the namespace and workload collectors,
+// 7 of the HPA and coverage collector, 13 of the node collector, and 5 of
 // the cluster autoscaling collector.
 func TestSnapshotRunSendsTheCollectorQueries(t *testing.T) {
 	baseServer, baseHandler, baseScenario := startScenario(t, "direct-complete")
@@ -1517,8 +1517,8 @@ func TestSnapshotRunSendsTheCollectorQueries(t *testing.T) {
 		t.Fatalf("snapshot: code = %d, want 0; stderr = %q", code, stderr)
 	}
 
-	if got := len(handler.Seen()); got != 69 {
-		t.Fatalf("requests = %d, want 69 (29 of the preflight, 14 of namespaces and workloads, 7 of HPAs, 13 of nodes, 6 of autoscaling)", got)
+	if got := len(handler.Seen()); got != 68 {
+		t.Fatalf("requests = %d, want 68 (29 of the preflight, 14 of namespaces and workloads, 7 of HPAs, 13 of nodes, 5 of autoscaling)", got)
 	}
 }
 
@@ -1883,7 +1883,7 @@ func emptyCollectorsServer(t *testing.T) (*httptest.Server, promtest.Scenario, *
 		}
 		mu.Unlock()
 
-		if inPreflight && !strings.Contains(r.PostFormValue("query"), "cluster_autoscaler_") {
+		if inPreflight && !strings.Contains(r.PostFormValue("query"), "kube_configmap_info") {
 			recorded.ServeHTTP(w, r)
 			return
 		}
@@ -1899,9 +1899,10 @@ func emptyCollectorsServer(t *testing.T) (*httptest.Server, promtest.Scenario, *
 }
 
 // TestNoUsefulSectionsExitsFive proves a run whose collectors find nothing
-// stops with exit code 5, one line, no output, and no file. With every
-// capability available and the recording rule, the collectors send 14 of
-// namespaces and workloads, 7 of HPAs, 13 of nodes, and 6 of autoscaling.
+// stops with exit code 5, one line, no output, and no file. The probe of the
+// ConfigMaps finds none, so the autoscaling status is unknown and its
+// collector sends nothing: the collectors send 14 of namespaces and
+// workloads, 7 of HPAs, and 13 of nodes.
 func TestNoUsefulSectionsExitsFive(t *testing.T) {
 	for _, mode := range []string{"snapshot", "pdf"} {
 		t.Run(mode, func(t *testing.T) {
@@ -1931,8 +1932,8 @@ func TestNoUsefulSectionsExitsFive(t *testing.T) {
 				t.Fatalf("%s was written, want no file", target)
 			}
 			assertNoTempFilesBeside(t, filepath.Dir(target))
-			if *collectorRequests != 40 {
-				t.Fatalf("collector requests = %d, want 40", *collectorRequests)
+			if *collectorRequests != 34 {
+				t.Fatalf("collector requests = %d, want 34", *collectorRequests)
 			}
 		})
 	}

@@ -275,9 +275,9 @@ func TestViewNarrowsAsThePDF(t *testing.T) {
 	}{
 		{"all", "detailed", "all", "all", 28, 10},
 		{"attention", "detailed", "attention", "attention", 21, 10},
-		{"critical", "detailed", "critical", "critical", 9, 7},
+		{"critical", "detailed", "critical", "critical", 10, 7},
 		{"executive at all", "executive", "all", "attention", 21, 10},
-		{"executive at critical", "executive", "critical", "critical", 9, 7},
+		{"executive at critical", "executive", "critical", "critical", 10, 7},
 	}
 	for _, tc := range cases {
 		for _, lang := range catalog.Languages() {
@@ -794,14 +794,13 @@ func zero(count string) string {
 func TestViewVerdictOfEdgeScaling(t *testing.T) {
 	v := mustView(t, goldenSnapshot(t, "edge-scaling"), catalog.English).Verdict
 	want := ViewVerdict{
-		ClusterFinding:      intPtr(10),
+		ClusterFinding:      intPtr(1),
 		NodeEvidenceWarning: intPtr(1),
-		Gauge:               &ViewGauge{Current: 3, Max: 3, Min: intPtr(2), Hazard: strPtr("attention")},
 		Pressure: []ViewPressure{
 			{ScopeType: "node", Severity: "critical", Finding: 0, Critical: 2, Attention: 1},
-			{ScopeType: "namespace", Severity: "critical", Finding: 1, Critical: 1, Attention: 0},
-			{ScopeType: "workload", Severity: "critical", Finding: 5, Critical: 1, Attention: 1},
-			{ScopeType: "hpa", Severity: "critical", Finding: 7, Critical: 1, Attention: 1},
+			{ScopeType: "namespace", Severity: "critical", Finding: 2, Critical: 1, Attention: 0},
+			{ScopeType: "workload", Severity: "critical", Finding: 6, Critical: 1, Attention: 1},
+			{ScopeType: "hpa", Severity: "critical", Finding: 8, Critical: 1, Attention: 1},
 			{ScopeType: "nodepool", Severity: "attention", Finding: 14, Critical: 0, Attention: 2},
 		},
 	}

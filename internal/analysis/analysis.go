@@ -68,7 +68,7 @@ func All(c collect.Collected, t config.Thresholds) []Finding {
 	poolFindings := Pools(collect.Pools(c.Nodes.Rows), c.Nodes.Rows, t)
 	findings = append(findings, nodeFindings...)
 	findings = append(findings, poolFindings...)
-	findings = append(findings, Autoscaling(c.Autoscaling, t, NodePressure(nodeFindings, poolFindings))...)
+	findings = append(findings, Autoscaling(c.Autoscaling, NodePressure(nodeFindings, poolFindings))...)
 	Sort(findings)
 	return findings
 }

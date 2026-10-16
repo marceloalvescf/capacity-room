@@ -26,7 +26,7 @@
 /api/v1/query	count(node_cpu_seconds_total{cluster="prod"})
 /api/v1/query	count(node_memory_MemAvailable_bytes{cluster="prod"})
 /api/v1/query	count(node_memory_MemTotal_bytes{cluster="prod"})
-/api/v1/query	count({__name__=~"cluster_autoscaler_.+",cluster="prod"})
+/api/v1/query	count(kube_configmap_info{cluster="prod"})
 /api/v1/query_range	sum by (namespace) (rate(container_cpu_usage_seconds_total{cluster="prod",namespace=~"(?:payments)",container!~"(?:|POD|istio\\-proxy)"}[5m]))
 /api/v1/query_range	sum by (namespace) (max by (namespace, pod, container) (container_memory_working_set_bytes{cluster="prod",namespace=~"(?:payments)",container!~"(?:|POD|istio\\-proxy)"}))
 /api/v1/query_range	sum by (namespace) (kube_pod_container_resource_requests{cluster="prod",resource="cpu",namespace=~"(?:payments)",container!~"(?:|POD|istio\\-proxy)"})
@@ -61,9 +61,8 @@
 /api/v1/query	sum by (node, instance) (kube_pod_container_resource_requests{cluster="prod",resource="memory"})
 /api/v1/query_range	instance:node_cpu_utilisation:rate5m{cluster="prod"} * 100
 /api/v1/query_range	instance:node_memory_utilisation:ratio{cluster="prod"} * 100
-/api/v1/query_range	cluster_autoscaler_node_groups_count{cluster="prod"}
-/api/v1/query_range	cluster_autoscaler_nodes_count{cluster="prod"}
-/api/v1/query_range	cluster_autoscaler_node_group_min_nodes_count{cluster="prod"}
-/api/v1/query_range	cluster_autoscaler_node_group_max_nodes_count{cluster="prod"}
-/api/v1/query_range	increase(cluster_autoscaler_scaled_up_nodes_total{cluster="prod"}[86400s])
-/api/v1/query_range	cluster_autoscaler_unschedulable_pods_count{cluster="prod"}
+/api/v1/query	max_over_time(kube_configmap_info{cluster="prod",configmap="cluster-autoscaler-status",namespace="kube-system"}[86400s])
+/api/v1/query	changes(kube_configmap_metadata_resource_version{cluster="prod",configmap="cluster-autoscaler-status",namespace="kube-system"}[86400s])
+/api/v1/query	count(count by (node) (kube_node_info{cluster="prod"}))
+/api/v1/query	count(count by (node) (max_over_time(kube_node_created{cluster="prod"}[86400s]) > time() - 86400))
+/api/v1/query	count(count by (namespace, pod) (kube_pod_status_unschedulable{cluster="prod"} == 1))

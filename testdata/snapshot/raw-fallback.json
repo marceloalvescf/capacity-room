@@ -135,12 +135,12 @@
       },
       {
         "name": "node_autoscaling",
-        "state": "partial",
-        "strategy": "none",
-        "evidence": [],
-        "reasons": [
-          "NODE_AUTOSCALING_UNDETERMINED"
-        ]
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_configmap_info"
+        ],
+        "reasons": []
       }
     ],
     "warnings": [
@@ -160,21 +160,21 @@
     "nodes": 1,
     "nodepools": 1,
     "findings": 13,
-    "recommendations": 7,
-    "healthy": 6,
-    "attention": 3,
+    "recommendations": 6,
+    "healthy": 7,
+    "attention": 2,
     "critical": 4,
     "workloads_without_hpa": 1,
     "autoscaling": {
       "status": "enabled",
       "source": "raw_metrics",
       "confidence": "inferred",
-      "managed_node_groups": 2,
-      "current_nodes": 3,
-      "min_nodes": 1,
-      "max_nodes": 3,
+      "managed_node_groups": null,
+      "current_nodes": 1,
+      "min_nodes": null,
+      "max_nodes": null,
       "scale_events": 1,
-      "unschedulable_pods": 1
+      "unschedulable_pods": 0
     }
   },
   "namespaces": [
@@ -550,24 +550,6 @@
       "confidence": "exact"
     },
     {
-      "code": "NODE_AUTOSCALING_NEAR_MAX",
-      "severity": "attention",
-      "scope_type": "cluster",
-      "scope_kind": "",
-      "scope_name": "cluster",
-      "evidence": [
-        {
-          "name": "current_nodes",
-          "value": 3
-        },
-        {
-          "name": "max_nodes",
-          "value": 3
-        }
-      ],
-      "confidence": "inferred"
-    },
-    {
       "code": "NAMESPACE_CPU_REQUEST_ATTENTION",
       "severity": "attention",
       "scope_type": "namespace",
@@ -597,6 +579,15 @@
           "value": 1
         }
       ],
+      "confidence": "inferred"
+    },
+    {
+      "code": "NODE_AUTOSCALING_ENABLED",
+      "severity": "healthy",
+      "scope_type": "cluster",
+      "scope_kind": "",
+      "scope_name": "cluster",
+      "evidence": [],
       "confidence": "inferred"
     },
     {
@@ -744,15 +735,6 @@
         "payments"
       ],
       "confidence": "exact"
-    },
-    {
-      "code": "NODE_AUTOSCALING_NEAR_MAX",
-      "severity": "attention",
-      "scope_type": "cluster",
-      "scopes": [
-        "cluster"
-      ],
-      "confidence": "inferred"
     },
     {
       "code": "HPA_REPLICA_DIVERGENCE",

@@ -119,7 +119,7 @@ func TestDetectReturnsNineInOrder(t *testing.T) {
 		"count(node_cpu_seconds_total)":                                  present(),
 		"count(node_memory_MemAvailable_bytes)":                          present(),
 		"count(node_memory_MemTotal_bytes)":                              present(),
-		`count({__name__=~"cluster_autoscaler_.+"})`:                     present(),
+		"count(kube_configmap_info)":                                     present(),
 	}
 	stub := &capStub{answers: answers}
 
@@ -582,24 +582,24 @@ func TestNodeUtilizationShortCut(t *testing.T) {
 
 func TestNodeAutoscaling(t *testing.T) {
 	tests := []struct {
-		name              string
-		configured        string
-		autoscalerPresent bool
-		wantState         string
-		wantStrategy      string
-		wantEvidence      []string
-		wantReasons       []string
+		name         string
+		configured   string
+		configMaps   bool
+		wantState    string
+		wantStrategy string
+		wantEvidence []string
+		wantReasons  []string
 	}{
 		{"configured enabled, metrics absent", "enabled", false, StateAvailable, StrategyConfigured, []string{}, []string{}},
 		{"configured disabled, metrics present", "disabled", true, StateAvailable, StrategyConfigured, []string{}, []string{}},
-		{"auto, present", "auto", true, StateAvailable, StrategyRawMetrics, []string{"cluster_autoscaler_*"}, []string{}},
+		{"auto, present", "auto", true, StateAvailable, StrategyRawMetrics, []string{"kube_configmap_info"}, []string{}},
 		{"auto, absent", "auto", false, StatePartial, StrategyNone, []string{}, []string{reasonNodeAutoscalingUndetermined}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			answers := map[string][]prom.Sample{}
-			if tt.autoscalerPresent {
-				answers[`count({__name__=~"cluster_autoscaler_.+"})`] = present()
+			if tt.configMaps {
+				answers["count(kube_configmap_info)"] = present()
 			}
 			stub := &capStub{answers: answers}
 
@@ -622,12 +622,12 @@ func TestNodeAutoscalingIsProbedWhenConfigured(t *testing.T) {
 
 	found := false
 	for _, q := range stub.queries {
-		if contains(q, "cluster_autoscaler_") {
+		if contains(q, "kube_configmap_info") {
 			found = true
 		}
 	}
 	if !found {
-		t.Error("no query held cluster_autoscaler_, want the probe asked even when configured")
+		t.Error("no query held kube_configmap_info, want the probe asked even when configured")
 	}
 }
 
@@ -1133,21 +1133,33 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 
 	// windowLen is how many of the fixture's own scripted requests (in its
 	// own order, smoke test and scope query included) hold the capability
-	// block for that scenario: 29 for every scenario whose last capability
-	// probe (cluster_autoscaler_) is scripted at index 28, and 31 for
-	// raw-fallback, whose block is two probes longer because neither
+	// block for that scenario. The answers added for node autoscaling come
+	// first: six for the scenarios whose collector asks (the probe and five
+	// queries) and one, the probe, for the others. The recorded block then
+	// holds 29 requests for every scenario whose last capability probe (the
+	// recorded one of the cluster autoscaler) is scripted at index 28, and
+	// 31 for raw-fallback, whose block is two probes longer because neither
 	// kube_deployment_labels nor kube_statefulset_labels is present there
-	// (so the short-circuited *_spec_replicas probes are not skipped), which
-	// pushes its own cluster_autoscaler_ entry to index 31.
+	// (so the short-circuited *_spec_replicas probes are not skipped).
 	windowLen := map[string]int{
-		"direct-complete":       29,
-		"grafana-authenticated": 29,
-		"thanos-multicluster":   29,
-		"raw-fallback":          31,
-		"partial-data":          29,
-		"value-edge-cases":      29,
-		"edge-values":           29,
-		"edge-scaling":          30,
+		"direct-complete":       35,
+		"grafana-authenticated": 35,
+		"thanos-multicluster":   35,
+		"raw-fallback":          37,
+		"partial-data":          30,
+		"value-edge-cases":      30,
+		"edge-values":           35,
+		"edge-scaling":          36,
+	}
+
+	// collectorAnswers are the added answers that Detect never asks for: the
+	// five queries of the node autoscaling collector.
+	collectorAnswers := []string{
+		"max_over_time(kube_configmap_info",
+		"changes(kube_configmap_metadata_resource_version",
+		"count(count by (node) (kube_node_info",
+		"max_over_time(kube_node_created",
+		"kube_pod_status_unschedulable",
 	}
 
 	// wantUnused is the query_contains text of every scripted request within
@@ -1156,17 +1168,20 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 	// fixture also scripts a collection-phase request or two inside this
 	// same window (kube_pod_status_phase; a second
 	// namespace_workload_pod:kube_pod_owner:relabel) that Detect, which only
-	// ever asks for it once, never consumes either — real, verified facts of
-	// the fixture files, not something this test's code chooses to ignore.
+	// ever asks for it once, never consumes either, and the recorded probe of
+	// the cluster autoscaler, which the program no longer sends (past the
+	// window of raw-fallback, so absent from its list): real,
+	// verified facts of the fixture files, not something this test's code
+	// chooses to ignore.
 	wantUnused := map[string][]string{
-		"direct-complete":       {},
-		"grafana-authenticated": {},
-		"thanos-multicluster":   {},
-		"raw-fallback":          {"kube_pod_status_phase", "instance:node_memory_utilisation:ratio"},
-		"partial-data":          {"instance:node_memory_utilisation:ratio", "node_memory_MemAvailable_bytes", "node_memory_MemTotal_bytes"},
-		"value-edge-cases":      {},
-		"edge-values":           {},
-		"edge-scaling":          {},
+		"direct-complete":       slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
+		"grafana-authenticated": slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
+		"thanos-multicluster":   slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
+		"raw-fallback":          slices.Concat(collectorAnswers, []string{"kube_pod_status_phase", "instance:node_memory_utilisation:ratio"}),
+		"partial-data":          {"instance:node_memory_utilisation:ratio", "node_memory_MemAvailable_bytes", "node_memory_MemTotal_bytes", "cluster_autoscaler_"},
+		"value-edge-cases":      {"cluster_autoscaler_"},
+		"edge-values":           slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
+		"edge-scaling":          slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
 	}
 
 	for _, scenario := range promtest.Scenarios {
@@ -1265,7 +1280,7 @@ func scenarioWant(name string) []scenarioCapability {
 			[]string{metricInstanceNodeCPUUtilisationRate5m, metricInstanceNodeMemoryUtilisationRatio},
 			[]string{},
 		},
-		{"node_autoscaling", StateAvailable, StrategyRawMetrics, []string{"cluster_autoscaler_*"}, []string{}},
+		{"node_autoscaling", StateAvailable, StrategyRawMetrics, []string{"kube_configmap_info"}, []string{}},
 	}
 
 	set := func(caps []scenarioCapability, changes map[string]scenarioCapability) []scenarioCapability {
@@ -1311,7 +1326,6 @@ func scenarioWant(name string) []scenarioCapability {
 				[]string{metricNodeCPUSecondsTotal, metricNodeMemoryMemAvailableBytes, metricNodeMemoryMemTotalBytes},
 				[]string{},
 			},
-			"node_autoscaling": {"node_autoscaling", StatePartial, StrategyNone, []string{}, []string{reasonNodeAutoscalingUndetermined}},
 		})
 	case "partial-data":
 		return set(baseline, map[string]scenarioCapability{

@@ -110,9 +110,9 @@ describe("workloads tab", () => {
     expect(screen.getByRole("table", { name: "Memory" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Findings" })).toBeInTheDocument();
     const links = within(screen.getByRole("list", { name: "Findings" })).getAllByRole("link");
-    expect(links.map((link) => link.getAttribute("href"))).toEqual([5, 6, 13, 22].map(hrefEnding));
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([6, 7, 13, 22].map(hrefEnding));
     expect(links.map((link) => link.textContent)).toEqual(
-      [5, 6, 13, 22].map((index) => textHolding(english.findings[index]?.sentence ?? "")),
+      [6, 7, 13, 22].map((index) => textHolding(english.findings[index]?.sentence ?? "")),
     );
   });
 
@@ -237,7 +237,7 @@ describe("namespaces tab", () => {
     expect(screen.getByRole("table", { name: "Memory" })).toBeInTheDocument();
     expect(screen.queryByText("HPA", { selector: "dt" })).not.toBeInTheDocument();
     const links = within(screen.getByRole("list", { name: "Findings" })).getAllByRole("link");
-    expect(links.map((link) => link.getAttribute("href"))).toEqual([1, 2, 3, 4].map(hrefEnding));
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([2, 3, 4, 5].map(hrefEnding));
   });
 
   it("a namespace with no finding says so, in Portuguese too", async () => {

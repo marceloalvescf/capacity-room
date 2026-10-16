@@ -20,6 +20,38 @@ const id = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a01";
 const english = viewEn as View;
 const portuguese = viewPt as View;
 
+const count = (value: number) => ({ raw: value, text: String(value), status: null });
+
+// bound gives a golden view the autoscaling of a report stored before the
+// program read node autoscaling from kube-state-metrics: enabled, with the
+// bounds of the cluster autoscaler, three nodes of a maximum of three, and a
+// finding of near maximum at the place of the cluster finding.
+function bound(view: View, sentence: string): View {
+  const at = view.verdict.cluster_finding as number;
+  const stored = { ...(view.findings[at] as View["findings"][number]), code: "NODE_AUTOSCALING_NEAR_MAX", severity: "attention" as const, sentence };
+  return {
+    ...view,
+    summary: {
+      ...view.summary,
+      autoscaling: {
+        ...view.summary.autoscaling,
+        status: "enabled",
+        managed_node_groups: count(2),
+        current_nodes: count(3),
+        min_nodes: count(2),
+        max_nodes: count(3),
+        scale_events: count(1),
+        unschedulable_pods: count(2),
+      },
+    },
+    findings: view.findings.map((finding, index) => (index === at ? stored : finding)),
+    verdict: { ...view.verdict, gauge: { current: 3, max: 3, min: 2, hazard: "attention" } },
+  };
+}
+
+const bounded = bound(english, "The number of nodes reached or came close to the observed maximum.");
+const boundedPortuguese = bound(portuguese, "O número de nodes atingiu ou ficou próximo do máximo observado.");
+
 beforeEach(() => {
   window.localStorage.clear();
   mockColourScheme(false);
@@ -45,6 +77,7 @@ async function open(language: "en" | "pt-BR" = "en") {
 
 describe("overview tab", () => {
   it("growth side", async () => {
+    mock.views.set(`${id}:en`, bounded);
     await open();
     const pair = growth();
     expect(pair).toHaveTextContent("3/3");
@@ -84,6 +117,7 @@ describe("overview tab", () => {
   });
 
   it("a proof bar under the nodes, filled to the nodes in the colour of the gauge hazard", async () => {
+    mock.views.set(`${id}:en`, bounded);
     await open();
     const bar = growth().querySelector("svg[viewBox='0 0 1000 16']") as SVGElement;
     const fill = bar.querySelector("[data-fill]") as SVGElement;
@@ -97,13 +131,14 @@ describe("overview tab", () => {
   });
 
   it("the fill of the gauge is the view's hazard, whatever the cluster finding", async () => {
-    const gauge = english.verdict.gauge as Gauge;
-    expect(english.findings[english.verdict.cluster_finding as number]?.severity).toBe("attention");
-    mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: { ...gauge, hazard: "critical" } } });
+    mock.views.set(`${id}:en`, bounded);
+    const gauge = bounded.verdict.gauge as Gauge;
+    expect(bounded.findings[bounded.verdict.cluster_finding as number]?.severity).toBe("attention");
+    mock.views.set(`${id}:en`, { ...bounded, verdict: { ...bounded.verdict, gauge: { ...gauge, hazard: "critical" } } });
     await open();
     expect(growth().querySelector("[data-fill]")).toHaveClass("fill-critical");
 
-    mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, cluster_finding: null, gauge: { ...gauge, hazard: null } } });
+    mock.views.set(`${id}:en`, { ...bounded, verdict: { ...bounded.verdict, cluster_finding: null, gauge: { ...gauge, hazard: null } } });
     cleanup();
     await open();
     const fill = growth().querySelector("[data-fill]");
@@ -112,9 +147,10 @@ describe("overview tab", () => {
   });
 
   it("the bar divides the maximum into units and draws the floor only between zero and the maximum", async () => {
-    const gauge = english.verdict.gauge as Gauge;
+    mock.views.set(`${id}:en`, bounded);
+    const gauge = bounded.verdict.gauge as Gauge;
     const draw = async (next: Gauge) => {
-      mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: next } });
+      mock.views.set(`${id}:en`, { ...bounded, verdict: { ...bounded.verdict, gauge: next } });
       cleanup();
       await open();
       return growth().querySelector("svg[viewBox='0 0 1000 16']") as SVGElement;
@@ -130,8 +166,9 @@ describe("overview tab", () => {
   });
 
   it("a count past its maximum runs past the reference line", async () => {
-    const gauge = english.verdict.gauge as Gauge;
-    mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: { ...gauge, current: 4, max: 3 } } });
+    mock.views.set(`${id}:en`, bounded);
+    const gauge = bounded.verdict.gauge as Gauge;
+    mock.views.set(`${id}:en`, { ...bounded, verdict: { ...bounded.verdict, gauge: { ...gauge, current: 4, max: 3 } } });
     await open();
     const bar = growth().querySelector("svg[viewBox='0 0 1000 16']") as SVGElement;
     expect(bar.querySelectorAll("[data-reference]")).toHaveLength(1);
@@ -142,7 +179,8 @@ describe("overview tab", () => {
   });
 
   it("no proof bar when the view gives no gauge, though autoscaling is enabled", async () => {
-    mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, gauge: null } });
+    mock.views.set(`${id}:en`, bounded);
+    mock.views.set(`${id}:en`, { ...bounded, verdict: { ...bounded.verdict, gauge: null } });
     await open();
     const pair = growth();
     expect(pair).toHaveTextContent("Nodes · current / maximum");
@@ -179,9 +217,9 @@ describe("overview tab", () => {
     const lead = (line: HTMLElement) => within(line).getAllByRole("link")[0] as HTMLElement;
     expect(lead(lines[0] as HTMLElement)).toHaveTextContent("Observed CPU usage on the node.");
     expect(lead(lines[0] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=node&finding=0$/);
-    expect(lead(lines[1] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=namespace&finding=1$/);
-    expect(lead(lines[2] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=workload&finding=5$/);
-    expect(lead(lines[3] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=hpa&finding=7$/);
+    expect(lead(lines[1] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=namespace&finding=2$/);
+    expect(lead(lines[2] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=workload&finding=6$/);
+    expect(lead(lines[3] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=hpa&finding=8$/);
     expect(lead(lines[4] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=nodepool&finding=14$/);
     expect(within(lines[0] as HTMLElement).getByText("aks-agentpool-12345678-vmss000000")).toHaveClass("font-mono");
     expect(within(lines[0] as HTMLElement).getByText("Peak")).toBeInTheDocument();
@@ -304,7 +342,7 @@ describe("overview tab", () => {
     const band = screen.getByRole("heading", { level: 3, name: "Cluster autoscaling" });
     expect(totals.compareDocumentPosition(band) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const links = within(totals).getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual(["9Critical", "12Attention", "7Healthy"]);
+    expect(links.map((link) => link.textContent)).toEqual(["10Critical", "11Attention", "7Healthy"]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       expect.stringMatching(/findings\?severity=critical$/),
       expect.stringMatching(/findings\?severity=attention$/),
@@ -318,8 +356,8 @@ describe("overview tab", () => {
       expect.stringContaining("text-attention"),
       expect.stringContaining("text-healthy"),
     ]);
-    expect(within(links[0] as HTMLElement).getByText("9")).toHaveClass("font-mono", "text-display", "font-semibold");
-    expect(within(links[0] as HTMLElement).getByText("9")).not.toHaveClass("italic");
+    expect(within(links[0] as HTMLElement).getByText("10")).toHaveClass("font-mono", "text-display", "font-semibold");
+    expect(within(links[0] as HTMLElement).getByText("10")).not.toHaveClass("italic");
     expect(within(links[0] as HTMLElement).getByText("Critical")).toHaveClass("text-sm", "text-muted-fg");
     expect(screen.getByRole("link", { name: "See all findings" }).getAttribute("href")).toMatch(/\/findings$/);
   });
@@ -397,6 +435,7 @@ describe("overview tab", () => {
   });
 
   it("portuguese words", async () => {
+    mock.views.set(`${id}:pt-BR`, boundedPortuguese);
     mock.session = signedIn({ language: "pt-BR" });
     await open("pt-BR");
     expect(screen.getByRole("heading", { level: 2, name: "Pressão por escopo" })).toBeInTheDocument();
@@ -454,15 +493,15 @@ describe("overview tab", () => {
     await open();
     const rows = within(screen.getByRole("table", { name: "Prioritized action plan" })).getAllByRole("row").slice(1);
     const first = within(rows[0] as HTMLElement).getByRole("link", { name: "Review the configured maximum and the capacity of the workload. (payments/web)" });
-    expect(first.getAttribute("href")).toMatch(/\/findings\?scope=hpa&finding=7$/);
+    expect(first.getAttribute("href")).toMatch(/\/findings\?scope=hpa&finding=8$/);
     const eighth = within(rows[7] as HTMLElement).getByRole("link");
     expect(eighth.getAttribute("href")).toMatch(/\/findings\?scope=workload&finding=11$/);
   });
 
   it("an action links to the finding the view names, whatever its code", async () => {
     const [first, ...rest] = english.recommendations;
-    expect(first?.finding).toBe(7);
-    expect(english.findings[3]?.code).not.toBe(english.findings[7]?.code);
+    expect(first?.finding).toBe(8);
+    expect(english.findings[3]?.code).not.toBe(english.findings[8]?.code);
     mock.views.set(`${id}:en`, { ...english, recommendations: [{ ...(first as View["recommendations"][number]), finding: 3 }, ...rest] });
     await open();
     const rows = within(screen.getByRole("table", { name: "Prioritized action plan" })).getAllByRole("row").slice(1);

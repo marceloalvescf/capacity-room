@@ -33,12 +33,12 @@
           {
             "status": "critical",
             "label": "Crítico",
-            "count": "9"
+            "count": "10"
           },
           {
             "status": "attention",
             "label": "Atenção",
-            "count": "12"
+            "count": "11"
           },
           {
             "status": "healthy",
@@ -59,36 +59,18 @@
       },
       "growth": {
         "title": "Autoscaling do cluster",
-        "current": "3",
-        "max": "3",
-        "state": null,
-        "gauge": {
-          "current": 3,
-          "max": 3,
-          "min": 2,
-          "hazard": true
-        },
-        "caption": "Nodes · atual / máximo",
+        "current": null,
+        "max": null,
+        "state": "Inativo",
+        "gauge": null,
+        "caption": null,
         "finding": {
-          "status": "attention",
-          "label": "Atenção",
-          "sentence": "O número de nodes atingiu ou ficou próximo do máximo observado."
+          "status": "critical",
+          "label": "Crítico",
+          "sentence": "O autoscaling de nodes está configurado como desabilitado."
         },
         "warning": "As evidências de capacidade dos nodes estão incompletas.",
-        "facts": [
-          {
-            "label": "Mínimo de nodes",
-            "value": "2"
-          },
-          {
-            "label": "Pods não agendáveis",
-            "value": "2"
-          },
-          {
-            "label": "Eventos de escala",
-            "value": "1"
-          }
-        ]
+        "facts": []
       },
       "pressure": {
         "title": "Pressão por escopo",
