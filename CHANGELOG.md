@@ -6,6 +6,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Node autoscaling is now read from kube-state-metrics, as kube-prometheus-stack collects it, so a report on a cluster whose autoscaler is managed, as on AKS, or not scraped, as on OKE, says whether node autoscaling is enabled or disabled instead of saying it could not be determined.
+- A report no longer shows the autoscaler's minimum and maximum nodes, the node pools it manages, or the gauge of nodes against the maximum, which kube-state-metrics does not hold; a report made before keeps them.
+- "Scale events" now reads "Nodes added" and counts every node added during the period.
+- A count of node autoscaling that is not known is left out of the report instead of reading Unavailable.
+
 ## [2.3.0] - 2026-10-15
 
 ### Changed

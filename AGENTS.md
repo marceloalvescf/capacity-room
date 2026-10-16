@@ -289,7 +289,9 @@ below the command; the core never imports `internal/platform/`.
 - **The collectors keep the order of the original too:** the namespaces,
   then the workloads, then the HPAs and their coverage, then the nodes, then
   the cluster autoscaling, and inside each the queries in its order. The text of
-  every query equals the original letter for letter.
+  every query equals the original letter for letter, except the node
+  autoscaling probe and collector, which read kube-state-metrics (decision
+  0002); the comparison with the original leaves them out.
 - **`--check` is the preflight and nothing else.** It sends no query of a
   collector, and the requests it sends are the first requests of a run.
 - **A run with nothing to report stops with exit code 5.** When the five
@@ -560,6 +562,10 @@ redactor the moment the settings are loaded, before the pool opens.
 
 ### Golden snapshots and data files
 
+- `testdata/prometheus-added/` holds, for each scenario, the answers to the
+  queries the original never sent, read before the recorded answers by
+  `promtest.LoadScenario`; its README pins each file by SHA-256 and says what
+  each answer exercises.
 - `testdata/snapshot/` holds one snapshot for each scenario, and
   `testdata/queries/` the queries the program sent for it, in order. The
   recorded answers match a query by a part of its text, so only the list of
@@ -714,9 +720,11 @@ redactor the moment the settings are loaded, before the pool opens.
   `worker` wait for both. A spec that needs a report in flight and no data
   uses a profile at `fake-prometheus:9091`, where nothing listens, as the
   concurrency spec and the administration spec's draft tests do. The target
-  stops the fakes and fails unless each log holds `remaining: 1`, the one
-  answer of `direct-complete` that no run asks, pinned by
-  `TestDirectCompleteLeavesTheRecordedAnswerUnused`.
+  stops the fakes and fails unless each log holds `remaining: 8`, the HPA
+  answer of `direct-complete` that no run asks and the seven recorded answers
+  of the cluster autoscaler, pinned by
+  `TestDirectCompleteLeavesTheRecordedAnswerUnused`; the fakes read
+  `testdata/prometheus-added/direct-complete.json` through `--added`.
 - **The test worker's typst is a switch.** `make e2e` builds
   `deploy/worker-e2e.Containerfile` on the runtime image as
   `capacity-room-worker-e2e`, whose worker runs `cmd/typst-switch`

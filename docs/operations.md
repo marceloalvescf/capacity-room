@@ -324,6 +324,32 @@ code. A script uses it as the browser does: a session cookie from
 `POST /api/v1/auth/login`, and the session's CSRF token in `X-CSRF-Token` on
 every request that changes something.
 
+### Node autoscaling
+
+The report reads node autoscaling from kube-state-metrics, as
+kube-prometheus-stack collects it, with nothing to configure. The cluster
+autoscaler writes its status to the ConfigMap
+`kube-system/cluster-autoscaler-status`, on AKS and in the OKE add-on alike;
+kube-state-metrics exports its existence (`kube_configmap_info`) and each
+change of it (`kube_configmap_metadata_resource_version`).
+
+| Status | When |
+|---|---|
+| enabled | the ConfigMap was written during the period, or, when kube-state-metrics exports no resource version, it appeared in the period |
+| disabled | ConfigMaps are collected, and that one never appeared or was never written during the period |
+| unknown | kube-state-metrics exports no ConfigMap at all |
+
+The report also states the current nodes, the nodes added during the
+period, and the unschedulable pods, from `kube_node_info`,
+`kube_node_created`, and `kube_pod_status_unschedulable`. It does not know
+the minimum or the maximum of a node pool.
+
+Two installations need the state written in the profile or in
+`analysis.node_autoscaling`: a kube-state-metrics whose collector list was
+trimmed and no longer holds `configmaps`, and an OKE add-on whose
+`statusConfigMapName` was changed. A cluster that scales its nodes with
+Karpenter alone reads disabled.
+
 ### Stopping
 
 `docker compose stop` asks each service to stop. `serve` waits up to 30

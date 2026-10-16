@@ -336,8 +336,26 @@ Nine capabilities, in this order: `namespace_usage`, `workload_usage`,
 - A calendar range gives the start and the end as written, converted from
   its zone. The step comes from the table above by the range's length, and
   the `increase` span of the cluster autoscaling is the range's length in
-  seconds. The last N gives the same window and the same query text as
+  seconds, which is also the span of the window aggregates of the node
+  autoscaling. The last N gives the same window and the same query text as
   before ranges existed.
+- Node autoscaling is the one exception to the port of the original. The
+  original read the metrics of the cluster autoscaler; this program reads
+  kube-state-metrics alone, as the design of phase 14
+  (`2026-10-16-node-autoscaling-design.md`) says. The ninth probe is
+  `count(kube_configmap_info)`. The collector sends five instant queries at
+  the end of the window: whether the ConfigMap
+  `kube-system/cluster-autoscaler-status` appeared in the window, how often
+  its resource version changed, the nodes at the end, the nodes added in the
+  window, and the unschedulable pods. The status is enabled when the
+  ConfigMap was written in the window (or, with no resource version
+  exported, appeared in it), disabled when ConfigMaps are collected and it
+  was not, and unknown when none is collected. The analysis gives one of four
+  findings (unknown, disabled, disabled with node pressure, enabled); the
+  minimum, the maximum, and the node groups are never known, the three
+  findings that needed them are no longer produced, and the report leaves an
+  unknown number out. The comparison with the original leaves these queries,
+  their evidence, and their findings out.
 - Time zone data is embedded in the binary.
 - Node pool identity follows the original order: configured label, known
   provider labels, AKS node name, OKE node name, shared name label, unknown.
@@ -406,7 +424,7 @@ scope         cluster name and label, filter mode, matcher state, confidence,
               discovered values, namespaces selected and excluded,
               excluded containers
 quality       capabilities, warnings, notices, collection start and end
-summary       counts, cluster autoscaling evidence
+summary       counts, node autoscaling evidence (a number not known is null)
 namespaces    per namespace: pods, statistics, approximate flag
 workloads     per workload: kind, pods, statistics, autoscaler coverage
 hpas          per autoscaler: target, limits, current and desired statistics
@@ -551,7 +569,7 @@ Go decides what is said. The template decides how it looks.
 
 | Block | Content |
 |---|---|
-| `verdict` | The first page, 2026-10-12: totals by status, data-quality warnings, whether the cluster can grow (counts, depth gauge, finding, facts), the pressure by scope, the first actions, and the legend of the five statuses |
+| `verdict` | The first page, 2026-10-12: totals by status, data-quality warnings, whether the cluster can grow (counts, depth gauge when the maximum is known, finding, facts), the pressure by scope, the first actions, and the legend of the five statuses |
 | `front` | The opening matter, set in smaller type; holds other blocks |
 | `outline` | Title and depth |
 | `heading` | Level, text, and whether it is numbered |
@@ -1061,9 +1079,9 @@ the administration.
 - The workloads table lists only the workloads with observed usage, as the
   PDF does. The HPA table lists every HPA of the view.
 - Autoscaling: one line with the status, source, and confidence of the
-  cluster autoscaling; its counts in the style of the inventory: current,
-  minimum, and maximum nodes, managed node groups, scale events,
-  unschedulable pods, and workloads without HPA; then the HPAs.
+  node autoscaling; its counts in the style of the inventory, only those
+  that are known: current, minimum, and maximum nodes, managed node groups,
+  nodes added, unschedulable pods, and workloads without HPA; then the HPAs.
 - Nodes: the nodes, then the node pools with their confidence and their
   nodes. The name of a node and of a node pool carry a copy control; the
   unknown node pool is plain text without one.
