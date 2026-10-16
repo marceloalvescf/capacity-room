@@ -10,6 +10,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The web app shows the CapacityRoom mark as its icon in the browser tab, in light and dark.
 
+### Changed
+
+- An empty cell of the PDF now shows a hyphen instead of a long dash, so it no longer looks like the mark for data that is unavailable.
+
 ## [2.4.0] - 2026-10-16
 
 ### Changed

@@ -261,7 +261,7 @@ memory = "Memória: {{.Percent}} solicitada do alocável"
 unavailable = "Indisponível"
 no_base = "Não definido"
 undetermined = "Indeterminado"
-empty_cell = "—"
+empty_cell = "-"
 
 [value]
 yes = "sim"

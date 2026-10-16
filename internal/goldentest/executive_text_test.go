@@ -46,6 +46,7 @@ var originalExecutiveTexts = func() []originalText {
 		{"Indisponível", catalog.State(discovery.StateUnavailable)},
 		{"Indisponível", catalog.PlaceholderUnavailable},
 		{"Indeterminado", catalog.PlaceholderUndetermined},
+		// The original prints a long dash; this project prints a hyphen, the same cell.
 		{"—", catalog.PlaceholderEmptyCell},
 		{"(alvo não identificado)", catalog.SectionsExecutiveTargetUnknown},
 		{"Interpretação", catalog.SectionsExecutiveInterpretation},
