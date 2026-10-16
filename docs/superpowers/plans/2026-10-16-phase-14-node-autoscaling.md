@@ -56,6 +56,8 @@
 
 ### Task 1: every PDF carries a creation time (F-269)
 
+> **Superseded during execution (2026-10-16).** A report PDF holds no date (the template sets `date: none`), so the creation-time plumbing below would change no byte of a report. It was implemented (33a1fc8) and reverted; the task became: `TestRealCompileIsDeterministic` compiles a document that sets `date: none`, and a test tagged `template` compiles a real report data file twice 1.1 s apart and finds equal bytes and no date. Spec section 9 says so.
+
 **Files:**
 - Modify: `internal/typst/compile.go` (the `Job` struct at :24-34, `Args`)
 - Modify: `internal/typst/compile_test.go` (`validJob`, `TestArgsOrderForPDF`, `TestCompilePassesArguments`, the PDF jobs at :27, :37, :140, :155)
@@ -943,8 +945,9 @@ In `README.md`, change only a line that names the cluster autoscaler's metrics o
 - A report no longer shows the autoscaler's minimum and maximum nodes, the node pools it manages, or the gauge of nodes against the maximum, which kube-state-metrics does not hold; a report made before keeps them.
 - "Scale events" now reads "Nodes added" and counts every node added during the period.
 - A count of node autoscaling that is not known is left out of the report instead of reading Unavailable.
-- A PDF now carries the time its report was issued as its creation date, so the same report gives the same file however often it is rendered.
 ```
+
+The fix of F-269 is a test alone and changes no report, so the changelog leaves it out; say so in the report of the task.
 
 - [ ] **Step 5: Check and commit**
 

@@ -16,9 +16,9 @@ capability, and a line in the data quality appendix.
 
 This phase reads node autoscaling from kube-state-metrics alone, as
 kube-prometheus-stack ships it, so that a report on AKS or OKE says enabled or
-disabled. It asks nothing of the operator. It also gives every PDF the
-emission time of its snapshot as its creation date, so a render is the same
-bytes on any host (F-269). The phase ends as release 2.4.0.
+disabled. It asks nothing of the operator. It also pins that a report PDF
+holds no date, so a render is the same bytes at any time (F-269). The phase
+ends as release 2.4.0.
 
 ## Decisions of the owner (2026-10-15 and 2026-10-16)
 
@@ -41,8 +41,9 @@ bytes on any host (F-269). The phase ends as release 2.4.0.
   collects ConfigMaps, and the guide says so in a paragraph.
 - The real-cluster checks run on an AKS cluster alone; the OKE clusters are
   reachable only from the owner's work laptop.
-- F-269 joins the phase: every PDF compile passes `--creation-timestamp`, the
-  emission time of the snapshot (section 9).
+- F-269 joins the phase (section 9). The owner first took a fixed creation
+  timestamp, the snapshot's emission; a measure during the work showed a
+  report PDF holds no date at all, so the fix moved to the test (2026-10-16).
 
 ## 1. The signals
 
@@ -268,24 +269,23 @@ and a contradiction found then is a finding of its own.
   cluster: the capability is available, and the status is enabled or
   disabled as the cluster is.
 
-## 9. The creation date of a PDF (F-269)
+## 9. The dates of a PDF (F-269)
 
-Typst writes a creation date into every PDF (`CreationDate`, `ModDate`, the
-XMP dates, and the document ID derived from them). With no
+Typst writes a creation date into a PDF (`CreationDate`, `ModDate`, and the
+XMP dates) unless the document sets `date: none`. With no
 `--creation-timestamp` it takes `SOURCE_DATE_EPOCH`, and without that the
-current second. The devShell's Nix environment sets `SOURCE_DATE_EPOCH` to
-315532800 (1980-01-01), so native compiles agree; the test image and the
-runtime image set nothing, so two compiles a second apart differ, and
-`TestRealCompileIsDeterministic` fails `make gate` when its two compiles
-straddle a second.
+current second; the toolchain runs typst with an empty environment, so it
+takes the current second. `TestRealCompileIsDeterministic` compiles a
+document that sets no date, so it failed `make gate` whenever its two
+compiles straddled a second.
 
-Every PDF compile passes `--creation-timestamp`, from a creation time the
-caller must give; a PDF job without one is refused. A report's PDF takes the
-emission time of its snapshot, so the same snapshot gives the same bytes on
-any host, at any render, in either the command or the worker; the
-determinism test passes a fixed time. A PNG compile is unchanged. Two
-compiles 1.5 seconds apart with the flag gave identical bytes (2026-10-16).
-No golden page changes, since the pages are compared as rendered pixels.
+The report's template sets `date: none` (`template/graphite/lib.typ`), so a
+report PDF holds no date: compiles with any timestamp, or none, give the same
+bytes (measured 2026-10-16). Nothing in the product changes. The determinism
+test compiles a document that sets `date: none`, as the report does, twice
+1.1 seconds apart, and finds equal bytes and no date; a test tagged
+`template` does the same with a real report data file, so a change that gave
+the report a date would fail it.
 
 ## 10. Version
 
@@ -321,7 +321,6 @@ the snapshot stays at schema `2.0`.
   what section 7 lists.
 - The real-cluster checks of section 8 pass on an AKS cluster, or the owner
   rules otherwise.
-- Every PDF compile passes a creation time, a test refuses a PDF job without
-  one, and the same snapshot rendered twice gives the same PDF bytes in the
-  test image.
+- A report PDF holds no date, and a report data file compiled twice 1.1
+  seconds apart gives the same bytes, held by a test tagged `template`.
 - `make gate` passes on the version commit.
