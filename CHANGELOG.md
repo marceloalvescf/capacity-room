@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-10-16
+
 ### Changed
 
 - Node autoscaling is now read from kube-state-metrics, as kube-prometheus-stack collects it, so a report on a cluster whose autoscaler is managed, as on AKS, or not scraped, as on OKE, says whether node autoscaling is enabled or disabled instead of saying it could not be determined.
