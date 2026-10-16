@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 	"unicode"
 
 	"github.com/marceloalvescf/capacity-room/internal/typst"
@@ -589,6 +590,7 @@ func TestCapacityCompilesFromUnpackedTemplate(t *testing.T) {
 		Source:   Entry(unpacked),
 		Output:   unpackedOutput,
 		Format:   typst.PDF,
+		Created:  time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC),
 		Inputs:   map[string]string{"data": "/report.json"},
 	}
 	unpackedStderr, err := tc.Compile(context.Background(), unpackedJob)

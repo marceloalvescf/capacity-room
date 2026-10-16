@@ -257,7 +257,11 @@ func TestRenderStoresThePDF(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, err := render.Compile(context.Background(), tc, t.TempDir(), data)
+	created, err := snapshot.Time(snap.Report.EmittedAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := render.Compile(context.Background(), tc, t.TempDir(), data, created)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -898,4 +902,22 @@ func TestRenderLoadErrorAfterTheClaimStoresItsCode(t *testing.T) {
 	e.startRender(both(pdfToolchain(t)), 2, hooks, langPT)
 	report := e.collectedBoth()
 	e.assertFailedPDF(report.ID, langEN, "INTERNAL_FAILURE")
+}
+
+func TestRenderDatesThePDFByTheSnapshotEmission(t *testing.T) {
+	e, _, _ := scenarioEnv(t, nil)
+	tc := scriptToolchain(t, `ts=""; prev=""
+for a in "$@"; do
+	if [ "$prev" = "--creation-timestamp" ]; then ts="$a"; fi
+	prev="$a"
+done
+printf '%%PDF-creation-timestamp %s' "$ts" > "$out"`)
+	e.startRender(both(tc), 2, renderHooks{})
+	report := e.collectedBoth()
+	e.waitPDF(report.ID, langEN, "ready")
+
+	want := "%PDF-creation-timestamp 1791288000"
+	if body := e.pdfBody(report.ID, langEN); string(body) != want {
+		t.Fatalf("stored PDF = %q, want %q, the emission 2026-10-06T12:00:00Z", body, want)
+	}
 }

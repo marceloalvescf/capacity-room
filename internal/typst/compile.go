@@ -32,6 +32,11 @@ type Job struct {
 	PackagePath string            // optional, absolute
 	Pages       string            // optional, PNG only, for example "1,2"
 	PPI         int               // optional, PNG only
+	// Created is the document's creation date, required for PDF and refused
+	// for PNG. Typst otherwise takes SOURCE_DATE_EPOCH or the current second,
+	// and the toolchain runs typst with an empty environment, so two compiles
+	// a second apart would differ.
+	Created time.Time
 }
 
 // CompileError reports a non-zero typst exit.
@@ -106,6 +111,12 @@ func Args(job Job) ([]string, error) {
 	if job.Format == PDF && job.PPI != 0 {
 		return nil, errors.New("ppi applies only to PNG")
 	}
+	if job.Format == PDF && job.Created.IsZero() {
+		return nil, errors.New("a PDF needs a creation time")
+	}
+	if job.Format == PNG && !job.Created.IsZero() {
+		return nil, errors.New("a creation time applies only to PDF")
+	}
 	if job.PPI < 0 {
 		return nil, fmt.Errorf("ppi must not be negative: %d", job.PPI)
 	}
@@ -130,6 +141,9 @@ func Args(job Job) ([]string, error) {
 		args = append(args, "--package-path", job.PackagePath)
 	}
 	args = append(args, "--format", string(job.Format))
+	if job.Format == PDF {
+		args = append(args, "--creation-timestamp", strconv.FormatInt(job.Created.Unix(), 10))
+	}
 	if job.Pages != "" {
 		args = append(args, "--pages", job.Pages)
 	}

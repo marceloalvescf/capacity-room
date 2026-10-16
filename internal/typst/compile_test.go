@@ -25,6 +25,7 @@ func validJob(t *testing.T) Job {
 		Source:   filepath.Join(root, "doc.typ"),
 		Output:   filepath.Join(root, "out.pdf"),
 		Format:   PDF,
+		Created:  time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC),
 	}
 }
 
@@ -35,6 +36,7 @@ func TestArgsOrderForPDF(t *testing.T) {
 		Source:   "/root/doc.typ",
 		Output:   "/root/out.pdf",
 		Format:   PDF,
+		Created:  time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC),
 		Inputs:   map[string]string{"b": "2", "a": "1"},
 	}
 	want := []string{
@@ -44,6 +46,7 @@ func TestArgsOrderForPDF(t *testing.T) {
 		"--font-path", "/fonts",
 		"--ignore-system-fonts", "--ignore-embedded-fonts",
 		"--format", "pdf",
+		"--creation-timestamp", "1784136600",
 		"--input", "a=1",
 		"--input", "b=2",
 		"/root/doc.typ",
@@ -138,6 +141,7 @@ func TestArgsRejectsSourceOutsideRoot(t *testing.T) {
 		Source:   "/b/x.typ",
 		Output:   "/a/out.pdf",
 		Format:   PDF,
+		Created:  time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC),
 	}
 	_, err := Args(job)
 	want := "source must be inside root"
@@ -153,6 +157,7 @@ func TestArgsRejectsSiblingPrefix(t *testing.T) {
 		Source:   "/a/bc/x.typ",
 		Output:   "/a/b/out.pdf",
 		Format:   PDF,
+		Created:  time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC),
 	}
 	_, err := Args(job)
 	want := "source must be inside root"
@@ -298,6 +303,9 @@ func TestCompilePassesArguments(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Fatalf("recorded args = %#v, want %#v", got, want)
 	}
+	if i := slices.Index(got, "--creation-timestamp"); i < 0 || i+1 >= len(got) || got[i+1] != "1784136600" {
+		t.Fatalf("recorded args = %#v, want --creation-timestamp 1784136600", got)
+	}
 }
 
 func TestCompileUsesEmptyEnvironment(t *testing.T) {
@@ -398,5 +406,22 @@ func TestCompileFailureIsNotAStop(t *testing.T) {
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("Compile() error = %v, want errors.Is(err, context.DeadlineExceeded) to be false", err)
+	}
+}
+
+func TestArgsRefusesAPDFWithoutACreationTime(t *testing.T) {
+	job := validJob(t)
+	job.Created = time.Time{}
+	if _, err := Args(job); err == nil || err.Error() != "a PDF needs a creation time" {
+		t.Fatalf("Args() error = %v, want %q", err, "a PDF needs a creation time")
+	}
+}
+
+func TestArgsRefusesACreationTimeForPNG(t *testing.T) {
+	job := validJob(t)
+	job.Format = PNG
+	job.Output = filepath.Join(filepath.Dir(job.Output), "page-{p}.png")
+	if _, err := Args(job); err == nil || err.Error() != "a creation time applies only to PDF" {
+		t.Fatalf("Args() error = %v, want %q", err, "a creation time applies only to PDF")
 	}
 }

@@ -33,7 +33,9 @@ func toolPath(t *testing.T, name string) string {
 //
 // --version answers with the pinned version. Any "compile" invocation copies
 // the file named by "--input data=<path>" (interpreted relative to --root) to
-// its last argument, after writing the line "%PDF-fake" first.
+// its last argument, after writing the line "%PDF-fake" first. The data file is followed by the line
+// "creation-timestamp <value>", the argument after "--creation-timestamp" or
+// "none".
 func fakeTypstPath(t *testing.T) string {
 	t.Helper()
 	script := `#!/bin/sh
@@ -46,9 +48,13 @@ root=""
 data_value=""
 prev=""
 last=""
+created="none"
 for arg in "$@"; do
 	if [ "$prev" = "--root" ]; then
 		root="$arg"
+	fi
+	if [ "$prev" = "--creation-timestamp" ]; then
+		created="$arg"
 	fi
 	if [ "$prev" = "--input" ]; then
 		case "$arg" in
@@ -64,6 +70,7 @@ done
 output="$last"
 echo '%PDF-fake' >"$output"
 ` + toolPath(t, "cat") + ` "$root$data_value" >>"$output"
+echo "creation-timestamp $created" >>"$output"
 `
 	return writeScript(t, script)
 }

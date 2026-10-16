@@ -244,14 +244,7 @@ func TestEveryFailureHasThePrefix(t *testing.T) {
 // nothing else.
 func assertExecutiveFile(t *testing.T, path string) {
 	t.Helper()
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("reading %s: %v", path, err)
-	}
-	if !strings.HasPrefix(string(raw), "%PDF") {
-		t.Fatalf("%s does not start as a PDF", path)
-	}
-	_, data, _ := strings.Cut(string(raw), "\n")
+	data := string(pdfBody(t, path))
 	var doc struct {
 		Blocks []struct {
 			Type  string `json:"type"`

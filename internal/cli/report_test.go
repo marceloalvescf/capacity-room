@@ -227,9 +227,9 @@ func TestSnapshotModeNeedsNoTypst(t *testing.T) {
 	}
 }
 
-// pdfBody strips the fixed "%PDF-fake\n" marker the fake compiler writes and
-// returns what follows: the exact bytes of report.json.
-func pdfBody(t *testing.T, path string) []byte {
+// pdfParts splits a fake PDF into the bytes of report.json and the value the
+// fake compiler recorded for --creation-timestamp.
+func pdfParts(t *testing.T, path string) ([]byte, string) {
 	t.Helper()
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -239,7 +239,20 @@ func pdfBody(t *testing.T, path string) []byte {
 	if !bytes.HasPrefix(data, []byte(marker)) {
 		t.Fatalf("%s does not start with %q", path, marker)
 	}
-	return data[len(marker):]
+	body := data[len(marker):]
+	const label = "creation-timestamp "
+	i := bytes.LastIndex(body, []byte(label))
+	if i < 0 || !bytes.HasSuffix(body, []byte("\n")) {
+		t.Fatalf("%s holds no creation-timestamp line", path)
+	}
+	return body[:i], string(body[i+len(label) : len(body)-1])
+}
+
+// pdfBody returns the exact bytes of report.json held by a fake PDF.
+func pdfBody(t *testing.T, path string) []byte {
+	t.Helper()
+	body, _ := pdfParts(t, path)
+	return body
 }
 
 func TestPDFModeWritesTheFile(t *testing.T) {
@@ -257,7 +270,10 @@ func TestPDFModeWritesTheFile(t *testing.T) {
 		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
 	}
 
-	got := pdfBody(t, outPath)
+	got, created := pdfParts(t, outPath)
+	if created != "1784136600" {
+		t.Fatalf("creation timestamp = %q, want 1784136600, the emission 2026-07-15T14:30:00-03:00", created)
+	}
 	wantPath, err := goldentest.DataFilePath("direct-complete", catalog.English)
 	if err != nil {
 		t.Fatalf("DataFilePath: %v", err)

@@ -181,7 +181,11 @@ func TestReportEndToEnd(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		wantPDF, err := render.Compile(ctx, tc, t.TempDir(), data)
+		created, err := snapshot.Time(want.Snapshot.Report.EmittedAt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantPDF, err := render.Compile(ctx, tc, t.TempDir(), data, created)
 		if err != nil {
 			t.Fatal(err)
 		}

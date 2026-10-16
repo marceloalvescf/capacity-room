@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/marceloalvescf/capacity-room/internal/catalog"
 	"github.com/marceloalvescf/capacity-room/internal/document"
@@ -41,7 +42,10 @@ func Document(s snapshot.Snapshot, lang catalog.Language, opts document.Options)
 // Compile unpacks the template into a fresh folder under tempDir, compiles
 // data, and returns the PDF bytes; the folder is removed before it returns.
 // An empty tempDir means os.TempDir().
-func Compile(ctx context.Context, tc typst.Toolchain, tempDir string, data []byte) (pdf []byte, err error) {
+//
+// created is the PDF's creation date; a report passes the emission time of
+// its snapshot, so the same snapshot gives the same bytes.
+func Compile(ctx context.Context, tc typst.Toolchain, tempDir string, data []byte, created time.Time) (pdf []byte, err error) {
 	err = inWorkFolder(tempDir, func(dir string) error {
 		if err := template.Unpack(dir); err != nil {
 			return err
@@ -57,6 +61,7 @@ func Compile(ctx context.Context, tc typst.Toolchain, tempDir string, data []byt
 			Source:   template.Entry(dir),
 			Output:   output,
 			Format:   typst.PDF,
+			Created:  created,
 			Inputs:   map[string]string{"data": "/report.json"},
 		}
 		if _, err := tc.Compile(ctx, job); err != nil {

@@ -628,8 +628,12 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 	if err != nil {
 		return nil, err
 	}
+	created, err := snapshot.Time(res.Snapshot.Report.EmittedAt)
+	if err != nil {
+		return nil, err
+	}
 
-	if err := compilePDF(ctx, env, tc, data, outputPath); err != nil {
+	if err := compilePDF(ctx, env, tc, data, created, outputPath); err != nil {
 		return nil, err
 	}
 
@@ -712,7 +716,7 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 		return nil, err
 	}
 
-	if err := compilePDF(ctx, env, tc, data, outputPath); err != nil {
+	if err := compilePDF(ctx, env, tc, data, emittedAt, outputPath); err != nil {
 		return nil, err
 	}
 
@@ -785,8 +789,8 @@ func strategiesLine(capabilities []discovery.Capability) string {
 
 // compilePDF compiles data and writes the PDF beside outputPath, renamed into
 // place; every failure is exit code 6.
-func compilePDF(ctx context.Context, env Env, tc typst.Toolchain, data []byte, outputPath string) error {
-	pdf, err := render.Compile(ctx, tc, env.TempDir, data)
+func compilePDF(ctx context.Context, env Env, tc typst.Toolchain, data []byte, created time.Time, outputPath string) error {
+	pdf, err := render.Compile(ctx, tc, env.TempDir, data, created)
 	if err != nil {
 		return &exitError{6, err}
 	}
