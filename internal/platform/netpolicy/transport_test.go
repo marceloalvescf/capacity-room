@@ -375,11 +375,7 @@ func TestTransportNoKeepAlive(t *testing.T) {
 }
 
 func TestTransportThroughThePromClient(t *testing.T) {
-	path, err := promtest.Path("direct-complete")
-	if err != nil {
-		t.Fatalf("Path: %v", err)
-	}
-	fixture, err := promtest.Load(path)
+	fixture, err := promtest.LoadScenario("direct-complete")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}

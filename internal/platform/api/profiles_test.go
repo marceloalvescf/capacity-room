@@ -29,11 +29,7 @@ const (
 // name to use when the scenario's requests carry a token.
 func (ts *testServer) fakeEndpoint(t *testing.T) (endpoint, credential string) {
 	t.Helper()
-	path, err := promtest.Path("direct-complete")
-	if err != nil {
-		t.Fatal(err)
-	}
-	fixture, err := promtest.Load(path)
+	fixture, err := promtest.LoadScenario("direct-complete")
 	if err != nil {
 		t.Fatal(err)
 	}

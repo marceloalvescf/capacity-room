@@ -48,10 +48,10 @@ var RangeScenarios = []Scenario{
 	{Name: "direct-complete-range", Fixture: "direct-complete", Folder: "prometheus", APIRoot: "/api/v1", EndpointType: "prometheus", NodeAutoscaling: "auto", Start: "2026-07-13 00:00", End: "2026-07-14 00:00"},
 }
 
-// Path returns the scenario file of name, under its own folder, found by
+// scenarioPath returns the scenario file of name, under its own folder, found by
 // walking up from the working directory to the folder that holds go.mod. A
 // range scenario resolves to the file of its fixture.
-func Path(name string) (string, error) {
+func scenarioPath(name string) (string, error) {
 	root, err := moduleRoot()
 	if err != nil {
 		return "", err
@@ -89,4 +89,41 @@ func moduleRoot() (string, error) {
 		}
 		dir = parent
 	}
+}
+
+// AddedPath returns the file of the answers this project adds to the
+// scenario of name, in testdata/prometheus-added.
+func AddedPath(name string) (string, error) {
+	root, err := moduleRoot()
+	if err != nil {
+		return "", err
+	}
+	for _, s := range slices.Concat(Scenarios, RangeScenarios) {
+		if s.Name == name {
+			return filepath.Join(root, "testdata", "prometheus-added", s.fixture()+".json"), nil
+		}
+	}
+	return "", fmt.Errorf("no scenario named %q", name)
+}
+
+// LoadScenario reads the scenario of name: the answers this project adds,
+// then the recorded answers, as one fixture.
+func LoadScenario(name string) (Fixture, error) {
+	added, err := AddedPath(name)
+	if err != nil {
+		return Fixture{}, err
+	}
+	recorded, err := scenarioPath(name)
+	if err != nil {
+		return Fixture{}, err
+	}
+	a, err := Load(added)
+	if err != nil {
+		return Fixture{}, err
+	}
+	r, err := Load(recorded)
+	if err != nil {
+		return Fixture{}, err
+	}
+	return Merge(a, r), nil
 }

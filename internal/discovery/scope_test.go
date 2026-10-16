@@ -413,11 +413,7 @@ func TestMatchers(t *testing.T) {
 func TestScopeScenario(t *testing.T) {
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
-			path, err := promtest.Path(scenario.Name)
-			if err != nil {
-				t.Fatalf("Path: %v", err)
-			}
-			fixture, err := promtest.Load(path)
+			fixture, err := promtest.LoadScenario(scenario.Name)
 			if err != nil {
 				t.Fatalf("Load: %v", err)
 			}
@@ -462,11 +458,7 @@ func TestScopeScenario(t *testing.T) {
 }
 
 func TestScopeScenarioMultipleClusters(t *testing.T) {
-	path, err := promtest.Path("thanos-multicluster")
-	if err != nil {
-		t.Fatalf("Path: %v", err)
-	}
-	fixture, err := promtest.Load(path)
+	fixture, err := promtest.LoadScenario("thanos-multicluster")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}

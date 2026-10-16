@@ -1674,11 +1674,7 @@ func TestCollectorFailureStopsWithThree(t *testing.T) {
 		}
 	}
 
-	path, err := promtest.Path("direct-complete")
-	if err != nil {
-		t.Fatalf("promtest.Path: %v", err)
-	}
-	fixture, err := promtest.Load(path)
+	fixture, err := promtest.LoadScenario("direct-complete")
 	if err != nil {
 		t.Fatalf("promtest.Load: %v", err)
 	}
@@ -1730,11 +1726,7 @@ func TestCommandStopsOnASlash(t *testing.T) {
 		}
 	}
 
-	path, err := promtest.Path("direct-complete")
-	if err != nil {
-		t.Fatalf("promtest.Path: %v", err)
-	}
-	fixture, err := promtest.Load(path)
+	fixture, err := promtest.LoadScenario("direct-complete")
 	if err != nil {
 		t.Fatalf("promtest.Load: %v", err)
 	}
@@ -1872,11 +1864,7 @@ func emptyCollectorsServer(t *testing.T) (*httptest.Server, promtest.Scenario, *
 			scenario = s
 		}
 	}
-	path, err := promtest.Path("direct-complete")
-	if err != nil {
-		t.Fatalf("promtest.Path: %v", err)
-	}
-	fixture, err := promtest.Load(path)
+	fixture, err := promtest.LoadScenario("direct-complete")
 	if err != nil {
 		t.Fatalf("promtest.Load: %v", err)
 	}

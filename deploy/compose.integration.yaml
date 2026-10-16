@@ -28,6 +28,7 @@ x-fake: &fake
     - ALL
   volumes:
     - ../testdata/prometheus:/fixtures:ro
+    - ../testdata/prometheus-added:/fixtures-added:ro
   healthcheck:
     test: ["CMD", "/usr/local/bin/fake-prometheus", "--probe", "http://127.0.0.1:9090/-/ready"]
     interval: 1s
@@ -37,11 +38,11 @@ x-fake: &fake
 services:
   fake-prometheus:
     <<: *fake
-    command: ["--fixture", "/fixtures/direct-complete.json", "--listen", ":9090"]
+    command: ["--fixture", "/fixtures/direct-complete.json", "--added", "/fixtures-added/direct-complete.json", "--listen", ":9090"]
 
   fake-recovery:
     <<: *fake
-    command: ["--fixture", "/fixtures/direct-complete.json", "--listen", ":9090", "--delay", "150ms"]
+    command: ["--fixture", "/fixtures/direct-complete.json", "--added", "/fixtures-added/direct-complete.json", "--listen", ":9090", "--delay", "150ms"]
 
   serve:
     depends_on:

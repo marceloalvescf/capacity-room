@@ -25,6 +25,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("fake-prometheus", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	fixturePath := flags.String("fixture", "", "path to a scenario file")
+	addedPath := flags.String("added", "", "path to a scenario file whose answers come before those of --fixture")
 	listen := flags.String("listen", "127.0.0.1:9090", "address to listen on")
 	probeURL := flags.String("probe", "", "URL to ask once; exit 0 on a 2xx answer")
 	delay := flags.Duration("delay", 0, "time to hold each answer other than the ready route")
@@ -45,7 +46,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
-	fixture, err := promtest.Load(*fixturePath)
+	fixture, err := loadFixture(*fixturePath, *addedPath)
 	if err != nil {
 		_, _ = fmt.Fprintf(stderr, "fake-prometheus: %v\n", err)
 		return 1
@@ -108,4 +109,18 @@ func probe(url string, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// loadFixture reads the scenario file at path. When addedPath is not empty,
+// the answers of that file come before those of the scenario.
+func loadFixture(path, addedPath string) (promtest.Fixture, error) {
+	fixture, err := promtest.Load(path)
+	if err != nil || addedPath == "" {
+		return fixture, err
+	}
+	added, err := promtest.Load(addedPath)
+	if err != nil {
+		return promtest.Fixture{}, err
+	}
+	return promtest.Merge(added, fixture), nil
 }

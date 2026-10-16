@@ -657,11 +657,7 @@ func TestListIncludesInactiveForAdministrators(t *testing.T) {
 // profile endpoint that reaches it through the stubbed name.
 func fakePrometheus(t *testing.T) (*promtest.Server, string, promtest.Fixture) {
 	t.Helper()
-	path, err := promtest.Path("direct-complete")
-	if err != nil {
-		t.Fatal(err)
-	}
-	fixture, err := promtest.Load(path)
+	fixture, err := promtest.LoadScenario("direct-complete")
 	if err != nil {
 		t.Fatal(err)
 	}

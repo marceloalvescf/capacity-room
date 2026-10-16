@@ -32,11 +32,7 @@ func TestRunPreflightAgainstTheFakeServer(t *testing.T) {
 	if scenario.Name != "direct-complete" {
 		t.Fatalf("first scenario = %q, want direct-complete", scenario.Name)
 	}
-	path, err := promtest.Path(scenario.Name)
-	if err != nil {
-		t.Fatalf("Path: %v", err)
-	}
-	fixture, err := promtest.Load(path)
+	fixture, err := promtest.LoadScenario(scenario.Name)
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}

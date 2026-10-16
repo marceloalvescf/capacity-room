@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -42,13 +44,13 @@ func TestScenariosHoldEight(t *testing.T) {
 // TestPathFollowsTheFolder checks that Path places edge-values under
 // testdata/prometheus-own, its own folder, rather than testdata/prometheus.
 func TestPathFollowsTheFolder(t *testing.T) {
-	path, err := Path("edge-values")
+	path, err := scenarioPath("edge-values")
 	if err != nil {
-		t.Fatalf("Path(%q): %v", "edge-values", err)
+		t.Fatalf("scenarioPath(%q): %v", "edge-values", err)
 	}
 	want := filepath.Join("testdata", "prometheus-own")
 	if !strings.Contains(path, want) {
-		t.Fatalf("Path(%q) = %q, want it to hold %q", "edge-values", path, want)
+		t.Fatalf("scenarioPath(%q) = %q, want it to hold %q", "edge-values", path, want)
 	}
 }
 
@@ -157,7 +159,7 @@ func TestOwnScenariosMatchTheirChecksums(t *testing.T) {
 // resolves to the recorded answers of the scenario it borrows, and that no
 // scenario of the original's list is a range.
 func TestPathOfARangeScenarioReadsItsFixture(t *testing.T) {
-	path, err := Path("direct-complete-range")
+	path, err := scenarioPath("direct-complete-range")
 	if err != nil {
 		t.Fatalf("Path: %v", err)
 	}
@@ -166,5 +168,86 @@ func TestPathOfARangeScenarioReadsItsFixture(t *testing.T) {
 	}
 	if _, err := Load(path); err != nil {
 		t.Fatalf("Load: %v", err)
+	}
+}
+
+func mustPath(t *testing.T, name string) string {
+	t.Helper()
+	path, err := scenarioPath(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func mustAddedPath(t *testing.T, name string) string {
+	t.Helper()
+	path, err := AddedPath(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestEveryScenarioHasItsAddedAnswers(t *testing.T) {
+	for _, s := range slices.Concat(Scenarios, RangeScenarios) {
+		if _, err := LoadScenario(s.Name); err != nil {
+			t.Errorf("LoadScenario(%q): %v", s.Name, err)
+		}
+	}
+}
+
+func TestAddedAnswersComeFirst(t *testing.T) {
+	recorded, err := Load(mustPath(t, "direct-complete"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	added, err := Load(mustAddedPath(t, "direct-complete"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadScenario("direct-complete")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Requests) != len(added.Requests)+len(recorded.Requests) {
+		t.Fatalf("requests = %d, want %d", len(got.Requests), len(added.Requests)+len(recorded.Requests))
+	}
+	if !reflect.DeepEqual(got.Requests[len(added.Requests):], recorded.Requests) {
+		t.Fatal("the recorded requests do not follow the added ones unchanged")
+	}
+}
+
+// TestAddedAnswersMatchTheirChecksums checks the eight files of
+// testdata/prometheus-added against the checksum its README names for each,
+// and refuses a file of the folder that the README does not name.
+func TestAddedAnswersMatchTheirChecksums(t *testing.T) {
+	root, err := moduleRoot()
+	if err != nil {
+		t.Fatalf("moduleRoot: %v", err)
+	}
+	dir := filepath.Join(root, "testdata", "prometheus-added")
+	readmePath := filepath.Join(dir, "README.md")
+	checksums := readmeChecksums(t, readmePath)
+
+	if len(checksums) != 8 {
+		t.Fatalf("%s names %d checksums, want 8: %v", readmePath, len(checksums), checksums)
+	}
+
+	for name, want := range checksums {
+		got := sha256File(t, filepath.Join(dir, name))
+		if got != want {
+			t.Errorf("%s: sha256 = %s, want %s (from %s)", name, got, want, readmePath)
+		}
+	}
+
+	files, err := filepath.Glob(filepath.Join(dir, "*.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range files {
+		if _, ok := checksums[filepath.Base(file)]; !ok {
+			t.Errorf("%s is not named by %s", filepath.Base(file), readmePath)
+		}
 	}
 }

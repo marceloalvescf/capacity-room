@@ -52,11 +52,7 @@ func (s *swap) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // recorded is a fake Prometheus that answers direct-complete as recorded.
 func recorded(t *testing.T) http.Handler {
 	t.Helper()
-	path, err := promtest.Path("direct-complete")
-	if err != nil {
-		t.Fatal(err)
-	}
-	f, err := promtest.Load(path)
+	f, err := promtest.LoadScenario("direct-complete")
 	if err != nil {
 		t.Fatal(err)
 	}

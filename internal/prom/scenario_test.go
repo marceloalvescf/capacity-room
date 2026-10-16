@@ -16,11 +16,7 @@ import (
 func TestScenarioProbe(t *testing.T) {
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
-			path, err := promtest.Path(scenario.Name)
-			if err != nil {
-				t.Fatalf("Path: %v", err)
-			}
-			fixture, err := promtest.Load(path)
+			fixture, err := promtest.LoadScenario(scenario.Name)
 			if err != nil {
 				t.Fatalf("Load: %v", err)
 			}
@@ -63,11 +59,7 @@ func TestScenarioProbe(t *testing.T) {
 // scenario, which the fixture scripts to require a bearer token, fails to
 // connect without one, and that no request was recorded as a match.
 func TestScenarioGrafanaNeedsToken(t *testing.T) {
-	path, err := promtest.Path("grafana-authenticated")
-	if err != nil {
-		t.Fatalf("Path: %v", err)
-	}
-	fixture, err := promtest.Load(path)
+	fixture, err := promtest.LoadScenario("grafana-authenticated")
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}

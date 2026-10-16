@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -29,9 +30,9 @@ func TestLoadReadsEachScenario(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			path, err := Path(c.name)
+			path, err := scenarioPath(c.name)
 			if err != nil {
-				t.Fatalf("Path(%q): %v", c.name, err)
+				t.Fatalf("scenarioPath(%q): %v", c.name, err)
 			}
 			fixture, err := Load(path)
 			if err != nil {
@@ -148,7 +149,7 @@ func TestServerMatchesOutOfOrder(t *testing.T) {
 }
 
 func TestServerRequiresAuthorization(t *testing.T) {
-	path, err := Path("grafana-authenticated")
+	path, err := scenarioPath("grafana-authenticated")
 	if err != nil {
 		t.Fatalf("Path: %v", err)
 	}
@@ -289,7 +290,7 @@ func TestScenariosMatchTheFiles(t *testing.T) {
 	for _, folder := range folders {
 		names := byFolder[folder]
 		t.Run(folder, func(t *testing.T) {
-			anyPath, err := Path(names[0])
+			anyPath, err := scenarioPath(names[0])
 			if err != nil {
 				t.Fatalf("Path: %v", err)
 			}
@@ -319,5 +320,18 @@ func TestScenariosMatchTheFiles(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestMergeKeepsTheOrderOfEachFixture(t *testing.T) {
+	a := Fixture{Requests: []Request{{Path: "/a1"}, {Path: "/a2"}}}
+	b := Fixture{Requests: []Request{{Path: "/b1"}}}
+	got := Merge(a, b)
+	var paths []string
+	for _, r := range got.Requests {
+		paths = append(paths, r.Path)
+	}
+	if want := []string{"/a1", "/a2", "/b1"}; !slices.Equal(paths, want) {
+		t.Fatalf("paths = %q, want %q", paths, want)
 	}
 }

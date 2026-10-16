@@ -341,11 +341,7 @@ func (e *env) audits(action string) []auditRow {
 
 func scenarioFixture(t *testing.T) promtest.Fixture {
 	t.Helper()
-	path, err := promtest.Path("direct-complete")
-	if err != nil {
-		t.Fatal(err)
-	}
-	f, err := promtest.Load(path)
+	f, err := promtest.LoadScenario("direct-complete")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -117,5 +119,38 @@ func TestRunRefusesFixtureAndProbeTogether(t *testing.T) {
 	}
 	if !strings.HasPrefix(stderr.String(), "fake-prometheus: ") {
 		t.Fatalf("stderr = %q", stderr.String())
+	}
+}
+
+func TestAddedAnswersComeBeforeTheFixtureOnes(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, body string) string {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(`{"requests":[{"method":"POST","path":"/api/v1/query","query_contains":"up","body":{"status":"`+body+`"}}]}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	fixture := write("fixture.json", "recorded")
+	added := write("added.json", "added")
+
+	merged, err := loadFixture(fixture, added)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder := httptest.NewRecorder()
+	promtest.NewServer(merged).ServeHTTP(recorder, queryRequest())
+	if got := recorder.Body.String(); !strings.Contains(got, `"added"`) {
+		t.Fatalf("first answer = %s, want the added one", got)
+	}
+
+	alone, err := loadFixture(fixture, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder = httptest.NewRecorder()
+	promtest.NewServer(alone).ServeHTTP(recorder, queryRequest())
+	if got := recorder.Body.String(); !strings.Contains(got, `"recorded"`) {
+		t.Fatalf("answer without --added = %s, want the recorded one", got)
 	}
 }

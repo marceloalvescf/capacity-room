@@ -111,11 +111,7 @@ type runOutput struct {
 // that needs to know whether every scripted answer was consumed can ask
 // the server itself once the run is over.
 func run(ctx context.Context, scenario promtest.Scenario) (runOutput, *promtest.Server, error) {
-	path, err := promtest.Path(scenario.Name)
-	if err != nil {
-		return runOutput{}, nil, fmt.Errorf("%s: locating fixture: %w", scenario.Name, err)
-	}
-	fixture, err := promtest.Load(path)
+	fixture, err := promtest.LoadScenario(scenario.Name)
 	if err != nil {
 		return runOutput{}, nil, fmt.Errorf("%s: loading fixture: %w", scenario.Name, err)
 	}

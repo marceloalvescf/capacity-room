@@ -101,11 +101,7 @@ func newRun(t *testing.T, scenario promtest.Scenario, serverURL string) fixture 
 func serveScenario(t *testing.T, name string) fixture {
 	t.Helper()
 	scenario := scenarioNamed(t, name)
-	path, err := promtest.Path(name)
-	if err != nil {
-		t.Fatalf("promtest.Path: %v", err)
-	}
-	recorded, err := promtest.Load(path)
+	recorded, err := promtest.LoadScenario(name)
 	if err != nil {
 		t.Fatalf("promtest.Load: %v", err)
 	}
@@ -150,11 +146,7 @@ func TestPreflightRequestsComeFromTheRecordedQueries(t *testing.T) {
 func emptyCollectors(t *testing.T) fixture {
 	t.Helper()
 	scenario := scenarioNamed(t, "direct-complete")
-	path, err := promtest.Path("direct-complete")
-	if err != nil {
-		t.Fatalf("promtest.Path: %v", err)
-	}
-	recorded, err := promtest.Load(path)
+	recorded, err := promtest.LoadScenario("direct-complete")
 	if err != nil {
 		t.Fatalf("promtest.Load: %v", err)
 	}

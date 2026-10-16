@@ -991,11 +991,7 @@ func TestCheckSufficient(t *testing.T) {
 // cluster, the way every scenario file was built.
 func scenarioClient(t *testing.T, scenario promtest.Scenario) (*prom.Client, Scope) {
 	t.Helper()
-	path, err := promtest.Path(scenario.Name)
-	if err != nil {
-		t.Fatalf("Path: %v", err)
-	}
-	fixture, err := promtest.Load(path)
+	fixture, err := promtest.LoadScenario(scenario.Name)
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -1175,11 +1171,7 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 
 	for _, scenario := range promtest.Scenarios {
 		t.Run(scenario.Name, func(t *testing.T) {
-			path, err := promtest.Path(scenario.Name)
-			if err != nil {
-				t.Fatalf("Path: %v", err)
-			}
-			fixture, err := promtest.Load(path)
+			fixture, err := promtest.LoadScenario(scenario.Name)
 			if err != nil {
 				t.Fatalf("Load: %v", err)
 			}

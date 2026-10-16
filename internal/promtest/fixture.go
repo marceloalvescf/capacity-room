@@ -206,3 +206,12 @@ func (s *Server) Remaining() int {
 	defer s.mu.Unlock()
 	return len(s.pending)
 }
+
+// Merge returns one fixture holding the requests of each fixture in turn.
+func Merge(fixtures ...Fixture) Fixture {
+	var merged Fixture
+	for _, f := range fixtures {
+		merged.Requests = append(merged.Requests, f.Requests...)
+	}
+	return merged
+}

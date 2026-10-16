@@ -149,13 +149,9 @@ func startScenario(t *testing.T, name string) (*httptest.Server, *promtest.Serve
 		t.Fatalf("no scenario named %q", name)
 	}
 
-	path, err := promtest.Path(name)
+	fixture, err := promtest.LoadScenario(name)
 	if err != nil {
-		t.Fatalf("promtest.Path(%s): %v", name, err)
-	}
-	fixture, err := promtest.Load(path)
-	if err != nil {
-		t.Fatalf("promtest.Load(%s): %v", name, err)
+		t.Fatalf("promtest.LoadScenario(%s): %v", name, err)
 	}
 	handler := promtest.NewServer(fixture)
 	server := httptest.NewServer(handler)
