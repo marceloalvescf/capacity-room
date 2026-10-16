@@ -1,4 +1,4 @@
-#import "@local/graphite-report:2.4.0": graphite-report
+#import "@local/graphite-report:2.5.0": graphite-report
 
 #show: graphite-report.with(
   title: [Relatório corporativo],
