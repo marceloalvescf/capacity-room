@@ -16,7 +16,9 @@ capability, and a line in the data quality appendix.
 
 This phase reads node autoscaling from kube-state-metrics alone, as
 kube-prometheus-stack ships it, so that a report on AKS or OKE says enabled or
-disabled. It asks nothing of the operator. The phase ends as release 2.4.0.
+disabled. It asks nothing of the operator. It also gives every PDF the
+emission time of its snapshot as its creation date, so a render is the same
+bytes on any host (F-269). The phase ends as release 2.4.0.
 
 ## Decisions of the owner (2026-10-15 and 2026-10-16)
 
@@ -37,6 +39,10 @@ disabled. It asks nothing of the operator. The phase ends as release 2.4.0.
   report still loads, and nothing is migrated.
 - The operator configures nothing for this. The stock kube-prometheus-stack
   collects ConfigMaps, and the guide says so in a paragraph.
+- The real-cluster checks run on an AKS cluster alone; the OKE clusters are
+  reachable only from the owner's work laptop.
+- F-269 joins the phase: every PDF compile passes `--creation-timestamp`, the
+  emission time of the snapshot (section 9).
 
 ## 1. The signals
 
@@ -227,26 +233,51 @@ read before it is committed. F-270 closes with the old queries.
 
 Every step here touches a work cluster, so each waits for the owner's word
 and names its target. Only read-only queries through the cluster's
-Prometheus are sent. No name, address, or context of a work cluster enters a
-tracked file; the record says "an AKS cluster" and "an OKE cluster".
+Prometheus are sent, through a `kubectl port-forward`, as the run against a
+real cluster of 2026-10-02 did. No name, address, or context of a work
+cluster enters a tracked file; the record says "an AKS cluster".
 
-- **Before implementation**, on one AKS and one OKE cluster, ideally with the
-  autoscaler on: `count(kube_configmap_info)`, the status ConfigMap's
+Only an AKS cluster is reachable from the host this project is developed on.
+The OKE clusters are reachable only from the owner's work laptop, so no step
+of this phase runs on OKE; the owner may run the same queries there later,
+and a contradiction found then is a finding of its own.
+
+- **Before implementation**, on an AKS cluster, ideally with the autoscaler
+  on: `count(kube_configmap_info)`, the status ConfigMap's
   `kube_configmap_info`, and `changes(kube_configmap_metadata_resource_version{...}[1h])`.
   A result that contradicts section 1 or the status rule of section 3 amends
   this spec before any code is written.
 - **After implementation**, a `--check` and a report against the same
-  clusters: the capability is available, and the status is enabled or
+  cluster: the capability is available, and the status is enabled or
   disabled as the cluster is.
 
-## 9. Version
+## 9. The creation date of a PDF (F-269)
+
+Typst writes a creation date into every PDF (`CreationDate`, `ModDate`, the
+XMP dates, and the document ID derived from them). With no
+`--creation-timestamp` it takes `SOURCE_DATE_EPOCH`, and without that the
+current second. The devShell's Nix environment sets `SOURCE_DATE_EPOCH` to
+315532800 (1980-01-01), so native compiles agree; the test image and the
+runtime image set nothing, so two compiles a second apart differ, and
+`TestRealCompileIsDeterministic` fails `make gate` when its two compiles
+straddle a second.
+
+Every PDF compile passes `--creation-timestamp`, from a creation time the
+caller must give; a PDF job without one is refused. A report's PDF takes the
+emission time of its snapshot, so the same snapshot gives the same bytes on
+any host, at any render, in either the command or the worker; the
+determinism test passes a fixed time. A PNG compile is unchanged. Two
+compiles 1.5 seconds apart with the flag gave identical bytes (2026-10-16).
+No golden page changes, since the pages are compared as rendered pixels.
+
+## 10. Version
 
 A minor version, 2.4.0: a finding appears where it did not (enabled or
 disabled in place of unknown), sentences of the report change, and the
 verdict changes for a report with no maximum. No public surface is removed;
 the snapshot stays at schema `2.0`.
 
-## 10. Out of scope
+## 11. Out of scope
 
 - Karpenter, AKS node auto provisioning, and the Karpenter provider of OCI:
   their nodes are not added by the cluster autoscaler, and none writes the
@@ -256,6 +287,7 @@ the snapshot stays at schema `2.0`.
 - A setting for the name or namespace of the status ConfigMap.
 - Removing the three dormant findings and the dormant fields, which is a
   major version of its own.
+- A check on an OKE cluster.
 
 ## Definition of done
 
@@ -270,6 +302,9 @@ the snapshot stays at schema `2.0`.
   unchanged.
 - The guide, the design spec, AGENTS.md, the README, and the changelog say
   what section 7 lists.
-- The real-cluster checks of section 8 pass on an AKS and an OKE cluster, or
-  the owner rules otherwise.
+- The real-cluster checks of section 8 pass on an AKS cluster, or the owner
+  rules otherwise.
+- Every PDF compile passes a creation time, a test refuses a PDF job without
+  one, and the same snapshot rendered twice gives the same PDF bytes in the
+  test image.
 - `make gate` passes on the version commit.
