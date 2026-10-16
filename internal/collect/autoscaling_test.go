@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	queryInfo          = `max_over_time(kube_configmap_info{cluster="prod",configmap="cluster-autoscaler-status",namespace="kube-system"}[86400s])`
-	queryWrites        = `changes(kube_configmap_metadata_resource_version{cluster="prod",configmap="cluster-autoscaler-status",namespace="kube-system"}[86400s])`
+	queryInfo          = `max_over_time(kube_configmap_info{cluster="prod",configmap="cluster-autoscaler-status"}[86400s])`
+	queryWrites        = `changes(kube_configmap_metadata_resource_version{cluster="prod",configmap="cluster-autoscaler-status"}[86400s])`
 	queryNodes         = `count(count by (node) (kube_node_info{cluster="prod"}))`
 	queryAdded         = `count(count by (node) (max_over_time(kube_node_created{cluster="prod"}[86400s]) > time() - 86400))`
 	queryUnschedulable = `count(count by (namespace, pod) (kube_pod_status_unschedulable{cluster="prod"} == 1))`
@@ -96,11 +96,27 @@ func TestAutoscalingWindowAtLeastOneSecond(t *testing.T) {
 	in := autoscalingInput("auto")
 	in.Window = Window{Start: time.Unix(500, 0), End: time.Unix(500, 0), Step: "5m"}
 	_, q := collectAutoscaling(t, in, nil)
-	if want := `changes(kube_configmap_metadata_resource_version{cluster="prod",configmap="cluster-autoscaler-status",namespace="kube-system"}[1s])`; q.queries[1] != want {
+	if want := `changes(kube_configmap_metadata_resource_version{cluster="prod",configmap="cluster-autoscaler-status"}[300s])`; q.queries[1] != want {
 		t.Errorf("query 2 = %q, want %q", q.queries[1], want)
 	}
 	if want := `count(count by (node) (max_over_time(kube_node_created{cluster="prod"}[1s]) > time() - 1))`; q.queries[3] != want {
 		t.Errorf("query 4 = %q, want %q", q.queries[3], want)
+	}
+}
+
+func TestAutoscalingShortWindowLooksBackFiveMinutes(t *testing.T) {
+	in := autoscalingInput("auto")
+	in.Window = Window{Start: time.Unix(1000, 0), End: time.Unix(1060, 0), Step: "5m"}
+	_, q := collectAutoscaling(t, in, nil)
+	want := []string{
+		`max_over_time(kube_configmap_info{cluster="prod",configmap="cluster-autoscaler-status"}[300s])`,
+		`changes(kube_configmap_metadata_resource_version{cluster="prod",configmap="cluster-autoscaler-status"}[300s])`,
+		queryNodes,
+		`count(count by (node) (max_over_time(kube_node_created{cluster="prod"}[60s]) > time() - 60))`,
+		queryUnschedulable,
+	}
+	if !reflect.DeepEqual(q.queries, want) {
+		t.Errorf("queries =\n%q\nwant\n%q", q.queries, want)
 	}
 }
 

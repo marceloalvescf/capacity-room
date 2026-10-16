@@ -28,8 +28,14 @@ type AutoscalingEvidence struct {
 }
 
 // statusConfigMap names the ConfigMap the cluster autoscaler writes its
-// status to by default, on AKS and in the OKE add-on alike.
-var statusConfigMap = map[string]string{"namespace": "kube-system", "configmap": "cluster-autoscaler-status"}
+// status to: by default in kube-system (AKS, the OKE add-on), and in its own
+// namespace when installed by hand, so the name alone selects it.
+var statusConfigMap = map[string]string{"configmap": "cluster-autoscaler-status"}
+
+// minStatusLookback is the shortest span the status queries look back, in
+// seconds: 300 s is the lookback of an instant selector in Prometheus, so a
+// window of a few minutes still holds samples of the ConfigMap.
+const minStatusLookback = 300
 
 // Autoscaling reads the node autoscaling of the scope from kube-state-metrics
 // (design, node autoscaling): enabled when the status ConfigMap of the
@@ -48,13 +54,15 @@ func Autoscaling(ctx context.Context, q Querier, in Input) (AutoscalingEvidence,
 		return AutoscalingEvidence{Status: AutoscalingUnknown, Source: discovery.StrategyNone, Confidence: discovery.ConfidenceUnknown}, nil
 	}
 
-	seconds := strconv.FormatInt(max(1, in.Window.End.Unix()-in.Window.Start.Unix()), 10)
+	length := max(1, in.Window.End.Unix()-in.Window.Start.Unix())
+	seconds := strconv.FormatInt(length, 10)
+	lookback := strconv.FormatInt(max(length, minStatusLookback), 10)
 	scope := in.Scope.Matchers()
 	configMap := maps.Clone(statusConfigMap)
 	maps.Copy(configMap, scope)
 	queries := []string{
-		"max_over_time(" + prom.Selector{Metric: "kube_configmap_info", Equal: configMap}.String() + "[" + seconds + "s])",
-		"changes(" + prom.Selector{Metric: "kube_configmap_metadata_resource_version", Equal: configMap}.String() + "[" + seconds + "s])",
+		"max_over_time(" + prom.Selector{Metric: "kube_configmap_info", Equal: configMap}.String() + "[" + lookback + "s])",
+		"changes(" + prom.Selector{Metric: "kube_configmap_metadata_resource_version", Equal: configMap}.String() + "[" + lookback + "s])",
 		"count(count by (node) (" + prom.Selector{Metric: "kube_node_info", Equal: scope}.String() + "))",
 		"count(count by (node) (max_over_time(" + prom.Selector{Metric: "kube_node_created", Equal: scope}.String() + "[" + seconds + "s]) > time() - " + seconds + "))",
 		"count(count by (namespace, pod) (" + prom.Selector{Metric: "kube_pod_status_unschedulable", Equal: scope}.String() + " == 1))",
