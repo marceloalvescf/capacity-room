@@ -55,14 +55,11 @@ describe("autoscaling tab", () => {
     const names = list.getAllByRole("term").map((term) => term.textContent);
     expect(names).toEqual([
       "Current nodes",
-      "Minimum nodes",
-      "Maximum nodes",
-      "Managed node pools",
-      "Scale events",
+      "Nodes added",
       "Unschedulable pods",
       "Workloads without HPA",
     ]);
-    expect(list.getAllByRole("definition").map((value) => value.textContent)).toEqual(["4", "Unavailable", "Unavailable", "Unavailable", "2", "2", "2"]);
+    expect(list.getAllByRole("definition").map((value) => value.textContent)).toEqual(["4", "2", "2", "2"]);
   });
 
   it("hpa rows", async () => {
@@ -390,7 +387,7 @@ describe("autoscaling tab verdict", () => {
   it("opens on the verdict of the cluster and the evidence warning", async () => {
     await open("autoscaling");
     const section = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" }).parentElement?.parentElement as HTMLElement;
-    const sentence = within(section).getByText("Node autoscaling is configured as disabled.");
+    const sentence = within(section).getByText("Node autoscaling is disabled.");
     expect(within(sentence.parentElement as HTMLElement).getByText("Critical")).toBeInTheDocument();
     expect(within(section).getByText("The capacity evidence of the nodes is incomplete.").parentElement?.querySelector("svg")).toHaveClass("text-attention");
   });
@@ -398,7 +395,7 @@ describe("autoscaling tab verdict", () => {
   it("shows the cluster finding alone when the evidence is complete", async () => {
     mock.views.set(`${id}:en`, directComplete as View);
     await open("autoscaling");
-    expect(screen.getByText("Node autoscaling enabled with observed headroom.")).toBeInTheDocument();
+    expect(screen.getByText("Node autoscaling is enabled.")).toBeInTheDocument();
     expect(screen.queryByText("The capacity evidence of the nodes is incomplete.")).not.toBeInTheDocument();
   });
 });

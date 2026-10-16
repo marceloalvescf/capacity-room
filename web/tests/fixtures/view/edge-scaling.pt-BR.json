@@ -138,7 +138,7 @@
       "scope_kind": "",
       "scope_name": "cluster",
       "confidence": "inferred",
-      "sentence": "O autoscaling de nodes está configurado como desabilitado.",
+      "sentence": "O autoscaling de nodes está desabilitado.",
       "action": "Planejar capacidade manual e revisar a decisão de autoscaling.",
       "evidence": [
         {

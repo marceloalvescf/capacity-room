@@ -9,6 +9,7 @@ import { mockColourScheme } from "../../../tests/match-media";
 import viewEn from "../../../tests/fixtures/view/edge-scaling.en.json";
 import viewPt from "../../../tests/fixtures/view/edge-scaling.pt-BR.json";
 import directComplete from "../../../tests/fixtures/view/direct-complete.en.json";
+import directCompletePt from "../../../tests/fixtures/view/direct-complete.pt-BR.json";
 
 const mock = installMockApi(signedIn());
 
@@ -61,8 +62,8 @@ beforeEach(() => {
   mock.views.set(`${id}:pt-BR`, portuguese);
 });
 
-function growth(): HTMLElement {
-  return screen.getByRole("heading", { level: 3, name: "Cluster autoscaling" }).closest("li") as HTMLElement;
+function growth(name = "Cluster autoscaling"): HTMLElement {
+  return screen.getByRole("heading", { level: 3, name }).closest("li") as HTMLElement;
 }
 
 function pairs(): HTMLElement[] {
@@ -84,7 +85,7 @@ describe("overview tab", () => {
     expect(within(pair).getByText("Nodes · current / maximum")).toBeInTheDocument();
     expect(within(pair).getByText("The number of nodes reached or came close to the observed maximum.")).toBeInTheDocument();
     expect(within(pair).getByText("Attention")).toBeInTheDocument();
-    expect(pair).toHaveTextContent("Minimum nodes 2 · Unschedulable pods 2 · Scale events 1");
+    expect(pair).toHaveTextContent("Minimum nodes 2 · Unschedulable pods 2 · Nodes added 1");
     const values = pair.querySelectorAll("span.font-mono");
     expect(values).toHaveLength(3);
     for (const value of values) {
@@ -92,6 +93,61 @@ describe("overview tab", () => {
     }
     const link = within(pair).getByRole("link", { name: "See autoscaling" });
     expect(link.getAttribute("href")).toMatch(/autoscaling$/);
+  });
+
+  it("enabled autoscaling without a maximum shows the state word and the known counts", async () => {
+    mock.views.set(`${id}:en`, directComplete as View);
+    await open();
+    const pair = growth();
+    expect(within(pair).getByText("Enabled")).toHaveClass("text-2xl");
+    expect(pair).not.toHaveTextContent("Nodes · current / maximum");
+    expect(pair.querySelector("svg[viewBox='0 0 1000 16']")).toBeNull();
+    expect(pair).toHaveTextContent("Current nodes 1 · Unschedulable pods 1 · Nodes added 1");
+    expect(pair).not.toHaveTextContent("Unavailable");
+    expect(pair).not.toHaveTextContent("Minimum nodes");
+  });
+
+  it("enabled autoscaling with a maximum and no minimum draws the pair and the bar", async () => {
+    const complete = directComplete as View;
+    mock.views.set(`${id}:en`, {
+      ...complete,
+      summary: {
+        ...complete.summary,
+        autoscaling: {
+          ...complete.summary.autoscaling,
+          current_nodes: count(3),
+          max_nodes: count(3),
+          unschedulable_pods: count(1),
+          scale_events: count(1),
+        },
+      },
+      verdict: { ...complete.verdict, gauge: { current: 3, max: 3, min: null, hazard: "attention" } },
+    });
+    await open();
+    const pair = growth();
+    expect(within(pair).getByText("Nodes · current / maximum")).toBeInTheDocument();
+    expect(pair).toHaveTextContent("3/3");
+    expect(pair.querySelector("svg[viewBox='0 0 1000 16']")).not.toBeNull();
+    expect(pair).toHaveTextContent("Unschedulable pods 1 · Nodes added 1");
+    expect(pair).not.toHaveTextContent("Minimum nodes");
+    expect(pair).not.toHaveTextContent("Unavailable");
+  });
+
+  it("autoscaling disabled from raw metrics shows its word and no counts", async () => {
+    await open();
+    const pair = growth();
+    expect(within(pair).getByText("Disabled")).toHaveClass("text-2xl");
+    expect(pair).not.toHaveTextContent("Current nodes");
+    expect(pair).not.toHaveTextContent("Nodes added");
+  });
+
+  it("enabled autoscaling in portuguese", async () => {
+    mock.session = signedIn({ language: "pt-BR" });
+    mock.views.set(`${id}:pt-BR`, directCompletePt as View);
+    await open("pt-BR");
+    const pair = growth("Autoscaling do cluster");
+    expect(within(pair).getByText("Ativo")).toBeInTheDocument();
+    expect(pair).toHaveTextContent("Nodes atuais 1");
   });
 
   it("autoscaling that is not enabled shows its status word", async () => {

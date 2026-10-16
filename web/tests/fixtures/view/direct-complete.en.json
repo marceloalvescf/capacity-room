@@ -265,7 +265,7 @@
       "scope_kind": "",
       "scope_name": "cluster",
       "confidence": "inferred",
-      "sentence": "Node autoscaling enabled with observed headroom.",
+      "sentence": "Node autoscaling is enabled.",
       "action": "",
       "evidence": []
     },

@@ -67,7 +67,7 @@
         "finding": {
           "status": "critical",
           "label": "Critical",
-          "sentence": "Node autoscaling is configured as disabled."
+          "sentence": "Node autoscaling is disabled."
         },
         "warning": "The capacity evidence of the nodes is incomplete.",
         "facts": []

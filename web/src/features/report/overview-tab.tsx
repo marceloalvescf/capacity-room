@@ -30,24 +30,34 @@ function Pair({ claim, proof }: { claim: ReactNode; proof: ReactNode }) {
   );
 }
 
-// Whether the cluster can grow: the worst finding of the cluster and what the autoscaler did, beside its nodes
-// against the autoscaler's maximum.
+// Whether the cluster can grow: the worst finding of the cluster and the counts that are known, beside the nodes
+// against the autoscaler's maximum when the autoscaling is enabled and both are known, and beside its state word
+// otherwise.
 function GrowthPair() {
   const { t } = useTranslation();
   const { summary, verdict } = useView();
   const { autoscaling } = summary;
   const { gauge } = verdict;
   const enabled = autoscaling.status === "enabled";
-  const facts = [
-    { label: t("report.autoscaling.minNodes"), value: autoscaling.min_nodes },
-    { label: t("report.autoscaling.unschedulablePods"), value: autoscaling.unschedulable_pods },
-    { label: t("report.autoscaling.scaleEvents"), value: autoscaling.scale_events },
-  ];
+  const paired = enabled && autoscaling.current_nodes.raw !== null && autoscaling.max_nodes.raw !== null;
+  const facts = (
+    paired
+      ? [
+          { label: t("report.autoscaling.minNodes"), value: autoscaling.min_nodes },
+          { label: t("report.autoscaling.unschedulablePods"), value: autoscaling.unschedulable_pods },
+          { label: t("report.autoscaling.scaleEvents"), value: autoscaling.scale_events },
+        ]
+      : [
+          { label: t("report.autoscaling.currentNodes"), value: autoscaling.current_nodes },
+          { label: t("report.autoscaling.unschedulablePods"), value: autoscaling.unschedulable_pods },
+          { label: t("report.autoscaling.scaleEvents"), value: autoscaling.scale_events },
+        ]
+  ).filter((fact) => fact.value.raw !== null);
   const claim = (
     <>
       <h3 className="font-semibold">{t("report.autoscaling.title")}</h3>
       <ClusterVerdict />
-      {enabled ? (
+      {enabled && facts.length > 0 ? (
         <p className="text-sm text-muted-fg">
           {facts.map((fact, position) => (
             <Fragment key={fact.label}>
@@ -68,7 +78,7 @@ function GrowthPair() {
       </Link>
     </>
   );
-  const proof = enabled ? (
+  const proof = paired ? (
     <>
       <p className="text-sm text-muted-fg">{t("report.overview.nodesCaption")}</p>
       <p className="font-mono text-display font-semibold">

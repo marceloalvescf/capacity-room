@@ -51,24 +51,24 @@
       "quality": null,
       "growth": {
         "title": "Autoscaling do cluster",
-        "current": "1",
-        "max": "Indisponível",
-        "state": null,
+        "current": null,
+        "max": null,
+        "state": "Ativo",
         "gauge": null,
-        "caption": "Nodes · atual / máximo",
+        "caption": null,
         "finding": null,
         "warning": null,
         "facts": [
           {
-            "label": "Mínimo de nodes",
-            "value": "Indisponível"
+            "label": "Nodes atuais",
+            "value": "1"
           },
           {
             "label": "Pods não agendáveis",
             "value": "1"
           },
           {
-            "label": "Eventos de escala",
+            "label": "Nodes adicionados",
             "value": "1"
           }
         ]

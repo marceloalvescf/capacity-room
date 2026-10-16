@@ -474,7 +474,7 @@
       "minNodes": "Minimum nodes",
       "maxNodes": "Maximum nodes",
       "managedPools": "Managed node pools",
-      "scaleEvents": "Scale events",
+      "scaleEvents": "Nodes added",
       "unschedulablePods": "Unschedulable pods",
       "workloadsWithoutHpa": "Workloads without HPA"
     },

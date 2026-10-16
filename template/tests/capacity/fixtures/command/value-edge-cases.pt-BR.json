@@ -59,7 +59,7 @@
         "finding": {
           "status": "attention",
           "label": "Atenção",
-          "sentence": "O autoscaling de nodes está configurado como desabilitado."
+          "sentence": "O autoscaling de nodes está desabilitado."
         },
         "warning": null,
         "facts": []

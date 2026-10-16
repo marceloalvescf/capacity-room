@@ -263,6 +263,7 @@ const (
 	VerdictGrowthTitle             Key = "verdict.growth.title"
 	VerdictGrowthCaption           Key = "verdict.growth.caption"
 	VerdictGrowthMinNodes          Key = "verdict.growth.min_nodes"
+	VerdictGrowthCurrentNodes      Key = "verdict.growth.current_nodes"
 	VerdictGrowthUnschedulablePods Key = "verdict.growth.unschedulable_pods"
 	VerdictGrowthScaleEvents       Key = "verdict.growth.scale_events"
 	VerdictPressureTitle           Key = "verdict.pressure.title"
@@ -376,7 +377,7 @@ var wordingKeys = []Key{
 	PeriodDaySingular, PeriodDayPlural, PeriodHourSingular, PeriodHourPlural,
 	PeriodMinuteSingular, PeriodMinutePlural, PeriodSecondSingular, PeriodSecondPlural,
 	VerdictNone, VerdictQuality, VerdictMoreWarnings,
-	VerdictGrowthTitle, VerdictGrowthCaption, VerdictGrowthMinNodes,
+	VerdictGrowthTitle, VerdictGrowthCaption, VerdictGrowthMinNodes, VerdictGrowthCurrentNodes,
 	VerdictGrowthUnschedulablePods, VerdictGrowthScaleEvents,
 	VerdictPressureTitle, VerdictPressureEmpty, VerdictPressurePeak,
 	VerdictPlanTitle, VerdictPlanOrder, VerdictPlanPriority, VerdictPlanAction,
@@ -408,16 +409,16 @@ var ScopeTypes = []string{"namespace", "workload", "hpa", "node", "nodepool", "c
 // Scope returns the key of the word that names a scope type: scope.<type>.
 func Scope(scopeType string) Key { return Key("scope." + scopeType) }
 
-// VerdictGrowthStates lists the autoscaling statuses the verdict words when
-// the autoscaling is not enabled. VerdictPressureScopes lists the scope types
+// VerdictGrowthStates lists the autoscaling statuses the verdict words as a
+// state: every status, when the pair of current against maximum is not drawn. VerdictPressureScopes lists the scope types
 // the verdict summarises.
 var (
-	VerdictGrowthStates   = []string{"disabled", "unknown"}
+	VerdictGrowthStates   = []string{"enabled", "disabled", "unknown"}
 	VerdictPressureScopes = []string{"node", "nodepool", "namespace", "workload", "hpa"}
 )
 
-// VerdictGrowthState returns the key of the word for an autoscaling status
-// that is not enabled, one of VerdictGrowthStates: verdict.growth.state.<status>.
+// VerdictGrowthState returns the key of the word for an autoscaling status,
+// one of VerdictGrowthStates: verdict.growth.state.<status>.
 func VerdictGrowthState(status string) Key { return Key("verdict.growth.state." + status) }
 
 // VerdictPressureScope returns the key of the name of a scope type, one of

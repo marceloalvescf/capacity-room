@@ -321,8 +321,10 @@ var wordingTable = []struct {
 	{VerdictGrowthTitle, "Autoscaling do cluster", "Cluster autoscaling"},
 	{VerdictGrowthCaption, "Nodes · atual / máximo", "Nodes · current / maximum"},
 	{VerdictGrowthMinNodes, "Mínimo de nodes", "Minimum nodes"},
+	{VerdictGrowthCurrentNodes, "Nodes atuais", "Current nodes"},
 	{VerdictGrowthUnschedulablePods, "Pods não agendáveis", "Unschedulable pods"},
-	{VerdictGrowthScaleEvents, "Eventos de escala", "Scale events"},
+	{VerdictGrowthScaleEvents, "Nodes adicionados", "Nodes added"},
+	{VerdictGrowthState("enabled"), "Ativo", "Enabled"},
 	{VerdictGrowthState("disabled"), "Inativo", "Disabled"},
 	{VerdictGrowthState("unknown"), "Desconhecido", "Unknown"},
 	{VerdictPressureTitle, "Pressão por escopo", "Pressure by scope"},
@@ -1948,12 +1950,12 @@ var findingWordingTable = []struct {
 	{"hpa_divergence", "", "Há diferença média persistente entre replicas atuais e desejados.", "Investigar eventos, restrições de agendamento e tempo de estabilização.", "There is a persistent average difference between current and desired replicas.", "Investigate the events, the scheduling constraints, and the stabilization time."},
 	{"deployment_without_hpa", "", "Deployment sem HPA observado.", "Validar se o autoscaling horizontal é necessário para este Deployment.", "Deployment observed without HPA.", "Validate whether horizontal autoscaling is needed for this Deployment."},
 	{"statefulset_without_hpa", "", "StatefulSet sem HPA observado; registro informativo.", "Confirmar a estratégia de escala adequada ao StatefulSet.", "StatefulSet observed without HPA; for information.", "Confirm the scaling strategy suited to the StatefulSet."},
-	{"autoscaling_unknown", "", "O estado do autoscaling de nodes não pôde ser determinado.", "Confirmar operacionalmente se o autoscaling do cluster está habilitado.", "The state of node autoscaling could not be determined.", "Confirm operationally whether cluster autoscaling is enabled."},
-	{"autoscaling_disabled", "", "O autoscaling de nodes está configurado como desabilitado.", "Planejar capacidade manual e revisar a decisão de autoscaling.", "Node autoscaling is configured as disabled.", "Plan capacity by hand and review the autoscaling decision."},
+	{"autoscaling_unknown", "", "O estado do autoscaling de nodes não pôde ser determinado.", "Verificar se o kube-state-metrics coleta ConfigMaps, ou informar o autoscaling de nodes na configuração.", "The state of node autoscaling could not be determined.", "Check that kube-state-metrics collects ConfigMaps, or state the node autoscaling in the configuration."},
+	{"autoscaling_disabled", "", "O autoscaling de nodes está desabilitado.", "Planejar capacidade manual e revisar a decisão de autoscaling.", "Node autoscaling is disabled.", "Plan capacity by hand and review the autoscaling decision."},
 	{"autoscaling_near_max", "", "O número de nodes atingiu ou ficou próximo do máximo observado.", "Revisar o máximo configurado e a margem do cluster.", "The number of nodes reached or came close to the observed maximum.", "Review the configured maximum and the headroom of the cluster."},
 	{"autoscaling_bounds_unknown", "", "Autoscaling habilitado sem mínimo e máximo observáveis nas métricas.", "Registrar o mínimo e o máximo operacionais sem inferir valores ausentes.", "Autoscaling enabled with no observable bounds in the metrics.", "Record the operational bounds without inferring absent values."},
 	{"autoscaling_at_min", "", "Autoscaling operando no mínimo observado sem pressão de nodes.", "Manter acompanhamento da demanda.", "Autoscaling running at the observed minimum with no node pressure.", "Keep following the demand."},
-	{"autoscaling_enabled", "", "Autoscaling de nodes habilitado com margem observada.", "Manter acompanhamento do mínimo, do máximo e dos eventos de escala.", "Node autoscaling enabled with observed headroom.", "Keep following the bounds and the scaling events."},
+	{"autoscaling_enabled", "", "O autoscaling de nodes está habilitado.", "Manter acompanhamento dos nodes adicionados e dos pods não agendáveis.", "Node autoscaling is enabled.", "Keep following the nodes added and the unschedulable pods."},
 }
 
 // observationWordingTable holds the approved observation of every pair of

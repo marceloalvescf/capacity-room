@@ -90,8 +90,10 @@ func verdictQuality(b *builder, s snapshot.Snapshot) *VerdictQuality {
 }
 
 // verdictGrowth words whether the cluster can grow: its nodes against the
-// maximum of the autoscaler, the worst finding of the cluster, and the
-// warning that the evidence of the nodes is incomplete.
+// maximum of the autoscaler, drawn only when the status is enabled and both
+// counts are known, otherwise the state word with the counts that are known;
+// the worst finding of the cluster; and the warning that the evidence of the
+// nodes is incomplete.
 func verdictGrowth(b *builder, s snapshot.Snapshot, findings []snapshot.Finding, facts verdictFacts) VerdictGrowth {
 	a := s.Summary.Autoscaling
 	vb := &viewBuilder{b: b}
@@ -112,9 +114,16 @@ func verdictGrowth(b *builder, s snapshot.Snapshot, findings []snapshot.Finding,
 		growth.Warning = &text
 	}
 
-	if a.Status != collect.AutoscalingEnabled {
+	if a.Status != collect.AutoscalingEnabled || a.CurrentNodes == nil || a.MaxNodes == nil {
 		state := b.text(catalog.VerdictGrowthState(a.Status), nil)
 		growth.State = &state
+		if a.Status == collect.AutoscalingEnabled {
+			growth.Facts = knownFacts(b, vb, []growthFact{
+				{catalog.VerdictGrowthCurrentNodes, a.CurrentNodes},
+				{catalog.VerdictGrowthUnschedulablePods, a.UnschedulablePods},
+				{catalog.VerdictGrowthScaleEvents, a.ScaleEvents},
+			})
+		}
 		return growth
 	}
 
@@ -127,12 +136,32 @@ func verdictGrowth(b *builder, s snapshot.Snapshot, findings []snapshot.Finding,
 	if g := facts.Gauge; g != nil {
 		growth.Gauge = &VerdictGauge{Current: g.Current, Max: g.Max, Min: g.Min, Hazard: g.Hazard != ""}
 	}
-	growth.Facts = []VerdictFact{
-		{Label: b.text(catalog.VerdictGrowthMinNodes, nil), Value: vb.number(a.MinNodes, b.cat.Count).Text},
-		{Label: b.text(catalog.VerdictGrowthUnschedulablePods, nil), Value: vb.number(a.UnschedulablePods, b.cat.Count).Text},
-		{Label: b.text(catalog.VerdictGrowthScaleEvents, nil), Value: vb.number(a.ScaleEvents, b.cat.Count).Text},
-	}
+	growth.Facts = knownFacts(b, vb, []growthFact{
+		{catalog.VerdictGrowthMinNodes, a.MinNodes},
+		{catalog.VerdictGrowthUnschedulablePods, a.UnschedulablePods},
+		{catalog.VerdictGrowthScaleEvents, a.ScaleEvents},
+	})
 	return growth
+}
+
+// growthFact is a count the verdict may state beside the growth of the
+// cluster, with the key of its label.
+type growthFact struct {
+	label catalog.Key
+	value *float64
+}
+
+// knownFacts words the facts whose count is known, in order, and leaves out
+// the others: a report from kube-state-metrics holds no minimum.
+func knownFacts(b *builder, vb *viewBuilder, facts []growthFact) []VerdictFact {
+	words := []VerdictFact{}
+	for _, f := range facts {
+		if f.value == nil {
+			continue
+		}
+		words = append(words, VerdictFact{Label: b.text(f.label, nil), Value: vb.number(f.value, b.cat.Count).Text})
+	}
+	return words
 }
 
 // verdictPressure words the scope types under pressure, the worst first.

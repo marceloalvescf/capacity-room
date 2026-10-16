@@ -130,7 +130,7 @@ export function AutoscalingTab() {
             { label: t("report.autoscaling.scaleEvents"), value: autoscaling.scale_events },
             { label: t("report.autoscaling.unschedulablePods"), value: autoscaling.unschedulable_pods },
             { label: t("report.autoscaling.workloadsWithoutHpa"), value: summary.workloads_without_hpa },
-          ]}
+          ].filter((item) => item.value.raw !== null)}
         />
       </section>
       <section className="flex flex-col gap-3">

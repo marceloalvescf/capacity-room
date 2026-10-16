@@ -51,28 +51,28 @@
       "quality": null,
       "growth": {
         "title": "Cluster autoscaling",
-        "current": "1",
-        "max": "Unavailable",
-        "state": null,
+        "current": null,
+        "max": null,
+        "state": "Enabled",
         "gauge": null,
-        "caption": "Nodes · current / maximum",
+        "caption": null,
         "finding": {
           "status": "healthy",
           "label": "Healthy",
-          "sentence": "Node autoscaling enabled with observed headroom."
+          "sentence": "Node autoscaling is enabled."
         },
         "warning": null,
         "facts": [
           {
-            "label": "Minimum nodes",
-            "value": "Unavailable"
+            "label": "Current nodes",
+            "value": "1"
           },
           {
             "label": "Unschedulable pods",
             "value": "1"
           },
           {
-            "label": "Scale events",
+            "label": "Nodes added",
             "value": "1"
           }
         ]

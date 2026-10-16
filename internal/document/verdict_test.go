@@ -1,6 +1,8 @@
 package document
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -65,7 +67,7 @@ func TestVerdictOfEdgeScalingGrowth(t *testing.T) {
 	want := VerdictGrowth{
 		Title:   "Cluster autoscaling",
 		State:   strPtr("Disabled"),
-		Finding: &VerdictFinding{"critical", "Critical", "Node autoscaling is configured as disabled."},
+		Finding: &VerdictFinding{"critical", "Critical", "Node autoscaling is disabled."},
 		Warning: strPtr("The capacity evidence of the nodes is incomplete."),
 	}
 	if !reflect.DeepEqual(g, want) {
@@ -217,38 +219,91 @@ func TestVerdictWithoutAutoscaling(t *testing.T) {
 	}
 }
 
-func TestVerdictWithoutAMaximum(t *testing.T) {
+func TestVerdictEnabledWithoutAMaximumStatesTheKnownCounts(t *testing.T) {
 	s := scalingWithBounds(t)
-	s.Summary.Autoscaling.MaxNodes = nil
+	a := &s.Summary.Autoscaling
+	a.CurrentNodes, a.MinNodes, a.MaxNodes = floatPtr(1), nil, nil
+	a.ScaleEvents, a.UnschedulablePods = floatPtr(1), floatPtr(1)
 	g := englishVerdict(t, s, "all").Growth
 
-	if g.Current == nil || *g.Current != "3" {
-		t.Errorf("Current = %v, want 3", g.Current)
+	if g.State == nil || *g.State != "Enabled" {
+		t.Errorf("State = %v, want Enabled", g.State)
 	}
-	if g.Max == nil || *g.Max != "Unavailable" {
-		t.Errorf("Max = %v, want Unavailable", g.Max)
+	if g.Current != nil || g.Max != nil || g.Caption != nil || g.Gauge != nil {
+		t.Errorf("Growth = %+v, want no pair, caption, or gauge", g)
 	}
-	if g.Gauge != nil {
-		t.Errorf("Gauge = %+v, want none", g.Gauge)
-	}
-	if g.Caption == nil || *g.Caption != "Nodes · current / maximum" {
-		t.Errorf("Caption = %v, want the caption", g.Caption)
+	want := []VerdictFact{{"Current nodes", "1"}, {"Unschedulable pods", "1"}, {"Nodes added", "1"}}
+	if !reflect.DeepEqual(g.Facts, want) {
+		t.Errorf("Facts = %+v, want %+v", g.Facts, want)
 	}
 }
 
-func TestVerdictWithoutACurrentCount(t *testing.T) {
+func TestVerdictEnabledWithAMaximumDrawsThePairWithoutAMinimum(t *testing.T) {
 	s := scalingWithBounds(t)
-	s.Summary.Autoscaling.CurrentNodes = nil
+	a := &s.Summary.Autoscaling
+	a.MinNodes, a.UnschedulablePods, a.ScaleEvents = nil, floatPtr(2), floatPtr(1)
 	g := englishVerdict(t, s, "all").Growth
 
-	if g.Current == nil || *g.Current != "Unavailable" {
-		t.Errorf("Current = %v, want Unavailable", g.Current)
+	if g.Current == nil || *g.Current != "3" || g.Max == nil || *g.Max != "3" {
+		t.Errorf("Current = %v, Max = %v, want 3 and 3", g.Current, g.Max)
 	}
-	if g.Max == nil || *g.Max != "3" {
-		t.Errorf("Max = %v, want 3", g.Max)
+	if g.Caption == nil || *g.Caption != "Nodes · current / maximum" || g.Gauge == nil {
+		t.Errorf("Caption = %v, Gauge = %+v, want the caption and a gauge", g.Caption, g.Gauge)
 	}
-	if g.Gauge != nil || g.Caption == nil {
-		t.Errorf("Gauge = %+v, Caption = %v, want no gauge and a caption", g.Gauge, g.Caption)
+	if g.State != nil {
+		t.Errorf("State = %v, want none", *g.State)
+	}
+	want := []VerdictFact{{"Unschedulable pods", "2"}, {"Nodes added", "1"}}
+	if !reflect.DeepEqual(g.Facts, want) {
+		t.Errorf("Facts = %+v, want %+v", g.Facts, want)
+	}
+}
+
+func storedSnapshot(t *testing.T) snapshot.Snapshot {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "snapshot", "testdata", "stored-2.3.0-direct-complete.json"))
+	if err != nil {
+		t.Fatalf("reading the stored snapshot: %v", err)
+	}
+	s, err := snapshot.Decode(data)
+	if err != nil {
+		t.Fatalf("Decode() error = %v", err)
+	}
+	return s
+}
+
+func TestVerdictOfAReportStoredBy230KeepsItsPair(t *testing.T) {
+	g := englishVerdict(t, storedSnapshot(t), "all").Growth
+
+	if g.Current == nil || *g.Current != "3" || g.Max == nil || *g.Max != "3" || g.Gauge == nil {
+		t.Errorf("Current = %v, Max = %v, Gauge = %+v, want 3, 3, and a gauge", g.Current, g.Max, g.Gauge)
+	}
+	want := []VerdictFact{{"Minimum nodes", "1"}, {"Unschedulable pods", "1"}, {"Nodes added", "1"}}
+	if !reflect.DeepEqual(g.Facts, want) {
+		t.Errorf("Facts = %+v, want %+v", g.Facts, want)
+	}
+}
+
+func TestVerdictDisabledFromRawMetricsStatesTheWordAlone(t *testing.T) {
+	g := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "all").Growth
+
+	if g.State == nil || *g.State != "Disabled" || g.Current != nil || len(g.Facts) != 0 {
+		t.Errorf("Growth = %+v, want the word Disabled and no facts", g)
+	}
+}
+
+func TestVerdictWithoutACurrentCountStatesTheKnownFacts(t *testing.T) {
+	s := scalingWithBounds(t)
+	s.Summary.Autoscaling.CurrentNodes = nil
+	s.Summary.Autoscaling.UnschedulablePods = floatPtr(2)
+	g := englishVerdict(t, s, "all").Growth
+
+	if g.State == nil || *g.State != "Enabled" || g.Current != nil || g.Max != nil || g.Gauge != nil {
+		t.Errorf("Growth = %+v, want the word Enabled and no pair", g)
+	}
+	want := []VerdictFact{{"Unschedulable pods", "2"}, {"Nodes added", "1"}}
+	if !reflect.DeepEqual(g.Facts, want) {
+		t.Errorf("Facts = %+v, want %+v", g.Facts, want)
 	}
 }
 
@@ -286,16 +341,6 @@ func TestVerdictRoundsTheGaugeToWholeNodes(t *testing.T) {
 
 	if want := (&VerdictGauge{Current: 6, Max: 6, Min: intPtr(2), Hazard: true}); !reflect.DeepEqual(g.Gauge, want) {
 		t.Errorf("Gauge = %+v, want %+v", g.Gauge, want)
-	}
-}
-
-func TestVerdictWritesAnAbsentFactAsUnavailable(t *testing.T) {
-	s := scalingWithBounds(t)
-	s.Summary.Autoscaling.ScaleEvents = nil
-	facts := englishVerdict(t, s, "all").Growth.Facts
-
-	if want := (VerdictFact{"Scale events", "Unavailable"}); facts[2] != want {
-		t.Errorf("third fact = %+v, want %+v", facts[2], want)
 	}
 }
 
@@ -359,5 +404,28 @@ func TestVerdictOfAttentionMinimumLeavesOutAHealthyClusterFinding(t *testing.T) 
 	}
 	if g := englishVerdict(t, s, "all").Growth; g.Finding == nil || g.Finding.Status != "healthy" || g.Gauge.Hazard {
 		t.Errorf("Growth = %+v, want the healthy finding and a gauge without hazard", g)
+	}
+}
+
+func TestAReportStoredBy230BuildsItsDocumentAndViewWithThePair(t *testing.T) {
+	s := storedSnapshot(t)
+	for _, lang := range []catalog.Language{catalog.English, catalog.PortugueseBrazil} {
+		cat := mustCatalog(t, lang)
+		doc := mustBuild(t, s, cat, Options{})
+		v, ok := doc.Blocks[0].(Verdict)
+		if !ok {
+			t.Fatalf("%v: first block = %T, want the verdict", lang, doc.Blocks[0])
+		}
+		g := v.Growth
+		if g.Current == nil || *g.Current != "3" || g.Max == nil || *g.Max != "3" || g.Gauge == nil {
+			t.Errorf("%v: Current = %v, Max = %v, Gauge = %+v, want 3, 3, and a gauge", lang, g.Current, g.Max, g.Gauge)
+		}
+		view, err := BuildView(s, cat)
+		if err != nil {
+			t.Fatalf("%v: BuildView() error = %v", lang, err)
+		}
+		if view.Verdict.Gauge == nil {
+			t.Errorf("%v: view gauge = nil, want a gauge", lang)
+		}
 	}
 }

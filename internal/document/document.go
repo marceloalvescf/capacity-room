@@ -245,14 +245,14 @@ type VerdictQuality struct {
 // VerdictGrowth is whether the cluster can grow.
 type VerdictGrowth struct {
 	Title   string
-	Current *string       // nil unless the autoscaling is enabled; the placeholder when the count is absent
-	Max     *string       // nil unless the autoscaling is enabled; the placeholder when the count is absent
-	State   *string       // the status word when it is not enabled
-	Gauge   *VerdictGauge // nil unless both counts are known and the maximum is positive
-	Caption *string       // "Nodes · current / maximum" whenever the autoscaling is enabled
+	Current *string       // set with Max and Caption, only when the autoscaling is enabled and both counts are known
+	Max     *string       // see Current
+	State   *string       // the status word when the pair is not drawn
+	Gauge   *VerdictGauge // nil unless the pair is drawn and the maximum is positive
+	Caption *string       // "Nodes · current / maximum" whenever the pair is drawn
 	Finding *VerdictFinding
-	Warning *string // the node-evidence warning, when the data has it
-	Facts   []VerdictFact
+	Warning *string       // the node-evidence warning, when the data has it
+	Facts   []VerdictFact // the counts that are known; a fact is left out when its count is absent
 }
 
 // VerdictGauge is what the depth gauge draws: whole nodes.

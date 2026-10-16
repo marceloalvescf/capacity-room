@@ -441,10 +441,10 @@ action = "Confirmar a estratégia de escala adequada ao StatefulSet."
 
 [finding.autoscaling_unknown]
 summary = "O estado do autoscaling de nodes não pôde ser determinado."
-action = "Confirmar operacionalmente se o autoscaling do cluster está habilitado."
+action = "Verificar se o kube-state-metrics coleta ConfigMaps, ou informar o autoscaling de nodes na configuração."
 
 [finding.autoscaling_disabled]
-summary = "O autoscaling de nodes está configurado como desabilitado."
+summary = "O autoscaling de nodes está desabilitado."
 action = "Planejar capacidade manual e revisar a decisão de autoscaling."
 
 [finding.autoscaling_near_max]
@@ -460,8 +460,8 @@ summary = "Autoscaling operando no mínimo observado sem pressão de nodes."
 action = "Manter acompanhamento da demanda."
 
 [finding.autoscaling_enabled]
-summary = "Autoscaling de nodes habilitado com margem observada."
-action = "Manter acompanhamento do mínimo, do máximo e dos eventos de escala."
+summary = "O autoscaling de nodes está habilitado."
+action = "Manter acompanhamento dos nodes adicionados e dos pods não agendáveis."
 
 [sections.executive]
 heading = "Resumo executivo"
@@ -572,10 +572,12 @@ more_warnings = "+{{.Count}}"
 title = "Autoscaling do cluster"
 caption = "Nodes · atual / máximo"
 min_nodes = "Mínimo de nodes"
+current_nodes = "Nodes atuais"
 unschedulable_pods = "Pods não agendáveis"
-scale_events = "Eventos de escala"
+scale_events = "Nodes adicionados"
 
 [verdict.growth.state]
+enabled = "Ativo"
 disabled = "Inativo"
 unknown = "Desconhecido"
 

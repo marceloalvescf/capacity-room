@@ -67,7 +67,7 @@
         "finding": {
           "status": "critical",
           "label": "Crítico",
-          "sentence": "O autoscaling de nodes está configurado como desabilitado."
+          "sentence": "O autoscaling de nodes está desabilitado."
         },
         "warning": "As evidências de capacidade dos nodes estão incompletas.",
         "facts": []

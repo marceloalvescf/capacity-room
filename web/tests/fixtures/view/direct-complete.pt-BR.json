@@ -265,7 +265,7 @@
       "scope_kind": "",
       "scope_name": "cluster",
       "confidence": "inferred",
-      "sentence": "Autoscaling de nodes habilitado com margem observada.",
+      "sentence": "O autoscaling de nodes está habilitado.",
       "action": "",
       "evidence": []
     },
