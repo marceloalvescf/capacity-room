@@ -145,7 +145,7 @@
   }
   if growth.facts.len() > 0 {
     v(4pt)
-    text(fill: muted, growth.facts.map(f => [#f.label #value(f.value)]).join(" · "))
+    text(fill: muted, growth.facts.map(f => box[#f.label #value(f.value)]).join(" · "))
   }
 }
 
