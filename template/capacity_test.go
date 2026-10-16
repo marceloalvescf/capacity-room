@@ -3,6 +3,7 @@
 package template
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -14,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 	"unicode"
 
 	"github.com/marceloalvescf/capacity-room/internal/typst"
@@ -748,5 +750,37 @@ func TestCapacityNumberColumnKeepsWordsApart(t *testing.T) {
 	}
 	if !sawWord {
 		t.Errorf("the text layer holds no word %q", "Unavailable")
+	}
+}
+
+// TestCapacityReportHoldsNoDate compiles one real report data file twice,
+// more than a second apart, and requires equal bytes holding no creation or
+// modification date: a report's PDF never carries its render time.
+func TestCapacityReportHoldsNoDate(t *testing.T) {
+	ws := workspace(t)
+	fixture := capacityFixture(ws, "command/direct-complete.en")
+
+	first, stderr, err := compileCapacityData(t, ws, fixture)
+	assertCleanCompile(t, stderr, err)
+	firstBytes, err := os.ReadFile(first)
+	if err != nil {
+		t.Fatalf("reading %s: %v", first, err)
+	}
+	for _, marker := range []string{"CreationDate", "ModDate", "xmp:CreateDate"} {
+		if bytes.Contains(firstBytes, []byte(marker)) {
+			t.Fatalf("the report PDF holds %s", marker)
+		}
+	}
+
+	time.Sleep(1100 * time.Millisecond)
+
+	second, stderr, err := compileCapacityData(t, ws, fixture)
+	assertCleanCompile(t, stderr, err)
+	secondBytes, err := os.ReadFile(second)
+	if err != nil {
+		t.Fatalf("reading %s: %v", second, err)
+	}
+	if !bytes.Equal(firstBytes, secondBytes) {
+		t.Fatalf("two compiles a second apart differ: %d bytes, then %d", len(firstBytes), len(secondBytes))
 	}
 }

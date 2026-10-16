@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // moduleRoot walks up from the current working directory to the first
@@ -170,10 +171,12 @@ func TestRealCompileReportsWarning(t *testing.T) {
 	}
 }
 
+// The report template sets no document date, so its PDF holds no time and two
+// compiles agree; a document with a date takes the current second.
 func TestRealCompileIsDeterministic(t *testing.T) {
 	root := t.TempDir()
 	source := filepath.Join(root, "doc.typ")
-	if err := os.WriteFile(source, []byte("Hello, world!\n"), 0o644); err != nil {
+	if err := os.WriteFile(source, []byte("#set document(date: none)\nHello, world!\n"), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	output := filepath.Join(root, "out.pdf")
@@ -187,7 +190,14 @@ func TestRealCompileIsDeterministic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading first output: %v", err)
 	}
+	for _, marker := range []string{"CreationDate", "ModDate", "xmp:CreateDate"} {
+		if bytes.Contains(first, []byte(marker)) {
+			t.Fatalf("the PDF holds %s", marker)
+		}
+	}
 	sumFirst := sha256.Sum256(first)
+
+	time.Sleep(1100 * time.Millisecond)
 
 	if _, err := tc.Compile(context.Background(), job); err != nil {
 		t.Fatalf("Compile() error (second run) = %v", err)
