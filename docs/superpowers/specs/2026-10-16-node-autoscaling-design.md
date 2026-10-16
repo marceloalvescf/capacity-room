@@ -92,42 +92,48 @@ The capability `node_autoscaling` is:
 ## 3. The collector
 
 The collector keeps its place, last of the five, and sends nothing when the
-configuration states the mode. Otherwise it sends, in this order, each with
-the scope's matchers:
+configuration states the mode, or when the probe found no ConfigMap.
+Otherwise it sends five instant queries at the end of the window, in this
+order, each with the scope's matchers (`W` is the window's length in whole
+seconds, at least 1, as the span of the `increase` of today):
 
-1. whether the status ConfigMap existed: `kube_configmap_info` for
-   `namespace="kube-system", configmap="cluster-autoscaler-status"`, as a
-   range over the window;
-2. how often it was written: `changes(kube_configmap_metadata_resource_version{...}[<window>s])`
-   for the same ConfigMap, at the end of the window, with the window's length
-   as the span the `increase` of today uses;
-3. the nodes: `count(kube_node_info)` as a range over the window;
-4. the nodes added: the nodes whose `kube_node_created` falls inside the
-   window, counted once each, including a node removed before the end;
-5. the unschedulable pods: `count(kube_pod_status_unschedulable == 1)` as a
-   range over the window.
+1. whether the status ConfigMap appeared in the window:
+   `max_over_time(kube_configmap_info{configmap="cluster-autoscaler-status",namespace="kube-system"}[Ws])`;
+2. how often it was written:
+   `changes(kube_configmap_metadata_resource_version{configmap="cluster-autoscaler-status",namespace="kube-system"}[Ws])`;
+3. the nodes at the end: `count(count by (node) (kube_node_info))`;
+4. the nodes added in the window, each once, a node removed before the end
+   included: `count(count by (node) (max_over_time(kube_node_created[Ws]) > time() - W))`;
+5. the unschedulable pods at the end:
+   `count(count by (namespace, pod) (kube_pod_status_unschedulable == 1))`.
 
-The exact text of each query, chosen so that no recorded answer of the
-fixtures matches it by part of its text, is fixed by the plan.
+Each query is instant because a window aggregate is wanted at the end
+alone: a range of `count(... > ...)` has gaps, and its last point would be
+an earlier step. The inner `count by` counts a node or a pod once when two
+replicas of kube-state-metrics export it, and an answer of several samples
+(one per replica) reads as the largest.
 
-**The status.** With the mode `auto`:
+**The status.** With the mode `auto` and a ConfigMap found by the probe:
 
-- `unknown` when the probe found no ConfigMap at all;
 - `enabled` when the status ConfigMap was written during the window (query 2
   above zero), or, when kube-state-metrics exports no resource version for
-  it, when it existed at the end of the window;
-- `disabled` otherwise: the ConfigMap never existed in the window, or it
-  existed and nobody wrote it, the mark of an autoscaler that was turned off
-  and left its ConfigMap behind.
+  it (query 2 empty), when it appeared in the window (query 1);
+- `disabled` otherwise: the ConfigMap never appeared in the window, or it
+  appeared and nobody wrote it, the mark of an autoscaler that was turned
+  off and left its ConfigMap behind.
 
-The source is `raw_metrics` and the confidence `inferred`, as today. A
-configured mode keeps the source `configured` and the confidence `exact`.
+With no ConfigMap found by the probe, the status is `unknown`, with no
+count. The source is `raw_metrics` and the confidence `inferred` for both
+enabled and disabled; the reader of the snapshot accepts the new
+combination disabled, `raw_metrics`, `inferred`, an addition to schema
+`2.0`. A configured mode keeps the source `configured` and the confidence
+`exact`.
 
-**The evidence.** `current_nodes` is the last value of query 3,
-`scale_events` the count of query 4, and `unschedulable_pods` the last value
-of query 5. An empty answer is zero when the nodes answered, and unknown
-when they did not. `managed_node_groups`, `min_nodes`, and `max_nodes` are
-always unknown. The meaning of `scale_events` holds: the original counted the
+**The evidence**, for enabled and disabled alike: `current_nodes` is query
+3, `scale_events` query 4, and `unschedulable_pods` query 5. When query 3
+answers, an empty query 4 or 5 is zero; when it does not, all three are
+unknown. `managed_node_groups`, `min_nodes`, and `max_nodes` are always
+unknown. The meaning of `scale_events` holds: the original counted the
 nodes the autoscaler added (`cluster_autoscaler_scaled_up_nodes_total`), and
 this counts the nodes added, by whatever added them.
 
@@ -154,6 +160,7 @@ The wording that is no longer true changes, in both languages:
 | `finding.autoscaling_unknown.action` | Confirm operationally whether cluster autoscaling is enabled. | Check that kube-state-metrics collects ConfigMaps, or state the node autoscaling in the configuration. | Verificar se o kube-state-metrics coleta ConfigMaps, ou informar o autoscaling de nodes na configuração. |
 | `verdict.growth.scale_events` and the web's `autoscaling.scaleEvents` | Scale events | Nodes added | Nodes adicionados |
 | `verdict.growth.state.enabled` (new) | | Enabled | Ativo |
+| `verdict.growth.current_nodes` (new) | | Current nodes | Nodes atuais |
 
 The disabled sentence holds for a configured mode too. The `NODE_AUTOSCALING_UNDETERMINED`
 reason keeps its sentence: it now appears only when ConfigMaps are not
@@ -161,18 +168,23 @@ collected.
 
 ## 5. The report shows what is known
 
-A number that is unknown is left out, never drawn as a hyphen, so a report
-from kube-state-metrics shows no empty maximum, minimum, or count of node
-groups. A stored report that holds them still shows them.
+A number that is unknown is left out, never drawn as the word Unavailable
+or as a hyphen, so a report from kube-state-metrics shows no empty maximum,
+minimum, or count of node groups. A stored report that holds them still
+shows them.
 
-- **The verdict** (page 1 of the PDF and the overview of the web): with an
-  enabled status and a known maximum, as today: current against maximum, the
-  gauge, the minimum, the unschedulable pods, and the nodes added. With an
-  enabled status and no maximum: the state word Enabled, then the current
-  nodes, the unschedulable pods, and the nodes added. A disabled or unknown
-  status shows its state word, as today.
-- **The autoscaling section** of the PDF and the autoscaling tab of the web:
-  the status, the source, and the confidence, then the counts that are known.
+- **The verdict.** The PDF shows node autoscaling in its verdict alone (page
+  1, in both profiles); it has no section of its own. The web shows it in the
+  overview. The pair current against maximum, with the gauge, is drawn when
+  the status is enabled and both numbers are known, followed by the facts
+  that are known among the minimum, the unschedulable pods, and the nodes
+  added, as today. With an enabled status and no maximum: the state word
+  Enabled, then the facts that are known among the current nodes, the
+  unschedulable pods, and the nodes added. A disabled or unknown status shows
+  its state word alone, as today. The template needs no change: its block
+  already draws the state word when there is no current count.
+- **The autoscaling tab** of the web: the status, the source, and the
+  confidence, then only the counts that are known.
 - The view carries the same numbers as today, null where unknown; the
   contract does not change.
 
@@ -184,26 +196,31 @@ does, so the rules that the text of every query equals the original and that
 the probes keep the original's order gain one named exception: the node
 autoscaling probe and collector. `TestQueriesEqualTheOriginal` and the
 comparison of the autoscaling evidence with `testdata/python` record the
-difference rather than compare it, as the comparison records F-106. The rest
-of the list still equals the original letter for letter.
+difference rather than compare it: a section of
+`docs/decisions/0002-differences-from-the-original.md` names it, and the
+comparison leaves the node autoscaling queries, the autoscaling evidence,
+and the `NODE_AUTOSCALING_*` findings out on both sides, as it leaves out
+the readiness findings of that decision. The rest of the list still equals
+the original letter for letter.
 
 **Recorded answers stay untouched.** The files of `testdata/prometheus/` are
 never edited. The answers to the new queries for each scenario live in a new
 folder, `testdata/prometheus-added/<scenario>.json`, in the format of the
 recorded files, with a README that says what each answer exercises. The fake
 server and every loader read the recorded file and its added file as one
-scenario. The answers of the six old autoscaler queries stay in the recorded
-files and go unused, so the count of unused answers that `make e2e` checks
-(`remaining: 1` today, for `direct-complete`) becomes the new count, pinned
-by its test.
+scenario, the added answers first, so that a recorded answer never takes a
+new query. The answers of the seven old autoscaler requests stay in the
+recorded files and go unused, so the count of unused answers that `make e2e`
+checks becomes 8 for `direct-complete` (`remaining: 1` today), pinned by its
+test.
 
 **The scenarios cover every status:**
 
 | Status | Covered by |
 |---|---|
 | enabled, ConfigMap written in the window | `direct-complete`, `grafana-authenticated`, `thanos-multicluster` (with the cluster matcher) |
-| enabled, no resource version exported, ConfigMap present | one scenario, named by the plan |
-| disabled, no ConfigMap | one scenario, named by the plan |
+| enabled, no resource version exported, ConfigMap present | `raw-fallback` |
+| disabled, no ConfigMap, empty answers read as zero | `edge-values` |
 | disabled with node pressure, ConfigMap left unwritten | `edge-scaling` |
 | unknown, no ConfigMap collected | `partial-data` |
 | configured | `value-edge-cases`, unchanged |
