@@ -283,8 +283,10 @@ below the command; the core never imports `internal/platform/`.
   walked. It names a wrong schema version before anything else. The schema
   is `2.0`, with no `report.period`: a snapshot `1.0` is named and refused,
   with no reader of it. Its period ends at or before its emission.
-- **The probes keep the order of the original**, short cuts included. The
-  fake server answers a query with the first recorded answer whose text is
+- **The probes keep the order of the original**, short cuts included, except
+  that the ninth probe asks `count(kube_configmap_info)` in place of the
+  original's probe of the cluster autoscaler (decision 0002). The fake
+  server answers a query with the first recorded answer whose text is
   part of the query, so another order consumes the wrong answers.
 - **The collectors keep the order of the original too:** the namespaces,
   then the workloads, then the HPAs and their coverage, then the nodes, then

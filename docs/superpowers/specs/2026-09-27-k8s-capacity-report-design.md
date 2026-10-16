@@ -344,8 +344,9 @@ Nine capabilities, in this order: `namespace_usage`, `workload_usage`,
   kube-state-metrics alone, as the design of phase 14
   (`2026-10-16-node-autoscaling-design.md`) says. The ninth probe is
   `count(kube_configmap_info)`. The collector sends five instant queries at
-  the end of the window: whether the ConfigMap
-  `kube-system/cluster-autoscaler-status` appeared in the window, how often
+  the end of the window (the two status queries look back at least five
+  minutes): whether the ConfigMap
+  `cluster-autoscaler-status` (selected by name, in any namespace) appeared in the window, how often
   its resource version changed, the nodes at the end, the nodes added in the
   window, and the unschedulable pods. The status is enabled when the
   ConfigMap was written in the window (or, with no resource version

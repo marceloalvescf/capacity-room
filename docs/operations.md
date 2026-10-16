@@ -329,8 +329,9 @@ every request that changes something.
 The report reads node autoscaling from kube-state-metrics, as
 kube-prometheus-stack collects it, with nothing to configure. The cluster
 autoscaler writes its status to the ConfigMap
-`kube-system/cluster-autoscaler-status`, on AKS and in the OKE add-on alike;
-kube-state-metrics exports its existence (`kube_configmap_info`) and each
+`cluster-autoscaler-status`, found by its name in any namespace: by default
+kube-system (AKS, the OKE add-on), or the namespace of a cluster autoscaler
+installed by hand. kube-state-metrics exports its existence (`kube_configmap_info`) and each
 change of it (`kube_configmap_metadata_resource_version`).
 
 | Status | When |
@@ -344,10 +345,16 @@ period, and the unschedulable pods, from `kube_node_info`,
 `kube_node_created`, and `kube_pod_status_unschedulable`. It does not know
 the minimum or the maximum of a node pool.
 
+The status reads the ConfigMap over at least the last five minutes of the
+period, so a scrape interval longer than two and a half minutes can read
+disabled for a running autoscaler; state the node autoscaling in the
+configuration there.
+
 Two installations need the state written in the profile or in
 `analysis.node_autoscaling`: a kube-state-metrics whose collector list was
-trimmed and no longer holds `configmaps`, and an OKE add-on whose
-`statusConfigMapName` was changed. A cluster that scales its nodes with
+trimmed and no longer holds `configmaps`, a kube-state-metrics started with
+`--namespaces` that leaves out the autoscaler's namespace, and an OKE add-on
+whose `statusConfigMapName` was changed. A cluster that scales its nodes with
 Karpenter alone reads disabled.
 
 ### Stopping
@@ -445,6 +452,13 @@ ca_bundle_dir = "/opt/capacity-room/ca"
 Then give the folder to user `10001` again, as section 4 does. A
 `platform.toml` that still names `/etc/capacity-room` stops `serve` at its
 start with a line naming the path it could not read.
+
+### Upgrading from 2.3.0
+
+A report stored by this version whose node autoscaling reads disabled from
+kube-state-metrics cannot be opened by 2.3.0 or earlier. A rollback to 2.3.0
+loses the view and the PDF renders of those reports; reports stored before the
+upgrade are read as before.
 
 ## 9. Sizing
 
