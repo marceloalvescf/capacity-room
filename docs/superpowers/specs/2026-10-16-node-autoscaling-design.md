@@ -96,17 +96,23 @@ The collector keeps its place, last of the five, and sends nothing when the
 configuration states the mode, or when the probe found no ConfigMap.
 Otherwise it sends five instant queries at the end of the window, in this
 order, each with the scope's matchers (`W` is the window's length in whole
-seconds, at least 1, as the span of the `increase` of today):
+seconds, at least 1, as the span of the `increase` of today; `S` is the
+larger of `W` and 300, the lookback of an instant selector, so that a window
+of a few minutes still holds samples of the ConfigMap):
 
 1. whether the status ConfigMap appeared in the window:
-   `max_over_time(kube_configmap_info{configmap="cluster-autoscaler-status",namespace="kube-system"}[Ws])`;
+   `max_over_time(kube_configmap_info{configmap="cluster-autoscaler-status"}[Ss])`;
 2. how often it was written:
-   `changes(kube_configmap_metadata_resource_version{configmap="cluster-autoscaler-status",namespace="kube-system"}[Ws])`;
+   `changes(kube_configmap_metadata_resource_version{configmap="cluster-autoscaler-status"}[Ss])`;
 3. the nodes at the end: `count(count by (node) (kube_node_info))`;
 4. the nodes added in the window, each once, a node removed before the end
    included: `count(count by (node) (max_over_time(kube_node_created[Ws]) > time() - W))`;
 5. the unschedulable pods at the end:
    `count(count by (namespace, pod) (kube_pod_status_unschedulable == 1))`.
+
+The ConfigMap is selected by its name alone: the cluster autoscaler writes
+it in kube-system on AKS and in the OKE add-on, and in its own namespace when
+installed by hand (amended 2026-10-16 after the whole-branch review).
 
 Each query is instant because a window aggregate is wanted at the end
 alone: a range of `count(... > ...)` has gaps, and its last point would be

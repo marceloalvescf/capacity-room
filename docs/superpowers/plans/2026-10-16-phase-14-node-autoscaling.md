@@ -19,6 +19,7 @@
   3. `count(count by (node) (kube_node_info{<scope>}))`
   4. `count(count by (node) (max_over_time(kube_node_created{<scope>}[Ws]) > time() - W))`
   5. `count(count by (namespace, pod) (kube_pod_status_unschedulable{<scope>} == 1))`
+- Amended after the whole-branch review (2026-10-16): queries 1 and 2 drop `namespace="kube-system"` and look back `max(W, 300)` seconds (spec section 3).
 - The probe, the ninth and last of the preflight, is `count(kube_configmap_info{<scope>})` at the end of the window; the preflight still sends 29 requests.
 - The snapshot stays at schema `2.0`; its reader accepts one new combination: status `disabled`, source `raw_metrics`, confidence `inferred`.
 - `NODE_AUTOSCALING_NEAR_MAX`, `NODE_AUTOSCALING_AT_MIN`, and `NODE_AUTOSCALING_BOUNDS_UNKNOWN` stay registered, with their catalog entries, and are never produced.
