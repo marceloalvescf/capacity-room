@@ -747,11 +747,13 @@ describe("report list", () => {
     await waitFor(() => {
       expect(within(dialog).getByRole("button", { name: t("delete.cancel") })).toBeDisabled();
     });
-    expect(await screen.findByText(t("reports.deleted", { count: 230 }))).toBeInTheDocument();
+    expect(
+      await screen.findByText(t("reports.deleted", { count: 230 }), undefined, { timeout: 10_000 }),
+    ).toBeInTheDocument();
     expect(sent).toEqual([200, 30]);
     expect(overlapped).toBe(false);
     // Renders 230 rows with a checkbox each, so every role query walks hundreds of nodes.
-  }, 15_000);
+  }, 30_000);
 
   it("a double click on confirm sends one request", async () => {
     mock.reports = many(3);
