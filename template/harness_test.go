@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/marceloalvescf/capacity-room/internal/typst"
 )
@@ -130,7 +129,6 @@ func compilePDF(t *testing.T, root, source string, inputs map[string]string) (pd
 		Source:   filepath.Join(root, source),
 		Output:   output,
 		Format:   typst.PDF,
-		Created:  time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC),
 		Inputs:   inputs,
 	}
 	stderr, err = tc.Compile(context.Background(), job)

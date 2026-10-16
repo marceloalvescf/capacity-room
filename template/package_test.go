@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/BurntSushi/toml"
 
@@ -87,7 +86,6 @@ func TestPackageInstallsByCopy(t *testing.T) {
 		Source:      docMain,
 		Output:      output,
 		Format:      typst.PDF,
-		Created:     time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC),
 		PackagePath: pkgRoot,
 	}
 	stderr, err := tc.Compile(context.Background(), job)

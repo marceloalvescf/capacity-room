@@ -202,11 +202,7 @@ func (w *RenderWorker) compile(ctx context.Context, job *river.Job[reports.Rende
 	if err != nil {
 		return nil, err
 	}
-	created, err := snapshot.Time(snap.Report.EmittedAt)
-	if err != nil {
-		return nil, err
-	}
-	pdf, err := render.Compile(ctx, w.Deps.Toolchain, w.Deps.TempDir, data, created)
+	pdf, err := render.Compile(ctx, w.Deps.Toolchain, w.Deps.TempDir, data)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errCompile, err)
 	}

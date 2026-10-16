@@ -287,11 +287,7 @@ func TestReportThroughTheAPI(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		created, err := snapshot.Time(want.Snapshot.Report.EmittedAt)
-		if err != nil {
-			t.Fatal(err)
-		}
-		wantPDF, err := render.Compile(ctx, tc, t.TempDir(), data, created)
+		wantPDF, err := render.Compile(ctx, tc, t.TempDir(), data)
 		if err != nil {
 			t.Fatal(err)
 		}

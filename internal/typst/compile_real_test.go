@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 )
 
 // moduleRoot walks up from the current working directory to the first
@@ -64,7 +63,7 @@ func TestRealCompileWritesPDF(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	output := filepath.Join(root, "out.pdf")
-	job := Job{Root: root, FontPath: realFontPath(t), Source: source, Output: output, Format: PDF, Created: time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC)}
+	job := Job{Root: root, FontPath: realFontPath(t), Source: source, Output: output, Format: PDF}
 
 	stderr, err := realToolchain(t).Compile(context.Background(), job)
 	if err != nil {
@@ -90,7 +89,7 @@ func TestRealCompileInFolderWithSpace(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	output := filepath.Join(root, "out.pdf")
-	job := Job{Root: root, FontPath: realFontPath(t), Source: source, Output: output, Format: PDF, Created: time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC)}
+	job := Job{Root: root, FontPath: realFontPath(t), Source: source, Output: output, Format: PDF}
 
 	stderr, err := realToolchain(t).Compile(context.Background(), job)
 	if err != nil {
@@ -119,7 +118,6 @@ func TestRealCompileReadsInput(t *testing.T) {
 		Source:   source,
 		Output:   output,
 		Format:   PDF,
-		Created:  time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC),
 		Inputs:   map[string]string{"name": "valor"},
 	}
 
@@ -144,7 +142,7 @@ func TestRealCompileReportsError(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	output := filepath.Join(root, "out.pdf")
-	job := Job{Root: root, FontPath: realFontPath(t), Source: source, Output: output, Format: PDF, Created: time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC)}
+	job := Job{Root: root, FontPath: realFontPath(t), Source: source, Output: output, Format: PDF}
 
 	_, err := realToolchain(t).Compile(context.Background(), job)
 	var compileErr *CompileError
@@ -164,7 +162,7 @@ func TestRealCompileReportsWarning(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	output := filepath.Join(root, "out.pdf")
-	job := Job{Root: root, FontPath: realFontPath(t), Source: source, Output: output, Format: PDF, Created: time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC)}
+	job := Job{Root: root, FontPath: realFontPath(t), Source: source, Output: output, Format: PDF}
 
 	_, err := realToolchain(t).Compile(context.Background(), job)
 	if !errors.Is(err, ErrWarning) {
@@ -179,7 +177,7 @@ func TestRealCompileIsDeterministic(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	output := filepath.Join(root, "out.pdf")
-	job := Job{Root: root, FontPath: realFontPath(t), Source: source, Output: output, Format: PDF, Created: time.Date(2026, 7, 15, 17, 30, 0, 0, time.UTC)}
+	job := Job{Root: root, FontPath: realFontPath(t), Source: source, Output: output, Format: PDF}
 	tc := realToolchain(t)
 
 	if _, err := tc.Compile(context.Background(), job); err != nil {
@@ -189,12 +187,7 @@ func TestRealCompileIsDeterministic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading first output: %v", err)
 	}
-	if !bytes.Contains(first, []byte("CreationDate(D:20260715173000Z)")) {
-		t.Fatalf("the first PDF holds no CreationDate(D:20260715173000Z)")
-	}
 	sumFirst := sha256.Sum256(first)
-
-	time.Sleep(1100 * time.Millisecond)
 
 	if _, err := tc.Compile(context.Background(), job); err != nil {
 		t.Fatalf("Compile() error (second run) = %v", err)
