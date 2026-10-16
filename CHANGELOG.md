@@ -6,6 +6,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The web app shows the CapacityRoom mark as its icon in the browser tab, in light and dark.
+
 ## [2.4.0] - 2026-10-16
 
 ### Changed

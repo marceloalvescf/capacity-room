@@ -157,3 +157,20 @@ func TestBuildHasNoInlineStyle(t *testing.T) {
 		t.Fatal("index.html holds inline style")
 	}
 }
+
+func TestBuildServesTheFavicon(t *testing.T) {
+	w := httptest.NewRecorder()
+	Handler().ServeHTTP(w, httptest.NewRequest("GET", "/favicon.svg", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d, want 200", w.Code)
+	}
+	if got := w.Header().Get("Content-Type"); got != "image/svg+xml" {
+		t.Fatalf("content type %q, want image/svg+xml", got)
+	}
+	if !strings.HasPrefix(w.Body.String(), "<svg") {
+		t.Fatalf("body is not the icon: %.40q", w.Body.String())
+	}
+	if !strings.Contains(readIndex(t), `<link rel="icon" type="image/svg+xml" href="/favicon.svg"`) {
+		t.Fatal("index.html holds no link to the icon")
+	}
+}

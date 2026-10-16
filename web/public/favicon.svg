@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
+  <style>
+    .disc { stroke: #0e0e0f; }
+    .line { stroke: #2c55dc; }
+    @media (prefers-color-scheme: dark) {
+      .disc { stroke: #ededee; }
+      .line { stroke: #86a2ff; }
+    }
+  </style>
+  <circle class="disc" cx="15" cy="15" r="10" fill="none" stroke-width="3"/>
+  <line class="line" x1="1" y1="15" x2="29" y2="15" stroke-width="3.25"/>
+</svg>

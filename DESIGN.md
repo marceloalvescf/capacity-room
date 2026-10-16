@@ -340,7 +340,7 @@ The system is flat at rest. The theme resets every Tailwind shadow scale (`--sha
 
 Two radii, from Tailwind's own scale: controls take 6px (`rounded-md`: buttons, inputs, selects, alerts, navigation entries, menu items, tooltips, the segmented track), panels and floating layers take 8px (`rounded-lg`: tables, claim-and-proof pairs, the finding detail, the sign-in card, dialogs, popovers, menus). The checked segment takes 5px so it nests inside the track's 2px inset. Borders are 1px Hairline; the active tab rule is 2px Ink; the focus ring is a 2px accent outline with a 2px offset (inset on menu items and list entries).
 
-Status shapes are 12px SVGs (16px in the answer strip, 10px on the data quality tab): a filled diamond (critical), a filled triangle (attention), a filled circle (healthy), an open circle (undefined), and a dash (unavailable). The brand mark is the load-line disc: a 2.25px Ink circle crossed at its centre by a line in the accent.
+Status shapes are 12px SVGs (16px in the answer strip, 10px on the data quality tab): a filled diamond (critical), a filled triangle (attention), a filled circle (healthy), an open circle (undefined), and a dash (unavailable). The brand mark is the load-line disc: a 2.25px Ink circle crossed at its centre by a line in the accent. The browser-tab icon (`web/public/favicon.svg`) is the same drawing with heavier strokes, 3 of 30 for the circle and 3.25 for the line, so that 16px stays dark; its Ink and accent follow the system theme.
 
 ## Components
 
