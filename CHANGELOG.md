@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-10-19
+
 ### Added
 
 - The Helm chart gives its two setup Jobs resource requests and a memory limit, which the new `jobs.resources` value changes, so a cluster that requires limits on every container accepts them.
