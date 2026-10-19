@@ -117,7 +117,8 @@ each metric source in `platform.allowed_endpoint_hostnames` or
 `platform.allowed_endpoint_cidrs`, since nothing is reachable until one lists
 it. Behind a gateway, set `platform.trusted_proxies` to the gateway's range,
 or every client counts as the gateway for the sign-in throttle; section 12 of
-`docs/operations.md` shows how to find it.
+`docs/operations.md` shows how to find it, and why the gateway's Service needs
+`externalTrafficPolicy: Local`.
 
 The main values follow. Each has a comment in `values.yaml` that is the
 reference.

@@ -767,6 +767,13 @@ az aks nodepool show -g <group> --cluster-name <cluster> -n <pool> --query '[pod
 az network vnet subnet show --ids <id> --query addressPrefix
 ```
 
+The range is enough only when the gateway sees each client's own address.
+With `externalTrafficPolicy: Cluster`, the default of a `LoadBalancer`
+Service, kube-proxy replaces the client's address with a node's before the
+gateway writes `X-Forwarded-For`, so every client that arrives through one
+node still counts as one. Set `externalTrafficPolicy: Local` on the gateway's
+Service to keep the client's address.
+
 ## Reporting a vulnerability
 
 `docs/security.md` describes what the platform defends against and how its

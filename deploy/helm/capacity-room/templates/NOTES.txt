@@ -10,7 +10,7 @@ The web answers at https://{{ first .Values.ingress.hosts }}.
 {{- if .Values.admin.username }}
 The administrator {{ .Values.admin.username }} is created by the Job {{ include "capacity-room.fullname" . }}-admin; Helm removes it once it succeeds, and a failure keeps it for its log.
 {{- else }}
-No administrator is created, since admin.username is empty. Over a database that holds no user yet, nobody can sign in: the admin Job runs at the first install only, so set admin.username and admin.existingSecret, uninstall, and install again; the database and the Secrets stay. Section 12 of docs/operations.md, The Jobs, says more.
+No administrator is created, since admin.username is empty. That is right over a database that already holds a user. Over a database that holds no user yet, nobody can sign in: the admin Job runs at the first install only, so set admin.username and admin.existingSecret, uninstall, and install again; the database and the Secrets stay. Section 12 of docs/operations.md, The Jobs, says more.
 {{- end }}
 {{- if .Values.profiles }}
 The profiles are imported by the Job {{ include "capacity-room.fullname" . }}-profiles at every install and upgrade.
