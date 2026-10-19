@@ -741,6 +741,33 @@ and the address the audit records, and gives no access, since the sender
 still needs a valid password. The chart ships no NetworkPolicy, so a cluster
 whose network can enforce one may narrow this.
 
+With `trusted_proxies` empty behind a gateway, every client has the address of
+the gateway pod, so one person's failed attempts block everyone's sign-in. To
+find the range, read the address of a gateway pod, then the range it belongs
+to.
+
+```bash
+kubectl -n <gateway namespace> get pods -o wide
+kubectl get nodes -o jsonpath='{.items[*].spec.podCIDRs}'
+```
+
+The second command lists the pod range of each node where the network plugin
+assigns one. On AKS, `az aks show` prints the pod range of kubenet and of
+Azure CNI Overlay.
+
+```bash
+az aks show -g <group> -n <cluster> --query networkProfile.podCidr
+```
+
+Azure CNI without overlay gives pods addresses of a virtual network subnet:
+the node pool's `podSubnetId`, or its `vnetSubnetId` when it has none. Read
+the ids of the pool, then the prefix of the subnet.
+
+```bash
+az aks nodepool show -g <group> --cluster-name <cluster> -n <pool> --query '[podSubnetId, vnetSubnetId]'
+az network vnet subnet show --ids <id> --query addressPrefix
+```
+
 ## Reporting a vulnerability
 
 `docs/security.md` describes what the platform defends against and how its
