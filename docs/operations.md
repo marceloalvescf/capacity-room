@@ -668,7 +668,11 @@ and removes it once it succeeds; a failed Job stays, so its log can be read.
 
 - The admin Job, `capacity-room-admin` for a release of that name, runs
   `admin bootstrap-admin` after the first install only, when `admin.username`
-  is set. The bootstrap mode is set on its pod alone.
+  is set. The bootstrap mode is set on its pod alone. With `admin.username`
+  empty over a database that holds no user, no Job creates one and nobody can
+  sign in, as the notes Helm prints say. Set `admin.username` and
+  `admin.existingSecret`, run `helm uninstall capacity-room -n capacity-room`,
+  and install again; the Job runs at that install.
 - The profiles Job, `capacity-room-profiles`, runs `admin import-profiles`
   after every install and upgrade, when `profiles` is not empty. It prints
   `created`, `revised`, `recreated`, or `unchanged` for each profile. A
@@ -682,11 +686,6 @@ kubectl -n capacity-room logs job/capacity-room-profiles
 
 A Job that fails after its retries leaves the release failed.
 
-- An install with `admin.username` empty over a database that holds no user
-  creates nobody, and nobody can sign in, which the notes Helm prints say. Set
-  `admin.username` and `admin.existingSecret`, run
-  `helm uninstall capacity-room -n capacity-room`, and install again; the Job
-  runs at that install.
 - A failed admin Job runs at the first install only, so an upgrade neither
   removes it nor runs it again. Read its log, correct the cause (the Secret,
   the password policy, the database), then run

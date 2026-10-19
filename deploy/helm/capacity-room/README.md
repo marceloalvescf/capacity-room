@@ -111,7 +111,13 @@ names, the gateway's `parentRefs`, and the profile. Set `database.existingSecret
 to the Secret of step 1. The chart refuses a route and an Ingress enabled
 together, and a key it does not know.
 
-Three settings decide whether the first install works. Set `admin.username` and `admin.existingSecret` at the first install, or nobody can sign in. List each metric source in `platform.allowed_endpoint_hostnames` or `platform.allowed_endpoint_cidrs`, since nothing is reachable until one lists it. Behind a gateway, set `platform.trusted_proxies` to the gateway's range, or every client counts as the gateway for the sign-in throttle; section 12 of `docs/operations.md` shows how to find it.
+Three settings decide whether the first install works. Set `admin.username`
+and `admin.existingSecret` at the first install, or nobody can sign in. List
+each metric source in `platform.allowed_endpoint_hostnames` or
+`platform.allowed_endpoint_cidrs`, since nothing is reachable until one lists
+it. Behind a gateway, set `platform.trusted_proxies` to the gateway's range,
+or every client counts as the gateway for the sign-in throttle; section 12 of
+`docs/operations.md` shows how to find it.
 
 The main values follow. Each has a comment in `values.yaml` that is the
 reference.
