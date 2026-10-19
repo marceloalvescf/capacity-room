@@ -118,3 +118,47 @@ func TestKubeconformJobs(t *testing.T) {
 		"--set", "admin.username=admin", "--set", "admin.existingSecret=admin-secret")...))
 	kubeconform(t, renderRaw(t, "-f", "../../deploy/helm/capacity-room/examples/gateway.yaml"))
 }
+
+// jobContainers returns the container of the admin Job and of the profiles
+// Job rendered with args.
+func jobContainers(t *testing.T, args ...string) []map[string]any {
+	t.Helper()
+	objects := render(t, "capacity-room", append(append(required,
+		"-f", "testdata/profiles.yaml",
+		"--set", "admin.username=admin", "--set", "admin.existingSecret=admin-secret"), args...)...)
+	var containers []map[string]any
+	for _, name := range []string{"capacity-room-admin", "capacity-room-profiles"} {
+		job := find(t, objects, "Job", name)
+		containers = append(containers, job.podSpec()["containers"].([]any)[0].(map[string]any))
+	}
+	return containers
+}
+
+func TestJobsHaveResources(t *testing.T) {
+	for _, c := range jobContainers(t) {
+		r := c["resources"].(map[string]any)
+		requests := r["requests"].(map[string]any)
+		limits := r["limits"].(map[string]any)
+		if requests["cpu"] != "50m" || requests["memory"] != "128Mi" || len(requests) != 2 {
+			t.Errorf("%v: requests %v", c["name"], requests)
+		}
+		if limits["memory"] != "256Mi" || len(limits) != 1 {
+			t.Errorf("%v: limits %v", c["name"], limits)
+		}
+	}
+}
+
+func TestJobResourcesCanBeSet(t *testing.T) {
+	for _, c := range jobContainers(t, "--set", "jobs.resources.limits.cpu=200m") {
+		limits := c["resources"].(map[string]any)["limits"].(map[string]any)
+		if limits["cpu"] != "200m" || limits["memory"] != "256Mi" {
+			t.Errorf("%v: limits %v", c["name"], limits)
+		}
+	}
+}
+
+func TestUnknownJobsKeyIsRefused(t *testing.T) {
+	if out := renderError(t, append(required, "--set", "jobs.limits=1")...); !strings.Contains(out, "at '/jobs': additional properties 'limits' not allowed") {
+		t.Errorf("an unknown key under jobs is not refused:\n%s", out)
+	}
+}

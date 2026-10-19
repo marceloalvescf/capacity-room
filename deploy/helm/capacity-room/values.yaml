@@ -56,6 +56,16 @@ worker:
     limits:
       memory: 4Gi
 
+# Resources of the two hook Jobs, the admin Job and the profiles Job. The
+# admin Job hashes the password with 64 MiB of memory.
+jobs:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
 # A Gateway API HTTPRoute to serve. parentRefs names the Gateway, for
 # example [{name: gateway, namespace: gateway-system, sectionName: https}];
 # TLS is the Gateway's. route and ingress exclude each other.

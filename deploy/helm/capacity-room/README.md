@@ -129,6 +129,7 @@ reference.
 | `ingress.enabled`, `ingress.className`, `ingress.annotations`, `ingress.hosts`, `ingress.tls` | `false`, empty, `{}`, `[]`, `[]` | An Ingress, for a cluster with an Ingress controller. |
 | `serve.resources` | 100m CPU and 256Mi requested, 1Gi memory limit | Resources of the `serve` pod. |
 | `worker.resources` | 250m CPU and 512Mi requested, 4Gi memory limit | Resources of the `worker` pod; write the limit in `Mi` or `Gi`, at least `512Mi`. |
+| `jobs.resources` | 50m CPU and 128Mi requested, 256Mi memory limit | Resources of the two hook Jobs. |
 
 ## 4. Install
 

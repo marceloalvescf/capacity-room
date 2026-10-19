@@ -139,6 +139,10 @@
       "type": "object", "additionalProperties": false,
       "properties": {"resources": {"type": "object"}}
     },
+    "jobs": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"resources": {"type": "object"}}
+    },
     "worker": {
       "type": "object", "additionalProperties": false, "required": ["resources"],
       "properties": {

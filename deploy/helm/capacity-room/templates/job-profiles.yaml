@@ -40,6 +40,10 @@ spec:
             {{- include "capacity-room.databaseEnv" . | nindent 12 }}
           securityContext:
             {{- include "capacity-room.containerSecurityContext" . | nindent 12 }}
+          {{- with .Values.jobs.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             {{- include "capacity-room.volumeMounts" . | nindent 12 }}
             - name: settings

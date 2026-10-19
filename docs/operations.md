@@ -693,6 +693,11 @@ written in `Mi` or `Gi`. `serve` has 45 seconds to stop. The worker has twice
 `worker_drain_seconds` (30 by default) plus 15 seconds, since it waits for running jobs, cancels
 the rest, and waits again. Size the memory as section 9 does.
 
+The two Jobs have the requests and limit of `jobs.resources`. No container has
+a CPU limit by default; a cluster whose admission policy requires one on every
+container, such as an Azure Policy initiative or Gatekeeper, takes
+`limits.cpu` in `serve.resources`, `worker.resources`, and `jobs.resources`.
+
 ### Upgrade and uninstall
 
 To upgrade, check out the new version and run the same `helm upgrade -i`
