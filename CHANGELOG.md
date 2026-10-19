@@ -6,6 +6,21 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The Helm chart gives its two setup Jobs resource requests and a memory limit, which the new `jobs.resources` value changes, so a cluster that requires limits on every container accepts them.
+- The notes printed after a Helm install warn when no first administrator is created.
+
+### Changed
+
+- When a metric source resolves to an address that the installation does not allow, the message now names the two settings that allow it.
+- The chart's quick start and the operations guide name the settings that every first install needs, and show how to find a gateway's address range on AKS.
+
+### Fixed
+
+- The chart's Ingress example now creates the first administrator and a profile, as the Gateway example does.
+- The CloudNativePG example now applies in any namespace.
+
 ## [2.5.0] - 2026-10-16
 
 ### Added
