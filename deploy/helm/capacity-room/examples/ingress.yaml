@@ -12,3 +12,14 @@ ingress:
   tls:
     - hosts: ["capacityroom.example.com"]
       secretName: capacityroom-example-com-tls
+admin:
+  username: admin
+  existingSecret: capacity-room-admin
+profiles:
+  - id: prod
+    display_name: Production
+    endpoint_url: http://prometheus.monitoring.svc.cluster.local:9090
+    endpoint_type: prometheus
+    cluster_name: prod
+    allowed_namespaces: ["payments", "checkout"]
+    active: true

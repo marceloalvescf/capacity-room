@@ -3,7 +3,9 @@
 package chart
 
 import (
+	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -160,5 +162,34 @@ func TestJobResourcesCanBeSet(t *testing.T) {
 func TestUnknownJobsKeyIsRefused(t *testing.T) {
 	if out := renderError(t, append(required, "--set", "jobs.limits=1")...); !strings.Contains(out, "at '/jobs': additional properties 'limits' not allowed") {
 		t.Errorf("an unknown key under jobs is not refused:\n%s", out)
+	}
+}
+
+// notes returns the notes Helm prints after an install of the chart with
+// args, from a dry run that reaches no cluster.
+func notes(t *testing.T, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("helm", append([]string{"install", "capacity-room", chartDir,
+		"--namespace", "capacity-room", "--dry-run=client"}, append(required, args...)...)...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("helm install --dry-run=client: %v: %s", err, stderr.String())
+	}
+	_, after, found := strings.Cut(stdout.String(), "NOTES:\n")
+	if !found {
+		t.Fatalf("no notes in the dry run:\n%s", stdout.String())
+	}
+	return after
+}
+
+func TestNotesWarnWhenNoAdministratorIsMade(t *testing.T) {
+	const warning = "No administrator is created"
+	if out := notes(t); !strings.Contains(out, warning) {
+		t.Errorf("notes with admin.username empty lack the warning:\n%s", out)
+	}
+	out := notes(t, "--set", "admin.username=admin", "--set", "admin.existingSecret=admin-secret")
+	if strings.Contains(out, warning) {
+		t.Errorf("notes with admin.username set carry the warning:\n%s", out)
 	}
 }

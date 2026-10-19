@@ -624,6 +624,17 @@ Start from `deploy/helm/capacity-room/examples/gateway.yaml` for a Gateway API
 route, or `examples/ingress.yaml` for an Ingress. Replace the hosts, the
 Secret names, the gateway's `parentRefs`, and the profile.
 
+Three settings decide whether the first install works:
+
+- Set `admin.username` and `admin.existingSecret` at the first install. The
+  admin Job runs at that install only, and with `admin.username` empty over a
+  database that holds no user, nobody can sign in.
+- List each metric source in `allowed_endpoint_hostnames` or
+  `allowed_endpoint_cidrs`, since nothing is reachable until one lists it.
+- Behind a gateway, set `trusted_proxies` to the gateway's range, or every
+  client counts as the gateway for the sign-in throttle. The subsection
+  Behind a gateway shows how to find the range.
+
 `platform` takes the keys of section 3, by their own names, and the schema
 refuses a key that section does not list. The chart writes
 `server_secret_path`, `credential_dir`, and `ca_bundle_dir` itself, so
@@ -671,6 +682,11 @@ kubectl -n capacity-room logs job/capacity-room-profiles
 
 A Job that fails after its retries leaves the release failed.
 
+- An install with `admin.username` empty over a database that holds no user
+  creates nobody, and nobody can sign in, which the notes Helm prints say. Set
+  `admin.username` and `admin.existingSecret`, run
+  `helm uninstall capacity-room -n capacity-room`, and install again; the Job
+  runs at that install.
 - A failed admin Job runs at the first install only, so an upgrade neither
   removes it nor runs it again. Read its log, correct the cause (the Secret,
   the password policy, the database), then run
