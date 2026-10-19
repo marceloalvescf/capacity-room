@@ -561,7 +561,7 @@ cluster has no default one, and pin the image by digest,
 prints.
 
 ```bash
-kubectl apply -f deploy/helm/capacity-room/examples/cloudnative-pg-cluster.yaml
+kubectl apply -n capacity-room -f deploy/helm/capacity-room/examples/cloudnative-pg-cluster.yaml
 kubectl -n capacity-room wait cluster/capacity-room-db --for=condition=Ready --timeout=300s
 ```
 
