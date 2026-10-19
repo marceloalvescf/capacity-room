@@ -319,7 +319,7 @@ describe("the profile form", () => {
     const user = await fillNew();
     mock.failures.set("POST /admin/profiles", { status: 422, code: "ENDPOINT_ADDRESS_REJECTED" });
     await user.click(screen.getByRole("button", { name: "Save" }));
-    const sentence = "The metric source resolves to an address that is not allowed.";
+    const sentence = "The metric source resolves to an address that is not allowed. The installation must list its host name in allowed_endpoint_hostnames, or a range that holds its address in allowed_endpoint_cidrs.";
     await waitFor(() => {
       expect(screen.getByLabelText("Endpoint URL")).toHaveAccessibleDescription(sentence);
     });
@@ -406,7 +406,7 @@ describe("the profile form", () => {
     expect(await findShown("Correct the marked fields, then test again.")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Correct the marked fields, then test again.");
     expect(screen.getByLabelText("Endpoint URL")).toHaveAccessibleDescription(
-      "The metric source resolves to an address that is not allowed.",
+      "The metric source resolves to an address that is not allowed. The installation must list its host name in allowed_endpoint_hostnames, or a range that holds its address in allowed_endpoint_cidrs.",
     );
   });
 
@@ -420,7 +420,7 @@ describe("the profile form", () => {
     });
     await user.type(screen.getByLabelText("Endpoint URL"), "/x");
     expect(screen.getByLabelText("Endpoint URL")).not.toHaveAttribute("aria-invalid", "true");
-    expect(screen.queryByText("The metric source resolves to an address that is not allowed.")).not.toBeInTheDocument();
+    expect(screen.queryByText("The metric source resolves to an address that is not allowed. The installation must list its host name in allowed_endpoint_hostnames, or a range that holds its address in allowed_endpoint_cidrs.")).not.toBeInTheDocument();
   });
 
   it("takes every earlier refusal off when a new test answers", async () => {
@@ -434,7 +434,7 @@ describe("the profile form", () => {
     await user.click(screen.getByRole("button", { name: "Test connection" }));
     await findShown("Connected. The source answers every query the report needs.");
     expect(screen.getByLabelText("Endpoint URL")).not.toHaveAttribute("aria-invalid", "true");
-    expect(screen.queryByText("The metric source resolves to an address that is not allowed.")).not.toBeInTheDocument();
+    expect(screen.queryByText("The metric source resolves to an address that is not allowed. The installation must list its host name in allowed_endpoint_hostnames, or a range that holds its address in allowed_endpoint_cidrs.")).not.toBeInTheDocument();
   });
 
   it("shows the failure of a draft in a 200", async () => {
