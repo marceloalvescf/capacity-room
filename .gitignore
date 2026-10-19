@@ -8,3 +8,5 @@
 /web/dist/
 /web/test-results/
 /web/playwright-report/
+# Scratch files of the tools; never tracked.
+/.cache/
