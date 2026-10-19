@@ -122,7 +122,7 @@
     "PROFILE_REVISION_STALE": "Este perfil mudou desde que você o abriu. Carregue-o de novo.",
     "PROFILE_DOCUMENT_INVALID": "O perfil não é válido.",
     "ENDPOINT_URL_REJECTED": "O endereço da fonte de métricas não é permitido.",
-    "ENDPOINT_ADDRESS_REJECTED": "A fonte de métricas aponta para um endereço que não é permitido. A instalação precisa listar o nome do host em allowed_endpoint_hostnames, ou uma faixa que contenha o endereço em allowed_endpoint_cidrs.",
+    "ENDPOINT_ADDRESS_REJECTED": "A fonte de métricas aponta para um endereço que não é permitido. A instalação precisa listar o nome do host em allowed_endpoint_hostnames, ou uma faixa que contenha o endereço em allowed_endpoint_cidrs; um endereço de uma classe recusada, como loopback ou link-local, precisa de uma faixa só com esse endereço.",
     "INTERNAL_ERROR": "Algo deu errado no servidor.",
     "IDEMPOTENCY_KEY_INVALID": "Não foi possível identificar o request. Tente de novo.",
     "CURSOR_INVALID": "A lista não pôde continuar. Carregue-a de novo.",
@@ -174,7 +174,7 @@
   },
   "reportFailure": {
     "ENDPOINT_URL_REJECTED": "O endereço da fonte de métricas não é permitido.",
-    "ENDPOINT_ADDRESS_REJECTED": "A fonte de métricas aponta para um endereço que não é permitido. A instalação precisa listar o nome do host em allowed_endpoint_hostnames, ou uma faixa que contenha o endereço em allowed_endpoint_cidrs.",
+    "ENDPOINT_ADDRESS_REJECTED": "A fonte de métricas aponta para um endereço que não é permitido. A instalação precisa listar o nome do host em allowed_endpoint_hostnames, ou uma faixa que contenha o endereço em allowed_endpoint_cidrs; um endereço de uma classe recusada, como loopback ou link-local, precisa de uma faixa só com esse endereço.",
     "ENDPOINT_RESOLUTION_FAILED": "Não foi possível resolver o nome da fonte de métricas.",
     "ENDPOINT_CONNECTION_REJECTED": "A conexão com a fonte de métricas foi recusada.",
     "ENDPOINT_REDIRECT_REJECTED": "A fonte de métricas respondeu com um redirecionamento, que não é permitido.",
@@ -752,7 +752,7 @@
   "profileTest": {
     "PROFILE_OK": "Conectado. A fonte responde a todas as consultas que o relatório usa.",
     "ENDPOINT_URL_REJECTED": "A URL do endpoint não é permitida.",
-    "ENDPOINT_ADDRESS_REJECTED": "O endereço do endpoint não é permitido por esta instalação, que precisa listar o nome do host em allowed_endpoint_hostnames, ou uma faixa que contenha o endereço em allowed_endpoint_cidrs.",
+    "ENDPOINT_ADDRESS_REJECTED": "O endereço do endpoint não é permitido por esta instalação, que precisa listar o nome do host em allowed_endpoint_hostnames, ou uma faixa que contenha o endereço em allowed_endpoint_cidrs; um endereço de uma classe recusada, como loopback ou link-local, precisa de uma faixa só com esse endereço.",
     "ENDPOINT_RESOLUTION_FAILED": "Não foi possível resolver o nome do host do endpoint.",
     "ENDPOINT_CONNECTION_REJECTED": "A conexão chegou a um endereço que não é permitido.",
     "ENDPOINT_REDIRECT_REJECTED": "O endpoint respondeu com um redirect, que não é seguido.",

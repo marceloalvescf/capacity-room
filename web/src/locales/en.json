@@ -122,7 +122,7 @@
     "PROFILE_REVISION_STALE": "This profile changed since you opened it. Load it again.",
     "PROFILE_DOCUMENT_INVALID": "The profile is not valid.",
     "ENDPOINT_URL_REJECTED": "The address of the metric source is not allowed.",
-    "ENDPOINT_ADDRESS_REJECTED": "The metric source resolves to an address that is not allowed. The installation must list its host name in allowed_endpoint_hostnames, or a range that holds its address in allowed_endpoint_cidrs.",
+    "ENDPOINT_ADDRESS_REJECTED": "The metric source resolves to an address that is not allowed. The installation must list its host name in allowed_endpoint_hostnames, or a range that holds its address in allowed_endpoint_cidrs; an address of a refused class, such as loopback or link-local, needs a range of that one address.",
     "INTERNAL_ERROR": "Something went wrong on the server.",
     "IDEMPOTENCY_KEY_INVALID": "The request could not be identified. Try again.",
     "CURSOR_INVALID": "The list could not continue. Load it again.",
@@ -174,7 +174,7 @@
   },
   "reportFailure": {
     "ENDPOINT_URL_REJECTED": "The address of the metric source is not allowed.",
-    "ENDPOINT_ADDRESS_REJECTED": "The metric source resolves to an address that is not allowed. The installation must list its host name in allowed_endpoint_hostnames, or a range that holds its address in allowed_endpoint_cidrs.",
+    "ENDPOINT_ADDRESS_REJECTED": "The metric source resolves to an address that is not allowed. The installation must list its host name in allowed_endpoint_hostnames, or a range that holds its address in allowed_endpoint_cidrs; an address of a refused class, such as loopback or link-local, needs a range of that one address.",
     "ENDPOINT_RESOLUTION_FAILED": "The name of the metric source could not be resolved.",
     "ENDPOINT_CONNECTION_REJECTED": "The connection to the metric source was refused.",
     "ENDPOINT_REDIRECT_REJECTED": "The metric source answered with a redirect, which is not allowed.",
@@ -752,7 +752,7 @@
   "profileTest": {
     "PROFILE_OK": "Connected. The source answers every query the report needs.",
     "ENDPOINT_URL_REJECTED": "The endpoint URL is not allowed.",
-    "ENDPOINT_ADDRESS_REJECTED": "The address of the endpoint is not allowed by this installation, which must list its host name in allowed_endpoint_hostnames, or a range that holds its address in allowed_endpoint_cidrs.",
+    "ENDPOINT_ADDRESS_REJECTED": "The address of the endpoint is not allowed by this installation, which must list its host name in allowed_endpoint_hostnames, or a range that holds its address in allowed_endpoint_cidrs; an address of a refused class, such as loopback or link-local, needs a range of that one address.",
     "ENDPOINT_RESOLUTION_FAILED": "The host name of the endpoint could not be resolved.",
     "ENDPOINT_CONNECTION_REJECTED": "The connection reached an address that is not allowed.",
     "ENDPOINT_REDIRECT_REJECTED": "The endpoint answered with a redirect, which is not followed.",
