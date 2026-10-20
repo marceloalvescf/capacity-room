@@ -2,8 +2,6 @@ database:
   existingSecret: capacity-room-db-app
 serverSecret:
   existingSecret: capacity-room-server-secret
-imagePullSecrets:
-  - name: registry-pull
 platform:
   trusted_proxies: ["10.244.0.0/16"]
   allowed_endpoint_hostnames: ["prometheus.monitoring.svc.cluster.local"]

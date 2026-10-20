@@ -6,6 +6,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The image on Docker Hub is now public, so the chart's Gateway example no longer names a pull secret.
+
 ## [2.6.0] - 2026-10-19
 
 ### Added

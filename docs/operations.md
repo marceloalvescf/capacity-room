@@ -611,12 +611,14 @@ kubectl -n capacity-room create secret docker-registry registry-pull \
   --docker-username=example --docker-password=CHANGE-ME  # example: replace
 ```
 
-List the pull secret in the values as `imagePullSecrets: [{name: registry-pull}]`.
+The image on Docker Hub is public, so a pull secret is needed only for a
+private registry or mirror; list it in the values as
+`imagePullSecrets: [{name: registry-pull}]`.
 
 The credentials Secret and the CA ConfigMap are optional; a key of either
-is the file name that a profile gives. The pull secret is needed only when
-the registry is private. A key of the admin Secret other than `password`
-is named by `admin.passwordKey`, which takes the characters `-._a-zA-Z0-9`.
+is the file name that a profile gives. A key of the admin Secret other than
+`password` is named by `admin.passwordKey`, which takes the characters
+`-._a-zA-Z0-9`.
 
 ### A values file
 
