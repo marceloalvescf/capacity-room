@@ -1056,3 +1056,45 @@ func TestViewCapabilityWithoutReasonHasNoRemark(t *testing.T) {
 		t.Errorf("remark = %q, want empty", got.Capabilities[0].Remark)
 	}
 }
+
+func TestViewVerdictScopesOfTheExecutiveProfileHoldNoHealthyFinding(t *testing.T) {
+	s := goldenSnapshot(t, "edge-scaling")
+	s.Report.Profile = "executive"
+	got := mustView(t, s, catalog.English).Verdict.Scopes
+	want := []ViewScope{
+		{ScopeType: "namespace", Severity: "critical", Finding: 2, Critical: 4, Attention: 0, Healthy: 0},
+		{ScopeType: "node", Severity: "critical", Finding: 0, Critical: 2, Attention: 5, Healthy: 0},
+		{ScopeType: "workload", Severity: "critical", Finding: 6, Critical: 2, Attention: 2, Healthy: 0},
+		{ScopeType: "hpa", Severity: "critical", Finding: 8, Critical: 1, Attention: 1, Healthy: 0},
+		{ScopeType: "nodepool", Severity: "attention", Finding: 14, Critical: 0, Attention: 3, Healthy: 0},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Scopes = %+v, want %+v", got, want)
+	}
+}
+
+func TestViewVerdictScopesAreAnEmptyListWhenNoFindingIsShown(t *testing.T) {
+	s := goldenSnapshot(t, "edge-scaling")
+	s.Report.Profile = "executive"
+	var healthy []snapshot.Finding
+	for _, f := range s.Findings {
+		if f.Severity == "healthy" {
+			healthy = append(healthy, f)
+		}
+	}
+	s.Findings = healthy
+	s.Recommendations = []snapshot.Recommendation{}
+	s.Summary.Recommendations = 0
+	s.Summary.Findings, s.Summary.Healthy, s.Summary.Attention, s.Summary.Critical = float64(len(healthy)), float64(len(healthy)), 0, 0
+	v := mustView(t, s, catalog.English).Verdict
+	if v.Scopes == nil || len(v.Scopes) != 0 {
+		t.Fatalf("Scopes = %#v, want an empty non-nil list", v.Scopes)
+	}
+	encoded, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"scopes":[]`) {
+		t.Errorf("verdict JSON = %s, want scopes as []", encoded)
+	}
+}
