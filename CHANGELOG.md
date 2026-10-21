@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-10-21
+
 ### Added
 
 - The report's overview, its Findings tab, and the first page of the PDF chart the findings: a ring of every finding by severity, and a bar of each scope's findings on one scale.
