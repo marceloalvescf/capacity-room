@@ -137,9 +137,9 @@ type UserChange struct {
 // then the password; a role or active change revokes every session as
 // privilege_changed, a password change as password_changed. It audits
 // user.update with {"changed": {"role": "<new>", ...}} naming the fields
-// that moved and their new values for role, active, language, and language_follows_browser only, plus
-// {"sessions_revoked": n}; a password change audits user.password_changed
-// with {"sessions_revoked": n}. A change that moves nothing writes nothing.
+// that moved and their new values for role, active, language, and
+// language_follows_browser only, plus {"sessions_revoked": n}; a password
+// change audits user.password_changed with {"sessions_revoked": n}. A change that moves nothing writes nothing.
 func (u *Users) Update(ctx context.Context, actor Principal, id uuid.UUID, c UserChange) (store.User, error) {
 	if err := requireAdministrator(actor); err != nil {
 		return store.User{}, err

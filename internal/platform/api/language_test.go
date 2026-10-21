@@ -92,3 +92,12 @@ func TestCreateUserWithoutLanguageFollowsTheBrowser(t *testing.T) {
 	}
 	wantProblem(t, ts.send(t, "POST", usersPath, `{"username":"paul","password":"a-long-enough-password","role":"reader","language":""}`, cookie, csrf), 400, CodeRequestInvalid, map[string]string{"language": "invalid"})
 }
+
+func TestUserLanguageFlagIsJudgedBeforeTheID(t *testing.T) {
+	ts := newTestServer(t)
+	cookie, csrf := ts.signIn(t, "root")
+	for _, id := range []string{"not-a-uuid", "6f1f0d7e-3a54-4d57-9c1c-1f6a7f0a1c99"} {
+		w := ts.send(t, "PATCH", usersPath+"/"+id, `{"language_follows_browser":false}`, cookie, csrf)
+		wantProblem(t, w, 400, CodeRequestInvalid, map[string]string{"language_follows_browser": "invalid"})
+	}
+}

@@ -89,12 +89,12 @@ func (s *Server) patchUser(w http.ResponseWriter, r *http.Request, a auth.Authen
 		WriteProblem(w, p)
 		return
 	}
-	id, ok := userID(w, r)
-	if !ok {
-		return
-	}
 	if p := languageFlagProblem(body.Language != nil, body.LanguageFollowsBrowser); p != nil {
 		WriteProblem(w, p)
+		return
+	}
+	id, ok := userID(w, r)
+	if !ok {
 		return
 	}
 	user, err := s.Users.Update(r.Context(), a.Principal, id, auth.UserChange{
