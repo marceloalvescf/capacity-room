@@ -519,6 +519,25 @@ describe("new report form", () => {
     expect(screen.getByText(t("error.REPORT_NOT_FOUND"))).toBeInTheDocument();
   });
 
+  it("opens on the profile in the address", async () => {
+    await open("/generate?profile=staging");
+    expect(profileSelect().value).toBe("staging");
+    expect(screen.getByText(summaryLine("UTC · Executive · Attention and critical"))).toBeInTheDocument();
+  });
+
+  it("ignores an unknown profile", async () => {
+    await open("/generate?profile=nowhere");
+    expect(profileSelect().value).toBe("prod");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("prefers from over profile", async () => {
+    const source = report({ id: "11111111-1111-4111-8111-111111111111", profile_id: "prod" });
+    mock.reports = [source];
+    await open(`/generate?from=${source.id}&profile=staging`);
+    expect(profileSelect().value).toBe("prod");
+  });
+
   it("no profile", async () => {
     mock.profiles = [];
     await renderApp("/generate");

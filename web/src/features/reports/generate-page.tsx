@@ -586,6 +586,7 @@ export function GeneratePage() {
   const profiles = useProfiles();
   useScreenTitle(t("generate.title"));
   const from = params.get("from");
+  const named = params.get("profile");
 
   let content = null;
   if (profiles.isError) {
@@ -605,7 +606,10 @@ export function GeneratePage() {
       content = (
         <GenerateForm
           profiles={list}
-          initial={defaultsOf(list[0] as ProfileSummary, isLanguage(i18n.language) ? i18n.language : "en")}
+          initial={defaultsOf(
+            list.find((candidate) => candidate.id === named) ?? (list[0] as ProfileSummary),
+            isLanguage(i18n.language) ? i18n.language : "en",
+          )}
           reload={reload}
         />
       );
