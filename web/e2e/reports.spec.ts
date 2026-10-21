@@ -173,6 +173,25 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await expect(page.getByText(en.reportStatus.collected, { exact: true })).toBeVisible();
   });
 
+  await test.step("the home page shows the report of the cluster", async () => {
+    await page.goto("/?cluster=e2e-prod");
+    const chip = page.getByRole("list", { name: en.home.strip.heading }).locator('a[href="/?cluster=e2e-prod"]');
+    await expect(chip).toHaveAttribute("aria-current", "true");
+    // The mark of the chip is one of the five statuses, spoken before the cluster name.
+    const statuses = Object.values(en.status).join("|");
+    await expect(chip).toHaveAccessibleName(new RegExp(`^(${statuses}) prod`));
+    const totals = page.getByRole("group", { name: en.report.overview.totals });
+    await expect(totals).toBeVisible();
+    const onHome = await totals.innerText();
+    await expectNoViolations(page);
+
+    await page.getByRole("link", { name: en.home.answer.open, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/reports/${reportId}/overview$`));
+    await expect(page.getByRole("group", { name: en.report.overview.totals })).toHaveText(onHome);
+    await page.goto(jobUrl);
+    await expect(page.getByText(en.reportStatus.collected, { exact: true })).toBeVisible();
+  });
+
   // The reader looks at the progress page while the Portuguese PDF is not
   // generated, the one moment an operator is offered Generate PDF.
   const context = await browser.newContext(baseURL === undefined ? {} : { baseURL });

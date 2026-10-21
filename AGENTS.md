@@ -745,10 +745,11 @@ redactor the moment the settings are loaded, before the pool opens.
   appears in the logs of `serve`, `worker`, or the one-shot services. It
   never prints a secret.
 - **The specs are independent of order.** Playwright runs them in name
-  order: admin, concurrency, recovery, reports, security, sign-in. Each
-  names its users and profiles with its own prefix (`e2e-s-`, `e2e-c-`,
+  order: admin, concurrency, home, recovery, reports, security, sign-in. Each
+  names its users and profiles with its own prefix (`e2e-s-`, `e2e-c-`, `e2e-h-`,
   `e2e-r-`), finds its reports by id, and undoes in a `finally` what it
-  changes for everyone: the recovery spec turns the switch off, and the
+  changes for everyone: the recovery spec turns the switch off, the home spec
+  deactivates its profile, and the
   concurrency spec leaves `e2e-admin` the one active administrator. Every
   spec fails on any CSP violation and on any axe finding, except the
   security check that injects one. The fixtures of `deploy/platform/` serve
