@@ -9,7 +9,7 @@ import { cn } from "@/lib/cn";
 import { useAddress } from "@/lib/address";
 import type { ViewFinding } from "./api";
 import { ConfidenceText, isUnknownPool, scopeName } from "./pieces";
-import { proofOf } from "./proof";
+import { proofOf, provedNames } from "./proof";
 import { FindingsChart } from "./findings-chart";
 import { FindingProof } from "./proof-bar";
 import { useView } from "./report-page";
@@ -87,7 +87,7 @@ function Detail({ finding }: { finding: ViewFinding }) {
   const { t } = useTranslation();
   const name = scopeName(finding, t("report.node.unknownPool"));
   const proof = proofOf(finding);
-  const proved = proof === null ? [] : [proof.lead.name, ...proof.rest.map((item) => item.name)];
+  const proved = proof === null ? [] : provedNames(proof);
   const listed = finding.evidence.filter((item) => !proved.includes(item.name));
   return (
     <article className="flex flex-col gap-5 rounded-lg border border-border bg-surface p-5 text-surface-fg lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto">

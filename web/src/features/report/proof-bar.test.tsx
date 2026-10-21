@@ -83,12 +83,6 @@ describe("proof bar", () => {
     expect(svg?.querySelector("[data-break]")).not.toBeNull();
   });
 
-  it("draws a range from its lowest value", () => {
-    const fill = bar({ from: 20, value: 60, reference: 100, status: "attention" })?.querySelector("[data-fill]");
-    expect(fill).toHaveAttribute("x", "200");
-    expect(fill).toHaveAttribute("width", "400");
-  });
-
   it("takes the colour of the status it is given, and ink for any other or none", () => {
     const fillOf = (status: Parameters<typeof ProofBar>[0]["status"]) =>
       bar({ value: 1, reference: 2, status })?.querySelector("[data-fill]")?.getAttribute("class");
@@ -133,6 +127,14 @@ describe("finding proof", () => {
     const { container } = render(<FindingProof finding={finding("HPA_MAX_REPLICAS_REACHED")} />);
     expect(container.querySelectorAll("[data-unit]")).toHaveLength(3);
     expect(container.querySelector("[data-reference]")).toHaveAttribute("x1", "1000");
+  });
+
+  it("draws an uneven pool as a range, its numbers printed above and no fill from zero", () => {
+    const { container } = render(<FindingProof finding={finding("NODEPOOL_CPU_UNEVEN")} />);
+    expect(container.querySelector("[data-low]")).not.toBeNull();
+    expect(container.querySelector("[data-high]")).not.toBeNull();
+    expect(container.querySelector("[data-fill]")).toBeNull();
+    expect(container.querySelector("p")?.textContent).toContain("Highest peak60%");
   });
 
   it("shows nothing for a finding with nothing to draw", () => {

@@ -5,6 +5,7 @@ import type { Status } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
 import type { ViewFinding } from "./api";
 import { proofOf } from "./proof";
+import { RangeBar } from "./range-bar";
 
 const width = 1000;
 const height = 16;
@@ -31,7 +32,6 @@ const ceiling = 4;
 // tick. The numbers are printed beside it, so the drawing is hidden from assistive technology. The fill grows once
 // from the left, under motion-safe only; otherwise it is drawn at once.
 export function ProofBar({
-  from = 0,
   value,
   reference,
   status,
@@ -39,7 +39,6 @@ export function ProofBar({
   floor = null,
   className,
 }: {
-  from?: number;
   value: number;
   reference: number;
   status: Status | null;
@@ -53,8 +52,8 @@ export function ProofBar({
   }
   const x = (at: number) => (width * Math.min(Math.max(at, 0), domain)) / domain;
   const colour = (status === null ? undefined : fill[status]) ?? "fill-neatline";
-  const within = Math.max(x(Math.min(value, reference)) - x(from), 0);
-  const past = Math.max(x(value) - x(Math.max(from, reference)), 0);
+  const within = x(Math.min(value, reference));
+  const past = Math.max(x(value) - x(reference), 0);
   const divisions =
     units && Number.isInteger(domain) && domain <= unitLimit ? Array.from({ length: domain - 1 }, (_, n) => n + 1) : [];
   const tick = (at: number) => ({ x1: x(at), x2: x(at), y1: 0, y2: height, vectorEffect: "non-scaling-stroke" as const });
@@ -68,11 +67,11 @@ export function ProofBar({
     >
       <rect x={0} y={top} width={width} height={depth} className="fill-track" />
       <g className="origin-left [transform-box:view-box] motion-safe:animate-proof">
-        <rect data-fill="" x={x(from)} y={top} width={within} height={depth} className={colour} />
+        <rect data-fill="" x={0} y={top} width={within} height={depth} className={colour} />
         {past > 0 ? (
           <rect
             data-overrun=""
-            x={x(Math.max(from, reference))}
+            x={x(reference)}
             y={top + depth / 4}
             width={past}
             height={depth / 2}
@@ -97,7 +96,7 @@ export function ProofBar({
   );
 }
 
-// The proof of a finding: its leading evidence large, the rest beside it, and the bar that draws them. A finding
+// The proof of a finding: its leading evidence large, the rest beside it, and the bar or the range that draws them. A finding
 // whose evidence holds nothing to draw shows nothing here.
 export function FindingProof({ finding, className }: { finding: ViewFinding; className?: string }) {
   const { t } = useTranslation();
@@ -105,14 +104,17 @@ export function FindingProof({ finding, className }: { finding: ViewFinding; cla
   if (proof === null) {
     return null;
   }
+  const lead = proof.kind === "range" ? proof.high : proof.lead;
+  const rest =
+    proof.kind === "range" ? [proof.low, ...(proof.spread === null ? [] : [proof.spread])] : proof.rest;
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <p className="flex flex-wrap items-baseline text-sm text-muted-fg">
         <span className="inline-flex items-baseline gap-2">
-          {t(`evidence.${proof.lead.name}`)}
-          <span className="font-mono text-lg font-semibold text-fg">{proof.lead.text}</span>
+          {t(`evidence.${lead.name}`)}
+          <span className="font-mono text-lg font-semibold text-fg">{lead.text}</span>
         </span>
-        {proof.rest.map((item) => (
+        {rest.map((item) => (
           <Fragment key={item.name}>
             <Separator />
             <span className="inline-flex items-baseline gap-1.5">
@@ -122,7 +124,11 @@ export function FindingProof({ finding, className }: { finding: ViewFinding; cla
           </Fragment>
         ))}
       </p>
-      <ProofBar from={proof.from} value={proof.value} reference={proof.reference} status={finding.severity} units={proof.count} />
+      {proof.kind === "range" ? (
+        <RangeBar low={proof.low} high={proof.high} spread={proof.spread} status={finding.severity} />
+      ) : (
+        <ProofBar value={proof.value} reference={proof.reference} status={finding.severity} units={proof.count} />
+      )}
     </div>
   );
 }

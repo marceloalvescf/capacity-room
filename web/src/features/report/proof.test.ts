@@ -30,25 +30,32 @@ const nearMax: ViewFinding = {
 };
 
 const names = (proof: ReturnType<typeof proofOf>) =>
-  proof === null ? null : { lead: proof.lead.name, rest: proof.rest.map((item) => item.name) };
+  proof?.kind === "bar" ? { lead: proof.lead.name, rest: proof.rest.map((item) => item.name) } : null;
+
+const bar = (proof: ReturnType<typeof proofOf>) => {
+  if (proof?.kind !== "bar") {
+    throw new Error("not a bar");
+  }
+  return proof;
+};
 
 describe("proof", () => {
   it("a peak percent is read against 100, its average printed beside it", () => {
     const proof = proofOf(first("NAMESPACE_CPU_LIMIT_CRITICAL"));
-    expect(proof && { from: proof.from, value: proof.value, reference: proof.reference }).toEqual({ from: 0, value: 330, reference: 100 });
+    expect(proof && { value: bar(proof).value, reference: bar(proof).reference }).toEqual({ value: 330, reference: 100 });
     expect(names(proof)).toEqual({ lead: "peak_percent", rest: ["average_percent"] });
-    expect(proof?.count).toBe(false);
+    expect(bar(proof).count).toBe(false);
   });
 
   it("a count is drawn in whole units, a percent is not", () => {
-    expect(proofOf(first("HPA_MAX_REPLICAS_REACHED"))?.count).toBe(true);
-    expect(proofOf(nearMax)?.count).toBe(true);
-    expect(proofOf(first("NODE_CPU_REQUEST_HIGH"))?.count).toBe(false);
+    expect(bar(proofOf(first("HPA_MAX_REPLICAS_REACHED"))).count).toBe(true);
+    expect(bar(proofOf(nearMax)).count).toBe(true);
+    expect(bar(proofOf(first("NODE_CPU_REQUEST_HIGH"))).count).toBe(false);
   });
 
   it("a share of the node is a percent read against 100", () => {
     const proof = proofOf(first("NODE_CPU_REQUEST_HIGH"));
-    expect(proof?.reference).toBe(100);
+    expect(bar(proof).reference).toBe(100);
     expect(names(proof)).toEqual({ lead: "percent", rest: [] });
   });
 
@@ -58,13 +65,13 @@ describe("proof", () => {
 
   it("the replicas of an HPA are read against its maximum", () => {
     const proof = proofOf(first("HPA_MAX_REPLICAS_REACHED"));
-    expect(proof && { from: proof.from, value: proof.value, reference: proof.reference }).toEqual({ from: 0, value: 4, reference: 4 });
+    expect(proof && { value: bar(proof).value, reference: bar(proof).reference }).toEqual({ value: 4, reference: 4 });
     expect(names(proof)).toEqual({ lead: "current_peak", rest: ["spec_max"] });
   });
 
   it("the nodes of the cluster are read against the autoscaler's maximum", () => {
     const proof = proofOf(nearMax);
-    expect(proof && { value: proof.value, reference: proof.reference }).toEqual({ value: 3, reference: 3 });
+    expect(proof && { value: bar(proof).value, reference: bar(proof).reference }).toEqual({ value: 3, reference: 3 });
     expect(names(proof)).toEqual({ lead: "current_nodes", rest: ["max_nodes"] });
   });
 
@@ -81,14 +88,38 @@ describe("proof", () => {
         { name: "spec_max", raw: 4, text: "4" },
       ],
     });
-    expect(proof && { value: proof.value, reference: proof.reference, count: proof.count }).toEqual({ value: 3.5, reference: 4, count: true });
+    expect(proof && { value: bar(proof).value, reference: bar(proof).reference, count: bar(proof).count }).toEqual({ value: 3.5, reference: 4, count: true });
     expect(names(proof)).toEqual({ lead: "current_average", rest: ["spec_max"] });
   });
 
-  it("an uneven pool draws its peaks as a range from the lowest, the spread printed after", () => {
+  it("an uneven pool draws its peaks as a range, the spread beside it", () => {
     const proof = proofOf(first("NODEPOOL_CPU_UNEVEN"));
-    expect(proof && { from: proof.from, value: proof.value, reference: proof.reference }).toEqual({ from: 20, value: 60, reference: 100 });
-    expect(names(proof)).toEqual({ lead: "maximum_peak_percent", rest: ["minimum_peak_percent", "spread_percent"] });
+    expect(proof?.kind).toBe("range");
+    expect(proof?.kind === "range" && [proof.low.raw, proof.high.raw, proof.spread?.raw]).toEqual([20, 60, 40]);
+  });
+
+  it("a range from 0 is still a range", () => {
+    const base = first("NODEPOOL_CPU_UNEVEN");
+    const proof = proofOf({
+      ...base,
+      evidence: [
+        { name: "minimum_peak_percent", raw: 0, text: "0%" },
+        { name: "maximum_peak_percent", raw: 60, text: "60%" },
+      ],
+    });
+    expect(proof?.kind === "range" && [proof.low.raw, proof.high.raw, proof.spread]).toEqual([0, 60, null]);
+  });
+
+  it("a range from 0 is still a range", () => {
+    const base = first("NODEPOOL_CPU_UNEVEN");
+    const proof = proofOf({
+      ...base,
+      evidence: [
+        { name: "minimum_peak_percent", raw: 0, text: "0%" },
+        { name: "maximum_peak_percent", raw: 60, text: "60%" },
+      ],
+    });
+    expect(proof?.kind === "range" && [proof.low.raw, proof.high.raw, proof.spread]).toEqual([0, 60, null]);
   });
 
   it("evidence with nothing to draw against a reference gives no proof", () => {
