@@ -168,12 +168,15 @@ export function FindingsTab() {
   const wanted = readIndex(params.get("finding"));
   const selected = shown.find((entry) => entry.index === wanted);
 
-  // A group the reader folded or opened stays as they left it; the others are open when the selected finding is in
-  // them or the search is typed.
-  const [chosen, setChosen] = useState<ReadonlyMap<Severity, boolean>>(new Map());
+  // The reader's own folds are kept until the selected finding or a filter changes. A group is open when the selected
+  // finding is in it, or when a search or a filter narrows the list to what it still shows.
+  const foldKey = `${String(wanted ?? "")}|${query}|${params.get("severity") ?? ""}|${scope ?? ""}`;
+  const [kept, setKept] = useState<{ key: string; chosen: ReadonlyMap<Severity, boolean> }>({ key: foldKey, chosen: new Map() });
+  const chosen = kept.key === foldKey ? kept.chosen : new Map<Severity, boolean>();
+  const narrowed = query !== "" || severities.size < severityOrder.length || scope !== null;
   const listId = useId();
   function isOpen(severity: Severity): boolean {
-    return chosen.get(severity) ?? (selected?.finding.severity === severity || query !== "");
+    return chosen.get(severity) ?? (selected?.finding.severity === severity || narrowed);
   }
 
   // A finding named in the address when the tab opens is brought into view once.
@@ -288,7 +291,7 @@ export function FindingsTab() {
                       aria-expanded={open}
                       aria-controls={open ? `${listId}-${severity}` : undefined}
                       onClick={() => {
-                        setChosen(new Map(chosen).set(severity, !open));
+                        setKept({ key: foldKey, chosen: new Map(chosen).set(severity, !open) });
                       }}
                       className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-3 text-left text-surface-fg hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     >

@@ -255,6 +255,34 @@ describe("findings tab", () => {
     expect(opened[0]).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("a scope and severity filter in the address opens the groups that still show a finding", async () => {
+    await open("?scope=node&severity=critical", "en", true);
+    expect(groupButtons().map((button) => button.getAttribute("aria-expanded"))).toEqual(["true"]);
+    expect(items().length).toBeGreaterThan(0);
+  });
+
+  it("a severity filter alone opens its group, and a group can still be folded", async () => {
+    const user = userEvent.setup();
+    await open("?severity=attention", "en", true);
+    expect(groupButtons().map((button) => button.getAttribute("aria-expanded"))).toEqual(["true"]);
+    expect(items()).toHaveLength(11);
+    await user.click(groupButtons()[0] as HTMLElement);
+    expect(items()).toHaveLength(0);
+  });
+
+  it("a finding chosen through the address opens its group again after the reader folded it", async () => {
+    const user = userEvent.setup();
+    const { router } = await open("?finding=12", "en", true);
+    await user.click(groupButtons()[1] as HTMLElement);
+    expect(items()).toHaveLength(0);
+    await act(async () => {
+      await router.navigate(`/reports/${id}/findings?finding=13`);
+    });
+    expect(groupButtons().map((button) => button.getAttribute("aria-expanded"))).toEqual(["false", "true", "false"]);
+    expect(items().filter((button) => button.getAttribute("aria-pressed") === "true")).toHaveLength(1);
+    expect(within(detail()).getByText(sentenceOf(13))).toBeInTheDocument();
+  });
+
   it("scrolls a finding named in the address into view once", async () => {
     const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
     const user = userEvent.setup();
@@ -406,7 +434,6 @@ describe("links into the findings tab", () => {
     await user.click(within(totals).getAllByRole("link")[0] as HTMLElement);
     expect(location(router)).toBe(`/reports/${id}/findings?severity=critical`);
     await screen.findByRole("searchbox", { name: "Search findings" });
-    await user.click(groupButtons()[0] as HTMLElement);
     expect(items()).toHaveLength(10);
   });
 

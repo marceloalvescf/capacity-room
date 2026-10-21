@@ -106,6 +106,13 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
       await tabs.getByRole("link", { name: en.report.tab[tab], exact: true }).click();
       await expect(page).toHaveURL(new RegExp(`/${tab}$`));
       await expect(shown[tab]).toBeVisible();
+      if (tab === "findings") {
+        // Open one severity group so axe also checks an open list.
+        const group = page.getByRole("heading", { level: 2 }).getByRole("button", { expanded: false }).first();
+        await group.click();
+        await expect(group).toHaveAttribute("aria-expanded", "true");
+        await expect(page.getByRole("list").getByRole("button", { pressed: false }).first()).toBeVisible();
+      }
       await expectNoViolations(page);
     }
 
