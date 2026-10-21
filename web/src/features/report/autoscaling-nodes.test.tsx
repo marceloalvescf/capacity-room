@@ -374,14 +374,12 @@ describe("nodes tab", () => {
     expect(await screen.findByRole("heading", { name: "Nodes of Undetermined" })).toBeInTheDocument();
   });
 
-  it("the pool table sorts by its count", async () => {
-    const user = userEvent.setup();
-    await open("nodes");
+  it("the pool table is not sortable and ignores the address sort of the nodes", async () => {
+    await open("nodes", "?sort=name.desc");
     const table = screen.getByRole("table", { name: "Node pools" });
-    await user.click(within(table).getByRole("button", { name: "Nodes" }));
-    await user.click(within(table).getByRole("button", { name: "Nodes" }));
-    const counts = within(table).getAllByRole("button", { name: /^Nodes of / }).map((button) => button.textContent);
-    expect(counts).toEqual(["2", "1", "1"]);
+    expect(within(table).queryAllByRole("button", { name: /^(Node pool|Status|Confidence|Nodes)$/ })).toHaveLength(0);
+    const names = within(table).getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[0]?.textContent);
+    expect(names).toEqual(["agentpool", "pool-a", "Undetermined"]);
   });
 
   it("the pools carry the status of their worst finding, or say none", async () => {
