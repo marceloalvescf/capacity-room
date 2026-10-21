@@ -332,6 +332,11 @@
       "pdfReady": "O PDF em {{language}} está pronto."
     }
   },
+  "home": {
+    "plan": {
+      "all": "Ver o plano de ação"
+    }
+  },
   "report": {
     "tabs": "Seções do relatório",
     "noFinding": "Sem achado",

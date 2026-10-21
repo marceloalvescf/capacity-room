@@ -1,6 +1,7 @@
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { useId, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
 import { useTranslation } from "react-i18next";
+import { useParams } from "react-router";
 import { viewScopeTypeValues, viewSeverityValues } from "@/api/schema.gen";
 import { StatusMark, StatusShape } from "@/components/status-mark";
 import { Button } from "@/components/ui/button";
@@ -140,7 +141,9 @@ function Detail({ finding }: { finding: ViewFinding }) {
 
 export function FindingsTab() {
   const { t } = useTranslation();
-  const { findings } = useView();
+  const view = useView();
+  const { findings } = view;
+  const base = `/reports/${useParams().id ?? ""}`;
   const address = useAddress();
   const { params, write } = address;
   const search = useSearchText(address);
@@ -205,7 +208,7 @@ export function FindingsTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <FindingsChart linkSegments />
+      <FindingsChart view={view} base={base} linkSegments />
       <div className="flex flex-wrap items-end gap-4">
         <SearchField label={t("report.findings.search")} text={search.text} onChange={search.change} />
         <div className="flex flex-col gap-1">

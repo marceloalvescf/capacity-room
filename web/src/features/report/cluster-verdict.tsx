@@ -1,10 +1,10 @@
 import { StatusMark, StatusShape } from "@/components/status-mark";
-import { useView } from "./report-page";
+import type { ReportView } from "./api";
 
 // The verdict on the cluster: the finding and the warning the view names, that the evidence of the nodes is
 // incomplete. With neither, nothing.
-export function ClusterVerdict() {
-  const { findings, quality, verdict } = useView();
+export function ClusterVerdict({ view }: { view: ReportView }) {
+  const { findings, quality, verdict } = view;
   const worst = verdict.cluster_finding === null ? null : (findings[verdict.cluster_finding] ?? null);
   const evidenceWarning = verdict.node_evidence_warning === null ? null : (quality.warnings[verdict.node_evidence_warning] ?? null);
   if (worst === null && evidenceWarning === null) {

@@ -3,8 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 import { StatusMark, StatusShape } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
-import type { ViewScope } from "./api";
-import { useView } from "./report-page";
+import type { ReportView, ViewScope } from "./api";
 
 const severities = ["critical", "attention", "healthy"] as const;
 type Severity = (typeof severities)[number];
@@ -88,12 +87,10 @@ const gap = 2;
 
 // The findings of one scope as a bar of its three severities, drawn on the scale shared by every row. With `link`,
 // each segment filters the Findings tab; without it, the row names the worst finding and links to it.
-export function ScopeBar({ scope, scale, link }: { scope: ViewScope; scale: number; link: boolean }) {
+export function ScopeBar({ scope, scale, link, lead }: { scope: ViewScope; scale: number; link: boolean; lead?: { sentence: string; to: string } | undefined }) {
   const { t } = useTranslation();
-  const { findings } = useView();
   const [params] = useSearchParams();
   const name = t(`report.overview.scope.${scope.scope_type}`);
-  const lead = findings[scope.finding];
   const counts: Record<Severity, number> = { critical: scope.critical, attention: scope.attention, healthy: scope.healthy };
   const widths = lift(
     severities.map((severity) => (counts[severity] / scale) * barWidth),
@@ -150,7 +147,7 @@ export function ScopeBar({ scope, scale, link }: { scope: ViewScope; scale: numb
         </svg>
         {link || lead === undefined ? null : (
           <Link
-            to={`../findings?scope=${scope.scope_type}&finding=${String(scope.finding)}`}
+            to={lead.to}
             className="self-start text-sm underline decoration-border underline-offset-4 hover:decoration-accent"
           >
             {lead.sentence}
@@ -171,13 +168,17 @@ export function ScopeBar({ scope, scale, link }: { scope: ViewScope; scale: numb
 }
 
 // The donut of the report's findings and the bar of each scope, side by side and level. `under` takes its own row below them.
-export function FindingsChart({ linkSegments, under }: { linkSegments: boolean; under?: ReactNode }) {
+export function FindingsChart({ view, base, linkSegments, under }: { view: ReportView; base: string; linkSegments: boolean; under?: ReactNode }) {
   const { t } = useTranslation();
-  const { summary, findings, verdict } = useView();
+  const { summary, findings, verdict } = view;
   const critical = summary.critical.raw ?? 0;
   const attention = summary.attention.raw ?? 0;
   const healthy = summary.healthy.raw ?? 0;
   const empty = findings.length === 0 || critical + attention + healthy === 0;
+  function leadOf(scope: ViewScope) {
+    const lead = findings[scope.finding];
+    return lead === undefined ? undefined : { sentence: lead.sentence, to: `${base}/findings?scope=${scope.scope_type}&finding=${String(scope.finding)}` };
+  }
   const scale = Math.max(1, ...verdict.scopes.map((scope) => scope.critical + scope.attention + scope.healthy));
   return (
     <div className="flex flex-col gap-4">
@@ -196,7 +197,7 @@ export function FindingsChart({ linkSegments, under }: { linkSegments: boolean; 
             </h2>
             <ul className="flex flex-1 flex-col">
               {verdict.scopes.map((scope) => (
-                <ScopeBar key={scope.scope_type} scope={scope} scale={scale} link={linkSegments} />
+                <ScopeBar key={scope.scope_type} scope={scope} scale={scale} link={linkSegments} lead={leadOf(scope)} />
               ))}
             </ul>
           </section>

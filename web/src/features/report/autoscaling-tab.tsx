@@ -36,7 +36,8 @@ const renderOpened = (row: ViewHPA) => <Opened row={row} />;
 
 export function AutoscalingTab() {
   const { t } = useTranslation();
-  const { summary, hpas } = useView();
+  const view = useView();
+  const { summary, hpas } = view;
   const index = useWorstFindingIndex();
   const status = useCallback((row: ViewHPA) => index.get(hpaKey(row))?.severity ?? "", [index]);
   const { autoscaling } = summary;
@@ -119,7 +120,7 @@ export function AutoscalingTab() {
             <ConfidenceText confidence={autoscaling.confidence} />
           </span>
         </div>
-        <ClusterVerdict />
+        <ClusterVerdict view={view} />
         <Counts
           label={t("report.autoscaling.title")}
           items={[
