@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
 import { newPassword } from "@/lib/password";
+import { browserChoice, choiceOf, type LanguageChoice } from "@/i18n/language";
 import { usePrincipal } from "@/session/session";
 import { useChangeLanguage } from "@/session/use-change-language";
 
@@ -71,6 +72,11 @@ export function AccountPage() {
     void navigate("/login?changed=1");
   }
 
+  const languageOptions: { value: LanguageChoice; label: string }[] = [
+    ...languageValues.map((language) => ({ value: language, label: t(`language.${language}`, { lng: language }) })),
+    { value: browserChoice, label: t("account.language.browser") },
+  ];
+
   const fieldError = (message: string | undefined) => (message === undefined ? undefined : t(message));
 
   return (
@@ -83,10 +89,10 @@ export function AccountPage() {
       <Segmented
         legend={t("account.language.title")}
         name="language"
-        value={principal.language}
-        options={languageValues.map((language) => ({ value: language, label: t(`language.${language}`, { lng: language }) }))}
-        onChange={(language) => {
-          void changeLanguage(language);
+        value={choiceOf(principal)}
+        options={languageOptions}
+        onChange={(choice) => {
+          void changeLanguage(choice);
         }}
       />
 

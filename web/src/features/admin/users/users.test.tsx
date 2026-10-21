@@ -125,6 +125,24 @@ describe("the users screen", () => {
     expect(changes().map((call) => call.body)).toEqual([{ language: "en" }]);
   });
 
+  it("unpins the language of a user, and pins it again", async () => {
+    await renderApp("/users");
+    const user = await openRow("ana.souza");
+    expect(screen.getByLabelText("Language")).toHaveValue("pt-BR");
+    await user.selectOptions(screen.getByLabelText("Language"), "browser");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await findShown("Saved.");
+    expect(changes().map((call) => call.body)).toEqual([{ language_follows_browser: true }]);
+    await waitFor(() => {
+      expect(screen.getByLabelText("Language")).toHaveValue("browser");
+    });
+    await user.selectOptions(screen.getByLabelText("Language"), "pt-BR");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(changes().map((call) => call.body)).toEqual([{ language_follows_browser: true }, { language: "pt-BR" }]);
+    });
+  });
+
   it("sets a password", async () => {
     await renderApp("/users");
     const user = await openRow("ana.souza");
@@ -267,8 +285,27 @@ describe("the users screen", () => {
       expect(changes()).toHaveLength(1);
     });
     expect(changes().map((call) => call.body)).toEqual([
-      { username: "bruno", password: "a-long-secret", role: "reader", language: "en" },
+      { username: "bruno", password: "a-long-secret", role: "reader" },
     ]);
+  });
+
+  it("a chosen language is sent, the browser's is not", async () => {
+    await renderApp("/users");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "New user" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByLabelText("Language")).toHaveValue("browser");
+    expect(within(dialog).getByRole("option", { name: "Browser language" })).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText("User name"), "bruno");
+    await user.type(within(dialog).getByLabelText("Password"), "a-long-secret");
+    await user.click(within(dialog).getByRole("button", { name: "Create user" }));
+    await waitFor(() => {
+      expect(changes()).toHaveLength(1);
+    });
+    expect(mock.adminUsers.find((candidate) => candidate.username === "bruno")).toMatchObject({
+      language: "en",
+      language_follows_browser: true,
+    });
   });
 
   it("taken name", async () => {

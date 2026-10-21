@@ -46,6 +46,19 @@ describe("account", () => {
     });
   });
 
+  it("language: three choices, the browser's sends the unpin", async () => {
+    mock.session = signedIn({ language: "en" });
+    const user = userEvent.setup();
+    await renderApp("/account");
+    expect(await screen.findAllByRole("radio")).toHaveLength(3);
+    expect(screen.getByRole("radio", { name: "English" })).toBeChecked();
+    await user.click(screen.getByRole("radio", { name: "Browser language" }));
+    await waitFor(() => {
+      expect(mock.calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([{ language_follows_browser: true }]);
+    });
+    expect(await screen.findByRole("radio", { name: "Browser language" })).toBeChecked();
+  });
+
   it("password policy: short and differing entries send nothing", async () => {
     const user = userEvent.setup();
     await renderApp("/account");

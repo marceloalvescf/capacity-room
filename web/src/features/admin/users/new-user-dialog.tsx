@@ -6,23 +6,22 @@ import { z } from "zod";
 import { ApiFailure } from "@/api/client";
 import { errorText, toError } from "@/api/errors";
 import { languageValues, roleValues, type components } from "@/api/schema.gen";
+import { browserChoice, isLanguageChoice, type LanguageChoice } from "@/i18n/language";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { newPassword } from "@/lib/password";
-import { usePrincipal } from "@/session/session";
 import { useCreateUser, type User } from "./api";
 
 type Role = components["schemas"]["Role"];
-type Language = components["schemas"]["Language"];
 
 export const newUserSchema = z.object({
   username: z.string().min(1, "validation.required"),
   password: newPassword,
   role: z.custom<Role>((value) => roleValues.some((role) => role === value), "validation.invalid"),
-  language: z.custom<Language>((value) => languageValues.some((language) => language === value), "validation.invalid"),
+  language: z.custom<LanguageChoice>(isLanguageChoice, "validation.invalid"),
 });
 type Values = z.infer<typeof newUserSchema>;
 
@@ -36,7 +35,6 @@ function NewUserForm({
   onCreated: (user: User) => void;
 }) {
   const { t } = useTranslation();
-  const principal = usePrincipal();
   const [failure, setFailure] = useState<string | null>(null);
   const {
     register,
@@ -45,13 +43,14 @@ function NewUserForm({
     formState: { errors },
   } = useForm<Values>({
     resolver: zodResolver(newUserSchema),
-    defaultValues: { username: "", password: "", role: "reader", language: principal?.language ?? "en" },
+    defaultValues: { username: "", password: "", role: "reader", language: browserChoice },
   });
 
   async function submit(values: Values) {
     setFailure(null);
     try {
-      onCreated(await create.mutateAsync(values));
+      const { language, ...rest } = values;
+      onCreated(await create.mutateAsync(language === browserChoice ? rest : { ...rest, language }));
     } catch (thrown) {
       const error = toError(thrown);
       const code = error instanceof ApiFailure ? error.code : null;
@@ -104,6 +103,7 @@ function NewUserForm({
             {t(`language.${value}`, { lng: value })}
           </option>
         ))}
+        <option value={browserChoice}>{t("account.language.browser")}</option>
       </Select>
       <div className="flex justify-end gap-2">
         <Button disabled={create.isPending} onClick={onCancel}>{t("admin.users.cancel")}</Button>

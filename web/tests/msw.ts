@@ -23,6 +23,7 @@ export function principal(overrides: Partial<Principal> = {}): Principal {
     username: "ana",
     role: "administrator",
     language: "en",
+    language_follows_browser: false,
     ...overrides,
   };
 }
@@ -116,6 +117,7 @@ export function adminUser(overrides: Partial<AdminUser> = {}): AdminUser {
     username: "ana.souza",
     role: "operator",
     language: "pt-BR",
+    language_follows_browser: false,
     active: true,
     created_at: "2026-09-01T12:00:00Z",
     updated_at: "2026-09-01T12:00:00Z",
@@ -285,7 +287,7 @@ export function installMockApi(initial: Session): Mock {
       return new HttpResponse(null, { status: 204 });
     }),
     http.patch(api("/account"), async ({ request }) => {
-      const body = (await record(request)) as { language?: Schemas["Language"]; password?: string };
+      const body = (await record(request)) as Schemas["AccountChange"];
       if (body.password !== undefined) {
         mock.session = anonymous();
         return HttpResponse.json(principal());
@@ -293,7 +295,11 @@ export function installMockApi(initial: Session): Mock {
       if (mock.session.authenticated && "principal" in mock.session) {
         mock.session = {
           ...mock.session,
-          principal: { ...mock.session.principal, ...(body.language === undefined ? {} : { language: body.language }) },
+          principal: {
+            ...mock.session.principal,
+            ...(body.language === undefined ? {} : { language: body.language, language_follows_browser: false }),
+            ...(body.language_follows_browser === true ? { language_follows_browser: true } : {}),
+          },
         };
         return HttpResponse.json(mock.session.principal);
       }
@@ -317,7 +323,8 @@ export function installMockApi(initial: Session): Mock {
         id: crypto.randomUUID(),
         username: body.username,
         role: body.role,
-        language: body.language,
+        language: body.language ?? "en",
+        language_follows_browser: body.language === undefined,
       });
       mock.adminUsers = [...mock.adminUsers, created].sort((a, b) => a.username.localeCompare(b.username));
       return HttpResponse.json(created, { status: 201 });
@@ -336,7 +343,8 @@ export function installMockApi(initial: Session): Mock {
       const changed = {
         ...found,
         ...(body.role === undefined ? {} : { role: body.role }),
-        ...(body.language === undefined ? {} : { language: body.language }),
+        ...(body.language === undefined ? {} : { language: body.language, language_follows_browser: false }),
+        ...(body.language_follows_browser === true ? { language_follows_browser: true } : {}),
         ...(body.active === undefined ? {} : { active: body.active }),
       };
       mock.adminUsers = mock.adminUsers.map((user) => (user.id === id ? changed : user));

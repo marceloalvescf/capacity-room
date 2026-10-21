@@ -61,6 +61,7 @@
     "signedInAs": "Signed in as {{username}}, {{role}}.",
     "language": {
       "title": "Language",
+      "browser": "Browser language",
       "saved": "Language saved."
     },
     "password": {

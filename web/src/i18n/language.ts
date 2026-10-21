@@ -28,3 +28,20 @@ export function storeLanguage(language: Language): void {
 export function forgetLanguage(): void {
   removeStored(storageKey);
 }
+
+// The choice of an account: a pinned language, or the browser's.
+export const browserChoice = "browser";
+export type LanguageChoice = Language | typeof browserChoice;
+
+export function choiceOf(account: { language: Language; language_follows_browser: boolean }): LanguageChoice {
+  return account.language_follows_browser ? browserChoice : account.language;
+}
+
+export function isLanguageChoice(value: unknown): value is LanguageChoice {
+  return value === browserChoice || isLanguage(value);
+}
+
+// The body that saves a choice: a language pins it, the browser's unpins.
+export function choiceBody(choice: LanguageChoice): { language: Language } | { language_follows_browser: true } {
+  return choice === browserChoice ? { language_follows_browser: true } : { language: choice };
+}

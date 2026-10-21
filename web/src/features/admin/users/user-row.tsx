@@ -15,6 +15,7 @@ import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { formatDate } from "@/lib/format";
 import { newPassword } from "@/lib/password";
+import { browserChoice, choiceBody, choiceOf, isLanguageChoice } from "@/i18n/language";
 import { usePrincipal } from "@/session/session";
 import { useChangeUser, useDeactivateUser, type User } from "./api";
 
@@ -27,18 +28,19 @@ function RolePart({ user }: { user: User }) {
   const announce = useAnnounce();
   const change = useChangeUser(user.id);
   const [role, setRole] = useState(user.role);
-  const [language, setLanguage] = useState(user.language);
-  const [seen, setSeen] = useState({ role: user.role, language: user.language });
+  const choice = choiceOf(user);
+  const [language, setLanguage] = useState(choice);
+  const [seen, setSeen] = useState({ role: user.role, language: choice });
   const [notice, setNotice] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  if (seen.role !== user.role || seen.language !== user.language) {
+  if (seen.role !== user.role || seen.language !== choice) {
     // The user changed elsewhere: the selects follow it and a pending edit goes.
-    setSeen({ role: user.role, language: user.language });
+    setSeen({ role: user.role, language: choice });
     setRole(user.role);
-    setLanguage(user.language);
+    setLanguage(choice);
   }
   const roleChanged = role !== user.role;
-  const languageChanged = language !== user.language;
+  const languageChanged = language !== choice;
 
   function clear() {
     setNotice(null);
@@ -51,7 +53,7 @@ function RolePart({ user }: { user: User }) {
     try {
       await change.mutateAsync({
         ...(roleChanged ? { role } : {}),
-        ...(languageChanged ? { language } : {}),
+        ...(languageChanged ? choiceBody(language) : {}),
       });
       const saved = t(roleChanged ? "admin.users.savedSignedOut" : "admin.users.saved");
       setNotice(saved);
@@ -83,7 +85,7 @@ function RolePart({ user }: { user: User }) {
           value={language}
           onChange={(event) => {
             clear();
-            setLanguage(languageValues.find((value) => value === event.target.value) ?? user.language);
+            setLanguage(isLanguageChoice(event.target.value) ? event.target.value : choice);
           }}
         >
           {languageValues.map((value) => (
@@ -91,6 +93,7 @@ function RolePart({ user }: { user: User }) {
               {t(`language.${value}`, { lng: value })}
             </option>
           ))}
+          <option value={browserChoice}>{t("account.language.browser")}</option>
         </Select>
       </div>
       <p className="text-sm text-muted-fg">{t("admin.users.roleHint")}</p>
