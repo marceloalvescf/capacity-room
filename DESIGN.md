@@ -232,7 +232,7 @@ components:
 
 Every finding is a claim set beside its proof: the sentence first, then the measured value against its reference, drawn as a bar. The world is the neutral developer-tool register, won on craft rather than on ornament: one grey scale from near-white to near-black, hairline frames, a single blue for the place where the reader acts, and status colour that lives only on shapes and on the bars that prove a finding. The dark theme is the same scale inverted, not a neon observability board.
 
-The overview opens on its answer. The severity totals stand at display size in mono beside their shapes; then "where room runs short" deals one claim-and-proof pair per scope, the cluster's growth first. The proof bar is the signature: it recurs in the overview, in the detail of a finding, and in the findings of an opened table row, and it always draws the numbers and the status the report view gives, never a threshold of the web app's own.
+The overview opens on its answer. The severity totals stand at display size in mono beside their shapes; then the findings chart: a donut of every finding by severity over the cluster's growth card, beside a bar for each scope on one scale. The proof bar is the signature: it recurs in the overview, in the detail of a finding, and in the findings of an opened table row, and it always draws the numbers and the status the report view gives, never a threshold of the web app's own.
 
 The visual system answers to two binding project rules. Status is a shape, then a label, then a colour, so no status is carried by colour alone. Every foreground and background drawn together is a listed token pair that passes a contrast test in both themes.
 
@@ -371,7 +371,10 @@ The findings filter: one 6px-cornered toggle per severity, its status mark then 
 - **Report tabs:** 0.875rem 500 tabs over a Hairline baseline; the active tab is Ink with a 2px Ink underline, the rest Muted Ink; an inactive tab under the pointer turns Ink over a 2px Input Border underline. The data quality tab carries a 10px attention shape and the count in mono when the report has warnings.
 
 ### Claim-and-proof pair (signature)
-A Panel with a Hairline frame and 8px corners, split in two equal halves from `lg` by a Hairline (stacked below it, parted by a Hairline underneath). The claim on the left: a 1rem 600 heading (a scope type as a status mark), the finding's sentence as a link underlined in Hairline that turns accent on hover, the scope name in mono and Muted Ink, then the counts of its findings. The proof on the right, centred vertically: the evidence and its proof bar. A finding with nothing to draw lets the claim take the whole row. The cluster's growth pair comes first: the worst cluster finding and the autoscaler's facts as the claim; the caption, the nodes at display size, and the nodes' proof bar as the proof.
+A Panel with a Hairline frame and 8px corners, the claim above its proof, parted by a Hairline. It holds the cluster's growth: the worst cluster finding and the autoscaler's facts as the claim; the caption, the nodes at display size, and the nodes' proof bar as the proof. With no proof the claim stands alone.
+
+### Findings chart
+Two Panels side by side from `lg` (20rem and the rest), on the overview and above the filters of the Findings tab. The donut is an SVG ring in the status fills, its slices parted by a 2px stroke in Surface, with the total in mono at display size and the word "findings" at its centre, and the three counts beneath it, each beside its shape. The scope panel holds a caption and one row for each scope the view gives, worst first: the scope name (a status mark on the overview), a 16px bar on a Track, and the three counts in mono beside their shapes. Every bar is drawn on one scale, the largest row total. On the overview the worst finding's sentence is a link under its bar; on the Findings tab the name is plain and each segment is a link that sets the scope and severity of the list. A report with no finding draws neither and says "No finding".
 
 ### Proof bar (signature)
 A value drawn against its reference on one track, as SVG whose lengths are attributes, never styles.

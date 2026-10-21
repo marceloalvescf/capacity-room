@@ -10,6 +10,7 @@ import { useAddress } from "@/lib/address";
 import type { ViewFinding } from "./api";
 import { ConfidenceText, isUnknownPool, scopeName } from "./pieces";
 import { proofOf } from "./proof";
+import { FindingsChart } from "./findings-chart";
 import { FindingProof } from "./proof-bar";
 import { useView } from "./report-page";
 import { SearchField, useSearchText } from "@/components/search-field";
@@ -192,6 +193,7 @@ export function FindingsTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <FindingsChart linkSegments />
       <div className="flex flex-wrap items-end gap-4">
         <SearchField label={t("report.findings.search")} text={search.text} onChange={search.change} />
         <div className="flex flex-col gap-1">

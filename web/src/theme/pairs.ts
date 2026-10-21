@@ -21,6 +21,9 @@ const onTint = ["attention-surface", "critical-surface"].flatMap((tint) =>
 // The fill of a proof bar, in the colour of its status or in ink, and its reference tick, against the track.
 const onTrack = ["critical", "attention", "healthy", "neatline"].map((fg) => line(fg, "track"));
 
+// The slices and segments of the findings chart, against the card.
+const onCard = ["critical", "attention", "healthy"].map((fg) => line(fg, "surface"));
+
 export const pairs: readonly Pair[] = [
   text("fg", "bg"),
   text("bg", "fg"),
@@ -53,6 +56,7 @@ export const pairs: readonly Pair[] = [
   text("info-surface-fg", "info-surface"),
   ...onTint,
   ...onTrack,
+  ...onCard,
   // The ink outline of a pressed severity toggle, at rest and under the pointer, and the underline of the current tab.
   line("fg", "surface"),
   line("fg", "hover"),

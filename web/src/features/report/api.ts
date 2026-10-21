@@ -19,6 +19,7 @@ export type ViewRecommendation = Schemas["ViewRecommendation"];
 export type ViewVerdict = Schemas["ViewVerdict"];
 export type ViewGauge = NonNullable<Schemas["ViewGauge"]>;
 export type ViewPressure = Schemas["ViewPressure"];
+export type ViewScope = Schemas["ViewScope"];
 
 // The view of a report in one language. It is read once: the snapshot behind it never changes, so no change of
 // the reports reloads it. The view of the previous language of the same report stays on screen while the new one

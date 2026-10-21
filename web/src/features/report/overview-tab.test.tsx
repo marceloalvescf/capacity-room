@@ -15,7 +15,6 @@ const mock = installMockApi(signedIn());
 
 type View = components["schemas"]["ReportView"];
 type Gauge = NonNullable<View["verdict"]["gauge"]>;
-type Pressure = View["verdict"]["pressure"][number];
 
 const id = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a01";
 const english = viewEn as View;
@@ -63,11 +62,7 @@ beforeEach(() => {
 });
 
 function growth(name = "Cluster autoscaling"): HTMLElement {
-  return screen.getByRole("heading", { level: 3, name }).closest("li") as HTMLElement;
-}
-
-function pairs(): HTMLElement[] {
-  return within(screen.getByRole("list", { name: "Pressure by scope" })).getAllByRole("listitem");
+  return screen.getByRole("heading", { level: 2, name }).closest("section") as HTMLElement;
 }
 
 async function open(language: "en" | "pt-BR" = "en") {
@@ -166,10 +161,7 @@ describe("overview tab", () => {
 
   it("the headings of the overview are sized as headings, not labels", async () => {
     await open();
-    expect(screen.getByRole("heading", { level: 3, name: "Cluster autoscaling" })).toHaveClass("font-semibold");
-    const pressure = screen.getByRole("heading", { level: 2, name: "Pressure by scope" });
-    expect(pressure).toHaveClass("text-lg", "font-semibold");
-    expect(pressure).not.toHaveClass("label");
+    expect(screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" })).toHaveClass("font-semibold");
   });
 
   it("a proof bar under the nodes, filled to the nodes in the colour of the gauge hazard", async () => {
@@ -243,82 +235,6 @@ describe("overview tab", () => {
     expect(pair.querySelector("svg[viewBox='0 0 1000 16']")).toBeNull();
   });
 
-  it("the pressure follows the order of the view and the cluster sentence follows its index", async () => {
-    const [first, second, ...rest] = english.verdict.pressure;
-    mock.views.set(`${id}:en`, {
-      ...english,
-      verdict: { ...english.verdict, cluster_finding: 12, pressure: [second as Pressure, first as Pressure, ...rest] },
-    });
-    await open();
-    expect(pairs().slice(0, 3).map((line) => line.querySelector("h3")?.textContent)).toEqual([
-      "Cluster autoscaling",
-      "CriticalNamespaces",
-      "CriticalNodes",
-    ]);
-    const pair = growth();
-    expect(pair).toHaveTextContent(english.findings[12]?.sentence ?? "");
-    expect(pair).not.toHaveTextContent(english.findings[10]?.sentence ?? "");
-  });
-
-  it("pressure lines, the worst scopes first and the fixed order among equals", async () => {
-    await open();
-    const lines = pairs().slice(1);
-    expect(lines.map((line) => line.querySelector("h3")?.textContent)).toEqual([
-      "CriticalNodes",
-      "CriticalNamespaces",
-      "CriticalWorkloads",
-      "CriticalHPAs",
-      "AttentionNode pools",
-    ]);
-    const lead = (line: HTMLElement) => within(line).getAllByRole("link")[0] as HTMLElement;
-    expect(lead(lines[0] as HTMLElement)).toHaveTextContent("Observed CPU usage on the node.");
-    expect(lead(lines[0] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=node&finding=0$/);
-    expect(lead(lines[1] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=namespace&finding=2$/);
-    expect(lead(lines[2] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=workload&finding=6$/);
-    expect(lead(lines[3] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=hpa&finding=8$/);
-    expect(lead(lines[4] as HTMLElement).getAttribute("href")).toMatch(/findings\?scope=nodepool&finding=14$/);
-    expect(within(lines[0] as HTMLElement).getByText("aks-agentpool-12345678-vmss000000")).toHaveClass("font-mono");
-    expect(within(lines[0] as HTMLElement).getByText("Peak")).toBeInTheDocument();
-    expect(within(lines[0] as HTMLElement).getByText("95%")).toHaveClass("font-mono");
-    expect(within(lines[1] as HTMLElement).queryByText("Peak")).toBeInTheDocument();
-    expect(lines[0]).toHaveTextContent(/Critical 2\s*·\s*Attention 1/);
-    expect(lines[1]).toHaveTextContent(/Critical 1/);
-    expect(lines[2]).toHaveTextContent(/Critical 1\s*·\s*Attention 1/);
-    expect(lines[3]).toHaveTextContent(/Critical 1\s*·\s*Attention 1/);
-    expect(lines[4]).toHaveTextContent(/Attention 2/);
-  });
-
-  it("a pressure pair with no proof gives its claim the whole row", async () => {
-    mock.views.set(`${id}:en`, {
-      ...english,
-      verdict: { ...english.verdict, pressure: [{ scope_type: "nodepool", severity: "attention", finding: 20, critical: 0, attention: 1 }] },
-    });
-    await open();
-    const only = pairs()[1] as HTMLElement;
-    expect(only.children).toHaveLength(1);
-    expect(only.children[0]).toHaveClass("lg:col-span-2");
-    expect(pairs()[0]?.children).toHaveLength(2);
-  });
-
-  it("the counts of a pressure line are the view's, whatever the findings", async () => {
-    const [first, ...rest] = english.verdict.pressure;
-    mock.views.set(`${id}:en`, {
-      ...english,
-      verdict: { ...english.verdict, pressure: [{ ...(first as Pressure), critical: 7, attention: 4 }, ...rest] },
-    });
-    await open();
-    const line = pairs()[1] as HTMLElement;
-    expect(line).toHaveTextContent(/Critical 7\s*·\s*Attention 4/);
-    expect(within(line).getByText("7")).toHaveClass("font-mono");
-    expect(within(line).getByText("7")).not.toHaveClass("italic");
-  });
-
-  it("a pressure link names the node it leads to", async () => {
-    await open();
-    const first = within(pairs()[1] as HTMLElement).getAllByRole("link")[0];
-    expect(first).toHaveAccessibleName("Observed CPU usage on the node. (aks-agentpool-12345678-vmss000000)");
-  });
-
   it("plan links with the same action are told apart by their scope", async () => {
     await open();
     const plan = screen.getByRole("heading", { level: 2, name: "Prioritized action plan" }).parentElement as HTMLElement;
@@ -340,63 +256,10 @@ describe("overview tab", () => {
     expect(growth()).not.toHaveTextContent("The capacity evidence of the nodes is incomplete.");
   });
 
-  it("two workloads of one name and two kinds count as two rows", async () => {
-    const deployment = english.findings.find((finding) => finding.scope_type === "workload" && finding.severity === "critical") as View["findings"][number];
-    const statefulSet = { ...deployment, scope_kind: "StatefulSet", severity: "attention" as const };
-    mock.views.set(`${id}:en`, {
-      ...english,
-      findings: [deployment, statefulSet],
-      verdict: {
-        cluster_finding: null,
-        node_evidence_warning: null,
-        gauge: null,
-        pressure: [{ scope_type: "workload", severity: "critical", finding: 0, critical: 1, attention: 1 }],
-        scopes: [{ scope_type: "workload", severity: "critical", finding: 0, critical: 1, attention: 1, healthy: 0 }],
-      },
-    });
-    await open();
-    const lines = pairs();
-    expect(lines).toHaveLength(2);
-    expect(lines[1]).toHaveTextContent(/Critical 1\s*·\s*Attention 1/);
-  });
-
-  it("an unknown node pool shows its word", async () => {
-    mock.views.set(`${id}:en`, {
-      ...english,
-      verdict: { ...english.verdict, pressure: [{ scope_type: "nodepool", severity: "attention", finding: 20, critical: 0, attention: 1 }] },
-    });
-    await open();
-    const only = screen.getByText("Node pools").closest("li") as HTMLElement;
-    expect(within(only).getByText("Undetermined")).not.toHaveClass("font-mono");
-    expect(only).not.toHaveTextContent(/\bunknown\b/);
-  });
-
-  it("an unknown node pool shows its word in portuguese", async () => {
-    mock.session = signedIn({ language: "pt-BR" });
-    mock.views.set(`${id}:pt-BR`, {
-      ...portuguese,
-      verdict: { ...portuguese.verdict, pressure: [{ scope_type: "nodepool", severity: "attention", finding: 20, critical: 0, attention: 1 }] },
-    });
-    await open("pt-BR");
-    const only = screen.getByText("Node pools").closest("li") as HTMLElement;
-    expect(within(only).getByText("Indeterminado")).not.toHaveClass("font-mono");
-  });
-
-  it("nothing needs attention", async () => {
-    mock.views.set(`${id}:en`, {
-      ...english,
-      verdict: { ...english.verdict, cluster_finding: null, pressure: [] },
-    });
-    await open();
-    expect(screen.getByText("Nothing needs attention.")).toBeInTheDocument();
-    expect(pairs()).toHaveLength(1);
-    expect(pairs()[0]).toBe(growth());
-  });
-
   it("the answer strip: the three totals above the band, each a link with its shape in colour", async () => {
     await open();
     const totals = screen.getByRole("group", { name: "Findings by severity" });
-    const band = screen.getByRole("heading", { level: 3, name: "Cluster autoscaling" });
+    const band = screen.getByRole("heading", { level: 2, name: "Cluster autoscaling" });
     expect(totals.compareDocumentPosition(band) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const links = within(totals).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual(["10Critical", "11Attention", "7Healthy"]);
@@ -495,7 +358,6 @@ describe("overview tab", () => {
     mock.views.set(`${id}:pt-BR`, boundedPortuguese);
     mock.session = signedIn({ language: "pt-BR" });
     await open("pt-BR");
-    expect(screen.getByRole("heading", { level: 2, name: "Pressão por escopo" })).toBeInTheDocument();
     expect(screen.getByText("Nodes · atual / máximo")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Achados por severidade" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ver todos os achados" })).toBeInTheDocument();
@@ -608,5 +470,60 @@ describe("overview tab", () => {
     portuguese.recommendations.forEach((recommendation, index) => {
       expect(within(rows[index] as HTMLElement).getByText(recommendation.action)).toBeInTheDocument();
     });
+  });
+
+  it("the donut centre is the sum of the strip's counts, with the word findings", async () => {
+    await open();
+    const donut = screen.getByText("findings").parentElement as HTMLElement;
+    expect(donut).toHaveTextContent("28findings");
+    expect(within(donut).getByText("28")).toHaveClass("font-mono");
+    expect(donut.previousElementSibling?.querySelectorAll("path")).toHaveLength(3);
+    expect(donut.previousElementSibling).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("one row for each scope of the view, in its order, with its worst sentence and its counts", async () => {
+    await open();
+    const card = screen.getByRole("heading", { level: 2, name: /Findings of each scope/ }).parentElement as HTMLElement;
+    const rows = within(card).getAllByRole("listitem");
+    expect(rows).toHaveLength(english.verdict.scopes.length);
+    english.verdict.scopes.forEach((scope, index) => {
+      const row = rows[index] as HTMLElement;
+      const lead = english.findings[scope.finding] as View["findings"][number];
+      expect(row).toHaveTextContent(i18next.t(`report.overview.scope.${scope.scope_type}`));
+      const link = within(row).getByRole("link", { name: lead.sentence });
+      expect(link.getAttribute("href")).toMatch(new RegExp(`findings\\?scope=${scope.scope_type}&finding=${String(scope.finding)}$`));
+      expect(row).toHaveTextContent(String(scope.critical));
+      expect(within(row).getAllByRole("link")).toHaveLength(1);
+      expect(row.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    });
+  });
+
+  it("the growth card stays under the donut", async () => {
+    await open();
+    const donut = screen.getByText("findings").closest(".rounded-lg") as HTMLElement;
+    expect(donut.compareDocumentPosition(growth()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("a report with no finding shows No finding and no chart", async () => {
+    const none = { raw: 0, text: "0", status: null };
+    mock.views.set(`${id}:en`, {
+      ...english,
+      findings: [],
+      verdict: { cluster_finding: null, node_evidence_warning: null, gauge: null, pressure: [], scopes: [] },
+      recommendations: [],
+      summary: { ...english.summary, critical: none, attention: none, healthy: none },
+    });
+    await open();
+    expect(screen.getByText("No finding")).toBeInTheDocument();
+    expect(screen.queryByText("findings")).toBeNull();
+    expect(document.querySelector("svg[viewBox='0 0 200 200']")).toBeNull();
+    expect(growth()).toBeInTheDocument();
+  });
+
+  it("the chart in portuguese", async () => {
+    mock.session = signedIn({ language: "pt-BR" });
+    await open("pt-BR");
+    expect(screen.getByText("achados")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Achados de cada escopo por severidade, na mesma escala" })).toBeInTheDocument();
   });
 });

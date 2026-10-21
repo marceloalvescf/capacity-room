@@ -334,6 +334,12 @@
   "report": {
     "tabs": "Seções do relatório",
     "noFinding": "Sem achado",
+    "chart": {
+      "findings": "achados",
+      "scopes": "Achados de cada escopo por severidade, na mesma escala",
+      "scopesLinked": "Achados de cada escopo por severidade, na mesma escala; um segmento filtra a lista abaixo",
+      "segment": "{{count}} achados {{severity}} de {{scope}}"
+    },
     "tab": {
       "overview": "Visão geral",
       "findings": "Achados",
@@ -348,8 +354,6 @@
     "overview": {
       "nodesCaption": "Nodes · atual / máximo",
       "seeAutoscaling": "Ver autoscaling",
-      "pressure": "Pressão por escopo",
-      "noPressure": "Nada pede atenção.",
       "totals": "Achados por severidade",
       "scope": {
         "node": "Nodes",
@@ -358,7 +362,6 @@
         "workload": "Workloads",
         "hpa": "HPAs"
       },
-      "pressureLink": "{{sentence}} ({{name}})",
       "allFindings": "Ver todos os achados",
       "seeQuality": "Ver qualidade dos dados",
       "moreWarnings": "+{{count}}"

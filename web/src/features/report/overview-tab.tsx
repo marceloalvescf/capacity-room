@@ -5,11 +5,11 @@ import { Link } from "react-router";
 import { Separator } from "@/components/separator";
 import { StatusMark, StatusShape } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
-import type { ViewPressure, ViewRecommendation } from "./api";
+import type { ViewRecommendation } from "./api";
 import { ClusterVerdict } from "./cluster-verdict";
-import { isUnknownPool, scopeName, ValueText } from "./pieces";
-import { proofOf } from "./proof";
-import { FindingProof, ProofBar } from "./proof-bar";
+import { FindingsChart } from "./findings-chart";
+import { ValueText } from "./pieces";
+import { ProofBar } from "./proof-bar";
 import { useView } from "./report-page";
 
 const severities = ["critical", "attention", "healthy"] as const;
@@ -17,16 +17,13 @@ const severities = ["critical", "attention", "healthy"] as const;
 const minimum: Record<string, number> = { all: 0, healthy: 0, attention: 1, critical: 2 };
 const rank: Record<(typeof severities)[number], number> = { healthy: 0, attention: 1, critical: 2 };
 
-// A claim beside its proof: the words on the left, the evidence that proves them on the right. Without a proof the
-// claim takes the whole row.
+// A claim above its proof: the words first, the evidence that proves them below. Without a proof the claim stands alone.
 function Pair({ claim, proof }: { claim: ReactNode; proof: ReactNode }) {
   return (
-    <li className="grid rounded-lg border border-border bg-surface text-surface-fg lg:grid-cols-2">
-      <div className={cn("flex flex-col gap-1.5 p-4", proof === null ? "lg:col-span-2" : "border-border max-lg:border-b lg:border-r")}>
-        {claim}
-      </div>
-      {proof === null ? null : <div className="flex flex-col justify-center gap-2 p-4">{proof}</div>}
-    </li>
+    <section className="flex flex-col rounded-lg border border-border bg-surface text-surface-fg">
+      <div className="flex flex-col gap-1.5 p-4">{claim}</div>
+      {proof === null ? null : <div className="flex flex-col justify-center gap-2 border-t border-border p-4">{proof}</div>}
+    </section>
   );
 }
 
@@ -55,7 +52,7 @@ function GrowthPair() {
   ).filter((fact) => fact.value.raw !== null);
   const claim = (
     <>
-      <h3 className="font-semibold">{t("report.autoscaling.title")}</h3>
+      <h2 className="font-semibold">{t("report.autoscaling.title")}</h2>
       <ClusterVerdict />
       {enabled && facts.length > 0 ? (
         <p className="text-sm text-muted-fg">
@@ -94,77 +91,6 @@ function GrowthPair() {
     <p className="text-2xl font-semibold">{t(`autoscalingStatus.${autoscaling.status}`)}</p>
   );
   return <Pair claim={claim} proof={proof} />;
-}
-
-// A scope under pressure: its worst finding as the claim, with the counts of its findings, beside the finding's
-// evidence drawn.
-function PressurePair({ pressure }: { pressure: ViewPressure }) {
-  const { t } = useTranslation();
-  const { findings } = useView();
-  const lead = findings[pressure.finding];
-  if (lead === undefined) {
-    return null;
-  }
-  const { scope_type: type, severity, critical, attention } = pressure;
-  const counts = [
-    { severity: "critical", count: critical },
-    { severity: "attention", count: attention },
-  ] as const;
-  const name = scopeName(lead, t("report.node.unknownPool"));
-  const claim = (
-    <>
-      <h3 className="font-semibold">
-        <StatusMark status={severity} label={t(`report.overview.scope.${type}`)} withStatus />
-      </h3>
-      <p>
-        <Link
-          to={`../findings?scope=${type}&finding=${String(pressure.finding)}`}
-          aria-label={name === null ? undefined : t("report.overview.pressureLink", { sentence: lead.sentence, name })}
-          className="underline decoration-border underline-offset-4 hover:decoration-accent"
-        >
-          {lead.sentence}
-        </Link>
-      </p>
-      {name === null ? null : (
-        <p className={cn("text-sm text-muted-fg [overflow-wrap:anywhere]", !isUnknownPool(lead) && "font-mono")}>{name}</p>
-      )}
-      <p className="text-sm text-muted-fg">
-        {counts
-          .filter(({ count }) => count > 0)
-          .map(({ severity: reached, count }, position) => (
-            <Fragment key={reached}>
-              {position > 0 ? <Separator /> : null}
-              <span className="inline-flex items-center gap-1.5">
-                <StatusShape status={reached} />
-                {t(`status.${reached}`)} <span className="font-mono text-fg">{count}</span>
-              </span>
-            </Fragment>
-          ))}
-      </p>
-    </>
-  );
-  return <Pair claim={claim} proof={proofOf(lead) === null ? null : <FindingProof finding={lead} />} />;
-}
-
-// Where the cluster runs short: its growth first, then the scope types under pressure in the order the view gives.
-function Pressure() {
-  const { t } = useTranslation();
-  const headingId = useId();
-  const { pressure } = useView().verdict;
-  return (
-    <section className="flex flex-col gap-3">
-      <h2 id={headingId} className="text-lg font-semibold">
-        {t("report.overview.pressure")}
-      </h2>
-      <ul aria-labelledby={headingId} className="flex flex-col gap-3">
-        <GrowthPair />
-        {pressure.map((line) => (
-          <PressurePair key={line.scope_type} pressure={line} />
-        ))}
-      </ul>
-      {pressure.length === 0 ? <p className="text-sm text-muted-fg">{t("report.overview.noPressure")}</p> : null}
-    </section>
-  );
 }
 
 // The answer first: the findings of each severity at the size of the answer, each beside the shape that carries
@@ -358,7 +284,7 @@ export function OverviewTab() {
         <AnswerStrip />
         <QualityNotice />
       </div>
-      <Pressure />
+      <FindingsChart linkSegments={false} under={<GrowthPair />} />
       <Plan />
       <About />
     </div>

@@ -413,4 +413,20 @@ describe("findings type scale", () => {
     const entry = items()[0] as HTMLElement;
     expect(within(entry).getByText(sentenceOf(0))).toHaveClass("line-clamp-2");
   });
+
+  it("the chart stands above the search and a segment filters the list", async () => {
+    const view = await open();
+    const first = english.verdict.scopes[0] as View["verdict"]["scopes"][number];
+    const heading = screen.getByRole("heading", { level: 2, name: /a segment filters the list below/ });
+    const search = screen.getByRole("searchbox", { name: i18next.t("report.findings.search") });
+    expect(heading.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText("findings")).toBeInTheDocument();
+    const rows = within(heading.parentElement as HTMLElement).getAllByRole("listitem");
+    const link = within(rows[0] as HTMLElement).getByRole("link", { name: new RegExp(`^${String(first.critical)} critical findings of`) });
+    expect(link.getAttribute("href")).toMatch(new RegExp(`\\?scope=${first.scope_type}&severity=critical$`));
+    await userEvent.click(link);
+    expect(params(view.router).get("scope")).toBe(first.scope_type);
+    expect(params(view.router).get("severity")).toBe("critical");
+    expect(params(view.router).get("finding")).toBeNull();
+  });
 });

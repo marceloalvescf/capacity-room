@@ -334,6 +334,12 @@
   "report": {
     "tabs": "Report sections",
     "noFinding": "No finding",
+    "chart": {
+      "findings": "findings",
+      "scopes": "Findings of each scope by severity, on one scale",
+      "scopesLinked": "Findings of each scope by severity, on one scale; a segment filters the list below",
+      "segment": "{{count}} {{severity}} findings of {{scope}}"
+    },
     "tab": {
       "overview": "Overview",
       "findings": "Findings",
@@ -348,8 +354,6 @@
     "overview": {
       "nodesCaption": "Nodes · current / maximum",
       "seeAutoscaling": "See autoscaling",
-      "pressure": "Pressure by scope",
-      "noPressure": "Nothing needs attention.",
       "totals": "Findings by severity",
       "scope": {
         "node": "Nodes",
@@ -358,7 +362,6 @@
         "workload": "Workloads",
         "hpa": "HPAs"
       },
-      "pressureLink": "{{sentence}} ({{name}})",
       "allFindings": "See all findings",
       "seeQuality": "See data quality",
       "moreWarnings": "+{{count}}"
