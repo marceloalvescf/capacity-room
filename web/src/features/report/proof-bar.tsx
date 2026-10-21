@@ -96,8 +96,8 @@ export function ProofBar({
   );
 }
 
-// The proof of a finding: its leading evidence large, the rest beside it, and the bar or the range that draws them. A finding
-// whose evidence holds nothing to draw shows nothing here.
+// The proof of a finding: its leading evidence large, the rest beside it, and the bar or the range that draws
+// them. A finding whose evidence holds nothing to draw shows nothing here.
 export function FindingProof({ finding, className }: { finding: ViewFinding; className?: string }) {
   const { t } = useTranslation();
   const proof = proofOf(finding);

@@ -110,18 +110,6 @@ describe("proof", () => {
     expect(proof?.kind === "range" && [proof.low.raw, proof.high.raw, proof.spread]).toEqual([0, 60, null]);
   });
 
-  it("a range from 0 is still a range", () => {
-    const base = first("NODEPOOL_CPU_UNEVEN");
-    const proof = proofOf({
-      ...base,
-      evidence: [
-        { name: "minimum_peak_percent", raw: 0, text: "0%" },
-        { name: "maximum_peak_percent", raw: 60, text: "60%" },
-      ],
-    });
-    expect(proof?.kind === "range" && [proof.low.raw, proof.high.raw, proof.spread]).toEqual([0, 60, null]);
-  });
-
   it("evidence with nothing to draw against a reference gives no proof", () => {
     for (const code of ["DEPLOYMENT_WITHOUT_HPA", "HPA_REPLICA_DIVERGENCE", "NODE_OVERREQUESTED", "NODEPOOL_UNKNOWN", "NODE_NOT_READY"]) {
       expect(proofOf(first(code)), code).toBeNull();

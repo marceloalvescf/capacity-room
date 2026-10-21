@@ -31,17 +31,24 @@ describe("range bar", () => {
     expect(svg?.querySelector("[style]")).toBeNull();
   });
 
-  it("puts an open dot at the lowest and a filled dot at the highest, on a track of 0 to 100", () => {
+  it("puts an open dot at the lowest and a filled dot at the highest, by percent of the width", () => {
     const svg = draw(20, 60);
-    const track = svg?.querySelector("[data-track]");
-    const x = Number(track?.getAttribute("x"));
-    const width = Number(track?.getAttribute("width"));
     const open = svg?.querySelector("[data-low]");
     const filled = svg?.querySelector("[data-high]");
-    expect(Number(open?.getAttribute("cx"))).toBeCloseTo(x + width * 0.2);
-    expect(Number(filled?.getAttribute("cx"))).toBeCloseTo(x + width * 0.6);
+    expect(svg?.querySelector("[data-track]")).toHaveAttribute("width", "100%");
+    expect(open).toHaveAttribute("cx", "20%");
+    expect(filled).toHaveAttribute("cx", "60%");
+    expect(svg?.querySelector("[data-span]")).toHaveAttribute("x", "20%");
+    expect(svg?.querySelector("[data-span]")).toHaveAttribute("width", "40%");
     expect(open).toHaveClass("fill-surface", "stroke-attention");
     expect(filled).toHaveClass("fill-attention");
+  });
+
+  it("anchors a label inward at an end of the track, apart from a close neighbour, else centred", () => {
+    const anchor = (low: number, high: number, name: string) => draw(low, high)?.querySelector(`[data-label=${name}]`)?.getAttribute("text-anchor");
+    expect([anchor(0, 100, "low"), anchor(0, 100, "high")]).toEqual(["start", "end"]);
+    expect([anchor(20, 60, "low"), anchor(20, 60, "high")]).toEqual(["middle", "middle"]);
+    expect([anchor(40, 50, "low"), anchor(40, 50, "high")]).toEqual(["end", "start"]);
   });
 
   it("draws the spread between the dots at a lower opacity", () => {
@@ -58,8 +65,7 @@ describe("range bar", () => {
 
   it("draws a lowest of 0 as a range with both dots, no fill from zero", () => {
     const svg = draw(0, 60);
-    const track = svg?.querySelector("[data-track]");
-    expect(svg?.querySelector("[data-low]")?.getAttribute("cx")).toBe(track?.getAttribute("x"));
+    expect(svg?.querySelector("[data-low]")).toHaveAttribute("cx", "0%");
     expect(svg?.querySelector("[data-high]")).not.toBeNull();
     expect(svg?.querySelector("[data-fill]")).toBeNull();
   });

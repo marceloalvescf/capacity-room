@@ -2,9 +2,10 @@ import type { ViewFinding } from "./api";
 
 type Evidence = ViewFinding["evidence"][number];
 
-// What the evidence of a finding draws: a value read against its reference from zero, or a range between two peaks; the evidence printed large beside it, then the rest of what it shows. Every number is the view's own: a
-// percent is read against 100, a count against the maximum its evidence names, a range against 100 from its
-// lowest value. A count divides its track into units; an average count stays where it falls between them.
+// What the evidence of a finding draws: a value read against its reference from zero, or a range between two
+// peaks; the evidence printed large beside it, then the rest of what it shows. Every number is the view's own: a
+// percent is read against 100, a count against the maximum its evidence names, a range against 100. A count
+// divides its track into units; an average count stays where it falls between them.
 export type Peak = Evidence & { raw: number };
 export type Proof =
   | { kind: "range"; low: Peak; high: Peak; spread: Evidence | null }
