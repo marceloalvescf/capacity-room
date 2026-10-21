@@ -32,7 +32,7 @@ cluster overview.
 - `/` serves Home instead of redirecting to `/reports`; Home is the first
   entry of the side navigation; the Reports page does not change.
 - A strip of chips, one per active profile: the status mark of its latest
-  report, the cluster name in mono, and the age of that report.
+  report, the profile's display name, and the age of that report.
 - Below the strip, the chosen cluster's latest report answered with the
   overview's own parts.
 - The chosen cluster lives in the address, `?cluster=<profile id>`.
@@ -60,9 +60,10 @@ replace, as every state of a tab), and the chosen one carries
 
 1. The status mark (`StatusMark`, shape then colour), the word for screen
    readers.
-2. The cluster name in mono. This is the `cluster_name` of the latest
-   collected report; with none, the profile's `display_name` in the body
-   face, because no cluster has named itself yet.
+2. The profile's `display_name` in the body face, with a report or
+   without. Two profiles can collect the same cluster, so the cluster's own
+   name (`cluster_name`) would give two chips one name; it stays in the
+   answer's meta line.
 3. A muted line: the age of the latest collected report ("2 h ago"), or the
    state of the newest request when one is in flight ("Collecting",
    "Queued", "Rendering the PDF"), or "No report yet".

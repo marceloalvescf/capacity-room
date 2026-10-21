@@ -64,7 +64,7 @@ function chips(): HTMLElement[] {
 async function open(path = "/") {
   const app = await renderApp(path);
   await screen.findByRole("heading", { level: 1, name: t("home.title") });
-  await screen.findAllByRole("link", { name: /payments-eu|prod-1|Edge/ });
+  await screen.findAllByRole("link", { name: /Payments|Production|Edge/ });
   return app;
 }
 
@@ -80,8 +80,10 @@ describe("home page", () => {
     expect(links[0]).toHaveAttribute("aria-current", "true");
     expect(links[1]).not.toHaveAttribute("aria-current");
     expect(await screen.findByRole("heading", { level: 2, name: "Payments" })).toBeInTheDocument();
-    expect(links[0]).toHaveTextContent("payments-eu");
-    expect(within(links[0] as HTMLElement).getByText("payments-eu")).toHaveClass("font-mono");
+    expect(links[0]).toHaveTextContent("Payments");
+    expect(links[0]).not.toHaveTextContent("payments-eu");
+    expect(within(links[0] as HTMLElement).getByText("Payments")).not.toHaveClass("font-mono");
+    expect(links[0]).toHaveAccessibleName(new RegExp(`^${t("status.critical")}\\s*Payments`));
     expect(links[2]).toHaveTextContent("Edge");
     expect(links[2]).toHaveTextContent(t("home.chip.none"));
   });

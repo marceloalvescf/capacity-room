@@ -37,7 +37,6 @@ function Chip({ cluster, chosen, unseen, now }: { cluster: HomeCluster; chosen: 
   const { t } = useTranslation();
   const { status, line } = chipOf(cluster);
   const lineText = useLineText(line, now);
-  const named = cluster.latest?.cluster_name ?? null;
   return (
     <Link
       to={{ search: new URLSearchParams({ cluster: cluster.profile_id }).toString() }}
@@ -47,7 +46,7 @@ function Chip({ cluster, chosen, unseen, now }: { cluster: HomeCluster; chosen: 
     >
       <StatusShape status={status} />
       <span className="sr-only">{t(`status.${status}`)}</span>
-      <span className={cn(named !== null && "font-mono")}>{named ?? cluster.display_name}</span>
+      <span>{cluster.display_name}</span>
       <span className="text-xs text-muted-fg">{lineText}</span>
       {unseen ? (
         <>

@@ -177,9 +177,9 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await page.goto("/?cluster=e2e-prod");
     const chip = page.getByRole("list", { name: en.home.strip.heading }).locator('a[href="/?cluster=e2e-prod"]');
     await expect(chip).toHaveAttribute("aria-current", "true");
-    // The mark of the chip is one of the five statuses, spoken before the cluster name.
+    // The mark of the chip is one of the five statuses, spoken before the display name of the profile.
     const statuses = Object.values(en.status).join("|");
-    await expect(chip).toHaveAccessibleName(new RegExp(`^(${statuses}) prod`));
+    await expect(chip).toHaveAccessibleName(new RegExp(`^(${statuses}) Production`));
     const totals = page.getByRole("group", { name: en.report.overview.totals });
     await expect(totals).toBeVisible();
     const onHome = await totals.textContent();
