@@ -1,6 +1,7 @@
 package document
 
 import (
+	"cmp"
 	"math"
 	"slices"
 
@@ -20,6 +21,7 @@ type verdictFacts struct {
 	EvidenceWarning int // -1 when the evidence of the nodes is complete
 	Gauge           *gaugeFacts
 	Pressure        []pressureFacts
+	Scopes          []scopeFacts
 }
 
 type gaugeFacts struct {
@@ -32,6 +34,13 @@ type pressureFacts struct {
 	ScopeType, Severity string
 	Lead                int // index of the first finding of Severity in the type
 	Critical, Attention int // rows that reach each severity
+}
+
+// scopeFacts counts the findings of one scope type, never its rows.
+type scopeFacts struct {
+	ScopeType, Severity          string
+	Lead                         int // index of the first finding of Severity in the type
+	Critical, Attention, Healthy int
 }
 
 // shownFindings are the findings at or above the severity, in order.
@@ -67,6 +76,7 @@ func decideVerdict(s snapshot.Snapshot, findings []snapshot.Finding) verdictFact
 			facts.Pressure = append(facts.Pressure, row)
 		}
 	}
+	facts.Scopes = decideScopes(findings)
 	slices.SortStableFunc(facts.Pressure, func(a, c pressureFacts) int {
 		return analysis.Rank(c.Severity) - analysis.Rank(a.Severity)
 	})
@@ -159,6 +169,50 @@ func decidePressure(scopeType string, findings []snapshot.Finding) (pressureFact
 		}
 	}
 	return row, true
+}
+
+// decideScopes counts the findings of each scope type but the cluster, by
+// severity, with its worst severity and the first finding of that severity.
+// A type with no finding has no entry. The worst come first, by severity,
+// then by critical and attention findings, then by the order of the types.
+func decideScopes(findings []snapshot.Finding) []scopeFacts {
+	var scopes []scopeFacts
+	for _, scopeType := range verdictScopeTypes {
+		row := scopeFacts{ScopeType: scopeType, Lead: -1}
+		lead := make(map[string]int)
+		for i, f := range findings {
+			if f.ScopeType != scopeType {
+				continue
+			}
+			if _, seen := lead[f.Severity]; !seen {
+				lead[f.Severity] = i
+			}
+			switch f.Severity {
+			case analysis.SeverityCritical:
+				row.Critical++
+			case analysis.SeverityAttention:
+				row.Attention++
+			default:
+				row.Healthy++
+			}
+		}
+		for severity, at := range lead {
+			if row.Lead < 0 || analysis.Rank(severity) > analysis.Rank(row.Severity) {
+				row.Severity, row.Lead = severity, at
+			}
+		}
+		if row.Lead >= 0 {
+			scopes = append(scopes, row)
+		}
+	}
+	slices.SortStableFunc(scopes, func(a, c scopeFacts) int {
+		return cmp.Or(
+			analysis.Rank(c.Severity)-analysis.Rank(a.Severity),
+			c.Critical-a.Critical,
+			c.Attention-a.Attention,
+		)
+	})
+	return scopes
 }
 
 // recommendationFinding is the index in findings of the finding an action

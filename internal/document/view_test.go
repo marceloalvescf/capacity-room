@@ -803,6 +803,13 @@ func TestViewVerdictOfEdgeScaling(t *testing.T) {
 			{ScopeType: "hpa", Severity: "critical", Finding: 8, Critical: 1, Attention: 1},
 			{ScopeType: "nodepool", Severity: "attention", Finding: 14, Critical: 0, Attention: 2},
 		},
+		Scopes: []ViewScope{
+			{ScopeType: "namespace", Severity: "critical", Finding: 2, Critical: 4, Attention: 0, Healthy: 0},
+			{ScopeType: "node", Severity: "critical", Finding: 0, Critical: 2, Attention: 5, Healthy: 4},
+			{ScopeType: "workload", Severity: "critical", Finding: 6, Critical: 2, Attention: 2, Healthy: 2},
+			{ScopeType: "hpa", Severity: "critical", Finding: 8, Critical: 1, Attention: 1, Healthy: 1},
+			{ScopeType: "nodepool", Severity: "attention", Finding: 14, Critical: 0, Attention: 3, Healthy: 0},
+		},
 	}
 	if !reflect.DeepEqual(v, want) {
 		t.Errorf("Verdict = %+v, want %+v", v, want)

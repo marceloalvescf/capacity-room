@@ -740,6 +740,7 @@ type ViewVerdict struct {
 	NodeEvidenceWarning *int           `json:"node_evidence_warning"`
 	Gauge               *ViewGauge     `json:"gauge"`
 	Pressure            []ViewPressure `json:"pressure"`
+	Scopes              []ViewScope    `json:"scopes"`
 }
 
 // ViewGauge is the depth gauge: whole nodes and the hazard of its last band.
@@ -759,12 +760,23 @@ type ViewPressure struct {
 	Attention int    `json:"attention"`
 }
 
+// ViewScope counts the findings of one scope type other than the cluster.
+type ViewScope struct {
+	ScopeType string `json:"scope_type"`
+	Severity  string `json:"severity"`
+	Finding   int    `json:"finding"`
+	Critical  int    `json:"critical"`
+	Attention int    `json:"attention"`
+	Healthy   int    `json:"healthy"`
+}
+
 // verdict carries the decisions of the verdict into the view.
 func (vb *viewBuilder) verdict(facts verdictFacts) ViewVerdict {
 	v := ViewVerdict{
 		ClusterFinding:      indexOrNil(facts.ClusterFinding),
 		NodeEvidenceWarning: indexOrNil(facts.EvidenceWarning),
 		Pressure:            make([]ViewPressure, 0, len(facts.Pressure)),
+		Scopes:              make([]ViewScope, 0, len(facts.Scopes)),
 	}
 	if g := facts.Gauge; g != nil {
 		v.Gauge = &ViewGauge{Current: g.Current, Max: g.Max, Min: g.Min}
@@ -776,6 +788,12 @@ func (vb *viewBuilder) verdict(facts verdictFacts) ViewVerdict {
 		v.Pressure = append(v.Pressure, ViewPressure{
 			ScopeType: p.ScopeType, Severity: p.Severity, Finding: p.Lead,
 			Critical: p.Critical, Attention: p.Attention,
+		})
+	}
+	for _, s := range facts.Scopes {
+		v.Scopes = append(v.Scopes, ViewScope{
+			ScopeType: s.ScopeType, Severity: s.Severity, Finding: s.Lead,
+			Critical: s.Critical, Attention: s.Attention, Healthy: s.Healthy,
 		})
 	}
 	return v

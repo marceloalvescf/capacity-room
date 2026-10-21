@@ -824,6 +824,48 @@
         "critical": 0,
         "attention": 2
       }
+    ],
+    "scopes": [
+      {
+        "scope_type": "namespace",
+        "severity": "critical",
+        "finding": 2,
+        "critical": 4,
+        "attention": 0,
+        "healthy": 0
+      },
+      {
+        "scope_type": "node",
+        "severity": "critical",
+        "finding": 0,
+        "critical": 2,
+        "attention": 5,
+        "healthy": 4
+      },
+      {
+        "scope_type": "workload",
+        "severity": "critical",
+        "finding": 6,
+        "critical": 2,
+        "attention": 2,
+        "healthy": 2
+      },
+      {
+        "scope_type": "hpa",
+        "severity": "critical",
+        "finding": 8,
+        "critical": 1,
+        "attention": 1,
+        "healthy": 1
+      },
+      {
+        "scope_type": "nodepool",
+        "severity": "attention",
+        "finding": 14,
+        "critical": 0,
+        "attention": 3,
+        "healthy": 0
+      }
     ]
   },
   "namespaces": [

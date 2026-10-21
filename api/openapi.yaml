@@ -2258,7 +2258,7 @@ components:
       description: >-
         The decisions of the verdict of the overview, as indices into the
         lists of this view.
-      required: [cluster_finding, node_evidence_warning, gauge, pressure]
+      required: [cluster_finding, node_evidence_warning, gauge, pressure, scopes]
       properties:
         cluster_finding:
           type: integer
@@ -2277,6 +2277,13 @@ components:
           description: The scope types under pressure, the worst first.
           items:
             $ref: "#/components/schemas/ViewPressure"
+        scopes:
+          type: array
+          description: >-
+            The scope types other than the cluster with a finding, the worst
+            first.
+          items:
+            $ref: "#/components/schemas/ViewScope"
     ViewGauge:
       type: object
       nullable: true
@@ -2322,6 +2329,27 @@ components:
         attention:
           type: integer
           description: Rows of the scope type that reach attention.
+    ViewScope:
+      type: object
+      description: >-
+        One scope type other than the cluster with a finding in this view: its
+        worst severity, its first finding of that severity, and its findings
+        by severity.
+      required: [scope_type, severity, finding, critical, attention, healthy]
+      properties:
+        scope_type:
+          $ref: "#/components/schemas/ViewScopeType"
+        severity:
+          $ref: "#/components/schemas/ViewSeverity"
+        finding:
+          type: integer
+          description: Index in findings of the first finding of the severity.
+        critical:
+          type: integer
+        attention:
+          type: integer
+        healthy:
+          type: integer
     ViewNamespace:
       type: object
       required:

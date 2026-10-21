@@ -24,6 +24,7 @@ output-options:
     - ViewGauge
     - ViewHazard
     - ViewPressure
+    - ViewScope
     - ViewNamespace
     - ViewWorkload
     - ViewHPA

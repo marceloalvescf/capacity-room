@@ -833,6 +833,8 @@ export interface components {
             gauge: components["schemas"]["ViewGauge"];
             /** @description The scope types under pressure, the worst first. */
             pressure: components["schemas"]["ViewPressure"][];
+            /** @description The scope types other than the cluster with a finding, the worst first. */
+            scopes: components["schemas"]["ViewScope"][];
         };
         /** @description The depth gauge in whole nodes; null unless the autoscaling is enabled with a known current and a positive maximum. */
         ViewGauge: {
@@ -857,6 +859,16 @@ export interface components {
             critical: number;
             /** @description Rows of the scope type that reach attention. */
             attention: number;
+        };
+        /** @description One scope type other than the cluster with a finding in this view: its worst severity, its first finding of that severity, and its findings by severity. */
+        ViewScope: {
+            scope_type: components["schemas"]["ViewScopeType"];
+            severity: components["schemas"]["ViewSeverity"];
+            /** @description Index in findings of the first finding of the severity. */
+            finding: number;
+            critical: number;
+            attention: number;
+            healthy: number;
         };
         ViewNamespace: {
             name: string;
