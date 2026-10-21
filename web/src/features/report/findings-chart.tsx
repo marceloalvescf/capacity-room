@@ -11,6 +11,19 @@ type Severity = (typeof severities)[number];
 
 const fill: Record<Severity, string> = { critical: "fill-critical", attention: "fill-attention", healthy: "fill-healthy" };
 
+// The values with every non-zero one raised to at least `floor`, the difference taken from the largest, so the sum is
+// kept and no count vanishes from a chart.
+export function lift(values: number[], floor: number): number[] {
+  const sized = values.map((value) => (value > 0 && value < floor ? floor : value));
+  const extra = sized.reduce((sum, value) => sum + value, 0) - values.reduce((sum, value) => sum + value, 0);
+  const largest = sized.indexOf(Math.max(...sized));
+  return sized.map((value, index) => (index === largest ? value - extra : value));
+}
+
+// The least sweep of a slice in degrees, and the least width of a segment on the bar, the stroke included.
+export const minSweep = 6;
+export const minWidth = 8;
+
 const centre = 100;
 const outer = 98;
 const inner = 66;
@@ -33,7 +46,10 @@ export function Donut({ critical, attention, healthy }: { critical: number; atte
   const { t } = useTranslation();
   const counts: Record<Severity, number> = { critical, attention, healthy };
   const total = critical + attention + healthy;
-  const sweeps = severities.map((severity) => (counts[severity] / total) * 360);
+  const sweeps = lift(
+    severities.map((severity) => (counts[severity] / total) * 360),
+    minSweep,
+  );
   const slices = severities.flatMap((severity, index) => {
     if (counts[severity] === 0) {
       return [];
@@ -79,7 +95,10 @@ export function ScopeBar({ scope, scale, link }: { scope: ViewScope; scale: numb
   const name = t(`report.overview.scope.${scope.scope_type}`);
   const lead = findings[scope.finding];
   const counts: Record<Severity, number> = { critical: scope.critical, attention: scope.attention, healthy: scope.healthy };
-  const widths = severities.map((severity) => (counts[severity] / scale) * barWidth);
+  const widths = lift(
+    severities.map((severity) => (counts[severity] / scale) * barWidth),
+    minWidth,
+  );
   const segments = severities.flatMap((severity, index) =>
     counts[severity] === 0
       ? []

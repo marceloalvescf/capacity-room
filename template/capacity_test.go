@@ -636,6 +636,7 @@ func TestCapacityVerdictFixturesCompile(t *testing.T) {
 		{"verdict.many-nodes", []string{"95", "120", "13", "107", "Nodes · current / maximum"}, "Disabled"},
 		{"verdict.no-quality-items", []string{"Data quality", "2 warnings are listed in the appendix."}, "none"},
 		{"verdict.disabled", []string{"Disabled", "CLUSTER AUTOSCALING"}, "Nodes · current / maximum"},
+		{"verdict.tiny-count", []string{"Critical 1", "Healthy 400", "401"}, "Disabled"},
 		{"verdict.empty", []string{"This report holds no findings.", "Nothing needs attention.", "No prioritized action was identified."}, "5 of 10 actions"},
 	}
 	for _, tt := range tests {

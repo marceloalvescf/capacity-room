@@ -97,12 +97,24 @@
   })
 })
 
+// The values with every non-zero one raised to at least `floor`, the
+// difference taken from the largest, so the sum is kept and no count
+// vanishes from a chart.
+#let lift(values, floor) = {
+  let sized = values.map(v => if v > 0 and v < floor { floor } else { v })
+  let extra = sized.sum(default: 0) - values.sum(default: 0)
+  let big = sized.position(v => v == calc.max(..sized))
+  sized.enumerate().map(((i, v)) => if i == big { v - extra } else { v })
+}
+
 // The ring of the findings: one slice per status with a count, clockwise
 // from the top, the slices parted by a small gap. A ring of one slice is a
 // full circle.
 #let ring-outer = 70pt
 #let ring-inner = 51pt
 #let ring-gap = 2pt
+// The least sweep of a slice, its gap included.
+#let ring-floor = 6deg
 
 #let ring-slice(from, to, fill) = if to > from {
   let steps = calc.max(2, calc.ceil((to - from) / 1deg))
@@ -128,8 +140,9 @@
     } else {
       let gap = ring-gap / ((ring-outer + ring-inner) / 2) * 1rad
       let turn = 0deg
-      for item in shown {
-        let span = 360deg * item.value / sum
+      let shares = lift(shown.map(item => item.value), sum * ring-floor / 360deg)
+      for (item, share) in shown.zip(shares) {
+        let span = 360deg * share / sum
         ring-slice(turn + gap / 2, turn + span - gap / 2, status-colour(item.status))
         turn += span
       }
@@ -222,13 +235,17 @@
 
 // The bar of a row: its findings per status against the scale, over a light
 // track; the segments are parted by a thin white line.
+// The least share of the scale a segment takes, its stroke included.
+#let bar-floor = 0.03
+
 #let pressure-bar(bar) = {
   let parts = ("critical", "attention", "healthy")
     .map(status => (status, bar.at(status)))
     .filter(((_, count)) => count > 0)
   let rest = calc.max(0, bar.scale - parts.map(((_, count)) => count).sum(default: 0))
+  let sizes = lift(parts.map(((_, count)) => count) + (rest,), bar.scale * bar-floor)
   grid(
-    columns: parts.map(((_, count)) => count * 1fr) + (rest * 1fr,),
+    columns: sizes.map(size => size * 1fr),
     rows: 5pt,
     fill: (x, _) => if x < parts.len() { status-colour(parts.at(x).first()) } else { track },
     stroke: (x, _) => if x < parts.len() { (right: 0.8pt + white) } else { none },
