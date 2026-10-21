@@ -6,6 +6,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The home page shows every cluster by its latest report, and answers the chosen cluster with its totals, its pressure, its growth, and what to do first.
+- A report can be requested for a cluster straight from the home page.
+
 ## [2.7.0] - 2026-10-21
 
 ### Added
