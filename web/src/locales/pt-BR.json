@@ -488,6 +488,7 @@
       "title": "Node pools",
       "nodesOf": "Nodes de {{pool}}: {{count}}",
       "heading": "Nodes de {{pool}}",
+      "copiedAll": "Nomes de {{pool}} copiados",
       "copyAll": "Copiar todos os nomes"
     },
     "unobserved": {

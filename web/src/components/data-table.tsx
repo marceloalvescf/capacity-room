@@ -242,29 +242,29 @@ export function DataTable<Row extends RowData>({
                   <Fragment key={row.id}>
                     <tr ref={opened ? openedRow : undefined} className={cn(opened && "bg-info-surface")}>
                       {renderOpened === undefined ? null : (
-                      <td className="px-3 py-1 align-top">
-                        <IconButton
-                          label={t(opened ? "table.close" : "table.open", { name })}
-                          variant="secondary"
-                          aria-expanded={opened}
-                          className="border-transparent bg-transparent"
-                          onClick={() => {
-                            address.write((next) => {
-                              if (opened) {
-                                next.delete("open");
-                              } else {
-                                next.set("open", row.id);
-                              }
-                            });
-                          }}
-                        >
-                          {opened ? (
-                            <CaretDownIcon aria-hidden="true" className="size-4" />
-                          ) : (
-                            <CaretRightIcon aria-hidden="true" className="size-4" />
-                          )}
-                        </IconButton>
-                      </td>
+                        <td className="px-3 py-1 align-top">
+                          <IconButton
+                            label={t(opened ? "table.close" : "table.open", { name })}
+                            variant="secondary"
+                            aria-expanded={opened}
+                            className="border-transparent bg-transparent"
+                            onClick={() => {
+                              address.write((next) => {
+                                if (opened) {
+                                  next.delete("open");
+                                } else {
+                                  next.set("open", row.id);
+                                }
+                              });
+                            }}
+                          >
+                            {opened ? (
+                              <CaretDownIcon aria-hidden="true" className="size-4" />
+                            ) : (
+                              <CaretRightIcon aria-hidden="true" className="size-4" />
+                            )}
+                          </IconButton>
+                        </td>
                       )}
                       {row.getAllCells().map((cell) => {
                         const column = byId.get(cell.column.id);

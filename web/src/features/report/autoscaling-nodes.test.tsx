@@ -346,8 +346,9 @@ describe("nodes tab", () => {
       "pool-a-2",
     ]);
     expect(within(popover).getByRole("button", { name: "Copy pool-a-2" })).toBeInTheDocument();
-    await user.click(within(popover).getByRole("button", { name: "Copy all names" }));
+    await user.click(within(within(popover).getByRole("heading").parentElement as HTMLElement).getByRole("button", { name: "Copy all names" }));
     expect(writeText).toHaveBeenCalledWith("pool-a-1\npool-a-2");
+    expect(await within(screen.getByRole("status")).findByText("Copied the names of pool-a")).toBeInTheDocument();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
   });

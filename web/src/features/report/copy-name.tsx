@@ -3,15 +3,15 @@ import { useTranslation } from "react-i18next";
 import { useAnnounce } from "@/app/live-region";
 import { IconButton } from "@/components/ui/icon-button";
 
-// Writes a text to the clipboard and announces the outcome under a name. A missing clipboard (a page that is not a secure
+// Writes a text to the clipboard and announces the outcome: the given sentence on success, a failure sentence otherwise. A missing clipboard (a page that is not a secure
 // context) fails like a refused write.
-export function useCopy(): (text: string, name: string) => Promise<void> {
+export function useCopy(): (text: string, copied: string) => Promise<void> {
   const { t } = useTranslation();
   const announce = useAnnounce();
-  return async (text, name) => {
+  return async (text, copied) => {
     try {
       await navigator.clipboard.writeText(text);
-      announce(t("report.copied", { name }));
+      announce(copied);
     } catch {
       announce(t("report.copyFailed"));
     }
@@ -30,7 +30,7 @@ export function CopyName({ name }: { name: string }) {
         variant="secondary"
         className="h-7 min-h-7 w-7 border-transparent bg-transparent"
         onClick={() => {
-          void copy(name, name);
+          void copy(name, t("report.copied", { name }));
         }}
       >
         <CopyIcon aria-hidden="true" className="size-4" />

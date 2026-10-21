@@ -1,9 +1,10 @@
-import { CaretDownIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, CopyIcon } from "@phosphor-icons/react";
 import { useCallback, useMemo } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
 import type { ViewNode, ViewNodepool, ViewValue } from "./api";
+import { IconButton } from "@/components/ui/icon-button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CopyName, useCopy } from "./copy-name";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
@@ -90,12 +91,24 @@ function PoolNodes({ pool }: { pool: ViewNodepool }) {
           className="inline-flex items-center gap-1 rounded-md px-1 font-mono focus-visible:outline-2 focus-visible:outline-accent"
         >
           {pool.nodes.length}
-          <CaretDownIcon aria-hidden="true" className="size-3" />
+          <CaretDownIcon aria-hidden="true" className="size-3 text-accent" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" aria-label={heading} className="w-80 max-w-[calc(100vw-2rem)]">
         <div className="flex flex-col gap-2">
-          <h3 className="label">{heading}</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="label">{heading}</h3>
+            <IconButton
+              label={t("report.pools.copyAll")}
+              variant="secondary"
+              className="h-7 min-h-7 w-7 border-transparent bg-transparent"
+              onClick={() => {
+                void copy(pool.nodes.join("\n"), t("report.pools.copiedAll", { pool: name }));
+              }}
+            >
+              <CopyIcon aria-hidden="true" className="size-4" />
+            </IconButton>
+          </div>
           <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto text-sm">
             {pool.nodes.map((node) => (
               <li key={node}>
@@ -103,15 +116,6 @@ function PoolNodes({ pool }: { pool: ViewNodepool }) {
               </li>
             ))}
           </ul>
-          <button
-            type="button"
-            className="self-start text-sm text-accent underline focus-visible:outline-2 focus-visible:outline-accent"
-            onClick={() => {
-              void copy(pool.nodes.join("\n"), heading);
-            }}
-          >
-            {t("report.pools.copyAll")}
-          </button>
         </div>
       </PopoverContent>
     </Popover>
