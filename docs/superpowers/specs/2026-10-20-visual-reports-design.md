@@ -100,6 +100,17 @@ each labelled with its value, the span between them in the status colour,
 and the spread written under the span. Web only: the PDF draws no proof bar,
 and its evidence stays numbers.
 
+### D7. The node names of a pool open on demand (pick 8B, F-292, 2026-10-21)
+
+The Nodes column of the Node pools table on the Nodes tab no longer prints
+every node name under the count. The cell shows the count and the word
+("11 nodes") with a chevron, as a button; it opens a popover that lists the
+pool's node names in mono, each with its copy button, and a copy of all the
+names at its head, under the heading "The 11 nodes of user"; past eight
+names the list scrolls. The table never changes height, and the popover
+closes on a click outside or on Escape. The disclosure in the cell (8A) and
+the expandable row (8C) were declined.
+
 ## The design of the parts
 
 ### The counts come from the view, decided once in Go
@@ -232,6 +243,19 @@ peak), not by the value of `from`, and says so in what it returns, so a
 range whose lowest value is 0% is still drawn as a range. The range is drawn
 by its own component; `ProofBar` loses `from` and every other bar is
 unchanged, filling from zero.
+
+### The node pool popover
+
+- The popover is the Radix popover already in use, so the five layers of the
+  no-inline-style test stay five; its content sits at `z-50` and lifts with
+  `shadow-float`.
+- The button's accessible name says the count and the pool ("11 nodes of
+  user"), from the locale files, which also hold the heading and the copy
+  labels.
+- The Node pools table becomes a `DataTable`, the app's one table, which
+  `AGENTS.md` requires and which this table is not today (the assistant's
+  call, F-293); it has no expander column, since its rows open nothing.
+- `DESIGN.md` gains the count-button and its popover.
 
 ## What is out of scope
 
