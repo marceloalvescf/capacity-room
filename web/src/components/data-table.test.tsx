@@ -347,3 +347,33 @@ describe("data table", () => {
     expect(screen.getByText("details of web-1").parentElement).toHaveClass("[overflow-wrap:anywhere]");
   });
 });
+
+describe("a table whose rows open nothing", () => {
+  it("has no expander column and ignores open", () => {
+    const router = createMemoryRouter(
+      [
+        {
+          path: "*",
+          element: (
+            <DataTable
+              label="Plain"
+              rows={named}
+              rowKey={(row) => row.key}
+              rowName={(row) => row.name}
+              columns={columns}
+              empty="No rows"
+              defaultOrder="view"
+            />
+          ),
+        },
+      ],
+      { initialEntries: ["/?open=web-1"] },
+    );
+    render(withTooltips(<LiveRegion><RouterProvider router={router} /></LiveRegion>));
+    const table = screen.getByRole("table", { name: "Plain" });
+    expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["Name", "CPU", "Pods", "Plain"]);
+    expect(within(table).queryAllByRole("button", { expanded: false }).filter((b) => b.hasAttribute("aria-expanded"))).toHaveLength(0);
+    expect(within(table).getAllByRole("row")).toHaveLength(4);
+    expect(within(table).getAllByRole("row")[1]).not.toHaveClass("bg-info-surface");
+  });
+});

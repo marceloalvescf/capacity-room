@@ -261,6 +261,10 @@ it("the report writes no style", async () => {
       const opener = document.querySelector("table button[aria-expanded='false']");
       await user.click(opener as Element);
       expect(document.querySelector("table button[aria-expanded='true']"), tab).not.toBeNull();
+      if (tab === "nodes") {
+        await user.click(screen.getByRole("button", { name: "Nodes of pool-a: 2" }));
+        expect(await screen.findByRole("dialog")).toBeInTheDocument();
+      }
     }
     expect(styled(), tab).toEqual([]);
     expect(document.querySelectorAll("style"), tab).toHaveLength(0);

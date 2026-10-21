@@ -485,7 +485,10 @@
       "title": "HPAs"
     },
     "pools": {
-      "title": "Node pools"
+      "title": "Node pools",
+      "nodesOf": "Nodes of {{pool}}: {{count}}",
+      "heading": "Nodes of {{pool}}",
+      "copyAll": "Copy all names"
     },
     "unobserved": {
       "title": "Workloads without observed usage",

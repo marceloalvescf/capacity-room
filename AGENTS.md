@@ -786,7 +786,8 @@ redactor the moment the settings are loaded, before the pool opens.
   `revealRows`: the row and its opened row scroll between the sticky header
   and the bottom of the window, or, when the pair is taller than the window,
   the row's top settles under the header; closing never scrolls. Cells wrap
-  and nothing scrolls sideways. The e2e checks the fit with `expectFits` at
+  and nothing scrolls sideways. A `DataTable` with no `renderOpened`, as the
+  Node pools table, has no expander column and ignores `open`. The e2e checks the fit with `expectFits` at
   1366×768, 1200×1000, and 1024×768, on a users table made longer than the
   window.
 - **The administration is for administrators alone.** `/users`,

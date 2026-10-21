@@ -314,20 +314,63 @@ describe("nodes tab", () => {
     await open("nodes");
     const table = screen.getByRole("table", { name: "Node pools" });
     expect(screen.getByRole("heading", { name: "Node pools" })).toBeInTheDocument();
+    expect(within(table).queryByRole("button", { expanded: false, name: /^Show the details/ })).toBeNull();
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(3);
     expect(within(rows[0] as HTMLElement).getByRole("button", { name: "Copy agentpool" })).toBeInTheDocument();
     expect(within(rows[1] as HTMLElement).getByRole("button", { name: "Copy pool-a" })).toBeInTheDocument();
-    expect(within(rows[2] as HTMLElement).queryByRole("button")).not.toBeInTheDocument();
     expect(within(rows[2] as HTMLElement).getByText("Undetermined")).toBeInTheDocument();
-    const counts = rows.map((row) => within(row).getAllByRole("cell")[3] as HTMLElement);
-    expect(counts.map((cell) => cell.querySelector("span")?.textContent)).toEqual(["1", "2", "1"]);
-    expect(counts.map((cell) => within(cell).getAllByRole("listitem").map((item) => item.textContent))).toEqual([
-      [firstNode],
-      ["pool-a-1", "pool-a-2"],
-      ["orphan"],
+    const counts = rows.map((row) => within(row).getByRole("button", { name: /^Nodes of / }));
+    expect(counts.map((button) => button.textContent)).toEqual(["1", "2", "1"]);
+    expect(counts.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Nodes of agentpool: 1",
+      "Nodes of pool-a: 2",
+      "Nodes of Undetermined: 1",
     ]);
-    expect(within(counts[1] as HTMLElement).getAllByRole("listitem")[0]).toHaveClass("font-mono");
+    for (const name of [firstNode, "pool-a-1", "pool-a-2"]) {
+      expect(within(table).queryByText(name)).toBeNull();
+    }
+  });
+
+  it("the count of a pool opens its nodes in a popover", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    await open("nodes");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Nodes of pool-a: 2" }));
+    const popover = await screen.findByRole("dialog", { name: "Nodes of pool-a" });
+    expect(within(popover).getByRole("heading", { name: "Nodes of pool-a" })).toBeInTheDocument();
+    expect(within(popover).getAllByRole("listitem").map((item) => item.querySelector(".font-mono")?.textContent)).toEqual([
+      "pool-a-1",
+      "pool-a-2",
+    ]);
+    expect(within(popover).getByRole("button", { name: "Copy pool-a-2" })).toBeInTheDocument();
+    await user.click(within(popover).getByRole("button", { name: "Copy all names" }));
+    expect(writeText).toHaveBeenCalledWith("pool-a-1\npool-a-2");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("the pool of one node and the unknown pool open with their heading", async () => {
+    const user = userEvent.setup();
+    await open("nodes");
+    await user.click(screen.getByRole("button", { name: "Nodes of agentpool: 1" }));
+    const one = await screen.findByRole("dialog", { name: "Nodes of agentpool" });
+    expect(within(one).getAllByRole("listitem")).toHaveLength(1);
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Nodes of Undetermined: 1" }));
+    expect(await screen.findByRole("heading", { name: "Nodes of Undetermined" })).toBeInTheDocument();
+  });
+
+  it("the pool table sorts by its count", async () => {
+    const user = userEvent.setup();
+    await open("nodes");
+    const table = screen.getByRole("table", { name: "Node pools" });
+    await user.click(within(table).getByRole("button", { name: "Nodes" }));
+    await user.click(within(table).getByRole("button", { name: "Nodes" }));
+    const counts = within(table).getAllByRole("button", { name: /^Nodes of / }).map((button) => button.textContent);
+    expect(counts).toEqual(["2", "1", "1"]);
   });
 
   it("the pools carry the status of their worst finding, or say none", async () => {

@@ -84,7 +84,8 @@ export function DataTable<Row extends RowData>({
   rowKey: (row: Row) => string;
   rowName: (row: Row) => string;
   columns: Column<Row>[];
-  renderOpened: (row: Row) => ReactNode;
+  // Without it the rows open nothing: no expander column, and `open` in the address is ignored.
+  renderOpened?: (row: Row) => ReactNode;
   empty: string;
   search?: { label: string; text: (row: Row) => string };
   defaultOrder?: "status" | "view";
@@ -102,7 +103,7 @@ export function DataTable<Row extends RowData>({
     [columns],
   );
   const sorting = readSorting(params.get("sort"), sortable);
-  const openKey = params.get("open");
+  const openKey = renderOpened === undefined ? null : params.get("open");
 
   const data = useMemo(() => {
     const needle = query.toLowerCase();
@@ -201,9 +202,11 @@ export function DataTable<Row extends RowData>({
             <thead ref={head} className="sticky top-0 z-10 [&>tr>th]:border-b [&>tr>th]:border-border [&>tr>th]:bg-surface [&>tr>th:first-child]:rounded-tl-lg [&>tr>th:last-child]:rounded-tr-lg">
               {table.getHeaderGroups().map((group) => (
                 <tr key={group.id}>
-                  <th scope="col" className="w-12 px-3 py-2">
-                    <span className="sr-only">{t("table.details")}</span>
-                  </th>
+                  {renderOpened === undefined ? null : (
+                    <th scope="col" className="w-12 px-3 py-2">
+                      <span className="sr-only">{t("table.details")}</span>
+                    </th>
+                  )}
                   {group.headers.map((header) => {
                     const column = byId.get(header.column.id);
                     const direction = header.column.getIsSorted();
@@ -238,6 +241,7 @@ export function DataTable<Row extends RowData>({
                 return (
                   <Fragment key={row.id}>
                     <tr ref={opened ? openedRow : undefined} className={cn(opened && "bg-info-surface")}>
+                      {renderOpened === undefined ? null : (
                       <td className="px-3 py-1 align-top">
                         <IconButton
                           label={t(opened ? "table.close" : "table.open", { name })}
@@ -261,6 +265,7 @@ export function DataTable<Row extends RowData>({
                           )}
                         </IconButton>
                       </td>
+                      )}
                       {row.getAllCells().map((cell) => {
                         const column = byId.get(cell.column.id);
                         return (
@@ -270,7 +275,7 @@ export function DataTable<Row extends RowData>({
                         );
                       })}
                     </tr>
-                    {opened ? (
+                    {opened && renderOpened !== undefined ? (
                       <tr ref={openedPair} className="bg-bg">
                         <td colSpan={columns.length + 1} className="px-6 py-4">
                           {/* An opened row spans the table, so only a value longer than the table breaks: an address, a list. */}

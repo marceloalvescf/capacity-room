@@ -1,9 +1,11 @@
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { useCallback, useMemo } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
 import type { ViewNode, ViewNodepool, ViewValue } from "./api";
-import { CopyName } from "./copy-name";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CopyName, useCopy } from "./copy-name";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
 import { Facts, FindingStatus, matchNode, nodeKey, nodepoolKey, PeakCell, peakTint, RowFindings, StatGrid, useFindingIndex, useWorstFindingIndex, ValueText } from "./pieces";
 import { useView } from "./report-page";
@@ -70,59 +72,95 @@ function NodeState({ row }: { row: ViewNode }) {
   return <span>{text}</span>;
 }
 
+const poolKey = (pool: ViewNodepool) => pool.name;
+const poolName = (pool: ViewNodepool) => pool.name;
+
+// The count of a pool's nodes as a button that opens the names, each to copy, and a control that copies them all.
+function PoolNodes({ pool }: { pool: ViewNodepool }) {
+  const { t } = useTranslation();
+  const copy = useCopy();
+  const name = pool.name === "unknown" ? t("report.node.unknownPool") : pool.name;
+  const heading = t("report.pools.heading", { pool: name });
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={t("report.pools.nodesOf", { pool: name, count: pool.nodes.length })}
+          className="inline-flex items-center gap-1 rounded-md px-1 font-mono focus-visible:outline-2 focus-visible:outline-accent"
+        >
+          {pool.nodes.length}
+          <CaretDownIcon aria-hidden="true" className="size-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" aria-label={heading} className="w-80 max-w-[calc(100vw-2rem)]">
+        <div className="flex flex-col gap-2">
+          <h3 className="label">{heading}</h3>
+          <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto text-sm">
+            {pool.nodes.map((node) => (
+              <li key={node}>
+                <CopyName name={node} />
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="self-start text-sm text-accent underline focus-visible:outline-2 focus-visible:outline-accent"
+            onClick={() => {
+              void copy(pool.nodes.join("\n"), heading);
+            }}
+          >
+            {t("report.pools.copyAll")}
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function Pools({ pools }: { pools: ViewNodepool[] }) {
   const { t } = useTranslation();
   const index = useWorstFindingIndex();
-  if (pools.length === 0) {
-    return <p className="text-sm text-muted-fg">{t("report.table.empty")}</p>;
-  }
+  const statusOf = useCallback((pool: ViewNodepool) => index.get(nodepoolKey(pool))?.severity ?? "healthy", [index]);
+  const columns = useMemo<Column<ViewNodepool>[]>(
+    () => [
+      {
+        id: "name",
+        header: t("report.column.nodepool"),
+        cell: (pool) => (pool.name === "unknown" ? t("report.node.unknownPool") : <CopyName name={pool.name} />),
+        sortValue: (pool) => pool.name,
+      },
+      {
+        id: "status",
+        header: t("report.column.status"),
+        cell: (pool) => <FindingStatus status={statusOf(pool)} hasFinding={index.has(nodepoolKey(pool))} />,
+        sortValue: (pool) => severityRank[statusOf(pool)] ?? 3,
+      },
+      {
+        id: "confidence",
+        header: t("report.column.confidence"),
+        cell: (pool) => t(`confidence.${pool.confidence}`),
+        sortValue: (pool) => pool.confidence,
+      },
+      {
+        id: "nodes",
+        header: t("report.column.nodes"),
+        cell: (pool) => <PoolNodes pool={pool} />,
+        sortValue: (pool) => pool.nodes.length,
+      },
+    ],
+    [t, index, statusOf],
+  );
   return (
-    <div className="rounded-lg border border-border bg-surface text-surface-fg">
-      <table aria-label={t("report.pools.title")} className="w-full text-sm">
-        <thead className="border-b border-border">
-          <tr>
-            <th scope="col" className="label px-3 py-2 text-left">
-              {t("report.column.nodepool")}
-            </th>
-            <th scope="col" className="label px-3 py-2 text-left">
-              {t("report.column.status")}
-            </th>
-            <th scope="col" className="label px-3 py-2 text-left">
-              {t("report.column.confidence")}
-            </th>
-            <th scope="col" className="label px-3 py-2 text-left">
-              {t("report.column.nodes")}
-            </th>
-          </tr>
-        </thead>
-        <tbody className="[&>tr:not(:last-child)>td]:border-b [&>tr>td]:border-border">
-          {pools.map((pool) => (
-            <tr key={pool.name}>
-              <td className="px-3 py-2 align-top">
-                {pool.name === "unknown" ? t("report.node.unknownPool") : <CopyName name={pool.name} />}
-              </td>
-              <td className="px-3 py-2 align-top">
-                <FindingStatus
-                  status={index.get(nodepoolKey(pool))?.severity ?? "healthy"}
-                  hasFinding={index.has(nodepoolKey(pool))}
-                />
-              </td>
-              <td className="px-3 py-2 align-top">{t(`confidence.${pool.confidence}`)}</td>
-              <td className="px-3 py-2 align-top">
-                <span className="font-mono">{pool.nodes.length}</span>
-                <ul className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted-fg">
-                  {pool.nodes.map((name) => (
-                    <li key={name} className="font-mono [overflow-wrap:anywhere]">
-                      {name}
-                    </li>
-                  ))}
-                </ul>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      label={t("report.pools.title")}
+      empty={t("report.table.empty")}
+      rows={pools}
+      rowKey={poolKey}
+      rowName={poolName}
+      columns={columns}
+      defaultOrder="view"
+    />
   );
 }
 
