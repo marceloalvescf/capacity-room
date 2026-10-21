@@ -12,9 +12,9 @@ its latest report, and the chosen cluster's answer below, in the words and
 numbers of the report itself.
 
 The phase adds a page, a navigation entry, and one read route to the API. It
-ends as version 3.0.0, by the owner's decision of 2026-10-21 ("this is a big
-release"). Nothing of the public surface of spec 15.1 breaks: an upgrade from
-2.7.0 keeps every stored row, route, flag, and key, and the changelog says so.
+ends as a minor version, 2.8.0 (the owner's decision of 2026-10-21, which
+withdrew an earlier 3.0.0). Nothing of the public surface of spec 15.1
+breaks: an upgrade from 2.7.0 keeps every stored row, route, flag, and key.
 
 ## Decisions of the owner (2026-10-21)
 

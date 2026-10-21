@@ -20,7 +20,7 @@
 
 - Branch `feat/home-page`. Every commit names its paths (`git add <paths>`, never `-A`).
 - A subagent never runs Docker. The main thread gives the DSN for `postgres`-tagged tests.
-- Release 3.0.0, by the owner's decision. The version commit is separate and comes at the end, on the owner's word.
+- Release 2.8.0, a minor version. The version commit is separate and comes at the end, on the owner's word.
 - No skipped or focused tests, in Go, Vitest, or Playwright.
 - Strict CSP: no `style` prop, no `dangerouslySetInnerHTML`, no injected `<style>`.
 - Every visible text, accessible name, and title comes from `web/src/locales/en.json` and `pt-BR.json`, with the same keys and parameters in both.
@@ -351,4 +351,4 @@ The behaviour follows the spec's sections "What the page shows", "When there is 
 - [ ] **Step 2: Look check.** Built Home in light and dark, at 1366×768 and 1024×768, beside `.impeccable/mocks/decision/home/dossier.html`, opened on the companion page for the owner.
 - [ ] **Step 3: Run the whole-branch adversarial review** (`adversarial-reviewer` agent) on `git diff main...feat/home-page`. Fix its findings and log them in ROADMAP.
 - [ ] **Step 4: Run `make gate`.** Logs go to `.cache/phase-17/`.
-- [ ] **Step 5: Version commit 3.0.0 on the owner's word.** It covers `VERSION`, the changelog heading, the chart's `version` and `appVersion`, and every other file held equal to `VERSION`. Then gate and audit, as the release flow sets out.
+- [ ] **Step 5: Version commit 2.8.0 on the owner's word.** It covers `VERSION`, the changelog heading, the chart's `version` and `appVersion`, and every other file held equal to `VERSION`. Then gate and audit, as the release flow sets out.
