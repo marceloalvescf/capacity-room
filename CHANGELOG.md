@@ -10,6 +10,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The report's overview, its Findings tab, and the first page of the PDF chart the findings: a ring of every finding by severity, and a bar of each scope's findings on one scale.
 - A bar of the Findings tab opens the findings of that scope and severity.
+- The Findings tab folds its findings by severity: a severity opens in place with its own scroll, and the detail shows once the reader picks a finding.
 - The Account page offers the browser's language as a choice beside the two languages; a reader who picks it sees the app in their browser's language after signing in. Existing accounts keep the language they had.
 - The node names of a pool open from their count on the Nodes tab, each with a copy button, and all of them can be copied at once.
 
