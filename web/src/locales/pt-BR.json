@@ -352,7 +352,8 @@
       "none": "Este cluster ainda não tem relatório.",
       "request": "Pedir um relatório",
       "expired": "O relatório mais recente deste cluster expirou.",
-      "gone": "Este relatório não está mais disponível."
+      "gone": "Este relatório não está mais disponível.",
+      "loading": "Carregando o relatório…"
     },
     "flight": {
       "queued": "Um novo relatório está na fila, pedido {{age}}.",
@@ -361,7 +362,7 @@
       "follow": "Acompanhar"
     },
     "failed": {
-      "notice": "O pedido mais recente falhou: {{reason}}.",
+      "notice": "O pedido mais recente falhou. {{reason}}",
       "open": "Abrir"
     },
     "empty": {
@@ -369,15 +370,15 @@
       "admin": "Adicionar um perfil",
       "other": "Um administrador precisa adicionar uma."
     },
-    "meta": {
-      "namespaces": "Todos os namespaces"
-    },
     "plan": {
       "all": "Ver o plano de ação"
     }
   },
   "report": {
     "tabs": "Seções do relatório",
+    "meta": {
+      "namespaces": "Todos os namespaces"
+    },
     "noFinding": "Sem achado",
     "chart": {
       "findings": "achados",

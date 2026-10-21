@@ -47,8 +47,7 @@ function Notice({ cluster, now }: { cluster: HomeCluster; now: number }) {
   if (newest.status !== "failed") {
     return null;
   }
-  // The sentence of the failure stands after the colon, and the notice closes its own sentence.
-  const reason = (newest.failure_code === null ? t("error.general") : t(`reportFailure.${newest.failure_code}`)).replace(/\.$/, "");
+  const reason = newest.failure_code === null ? t("error.general") : t(`reportFailure.${newest.failure_code}`);
   return (
     <Alert tone="error">
       <p className="flex flex-wrap items-center gap-x-3">
@@ -103,14 +102,15 @@ function LatestAnswer({
   if (gone !== null) {
     return <Alert tone="notice">{t("home.answer.gone")}</Alert>;
   }
-  if (view.data === undefined && held === undefined && view.error !== null) {
+  if (view.isError && view.data === undefined) {
     return <Alert tone="error">{errorText(t, toError(view.error))}</Alert>;
   }
+  // The view of the previous cluster stands only while this one loads.
   const shown = view.data === undefined ? held : { id: latest.id, view: view.data };
   if (shown === undefined) {
     return (
       <p role="status" className="text-sm text-muted-fg">
-        {t("reports.loading")}
+        {t("home.answer.loading")}
       </p>
     );
   }
@@ -119,7 +119,7 @@ function LatestAnswer({
     <div aria-busy={view.isPending} className="flex flex-col gap-6">
       {view.isPending ? (
         <p role="status" className="text-sm text-muted-fg">
-          {t("reports.loading")}
+          {t("home.answer.loading")}
         </p>
       ) : null}
       {view.data === undefined ? null : (

@@ -1,9 +1,10 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { components } from "@/api/schema.gen";
 import { i18next } from "@/i18n/i18n";
-import { installMockApi, principal, report, signedIn } from "../../../tests/msw";
+import { failure, installMockApi, principal, report, server, signedIn } from "../../../tests/msw";
 import { location, renderApp } from "../../../tests/render";
 import { mockColourScheme } from "../../../tests/match-media";
 import viewEn from "../../../tests/fixtures/view/direct-complete.en.json";
@@ -136,7 +137,7 @@ describe("home page", () => {
   it("says all namespaces for an empty list", async () => {
     mock.views.set(`${paymentsId}:en`, { ...english, report: { ...english.report, namespaces: [] } });
     await open();
-    expect(await screen.findByText(t("home.meta.namespaces"))).toBeInTheDocument();
+    expect(await screen.findByText(t("report.meta.namespaces"))).toBeInTheDocument();
   });
 
   it("says a request is collecting, with Follow", async () => {
@@ -162,7 +163,7 @@ describe("home page", () => {
     });
     mock.home = { clusters: [cluster("edge", "Edge", null, failed)] };
     await open();
-    const reason = t("reportFailure.INTERNAL_FAILURE").replace(/\.$/, "");
+    const reason = t("reportFailure.INTERNAL_FAILURE");
     expect(await screen.findByText(t("home.failed.notice", { reason }))).toBeInTheDocument();
     expect(screen.getByRole("link", { name: t("home.failed.open") })).toHaveAttribute("href", `/jobs/${jobId}`);
     expect(screen.getByText(t("home.answer.none"))).toBeInTheDocument();
@@ -250,6 +251,45 @@ describe("home page", () => {
       expect(chips()[1]).not.toHaveAccessibleName(new RegExp(t("home.chip.unseen")));
     });
     expect(JSON.parse(window.localStorage.getItem(`capacityroom-home-seen:${principal().id}`) ?? "{}")).toMatchObject({ prod: prodId });
+  });
+
+  it("holds the previous answer while the next one loads", async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(`${window.location.origin}/api/v1/reports/${paymentsId}/view`, async () => {
+        await gate;
+        return HttpResponse.json(english);
+      }),
+    );
+    const user = userEvent.setup();
+    await open("/?cluster=prod");
+    expect(await screen.findByRole("link", { name: t("home.answer.open") })).toHaveAttribute("href", `/reports/${prodId}/overview`);
+    await user.click(chips()[0] as HTMLElement);
+    expect(await screen.findByRole("heading", { level: 2, name: "Payments" })).toBeInTheDocument();
+    expect(await screen.findByText(t("home.answer.loading"))).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: t("home.plan.all") })).toHaveAttribute("href", `/reports/${prodId}/overview`);
+    release();
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: t("home.plan.all") })).toHaveAttribute("href", `/reports/${paymentsId}/overview`);
+    });
+    expect(screen.queryByText(t("home.answer.loading"))).not.toBeInTheDocument();
+  });
+
+  it("drops the previous answer when the next view fails", async () => {
+    server.use(
+      http.get(`${window.location.origin}/api/v1/reports/${paymentsId}/view`, () => failure(500, "INTERNAL_ERROR")),
+    );
+    const user = userEvent.setup();
+    await open("/?cluster=prod");
+    expect(await screen.findByRole("link", { name: t("home.plan.all") })).toHaveAttribute("href", `/reports/${prodId}/overview`);
+    await user.click(chips()[0] as HTMLElement);
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: t("home.plan.all") })).not.toBeInTheDocument();
+    expect(screen.queryByText(t("home.answer.loading"))).not.toBeInTheDocument();
+    expect(screen.queryByText(english.report.period_text)).not.toBeInTheDocument();
   });
 
   it("keeps the strip when the language changes", async () => {

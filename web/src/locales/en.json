@@ -352,7 +352,8 @@
       "none": "This cluster has no report yet.",
       "request": "Request a report",
       "expired": "The latest report of this cluster has expired.",
-      "gone": "This report is no longer available."
+      "gone": "This report is no longer available.",
+      "loading": "Loading the report…"
     },
     "flight": {
       "queued": "A new report is queued, requested {{age}}.",
@@ -361,7 +362,7 @@
       "follow": "Follow"
     },
     "failed": {
-      "notice": "The newest request failed: {{reason}}.",
+      "notice": "The newest request failed. {{reason}}",
       "open": "Open"
     },
     "empty": {
@@ -369,15 +370,15 @@
       "admin": "Add a profile",
       "other": "An administrator must add one."
     },
-    "meta": {
-      "namespaces": "All namespaces"
-    },
     "plan": {
       "all": "See the action plan"
     }
   },
   "report": {
     "tabs": "Report sections",
+    "meta": {
+      "namespaces": "All namespaces"
+    },
     "noFinding": "No finding",
     "chart": {
       "findings": "findings",

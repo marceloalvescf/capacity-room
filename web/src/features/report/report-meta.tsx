@@ -24,7 +24,7 @@ export function ReportMeta({
       </span>
       <span className="whitespace-nowrap">{view.report.period_text}</span>
       {namespaces === undefined ? null : namespaces.length === 0 ? (
-        <span>{t("home.meta.namespaces")}</span>
+        <span>{t("report.meta.namespaces")}</span>
       ) : (
         <span className="font-mono text-fg">{namespaces.join(", ")}</span>
       )}
