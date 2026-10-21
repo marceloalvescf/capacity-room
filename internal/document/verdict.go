@@ -136,6 +136,9 @@ func verdictGrowth(b *builder, s snapshot.Snapshot, findings []snapshot.Finding,
 	growth.Caption = &caption
 	if g := facts.Gauge; g != nil {
 		growth.Gauge = &VerdictGauge{Current: g.Current, Max: g.Max, Min: g.Min, Hazard: g.Hazard != ""}
+		if g.Hazard != "" {
+			growth.Gauge.Status = &g.Hazard
+		}
 	}
 	growth.Facts = knownFacts(b, vb, []growthFact{
 		{catalog.VerdictGrowthMinNodes, a.MinNodes},

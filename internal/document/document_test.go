@@ -230,7 +230,7 @@ func TestVerdictMarshalsFull(t *testing.T) {
 		},
 		Growth: VerdictGrowth{
 			Title: "Cluster autoscaling", Current: str("3"), Max: str("3"),
-			Gauge:   &VerdictGauge{Current: 3, Max: 3, Min: num(2), Hazard: true},
+			Gauge:   &VerdictGauge{Current: 3, Max: 3, Min: num(2), Hazard: true, Status: str("attention")},
 			Caption: str("Nodes"),
 			Finding: &VerdictFinding{"attention", "Attention", "Close."},
 			Warning: str("Incomplete."),
@@ -260,7 +260,7 @@ func TestVerdictMarshalsFull(t *testing.T) {
 		`"totals":{"items":[{"status":"critical","label":"Critical","count":"9","value":9}],"none":null},` +
 		`"quality":{"label":"Data quality","count":"2","items":["One.","Two."],"more":"+1"},` +
 		`"growth":{"title":"Cluster autoscaling","current":"3","max":"3","state":null,` +
-		`"gauge":{"current":3,"max":3,"min":2,"hazard":true},"caption":"Nodes",` +
+		`"gauge":{"current":3,"max":3,"min":2,"hazard":true,"status":"attention"},"caption":"Nodes",` +
 		`"finding":{"status":"attention","label":"Attention","sentence":"Close."},"warning":"Incomplete.",` +
 		`"facts":[{"label":"Minimum nodes","value":"2"}]},` +
 		`"pressure":{"title":"Pressure","rows":[{"status":"critical","label":"Nodes","sentence":"Hot.",` +

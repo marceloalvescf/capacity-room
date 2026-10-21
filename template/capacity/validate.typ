@@ -391,7 +391,7 @@
   }
   if g.gauge != none {
     let gauge = growth + ".gauge"
-    check-exact-keys(gauge, g.gauge, ("current", "max", "min", "hazard"))
+    check-exact-keys(gauge, g.gauge, ("current", "max", "min", "hazard", "status"))
     check-int(gauge + ".current", g.gauge.current, 0, "a non-negative")
     check-int(gauge + ".max", g.gauge.max, 1, "a positive")
     if g.gauge.min != none {
@@ -401,6 +401,12 @@
       }
     }
     expect-bool(gauge + ".hazard", g.gauge.hazard)
+    if g.gauge.status != none {
+      check-status(gauge + ".status", g.gauge.status)
+      if g.gauge.status not in ("attention", "critical") {
+        fail("unknown-status", " \"" + g.gauge.status + "\" at " + gauge + ".status")
+      }
+    }
   }
   if g.finding != none {
     let finding = growth + ".finding"

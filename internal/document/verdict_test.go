@@ -360,7 +360,7 @@ func TestVerdictRoundsTheGaugeToWholeNodes(t *testing.T) {
 	s.Summary.Autoscaling.MaxNodes = floatPtr(5.6)
 	g := englishVerdict(t, s, "all").Growth
 
-	if want := (&VerdictGauge{Current: 6, Max: 6, Min: intPtr(2), Hazard: true}); !reflect.DeepEqual(g.Gauge, want) {
+	if want := (&VerdictGauge{Current: 6, Max: 6, Min: intPtr(2), Hazard: true, Status: strPtr("critical")}); !reflect.DeepEqual(g.Gauge, want) {
 		t.Errorf("Gauge = %+v, want %+v", g.Gauge, want)
 	}
 }

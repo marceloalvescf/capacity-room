@@ -264,8 +264,9 @@ type VerdictGrowth struct {
 type VerdictGauge struct {
 	Current int
 	Max     int
-	Min     *int // nil unless between none and the maximum
-	Hazard  bool // the last band is hatched when full and the cluster has a finding above healthy
+	Min     *int    // nil unless between none and the maximum
+	Hazard  bool    // the last band is hatched when full and the cluster has a finding above healthy
+	Status  *string // the hazard severity, "attention" or "critical"; nil when there is none
 }
 
 // VerdictFinding is a finding drawn with its mark and its sentence.
@@ -378,14 +379,15 @@ func (g VerdictGrowth) MarshalJSON() ([]byte, error) {
 	}{g.Title, g.Current, g.Max, g.State, g.Gauge, g.Caption, g.Finding, g.Warning, nonNil(g.Facts)})
 }
 
-// MarshalJSON writes the keys "current", "max", "min", and "hazard".
+// MarshalJSON writes the keys "current", "max", "min", "hazard", and "status".
 func (g VerdictGauge) MarshalJSON() ([]byte, error) {
 	return marshalNoEscape(struct {
-		Current int  `json:"current"`
-		Max     int  `json:"max"`
-		Min     *int `json:"min"`
-		Hazard  bool `json:"hazard"`
-	}{g.Current, g.Max, g.Min, g.Hazard})
+		Current int     `json:"current"`
+		Max     int     `json:"max"`
+		Min     *int    `json:"min"`
+		Hazard  bool    `json:"hazard"`
+		Status  *string `json:"status"`
+	}{g.Current, g.Max, g.Min, g.Hazard, g.Status})
 }
 
 // MarshalJSON writes the keys "status", "label", and "sentence".

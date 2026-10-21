@@ -42,7 +42,8 @@
           "current": 3,
           "max": 3,
           "min": 2,
-          "hazard": true
+          "hazard": true,
+          "status": "critical"
         },
         "caption": "Nodes · current / maximum",
         "finding": {
