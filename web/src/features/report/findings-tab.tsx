@@ -1,3 +1,4 @@
+import { CaretRightIcon } from "@phosphor-icons/react";
 import { useId, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 import { viewScopeTypeValues, viewSeverityValues } from "@/api/schema.gen";
@@ -165,7 +166,15 @@ export function FindingsTab() {
     );
 
   const wanted = readIndex(params.get("finding"));
-  const selected = shown.find((entry) => entry.index === wanted) ?? shown[0];
+  const selected = shown.find((entry) => entry.index === wanted);
+
+  // A group the reader folded or opened stays as they left it; the others are open when the selected finding is in
+  // them or the search is typed.
+  const [chosen, setChosen] = useState<ReadonlyMap<Severity, boolean>>(new Map());
+  const listId = useId();
+  function isOpen(severity: Severity): boolean {
+    return chosen.get(severity) ?? (selected?.finding.severity === severity || query !== "");
+  }
 
   // A finding named in the address when the tab opens is brought into view once.
   const selectedItem = useRef<HTMLButtonElement>(null);
@@ -247,7 +256,7 @@ export function FindingsTab() {
           ))}
         </Select>
       </div>
-      {selected === undefined ? (
+      {shown.length === 0 ? (
         <div className="flex flex-col items-start gap-3">
           <p className="text-sm text-muted-fg">{t("report.findings.noMatch")}</p>
           <Button
@@ -270,32 +279,63 @@ export function FindingsTab() {
               if (group.length === 0) {
                 return null;
               }
+              const open = isOpen(severity);
               return (
                 <section key={severity} className="flex flex-col gap-1">
-                  <h2 className="flex items-center justify-between text-base font-semibold">
-                    <StatusMark status={severity} />
-                    <span className="font-mono text-muted-fg">{group.length}</span>
+                  <h2 className="text-base font-semibold">
+                    <button
+                      type="button"
+                      aria-expanded={open}
+                      aria-controls={open ? `${listId}-${severity}` : undefined}
+                      onClick={() => {
+                        setChosen(new Map(chosen).set(severity, !open));
+                      }}
+                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-3 text-left text-surface-fg hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    >
+                      <StatusMark status={severity} />
+                      <span className="flex items-center gap-3">
+                        <span className="font-mono text-muted-fg">{group.length}</span>
+                        <CaretRightIcon
+                          aria-hidden="true"
+                          className={cn(
+                            "size-4 text-accent motion-safe:transition-transform motion-safe:duration-150",
+                            open && "rotate-90",
+                          )}
+                        />
+                      </span>
+                    </button>
                   </h2>
-                  <ul className="rounded-lg border border-border bg-surface text-surface-fg">
-                    {group.map((entry) => (
-                      <ListItem
-                        key={entry.index}
-                        entry={entry}
-                        selected={entry === selected}
-                        buttonRef={entry === selected ? selectedItem : undefined}
-                        onSelect={() => {
-                          write((next) => {
-                            next.set("finding", String(entry.index));
-                          });
-                        }}
-                      />
-                    ))}
-                  </ul>
+                  {open ? (
+                    <ul
+                      id={`${listId}-${severity}`}
+                      className="max-h-[26rem] overflow-y-auto rounded-lg border border-border bg-surface text-surface-fg"
+                    >
+                      {group.map((entry) => (
+                        <ListItem
+                          key={entry.index}
+                          entry={entry}
+                          selected={entry === selected}
+                          buttonRef={entry === selected ? selectedItem : undefined}
+                          onSelect={() => {
+                            write((next) => {
+                              next.set("finding", String(entry.index));
+                            });
+                          }}
+                        />
+                      ))}
+                    </ul>
+                  ) : null}
                 </section>
               );
             })}
           </div>
-          <Detail finding={selected.finding} />
+          {selected === undefined ? (
+            <p className="rounded-lg border border-border bg-surface p-5 text-sm text-muted-fg lg:sticky lg:top-4">
+              {t("report.findings.choose")}
+            </p>
+          ) : (
+            <Detail finding={selected.finding} />
+          )}
         </div>
       )}
     </div>

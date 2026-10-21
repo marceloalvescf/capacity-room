@@ -246,6 +246,7 @@ it("the report writes no style", async () => {
     await screen.findByRole("heading", { level: 1, name: i18next.t("progress.title", { profile: "Production" }) });
     if (tab === "findings") {
       await screen.findByRole("searchbox");
+      await user.click(screen.getAllByRole("heading", { level: 2 }).flatMap((heading) => within(heading).queryAllByRole("button"))[0] as HTMLElement);
       const items = screen
         .getAllByRole("list")
         .flatMap((list) => within(list).queryAllByRole("button"))

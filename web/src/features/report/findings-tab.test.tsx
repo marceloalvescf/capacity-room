@@ -26,9 +26,18 @@ beforeEach(() => {
   mock.views.set(`${id}:pt-BR`, portuguese);
 });
 
-async function open(search = "", language: "en" | "pt-BR" = "en") {
+function groupButtons(): HTMLElement[] {
+  return screen.getAllByRole("heading", { level: 2 }).flatMap((heading) => within(heading).queryAllByRole("button"));
+}
+
+async function open(search = "", language: "en" | "pt-BR" = "en", fold = false) {
   const view = await renderApp(`/reports/${id}/findings${search}`, language);
   await screen.findByRole("searchbox", { name: i18next.t("report.findings.search") });
+  if (!fold) {
+    for (const button of groupButtons().filter((candidate) => candidate.getAttribute("aria-expanded") === "false")) {
+      await userEvent.click(button);
+    }
+  }
   return view;
 }
 
@@ -194,19 +203,56 @@ describe("findings tab", () => {
     expect(items()).toHaveLength(28);
   });
 
-  it("a finding the filters hide gives way to the first one shown", async () => {
+  it("a finding the filters hide selects nothing", async () => {
     await open("?finding=19&severity=critical");
     expect(items()).toHaveLength(10);
-    expect(items()[0]).toHaveAttribute("aria-pressed", "true");
-    expect(within(detail()).getByText(sentenceOf(0))).toBeInTheDocument();
-    expect(within(detail()).getByText(english.findings[0]?.action ?? "")).toBeInTheDocument();
+    expect(items().every((button) => button.getAttribute("aria-pressed") === "false")).toBe(true);
+    expect(screen.queryByRole("article")).toBeNull();
+    expect(screen.getByText(i18next.t("report.findings.choose"))).toBeInTheDocument();
   });
 
-  it("default selection", async () => {
-    const { router } = await open();
-    expect(items()[0]).toHaveAttribute("aria-pressed", "true");
-    expect(within(detail()).getByText(sentenceOf(0))).toBeInTheDocument();
+  it("opens folded with a prompt and no finding selected", async () => {
+    const { router } = await open("", "en", true);
+    expect(groupButtons().map((button) => button.getAttribute("aria-expanded"))).toEqual(["false", "false", "false"]);
+    expect(items()).toHaveLength(0);
+    expect(screen.queryByRole("article")).toBeNull();
+    expect(screen.getByText("Choose a finding to see what was observed, what to do, and its evidence.")).toBeInTheDocument();
     expect(router.state.location.search).toBe("");
+  });
+
+  it("a group opens and folds, several at once, and an item opens its detail", async () => {
+    const user = userEvent.setup();
+    const { router } = await open("", "en", true);
+    const [critical, attention] = groupButtons() as [HTMLElement, HTMLElement];
+    await user.click(critical);
+    await user.click(attention);
+    expect(critical).toHaveAttribute("aria-expanded", "true");
+    expect(items()).toHaveLength(21);
+    expect(document.getElementById(critical.getAttribute("aria-controls") ?? "")).toHaveClass("max-h-[26rem]");
+    await user.click(critical);
+    expect(items()).toHaveLength(11);
+    expect(router.state.location.search).toBe("");
+    await user.click(items()[0] as HTMLElement);
+    expect(params(router).get("finding")).toBe("10");
+    expect(within(detail()).getByText(sentenceOf(10))).toBeInTheDocument();
+  });
+
+  it("a finding named in the address opens its group alone", async () => {
+    await open("?finding=12", "en", true);
+    expect(groupButtons().map((button) => button.getAttribute("aria-expanded"))).toEqual(["false", "true", "false"]);
+    expect(items()).toHaveLength(11);
+    expect(within(detail()).getByText(sentenceOf(12))).toBeInTheDocument();
+  });
+
+  it("a search opens the groups that hold a match and a group can still be folded", async () => {
+    const user = userEvent.setup();
+    await open("", "en", true);
+    await user.type(screen.getByRole("searchbox"), "against the limit");
+    expect(items()).toHaveLength(4);
+    const opened = groupButtons().filter((button) => button.getAttribute("aria-expanded") === "true");
+    expect(opened.length).toBeGreaterThan(0);
+    await user.click(opened[0] as HTMLElement);
+    expect(opened[0]).toHaveAttribute("aria-expanded", "false");
   });
 
   it("scrolls a finding named in the address into view once", async () => {
@@ -271,7 +317,7 @@ describe("findings tab", () => {
     const { router } = await open("?finding=99&severity=bogus");
     expect(chips().map((c) => c.getAttribute("aria-pressed"))).toEqual(["true", "true", "true"]);
     expect(items()).toHaveLength(28);
-    expect(within(detail()).getByText(sentenceOf(0))).toBeInTheDocument();
+    expect(screen.queryByRole("article")).toBeNull();
     expect(location(router)).toBe(`/reports/${id}/findings?finding=99&severity=bogus`);
   });
 
@@ -301,6 +347,9 @@ describe("findings tab", () => {
     expect(params(router).has("severity")).toBe(false);
     expect(params(router).has("scope")).toBe(false);
     expect(params(router).has("q")).toBe(false);
+    for (const button of groupButtons()) {
+      await user.click(button);
+    }
     expect(items()).toHaveLength(28);
     expect(screen.getByRole("searchbox", { name: i18next.t("report.findings.search") })).toHaveValue("");
   });
@@ -342,7 +391,7 @@ describe("findings tab", () => {
 
   it("the portuguese words", async () => {
     mock.session = signedIn({ language: "pt-BR" });
-    await open("", "pt-BR");
+    await open("?finding=0", "pt-BR");
     expect(screen.getByRole("group", { name: "Severidade" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Escopo" })).toBeInTheDocument();
     expect(within(detail()).getByText("O que fazer")).toBeInTheDocument();
@@ -357,6 +406,7 @@ describe("links into the findings tab", () => {
     await user.click(within(totals).getAllByRole("link")[0] as HTMLElement);
     expect(location(router)).toBe(`/reports/${id}/findings?severity=critical`);
     await screen.findByRole("searchbox", { name: "Search findings" });
+    await user.click(groupButtons()[0] as HTMLElement);
     expect(items()).toHaveLength(10);
   });
 
@@ -387,7 +437,7 @@ describe("links into the findings tab", () => {
 
 describe("findings type scale", () => {
   it("groups at 16px, detail title at 18px, section labels as labels, observed sentence at 16px, list at 14px", async () => {
-    await open();
+    await open("?finding=0");
     const group = screen.getAllByRole("heading", { level: 2 }).find((h) => /^Critical/.test(h.textContent));
     expect(group).toHaveClass("text-base", "font-semibold");
     const title = screen.getByRole("heading", { level: 3 });
@@ -401,7 +451,7 @@ describe("findings type scale", () => {
   });
 
   it("the detail draws the proof of its finding in the colour of its severity", async () => {
-    await open();
+    await open("?finding=0");
     const bar = detail().querySelector("svg[viewBox='0 0 1000 16']") as SVGElement;
     expect(bar.querySelector("[data-fill]")).toHaveClass("fill-critical");
     expect(bar.querySelector("[data-fill]")?.getAttribute("width")).toBe("950");

@@ -458,6 +458,7 @@
       "none": "Este relatório não tem achados.",
       "noMatch": "Nenhum achado corresponde a estes filtros.",
       "showAll": "Mostrar todos os achados",
+      "choose": "Escolha um achado para ver o que foi observado, o que fazer e as evidências.",
       "observed": "Observado",
       "action": "O que fazer",
       "evidence": "Evidências"

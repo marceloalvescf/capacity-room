@@ -458,6 +458,7 @@
       "none": "This report holds no findings.",
       "noMatch": "No finding matches these filters.",
       "showAll": "Show all findings",
+      "choose": "Choose a finding to see what was observed, what to do, and its evidence.",
       "observed": "Observed",
       "action": "What to do",
       "evidence": "Evidence"
