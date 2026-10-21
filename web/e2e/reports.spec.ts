@@ -115,10 +115,10 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
         }
         expect(index).toBeGreaterThanOrEqual(0);
         const group = groups.nth(index);
-        const listId = (await group.getAttribute("aria-controls")) ?? "";
-        expect(listId).not.toBe("");
         await group.click();
         await expect(group).toHaveAttribute("aria-expanded", "true");
+        const listId = (await group.getAttribute("aria-controls")) ?? "";
+        expect(listId).not.toBe("");
         await expect(page.locator(`[id="${listId}"]`).getByRole("button").first()).toBeVisible();
       }
       await expectNoViolations(page);
