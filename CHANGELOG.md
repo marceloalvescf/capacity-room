@@ -24,6 +24,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `admin bootstrap-admin --language` and the chart's `admin.language` are optional; when left out, the first administrator follows the browser's language.
 - A new user created without a language follows the browser's language.
 
+### Security
+
+- The program is built with Go 1.27.3, which fixes a weakness in how certificates are checked when it connects to a metric source over HTTPS.
+- The image moves to the Debian 13 base, whose list of trusted certificate authorities is current.
+
 ## [2.6.0] - 2026-10-19
 
 ### Added

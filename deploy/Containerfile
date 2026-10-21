@@ -10,7 +10,7 @@ COPY VERSION /src/VERSION
 COPY web/ ./
 RUN npm run build
 
-FROM golang:1.27.2@sha256:5bc7f572bbaa98885a3a1fd9c0aa76b59e3e14e8628bfc316bbfd0c701e4818c AS build
+FROM golang:1.27.3@sha256:f20d83a83e18dbd2a4714b8ffd4b30b287b6243962dd75608e86abcc63ba4efc AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -22,7 +22,7 @@ RUN CGO_ENABLED=0 go build -trimpath -o /out/capacity-room ./cmd/capacity-room
 # image. It needs only its own package and promtest, so a build with no cache
 # rebuilds neither the frontend nor the product. `make e2e` builds it;
 # `make image` never does.
-FROM golang:1.27.2@sha256:5bc7f572bbaa98885a3a1fd9c0aa76b59e3e14e8628bfc316bbfd0c701e4818c AS fake-prometheus-build
+FROM golang:1.27.3@sha256:f20d83a83e18dbd2a4714b8ffd4b30b287b6243962dd75608e86abcc63ba4efc AS fake-prometheus-build
 WORKDIR /src
 COPY go.mod go.sum ./
 COPY internal/promtest/ ./internal/promtest/
@@ -33,7 +33,7 @@ RUN CGO_ENABLED=0 go build -trimpath -o /out/fake-prometheus ./cmd/fake-promethe
 # runs unchanged on the Debian and distroless stages below.
 FROM ghcr.io/typst/typst:0.15.1@sha256:032e292249bcd378480cc7c142cfa324b63ef8aadeb88d7e7230320c4c9c422f AS typst
 
-FROM golang:1.27.2@sha256:5bc7f572bbaa98885a3a1fd9c0aa76b59e3e14e8628bfc316bbfd0c701e4818c AS test
+FROM golang:1.27.3@sha256:f20d83a83e18dbd2a4714b8ffd4b30b287b6243962dd75608e86abcc63ba4efc AS test
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends poppler-utils \
     && rm -rf /var/lib/apt/lists/*
@@ -60,13 +60,13 @@ ENV GOCACHE=/tmp/gocache \
 USER 10001:10001
 WORKDIR /src
 
-FROM gcr.io/distroless/static-debian12@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2 AS runtime
+FROM gcr.io/distroless/static-debian13@sha256:034df5c1737e8241f6ed6423a12e720ee0f6d6f088609ee172f98f6f2166ef5d AS runtime
 COPY --from=build /out/capacity-room /usr/local/bin/capacity-room
 COPY --from=typst /bin/typst /usr/local/bin/typst
 USER 10001:10001
 ENTRYPOINT ["/usr/local/bin/capacity-room"]
 
-FROM gcr.io/distroless/static-debian12@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2 AS fake-prometheus
+FROM gcr.io/distroless/static-debian13@sha256:034df5c1737e8241f6ed6423a12e720ee0f6d6f088609ee172f98f6f2166ef5d AS fake-prometheus
 COPY --from=fake-prometheus-build /out/fake-prometheus /usr/local/bin/fake-prometheus
 USER 10001:10001
 ENTRYPOINT ["/usr/local/bin/fake-prometheus"]

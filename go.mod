@@ -1,6 +1,6 @@
 module github.com/marceloalvescf/capacity-room
 
-go 1.27.2
+go 1.27.3
 
 ignore ./web/node_modules
 
