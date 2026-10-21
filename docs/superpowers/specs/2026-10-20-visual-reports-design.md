@@ -111,6 +111,28 @@ names the list scrolls. The table never changes height, and the popover
 closes on a click outside or on Escape. The disclosure in the cell (8A) and
 the expandable row (8C) were declined.
 
+### D8. The chart's cards share one row, and the Findings tab folds its groups (2026-10-21)
+
+After a test on a real cluster (474 findings), the owner picked two changes on
+the companion page:
+
+- **L3, the chart as a dashboard row (F-296).** The donut card and the scope
+  card sit side by side at one height, the donut one third and the scope card
+  two thirds of the width, the scope rows spread over that height. On the
+  overview the cluster autoscaling card takes its own full-width row under
+  them. Below `lg` everything stacks.
+- **S2, folded severity groups (F-297).** On the Findings tab each severity is
+  one row with its mark, its count, and a chevron; the rows open in the page,
+  each list with its own scroll, and the rows below move down. A floating
+  popover (S1) was declined because no other tab works that way, and tabs per
+  severity (S3) were declined.
+- **No finding is chosen by default.** The tab opens with every group folded
+  and the detail panel showing a prompt to choose a finding. A `finding` in
+  the address (from the overview's links or a bar segment) unfolds its group
+  and opens it. The fold of each group is the reader's own and is not written
+  to the address; a search unfolds every group that holds a match (the
+  assistant's calls).
+
 ## The design of the parts
 
 ### The counts come from the view, decided once in Go
