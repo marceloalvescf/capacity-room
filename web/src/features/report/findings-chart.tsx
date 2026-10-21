@@ -112,7 +112,7 @@ export function ScopeBar({ scope, scale, link }: { scope: ViewScope; scale: numb
     return `?${next.toString()}`;
   }
   return (
-    <li className="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)_auto] items-start gap-x-4 gap-y-1 border-b border-border py-3 first:pt-2 last:border-0">
+    <li className="grid flex-1 grid-cols-[minmax(0,8rem)_minmax(0,1fr)_auto] content-center items-start gap-x-4 gap-y-1 border-b border-border py-3 last:border-0">
       <span className="pt-0.5 font-medium">
         {link ? name : <StatusMark status={scope.severity} label={name} withStatus />}
       </span>
@@ -170,7 +170,7 @@ export function ScopeBar({ scope, scale, link }: { scope: ViewScope; scale: numb
   );
 }
 
-// The donut of the report's findings and the bar of each scope, side by side. `under` goes below the donut.
+// The donut of the report's findings and the bar of each scope, side by side and level. `under` takes its own row below them.
 export function FindingsChart({ linkSegments, under }: { linkSegments: boolean; under?: ReactNode }) {
   const { t } = useTranslation();
   const { summary, findings, verdict } = useView();
@@ -180,29 +180,29 @@ export function FindingsChart({ linkSegments, under }: { linkSegments: boolean; 
   const empty = findings.length === 0 || critical + attention + healthy === 0;
   const scale = Math.max(1, ...verdict.scopes.map((scope) => scope.critical + scope.attention + scope.healthy));
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
-      <div className="flex flex-col gap-4">
-        <div className="rounded-lg border border-border bg-surface p-5 text-surface-fg">
+    <div className="flex flex-col gap-4">
+      <div className="grid items-stretch gap-4 lg:grid-cols-3">
+        <div className="flex flex-col justify-center rounded-lg border border-border bg-surface p-5 text-surface-fg">
           {empty ? (
             <p className="text-sm text-muted-fg">{t("report.noFinding")}</p>
           ) : (
             <Donut critical={critical} attention={attention} healthy={healthy} />
           )}
         </div>
-        {under}
+        {empty ? null : (
+          <section className="flex flex-col rounded-lg border border-border bg-surface p-5 text-surface-fg lg:col-span-2">
+            <h2 className="mb-2 text-sm font-normal text-muted-fg">
+              {t(linkSegments ? "report.chart.scopesLinked" : "report.chart.scopes")}
+            </h2>
+            <ul className="flex flex-1 flex-col">
+              {verdict.scopes.map((scope) => (
+                <ScopeBar key={scope.scope_type} scope={scope} scale={scale} link={linkSegments} />
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
-      {empty ? null : (
-        <section className="rounded-lg border border-border bg-surface p-5 text-surface-fg">
-          <h2 className="mb-2 text-sm font-normal text-muted-fg">
-            {t(linkSegments ? "report.chart.scopesLinked" : "report.chart.scopes")}
-          </h2>
-          <ul>
-            {verdict.scopes.map((scope) => (
-              <ScopeBar key={scope.scope_type} scope={scope} scale={scale} link={linkSegments} />
-            ))}
-          </ul>
-        </section>
-      )}
+      {under}
     </div>
   );
 }
