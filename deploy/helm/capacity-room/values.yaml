@@ -94,8 +94,9 @@ admin:
   #     --from-file=password=./admin-password
   existingSecret: ""
   passwordKey: password
-  # pt-BR or en.
-  language: en
+  # pt-BR or en. Empty: the administrator follows the browser's language, and
+  # the Job passes no --language.
+  language: ""
 
 # The profiles, as the [[profiles]] tables of admin import-profiles, written
 # as YAML. A Job imports them at every install and upgrade; an edit made on

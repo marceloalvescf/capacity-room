@@ -16,7 +16,7 @@
         "username": {"type": "string"},
         "existingSecret": {"anyOf": [{"const": ""}, {"type": "string", "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"}]},
         "passwordKey": {"type": "string", "minLength": 1, "pattern": "^[-._a-zA-Z0-9]+$"},
-        "language": {"enum": ["pt-BR", "en"]}
+        "language": {"enum": ["", "pt-BR", "en"]}
       },
       "if": {"properties": {"username": {"minLength": 1}}},
       "then": {"properties": {"existingSecret": {"minLength": 1}}}

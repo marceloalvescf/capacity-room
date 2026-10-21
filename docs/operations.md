@@ -221,6 +221,11 @@ rm "$CAPACITYROOM_HOME/admin-password"
 
 `--password-file <path>` reads the password from the first line of a file instead, as the Kubernetes chart does.
 
+`--language pt-BR` or `--language en` pins the administrator's language. When
+the flag is omitted, the administrator follows the browser's language: the
+web app uses the language of the browser, and the account stores `en` until
+the administrator picks one.
+
 Profiles can be created on the web by the administrator, or imported from a
 file. An import creates or revises each profile the file names and leaves
 the others alone; it can be run again. The file is checked whole before
@@ -670,7 +675,9 @@ and removes it once it succeeds; a failed Job stays, so its log can be read.
 
 - The admin Job, `capacity-room-admin` for a release of that name, runs
   `admin bootstrap-admin` after the first install only, when `admin.username`
-  is set. The bootstrap mode is set on its pod alone. With `admin.username`
+  is set. It passes `--language` only when `admin.language` is `pt-BR` or
+  `en`; the default, empty, makes the administrator follow the browser's
+  language. The bootstrap mode is set on its pod alone. With `admin.username`
   empty over a database that holds no user, no Job creates one and nobody can
   sign in, as the notes Helm prints say. Set `admin.username` and
   `admin.existingSecret`, run `helm uninstall capacity-room -n capacity-room`,

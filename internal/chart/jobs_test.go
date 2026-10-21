@@ -32,13 +32,21 @@ func TestAdminJob(t *testing.T) {
 		t.Fatalf("annotations %v", annotations)
 	}
 	c := job.podSpec()["containers"].([]any)[0].(map[string]any)
-	want := []any{"admin", "bootstrap-admin", "--username", "admin", "--language", "en",
+	want := []any{"admin", "bootstrap-admin", "--username", "admin",
 		"--password-file", "/opt/capacity-room/admin/password", "--config", "/opt/capacity-room/platform.toml"}
 	if !equalLists(c["args"].([]any), want) {
 		t.Fatalf("args %v", c["args"])
 	}
 	if !containsEnv(c["env"].([]any), "CAPACITYROOM_BOOTSTRAP_MODE", "1") {
 		t.Fatalf("env %v", c["env"])
+	}
+	pinnedObjects := render(t, "capacity-room", append(required,
+		"--set", "admin.username=admin", "--set", "admin.existingSecret=admin-secret", "--set", "admin.language=en")...)
+	pinned := find(t, pinnedObjects, "Job", "capacity-room-admin").podSpec()["containers"].([]any)[0].(map[string]any)
+	wantPinned := []any{"admin", "bootstrap-admin", "--username", "admin", "--language", "en",
+		"--password-file", "/opt/capacity-room/admin/password", "--config", "/opt/capacity-room/platform.toml"}
+	if !equalLists(pinned["args"].([]any), wantPinned) {
+		t.Fatalf("pinned args %v", pinned["args"])
 	}
 	for name, spec := range pods(objects) {
 		hasAdmin := false

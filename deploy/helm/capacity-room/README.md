@@ -131,7 +131,7 @@ reference.
 | `imagePullSecrets` | `[]` | Secrets that let the cluster pull a private image. |
 | `database.existingSecret`, `database.key` | required, `uri` | The Secret that holds the database DSN, and its key. |
 | `serverSecret.existingSecret`, `serverSecret.key` | required, `server-secret` | The Secret that holds the server secret, and its key. |
-| `admin.username`, `admin.existingSecret`, `admin.passwordKey`, `admin.language` | empty, empty, `password`, `en` | The first administrator, created by a Job at the first install. Leave `username` empty over a database that already holds a user. |
+| `admin.username`, `admin.existingSecret`, `admin.passwordKey`, `admin.language` | empty, empty, `password`, empty | The first administrator, created by a Job at the first install. Leave `username` empty over a database that already holds a user. `language` is `pt-BR` or `en`; when empty, the administrator follows the browser's language. |
 | `credentials.existingSecret` | empty | The Secret whose keys are the credential files that profiles name. |
 | `caBundles.existingConfigMap` | empty | The ConfigMap whose keys are the CA bundles that profiles name. |
 | `platform` | `{}` | The keys of `platform.toml`, by their own names, such as `trusted_proxies` and `allowed_endpoint_hostnames`. |

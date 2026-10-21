@@ -44,7 +44,7 @@ func TestBootstrapReadsOneLine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if user.Role != auth.RoleAdministrator || user.Language != "pt-BR" {
+	if user.Role != auth.RoleAdministrator || user.Language != "en" || !user.LanguageFollowsBrowser {
 		t.Fatalf("user = %+v", user)
 	}
 	if match, _, _ := auth.VerifyPassword(context.Background(), bootstrapPassword, user.PasswordHash); !match {
@@ -150,8 +150,20 @@ func TestBootstrapLanguage(t *testing.T) {
 		t.Fatalf("en: code = %d, stderr = %q", code, stderr)
 	}
 	user, err := store.FindActiveUserByUsername(context.Background(), pool, "root")
-	if err != nil || user.Language != "en" {
-		t.Fatalf("user = %+v, err = %v, want language en", user, err)
+	if err != nil || user.Language != "en" || user.LanguageFollowsBrowser {
+		t.Fatalf("user = %+v, err = %v, want language en pinned", user, err)
+	}
+}
+
+func TestBootstrapLanguagePtBR(t *testing.T) {
+	pool := storetest.New(t)
+	config := writePlatformFiles(t)
+	if code, _, stderr := bootstrap(t, pool, config, bootstrapPassword+"\n", "--language", "pt-BR"); code != 0 {
+		t.Fatalf("code = %d, stderr = %q", code, stderr)
+	}
+	user, err := store.FindActiveUserByUsername(context.Background(), pool, "root")
+	if err != nil || user.Language != "pt-BR" || user.LanguageFollowsBrowser {
+		t.Fatalf("user = %+v, err = %v, want language pt-BR pinned", user, err)
 	}
 }
 

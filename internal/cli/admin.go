@@ -114,7 +114,7 @@ func newBootstrapAdminCmd(ctx context.Context, env Env, redactor *redact.Redacto
 	flags.StringVar(&username, "username", "", "Username of the administrator.")
 	flags.BoolVar(&passwordStdin, "password-stdin", false, "Read the password from one line of standard input.")
 	flags.StringVar(&passwordFile, "password-file", "", "Read the password from the first line of this file.")
-	flags.StringVar(&language, "language", "pt-BR", "Language of the administrator: pt-BR or en.")
+	flags.StringVar(&language, "language", "", "Language of the administrator: pt-BR or en; when omitted, the administrator follows the browser's language.")
 	flags.StringVar(&config, "config", platformConfigDefault, "Path of the TOML settings file.")
 	_ = cmd.MarkFlagRequired("username")
 	return cmd
@@ -200,7 +200,7 @@ func bootstrapAdmin(ctx context.Context, env Env, redactor *redact.Redactor, in 
 	if err != nil {
 		return "", err
 	}
-	if in.language != "pt-BR" && in.language != "en" {
+	if in.language != "" && in.language != "pt-BR" && in.language != "en" {
 		return "", &exitError{2, errors.New("--language must be pt-BR or en")}
 	}
 
@@ -226,6 +226,10 @@ func bootstrapAdmin(ctx context.Context, env Env, redactor *redact.Redactor, in 
 		return "", &exitError{1, err}
 	}
 
+	language, follows := in.language, false
+	if language == "" {
+		language, follows = "en", true
+	}
 	now := env.Now()
 	err = store.Transact(ctx, pool, func(tx pgx.Tx) error {
 		empty, err := store.LockUsersAndCheckEmpty(ctx, tx)
@@ -237,7 +241,7 @@ func bootstrapAdmin(ctx context.Context, env Env, redactor *redact.Redactor, in 
 		}
 		if err := store.InsertUser(ctx, tx, store.User{
 			ID: id, Username: name, PasswordHash: hash, Role: auth.RoleAdministrator,
-			Language: in.language, Active: true, CreatedAt: now, UpdatedAt: now,
+			Language: language, LanguageFollowsBrowser: follows, Active: true, CreatedAt: now, UpdatedAt: now,
 		}); err != nil {
 			return err
 		}

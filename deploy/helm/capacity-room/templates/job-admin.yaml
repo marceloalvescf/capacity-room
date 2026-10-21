@@ -34,8 +34,10 @@ spec:
             - bootstrap-admin
             - --username
             - {{ .Values.admin.username | quote }}
+            {{- if .Values.admin.language }}
             - --language
             - {{ .Values.admin.language | quote }}
+            {{- end }}
             - --password-file
             - {{ printf "/opt/capacity-room/admin/%s" .Values.admin.passwordKey | quote }}
             - --config
