@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { formatDate, formatElapsed, formatTime, formatTimeIn, formatTimeSeconds } from "./format";
+import { formatAge, formatDate, formatElapsed, formatTime, formatTimeIn, formatTimeSeconds } from "./format";
 
 const zone = process.env.TZ;
 afterEach(() => {
@@ -39,5 +39,17 @@ describe("format", () => {
   it("shows a dash for a date that is not valid", () => {
     expect(formatTime("not a date")).toBe("-");
     expect(formatDate("")).toBe("-");
+  });
+});
+
+describe("formatAge", () => {
+  const now = Date.parse("2026-10-21T14:30:00Z");
+  it("uses the largest whole unit up to weeks", () => {
+    expect(formatAge("2026-10-21T12:00:00Z", now, "en")).toBe("2 hr. ago");
+    expect(formatAge("2026-10-21T12:00:00Z", now, "pt-BR")).toBe("há 2 h");
+    expect(formatAge("2026-10-21T14:29:30Z", now, "en")).toBe("0 min. ago");
+    expect(formatAge("2026-10-21T14:00:00Z", now, "en")).toBe("30 min. ago");
+    expect(formatAge("2026-10-19T14:30:00Z", now, "en")).toBe("2 days ago");
+    expect(formatAge("2026-10-07T14:30:00Z", now, "en")).toBe("2 wk. ago");
   });
 });

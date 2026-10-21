@@ -56,3 +56,22 @@ export function formatElapsed(ms: number): string {
   const seconds = total % 60;
   return hours > 0 ? `${String(hours)}:${pad(minutes)}:${pad(seconds)}` : `${String(minutes)}:${pad(seconds)}`;
 }
+
+const ageUnits = [
+  ["week", 7 * 24 * 60 * 60 * 1000],
+  ["day", 24 * 60 * 60 * 1000],
+  ["hour", 60 * 60 * 1000],
+  ["minute", 60 * 1000],
+] as const;
+
+// The age of a moment as the largest whole unit among minute, hour, day, and week.
+export function formatAge(iso: string, now: number, language: string): string {
+  const span = Math.max(0, now - Date.parse(iso));
+  const formatter = new Intl.RelativeTimeFormat(language, { numeric: "always", style: "short" });
+  for (const [unit, ms] of ageUnits) {
+    if (span >= ms) {
+      return formatter.format(-Math.floor(span / ms), unit);
+    }
+  }
+  return formatter.format(-0, "minute");
+}
