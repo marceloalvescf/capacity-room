@@ -7,7 +7,7 @@ export type Home = components["schemas"]["Home"];
 
 export const homeKey = ["home"] as const;
 
-// The answer is checked every 5 seconds while any cluster has a request in flight.
+// The answer is fetched again on every visit, and every 5 seconds while any cluster has a request in flight.
 export function useHome(): UseQueryResult<Home> {
   const api = useApi();
   return useQuery({
@@ -19,6 +19,8 @@ export function useHome(): UseQueryResult<Home> {
       }
       return data;
     },
+    staleTime: 0,
+    refetchOnMount: "always",
     refetchInterval: (query) =>
       query.state.data?.clusters.some((c) => c.newest !== null && isActive(c.newest)) === true ? 5000 : false,
   });

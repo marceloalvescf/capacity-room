@@ -307,4 +307,38 @@ describe("home page", () => {
     expect(screen.getByRole("list", { name: "Clusters, pelo relatório mais recente" })).toBeInTheDocument();
     expect(chips()).toHaveLength(3);
   });
+
+  it("fetches home again when it is opened again", async () => {
+    const { router } = await open();
+    expect(await screen.findByRole("link", { name: t("home.answer.open") })).toHaveAttribute("href", `/reports/${paymentsId}/overview`);
+    await act(async () => {
+      await router.navigate("/reports");
+    });
+    const later = "44444444-0000-4000-8000-000000000004";
+    useViews(later);
+    mock.home = {
+      clusters: [cluster("payments", "Payments", summary({ id: later, profile_id: "payments", worst_severity: "critical", cluster_name: "payments-eu" }))],
+    };
+    await act(async () => {
+      await router.navigate("/");
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: t("home.answer.open") })).toHaveAttribute("href", `/reports/${later}/overview`);
+    });
+  });
+
+  it("drops a deleted report on return", async () => {
+    const { router } = await open();
+    expect(await screen.findByRole("link", { name: t("home.answer.open") })).toBeInTheDocument();
+    await act(async () => {
+      await router.navigate("/reports");
+    });
+    mock.home = { clusters: [cluster("payments", "Payments", null)] };
+    await act(async () => {
+      await router.navigate("/");
+    });
+    await waitFor(() => {
+      expect(chips()[0]).toHaveTextContent(t("home.chip.none"));
+    });
+  });
 });
