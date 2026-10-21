@@ -351,6 +351,7 @@ describe("overview tab", () => {
         node_evidence_warning: null,
         gauge: null,
         pressure: [{ scope_type: "workload", severity: "critical", finding: 0, critical: 1, attention: 1 }],
+        scopes: [{ scope_type: "workload", severity: "critical", finding: 0, critical: 1, attention: 1, healthy: 0 }],
       },
     });
     await open();
@@ -453,7 +454,7 @@ describe("overview tab", () => {
     mock.views.set(`${id}:en`, {
       ...english,
       findings: [],
-      verdict: { cluster_finding: null, node_evidence_warning: null, gauge: null, pressure: [] },
+      verdict: { cluster_finding: null, node_evidence_warning: null, gauge: null, pressure: [], scopes: [] },
       recommendations: [],
       summary: { ...english.summary, critical: none, attention: none, healthy: none },
     });
