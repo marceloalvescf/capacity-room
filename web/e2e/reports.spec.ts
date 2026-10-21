@@ -108,10 +108,18 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
       await expect(shown[tab]).toBeVisible();
       if (tab === "findings") {
         // Open one severity group so axe also checks an open list.
-        const group = page.getByRole("heading", { level: 2 }).getByRole("button", { expanded: false }).first();
+        const groups = page.getByRole("heading", { level: 2 }).getByRole("button");
+        let index = -1;
+        for (let i = 0, n = await groups.count(); i < n && index < 0; i++) {
+          if ((await groups.nth(i).getAttribute("aria-expanded")) === "false") index = i;
+        }
+        expect(index).toBeGreaterThanOrEqual(0);
+        const group = groups.nth(index);
+        const listId = (await group.getAttribute("aria-controls")) ?? "";
+        expect(listId).not.toBe("");
         await group.click();
         await expect(group).toHaveAttribute("aria-expanded", "true");
-        await expect(page.getByRole("list").getByRole("button", { pressed: false }).first()).toBeVisible();
+        await expect(page.locator(`[id="${listId}"]`).getByRole("button").first()).toBeVisible();
       }
       await expectNoViolations(page);
     }
