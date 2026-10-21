@@ -1,7 +1,6 @@
 # Phase 17: the home page
 
-Date: 2026-10-21. Status: brief agreed by the owner on 2026-10-21, written
-for review. Phase 15 (the public release) stays paused; the order of the two
+Date: 2026-10-21. Status: approved by the owner on 2026-10-21. Phase 15 (the public release) stays paused; the order of the two
 is the owner's call.
 
 ## Purpose
@@ -13,7 +12,9 @@ its latest report, and the chosen cluster's answer below, in the words and
 numbers of the report itself.
 
 The phase adds a page, a navigation entry, and one read route to the API. It
-ends as a minor version, 2.8.0.
+ends as version 3.0.0, by the owner's decision of 2026-10-21 ("this is a big
+release"). Nothing of the public surface of spec 15.1 breaks: an upgrade from
+2.7.0 keeps every stored row, route, flag, and key, and the changelog says so.
 
 ## Decisions of the owner (2026-10-21)
 
