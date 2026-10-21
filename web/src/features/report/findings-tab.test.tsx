@@ -422,7 +422,7 @@ describe("findings type scale", () => {
     expect(heading.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText("findings")).toBeInTheDocument();
     const rows = within(heading.parentElement as HTMLElement).getAllByRole("listitem");
-    const link = within(rows[0] as HTMLElement).getByRole("link", { name: new RegExp(`^${String(first.critical)} critical findings of`) });
+    const link = within(rows[0] as HTMLElement).getByRole("link", { name: new RegExp(`: critical, ${String(first.critical)}$`) });
     expect(link.getAttribute("href")).toMatch(new RegExp(`\\?scope=${first.scope_type}&severity=critical$`));
     await userEvent.click(link);
     expect(params(view.router).get("scope")).toBe(first.scope_type);

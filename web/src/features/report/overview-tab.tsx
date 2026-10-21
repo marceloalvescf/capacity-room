@@ -1,5 +1,5 @@
 import { CaretRightIcon } from "@phosphor-icons/react";
-import { Fragment, useId, type ReactNode } from "react";
+import { Fragment, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Separator } from "@/components/separator";
@@ -17,19 +17,9 @@ const severities = ["critical", "attention", "healthy"] as const;
 const minimum: Record<string, number> = { all: 0, healthy: 0, attention: 1, critical: 2 };
 const rank: Record<(typeof severities)[number], number> = { healthy: 0, attention: 1, critical: 2 };
 
-// A claim above its proof: the words first, the evidence that proves them below. Without a proof the claim stands alone.
-function Pair({ claim, proof }: { claim: ReactNode; proof: ReactNode }) {
-  return (
-    <section className="flex flex-col rounded-lg border border-border bg-surface text-surface-fg">
-      <div className="flex flex-col gap-1.5 p-4">{claim}</div>
-      {proof === null ? null : <div className="flex flex-col justify-center gap-2 border-t border-border p-4">{proof}</div>}
-    </section>
-  );
-}
-
-// Whether the cluster can grow: the worst finding of the cluster and the counts that are known, beside the nodes
-// against the autoscaler's maximum when the autoscaling is enabled and both are known, and beside its state word
-// otherwise.
+// Whether the cluster can grow: the proof comes first under the title, the nodes against the autoscaler's maximum
+// when the autoscaling is enabled and both are known and its state word otherwise, then the worst finding of the
+// cluster and the counts that are known.
 function GrowthPair() {
   const { t } = useTranslation();
   const { summary, verdict } = useView();
@@ -50,9 +40,8 @@ function GrowthPair() {
           { label: t("report.autoscaling.scaleEvents"), value: autoscaling.scale_events },
         ]
   ).filter((fact) => fact.value.raw !== null);
-  const claim = (
+  const detail = (
     <>
-      <h2 className="font-semibold">{t("report.autoscaling.title")}</h2>
       <ClusterVerdict />
       {enabled && facts.length > 0 ? (
         <p className="text-sm text-muted-fg">
@@ -90,7 +79,15 @@ function GrowthPair() {
   ) : (
     <p className="text-2xl font-semibold">{t(`autoscalingStatus.${autoscaling.status}`)}</p>
   );
-  return <Pair claim={claim} proof={proof} />;
+  return (
+    <section className="flex flex-col rounded-lg border border-border bg-surface text-surface-fg">
+      <div className="flex flex-col gap-2 p-4">
+        <h2 className="font-semibold">{t("report.autoscaling.title")}</h2>
+        {proof}
+      </div>
+      <div className="flex flex-col gap-1.5 border-t border-border p-4">{detail}</div>
+    </section>
+  );
 }
 
 // The answer first: the findings of each severity at the size of the answer, each beside the shape that carries

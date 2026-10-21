@@ -136,6 +136,18 @@ describe("overview tab", () => {
     expect(pair).not.toHaveTextContent("Nodes added");
   });
 
+  it("the proof comes right under the title, before the finding and the link", async () => {
+    await open();
+    const pair = growth();
+    const proof = within(pair).getByText("Disabled");
+    const finding = within(pair).getByText("Node autoscaling is disabled.");
+    const link = within(pair).getByRole("link", { name: /See autoscaling/ });
+    const title = within(pair).getByRole("heading", { level: 2 });
+    for (const [before, after] of [[title, proof], [proof, finding], [finding, link]]) {
+      expect((before as HTMLElement).compareDocumentPosition(after as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
   it("enabled autoscaling in portuguese", async () => {
     mock.session = signedIn({ language: "pt-BR" });
     mock.views.set(`${id}:pt-BR`, directCompletePt as View);

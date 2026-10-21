@@ -339,7 +339,7 @@
       "findings": "findings",
       "scopes": "Findings of each scope by severity, on one scale",
       "scopesLinked": "Findings of each scope by severity, on one scale; a segment filters the list below",
-      "segment": "{{count}} {{severity}} findings of {{scope}}"
+      "segment": "{{scope}}: {{severity}}, {{count}}"
     },
     "tab": {
       "overview": "Overview",

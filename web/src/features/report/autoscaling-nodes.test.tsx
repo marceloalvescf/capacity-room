@@ -353,6 +353,16 @@ describe("nodes tab", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("a popover opens with focus on its list and no tooltip", async () => {
+    const user = userEvent.setup();
+    await open("nodes");
+    await user.click(screen.getByRole("button", { name: "Nodes of pool-a: 2" }));
+    const popover = await screen.findByRole("dialog", { name: "Nodes of pool-a" });
+    expect(popover.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).toBe(within(popover).getByRole("list", { name: "Nodes of pool-a" }));
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
   it("the pool of one node and the unknown pool open with their heading", async () => {
     const user = userEvent.setup();
     await open("nodes");

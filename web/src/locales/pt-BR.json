@@ -339,7 +339,7 @@
       "findings": "achados",
       "scopes": "Achados de cada escopo por severidade, na mesma escala",
       "scopesLinked": "Achados de cada escopo por severidade, na mesma escala; um segmento filtra a lista abaixo",
-      "segment": "{{count}} achados {{severity}} de {{scope}}"
+      "segment": "{{scope}}: {{severity}}, {{count}}"
     },
     "tab": {
       "overview": "Visão geral",

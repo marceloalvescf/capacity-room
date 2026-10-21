@@ -1,5 +1,5 @@
 import { CaretDownIcon, CopyIcon } from "@phosphor-icons/react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
@@ -82,6 +82,7 @@ function PoolNodes({ pool }: { pool: ViewNodepool }) {
   const copy = useCopy();
   const name = pool.name === "unknown" ? t("report.node.unknownPool") : pool.name;
   const heading = t("report.pools.heading", { pool: name });
+  const list = useRef<HTMLUListElement>(null);
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -94,7 +95,15 @@ function PoolNodes({ pool }: { pool: ViewNodepool }) {
           <CaretDownIcon aria-hidden="true" className="size-3 text-accent" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" aria-label={heading} className="w-80 max-w-[calc(100vw-2rem)]">
+      <PopoverContent
+        align="start"
+        aria-label={heading}
+        className="w-80 max-w-[calc(100vw-2rem)]"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          list.current?.focus();
+        }}
+      >
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
             <h3 className="label">{heading}</h3>
@@ -109,7 +118,7 @@ function PoolNodes({ pool }: { pool: ViewNodepool }) {
               <CopyIcon aria-hidden="true" className="size-4" />
             </IconButton>
           </div>
-          <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto text-sm">
+          <ul ref={list} tabIndex={-1} aria-label={heading} className="flex max-h-56 flex-col gap-1 overflow-y-auto text-sm outline-none">
             {pool.nodes.map((node) => (
               <li key={node}>
                 <CopyName name={node} />
