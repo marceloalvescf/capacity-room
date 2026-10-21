@@ -490,6 +490,98 @@ LIMIT `
 	return items, nil
 }
 
+// ProfileReports is the newest usable report and the newest report of one
+// profile; a pointer is nil when no row matches.
+type ProfileReports struct {
+	ProfileID string
+	Latest    *ReportListItem
+	Newest    *ReportListItem
+}
+
+// prefixedRow scans leading columns into dest before the columns the caller
+// asks for.
+type prefixedRow struct {
+	rows pgx.Rows
+	dest []any
+}
+
+func (p prefixedRow) Scan(dest ...any) error {
+	return p.rows.Scan(append(p.dest, dest...)...)
+}
+
+// LatestReportsByProfile returns, for each profile id given and in that
+// order, the newest collected report that is not expired and the newest
+// report; deleted reports are left out of both.
+func LatestReportsByProfile(ctx context.Context, q Querier, profileIDs []string, now time.Time) ([]ProfileReports, error) {
+	out := make([]ProfileReports, len(profileIDs))
+	for i, id := range profileIDs {
+		out[i].ProfileID = id
+	}
+	if len(profileIDs) == 0 {
+		return out, nil
+	}
+	const from = ` FROM reports r JOIN users u ON u.id = r.owner_id
+WHERE r.profile_id = t.id AND r.deleted_at IS NULL`
+	const order = ` ORDER BY r.created_at DESC, r.id DESC LIMIT 1`
+	rows, err := q.Query(ctx, `
+SELECT t.ord, x.*
+FROM unnest($1::text[]) WITH ORDINALITY AS t(id, ord)
+CROSS JOIN LATERAL (
+  (SELECT 'latest' AS kind, `+listColumns+from+`
+     AND r.status = 'collected' AND r.expired_at IS NULL AND r.expires_at > $2`+order+`)
+  UNION ALL
+  (SELECT 'newest' AS kind, `+listColumns+from+order+`)
+) AS x`, profileIDs, now)
+	if err != nil {
+		return nil, fmt.Errorf("latest reports by profile: %w", err)
+	}
+	defer rows.Close()
+	type slot struct {
+		at     int
+		latest bool
+	}
+	var (
+		found []ReportListItem
+		slots []slot
+		index = map[uuid.UUID]int{} // a report that is both latest and newest is held once
+		pick  []int
+	)
+	for rows.Next() {
+		var (
+			ord  int64
+			kind string
+		)
+		it, err := scanItem(prefixedRow{rows: rows, dest: []any{&ord, &kind}})
+		if err != nil {
+			return nil, fmt.Errorf("latest reports by profile: %w", err)
+		}
+		i, seen := index[it.ID]
+		if !seen {
+			i = len(found)
+			index[it.ID] = i
+			found = append(found, it)
+		}
+		pick = append(pick, i)
+		slots = append(slots, slot{at: int(ord) - 1, latest: kind == "latest"})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("latest reports by profile: %w", err)
+	}
+	rows.Close()
+	if err := attachPDFs(ctx, q, found); err != nil {
+		return nil, err
+	}
+	for n, s := range slots {
+		it := found[pick[n]]
+		if s.latest {
+			out[s.at].Latest = &it
+		} else {
+			out[s.at].Newest = &it
+		}
+	}
+	return out, nil
+}
+
 // GetReportItem returns one report not deleted, with its owner's user name
 // and PDF rows; ErrNotFound when absent or deleted.
 func GetReportItem(ctx context.Context, q Querier, id uuid.UUID) (ReportListItem, error) {
