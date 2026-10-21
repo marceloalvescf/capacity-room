@@ -182,12 +182,13 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await expect(chip).toHaveAccessibleName(new RegExp(`^(${statuses}) prod`));
     const totals = page.getByRole("group", { name: en.report.overview.totals });
     await expect(totals).toBeVisible();
-    const onHome = await totals.innerText();
+    const onHome = await totals.textContent();
+    expect(onHome).toMatch(/\d/);
     await expectNoViolations(page);
 
     await page.getByRole("link", { name: en.home.answer.open, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/reports/${reportId}/overview$`));
-    await expect(page.getByRole("group", { name: en.report.overview.totals })).toHaveText(onHome);
+    await expect(page.getByRole("group", { name: en.report.overview.totals })).toHaveText(onHome ?? "");
     await page.goto(jobUrl);
     await expect(page.getByText(en.reportStatus.collected, { exact: true })).toBeVisible();
   });
