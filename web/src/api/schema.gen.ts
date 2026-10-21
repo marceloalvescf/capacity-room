@@ -128,6 +128,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The newest reports of every active profile, for any signed-in reader. */
+        get: operations["getHome"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/profiles": {
         parameters: {
             query?: never;
@@ -457,6 +474,17 @@ export interface components {
             items: components["schemas"]["ReportSummary"][];
             /** @description The cursor of the next page; null on the last page. */
             next_cursor: string | null;
+        };
+        Home: {
+            clusters: components["schemas"]["HomeCluster"][];
+        };
+        HomeCluster: {
+            profile_id: string;
+            display_name: string;
+            /** @description The newest collected report that is not deleted and has not expired, judged with the request's one reading of the clock. */
+            latest: components["schemas"]["ReportSummary"] | null;
+            /** @description The newest report that is not deleted, whatever its status; equal to latest when nothing was requested after it. */
+            newest: components["schemas"]["ReportSummary"] | null;
         };
         PDFRequest: {
             language: components["schemas"]["Language"];
@@ -1538,6 +1566,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProfileSummaryList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            default: components["responses"]["Unexpected"];
+        };
+    };
+    getHome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One entry per active profile, in id order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Home"];
                 };
             };
             401: components["responses"]["Unauthenticated"];

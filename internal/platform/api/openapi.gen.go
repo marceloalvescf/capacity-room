@@ -463,6 +463,23 @@ type ErrorCode = Code
 // FilterMode defines model for FilterMode.
 type FilterMode string
 
+// Home defines model for Home.
+type Home struct {
+	Clusters []HomeCluster `json:"clusters"`
+}
+
+// HomeCluster defines model for HomeCluster.
+type HomeCluster struct {
+	DisplayName string `json:"display_name"`
+
+	// Latest The newest collected report that is not deleted and has not expired, judged with the request's one reading of the clock.
+	Latest *ReportSummary `json:"latest"`
+
+	// Newest The newest report that is not deleted, whatever its status; equal to latest when nothing was requested after it.
+	Newest    *ReportSummary `json:"newest"`
+	ProfileId string         `json:"profile_id"`
+}
+
 // Language defines model for Language.
 type Language string
 

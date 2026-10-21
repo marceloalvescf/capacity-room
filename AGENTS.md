@@ -367,7 +367,10 @@ redactor the moment the settings are loaded, before the pool opens.
   `GET /reports` (a keyset page on creation time and id), `GET /reports/{id}`,
   its `/view?lang=`, `/snapshot`, and `/pdf?lang=`, `POST
   /reports/{id}/pdfs`, `DELETE /reports/{id}`, and `POST
-  /reports/delete` (up to 200 ids, one outcome each, in the order sent).
+  /reports/delete` (up to 200 ids, one outcome each, in the order sent),
+  and `GET /home`, a read for every signed-in user that answers, for each
+  active profile, its newest report and its newest collected report that has
+  not expired.
   Every signed-in user reads every report that is not deleted; an operator
   or an administrator requests reports and PDFs; an administrator deletes
   any report, an operator its own.

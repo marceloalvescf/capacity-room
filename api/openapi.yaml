@@ -287,6 +287,21 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         default:
           $ref: "#/components/responses/Unexpected"
+  /home:
+    get:
+      operationId: getHome
+      summary: The newest reports of every active profile, for any signed-in reader.
+      responses:
+        "200":
+          description: One entry per active profile, in id order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Home"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        default:
+          $ref: "#/components/responses/Unexpected"
   /admin/profiles:
     get:
       operationId: listProfiles
@@ -1338,6 +1353,32 @@ components:
           type: string
           nullable: true
           description: The cursor of the next page; null on the last page.
+    Home:
+      type: object
+      required: [clusters]
+      properties:
+        clusters:
+          type: array
+          items:
+            $ref: "#/components/schemas/HomeCluster"
+    HomeCluster:
+      type: object
+      required: [profile_id, display_name, latest, newest]
+      properties:
+        profile_id: { type: string }
+        display_name: { type: string }
+        latest:
+          allOf: [{ $ref: "#/components/schemas/ReportSummary" }]
+          nullable: true
+          description: >-
+            The newest collected report that is not deleted and has not expired,
+            judged with the request's one reading of the clock.
+        newest:
+          allOf: [{ $ref: "#/components/schemas/ReportSummary" }]
+          nullable: true
+          description: >-
+            The newest report that is not deleted, whatever its status; equal to
+            latest when nothing was requested after it.
     PDFRequest:
       type: object
       required: [language]
