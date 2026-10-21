@@ -8,12 +8,11 @@ type Evidence = ViewFinding["evidence"][number];
 
 const evidence = (name: Evidence["name"], raw: number): Evidence & { raw: number } => ({ name, raw, text: `${String(raw)}%` });
 
-function draw(low: number, high: number, spread: number | null = high - low) {
+function draw(low: number, high: number) {
   const { container } = render(
     <RangeBar
       low={evidence("minimum_peak_percent", low)}
       high={evidence("maximum_peak_percent", high)}
-      spread={spread === null ? null : evidence("spread_percent", spread)}
       status="attention"
     />,
   );
@@ -44,11 +43,27 @@ describe("range bar", () => {
     expect(filled).toHaveClass("fill-attention");
   });
 
-  it("anchors a label inward at an end of the track, apart from a close neighbour, else centred", () => {
-    const anchor = (low: number, high: number, name: string) => draw(low, high)?.querySelector(`[data-label=${name}]`)?.getAttribute("text-anchor");
-    expect([anchor(0, 100, "low"), anchor(0, 100, "high")]).toEqual(["start", "end"]);
-    expect([anchor(20, 60, "low"), anchor(20, 60, "high")]).toEqual(["middle", "middle"]);
-    expect([anchor(40, 50, "low"), anchor(40, 50, "high")]).toEqual(["end", "start"]);
+  it("hangs the lowest label above the track and the highest below it, each toward the centre", () => {
+    const cases: [number, number, string, string][] = [
+      [0, 100, "start", "end"],
+      [0, 10, "start", "start"],
+      [90, 95, "end", "end"],
+      [20, 50, "start", "start"],
+      [20, 60, "start", "end"],
+    ];
+    for (const [low, high, lowAnchor, highAnchor] of cases) {
+      const { container, unmount } = render(
+        <RangeBar low={evidence("minimum_peak_percent", low)} high={evidence("maximum_peak_percent", high)} status="attention" />,
+      );
+      const track = Number(container.querySelector("[data-track]")?.getAttribute("y"));
+      const lowLabel = container.querySelector("[data-label=low]");
+      const highLabel = container.querySelector("[data-label=high]");
+      expect(Number(lowLabel?.getAttribute("y")), String(low)).toBeLessThan(track);
+      expect(Number(highLabel?.getAttribute("y")), String(high)).toBeGreaterThan(track);
+      expect([lowLabel?.getAttribute("text-anchor"), highLabel?.getAttribute("text-anchor")]).toEqual([lowAnchor, highAnchor]);
+      expect([lowLabel?.getAttribute("x"), highLabel?.getAttribute("x")]).toEqual([`${String(low)}%`, `${String(high)}%`]);
+      unmount();
+    }
   });
 
   it("draws the spread between the dots at a lower opacity", () => {
@@ -56,11 +71,12 @@ describe("range bar", () => {
     expect(span).toHaveClass("fill-attention", "opacity-35");
   });
 
-  it("labels the dots and the spread with the words and texts of the evidence", () => {
+  it("labels the dots with the words and texts of the evidence, and the scale", () => {
     const text = draw(20, 60)?.textContent ?? "";
-    for (const label of ["Lowest peak 20%", "Highest peak 60%", "Spread 40%", "0%", "25%", "50%", "75%", "100%"]) {
+    for (const label of ["Lowest peak 20%", "Highest peak 60%", "0%", "25%", "50%", "75%", "100%"]) {
       expect(text).toContain(label);
     }
+    expect(text).not.toContain("Spread");
   });
 
   it("draws a lowest of 0 as a range with both dots, no fill from zero", () => {
@@ -68,9 +84,5 @@ describe("range bar", () => {
     expect(svg?.querySelector("[data-low]")).toHaveAttribute("cx", "0%");
     expect(svg?.querySelector("[data-high]")).not.toBeNull();
     expect(svg?.querySelector("[data-fill]")).toBeNull();
-  });
-
-  it("omits the spread label when the evidence has none", () => {
-    expect(draw(20, 60, null)?.textContent).not.toContain("Spread");
   });
 });

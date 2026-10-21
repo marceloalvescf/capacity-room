@@ -125,7 +125,7 @@ export function FindingProof({ finding, className }: { finding: ViewFinding; cla
         ))}
       </p>
       {proof.kind === "range" ? (
-        <RangeBar low={proof.low} high={proof.high} spread={proof.spread} status={finding.severity} />
+        <RangeBar low={proof.low} high={proof.high} status={finding.severity} />
       ) : (
         <ProofBar value={proof.value} reference={proof.reference} status={finding.severity} units={proof.count} />
       )}
