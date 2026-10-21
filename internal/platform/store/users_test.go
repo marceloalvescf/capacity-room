@@ -119,7 +119,7 @@ func TestUpdateUserFieldsNeverWritesTheHash(t *testing.T) {
 	u := newUser("amy", "reader", true)
 	mustInsertUser(t, pool, u)
 
-	if err := store.UpdateUserFields(ctx, pool, u.ID, "administrator", "pt-BR", false, now.Add(time.Hour)); err != nil {
+	if err := store.UpdateUserFields(ctx, pool, u.ID, "administrator", "pt-BR", true, false, now.Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	got, err := store.GetUser(ctx, pool, u.ID)
@@ -127,12 +127,12 @@ func TestUpdateUserFieldsNeverWritesTheHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.Username != "amy" || got.Role != "administrator" || got.Language != "pt-BR" ||
-		got.Active || got.PasswordHash != "hash-amy" ||
+		got.Active || !got.LanguageFollowsBrowser || got.PasswordHash != "hash-amy" ||
 		!got.UpdatedAt.Equal(time.Date(2026, 10, 5, 13, 0, 0, 0, time.UTC)) {
 		t.Fatalf("got %+v", got)
 	}
 
-	err = store.UpdateUserFields(ctx, pool, uuid.New(), "reader", "en", true, now)
+	err = store.UpdateUserFields(ctx, pool, uuid.New(), "reader", "en", false, true, now)
 	if !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("missing row: got %v, want ErrNotFound", err)
 	}
@@ -197,24 +197,24 @@ func TestUpdatePasswordHashComparesAndSets(t *testing.T) {
 	}
 }
 
-func TestUpdateLanguageWritesItsColumnAlone(t *testing.T) {
+func TestUpdateLanguagePinWritesItsColumnsAlone(t *testing.T) {
 	pool := storetest.New(t)
 	ctx := context.Background()
 	u := newUser("amy", "operator", true)
 	mustInsertUser(t, pool, u)
 
-	if err := store.UpdateLanguage(ctx, pool, u.ID, "pt-BR", now.Add(time.Hour)); err != nil {
+	if err := store.UpdateLanguagePin(ctx, pool, u.ID, "pt-BR", true, now.Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	got, err := store.GetUser(ctx, pool, u.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Language != "pt-BR" || got.Role != "operator" || !got.Active || got.PasswordHash != "hash-amy" ||
+	if got.Language != "pt-BR" || !got.LanguageFollowsBrowser || got.Role != "operator" || !got.Active || got.PasswordHash != "hash-amy" ||
 		!got.UpdatedAt.Equal(time.Date(2026, 10, 5, 13, 0, 0, 0, time.UTC)) {
 		t.Fatalf("got %+v", got)
 	}
-	if err := store.UpdateLanguage(ctx, pool, uuid.New(), "en", now); !errors.Is(err, store.ErrNotFound) {
+	if err := store.UpdateLanguagePin(ctx, pool, uuid.New(), "en", false, now); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("missing row: got %v, want ErrNotFound", err)
 	}
 }

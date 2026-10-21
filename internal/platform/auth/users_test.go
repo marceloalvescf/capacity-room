@@ -317,7 +317,7 @@ func TestUpdateRefusesLastAdministratorTransitions(t *testing.T) {
 	f := newUserFixture(t)
 	ctx := context.Background()
 	two := newUser(t, f.pool, "two", adminPassword, RoleAdministrator, "en")
-	if err := store.UpdateUserFields(ctx, f.pool, two.ID, two.Role, two.Language, false, base); err != nil {
+	if err := store.UpdateUserFields(ctx, f.pool, two.ID, two.Role, two.Language, two.LanguageFollowsBrowser, false, base); err != nil {
 		t.Fatal(err)
 	}
 	// An inactive administrator acts here, so root is the last active one.
@@ -331,7 +331,7 @@ func TestUpdateRefusesLastAdministratorTransitions(t *testing.T) {
 	if !f.user(t, f.root.ID).Active {
 		t.Fatal("root changed")
 	}
-	if err := store.UpdateUserFields(ctx, f.pool, two.ID, two.Role, two.Language, true, base); err != nil {
+	if err := store.UpdateUserFields(ctx, f.pool, two.ID, two.Role, two.Language, two.LanguageFollowsBrowser, true, base); err != nil {
 		t.Fatal(err)
 	}
 	got, err := f.users.Update(ctx, f.actor(two), f.root.ID, UserChange{Role: str(RoleReader)})
@@ -401,7 +401,7 @@ func TestDeleteLastAdministrator(t *testing.T) {
 	two := newUser(t, f.pool, "two", adminPassword, RoleAdministrator, "en")
 	deactivate := func(active bool) {
 		t.Helper()
-		if err := store.UpdateUserFields(ctx, f.pool, two.ID, two.Role, two.Language, active, base); err != nil {
+		if err := store.UpdateUserFields(ctx, f.pool, two.ID, two.Role, two.Language, two.LanguageFollowsBrowser, active, base); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -506,5 +506,47 @@ func TestUpdateKeepsAConcurrentPasswordChange(t *testing.T) {
 	}
 	if match, _, _ := VerifyPassword(context.Background(), newPassword, row.PasswordHash); !match {
 		t.Fatal("the password change was reverted")
+	}
+}
+
+func TestCreateUserWithoutLanguageFollowsTheBrowser(t *testing.T) {
+	f := newUserFixture(t)
+	got, err := f.users.Create(context.Background(), f.actor(f.root),
+		NewUser{Username: "Kim", Password: "twelve letters", Role: RoleOperator})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row := f.user(t, got.ID); row.Language != "en" || !row.LanguageFollowsBrowser {
+		t.Fatalf("row %+v", row)
+	}
+	got, err = f.users.Create(context.Background(), f.actor(f.root),
+		NewUser{Username: "Lee", Password: "twelve letters", Role: RoleOperator, Language: "pt-BR"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row := f.user(t, got.ID); row.Language != "pt-BR" || row.LanguageFollowsBrowser {
+		t.Fatalf("row %+v", row)
+	}
+}
+
+func TestUpdateUnpinsTheLanguage(t *testing.T) {
+	f := newUserFixture(t)
+	ctx := context.Background()
+	if _, err := f.users.Update(ctx, f.actor(f.root), f.ops.ID, UserChange{LanguageFollowsBrowser: flag(true)}); err != nil {
+		t.Fatal(err)
+	}
+	row := f.user(t, f.ops.ID)
+	if !row.LanguageFollowsBrowser || row.Language != f.ops.Language {
+		t.Fatalf("row %+v", row)
+	}
+	events := f.audits(t, audit.ActionUserUpdate)
+	last := events[len(events)-1]
+	requireMetadata(t, last, `{"changed":{"language_follows_browser":true},"sessions_revoked":0}`)
+
+	if _, err := f.users.Update(ctx, f.actor(f.root), f.ops.ID, UserChange{Language: str("en")}); err != nil {
+		t.Fatal(err)
+	}
+	if row := f.user(t, f.ops.ID); row.LanguageFollowsBrowser || row.Language != "en" {
+		t.Fatalf("pinned row %+v", row)
 	}
 }

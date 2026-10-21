@@ -988,7 +988,7 @@ components:
         Cache-Control:
           $ref: "#/components/headers/CacheControl"
     RequestInvalid:
-      description: REQUEST_INVALID, with one field per problem (missing, invalid, unknown, too_long).
+      description: REQUEST_INVALID, with one field per problem (missing, invalid, unknown, too_long, conflict).
       content:
         application/json:
           schema:
@@ -1465,7 +1465,7 @@ components:
       enum: [pt-BR, en]
     Principal:
       type: object
-      required: [id, username, role, language]
+      required: [id, username, role, language, language_follows_browser]
       properties:
         id:
           type: string
@@ -1479,6 +1479,9 @@ components:
           $ref: "#/components/schemas/Role"
         language:
           $ref: "#/components/schemas/Language"
+        language_follows_browser:
+          type: boolean
+          description: True while the account takes the browser's language; language then holds the last pinned or initial language.
     Session:
       description: The answer of GET /auth/session, one of the two shapes.
       oneOf:
@@ -1531,9 +1534,12 @@ components:
           maxLength: 1024
         language:
           $ref: "#/components/schemas/Language"
+        language_follows_browser:
+          type: boolean
+          description: Only true is accepted, which unpins the language and keeps the stored one; false is refused, and so is a body that also sends language.
     User:
       type: object
-      required: [id, username, role, language, active, created_at, updated_at]
+      required: [id, username, role, language, language_follows_browser, active, created_at, updated_at]
       properties:
         id:
           type: string
@@ -1547,6 +1553,8 @@ components:
           $ref: "#/components/schemas/Role"
         language:
           $ref: "#/components/schemas/Language"
+        language_follows_browser:
+          type: boolean
         active:
           type: boolean
         created_at:
@@ -1565,7 +1573,7 @@ components:
             $ref: "#/components/schemas/User"
     NewUser:
       type: object
-      required: [username, password, role, language]
+      required: [username, password, role]
       properties:
         username:
           type: string
@@ -1577,6 +1585,7 @@ components:
           $ref: "#/components/schemas/Role"
         language:
           $ref: "#/components/schemas/Language"
+          description: When absent, the account follows the browser's language and stores en.
     UserChange:
       type: object
       properties:
@@ -1589,6 +1598,9 @@ components:
           maxLength: 1024
         language:
           $ref: "#/components/schemas/Language"
+        language_follows_browser:
+          type: boolean
+          description: Only true is accepted, which unpins the language and keeps the stored one; false is refused, and so is a body that also sends language.
     EndpointType:
       type: string
       enum: [auto, prometheus, grafana]

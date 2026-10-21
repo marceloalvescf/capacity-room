@@ -22,6 +22,9 @@ type Principal struct {
 	Username string
 	Role     string
 	Language string
+	// LanguageFollowsBrowser is true while the account takes the browser's
+	// language, so Language is not the language in use.
+	LanguageFollowsBrowser bool
 }
 
 // Role is the name of a role as the users table stores it.
@@ -66,7 +69,7 @@ const (
 )
 
 func principalOf(u store.User) Principal {
-	return Principal{ID: u.ID, Username: u.Username, Role: u.Role, Language: u.Language}
+	return Principal{ID: u.ID, Username: u.Username, Role: u.Role, Language: u.Language, LanguageFollowsBrowser: u.LanguageFollowsBrowser}
 }
 
 // Issued is a new session: the raw tokens, given to the client once.

@@ -26,9 +26,12 @@ type User struct {
 	PasswordHash string
 	Role         string
 	Language     string
-	Active       bool
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	// LanguageFollowsBrowser is true while the account takes the browser's
+	// language; Language then holds the last pinned or initial language.
+	LanguageFollowsBrowser bool
+	Active                 bool
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
 }
 
 // ErrNotFound is returned by every lookup that finds no row.
@@ -38,11 +41,11 @@ var ErrNotFound = errors.New("no such row")
 // refuses the name.
 var ErrUsernameTaken = errors.New("username taken")
 
-const userColumns = `id, username, password_hash, role, language, active, created_at, updated_at`
+const userColumns = `id, username, password_hash, role, language, language_follows_browser, active, created_at, updated_at`
 
 func scanUser(row pgx.Row) (User, error) {
 	var u User
-	err := row.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.Role, &u.Language, &u.Active, &u.CreatedAt, &u.UpdatedAt)
+	err := row.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.Role, &u.Language, &u.LanguageFollowsBrowser, &u.Active, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return User{}, err
 	}
@@ -54,9 +57,9 @@ func scanUser(row pgx.Row) (User, error) {
 // InsertUser inserts u.
 func InsertUser(ctx context.Context, q Querier, u User) error {
 	_, err := q.Exec(ctx, `
-INSERT INTO users (id, username, password_hash, role, language, active, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		u.ID, u.Username, u.PasswordHash, u.Role, u.Language, u.Active, u.CreatedAt, u.UpdatedAt)
+INSERT INTO users (id, username, password_hash, role, language, language_follows_browser, active, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		u.ID, u.Username, u.PasswordHash, u.Role, u.Language, u.LanguageFollowsBrowser, u.Active, u.CreatedAt, u.UpdatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "uq_users_username" {
@@ -122,12 +125,12 @@ func ListUsers(ctx context.Context, q Querier) ([]User, error) {
 	return users, nil
 }
 
-// UpdateUserFields writes role, language, active, and updated_at of the
-// row with id, and never the hash or the username.
-func UpdateUserFields(ctx context.Context, q Querier, id uuid.UUID, role, language string, active bool, now time.Time) error {
+// UpdateUserFields writes role, language, language_follows_browser, active,
+// and updated_at of the row with id, and never the hash or the username.
+func UpdateUserFields(ctx context.Context, q Querier, id uuid.UUID, role, language string, follows, active bool, now time.Time) error {
 	tag, err := q.Exec(ctx, `
-UPDATE users SET role = $2, language = $3, active = $4, updated_at = $5 WHERE id = $1`,
-		id, role, language, active, now)
+UPDATE users SET role = $2, language = $3, language_follows_browser = $4, active = $5, updated_at = $6 WHERE id = $1`,
+		id, role, language, follows, active, now)
 	if err != nil {
 		return fmt.Errorf("update user fields: %w", err)
 	}
@@ -150,12 +153,12 @@ UPDATE users SET password_hash = $3, updated_at = $4 WHERE id = $1 AND password_
 	return tag.RowsAffected() == 1, nil
 }
 
-// UpdateLanguage writes language and now as language and updated_at of the
-// row with id.
-func UpdateLanguage(ctx context.Context, q Querier, id uuid.UUID, language string, now time.Time) error {
-	tag, err := q.Exec(ctx, `UPDATE users SET language = $2, updated_at = $3 WHERE id = $1`, id, language, now)
+// UpdateLanguagePin writes language, language_follows_browser, and now as
+// language, language_follows_browser, and updated_at of the row with id.
+func UpdateLanguagePin(ctx context.Context, q Querier, id uuid.UUID, language string, follows bool, now time.Time) error {
+	tag, err := q.Exec(ctx, `UPDATE users SET language = $2, language_follows_browser = $3, updated_at = $4 WHERE id = $1`, id, language, follows, now)
 	if err != nil {
-		return fmt.Errorf("update language: %w", err)
+		return fmt.Errorf("update language pin: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound

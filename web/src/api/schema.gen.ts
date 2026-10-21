@@ -509,6 +509,8 @@ export interface components {
             username: string;
             role: components["schemas"]["Role"];
             language: components["schemas"]["Language"];
+            /** @description True while the account takes the browser's language; language then holds the last pinned or initial language. */
+            language_follows_browser: boolean;
         };
         /** @description The answer of GET /auth/session, one of the two shapes. */
         Session: components["schemas"]["AnonymousSession"] | components["schemas"]["SignedInSession"];
@@ -536,6 +538,8 @@ export interface components {
             current_password?: string;
             password?: string;
             language?: components["schemas"]["Language"];
+            /** @description Only true is accepted, which unpins the language and keeps the stored one; false is refused, and so is a body that also sends language. */
+            language_follows_browser?: boolean;
         };
         User: {
             /** Format: uuid */
@@ -543,6 +547,7 @@ export interface components {
             username: string;
             role: components["schemas"]["Role"];
             language: components["schemas"]["Language"];
+            language_follows_browser: boolean;
             active: boolean;
             /** Format: date-time */
             created_at: string;
@@ -556,13 +561,16 @@ export interface components {
             username: string;
             password: string;
             role: components["schemas"]["Role"];
-            language: components["schemas"]["Language"];
+            /** @description When absent, the account follows the browser's language and stores en. */
+            language?: components["schemas"]["Language"];
         };
         UserChange: {
             role?: components["schemas"]["Role"];
             active?: boolean;
             password?: string;
             language?: components["schemas"]["Language"];
+            /** @description Only true is accepted, which unpins the language and keeps the stored one; false is refused, and so is a body that also sends language. */
+            language_follows_browser?: boolean;
         };
         /** @enum {string} */
         EndpointType: "auto" | "prometheus" | "grafana";
@@ -1042,7 +1050,7 @@ export interface components {
             };
             content?: never;
         };
-        /** @description REQUEST_INVALID, with one field per problem (missing, invalid, unknown, too_long). */
+        /** @description REQUEST_INVALID, with one field per problem (missing, invalid, unknown, too_long, conflict). */
         RequestInvalid: {
             headers: {
                 [name: string]: unknown;

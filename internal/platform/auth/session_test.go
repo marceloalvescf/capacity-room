@@ -199,7 +199,7 @@ func TestLoginUnknownUser(t *testing.T) {
 func TestLoginInactiveUserLooksUnknown(t *testing.T) {
 	f := newSessionFixture(t)
 	f.reader.Active = false
-	if err := store.UpdateUserFields(context.Background(), f.pool, f.reader.ID, f.reader.Role, f.reader.Language, f.reader.Active, base); err != nil {
+	if err := store.UpdateUserFields(context.Background(), f.pool, f.reader.ID, f.reader.Role, f.reader.Language, f.reader.LanguageFollowsBrowser, f.reader.Active, base); err != nil {
 		t.Fatal(err)
 	}
 	_, err := f.sessions.Login(context.Background(), "reader", readerPassword, testAddress, "")
@@ -378,7 +378,7 @@ func TestAuthenticateRevokesSessionOfInactiveUser(t *testing.T) {
 	f := newSessionFixture(t)
 	issued := f.login(t, "admin", adminPassword, "")
 	f.admin.Active = false
-	if err := store.UpdateUserFields(context.Background(), f.pool, f.admin.ID, f.admin.Role, f.admin.Language, f.admin.Active, base); err != nil {
+	if err := store.UpdateUserFields(context.Background(), f.pool, f.admin.ID, f.admin.Role, f.admin.Language, f.admin.LanguageFollowsBrowser, f.admin.Active, base); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := f.sessions.Authenticate(context.Background(), issued.Token); !errors.Is(err, ErrUnauthenticated) {
@@ -391,7 +391,7 @@ func TestAuthenticateReadsRoleFromDatabase(t *testing.T) {
 	f := newSessionFixture(t)
 	issued := f.login(t, "admin", adminPassword, "")
 	f.admin.Role = RoleReader
-	if err := store.UpdateUserFields(context.Background(), f.pool, f.admin.ID, f.admin.Role, f.admin.Language, f.admin.Active, base); err != nil {
+	if err := store.UpdateUserFields(context.Background(), f.pool, f.admin.ID, f.admin.Role, f.admin.Language, f.admin.LanguageFollowsBrowser, f.admin.Active, base); err != nil {
 		t.Fatal(err)
 	}
 	got, err := f.sessions.Authenticate(context.Background(), issued.Token)

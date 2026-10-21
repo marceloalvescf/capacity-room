@@ -161,7 +161,7 @@ func TestMigrate(t *testing.T) {
 	config := writePlatformFiles(t)
 	for range 2 {
 		code, stdout, stderr := runCommand(context.Background(), env, "admin", "migrate", "--config", config)
-		if code != 0 || stdout != "migrate: schema at version 5\n" || stderr != "" {
+		if code != 0 || stdout != "migrate: schema at version 6\n" || stderr != "" {
 			t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
 		}
 	}

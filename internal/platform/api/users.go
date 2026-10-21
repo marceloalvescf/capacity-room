@@ -13,7 +13,7 @@ var userLimits = map[string]int{"username": maxUsername, "password": maxPassword
 
 func userOf(u store.User) User {
 	return User{
-		Id: u.ID, Username: u.Username, Role: Role(u.Role), Language: Language(u.Language), Active: u.Active,
+		Id: u.ID, Username: u.Username, Role: Role(u.Role), Language: Language(u.Language), LanguageFollowsBrowser: u.LanguageFollowsBrowser, Active: u.Active,
 		CreatedAt: u.CreatedAt.UTC(), UpdatedAt: u.UpdatedAt.UTC(),
 	}
 }
@@ -49,12 +49,19 @@ func (s *Server) listUsers(w http.ResponseWriter, r *http.Request, a auth.Authen
 
 func (s *Server) createUser(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
 	var body NewUser
-	if p := DecodeBody(r, &body, []string{"username", "password", "role", "language"}, userLimits); p != nil {
+	if p := DecodeBody(r, &body, []string{"username", "password", "role"}, userLimits); p != nil {
 		WriteProblem(w, p)
 		return
 	}
+	language := ""
+	if body.Language != nil {
+		if language = string(*body.Language); language == "" {
+			WriteProblem(w, &Problem{Code: CodeRequestInvalid, Fields: map[string]string{"language": "invalid"}})
+			return
+		}
+	}
 	user, err := s.Users.Create(r.Context(), a.Principal, auth.NewUser{
-		Username: body.Username, Password: body.Password, Role: string(body.Role), Language: string(body.Language),
+		Username: body.Username, Password: body.Password, Role: string(body.Role), Language: language,
 	})
 	if err != nil {
 		s.fail(w, r, err)
@@ -86,8 +93,13 @@ func (s *Server) patchUser(w http.ResponseWriter, r *http.Request, a auth.Authen
 	if !ok {
 		return
 	}
+	if p := languageFlagProblem(body.Language != nil, body.LanguageFollowsBrowser); p != nil {
+		WriteProblem(w, p)
+		return
+	}
 	user, err := s.Users.Update(r.Context(), a.Principal, id, auth.UserChange{
 		Role: (*string)(body.Role), Active: body.Active, Password: body.Password, Language: (*string)(body.Language),
+		LanguageFollowsBrowser: body.LanguageFollowsBrowser,
 	})
 	if err != nil {
 		s.fail(w, r, err)

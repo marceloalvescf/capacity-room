@@ -251,3 +251,27 @@ func TestAccountPasswordChangeRefusedWhenHashMoved(t *testing.T) {
 	}
 	f.requireNoAudit(t)
 }
+
+func TestAccountChangeUnpinsTheLanguage(t *testing.T) {
+	f := newAccountFixture(t)
+	got, err := f.account.Change(context.Background(), f.actor(f.eve), testAddress, AccountChange{LanguageFollowsBrowser: flag(true)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row := f.user(t, f.eve.ID)
+	if !got.LanguageFollowsBrowser || !row.LanguageFollowsBrowser || row.Language != f.eve.Language {
+		t.Fatalf("row %+v", row)
+	}
+	events := f.audits(t, audit.ActionAccountLanguageChanged)
+	if len(events) != 1 {
+		t.Fatalf("events %+v", events)
+	}
+	requireMetadata(t, events[0], `{"language_follows_browser":true}`)
+
+	if _, err := f.account.Change(context.Background(), f.actor(f.eve), testAddress, AccountChange{LanguageFollowsBrowser: flag(true)}); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(f.audits(t, audit.ActionAccountLanguageChanged)); n != 1 {
+		t.Fatalf("a repeated unpin wrote an audit row: %d", n)
+	}
+}

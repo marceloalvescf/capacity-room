@@ -26,6 +26,8 @@ type AccountChange struct {
 	CurrentPassword *string
 	Password        *string
 	Language        *string
+	// LanguageFollowsBrowser true unpins the language and keeps the stored one.
+	LanguageFollowsBrowser *bool
 }
 
 // Change applies a language change and, when Password is set, verifies
@@ -53,7 +55,8 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 	if err != nil {
 		return store.User{}, err
 	}
-	languageMoved := c.Language != nil && *c.Language != user.Language
+	language, follows := languageAfter(user, c.Language, c.LanguageFollowsBrowser)
+	languageMoved := language != user.Language || follows != user.LanguageFollowsBrowser
 	if !languageMoved && c.Password == nil {
 		return user, nil
 	}
@@ -97,18 +100,22 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 			}
 		}
 		if languageMoved {
-			if err := store.UpdateLanguage(ctx, tx, p.ID, *c.Language, now); err != nil {
+			if err := store.UpdateLanguagePin(ctx, tx, p.ID, language, follows, now); err != nil {
 				if errors.Is(err, store.ErrNotFound) {
 					return ErrUserNotFound
 				}
 				return err
+			}
+			detail := audit.Metadata{"language": language}
+			if c.Language == nil {
+				detail = audit.Metadata{"language_follows_browser": follows}
 			}
 			err := audit.Append(ctx, tx, now, audit.Event{
 				ActorID:    &p.ID,
 				Action:     audit.ActionAccountLanguageChanged,
 				TargetType: "user",
 				TargetID:   p.ID.String(),
-				Metadata:   audit.Metadata{"language": *c.Language},
+				Metadata:   detail,
 			})
 			if err != nil {
 				return err
@@ -136,7 +143,7 @@ func (a *Account) Change(ctx context.Context, p Principal, clientAddress string,
 		user.PasswordHash = fresh
 	}
 	if languageMoved {
-		user.Language = *c.Language
+		user.Language, user.LanguageFollowsBrowser = language, follows
 	}
 	user.UpdatedAt = now
 	return user, nil

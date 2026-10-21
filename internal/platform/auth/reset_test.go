@@ -82,7 +82,7 @@ func TestResetPasswordRefusesAnUnknownUser(t *testing.T) {
 
 func TestResetPasswordRefusesAnInactiveUser(t *testing.T) {
 	f := newUserFixture(t)
-	if err := store.UpdateUserFields(context.Background(), f.pool, f.eve.ID, f.eve.Role, f.eve.Language, false, base); err != nil {
+	if err := store.UpdateUserFields(context.Background(), f.pool, f.eve.ID, f.eve.Role, f.eve.Language, f.eve.LanguageFollowsBrowser, false, base); err != nil {
 		t.Fatal(err)
 	}
 	_, err := ResetPassword(context.Background(), f.pool, "eve", resetPassword, base)

@@ -64,10 +64,13 @@ type NewUser struct {
 	Username string
 	Password string
 	Role     Role
+	// Language is empty when the account follows the browser's language; it
+	// then stores en.
 	Language string
 }
 
-// Create validates the name, the password, the role, and the language,
+// Create validates the name, the password, the role, and the language (an
+// empty one means the account follows the browser),
 // hashes, inserts, and audits user.create with {"role": role}. actor must
 // be an administrator.
 func (u *Users) Create(ctx context.Context, actor Principal, n NewUser) (store.User, error) {
@@ -84,7 +87,7 @@ func (u *Users) Create(ctx context.Context, actor Principal, n NewUser) (store.U
 	if !validRole(n.Role) {
 		return store.User{}, ErrInvalidRole
 	}
-	if !validLanguage(n.Language) {
+	if n.Language != "" && !validLanguage(n.Language) {
 		return store.User{}, ErrInvalidLanguage
 	}
 	hash, err := HashPassword(ctx, n.Password)
@@ -95,6 +98,10 @@ func (u *Users) Create(ctx context.Context, actor Principal, n NewUser) (store.U
 	user := store.User{
 		ID: uuid.New(), Username: name, PasswordHash: hash, Role: n.Role,
 		Language: n.Language, Active: true, CreatedAt: now, UpdatedAt: now,
+	}
+	if n.Language == "" {
+		user.Language = "en"
+		user.LanguageFollowsBrowser = true
 	}
 	err = store.Transact(ctx, u.Pool, func(tx pgx.Tx) error {
 		if err := store.InsertUser(ctx, tx, user); err != nil {
@@ -121,6 +128,8 @@ type UserChange struct {
 	Active   *bool
 	Password *string
 	Language *string
+	// LanguageFollowsBrowser true unpins the language and keeps the stored one.
+	LanguageFollowsBrowser *bool
 }
 
 // Update applies the fields that are set, in the order of the original:
@@ -128,7 +137,7 @@ type UserChange struct {
 // then the password; a role or active change revokes every session as
 // privilege_changed, a password change as password_changed. It audits
 // user.update with {"changed": {"role": "<new>", ...}} naming the fields
-// that moved and their new values for role, active, and language only, plus
+// that moved and their new values for role, active, language, and language_follows_browser only, plus
 // {"sessions_revoked": n}; a password change audits user.password_changed
 // with {"sessions_revoked": n}. A change that moves nothing writes nothing.
 func (u *Users) Update(ctx context.Context, actor Principal, id uuid.UUID, c UserChange) (store.User, error) {
@@ -209,11 +218,9 @@ func (u *Users) Update(ctx context.Context, actor Principal, id uuid.UUID, c Use
 		if c.Active != nil {
 			user.Active = *c.Active
 		}
-		if c.Language != nil {
-			user.Language = *c.Language
-		}
+		user.Language, user.LanguageFollowsBrowser = languageAfter(user, c.Language, c.LanguageFollowsBrowser)
 		user.UpdatedAt = now
-		if err := store.UpdateUserFields(ctx, tx, id, user.Role, user.Language, user.Active, now); err != nil {
+		if err := store.UpdateUserFields(ctx, tx, id, user.Role, user.Language, user.LanguageFollowsBrowser, user.Active, now); err != nil {
 			return err
 		}
 		if c.Password != nil {
@@ -284,8 +291,12 @@ func movedFields(user store.User, c UserChange) (changed audit.Metadata, privile
 		changed["active"] = *c.Active
 		privilege = true
 	}
-	if c.Language != nil && *c.Language != user.Language {
-		changed["language"] = *c.Language
+	language, follows := languageAfter(user, c.Language, c.LanguageFollowsBrowser)
+	if language != user.Language {
+		changed["language"] = language
+	}
+	if follows != user.LanguageFollowsBrowser {
+		changed["language_follows_browser"] = follows
 	}
 	return changed, privilege
 }
@@ -341,7 +352,7 @@ func (u *Users) Delete(ctx context.Context, actor Principal, id uuid.UUID) error
 				return ErrLastAdmin
 			}
 		}
-		if err := store.UpdateUserFields(ctx, tx, id, user.Role, user.Language, false, now); err != nil {
+		if err := store.UpdateUserFields(ctx, tx, id, user.Role, user.Language, user.LanguageFollowsBrowser, false, now); err != nil {
 			return err
 		}
 		revoked, err := store.RevokeSessionsOfUser(ctx, tx, id, revokedUserDeleted, now)
@@ -376,4 +387,18 @@ func (u *Users) List(ctx context.Context, actor Principal) ([]store.User, error)
 		return nil, err
 	}
 	return store.ListUsers(ctx, u.Pool)
+}
+
+// languageAfter returns the language and the follow flag of user once a
+// pinned language and a follow flag are applied: a pinned language clears
+// the flag, and a flag that is set then has the last word.
+func languageAfter(user store.User, language *string, follows *bool) (string, bool) {
+	outLanguage, outFollows := user.Language, user.LanguageFollowsBrowser
+	if language != nil {
+		outLanguage, outFollows = *language, false
+	}
+	if follows != nil {
+		outFollows = *follows
+	}
+	return outLanguage, outFollows
 }

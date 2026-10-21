@@ -15,7 +15,7 @@ const (
 )
 
 func principalOf(p auth.Principal) Principal {
-	return Principal{Id: p.ID, Username: p.Username, Role: Role(p.Role), Language: Language(p.Language)}
+	return Principal{Id: p.ID, Username: p.Username, Role: Role(p.Role), Language: Language(p.Language), LanguageFollowsBrowser: p.LanguageFollowsBrowser}
 }
 
 func signedIn(p auth.Principal, csrf string, expiresAt time.Time) SignedInSession {

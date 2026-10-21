@@ -422,7 +422,10 @@ type AccountChange struct {
 	// CurrentPassword Required with password.
 	CurrentPassword *string   `json:"current_password,omitempty"`
 	Language        *Language `json:"language,omitempty"`
-	Password        *string   `json:"password,omitempty"`
+
+	// LanguageFollowsBrowser Only true is accepted, which unpins the language and keeps the stored one; false is refused, and so is a body that also sends language.
+	LanguageFollowsBrowser *bool   `json:"language_follows_browser,omitempty"`
+	Password               *string `json:"password,omitempty"`
 }
 
 // AnonymousSession defines model for AnonymousSession.
@@ -474,10 +477,10 @@ type MinSeverity string
 
 // NewUser defines model for NewUser.
 type NewUser struct {
-	Language Language `json:"language"`
-	Password string   `json:"password"`
-	Role     Role     `json:"role"`
-	Username string   `json:"username"`
+	Language *Language `json:"language,omitempty"`
+	Password string    `json:"password"`
+	Role     Role      `json:"role"`
+	Username string    `json:"username"`
 }
 
 // NodeAutoscaling defines model for NodeAutoscaling.
@@ -504,8 +507,11 @@ type PDFStatus string
 type Principal struct {
 	Id       uuid.UUID `json:"id"`
 	Language Language  `json:"language"`
-	Role     Role      `json:"role"`
-	Username string    `json:"username"`
+
+	// LanguageFollowsBrowser True while the account takes the browser's language; language then holds the last pinned or initial language.
+	LanguageFollowsBrowser bool   `json:"language_follows_browser"`
+	Role                   Role   `json:"role"`
+	Username               string `json:"username"`
 }
 
 // Profile A profile with its current revision, as the administration reads it.
@@ -976,21 +982,25 @@ type SignedInSession struct {
 
 // User defines model for User.
 type User struct {
-	Active    bool      `json:"active"`
-	CreatedAt time.Time `json:"created_at"`
-	Id        uuid.UUID `json:"id"`
-	Language  Language  `json:"language"`
-	Role      Role      `json:"role"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Username  string    `json:"username"`
+	Active                 bool      `json:"active"`
+	CreatedAt              time.Time `json:"created_at"`
+	Id                     uuid.UUID `json:"id"`
+	Language               Language  `json:"language"`
+	LanguageFollowsBrowser bool      `json:"language_follows_browser"`
+	Role                   Role      `json:"role"`
+	UpdatedAt              time.Time `json:"updated_at"`
+	Username               string    `json:"username"`
 }
 
 // UserChange defines model for UserChange.
 type UserChange struct {
 	Active   *bool     `json:"active,omitempty"`
 	Language *Language `json:"language,omitempty"`
-	Password *string   `json:"password,omitempty"`
-	Role     *Role     `json:"role,omitempty"`
+
+	// LanguageFollowsBrowser Only true is accepted, which unpins the language and keeps the stored one; false is refused, and so is a body that also sends language.
+	LanguageFollowsBrowser *bool   `json:"language_follows_browser,omitempty"`
+	Password               *string `json:"password,omitempty"`
+	Role                   *Role   `json:"role,omitempty"`
 }
 
 // UserList defines model for UserList.
