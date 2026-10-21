@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
+	"github.com/marceloalvescf/capacity-room/internal/platform/profiles"
 	"github.com/marceloalvescf/capacity-room/internal/platform/store"
 )
 
@@ -156,6 +157,39 @@ func (s *Service) List(ctx context.Context, _ auth.Principal, cursor string, lim
 		page.Items = append(page.Items, summaryOf(it, now))
 	}
 	return page, nil
+}
+
+// HomeCluster is one active profile with its newest usable report and its
+// newest report; a side is nil when no report matches.
+type HomeCluster struct {
+	ProfileID, DisplayName string
+	Latest, Newest         *Summary
+}
+
+// Home returns, for each active profile and in the order given, the newest
+// collected report that is not expired and the newest report.
+func (s *Service) Home(ctx context.Context, _ auth.Principal, active []profiles.Summary) ([]HomeCluster, error) {
+	ids := make([]string, len(active))
+	for i, p := range active {
+		ids[i] = p.ID
+	}
+	now := s.now()
+	found, err := store.LatestReportsByProfile(ctx, s.Pool, ids, now)
+	if err != nil {
+		return nil, err
+	}
+	side := func(it *store.ReportListItem) *Summary {
+		if it == nil {
+			return nil
+		}
+		sum := summaryOf(*it, now)
+		return &sum
+	}
+	out := make([]HomeCluster, len(active))
+	for i, p := range active {
+		out[i] = HomeCluster{ProfileID: p.ID, DisplayName: p.DisplayName, Latest: side(found[i].Latest), Newest: side(found[i].Newest)}
+	}
+	return out, nil
 }
 
 // Get returns one report with its request and progress.
