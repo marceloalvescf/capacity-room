@@ -6,9 +6,20 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The report's overview, its Findings tab, and the first page of the PDF chart the findings: a ring of every finding by severity, and a bar of each scope's findings on one scale.
+- A bar of the Findings tab opens the findings of that scope and severity.
+- A signed-in reader follows the browser's language unless they choose one, and the Account page offers the browser's language as a choice.
+- The node names of a pool open from their count on the Nodes tab, each with a copy button, and all of them can be copied at once.
+
 ### Changed
 
 - The image on Docker Hub is now public, so the chart's Gateway example no longer names a pull secret.
+- The PDF uses the status colours of the web app on its marks, charts, gauge, and the cells that carry a status; words and numbers stay black.
+- The spread of a node pool's peaks is drawn as a range, from its lowest node to its highest, with both ends named.
+- `admin bootstrap-admin --language` and the chart's `admin.language` are optional; when left out, the first administrator follows the browser's language.
+- A new user created without a language follows the browser's language.
 
 ## [2.6.0] - 2026-10-19
 
