@@ -130,8 +130,10 @@ the companion page:
   and the detail panel showing a prompt to choose a finding. A `finding` in
   the address (from the overview's links or a bar segment) unfolds its group
   and opens it. The fold of each group is the reader's own and is not written
-  to the address; a search unfolds every group that holds a match (the
-  assistant's calls).
+  to the address, and it starts again when the chosen finding changes; a
+  search, a severity filter, or a scope filter in the address (the overview's
+  totals and the chart's bar segments write the last two) unfolds every group
+  that still shows a finding (the assistant's calls).
 
 ## The design of the parts
 
