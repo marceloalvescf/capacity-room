@@ -268,7 +268,8 @@ const (
 	VerdictGrowthScaleEvents       Key = "verdict.growth.scale_events"
 	VerdictPressureTitle           Key = "verdict.pressure.title"
 	VerdictPressureEmpty           Key = "verdict.pressure.empty"
-	VerdictPressurePeak            Key = "verdict.pressure.peak"
+	VerdictFindingsTitle           Key = "verdict.findings.title"
+	VerdictFindingsTotal           Key = "verdict.findings.total"
 	VerdictPlanTitle               Key = "verdict.plan.title"
 	VerdictPlanOrder               Key = "verdict.plan.order"
 	VerdictPlanPriority            Key = "verdict.plan.priority"
@@ -379,7 +380,8 @@ var wordingKeys = []Key{
 	VerdictNone, VerdictQuality, VerdictMoreWarnings,
 	VerdictGrowthTitle, VerdictGrowthCaption, VerdictGrowthMinNodes, VerdictGrowthCurrentNodes,
 	VerdictGrowthUnschedulablePods, VerdictGrowthScaleEvents,
-	VerdictPressureTitle, VerdictPressureEmpty, VerdictPressurePeak,
+	VerdictPressureTitle, VerdictPressureEmpty,
+	VerdictFindingsTitle, VerdictFindingsTotal,
 	VerdictPlanTitle, VerdictPlanOrder, VerdictPlanPriority, VerdictPlanAction,
 	VerdictPlanScope, VerdictPlanEmpty, VerdictPlanMore,
 	StatusHealthy, StatusAttention, StatusCritical,

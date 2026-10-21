@@ -163,8 +163,8 @@ func pressureRows(v any) []any {
 }
 
 // TestPressureRowMarkCarriesItsWord checks that the mark of every pressure
-// row of the verdict block carries the row's label as the alternate text of
-// the PDF.
+// row of the verdict block carries the word of its status as the alternate
+// text of the PDF.
 func TestPressureRowMarkCarriesItsWord(t *testing.T) {
 	ws := workspace(t)
 	raw, err := os.ReadFile(capacityFixture(ws, "verdict.en"))
@@ -180,7 +180,12 @@ func TestPressureRowMarkCarriesItsWord(t *testing.T) {
 		t.Fatalf("the verdict fixture holds %d pressure rows, want 5", len(rows))
 	}
 	for _, row := range rows {
-		row.(map[string]any)["label"] = "PressureRowWord"
+		r := row.(map[string]any)
+		for _, c := range r["counts"].([]any) {
+			if count := c.(map[string]any); count["status"] == r["status"] {
+				count["label"] = "PressureRowWord"
+			}
+		}
 	}
 	out, err := json.Marshal(data)
 	if err != nil {

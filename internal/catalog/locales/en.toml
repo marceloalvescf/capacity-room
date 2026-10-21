@@ -584,7 +584,6 @@ unknown = "Unknown"
 [verdict.pressure]
 title = "Pressure by scope"
 empty = "Nothing needs attention."
-peak = "Peak"
 
 [verdict.pressure.scope]
 node = "Nodes"
@@ -592,6 +591,10 @@ nodepool = "Node pools"
 namespace = "Namespaces"
 workload = "Workloads"
 hpa = "HPAs"
+
+[verdict.findings]
+title = "Findings"
+total = "findings"
 
 [verdict.plan]
 title = "Prioritized action plan"

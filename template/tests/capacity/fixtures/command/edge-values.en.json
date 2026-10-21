@@ -33,17 +33,20 @@
           {
             "status": "critical",
             "label": "Critical",
-            "count": "2"
+            "count": "2",
+            "value": 2
           },
           {
             "status": "attention",
             "label": "Attention",
-            "count": "9"
+            "count": "9",
+            "value": 9
           },
           {
             "status": "healthy",
             "label": "Healthy",
-            "count": "6"
+            "count": "6",
+            "value": 6
           }
         ],
         "none": null
@@ -69,74 +72,134 @@
         "rows": [
           {
             "status": "critical",
-            "label": "Critical",
-            "scope": "Workloads",
+            "label": "Workloads",
             "sentence": "CPU usage against the limit.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments/api"
-              }
-            ],
-            "peak": {
-              "label": "Peak",
-              "value": "90%"
-            },
             "counts": [
               {
                 "status": "critical",
                 "label": "Critical",
-                "count": "1"
+                "count": "2",
+                "value": 2
               },
               {
                 "status": "attention",
                 "label": "Attention",
-                "count": "1"
+                "count": "5",
+                "value": 5
+              },
+              {
+                "status": "healthy",
+                "label": "Healthy",
+                "count": "3",
+                "value": 3
               }
-            ]
+            ],
+            "bar": {
+              "critical": 2,
+              "attention": 5,
+              "healthy": 3,
+              "scale": 10
+            }
           },
           {
             "status": "attention",
-            "label": "Attention",
-            "scope": "Namespaces",
+            "label": "Namespaces",
             "sentence": "There is a configuration gap: no CPU limit was observed.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments"
-              }
-            ],
-            "peak": null,
             "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "0",
+                "value": 0
+              },
               {
                 "status": "attention",
                 "label": "Attention",
-                "count": "1"
+                "count": "2",
+                "value": 2
+              },
+              {
+                "status": "healthy",
+                "label": "Healthy",
+                "count": "1",
+                "value": 1
               }
-            ]
+            ],
+            "bar": {
+              "critical": 0,
+              "attention": 2,
+              "healthy": 1,
+              "scale": 10
+            }
           },
           {
             "status": "attention",
-            "label": "Attention",
-            "scope": "HPAs",
+            "label": "HPAs",
             "sentence": "There is a persistent average difference between current and desired replicas.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments/payments-web"
-              }
-            ],
-            "peak": null,
             "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "0",
+                "value": 0
+              },
               {
                 "status": "attention",
                 "label": "Attention",
-                "count": "1"
+                "count": "1",
+                "value": 1
+              },
+              {
+                "status": "healthy",
+                "label": "Healthy",
+                "count": "0",
+                "value": 0
               }
-            ]
+            ],
+            "bar": {
+              "critical": 0,
+              "attention": 1,
+              "healthy": 0,
+              "scale": 10
+            }
+          },
+          {
+            "status": "healthy",
+            "label": "Nodes",
+            "sentence": "Observed CPU usage on the node.",
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "0",
+                "value": 0
+              },
+              {
+                "status": "attention",
+                "label": "Attention",
+                "count": "0",
+                "value": 0
+              },
+              {
+                "status": "healthy",
+                "label": "Healthy",
+                "count": "2",
+                "value": 2
+              }
+            ],
+            "bar": {
+              "critical": 0,
+              "attention": 0,
+              "healthy": 2,
+              "scale": 10
+            }
           }
         ],
         "empty": null
+      },
+      "findings": {
+        "title": "Findings",
+        "total_label": "findings"
       },
       "plan": {
         "title": "Prioritized action plan",

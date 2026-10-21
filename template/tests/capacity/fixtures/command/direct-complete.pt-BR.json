@@ -33,17 +33,20 @@
           {
             "status": "critical",
             "label": "Crítico",
-            "count": "4"
+            "count": "4",
+            "value": 4
           },
           {
             "status": "attention",
             "label": "Atenção",
-            "count": "3"
+            "count": "3",
+            "value": 3
           },
           {
             "status": "healthy",
             "label": "Saudável",
-            "count": "6"
+            "count": "6",
+            "value": 6
           }
         ],
         "none": null
@@ -82,72 +85,134 @@
         "rows": [
           {
             "status": "critical",
-            "label": "Crítico",
-            "scope": "Namespaces",
+            "label": "Namespaces",
             "sentence": "Uso de memória em relação ao limit.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments"
-              }
-            ],
-            "peak": {
-              "label": "Pico",
-              "value": "12000%"
-            },
             "counts": [
               {
                 "status": "critical",
                 "label": "Crítico",
-                "count": "1"
-              }
-            ]
-          },
-          {
-            "status": "critical",
-            "label": "Crítico",
-            "scope": "Workloads",
-            "sentence": "Uso de memória em relação ao limit.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments/payments-web"
-              }
-            ],
-            "peak": {
-              "label": "Pico",
-              "value": "12000%"
-            },
-            "counts": [
-              {
-                "status": "critical",
-                "label": "Crítico",
-                "count": "1"
-              }
-            ]
-          },
-          {
-            "status": "attention",
-            "label": "Atenção",
-            "scope": "HPAs",
-            "sentence": "Há diferença média persistente entre replicas atuais e desejados.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments/payments-web"
-              }
-            ],
-            "peak": null,
-            "counts": [
+                "count": "2",
+                "value": 2
+              },
               {
                 "status": "attention",
                 "label": "Atenção",
-                "count": "1"
+                "count": "1",
+                "value": 1
+              },
+              {
+                "status": "healthy",
+                "label": "Saudável",
+                "count": "1",
+                "value": 1
               }
-            ]
+            ],
+            "bar": {
+              "critical": 2,
+              "attention": 1,
+              "healthy": 1,
+              "scale": 5
+            }
+          },
+          {
+            "status": "critical",
+            "label": "Workloads",
+            "sentence": "Uso de memória em relação ao limit.",
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Crítico",
+                "count": "2",
+                "value": 2
+              },
+              {
+                "status": "attention",
+                "label": "Atenção",
+                "count": "1",
+                "value": 1
+              },
+              {
+                "status": "healthy",
+                "label": "Saudável",
+                "count": "2",
+                "value": 2
+              }
+            ],
+            "bar": {
+              "critical": 2,
+              "attention": 1,
+              "healthy": 2,
+              "scale": 5
+            }
+          },
+          {
+            "status": "attention",
+            "label": "HPAs",
+            "sentence": "Há diferença média persistente entre replicas atuais e desejados.",
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Crítico",
+                "count": "0",
+                "value": 0
+              },
+              {
+                "status": "attention",
+                "label": "Atenção",
+                "count": "1",
+                "value": 1
+              },
+              {
+                "status": "healthy",
+                "label": "Saudável",
+                "count": "0",
+                "value": 0
+              }
+            ],
+            "bar": {
+              "critical": 0,
+              "attention": 1,
+              "healthy": 0,
+              "scale": 5
+            }
+          },
+          {
+            "status": "healthy",
+            "label": "Nodes",
+            "sentence": "Uso observado de CPU no node.",
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Crítico",
+                "count": "0",
+                "value": 0
+              },
+              {
+                "status": "attention",
+                "label": "Atenção",
+                "count": "0",
+                "value": 0
+              },
+              {
+                "status": "healthy",
+                "label": "Saudável",
+                "count": "2",
+                "value": 2
+              }
+            ],
+            "bar": {
+              "critical": 0,
+              "attention": 0,
+              "healthy": 2,
+              "scale": 5
+            }
           }
         ],
         "empty": null
+      },
+      "findings": {
+        "title": "Achados",
+        "total_label": "achados"
       },
       "plan": {
         "title": "Plano de ação priorizado",

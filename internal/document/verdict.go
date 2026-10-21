@@ -33,7 +33,8 @@ func buildVerdict(b *builder, s snapshot.Snapshot, severity string) Verdict {
 		Totals:   verdictTotals(b, s.Summary),
 		Quality:  verdictQuality(b, s),
 		Growth:   verdictGrowth(b, s, findings, facts),
-		Pressure: verdictPressure(b, findings, facts),
+		Pressure: verdictPressure(b, findings, facts, severity),
+		Findings: verdictFindings(b),
 		Plan:     verdictPlan(b, s, severity),
 		Legend:   verdictLegend(b),
 	}
@@ -53,7 +54,7 @@ func statusLabel(b *builder, status string) string {
 
 // verdictCount writes one status and a count of it.
 func verdictCount(b *builder, status string, count float64) VerdictCount {
-	return VerdictCount{Status: status, Label: statusLabel(b, status), Count: b.cat.Count(count)}
+	return VerdictCount{Status: status, Label: statusLabel(b, status), Count: b.cat.Count(count), Value: int(count)}
 }
 
 func verdictTotals(b *builder, m snapshot.Summary) VerdictTotals {
@@ -164,11 +165,18 @@ func knownFacts(b *builder, vb *viewBuilder, facts []growthFact) []VerdictFact {
 	return words
 }
 
-// verdictPressure words the scope types under pressure, the worst first.
-func verdictPressure(b *builder, findings []snapshot.Finding, facts verdictFacts) VerdictPressure {
+// verdictPressure words the scope types that hold a finding, the worst
+// first, with a bar of their findings. The healthy count is kept only when
+// the minimum severity lets a healthy finding through.
+func verdictPressure(b *builder, findings []snapshot.Finding, facts verdictFacts, severity string) VerdictPressure {
 	pressure := VerdictPressure{Title: b.text(catalog.VerdictPressureTitle, nil)}
-	for _, f := range facts.Pressure {
-		pressure.Rows = append(pressure.Rows, pressureRow(b, f, findings[f.Lead]))
+	showHealthy := minimumRank(severity) <= analysis.Rank(analysis.SeverityHealthy)
+	scale := 0
+	for _, f := range facts.Scopes {
+		scale = max(scale, f.Critical+f.Attention+f.Healthy)
+	}
+	for _, f := range facts.Scopes {
+		pressure.Rows = append(pressure.Rows, pressureRow(b, f, findings[f.Lead], showHealthy, scale))
 	}
 	if len(pressure.Rows) == 0 {
 		empty := b.text(catalog.VerdictPressureEmpty, nil)
@@ -178,32 +186,30 @@ func verdictPressure(b *builder, findings []snapshot.Finding, facts verdictFacts
 }
 
 // pressureRow words one scope type from its facts and its lead finding.
-func pressureRow(b *builder, facts pressureFacts, lead snapshot.Finding) VerdictPressureRow {
+func pressureRow(b *builder, facts scopeFacts, lead snapshot.Finding, showHealthy bool, scale int) VerdictPressureRow {
 	row := VerdictPressureRow{
 		Status: facts.Severity,
-		Label:  statusWord(b, facts.Severity),
-		Scope:  b.text(catalog.VerdictPressureScope(facts.ScopeType), nil),
+		Label:  b.text(catalog.VerdictPressureScope(facts.ScopeType), nil),
+		Bar:    VerdictBar{Critical: facts.Critical, Attention: facts.Attention, Healthy: facts.Healthy, Scale: scale},
 	}
 	if definition, ok := findingDefinition(b, lead.Code); ok {
 		row.Sentence = findingSentence(b, definition)
 	}
-	row.Name = []Run{Ident(lead.ScopeName)}
-	if facts.ScopeType == analysis.ScopeNodepool {
-		row.Name = []Run{poolRun(b, lead.ScopeName)}
-	}
-	for _, e := range lead.Evidence {
-		if e.Name == "peak_percent" {
-			row.Peak = &VerdictFact{Label: b.text(catalog.VerdictPressurePeak, nil), Value: evidenceView(b, e).Text}
-			break
-		}
-	}
-	if facts.Critical > 0 {
-		row.Counts = append(row.Counts, verdictCount(b, analysis.SeverityCritical, float64(facts.Critical)))
-	}
-	if facts.Attention > 0 {
-		row.Counts = append(row.Counts, verdictCount(b, analysis.SeverityAttention, float64(facts.Attention)))
+	row.Counts = append(row.Counts,
+		verdictCount(b, analysis.SeverityCritical, float64(facts.Critical)),
+		verdictCount(b, analysis.SeverityAttention, float64(facts.Attention)))
+	if showHealthy {
+		row.Counts = append(row.Counts, verdictCount(b, analysis.SeverityHealthy, float64(facts.Healthy)))
 	}
 	return row
+}
+
+// verdictFindings words the donut of the findings.
+func verdictFindings(b *builder) VerdictFindings {
+	return VerdictFindings{
+		Title:      b.text(catalog.VerdictFindingsTitle, nil),
+		TotalLabel: b.text(catalog.VerdictFindingsTotal, nil),
+	}
 }
 
 // verdictPlan holds the first actions of the executive action plan, and the

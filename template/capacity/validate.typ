@@ -345,9 +345,10 @@
   expect-array(path, counts)
   for (i, count) in counts.enumerate() {
     let item = path + "[" + str(i) + "]"
-    check-exact-keys(item, count, ("status", "label", "count"))
+    check-exact-keys(item, count, ("status", "label", "count", "value"))
     check-status(item + ".status", count.status)
     check-strings(item, count, ("label", "count"))
+    check-int(item + ".value", count.value, 0, "a non-negative")
   }
 }
 
@@ -359,7 +360,7 @@
 // validate-verdict-block checks the first page: every object has exactly
 // its keys, every leaf its type, and the gauge its range.
 #let validate-verdict-block(place, block) = {
-  check-exact-keys(place, block, ("type", "totals", "quality", "growth", "pressure", "plan", "legend"))
+  check-exact-keys(place, block, ("type", "totals", "quality", "growth", "pressure", "findings", "plan", "legend"))
 
   let totals = place + ".totals"
   check-exact-keys(totals, block.totals, ("items", "none"))
@@ -419,19 +420,22 @@
   expect-array(pressure + ".rows", p.rows)
   for (i, row) in p.rows.enumerate() {
     let item = pressure + ".rows[" + str(i) + "]"
-    check-exact-keys(item, row, ("status", "label", "scope", "sentence", "name", "peak", "counts"))
+    check-exact-keys(item, row, ("status", "label", "sentence", "counts", "bar"))
     check-status(item + ".status", row.status)
-    check-strings(item, row, ("label", "scope", "sentence"))
-    expect-array(item + ".name", row.name)
-    for (k, run) in row.name.enumerate() {
-      validate-run(item + ".name[" + str(k) + "]", run)
-    }
-    if row.peak != none {
-      check-fact(item + ".peak", row.peak)
-    }
+    check-strings(item, row, ("label", "sentence"))
     check-counts(item + ".counts", row.counts)
+    let bar = item + ".bar"
+    check-exact-keys(bar, row.bar, ("critical", "attention", "healthy", "scale"))
+    for key in ("critical", "attention", "healthy") {
+      check-int(bar + "." + key, row.bar.at(key), 0, "a non-negative")
+    }
+    check-int(bar + ".scale", row.bar.scale, 1, "a positive")
   }
   expect-string-or-none(pressure + ".empty", p.empty)
+
+  let findings = place + ".findings"
+  check-exact-keys(findings, block.findings, ("title", "total_label"))
+  check-strings(findings, block.findings, ("title", "total_label"))
 
   let plan = place + ".plan"
   let q = block.plan

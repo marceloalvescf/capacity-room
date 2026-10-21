@@ -28,9 +28,9 @@ func TestVerdictOfEdgeScalingTotalsAndQuality(t *testing.T) {
 	v := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "all")
 
 	wantTotals := []VerdictCount{
-		{"critical", "Critical", "10"},
-		{"attention", "Attention", "11"},
-		{"healthy", "Healthy", "7"},
+		{"critical", "Critical", "10", 10},
+		{"attention", "Attention", "11", 11},
+		{"healthy", "Healthy", "7", 7},
 	}
 	if !reflect.DeepEqual(v.Totals.Items, wantTotals) || v.Totals.None != nil {
 		t.Errorf("Totals = %+v, want items %+v and no sentence", v.Totals, wantTotals)
@@ -75,53 +75,73 @@ func TestVerdictOfEdgeScalingGrowth(t *testing.T) {
 	}
 }
 
-func TestVerdictOfEdgeScalingPressure(t *testing.T) {
-	p := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "all").Pressure
-
-	want := []VerdictPressureRow{
-		{
-			Status: "critical", Label: "Critical", Scope: "Nodes",
-			Sentence: "Observed CPU usage on the node.",
-			Name:     []Run{Ident("aks-agentpool-12345678-vmss000000")},
-			Peak:     &VerdictFact{"Peak", "95%"},
-			Counts:   []VerdictCount{{"critical", "Critical", "2"}, {"attention", "Attention", "1"}},
-		},
-		{
-			Status: "critical", Label: "Critical", Scope: "Namespaces",
-			Sentence: "CPU usage against the limit.",
-			Name:     []Run{Ident("payments")},
-			Peak:     &VerdictFact{"Peak", "330%"},
-			Counts:   []VerdictCount{{"critical", "Critical", "1"}},
-		},
-		{
-			Status: "critical", Label: "Critical", Scope: "Workloads",
-			Sentence: "Memory usage against the limit.",
-			Name:     []Run{Ident("payments/payments-web")},
-			Peak:     &VerdictFact{"Peak", "12000%"},
-			Counts:   []VerdictCount{{"critical", "Critical", "1"}, {"attention", "Attention", "1"}},
-		},
-		{
-			Status: "critical", Label: "Critical", Scope: "HPAs",
-			Sentence: "The HPA reached its observed maximum of replicas.",
-			Name:     []Run{Ident("payments/web")},
-			Counts:   []VerdictCount{{"critical", "Critical", "1"}, {"attention", "Attention", "1"}},
-		},
-		{
-			Status: "attention", Label: "Attention", Scope: "Node pools",
-			Sentence: "Peak CPU pressure varied among the nodes of the pool.",
-			Name:     []Run{Ident("pool-a")},
-			Counts:   []VerdictCount{{"attention", "Attention", "2"}},
-		},
+func TestVerdictPressureRowsFollowTheScopes(t *testing.T) {
+	s := goldenSnapshot(t, "edge-scaling")
+	code := s.Findings[0].Code
+	s.Findings = scopeFindings()
+	for i := range s.Findings {
+		s.Findings[i].Code = code
 	}
+	p := englishVerdict(t, s, "all").Pressure
+
 	if p.Title != "Pressure by scope" || p.Empty != nil {
 		t.Errorf("Pressure title = %q, empty = %v", p.Title, p.Empty)
 	}
-	if !reflect.DeepEqual(p.Rows, want) {
-		t.Errorf("Pressure rows = %+v, want %+v", p.Rows, want)
+	var labels []string
+	for _, row := range p.Rows {
+		labels = append(labels, row.Label)
+	}
+	if want := []string{"Nodes", "Workloads", "HPAs", "Namespaces"}; !reflect.DeepEqual(labels, want) {
+		t.Fatalf("row labels = %v, want %v", labels, want)
+	}
+	first := p.Rows[0]
+	if want := (VerdictBar{Critical: 2, Attention: 1, Healthy: 1, Scale: 8}); first.Bar != want {
+		t.Errorf("first bar = %+v, want %+v", first.Bar, want)
+	}
+	wantCounts := []VerdictCount{{"critical", "Critical", "2", 2}, {"attention", "Attention", "1", 1}, {"healthy", "Healthy", "1", 1}}
+	if first.Status != "critical" || !reflect.DeepEqual(first.Counts, wantCounts) {
+		t.Errorf("first row = %+v, want status critical and counts %+v", first, wantCounts)
+	}
+	if last := p.Rows[3]; last.Status != "healthy" || last.Bar != (VerdictBar{Healthy: 2, Scale: 8}) {
+		t.Errorf("last row = %+v, want a healthy row of two findings", last)
 	}
 }
 
-func TestVerdictNamesAnUnknownPoolAsAPlaceholder(t *testing.T) {
+func TestVerdictCountsOfTheExecutiveProfile(t *testing.T) {
+	s := goldenSnapshot(t, "edge-scaling")
+	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{Profile: "executive", MinSeverity: "all"})
+	rows := doc.Blocks[0].(Verdict).Pressure.Rows
+	if len(rows) == 0 {
+		t.Fatal("no pressure row")
+	}
+	for _, row := range rows {
+		if len(row.Counts) != 2 || row.Counts[0].Status != "critical" || row.Counts[1].Status != "attention" || row.Bar.Healthy != 0 {
+			t.Errorf("row %q counts = %+v, bar = %+v, want critical and attention alone", row.Label, row.Counts, row.Bar)
+		}
+	}
+}
+
+func TestVerdictTotalsCarryValues(t *testing.T) {
+	s := goldenSnapshot(t, "edge-scaling")
+	s.Summary.Critical, s.Summary.Attention, s.Summary.Healthy = 4, 3, 2
+	items := englishVerdict(t, s, "all").Totals.Items
+	if got := []int{items[0].Value, items[1].Value, items[2].Value}; !reflect.DeepEqual(got, []int{4, 3, 2}) {
+		t.Errorf("totals values = %v, want [4 3 2]", got)
+	}
+}
+
+func TestVerdictFindingsWords(t *testing.T) {
+	s := goldenSnapshot(t, "edge-scaling")
+	if got, want := englishVerdict(t, s, "all").Findings, (VerdictFindings{"Findings", "findings"}); got != want {
+		t.Errorf("en findings = %+v, want %+v", got, want)
+	}
+	b := &builder{cat: mustCatalog(t, catalog.PortugueseBrazil)}
+	if got, want := buildVerdict(b, s, "all").Findings, (VerdictFindings{"Achados", "achados"}); got != want {
+		t.Errorf("pt-BR findings = %+v, want %+v", got, want)
+	}
+}
+
+func TestVerdictCountsTheFindingsOfAPoolNotItsRows(t *testing.T) {
 	s := goldenSnapshot(t, "edge-scaling")
 	var kept []snapshot.Finding
 	for _, f := range s.Findings {
@@ -131,14 +151,15 @@ func TestVerdictNamesAnUnknownPoolAsAPlaceholder(t *testing.T) {
 	}
 	s.Findings = kept
 
-	rows := englishVerdict(t, s, "all").Pressure.Rows
-	last := rows[len(rows)-1]
-	if last.Scope != "Node pools" || !reflect.DeepEqual(last.Name, []Run{Placeholder("Undetermined")}) {
-		t.Errorf("last row = %+v, want the node pools with the placeholder Undetermined", last)
+	for _, row := range englishVerdict(t, s, "all").Pressure.Rows {
+		if row.Label == "Node pools" {
+			if row.Status != "attention" || row.Bar.Critical != 0 || row.Bar.Attention != 1 {
+				t.Errorf("node pools row = %+v, want attention with one finding", row)
+			}
+			return
+		}
 	}
-	if want := []VerdictCount{{"attention", "Attention", "1"}}; !reflect.DeepEqual(last.Counts, want) {
-		t.Errorf("counts = %+v, want %+v", last.Counts, want)
-	}
+	t.Error("no row for the node pools")
 }
 
 func TestVerdictOfEdgeScalingPlan(t *testing.T) {
@@ -187,9 +208,9 @@ func TestVerdictOfDirectComplete(t *testing.T) {
 	v := englishVerdict(t, goldenSnapshot(t, "direct-complete"), "all")
 
 	wantTotals := []VerdictCount{
-		{"critical", "Critical", "4"},
-		{"attention", "Attention", "3"},
-		{"healthy", "Healthy", "6"},
+		{"critical", "Critical", "4", 4},
+		{"attention", "Attention", "3", 3},
+		{"healthy", "Healthy", "6", 6},
 	}
 	if !reflect.DeepEqual(v.Totals.Items, wantTotals) {
 		t.Errorf("Totals = %+v, want %+v", v.Totals.Items, wantTotals)
@@ -373,9 +394,9 @@ func TestVerdictOfTheExecutiveProfileRaisesTheMinimum(t *testing.T) {
 	}
 
 	wantTotals := []VerdictCount{
-		{"critical", "Critical", "10"},
-		{"attention", "Attention", "11"},
-		{"healthy", "Healthy", "7"},
+		{"critical", "Critical", "10", 10},
+		{"attention", "Attention", "11", 11},
+		{"healthy", "Healthy", "7", 7},
 	}
 	if !reflect.DeepEqual(v.Totals.Items, wantTotals) {
 		t.Errorf("Totals = %+v, want %+v", v.Totals.Items, wantTotals)
@@ -387,7 +408,7 @@ func TestVerdictOfTheExecutiveProfileRaisesTheMinimum(t *testing.T) {
 	}
 	for _, row := range v.Pressure.Rows {
 		if row.Status == "healthy" {
-			t.Errorf("pressure row %q is healthy", row.Scope)
+			t.Errorf("pressure row %q is healthy", row.Label)
 		}
 	}
 }

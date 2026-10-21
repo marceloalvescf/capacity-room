@@ -740,10 +740,10 @@ func TestViewVerdictPointsAtWhatThePDFWords(t *testing.T) {
 			}
 		}
 
-		if len(v.Pressure) != len(pdf.Pressure.Rows) {
-			t.Fatalf("%s: %d pressure rows, PDF %d", where, len(v.Pressure), len(pdf.Pressure.Rows))
+		if len(v.Scopes) != len(pdf.Pressure.Rows) {
+			t.Fatalf("%s: %d pressure rows, PDF %d", where, len(v.Scopes), len(pdf.Pressure.Rows))
 		}
-		for i, p := range v.Pressure {
+		for i, p := range v.Scopes {
 			row := pdf.Pressure.Rows[i]
 			if got := view.Findings[p.Finding].Sentence; got != row.Sentence {
 				t.Errorf("%s: pressure %d sentence %q, PDF %q", where, i, got, row.Sentence)
@@ -831,10 +831,10 @@ func TestViewVerdictOfTheExecutiveProfile(t *testing.T) {
 	if f := view.Findings[*v.ClusterFinding]; f.ScopeType != "cluster" || f.Sentence != pdf.Growth.Finding.Sentence {
 		t.Errorf("cluster finding is %s %q, PDF %q", f.ScopeType, f.Sentence, pdf.Growth.Finding.Sentence)
 	}
-	if len(v.Pressure) != len(pdf.Pressure.Rows) {
-		t.Fatalf("%d pressure rows, PDF %d", len(v.Pressure), len(pdf.Pressure.Rows))
+	if len(v.Scopes) != len(pdf.Pressure.Rows) {
+		t.Fatalf("%d pressure rows, PDF %d", len(v.Scopes), len(pdf.Pressure.Rows))
 	}
-	for i, p := range v.Pressure {
+	for i, p := range v.Scopes {
 		f := view.Findings[p.Finding]
 		if f.ScopeType != p.ScopeType || f.Severity != p.Severity || p.Severity == "healthy" || f.Sentence != pdf.Pressure.Rows[i].Sentence {
 			t.Errorf("pressure %d points at %s %s %q, row is %s %s, PDF %q", i, f.ScopeType, f.Severity, f.Sentence, p.ScopeType, p.Severity, pdf.Pressure.Rows[i].Sentence)
@@ -969,11 +969,11 @@ func TestExecutiveCountsANodeNotReadyWithoutAnAction(t *testing.T) {
 	}
 	pdfNodes := 0
 	for _, row := range pdf.Pressure.Rows {
-		if row.Scope != "Nodes" {
+		if row.Label != "Nodes" {
 			continue
 		}
 		pdfNodes++
-		if want := []VerdictCount{{"attention", "Attention", "1"}}; row.Status != "attention" || !reflect.DeepEqual(row.Counts, want) {
+		if want := []VerdictCount{{"critical", "Critical", "0", 0}, {"attention", "Attention", "1", 1}}; row.Status != "attention" || !reflect.DeepEqual(row.Counts, want) {
 			t.Errorf("PDF node pressure = %s %+v, want attention %+v", row.Status, row.Counts, want)
 		}
 	}

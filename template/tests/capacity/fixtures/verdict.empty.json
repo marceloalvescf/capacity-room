@@ -71,6 +71,10 @@
         "rows": [],
         "empty": "Nothing needs attention."
       },
+      "findings": {
+        "title": "Findings",
+        "total_label": "findings"
+      },
       "plan": {
         "title": "Prioritized action plan",
         "table": null,

@@ -33,17 +33,20 @@
           {
             "status": "critical",
             "label": "Critical",
-            "count": "4"
+            "count": "4",
+            "value": 4
           },
           {
             "status": "attention",
             "label": "Attention",
-            "count": "3"
+            "count": "3",
+            "value": 3
           },
           {
             "status": "healthy",
             "label": "Healthy",
-            "count": "6"
+            "count": "6",
+            "value": 6
           }
         ],
         "none": null
@@ -78,72 +81,85 @@
         "rows": [
           {
             "status": "critical",
-            "label": "Critical",
-            "scope": "Namespaces",
+            "label": "Namespaces",
             "sentence": "Memory usage against the limit.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments"
-              }
-            ],
-            "peak": {
-              "label": "Peak",
-              "value": "12000%"
-            },
             "counts": [
               {
                 "status": "critical",
                 "label": "Critical",
-                "count": "1"
-              }
-            ]
-          },
-          {
-            "status": "critical",
-            "label": "Critical",
-            "scope": "Workloads",
-            "sentence": "Memory usage against the limit.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments/payments-web"
-              }
-            ],
-            "peak": {
-              "label": "Peak",
-              "value": "12000%"
-            },
-            "counts": [
-              {
-                "status": "critical",
-                "label": "Critical",
-                "count": "1"
-              }
-            ]
-          },
-          {
-            "status": "attention",
-            "label": "Attention",
-            "scope": "HPAs",
-            "sentence": "There is a persistent average difference between current and desired replicas.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments/payments-web"
-              }
-            ],
-            "peak": null,
-            "counts": [
+                "count": "2",
+                "value": 2
+              },
               {
                 "status": "attention",
                 "label": "Attention",
-                "count": "1"
+                "count": "1",
+                "value": 1
               }
-            ]
+            ],
+            "bar": {
+              "critical": 2,
+              "attention": 1,
+              "healthy": 0,
+              "scale": 3
+            }
+          },
+          {
+            "status": "critical",
+            "label": "Workloads",
+            "sentence": "Memory usage against the limit.",
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "2",
+                "value": 2
+              },
+              {
+                "status": "attention",
+                "label": "Attention",
+                "count": "1",
+                "value": 1
+              }
+            ],
+            "bar": {
+              "critical": 2,
+              "attention": 1,
+              "healthy": 0,
+              "scale": 3
+            }
+          },
+          {
+            "status": "attention",
+            "label": "HPAs",
+            "sentence": "There is a persistent average difference between current and desired replicas.",
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "0",
+                "value": 0
+              },
+              {
+                "status": "attention",
+                "label": "Attention",
+                "count": "1",
+                "value": 1
+              }
+            ],
+            "bar": {
+              "critical": 0,
+              "attention": 1,
+              "healthy": 0,
+              "scale": 3
+            }
           }
         ],
         "empty": null
+      },
+      "findings": {
+        "title": "Findings",
+        "total_label": "findings"
       },
       "plan": {
         "title": "Prioritized action plan",

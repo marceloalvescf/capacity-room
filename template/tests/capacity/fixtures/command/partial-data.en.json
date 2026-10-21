@@ -33,17 +33,20 @@
           {
             "status": "critical",
             "label": "Critical",
-            "count": "2"
+            "count": "2",
+            "value": 2
           },
           {
             "status": "attention",
             "label": "Attention",
-            "count": "6"
+            "count": "6",
+            "value": 6
           },
           {
             "status": "healthy",
             "label": "Healthy",
-            "count": "2"
+            "count": "2",
+            "value": 2
           }
         ],
         "none": null
@@ -78,49 +81,72 @@
         "rows": [
           {
             "status": "critical",
-            "label": "Critical",
-            "scope": "Workloads",
+            "label": "Workloads",
             "sentence": "Memory usage against the limit.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments/payments-web"
-              }
-            ],
-            "peak": {
-              "label": "Peak",
-              "value": "12000%"
-            },
             "counts": [
               {
                 "status": "critical",
                 "label": "Critical",
-                "count": "1"
-              }
-            ]
-          },
-          {
-            "status": "attention",
-            "label": "Attention",
-            "scope": "Namespaces",
-            "sentence": "There is a configuration gap: no CPU limit was observed.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments"
-              }
-            ],
-            "peak": null,
-            "counts": [
+                "count": "2",
+                "value": 2
+              },
               {
                 "status": "attention",
                 "label": "Attention",
-                "count": "1"
+                "count": "1",
+                "value": 1
+              },
+              {
+                "status": "healthy",
+                "label": "Healthy",
+                "count": "2",
+                "value": 2
               }
-            ]
+            ],
+            "bar": {
+              "critical": 2,
+              "attention": 1,
+              "healthy": 2,
+              "scale": 5
+            }
+          },
+          {
+            "status": "attention",
+            "label": "Namespaces",
+            "sentence": "There is a configuration gap: no CPU limit was observed.",
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Critical",
+                "count": "0",
+                "value": 0
+              },
+              {
+                "status": "attention",
+                "label": "Attention",
+                "count": "4",
+                "value": 4
+              },
+              {
+                "status": "healthy",
+                "label": "Healthy",
+                "count": "0",
+                "value": 0
+              }
+            ],
+            "bar": {
+              "critical": 0,
+              "attention": 4,
+              "healthy": 0,
+              "scale": 5
+            }
           }
         ],
         "empty": null
+      },
+      "findings": {
+        "title": "Findings",
+        "total_label": "findings"
       },
       "plan": {
         "title": "Prioritized action plan",

@@ -28,8 +28,10 @@ func joinFindings(groups ...[]snapshot.Finding) []snapshot.Finding {
 	return out
 }
 
-func TestDecideScopesCountsFindings(t *testing.T) {
-	findings := joinFindings(
+// scopeFindings is a set of findings that holds every severity of four scope
+// types and one finding of the cluster.
+func scopeFindings() []snapshot.Finding {
+	return joinFindings(
 		findingsOf("node", "critical", 2),
 		findingsOf("node", "attention", 1),
 		findingsOf("node", "healthy", 1),
@@ -40,6 +42,10 @@ func TestDecideScopesCountsFindings(t *testing.T) {
 		findingsOf("namespace", "healthy", 2),
 		findingsOf("cluster", "critical", 1),
 	)
+}
+
+func TestDecideScopesCountsFindings(t *testing.T) {
+	findings := scopeFindings()
 	want := []scopeFacts{
 		{ScopeType: "node", Severity: "critical", Lead: 0, Critical: 2, Attention: 1, Healthy: 1},
 		{ScopeType: "workload", Severity: "critical", Lead: 4, Critical: 1, Attention: 4, Healthy: 3},

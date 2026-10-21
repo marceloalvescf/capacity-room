@@ -46,17 +46,20 @@
           {
             "status": "critical",
             "label": "Critical",
-            "count": "9"
+            "count": "9",
+            "value": 9
           },
           {
             "status": "attention",
             "label": "Attention",
-            "count": "10"
+            "count": "10",
+            "value": 10
           },
           {
             "status": "healthy",
             "label": "Healthy",
-            "count": "7"
+            "count": "7",
+            "value": 7
           }
         ],
         "none": null
@@ -108,125 +111,117 @@
         "rows": [
           {
             "status": "critical",
-            "label": "Critical",
-            "scope": "Nodes",
+            "label": "Nodes",
             "sentence": "Observed CPU usage on the node.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "aks-agentpool-12345678-vmss000000"
-              }
-            ],
-            "peak": {
-              "label": "Peak",
-              "value": "95%"
-            },
             "counts": [
               {
                 "status": "critical",
                 "label": "Critical",
-                "count": "2"
+                "count": "2",
+                "value": 2
               }
-            ]
+            ],
+            "bar": {
+              "critical": 2,
+              "attention": 0,
+              "healthy": 0,
+              "scale": 2
+            }
           },
           {
             "status": "critical",
-            "label": "Critical",
-            "scope": "Namespaces",
+            "label": "Namespaces",
             "sentence": "CPU usage against the limit indicates an increased risk of CPU throttling.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments"
-              }
-            ],
-            "peak": {
-              "label": "Peak",
-              "value": "330%"
-            },
             "counts": [
               {
                 "status": "critical",
                 "label": "Critical",
-                "count": "1"
+                "count": "1",
+                "value": 1
               }
-            ]
+            ],
+            "bar": {
+              "critical": 1,
+              "attention": 0,
+              "healthy": 0,
+              "scale": 2
+            }
           },
           {
             "status": "critical",
-            "label": "Critical",
-            "scope": "Workloads",
+            "label": "Workloads",
             "sentence": "Memory usage against the limit indicates an increased risk of OOMKill.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments/payments-web"
-              }
-            ],
-            "peak": {
-              "label": "Peak",
-              "value": "12000%"
-            },
             "counts": [
               {
                 "status": "critical",
                 "label": "Critical",
-                "count": "1"
+                "count": "1",
+                "value": 1
               },
               {
                 "status": "attention",
                 "label": "Attention",
-                "count": "1"
+                "count": "1",
+                "value": 1
               }
-            ]
+            ],
+            "bar": {
+              "critical": 1,
+              "attention": 1,
+              "healthy": 0,
+              "scale": 2
+            }
           },
           {
             "status": "critical",
-            "label": "Critical",
-            "scope": "HPAs",
+            "label": "HPAs",
             "sentence": "The HPA reached its observed maximum of replicas.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments/web"
-              }
-            ],
-            "peak": null,
             "counts": [
               {
                 "status": "critical",
                 "label": "Critical",
-                "count": "1"
+                "count": "1",
+                "value": 1
               },
               {
                 "status": "attention",
                 "label": "Attention",
-                "count": "1"
+                "count": "1",
+                "value": 1
               }
-            ]
+            ],
+            "bar": {
+              "critical": 1,
+              "attention": 1,
+              "healthy": 0,
+              "scale": 2
+            }
           },
           {
             "status": "attention",
-            "label": "Attention",
-            "scope": "Node pools",
+            "label": "Node pools",
             "sentence": "Peak CPU pressure varied among the nodes of the pool.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "pool-a"
-              }
-            ],
-            "peak": null,
             "counts": [
               {
                 "status": "attention",
                 "label": "Attention",
-                "count": "2"
+                "count": "2",
+                "value": 2
               }
-            ]
+            ],
+            "bar": {
+              "critical": 0,
+              "attention": 2,
+              "healthy": 0,
+              "scale": 2
+            }
           }
         ],
         "empty": null
+      },
+      "findings": {
+        "title": "Findings",
+        "total_label": "findings"
       },
       "plan": {
         "title": "Prioritized action plan",

@@ -161,19 +161,9 @@
       columns: (7.8em, 1fr),
       column-gutter: 6pt,
       row-gutter: 3pt,
-      mark(row.status, text(weight: "semibold", row.scope), alt: row.label),
+      mark(row.status, text(weight: "semibold", row.label), alt: row.counts.find(c => c.status == row.status).label),
       {
         row.sentence
-        if row.name.len() > 0 or row.peak != none {
-          linebreak()
-        }
-        if row.name.len() > 0 {
-          runs-to-content(row.name)
-        }
-        if row.peak != none {
-          h(6pt)
-          text(fill: muted, box[#row.peak.label #value(row.peak.value)])
-        }
         linebreak()
         count-line(row.counts)
       },

@@ -33,17 +33,20 @@
           {
             "status": "critical",
             "label": "Crítico",
-            "count": "2"
+            "count": "2",
+            "value": 2
           },
           {
             "status": "attention",
             "label": "Atenção",
-            "count": "6"
+            "count": "6",
+            "value": 6
           },
           {
             "status": "healthy",
             "label": "Saudável",
-            "count": "2"
+            "count": "2",
+            "value": 2
           }
         ],
         "none": null
@@ -78,49 +81,72 @@
         "rows": [
           {
             "status": "critical",
-            "label": "Crítico",
-            "scope": "Workloads",
+            "label": "Workloads",
             "sentence": "Uso de memória em relação ao limit.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments/payments-web"
-              }
-            ],
-            "peak": {
-              "label": "Pico",
-              "value": "12000%"
-            },
             "counts": [
               {
                 "status": "critical",
                 "label": "Crítico",
-                "count": "1"
-              }
-            ]
-          },
-          {
-            "status": "attention",
-            "label": "Atenção",
-            "scope": "Namespaces",
-            "sentence": "Há uma lacuna de configuração: limit de CPU não observado.",
-            "name": [
-              {
-                "kind": "ident",
-                "text": "payments"
-              }
-            ],
-            "peak": null,
-            "counts": [
+                "count": "2",
+                "value": 2
+              },
               {
                 "status": "attention",
                 "label": "Atenção",
-                "count": "1"
+                "count": "1",
+                "value": 1
+              },
+              {
+                "status": "healthy",
+                "label": "Saudável",
+                "count": "2",
+                "value": 2
               }
-            ]
+            ],
+            "bar": {
+              "critical": 2,
+              "attention": 1,
+              "healthy": 2,
+              "scale": 5
+            }
+          },
+          {
+            "status": "attention",
+            "label": "Namespaces",
+            "sentence": "Há uma lacuna de configuração: limit de CPU não observado.",
+            "counts": [
+              {
+                "status": "critical",
+                "label": "Crítico",
+                "count": "0",
+                "value": 0
+              },
+              {
+                "status": "attention",
+                "label": "Atenção",
+                "count": "4",
+                "value": 4
+              },
+              {
+                "status": "healthy",
+                "label": "Saudável",
+                "count": "0",
+                "value": 0
+              }
+            ],
+            "bar": {
+              "critical": 0,
+              "attention": 4,
+              "healthy": 0,
+              "scale": 5
+            }
           }
         ],
         "empty": null
+      },
+      "findings": {
+        "title": "Achados",
+        "total_label": "achados"
       },
       "plan": {
         "title": "Plano de ação priorizado",

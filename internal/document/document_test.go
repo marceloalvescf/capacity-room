@@ -213,6 +213,7 @@ func TestVerdictMarshalsEmpty(t *testing.T) {
 	want := `{"type":"verdict","totals":{"items":[],"none":null},"quality":null,` +
 		`"growth":{"title":"","current":null,"max":null,"state":null,"gauge":null,"caption":null,"finding":null,"warning":null,"facts":[]},` +
 		`"pressure":{"title":"","rows":[],"empty":null},` +
+		`"findings":{"title":"","total_label":""},` +
 		`"plan":{"title":"","table":null,"empty":null,"more":null},"legend":[]}`
 	if string(data) != want {
 		t.Errorf("Marshal() = %s, want %s", data, want)
@@ -223,7 +224,7 @@ func TestVerdictMarshalsFull(t *testing.T) {
 	str := func(s string) *string { return &s }
 	num := func(n int) *int { return &n }
 	v := Verdict{
-		Totals: VerdictTotals{Items: []VerdictCount{{"critical", "Critical", "9"}}},
+		Totals: VerdictTotals{Items: []VerdictCount{{"critical", "Critical", "9", 9}}},
 		Quality: &VerdictQuality{
 			Label: "Data quality", Count: "2", Items: []string{"One.", "Two."}, More: str("+1"),
 		},
@@ -238,12 +239,12 @@ func TestVerdictMarshalsFull(t *testing.T) {
 		Pressure: VerdictPressure{
 			Title: "Pressure",
 			Rows: []VerdictPressureRow{{
-				Status: "critical", Label: "Critical", Scope: "Nodes", Sentence: "Hot.",
-				Name:   []Run{Ident("n-1")},
-				Peak:   &VerdictFact{"Peak", "95%"},
-				Counts: []VerdictCount{{"critical", "Critical", "2"}},
+				Status: "critical", Label: "Nodes", Sentence: "Hot.",
+				Counts: []VerdictCount{{"critical", "Critical", "2", 2}},
+				Bar:    VerdictBar{Critical: 2, Scale: 3},
 			}},
 		},
+		Findings: VerdictFindings{"Findings", "findings"},
 		Plan: VerdictPlan{
 			Title: "Plan",
 			Table: &Table{ID: "verdict-plan", Headers: []string{"a"}, Rows: [][][]Run{{{Text("x")}}}},
@@ -256,15 +257,16 @@ func TestVerdictMarshalsFull(t *testing.T) {
 		t.Fatalf("Marshal() error = %v", err)
 	}
 	want := `{"type":"verdict",` +
-		`"totals":{"items":[{"status":"critical","label":"Critical","count":"9"}],"none":null},` +
+		`"totals":{"items":[{"status":"critical","label":"Critical","count":"9","value":9}],"none":null},` +
 		`"quality":{"label":"Data quality","count":"2","items":["One.","Two."],"more":"+1"},` +
 		`"growth":{"title":"Cluster autoscaling","current":"3","max":"3","state":null,` +
 		`"gauge":{"current":3,"max":3,"min":2,"hazard":true},"caption":"Nodes",` +
 		`"finding":{"status":"attention","label":"Attention","sentence":"Close."},"warning":"Incomplete.",` +
 		`"facts":[{"label":"Minimum nodes","value":"2"}]},` +
-		`"pressure":{"title":"Pressure","rows":[{"status":"critical","label":"Critical","scope":"Nodes","sentence":"Hot.",` +
-		`"name":[{"kind":"ident","text":"n-1"}],"peak":{"label":"Peak","value":"95%"},` +
-		`"counts":[{"status":"critical","label":"Critical","count":"2"}]}],"empty":null},` +
+		`"pressure":{"title":"Pressure","rows":[{"status":"critical","label":"Nodes","sentence":"Hot.",` +
+		`"counts":[{"status":"critical","label":"Critical","count":"2","value":2}],` +
+		`"bar":{"critical":2,"attention":0,"healthy":0,"scale":3}}],"empty":null},` +
+		`"findings":{"title":"Findings","total_label":"findings"},` +
 		`"plan":{"title":"Plan","table":{"type":"table","id":"verdict-plan","headers":["a"],"rows":[[[{"kind":"text","text":"x"}]]]},"empty":null,"more":"1 of 2 actions."},` +
 		`"legend":[{"status":"healthy","label":"Healthy"}]}`
 	if string(data) != want {
