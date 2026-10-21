@@ -5,6 +5,7 @@
 // built; `blocks.typ` calls `render-table` once the shape is already known
 // to be correct.
 
+#import "palette.typ": attention-surface, critical-surface
 #import "runs.typ": mono, run-to-content
 
 #let layouts = (
@@ -118,6 +119,13 @@
   }
 }
 
+// A number cell holding a critical or attention status run is tinted with the
+// surface of the worse one; every other cell has no fill.
+#let cell-fill(cell) = {
+  let statuses = cell.filter(run => run.kind == "status").map(run => run.status)
+  if "critical" in statuses { critical-surface } else if "attention" in statuses { attention-surface } else { none }
+}
+
 // render-table assumes `id`, `headers`, and `rows` already passed
 // `validate.typ`'s checks: `id` is a known layout, `headers` holds as many
 // strings as `layout.columns`, and every row of `rows` (an array of runs per
@@ -138,6 +146,7 @@
     ))
     #let body = rows.map(row => row.enumerate().map(((i, cell)) => table.cell(
       align: face-align.at(faces.at(i)) + horizon,
+      fill: if faces.at(i) == "num" { cell-fill(cell) } else { none },
       if faces.at(i) == "num" { cell.map(num-run).join() } else { cell.map(run-to-content).join() },
     ))).flatten()
     #table(

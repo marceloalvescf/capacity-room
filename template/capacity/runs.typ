@@ -4,6 +4,8 @@
 // module never parses a string as markup. It draws the runs of the data
 // file: text, strong words, identifiers, placeholders, and statuses.
 
+#import "palette.typ": status-colour
+
 #let mono = "JetBrains Mono"
 
 #let status-symbols = (
@@ -14,13 +16,15 @@
   unavailable: "—",
 )
 
-#let status-fill(status) = if status in ("healthy", "unavailable", "undefined") { luma(45%) } else { black }
+// word-fill is the ink of the words beside a status shape: the shape alone
+// carries the colour.
+#let word-fill(status) = if status in ("healthy", "unavailable", "undefined") { luma(45%) } else { black }
 
 // status-glyph sets the mark of a status in the monospaced face, which
 // holds all five glyphs; the face of the words holds none of them.
 #let status-glyph(status) = text(
   font: mono,
-  fill: status-fill(status),
+  fill: status-colour(status),
   weight: if status == "critical" { "bold" } else { "regular" },
   status-symbols.at(status),
 )
@@ -48,7 +52,7 @@
     text(run.text)
   } else {
     let weight = if run.status == "critical" { "bold" } else { "regular" }
-    box(text(fill: status-fill(run.status), weight: weight)[
+    box(text(fill: word-fill(run.status), weight: weight)[
       #status-mark(run.status, run.at("alt", default: none))#if run.text != none { sym.wj; h(2pt); sym.wj; text(hyphenate: " " not in run.text, run.text) }
     ])
   }

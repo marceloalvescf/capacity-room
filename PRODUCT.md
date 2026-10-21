@@ -70,8 +70,9 @@ where, and what to do first, and trusts every mark enough to act on it.
 - The web app and the PDF share the load-line disc, the mark of the product,
   and JetBrains Mono for every name and number. Words are set in Mona Sans on
   the web and in Public Sans in the PDF (owner, 2026-10-15).
-- The PDF has its own monochrome look (the graphite template; no coloured
-  pixel on a page). The web app need not copy it.
+- The PDF has its own look (the graphite template): ink for words and
+  numbers, and the light status colours of the web, held equal by a test, for
+  the status shapes, the findings donut, the bars, and the tinted peak cells.
 
 ## Evidence on Hand
 

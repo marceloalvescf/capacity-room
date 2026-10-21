@@ -437,7 +437,7 @@ Motion appears only under `motion-safe:` or `prefers-reduced-motion: no-preferen
 
 ## The PDF
 
-The report on paper keeps its own look: the instrument drawn in ink alone. It is monochrome: every fill, rule, and glyph is `black`, `white`, or a `luma(...)` grey, and no page holds a coloured pixel. It shares JetBrains Mono and the load-line disc with the web app, so a name or a number reads the same on both; its words stay in Public Sans.
+The report on paper keeps its own look: the instrument drawn in ink, with the status colours of the web and no other colour. Every fill, rule, and glyph is `black`, `white`, a `luma(...)` grey, or a colour of `template/capacity/palette.typ`, whose six values equal the light tokens of the web theme (a test holds them equal): critical `#be1e45`, attention `#8f5b00`, healthy `#24774a`, neutral `#5c5c5e`, critical surface `#fdedf0`, attention surface `#fdf4e3`. Words and numbers stay in ink. It shares JetBrains Mono and the load-line disc with the web app, so a name or a number reads the same on both; its words stay in Public Sans.
 
 ### Faces and sizes
 - **Words:** Public Sans (Regular, SemiBold, Bold, and their italics) at 9pt on the verdict page and 7pt to 8.5pt in tables. Title 18pt Bold; the plan heading 11pt SemiBold; the totals line 13pt.
@@ -446,22 +446,25 @@ The report on paper keeps its own look: the instrument drawn in ink alone. It is
 - **Table text:** per layout, 6.8pt to 8.5pt, with a row inset of 2pt or 3.5pt. The page margins are one inch at the top and the sides and half an inch at the bottom.
 
 ### Greys
-Foreground is black. Muted text (the eyebrow, the footer, the facts under the gauge, the issue block) is `luma(35%)`. Healthy, unavailable, and no-base glyphs are `luma(45%)`. Hairlines between rows and the colophon rule are `luma(78%)`. The gauge bands are tinted `luma(93%)`, `luma(85%)`, and `luma(74%)`, with a `luma(55%)` band edge.
+Foreground is black. Muted text (the eyebrow, the footer, the facts under the gauge, the issue block) is `luma(35%)`. The words of a healthy, unavailable, or no-base mark are `luma(45%)`. The track of a bar is `luma(93%)`. Hairlines between rows and the colophon rule are `luma(78%)`. A gauge with no hazard has bands tinted `luma(93%)`, `luma(85%)`, and `luma(74%)`, with a `luma(55%)` band edge.
 
 ### Status glyphs
-Status is a shape, then a word. The five glyphs (the diamond of critical, the triangle of attention, the circle of healthy, the empty circle of no base, the dash of unavailable) are set in JetBrains Mono, the one face that holds all five. Critical is bold and black; attention is black; the other three are `luma(45%)`. A glyph never stands without its word where the page has room for the word.
+Status is a shape, then a word. The five glyphs (the diamond of critical, the triangle of attention, the circle of healthy, the empty circle of no base, the dash of unavailable) are set in JetBrains Mono, the one face that holds all five. Critical is bold. A glyph takes the colour of its status (critical, attention, healthy; neutral for no base and unavailable); the word beside it keeps its ink. A glyph never stands without its word where the page has room for the word.
 
 ### The gauge
-The depth gauge is drawn in black. Up to sixty nodes, one band per node, filled bands tinted by thirds of the scale; above sixty, three bands over the thirds of the scale, each filled to the share of the current count that falls in it. A dashed 0.7pt line marks the minimum, rounded to a whole node. Once the cluster is at its maximum and the report gives it a finding, the last band is hatched: diagonal black strokes of 1.1pt over the darkest tint. The scale beneath shows every node up to ten, else ten values spread evenly, the first and the last included.
+The depth gauge is drawn in black ink. Up to sixty nodes, one band per node, filled bands in the colour of the cluster finding's hazard (critical or attention), lightened by thirds of the scale, or in greys when there is no hazard; above sixty, three bands over the thirds of the scale, each filled to the share of the current count that falls in it. A dashed 0.7pt line marks the minimum, rounded to a whole node. Once the cluster is at its maximum and the report gives it a finding, the last band is hatched: diagonal strokes of 1.1pt (white over a status colour, black over grey) over the darkest band. The scale beneath shows every node up to ten, else ten values spread evenly, the first and the last included.
+
+### The findings donut
+A ring 140pt wide of the findings by status, drawn from the counts of the totals: one slice per status that has a count, clockwise from the top (critical, attention, healthy), parted by a 2pt gap, in the status colours. The total sits at the centre in mono Bold 26pt with the word "findings" under it in Muted 8pt, and a legend follows: a swatch, the glyph, the count in mono, the word. A single status is a full ring. A report with no finding draws no ring; the totals strip says so and the cluster block stands alone.
 
 ### The verdict page
-The first page of a report the command writes. From the top: the title band, the severity totals with the leading count in bold, the data-quality line, then two columns (0.9fr, 1.5fr). The left column is the cluster autoscaling block, the numeral, the gauge, the caption, the worst cluster finding, the node-evidence warning, and the facts. The right column is the pressure by scope, one row after a hairline, worst scope first. Below both, the prioritized action plan with its footer line ("5 of 10 actions"), and the legend of the five statuses.
+The first page of a report the command writes. From the top: the title band, the severity totals with the leading count in bold, the data-quality line, then two columns (0.9fr, 1.5fr). The left column opens with the findings donut and then holds the cluster autoscaling block, the numeral, the gauge, the caption, the worst cluster finding, the node-evidence warning, and the facts. The right column is the pressure by scope, one row after a hairline, worst scope first: the status glyph and the scope, a bar of its critical, attention, and healthy findings against its scale over a `luma(93%)` track, the sentence, and the counts as glyphs and numbers. Below both, the prioritized action plan with its footer line ("5 of 10 actions"), and the legend of the five statuses.
 
 ### The title band
 One block at the head of the first page: the title at 18pt Bold and, 10pt under it, the cluster in mono and the period with its numbers in mono, each kept whole, so a long cluster name moves the period to the next line instead of breaking a word; the profile, the author, and the issue time at 8pt Muted, right aligned, the last on the baseline of the period. The rule below is graphite's own title rule at 0.8pt.
 
 ### Tables
-Each table layout names a face for every column. A `num` column is set in mono and aligned right; a `name`, `text`, or `mark` column is aligned from the left. Cells sit at the middle of the row. The header is SemiBold, repeats at a page break, and is closed by a 0.8pt black rule; every other row is parted by a 0.5pt `luma(78%)` hairline.
+Each table layout names a face for every column. A `num` column is set in mono and aligned right; a `name`, `text`, or `mark` column is aligned from the left. Cells sit at the middle of the row. The header is SemiBold, repeats at a page break, and is closed by a 0.8pt black rule; every other row is parted by a 0.5pt `luma(78%)` hairline. A number cell that holds a critical or attention status mark is tinted with the critical or attention surface (the worse of the two); no other cell has a fill.
 
 ### The colophon
 The last block of the document: a hairline rule, then the load-line disc (a ring crossed by a line, drawn in black at 8pt) and the line naming the program, CapacityRoom, at 7pt Muted.

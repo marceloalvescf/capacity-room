@@ -333,23 +333,3 @@ func TestSnapshotsCoverEveryPage(t *testing.T) {
 		})
 	}
 }
-
-// TestGoldenPagesHaveNoColour checks every rendered page directly: it
-// needs no golden page to compare against, so it is the one test of this
-// file that can pass before template/tests/golden/ has ever been
-// populated.
-func TestGoldenPagesHaveNoColour(t *testing.T) {
-	render := renderGolden(t)
-
-	for _, name := range sortedNames(render.pages) {
-		path := writeRendered(t, name, render.pages[name])
-		hasColour, err := golden.HasColour(path)
-		if err != nil {
-			t.Errorf("checking colour of %s: %v", name, err)
-			continue
-		}
-		if hasColour {
-			t.Errorf("%s: contains a coloured pixel; no page may", name)
-		}
-	}
-}

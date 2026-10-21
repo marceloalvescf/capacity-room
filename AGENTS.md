@@ -876,7 +876,9 @@ looks.
   draws. The front matter follows it. It closes with the colophon block: a
   rule, the load-line disc, and the line naming the program.
 - The report layer has 23 diagnostics in `validate.typ`.
-- No page may contain a coloured pixel.
+- A page uses only the colours of `template/capacity/palette.typ`, the light
+  status colours of the web, which a test holds equal; words and numbers stay
+  in ink.
 - The public surface of the generic layer is frozen: `graphite-report`,
   `callout`, `keep-together`, with the keys its README documents.
 

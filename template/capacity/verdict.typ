@@ -3,11 +3,13 @@
 // word comes from the block; the soundings of the gauge are the integers it
 // was given.
 
-#import "runs.typ": mono, runs-to-content, status-mark
+#import "palette.typ": status-colour
+#import "runs.typ": mono, runs-to-content, status-glyph, status-mark
 #import "tables.typ": num-run, render-table
 
 #let muted = luma(35%)
 #let hair = luma(78%)
+#let track = luma(93%)
 #let tints = (luma(93%), luma(85%), luma(74%))
 #let band-stroke = 0.4pt + luma(55%)
 
@@ -34,28 +36,35 @@
   }
 }
 
-#let hatch-fill = tiling(size: (5pt, 5pt))[
-  #place(rect(width: 5pt, height: 5pt, fill: tints.at(2), stroke: none))
-  #place(line(start: (0pt, 5pt), end: (5pt, 0pt), stroke: 1.1pt + black))
-  #place(line(start: (-1pt, 1pt), end: (1pt, -1pt), stroke: 1.1pt + black))
-  #place(line(start: (4pt, 6pt), end: (6pt, 4pt), stroke: 1.1pt + black))
+// The hatch of a full gauge: diagonal strokes over the colour of the last band.
+#let hatch-fill(base, ink) = tiling(size: (5pt, 5pt))[
+  #place(rect(width: 5pt, height: 5pt, fill: base, stroke: none))
+  #place(line(start: (0pt, 5pt), end: (5pt, 0pt), stroke: 1.1pt + ink))
+  #place(line(start: (-1pt, 1pt), end: (1pt, -1pt), stroke: 1.1pt + ink))
+  #place(line(start: (4pt, 6pt), end: (6pt, 4pt), stroke: 1.1pt + ink))
 ]
 
-// The depth gauge in black: up to sixty nodes, one band per node, filled
-// bands tinted by thirds; above that, three bands over the thirds of the
+// The depth gauge: up to sixty nodes, one band per node, filled
+// bands in the colour of its hazard (greys when it has none) by thirds; above
+// that, three bands over the thirds of the
 // scale, each filled to the share of the current count that falls in it.
 #let gauge(spec) = layout(size => {
   let w = size.width
   let height = 16pt
   let max = spec.max
   let full = spec.hazard and spec.current >= max
+  let thirds = if spec.status == none { tints } else {
+    let base = status-colour(spec.status)
+    (base.lighten(70%), base.lighten(40%), base)
+  }
+  let hatch-ink = if spec.status == none { black } else { white }
   box(width: w, height: height + 10pt, {
     if max <= 60 {
       let band = w / max
       for i in range(max) {
         let filled = i < spec.current
-        let tint = tints.at(calc.min(2, calc.floor(i * 3 / max)))
-        let fill = if filled and full and i == max - 1 { hatch-fill } else if filled { tint } else { white }
+        let tint = thirds.at(calc.min(2, calc.floor(i * 3 / max)))
+        let fill = if filled and full and i == max - 1 { hatch-fill(thirds.at(2), hatch-ink) } else if filled { tint } else { white }
         place(dx: i * band, rect(width: band, height: height, fill: fill, stroke: band-stroke))
       }
     } else {
@@ -65,7 +74,7 @@
         let share = calc.clamp((spec.current - k * third) / third, 0, 1)
         place(dx: k * band, rect(width: band, height: height, fill: white, stroke: band-stroke))
         if share > 0 {
-          let fill = if full and k == 2 { hatch-fill } else { tints.at(k) }
+          let fill = if full and k == 2 { hatch-fill(thirds.at(2), hatch-ink) } else { thirds.at(k) }
           place(dx: k * band, rect(width: band * share, height: height, fill: fill, stroke: none))
         }
         place(dx: k * band, rect(width: band, height: height, fill: none, stroke: band-stroke))
@@ -88,9 +97,71 @@
   })
 })
 
+// The ring of the findings: one slice per status with a count, clockwise
+// from the top, the slices parted by a small gap. A ring of one slice is a
+// full circle.
+#let ring-outer = 70pt
+#let ring-inner = 51pt
+#let ring-gap = 2pt
+
+#let ring-slice(from, to, fill) = if to > from {
+  let steps = calc.max(2, calc.ceil((to - from) / 1deg))
+  let point(radius, angle) = (
+    ring-outer + radius * calc.sin(angle),
+    ring-outer - radius * calc.cos(angle),
+  )
+  let outer = range(steps + 1).map(i => point(ring-outer, from + (to - from) * i / steps))
+  let inner = range(steps + 1).rev().map(i => point(ring-inner, from + (to - from) * i / steps))
+  place(polygon(fill: fill, stroke: none, ..(outer + inner)))
+}
+
+#let donut(totals, findings) = {
+  let sum = totals.map(item => item.value).sum(default: 0)
+  let shown = totals.filter(item => item.value > 0)
+  let size = 2 * ring-outer
+  eyebrow(findings.title)
+  v(4pt)
+  align(center, pdf.artifact(box(width: size, height: size, {
+    if shown.len() == 1 {
+      place(circle(radius: ring-outer, fill: status-colour(shown.first().status), stroke: none))
+      place(dx: ring-outer - ring-inner, dy: ring-outer - ring-inner, circle(radius: ring-inner, fill: white, stroke: none))
+    } else {
+      let gap = ring-gap / ((ring-outer + ring-inner) / 2) * 1rad
+      let turn = 0deg
+      for item in shown {
+        let span = 360deg * item.value / sum
+        ring-slice(turn + gap / 2, turn + span - gap / 2, status-colour(item.status))
+        turn += span
+      }
+    }
+    place(center + horizon, align(center, {
+      text(font: mono, size: 26pt, weight: "bold", str(sum))
+      linebreak()
+      text(size: 8pt, fill: muted, findings.total_label)
+    }))
+  })))
+  v(6pt)
+  align(center, grid(
+    columns: 4,
+    column-gutter: 5pt,
+    row-gutter: 3pt,
+    align: (left, left, right, left),
+    ..totals
+      .map(item => (
+        box(rect(width: 12pt, height: 8pt, fill: status-colour(item.status), stroke: none)),
+        pdf.artifact(status-glyph(item.status)),
+        num(str(item.value)),
+        item.label,
+      ))
+      .flatten()
+  ))
+}
+
+// The counts of a row as a monospaced line: each count after the glyph of
+// its status, which carries the word of the status for a screen reader.
 #let count-line(counts) = {
   counts
-    .map(c => mark(c.status, [#c.label #num(c.count)]))
+    .map(c => mark(c.status, num(c.count), alt: c.label))
     .join(h(4pt) + text(fill: muted, "·") + h(4pt))
 }
 
@@ -149,7 +220,30 @@
   }
 }
 
-#let build-pressure(pressure) = {
+// The bar of a row: its findings per status against the scale, over a light
+// track; the segments are parted by a thin white line.
+#let pressure-bar(bar) = {
+  let parts = ("critical", "attention", "healthy")
+    .map(status => (status, bar.at(status)))
+    .filter(((_, count)) => count > 0)
+  let rest = calc.max(0, bar.scale - parts.map(((_, count)) => count).sum(default: 0))
+  grid(
+    columns: parts.map(((_, count)) => count * 1fr) + (rest * 1fr,),
+    rows: 5pt,
+    fill: (x, _) => if x < parts.len() { status-colour(parts.at(x).first()) } else { track },
+    stroke: (x, _) => if x < parts.len() { (right: 0.8pt + white) } else { none },
+    ..range(parts.len() + 1).map(_ => []),
+  )
+}
+
+// The word of a status as the legend gives it, or none when the legend
+// does not hold the status.
+#let status-word(legend, status) = {
+  let item = legend.find(item => item.status == status)
+  if item == none { none } else { item.label }
+}
+
+#let build-pressure(pressure, legend) = {
   eyebrow(pressure.title)
   v(2pt)
   if pressure.empty != none {
@@ -161,8 +255,10 @@
       columns: (7.8em, 1fr),
       column-gutter: 6pt,
       row-gutter: 3pt,
-      mark(row.status, text(weight: "semibold", row.label), alt: row.counts.find(c => c.status == row.status).label),
+      mark(row.status, text(weight: "semibold", row.label), alt: status-word(legend, row.status)),
       {
+        pressure-bar(row.bar)
+        v(3pt)
         row.sentence
         linebreak()
         count-line(row.counts)
@@ -197,7 +293,16 @@
   grid(
     columns: (0.9fr, 1.5fr),
     column-gutter: 18pt,
-    build-growth(entry.growth), build-pressure(entry.pressure),
+    {
+      // With no finding at all there is no ring to draw: the strip above
+      // says so, and the growth block stands alone.
+      if entry.totals.items.map(item => item.value).sum(default: 0) > 0 {
+        donut(entry.totals.items, entry.findings)
+        v(14pt)
+      }
+      build-growth(entry.growth)
+    },
+    build-pressure(entry.pressure, entry.legend),
   )
   v(10pt)
   build-plan(entry.plan)
