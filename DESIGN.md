@@ -322,6 +322,8 @@ The signed-in screen is a two-column grid from `md` (768px): a side column of 14
 
 Spacing follows Tailwind's 4px step; 2, 4, 6, 8, 12, 16, 20, 24, 28, and 32px are the values in use. Controls and table cells pad 12px by 8px; a pair's halves pad 16px; a finding detail 20px; a dialog 24px; the sign-in card 28px. Stacks of pairs part by 12px, overview sections by 32px. Forms keep to 48rem (`max-w-3xl`), the account page to 36rem.
 
+Home stacks the title row (title, New report at the right), the label heading over the strip of cluster chips, and the chosen cluster's answer: a notice line when a request is in flight or failed, the heading row (name, id in mono, Open report at the right), the meta line, then the overview's parts, with the quality notice beside the answer strip from `xl` and the first three rows of the action plan.
+
 A report screen stacks the title row (title, the meta line of cluster and period, the PDF action at the right), the seven tabs over a Hairline baseline, then the tab. A claim-and-proof pair splits into two equal halves from `lg` (1024px) and stacks below it. On the findings tab from `lg` the list takes up to 26rem and the detail the rest, sticking 16px under the window top and scrolling within the window height. In an opened row, a finding and its proof sit side by side from `lg`, the proof in a 20rem column.
 
 Tables never scroll sideways. Cells wrap between words; only a mono name or a value longer than the table breaks inside it. The header sticks under the window top. An opened row reveals itself between the sticky header and the window bottom.
@@ -358,6 +360,12 @@ A grey track (Hover) with a 2px inset and 6px corners; each option is muted text
 
 ### Severity toggles
 The findings filter: one 6px-cornered toggle per severity, its status mark then its count in mono. Pressed: an Ink outline on Panel, the shape in its status colour. Released: a Hairline outline on no fill, Muted Ink, and a plain shape in the text colour (the shape and the word still name the status). Under the pointer both take Hover, and a press sinks 1px as a button does.
+
+### Cluster chip
+One chip per active cluster on Home, a link at 0.875rem: the status mark, the cluster name in mono (the profile's display name in the body face when no report names the cluster), then a muted line at 0.75rem for the age of the latest report, the step of a request in flight, or why there is none. Corners are 8px, padding 14px by 10px, and the chips wrap to as many rows as they need. The chosen chip takes the pressed look of a severity toggle: Panel fill and an Ink outline. The others sit on the Ground with a Hairline outline, and all take Hover under the pointer.
+
+### Unseen dot
+A 6px dot in the accent at the top right of a cluster chip, aria-hidden, with a visually hidden phrase in the chip's name. It marks a latest report the reader has not yet seen on Home. It is a dot and not a ring because the focus ring is already an accent outline.
 
 ### Inputs / Fields
 - **Style:** Panel fill, 1px Input Border, 6px radius, min height 36px, 12px padding. The label sits above at 0.875rem 500; a hint below in Muted Ink; an error below in Critical.

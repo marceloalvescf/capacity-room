@@ -540,7 +540,7 @@ describe("new report form", () => {
     expect(screen.queryByRole("link", { name: t("nav.generate") })).not.toBeInTheDocument();
   });
 
-  it("the sidebar offers New report between Reports and Account to an operator", async () => {
+  it("the sidebar lists Home, Reports, New report, and Account to an operator", async () => {
     mock.session = signedIn({ role: "operator" });
     await renderApp("/reports");
     const nav = await screen.findByRole("navigation", { name: t("nav.label") });
@@ -548,7 +548,7 @@ describe("new report form", () => {
       within(nav)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual([t("nav.reports"), t("nav.generate"), t("nav.account")]);
+    ).toEqual([t("nav.home"), t("nav.reports"), t("nav.generate"), t("nav.account")]);
   });
 
   it("the sidebar hides New report from a reader", async () => {
@@ -559,7 +559,7 @@ describe("new report form", () => {
       within(nav)
         .getAllByRole("link")
         .map((link) => link.textContent),
-    ).toEqual([t("nav.reports"), t("nav.account")]);
+    ).toEqual([t("nav.home"), t("nav.reports"), t("nav.account")]);
   });
 });
 

@@ -84,6 +84,7 @@ describe("the users screen", () => {
     await renderApp("/reports");
     const nav = await screen.findByRole("navigation", { name: "Main navigation" });
     expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Home",
       "Reports",
       "New report",
       "Profiles",

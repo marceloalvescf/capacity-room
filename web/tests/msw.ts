@@ -56,6 +56,7 @@ type Report = Schemas["Report"];
 type ReportView = Schemas["ReportView"];
 type ErrorCode = Schemas["ErrorCode"];
 type ProfileSummary = Schemas["ProfileSummary"];
+type Home = Schemas["Home"];
 type AdminUser = Schemas["User"];
 type AdminProfile = Profile;
 type ProfileTestResult = Schemas["ProfileTestResult"];
@@ -193,6 +194,8 @@ export interface Mock {
   calls: Call[];
   reports: (Omit<Report, "selection"> & { selection: Report["selection"] | null })[];
   profiles: ProfileSummary[];
+  // The clusters the home route serves.
+  home: Home;
   // The reports requested by key, so that a key sent again answers the same report.
   requested: Map<string, { body: string; id: string }>;
   // The views of the reports, keyed `${id}:${lang}`, and the failures that replace them.
@@ -217,7 +220,7 @@ export const server = setupServer();
 // Installs the handlers of the contract, held by one mutable state, and the
 // hooks that start and stop the server around a test file.
 export function installMockApi(initial: Session): Mock {
-  const mock: Mock = { session: initial, calls: [], reports: [], profiles: [], requested: new Map(),
+  const mock: Mock = { session: initial, calls: [], reports: [], profiles: [], home: { clusters: [] }, requested: new Map(),
     views: new Map(),
     viewFailure: new Map(),
     adminUsers: [],
@@ -449,6 +452,10 @@ export function installMockApi(initial: Session): Mock {
       await record(request);
       return HttpResponse.json({ profiles: mock.profiles });
     }),
+    http.get(api("/home"), async ({ request }) => {
+      await record(request);
+      return HttpResponse.json(mock.home);
+    }),
     http.get(api("/reports"), async ({ request }) => {
       await record(request);
       const url = new URL(request.url);
@@ -540,6 +547,7 @@ export function installMockApi(initial: Session): Mock {
     mock.session = initial;
     mock.reports = [];
     mock.profiles = [];
+    mock.home = { clusters: [] };
     mock.requested = new Map();
     mock.views = new Map();
     mock.viewFailure = new Map();

@@ -8,6 +8,7 @@
   },
   "nav": {
     "label": "Main navigation",
+    "home": "Home",
     "reports": "Reports",
     "generate": "New report",
     "account": "Account",
@@ -333,6 +334,44 @@
     }
   },
   "home": {
+    "title": "Home",
+    "strip": {
+      "heading": "Clusters, by their latest report"
+    },
+    "chip": {
+      "unseen": "New report since your last visit",
+      "step": {
+        "queued": "Queued",
+        "collecting": "Collecting",
+        "rendering": "Rendering the PDF"
+      },
+      "none": "No report yet"
+    },
+    "answer": {
+      "open": "Open report",
+      "none": "This cluster has no report yet.",
+      "request": "Request a report",
+      "expired": "The latest report of this cluster has expired.",
+      "gone": "This report is no longer available."
+    },
+    "flight": {
+      "queued": "A new report is queued, requested {{age}}.",
+      "collecting": "A new report is collecting, requested {{age}}.",
+      "rendering": "A PDF of this report is being rendered.",
+      "follow": "Follow"
+    },
+    "failed": {
+      "notice": "The newest request failed: {{reason}}.",
+      "open": "Open"
+    },
+    "empty": {
+      "title": "No metric source is set up yet.",
+      "admin": "Add a profile",
+      "other": "An administrator must add one."
+    },
+    "meta": {
+      "namespaces": "All namespaces"
+    },
     "plan": {
       "all": "See the action plan"
     }

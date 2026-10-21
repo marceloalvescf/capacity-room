@@ -8,6 +8,7 @@
   },
   "nav": {
     "label": "Navegação principal",
+    "home": "Início",
     "reports": "Relatórios",
     "generate": "Novo relatório",
     "account": "Conta",
@@ -333,6 +334,44 @@
     }
   },
   "home": {
+    "title": "Início",
+    "strip": {
+      "heading": "Clusters, pelo relatório mais recente"
+    },
+    "chip": {
+      "unseen": "Relatório novo desde a sua última visita",
+      "step": {
+        "queued": "Na fila",
+        "collecting": "Coletando",
+        "rendering": "Gerando o PDF"
+      },
+      "none": "Nenhum relatório ainda"
+    },
+    "answer": {
+      "open": "Abrir relatório",
+      "none": "Este cluster ainda não tem relatório.",
+      "request": "Pedir um relatório",
+      "expired": "O relatório mais recente deste cluster expirou.",
+      "gone": "Este relatório não está mais disponível."
+    },
+    "flight": {
+      "queued": "Um novo relatório está na fila, pedido {{age}}.",
+      "collecting": "Um novo relatório está em coleta, pedido {{age}}.",
+      "rendering": "Um PDF deste relatório está sendo gerado.",
+      "follow": "Acompanhar"
+    },
+    "failed": {
+      "notice": "O pedido mais recente falhou: {{reason}}.",
+      "open": "Abrir"
+    },
+    "empty": {
+      "title": "Nenhuma fonte de métricas configurada ainda.",
+      "admin": "Adicionar um perfil",
+      "other": "Um administrador precisa adicionar uma."
+    },
+    "meta": {
+      "namespaces": "Todos os namespaces"
+    },
     "plan": {
       "all": "Ver o plano de ação"
     }

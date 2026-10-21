@@ -1,4 +1,3 @@
-import { DatedText } from "@/components/dated-text";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, NavLink, Outlet, useOutletContext, useParams } from "react-router";
@@ -10,13 +9,13 @@ import { Alert } from "@/components/ui/alert";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/cn";
-import { formatTime } from "@/lib/format";
 import { isLanguage } from "@/i18n/language";
 import { useProfiles, useReport } from "@/features/reports/api";
 import { PdfBlock } from "@/features/reports/pdf-block";
 import { Gone } from "@/features/reports/progress-page";
 import { usePrincipal } from "@/session/session";
 import { useReportView, type ReportView } from "./api";
+import { ReportMeta } from "./report-meta";
 import { reportTabs } from "./tabs";
 
 // The view the open tab shows.
@@ -76,14 +75,7 @@ export function ReportPage() {
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <h1 className="text-3xl font-semibold tracking-tight">{t("progress.title", { profile })}</h1>
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-fg">
-            <span>
-              {t("report.cluster")} <span className="font-mono text-fg">{view.data.report.cluster_name}</span>
-            </span>
-            <span className="whitespace-nowrap">{view.data.report.period_text}</span>
-            <span>{t(`reportProfile.${view.data.report.profile}`)}</span>
-            <span><DatedText i18nKey="progress.requested" values={{ time: formatTime(data.created_at), username: data.owner_username }} /></span>
-          </p>
+          <ReportMeta view={view.data} createdAt={data.created_at} owner={data.owner_username} />
         </div>
         <Popover>
           <PopoverTrigger asChild>

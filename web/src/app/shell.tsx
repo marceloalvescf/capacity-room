@@ -60,6 +60,11 @@ export function Shell() {
         <nav aria-label={t("nav.label")} className="flex-1">
           <ul>
             <li>
+              <NavLink to="/" end className={navLink}>
+                {t("nav.home")}
+              </NavLink>
+            </li>
+            <li>
               <Link to="/reports" aria-current={inReports ? "page" : undefined} className={navLink}>
                 {t("nav.reports")}
               </Link>

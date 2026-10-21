@@ -93,6 +93,33 @@ describe("screens", () => {
 
   for (const language of languages) {
     for (const theme of ["light", "dark"]) {
+      it(`axe and vocabulary: the home page with its answer, ${language}, ${theme}`, async () => {
+        document.documentElement.setAttribute("data-theme", theme);
+        const id = "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a01";
+        const latest = report({ worst_severity: "critical", cluster_name: "prod-1" });
+        const running = report({ id: "0b6c3b52-2f0e-4d0a-8d57-6f6f6c1f0a02", status: "running", phase: "collecting", worst_severity: null });
+        mock.home = {
+          clusters: [
+            { profile_id: "prod", display_name: "Production", latest, newest: running },
+            { profile_id: "edge", display_name: "Edge", latest: null, newest: null },
+          ],
+        };
+        mock.views.set(`${id}:en`, viewEn as components["schemas"]["ReportView"]);
+        mock.views.set(`${id}:pt-BR`, viewPt as components["schemas"]["ReportView"]);
+        mock.session = signedIn({ language });
+        const { container } = await renderApp("/", language);
+        await screen.findByRole("heading", { level: 1, name: i18next.t("home.title") });
+        await screen.findByRole("table");
+        const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
+        expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+        expect(findBannedTerms(language === "en" ? "en" : "pt-BR", readableText())).toEqual([]);
+        expect(document.title).toBe(i18next.t("app.title", { screen: i18next.t("home.title") }));
+      });
+    }
+  }
+
+  for (const language of languages) {
+    for (const theme of ["light", "dark"]) {
       it(`axe and vocabulary: the profiles with a row opened and a test result, ${language}, ${theme}`, async () => {
         document.documentElement.setAttribute("data-theme", theme);
         mock.adminProfiles = [adminProfile({ credential_file: "production-token", allowed_namespaces: ["payments"] })];
@@ -334,14 +361,11 @@ describe("screens", () => {
     });
   });
 
-  it("routes: signed-in sign-in and start page lead to the reports", async () => {
-    for (const path of ["/login", "/"]) {
-      const { router, unmount } = await renderApp(path);
-      await waitFor(() => {
-        expect(location(router)).toBe("/reports");
-      });
-      unmount();
-    }
+  it("routes: a signed-in sign-in leads to the start page", async () => {
+    const { router } = await renderApp("/login");
+    await waitFor(() => {
+      expect(location(router)).toBe("/");
+    });
   });
 
   it("routes: an unknown path shows not found inside the shell", async () => {

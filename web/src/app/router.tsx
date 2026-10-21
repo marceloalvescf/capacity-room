@@ -1,4 +1,5 @@
 import { Navigate, type RouteObject } from "react-router";
+import { HomePage } from "@/features/home/home-page";
 import { AccountPage } from "@/features/account/account-page";
 import { LoginPage } from "@/features/auth/login-page";
 import { AutoscalingTab } from "@/features/report/autoscaling-tab";
@@ -29,7 +30,7 @@ export const routes: RouteObject[] = [
       {
         element: <Shell />,
         children: [
-          { index: true, element: <Navigate to="/reports" replace /> },
+          { index: true, element: <HomePage /> },
           { path: "reports", element: <ReportsPage /> },
           {
             path: "generate",

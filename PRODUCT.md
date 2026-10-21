@@ -47,6 +47,9 @@ where, and what to do first, and trusts every mark enough to act on it.
 
 ## Capabilities and Constraints
 
+- Home: every active cluster as a chip marked by its latest report, with the
+  chosen cluster answered below in the words and numbers of that report and
+  a mark on a chip whose latest report is new since the reader last looked.
 - Reports: request, progress, a seven-tab report screen (overview, findings,
   namespaces, workloads, autoscaling, nodes, data quality), PDF download in
   either language, retention and expiry.
