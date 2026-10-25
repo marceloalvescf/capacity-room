@@ -187,7 +187,9 @@ check-runtime: $(IMAGE_DEP)
 # whose typst the specs can make fail. Each fake stops with eight answers
 # unasked: the seven recorded answers of the old cluster autoscaler, which the
 # program no longer asks, and the one of an HPA info that nothing asks, as a
-# whole run of direct-complete does in internal/goldentest. No log of
+# whole run of direct-complete does in internal/goldentest. The settings folder
+# is a copy of deploy/platform made for the run, with a server secret of its own
+# in .cache/e2e/config. No log of
 # the stack holds a secret the run used. The stack is removed with its volumes
 # first and last.
 E2E_COMPOSE := docker compose -f deploy/compose.yaml -f deploy/compose.integration.yaml
@@ -197,8 +199,14 @@ e2e: $(IMAGE_DEP)
 	docker build $(BUILD_FLAGS) --file deploy/Containerfile --target fake-prometheus --tag capacity-room-fake-prometheus:$(VERSION) .
 	docker build $(filter-out --pull,$(BUILD_FLAGS)) --file deploy/worker-e2e.Containerfile --build-arg RUNTIME_IMAGE=$(IMAGE) --tag capacity-room-worker-e2e:$(VERSION) .
 	@set -o pipefail; \
-	export CAPACITYROOM_VERSION=$(VERSION) CAPACITYROOM_CONFIG_DIR=$(CURDIR)/deploy/platform CAPACITYROOM_POSTGRES_PASSWORD=capacityroom_e2e_only; \
-	mkdir -p .cache/e2e; : > .cache/e2e/one-shot.log; \
+	rm -rf .cache/e2e/config && mkdir -p .cache/e2e \
+		&& cp -R deploy/platform .cache/e2e/config \
+		&& mkdir -p .cache/e2e/config/secret \
+		&& head -c 32 /dev/urandom > .cache/e2e/config/secret/server-secret \
+		&& chmod -R a+rX .cache/e2e/config \
+		|| { echo 'e2e: the settings folder could not be made'; exit 1; }; \
+	export CAPACITYROOM_VERSION=$(VERSION) CAPACITYROOM_CONFIG_DIR=$(CURDIR)/.cache/e2e/config CAPACITYROOM_POSTGRES_PASSWORD=capacityroom_e2e_only; \
+	: > .cache/e2e/one-shot.log; \
 	$(E2E_COMPOSE) down --volumes; \
 	$(E2E_COMPOSE) up -d --wait postgres \
 		&& $(E2E_COMPOSE) run --rm -T migrate 2>&1 | tee -a .cache/e2e/one-shot.log \

@@ -753,7 +753,8 @@ redactor the moment the settings are loaded, before the pool opens.
   concurrency spec leaves `e2e-admin` the one active administrator. Every
   spec fails on any CSP violation and on any axe finding, except the
   security check that injects one. The fixtures of `deploy/platform/` serve
-  this stack alone.
+  this stack alone. The target copies them to `.cache/e2e/config` and writes a
+  fresh server secret there for each run; none is tracked.
 - **The report screen is `/reports/:id/:tab`,** with seven tabs: overview,
   findings, namespaces, workloads, autoscaling, nodes, and quality. Its frame
   reads `GET /reports/{id}` and `GET /reports/{id}/view?lang=`. The view has

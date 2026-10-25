@@ -71,6 +71,18 @@ including running the two commands that need `CAPACITYROOM_BOOTSTRAP_MODE=1`.
   NetworkPolicy; name the gateway's address alone when it has one (section 12
   of the operations guide).
 
+## The test fixtures
+
+The files of `deploy/platform/` serve `make e2e` alone. The administrator
+password `e2e-admin-password`, the credential `credentials/e2e-recovery`, and
+the database password `capacityroom_e2e_only` of the Makefile are public and
+weak by design. They reach only the fake metric sources, on the throwaway
+network of the e2e project, which `make e2e` removes with its volumes. The
+server secret is not tracked: `make e2e` writes a new one for every run into
+its copy of the folder under `.cache/e2e/config`. Every operator path makes
+its own secret and passwords: the Compose guide in section 4 of
+`docs/operations.md`, and the chart in section 12, "Secrets to create first".
+
 ## What an operator must do
 
 - Run a TLS proxy in front of `serve`, and set `trusted_proxies` to the
