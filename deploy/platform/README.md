@@ -5,8 +5,9 @@ file, the password of the test administrator, and `profiles.toml`, the
 profiles that point at the stack's fake Prometheus servers. They are public
 and weak by design. The server secret is not tracked: `make e2e` copies this
 folder to `.cache/e2e/config`, writes a fresh `secret/server-secret` there on
-every run, and points `CAPACITYROOM_CONFIG_DIR` at the copy. Never use them for a deployment: a deployment provides its own folder, and its
-own database password in `CAPACITYROOM_POSTGRES_PASSWORD`.
+every run, and points `CAPACITYROOM_CONFIG_DIR` at the copy. Never use them
+for a deployment: a deployment provides its own folder, and its own database
+password in `CAPACITYROOM_POSTGRES_PASSWORD`.
 
 The folder mounts at `/opt/capacity-room` with the layout `platform.toml`,
 `secret/server-secret` (made by the run), and `credentials/`.

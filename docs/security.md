@@ -76,8 +76,9 @@ including running the two commands that need `CAPACITYROOM_BOOTSTRAP_MODE=1`.
 The files of `deploy/platform/` serve `make e2e` alone. The administrator
 password `e2e-admin-password`, the credential `credentials/e2e-recovery`, and
 the database password `capacityroom_e2e_only` of the Makefile are public and
-weak by design. They reach only the fake metric sources, on the throwaway
-network of the e2e project, which `make e2e` removes with its volumes. The
+weak by design. They are used only inside the e2e project, whose stack holds
+no real data and reaches only the fake metric sources, and which `make e2e`
+removes with its volumes before and after the run. The
 server secret is not tracked: `make e2e` writes a new one for every run into
 its copy of the folder under `.cache/e2e/config`. Every operator path makes
 its own secret and passwords: the Compose guide in section 4 of

@@ -189,8 +189,8 @@ check-runtime: $(IMAGE_DEP)
 # program no longer asks, and the one of an HPA info that nothing asks, as a
 # whole run of direct-complete does in internal/goldentest. The settings folder
 # is a copy of deploy/platform made for the run, with a server secret of its own
-# in .cache/e2e/config. No log of
-# the stack holds a secret the run used. The stack is removed with its volumes
+# that no file of the repository holds. No log of the stack holds a secret the
+# run used. The stack is removed with its volumes
 # first and last.
 E2E_COMPOSE := docker compose -f deploy/compose.yaml -f deploy/compose.integration.yaml
 E2E_FAKES := fake-prometheus fake-recovery
