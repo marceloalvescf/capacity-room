@@ -10,7 +10,8 @@ import (
 const ociChart = "oci://ghcr.io/marceloalvescf/charts/capacity-room"
 
 // TestPublishedChartVersionEqualsVERSION requires the OCI chart in both chart
-// documents, and every version written beside it to equal VERSION.
+// documents, and every version written beside it, and every tag of the
+// published image, to equal VERSION.
 func TestPublishedChartVersionEqualsVERSION(t *testing.T) {
 	raw, err := os.ReadFile("../../VERSION")
 	if err != nil {
@@ -18,6 +19,7 @@ func TestPublishedChartVersionEqualsVERSION(t *testing.T) {
 	}
 	version := strings.TrimSpace(string(raw))
 	pin := regexp.MustCompile(`--version (\S+)`)
+	image := regexp.MustCompile(`alvesmarcelocf/capacity-room:([^\s"'` + "`" + `]+)`)
 	documents := []struct {
 		path     string
 		required bool
@@ -33,6 +35,11 @@ func TestPublishedChartVersionEqualsVERSION(t *testing.T) {
 		}
 		found := 0
 		for number, line := range strings.Split(string(data), "\n") {
+			for _, tag := range image.FindAllStringSubmatch(line, -1) {
+				if strings.TrimRight(tag[1], ".,;") != version {
+					t.Errorf("%s:%d: image tag %s, want %s", document.path, number+1, tag[1], version)
+				}
+			}
 			if !strings.Contains(line, ociChart) {
 				continue
 			}

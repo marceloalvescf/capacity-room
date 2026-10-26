@@ -27,7 +27,7 @@ migration, no route, no screen, and no number changes.
   (the `runtime` stage) for `serve`, `worker`, and `admin`. The owner runs
   `docker login` and creates the pull secret, so no agent sees a token.
 - The chart lives in the repository and is published only as the OCI chart
-  `oci://ghcr.io/marceloalvescf/charts/capacity-room`, by `make push-chart`
+  `oci://ghcr.io/marceloalvescf/charts/capacity-room`, by `.github/workflows/release.yml`
   (amended 2026-10-26). Its values are generic. It has a Gateway API `HTTPRoute` template, proven live
   on the homelab, and an `Ingress` template, proven by schema and by a
   server-side dry run only, since the homelab has no Ingress controller.
@@ -256,11 +256,10 @@ secret into `secret/`. No stored data is touched.
 
 ## 5. The image
 
-`make push` builds the `runtime` stage for `linux/amd64` and pushes
-`alvesmarcelocf/capacity-room:$(VERSION)`. It refuses a working tree with
-changes. It is outward: the main thread runs it, after naming the target and
-receiving the owner's word, and it is not part of `make gate`. The owner runs
-`docker login` before it.
+`.github/workflows/release.yml` pushes `alvesmarcelocf/capacity-room:$(VERSION)`,
+the `runtime` image for `linux/amd64` that `make gate` built and tested, when
+the owner pushes the annotated tag of a version, and refuses a version already
+published (amended 2026-10-26; `make push` is gone).
 
 The image is pushed from the version commit of 2.1.0 after `make gate` passes
 on it. A defect found on the homelab is fixed on the branch, the gate passes

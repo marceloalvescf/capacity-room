@@ -966,7 +966,10 @@ design, and section 12 of `docs/operations.md` is the operator's guide to it.
 - **The chart lives in `deploy/helm/capacity-room/` and is published only as
   the OCI chart `oci://ghcr.io/marceloalvescf/charts/capacity-room`,** by
   `.github/workflows/release.yml` on a version tag, with the version of
-  `VERSION`. An operator installs from
+  `VERSION`. The workflow pushes with the repository's token, so the package
+  grants the repository Write under Manage Actions access; it pushes the
+  chart before the image and refuses a version either registry already
+  holds. An operator installs from
   it, or from the chart folder of a checkout, never from the repository root.
 - **The chart's README is the quick start of section 12.** It links to
   `docs/operations.md` and changes with it in the same commit.
