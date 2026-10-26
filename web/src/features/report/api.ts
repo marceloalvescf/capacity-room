@@ -20,6 +20,12 @@ export type ViewVerdict = Schemas["ViewVerdict"];
 export type ViewGauge = NonNullable<Schemas["ViewGauge"]>;
 export type ViewPressure = Schemas["ViewPressure"];
 export type ViewScope = Schemas["ViewScope"];
+export type ViewTotal = Schemas["ViewTotal"];
+
+// The findings shown: the sum of the counts of the totals, which follow the floor of the report.
+export function shownTotal(view: ReportView): number {
+  return view.verdict.totals.reduce((sum, entry) => sum + entry.count, 0);
+}
 
 // The view of a report in one language. It is read once: the snapshot behind it never changes, so no change of
 // the reports reloads it. The view of the previous language of the same report stays on screen while the new one

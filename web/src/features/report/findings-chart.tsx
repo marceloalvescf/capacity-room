@@ -3,10 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 import { StatusMark, StatusShape } from "@/components/status-mark";
 import { cn } from "@/lib/cn";
-import type { ReportView, ViewScope } from "./api";
+import { shownTotal, type ReportView, type ViewScope, type ViewTotal } from "./api";
 
-const severities = ["critical", "attention", "healthy"] as const;
-type Severity = (typeof severities)[number];
+type Severity = ViewTotal["severity"];
 
 const fill: Record<Severity, string> = { critical: "fill-critical", attention: "fill-attention", healthy: "fill-healthy" };
 
@@ -39,18 +38,17 @@ function sector(from: number, to: number): string {
   return `M ${point(outer, from)} A ${String(outer)} ${String(outer)} 0 ${String(large)} 1 ${point(outer, to)} L ${point(inner, to)} A ${String(inner)} ${String(inner)} 0 ${String(large)} 0 ${point(inner, from)} Z`;
 }
 
-// Every finding of the report as a ring, one slice for each severity that has any, with the total at its centre and
-// the three counts beside it as text.
-export function Donut({ critical, attention, healthy }: { critical: number; attention: number; healthy: number }) {
+// The findings shown as a ring, one slice for each severity of the totals that has any, with their sum at its centre
+// and the counts beside it as text. The totals sum to more than zero.
+export function Donut({ totals }: { totals: readonly ViewTotal[] }) {
   const { t } = useTranslation();
-  const counts: Record<Severity, number> = { critical, attention, healthy };
-  const total = critical + attention + healthy;
+  const total = totals.reduce((sum, entry) => sum + entry.count, 0);
   const sweeps = lift(
-    severities.map((severity) => (counts[severity] / total) * 360),
+    totals.map((entry) => (entry.count / total) * 360),
     minSweep,
   );
-  const slices = severities.flatMap((severity, index) => {
-    if (counts[severity] === 0) {
+  const slices = totals.flatMap(({ severity, count }, index) => {
+    if (count === 0) {
       return [];
     }
     const from = sweeps.slice(0, index).reduce((sum, sweep) => sum + sweep, 0);
@@ -70,10 +68,10 @@ export function Donut({ critical, attention, healthy }: { critical: number; atte
         </p>
       </div>
       <ul className="flex flex-col gap-1 text-sm">
-        {severities.map((severity) => (
+        {totals.map(({ severity, count }) => (
           <li key={severity} className="flex items-center gap-2">
             <StatusShape status={severity} />
-            <span className="w-8 text-right font-mono font-semibold">{counts[severity]}</span>
+            <span className="w-8 text-right font-mono font-semibold">{count}</span>
             <span className="text-muted-fg">{t(`status.${severity}`)}</span>
           </li>
         ))}
@@ -85,18 +83,31 @@ export function Donut({ critical, attention, healthy }: { critical: number; atte
 const barWidth = 1000;
 const gap = 2;
 
-// The findings of one scope as a bar of its three severities, drawn on the scale shared by every row. With `link`,
+// The findings of one scope as a bar of the severities of the totals, drawn on the scale shared by every row. With `link`,
 // each segment filters the Findings tab; without it, the row names the worst finding and links to it.
-export function ScopeBar({ scope, scale, link, lead }: { scope: ViewScope; scale: number; link: boolean; lead?: { sentence: string; to: string } | undefined }) {
+export function ScopeBar({
+  scope,
+  totals,
+  scale,
+  link,
+  lead,
+}: {
+  scope: ViewScope;
+  totals: readonly ViewTotal[];
+  scale: number;
+  link: boolean;
+  lead?: { sentence: string; to: string } | undefined;
+}) {
   const { t } = useTranslation();
   const [params] = useSearchParams();
   const name = t(`report.overview.scope.${scope.scope_type}`);
   const counts: Record<Severity, number> = { critical: scope.critical, attention: scope.attention, healthy: scope.healthy };
+  const shown = totals.map((entry) => entry.severity);
   const widths = lift(
-    severities.map((severity) => (counts[severity] / scale) * barWidth),
+    shown.map((severity) => (counts[severity] / scale) * barWidth),
     minWidth,
   );
-  const segments = severities.flatMap((severity, index) =>
+  const segments = shown.flatMap((severity, index) =>
     counts[severity] === 0
       ? []
       : [{ severity, count: counts[severity], at: widths.slice(0, index).reduce((sum, width) => sum + width, 0), width: widths[index] ?? 0 }],
@@ -155,7 +166,7 @@ export function ScopeBar({ scope, scale, link, lead }: { scope: ViewScope; scale
         )}
       </div>
       <span className="flex items-center gap-3 pt-0.5 text-sm">
-        {severities.map((severity) => (
+        {shown.map((severity) => (
           <span key={severity} className="inline-flex items-center gap-1">
             <StatusShape status={severity} />
             <span className="sr-only">{t(`status.${severity}`)}</span>
@@ -170,39 +181,35 @@ export function ScopeBar({ scope, scale, link, lead }: { scope: ViewScope; scale
 // The donut of the report's findings and the bar of each scope, side by side and level. `under` takes its own row below them.
 export function FindingsChart({ view, base, linkSegments, under }: { view: ReportView; base: string; linkSegments: boolean; under?: ReactNode }) {
   const { t } = useTranslation();
-  const { summary, findings, verdict } = view;
-  const critical = summary.critical.raw ?? 0;
-  const attention = summary.attention.raw ?? 0;
-  const healthy = summary.healthy.raw ?? 0;
-  const empty = findings.length === 0 || critical + attention + healthy === 0;
+  const { findings, verdict } = view;
   function leadOf(scope: ViewScope) {
     const lead = findings[scope.finding];
     return lead === undefined ? undefined : { sentence: lead.sentence, to: `${base}/findings?scope=${scope.scope_type}&finding=${String(scope.finding)}` };
   }
-  const scale = Math.max(1, ...verdict.scopes.map((scope) => scope.critical + scope.attention + scope.healthy));
+  const { totals } = verdict;
+  const scale = Math.max(
+    1,
+    ...verdict.scopes.map((scope) => totals.reduce((sum, entry) => sum + scope[entry.severity], 0)),
+  );
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid items-stretch gap-4 lg:grid-cols-3">
-        <div className="flex flex-col justify-center rounded-lg border border-border bg-surface p-5 text-surface-fg">
-          {empty ? (
-            <p className="text-sm text-muted-fg">{t("report.noFinding")}</p>
-          ) : (
-            <Donut critical={critical} attention={attention} healthy={healthy} />
-          )}
-        </div>
-        {empty ? null : (
+      {shownTotal(view) === 0 ? null : (
+        <div className="grid items-stretch gap-4 lg:grid-cols-3">
+          <div className="flex flex-col justify-center rounded-lg border border-border bg-surface p-5 text-surface-fg">
+            <Donut totals={totals} />
+          </div>
           <section className="flex flex-col rounded-lg border border-border bg-surface p-5 text-surface-fg lg:col-span-2">
             <h2 className="mb-2 text-sm font-normal text-muted-fg">
               {t(linkSegments ? "report.chart.scopesLinked" : "report.chart.scopes")}
             </h2>
             <ul className="flex flex-1 flex-col">
               {verdict.scopes.map((scope) => (
-                <ScopeBar key={scope.scope_type} scope={scope} scale={scale} link={linkSegments} lead={leadOf(scope)} />
+                <ScopeBar key={scope.scope_type} scope={scope} totals={totals} scale={scale} link={linkSegments} lead={leadOf(scope)} />
               ))}
             </ul>
           </section>
-        )}
-      </div>
+        </div>
+      )}
       {under}
     </div>
   );

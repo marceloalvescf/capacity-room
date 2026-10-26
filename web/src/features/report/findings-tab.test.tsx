@@ -8,6 +8,8 @@ import { location, renderApp } from "../../../tests/render";
 import { mockColourScheme } from "../../../tests/match-media";
 import viewEn from "../../../tests/fixtures/view/edge-scaling.en.json";
 import viewPt from "../../../tests/fixtures/view/edge-scaling.pt-BR.json";
+import directComplete from "../../../tests/fixtures/view/direct-complete.en.json";
+import { emptyOf, executiveOf } from "../../../tests/executive";
 
 const mock = installMockApi(signedIn());
 
@@ -349,10 +351,21 @@ describe("findings tab", () => {
     expect(location(router)).toBe(`/reports/${id}/findings?finding=99&severity=bogus`);
   });
 
+  it("an executive report offers the chips of the severities it shows, and ignores a severity it does not", async () => {
+    mock.views.set(`${id}:en`, executiveOf(directComplete as View));
+    await renderApp(`/reports/${id}/findings?severity=healthy`, "en");
+    const group = await screen.findByRole("group", { name: "Severity" });
+    expect(within(group).getAllByRole("button").map((button) => button.textContent)).toEqual(["Critical4", "Attention3"]);
+    expect(within(group).getAllByRole("button").map((button) => button.getAttribute("aria-pressed"))).toEqual(["true", "true"]);
+    expect(screen.queryByText("Healthy")).toBeNull();
+  });
+
   it("no findings", async () => {
-    mock.views.set(`${id}:en`, { ...english, findings: [] });
+    mock.views.set(`${id}:en`, emptyOf(english));
     await renderApp(`/reports/${id}/findings`, "en");
-    expect(await screen.findByText("This report holds no findings.")).toBeInTheDocument();
+    expect(await screen.findByText("Nothing needs attention.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { pressed: true })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Severity" })).toBeNull();
     expect(screen.queryByRole("article")).toBeNull();
   });
 

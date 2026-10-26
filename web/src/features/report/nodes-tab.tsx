@@ -8,7 +8,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CopyName, useCopy } from "./copy-name";
 import { DataTable, severityRank, type Column } from "@/components/data-table";
-import { Facts, FindingStatus, matchNode, nodeKey, nodepoolKey, PeakCell, peakTint, RowFindings, StatGrid, useFindingIndex, useWorstFindingIndex, ValueText } from "./pieces";
+import { Facts, FindingStatus, matchNode, nodeKey, PeakCell, peakTint, RowFindings, StatGrid, useFindingIndex, ValueText } from "./pieces";
 import { useView } from "./report-page";
 
 const rowKey = (row: ViewNode) => row.name;
@@ -133,8 +133,6 @@ function PoolNodes({ pool }: { pool: ViewNodepool }) {
 
 function Pools({ pools }: { pools: ViewNodepool[] }) {
   const { t } = useTranslation();
-  const index = useWorstFindingIndex();
-  const statusOf = useCallback((pool: ViewNodepool) => index.get(nodepoolKey(pool))?.severity ?? "healthy", [index]);
   const columns = useMemo<Column<ViewNodepool>[]>(
     () => [
       {
@@ -145,7 +143,7 @@ function Pools({ pools }: { pools: ViewNodepool[] }) {
       {
         id: "status",
         header: t("report.column.status"),
-        cell: (pool) => <FindingStatus status={statusOf(pool)} hasFinding={index.has(nodepoolKey(pool))} />,
+        cell: (pool) => <FindingStatus status={pool.status ?? "healthy"} hasFinding={pool.status !== null} />,
       },
       {
         id: "confidence",
@@ -158,7 +156,7 @@ function Pools({ pools }: { pools: ViewNodepool[] }) {
         cell: (pool) => <PoolNodes pool={pool} />,
       },
     ],
-    [t, index, statusOf],
+    [t],
   );
   return (
     <DataTable

@@ -10,6 +10,7 @@ import viewEn from "../../../tests/fixtures/view/edge-scaling.en.json";
 import viewPt from "../../../tests/fixtures/view/edge-scaling.pt-BR.json";
 import directComplete from "../../../tests/fixtures/view/direct-complete.en.json";
 import directCompletePt from "../../../tests/fixtures/view/direct-complete.pt-BR.json";
+import { emptyOf, executiveOf } from "../../../tests/executive";
 
 const mock = installMockApi(signedIn());
 
@@ -295,7 +296,7 @@ describe("overview tab", () => {
   });
 
   it("the worst severity present is not coloured in the strip", async () => {
-    mock.views.set(`${id}:en`, { ...english, summary: { ...english.summary, critical: { raw: 0, text: "0", status: null } } });
+    mock.views.set(`${id}:en`, { ...english, verdict: { ...english.verdict, totals: [{ severity: "critical", count: 0 }, ...english.verdict.totals.slice(1)] } });
     await open();
     const links = within(screen.getByRole("group", { name: "Findings by severity" })).getAllByRole("link");
     expect(links[0]?.querySelector("svg")?.getAttribute("class")).toContain("text-critical");
@@ -303,38 +304,38 @@ describe("overview tab", () => {
     expect(links[1]).not.toHaveClass("text-attention");
   });
 
-  it("a total below the minimum severity keeps its count and no link", async () => {
-    mock.views.set(`${id}:en`, { ...english, min_severity: "attention" });
+  it("an executive report lists critical and attention, each a link, and no healthy", async () => {
+    const executive = executiveOf(directComplete as View);
+    mock.views.set(`${id}:en`, executive);
     await open();
-    let totals = screen.getByRole("group", { name: "Findings by severity" });
-    expect(within(totals).getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+    const totals = screen.getByRole("group", { name: "Findings by severity" });
+    const links = within(totals).getAllByRole("link");
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
       expect.stringMatching(/findings\?severity=critical$/),
       expect.stringMatching(/findings\?severity=attention$/),
     ]);
-    const healthy = within(totals).getByText("Healthy").parentElement as HTMLElement;
-    expect(healthy).toHaveTextContent("7Healthy");
-    expect(healthy.closest("a")).toBeNull();
-    expect(within(healthy).getByText("7")).toHaveClass("font-mono");
-
-    mock.views.set(`${id}:en`, { ...english, min_severity: "critical" });
-    cleanup();
-    await open();
-    totals = screen.getByRole("group", { name: "Findings by severity" });
-    expect(within(totals).getAllByRole("link")).toHaveLength(1);
-    expect((within(totals).getByText("Attention").parentElement as HTMLElement).closest("a")).toBeNull();
+    expect(within(totals).queryByText("Healthy")).toBeNull();
+    expect(links[0]).toHaveTextContent("4Critical");
+    expect(links[1]).toHaveTextContent("3Attention");
+    expect(within(links[0] as HTMLElement).getByText("4")).toHaveClass("font-mono");
+    const donut = screen.getByText("findings").closest(".rounded-lg") as HTMLElement;
+    expect(within(donut).getByText("7")).toBeInTheDocument();
+    expect(within(donut).queryByText("Healthy")).toBeNull();
+    const scopes = screen.getByRole("heading", { name: "Findings of each scope by severity, on one scale" }).closest("section") as HTMLElement;
+    expect(within(scopes).queryByText("Healthy")).toBeNull();
   });
 
-  it("a report with no finding says so in the strip", async () => {
-    const none = { raw: 0, text: "0", status: null };
-    mock.views.set(`${id}:en`, {
-      ...english,
-      findings: [],
-      verdict: { cluster_finding: null, node_evidence_warning: null, gauge: null, pressure: [], scopes: [] },
-      recommendations: [],
-      summary: { ...english.summary, critical: none, attention: none, healthy: none },
-    });
+  it("a detailed report lists the three severities", async () => {
+    mock.views.set(`${id}:en`, directComplete as View);
     await open();
-    expect(screen.getByText("This report holds no findings.")).toBeInTheDocument();
+    const totals = screen.getByRole("group", { name: "Findings by severity" });
+    expect(within(totals).getAllByRole("link").map((link) => link.textContent)).toEqual(["4Critical", "3Attention", "6Healthy"]);
+  });
+
+  it("a report with nothing to show says so in the strip", async () => {
+    mock.views.set(`${id}:en`, emptyOf(directComplete as View));
+    await open();
+    expect(screen.getByText("Nothing needs attention.")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Findings by severity" })).toBeNull();
   });
 
@@ -464,7 +465,6 @@ describe("overview tab", () => {
     expect(details.open).toBe(true);
     expect(details).toHaveTextContent("America/Sao_Paulo");
     expect(details).toHaveTextContent("payments");
-    expect(details).toHaveTextContent("All");
     expect(details).toHaveTextContent(english.report.emitted_at_text);
     expect(details).toHaveTextContent("0.0.0-golden");
     expect(within(details).getByText("America/Sao_Paulo")).toHaveClass("font-mono");
@@ -516,18 +516,11 @@ describe("overview tab", () => {
     expect(donut.compareDocumentPosition(growth()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("a report with no finding shows No finding and no chart", async () => {
-    const none = { raw: 0, text: "0", status: null };
-    mock.views.set(`${id}:en`, {
-      ...english,
-      findings: [],
-      verdict: { cluster_finding: null, node_evidence_warning: null, gauge: null, pressure: [], scopes: [] },
-      recommendations: [],
-      summary: { ...english.summary, critical: none, attention: none, healthy: none },
-    });
+  it("a report with nothing to show draws neither card, and keeps the growth pair", async () => {
+    mock.views.set(`${id}:en`, emptyOf(english));
     await open();
-    expect(screen.getByText("No finding")).toBeInTheDocument();
     expect(screen.queryByText("findings")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Findings of each scope by severity, on one scale" })).toBeNull();
     expect(document.querySelector("svg[viewBox='0 0 200 200']")).toBeNull();
     expect(growth()).toBeInTheDocument();
   });

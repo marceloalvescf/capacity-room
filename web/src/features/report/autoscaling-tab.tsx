@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StatusMark } from "@/components/status-mark";
 import type { ViewHPA, ViewValue } from "./api";
@@ -10,6 +10,7 @@ import { useView } from "./report-page";
 const rowKey = (row: ViewHPA) => `${row.namespace}/${row.name}`;
 const rowName = (row: ViewHPA) => row.name;
 const searchText = (row: ViewHPA) => `${row.name} ${row.target_kind} ${row.target_name} ${row.namespace}`;
+const rowStatus = (row: ViewHPA) => row.status ?? "";
 
 // A replica bound in mono; an unavailable one is its placeholder word alone, muted, in the sans face.
 function ReplicaBound({ value }: { value: ViewValue }) {
@@ -39,7 +40,6 @@ export function AutoscalingTab() {
   const view = useView();
   const { summary, hpas } = view;
   const index = useWorstFindingIndex();
-  const status = useCallback((row: ViewHPA) => index.get(hpaKey(row))?.severity ?? "", [index]);
   const { autoscaling } = summary;
   const columns = useMemo<Column<ViewHPA>[]>(
     () => [
@@ -64,12 +64,12 @@ export function AutoscalingTab() {
           const worst = index.get(hpaKey(row));
           return (
             <div className="flex flex-col gap-0.5">
-              <FindingStatus status={worst?.severity ?? "healthy"} hasFinding={worst !== undefined} />
+              <FindingStatus status={row.status ?? "healthy"} hasFinding={row.status !== null} />
               {worst !== undefined && <span className="max-w-56 text-xs leading-snug">{worst.sentence}</span>}
             </div>
           );
         },
-        sortValue: (row) => severityRank[status(row)] ?? 3,
+        sortValue: (row) => severityRank[row.status ?? ""] ?? 3,
       },
       {
         id: "situation",
@@ -105,7 +105,7 @@ export function AutoscalingTab() {
         align: "end",
       },
     ],
-    [t, index, status],
+    [t, index],
   );
   return (
     <div className="flex flex-col gap-6">
@@ -145,7 +145,7 @@ export function AutoscalingTab() {
           rowName={rowName}
           columns={columns}
           renderOpened={renderOpened}
-          status={status}
+          status={rowStatus}
         />
       </section>
     </div>

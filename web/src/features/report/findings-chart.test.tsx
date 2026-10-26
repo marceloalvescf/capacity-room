@@ -22,9 +22,15 @@ function degrees(d: string): number {
   return (((to ?? 0) - (from ?? 0)) * 180) / Math.PI;
 }
 
+const threeTotals = [
+  { severity: "critical", count: 1 },
+  { severity: "attention", count: 0 },
+  { severity: "healthy", count: 400 },
+] as const;
+
 describe("Donut", () => {
   it("draws a critical slice of at least the least sweep and fills the ring", () => {
-    const { container } = render(<Donut critical={1} attention={0} healthy={400} />);
+    const { container } = render(<Donut totals={threeTotals} />);
     const paths = [...container.querySelectorAll("path")];
     expect(paths).toHaveLength(2);
     const critical = degrees(paths[0]?.getAttribute("d") ?? "");
@@ -40,7 +46,7 @@ describe("ScopeBar", () => {
     const { container } = render(
       <MemoryRouter>
         <ul>
-          <ScopeBar scope={scope} scale={401} link={false} />
+          <ScopeBar scope={scope} totals={threeTotals} scale={401} link={false} />
         </ul>
       </MemoryRouter>,
     );

@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { scrollBehavior } from "@/components/reveal";
 import { cn } from "@/lib/cn";
 import { useAddress } from "@/lib/address";
-import type { ViewFinding } from "./api";
+import { shownTotal, type ViewFinding } from "./api";
 import { ConfidenceText, isUnknownPool, scopeName } from "./pieces";
 import { proofOf, provedNames } from "./proof";
 import { FindingsChart } from "./findings-chart";
@@ -23,18 +23,18 @@ type ScopeType = (typeof viewScopeTypeValues)[number];
 // The order of the groups, the most serious first.
 const severityOrder: readonly Severity[] = ["critical", "attention", "healthy"];
 
-// The severities the address holds: absent means all, an empty value means none, and a list of names none of which is
-// known means all.
-function readSeverities(param: string | null): ReadonlySet<Severity> {
+// The severities the address holds among the listed ones: absent means all, an empty value means none, and a list of
+// names none of which is listed means all.
+function readSeverities(param: string | null, listed: readonly Severity[]): ReadonlySet<Severity> {
   if (param === null) {
-    return new Set(viewSeverityValues);
+    return new Set(listed);
   }
   if (param === "") {
     return new Set();
   }
   const named = param.split(",");
-  const known = severityOrder.filter((severity) => named.includes(severity));
-  return new Set(known.length === 0 ? viewSeverityValues : known);
+  const known = listed.filter((severity) => named.includes(severity));
+  return new Set(known.length === 0 ? listed : known);
 }
 
 function readIndex(param: string | null): number | null {
@@ -149,7 +149,9 @@ export function FindingsTab() {
   const search = useSearchText(address);
   const groupId = useId();
   const query = search.text;
-  const severities = readSeverities(params.get("severity"));
+  const { totals } = view.verdict;
+  const listed = totals.map((entry) => entry.severity);
+  const severities = readSeverities(params.get("severity"), listed);
   const present = useMemo(
     () => viewScopeTypeValues.filter((type) => findings.some((finding) => finding.scope_type === type)),
     [findings],
@@ -176,7 +178,7 @@ export function FindingsTab() {
   const foldKey = `${String(wanted ?? "")}|${query}|${params.get("severity") ?? ""}|${scope ?? ""}`;
   const [kept, setKept] = useState<{ key: string; chosen: ReadonlyMap<Severity, boolean> }>({ key: foldKey, chosen: new Map() });
   const chosen = kept.key === foldKey ? kept.chosen : new Map<Severity, boolean>();
-  const narrowed = query !== "" || severities.size < severityOrder.length || scope !== null;
+  const narrowed = query !== "" || severities.size < listed.length || scope !== null;
   const listId = useId();
   function isOpen(severity: Severity): boolean {
     return chosen.get(severity) ?? (selected?.finding.severity === severity || narrowed);
@@ -192,9 +194,9 @@ export function FindingsTab() {
   }, [deepLinked]);
 
   function toggle(severity: Severity) {
-    const kept = severityOrder.filter((name) => severities.has(name) !== (name === severity));
+    const kept = listed.filter((name) => severities.has(name) !== (name === severity));
     write((next) => {
-      if (kept.length === severityOrder.length) {
+      if (kept.length === listed.length) {
         next.delete("severity");
       } else {
         next.set("severity", kept.join(","));
@@ -202,7 +204,7 @@ export function FindingsTab() {
     });
   }
 
-  if (findings.length === 0) {
+  if (shownTotal(view) === 0) {
     return <p className="text-sm text-muted-fg">{t("report.findings.none")}</p>;
   }
 
@@ -216,7 +218,7 @@ export function FindingsTab() {
             {t("report.findings.severity")}
           </span>
           <div role="group" aria-labelledby={groupId} className="flex flex-wrap gap-2">
-            {severityOrder.map((severity) => {
+            {totals.map(({ severity, count }) => {
               const pressed = severities.has(severity);
               return (
                 <button
@@ -235,7 +237,7 @@ export function FindingsTab() {
                   )}
                 >
                   <StatusMark status={severity} plain={!pressed} />
-                  <span className="font-mono">{findings.filter((finding) => finding.severity === severity).length}</span>
+                  <span className="font-mono">{count}</span>
                 </button>
               );
             })}

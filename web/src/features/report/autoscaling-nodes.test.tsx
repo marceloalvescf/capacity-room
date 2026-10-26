@@ -62,6 +62,13 @@ describe("autoscaling tab", () => {
     expect(list.getAllByRole("definition").map((value) => value.textContent)).toEqual(["4", "2", "2", "2"]);
   });
 
+  it("an HPA row with no finding says so, and one with only healthy findings shows the mark", async () => {
+    await open("autoscaling");
+    expect(within(rowOf("HPAs", "dup")).getAllByRole("cell")[2]).toHaveTextContent(/^No finding$/);
+    expect(within(rowOf("HPAs", "fixed")).getAllByRole("cell")[2]).toHaveTextContent(/^Healthy/);
+    expect(within(rowOf("HPAs", "web")).getAllByRole("cell")[2]).toHaveTextContent(/^Critical/);
+  });
+
   it("hpa rows", async () => {
     await open("autoscaling");
     const table = screen.getByRole("table", { name: "HPAs" });
@@ -271,6 +278,7 @@ describe("nodes tab", () => {
   });
 
   it("no finding is worded in Portuguese", async () => {
+    mock.views.set(`${id}:en`, { ...english, nodepools: english.nodepools.map((pool) => ({ ...pool, status: null })) });
     await open("nodes");
     await act(async () => {
       await i18next.changeLanguage("pt-BR");
@@ -382,7 +390,12 @@ describe("nodes tab", () => {
     expect(names).toEqual(["agentpool", "pool-a", "Undetermined"]);
   });
 
-  it("the pools carry the status of their worst finding, or say none", async () => {
+  it("the pools carry the status of their worst finding, healthy, or none", async () => {
+    const [first, second, third] = english.nodepools;
+    mock.views.set(`${id}:en`, {
+      ...english,
+      nodepools: [{ ...first, status: null }, { ...second, status: "healthy" }, { ...third, status: "attention" }] as typeof english.nodepools,
+    });
     await open("nodes");
     const table = screen.getByRole("table", { name: "Node pools" });
     expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
@@ -395,7 +408,7 @@ describe("nodes tab", () => {
       .getAllByRole("row")
       .slice(1)
       .map((row) => within(row).getAllByRole("cell")[1]?.textContent);
-    expect(status).toEqual(["No finding", "Attention", "Attention"]);
+    expect(status).toEqual(["No finding", "Healthy", "Attention"]);
   });
 });
 

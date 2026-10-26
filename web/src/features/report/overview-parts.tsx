@@ -4,8 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Separator } from "@/components/separator";
 import { StatusMark, StatusShape } from "@/components/status-mark";
-import { cn } from "@/lib/cn";
-import type { ReportView, ViewRecommendation } from "./api";
+import { shownTotal, type ReportView, type ViewRecommendation } from "./api";
 import { ClusterVerdict } from "./cluster-verdict";
 import { ValueText } from "./pieces";
 import { ProofBar } from "./proof-bar";
@@ -13,11 +12,6 @@ import { ProofBar } from "./proof-bar";
 // What a part of the overview needs: the view it words, and the address of its report, `/reports/<id>`, which its
 // links are built under.
 export type PartProps = { view: ReportView; base: string };
-
-const severities = ["critical", "attention", "healthy"] as const;
-
-const minimum: Record<string, number> = { all: 0, healthy: 0, attention: 1, critical: 2 };
-const rank: Record<(typeof severities)[number], number> = { healthy: 0, attention: 1, critical: 2 };
 
 // Whether the cluster can grow: the proof comes first under the title, the nodes against the autoscaler's maximum
 // when the autoscaling is enabled and both are known and its state word otherwise, then the worst finding of the
@@ -92,40 +86,29 @@ export function GrowthPair({ view, base }: PartProps) {
   );
 }
 
-// The answer first: the findings of each severity at the size of the answer, each beside the shape that carries
-// its colour, then the way to all of them. A severity the view's minimum leaves out keeps its count and offers no findings to
-// see.
+// The answer first: the findings of each severity the report shows at the size of the answer, each beside the shape that
+// carries its colour and linked to the findings of that severity, then the way to all of them. A report that shows none
+// says so.
 export function AnswerStrip({ view, base }: PartProps) {
-  const { t } = useTranslation();
-  const { summary, min_severity: floor } = view;
-  const worst = severities.find((severity) => (summary[severity].raw ?? 0) > 0);
-  if (worst === undefined) {
+  const { t, i18n } = useTranslation();
+  if (shownTotal(view) === 0) {
     return <p className="text-xl">{t("report.findings.none")}</p>;
   }
+  const count = new Intl.NumberFormat(i18n.language);
   return (
     <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
       <div role="group" aria-label={t("report.overview.totals")} className="flex flex-wrap items-center gap-x-8 gap-y-2">
-        {severities.map((severity) => {
-          const item = "inline-flex items-center gap-2.5 rounded-md text-fg";
-          const content = (
-            <>
-              <StatusShape status={severity} className="size-4" />
-              <span className="font-mono text-display font-semibold">{summary[severity].text}</span>
-              <span className="text-sm text-muted-fg">{t(`status.${severity}`)}</span>
-            </>
-          );
-          return (
-            <Fragment key={severity}>
-              {rank[severity] < (minimum[floor] ?? 0) ? (
-                <span className={item}>{content}</span>
-              ) : (
-                <Link to={`${base}/findings?severity=${severity}`} className={cn(item, "hover:[&>span:last-child]:underline")}>
-                  {content}
-                </Link>
-              )}
-            </Fragment>
-          );
-        })}
+        {view.verdict.totals.map(({ severity, count: total }) => (
+          <Link
+            key={severity}
+            to={`${base}/findings?severity=${severity}`}
+            className="inline-flex items-center gap-2.5 rounded-md text-fg hover:[&>span:last-child]:underline"
+          >
+            <StatusShape status={severity} className="size-4" />
+            <span className="font-mono text-display font-semibold">{count.format(total)}</span>
+            <span className="text-sm text-muted-fg">{t(`status.${severity}`)}</span>
+          </Link>
+        ))}
       </div>
       <Link to={`${base}/findings`} className="inline-flex items-center gap-1 text-sm text-accent underline-offset-4 hover:underline">
         {t("report.overview.allFindings")}
