@@ -447,10 +447,11 @@ func TestViewFieldsTakeTheirEnums(t *testing.T) {
 		"ViewNamespace":      {"status": "ViewSeverity"},
 		"ViewWorkload":       {"status": "ViewSeverity", "hpa_coverage": "ViewHPACoverage"},
 		"ViewNode":           {"status": "ViewSeverity", "pool_confidence": "ViewConfidence"},
-		"ViewNodepool":       {"confidence": "ViewConfidence"},
+		"ViewNodepool":       {"confidence": "ViewConfidence", "status": "ViewSeverity"},
+		"ViewHPA":            {"status": "ViewSeverity"},
+		"ViewTotal":          {"severity": "ViewSeverity"},
 		"ViewAutoscaling":    {"status": "ViewAutoscalingStatus", "source": "ViewAutoscalingSource", "confidence": "ViewConfidence"},
 		"ViewCapability":     {"name": "ViewCapabilityName", "state": "ViewCapabilityState", "strategy": "ViewStrategy"},
-		"ReportView":         {"min_severity": "MinSeverity"},
 		"ViewReport":         {"profile": "ReportProfile"},
 	}
 	schemas := loadSchemas(t)

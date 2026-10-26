@@ -726,11 +726,9 @@ export interface components {
             /** @description The names of the capabilities the source offers, in their order; empty when not ok. */
             capabilities: string[];
         };
-        /** @description A report worded in one language for the web, narrowed as its PDF is: the findings, recommendations, and the namespace, workload, and node rows below the effective minimum are left out; the HPAs, node pools, summary counts, and quality are whole. Every text is the text the PDF prints for the same quantity. A closed set travels as its code, which a client words. */
+        /** @description A report worded in one language for the web, narrowed as its PDF is: the findings, recommendations, and the namespace, workload, and node rows below the floor of the profile are left out; the HPAs, node pools, summary counts, and quality are whole. Every text is the text the PDF prints for the same quantity. A closed set travels as its code, which a client words. */
         ReportView: {
             language: components["schemas"]["Language"];
-            /** @description The effective minimum, raised to attention for the executive profile. */
-            min_severity: components["schemas"]["MinSeverity"];
             report: components["schemas"]["ViewReport"];
             summary: components["schemas"]["ViewSummary"];
             findings: components["schemas"]["ViewFinding"][];
@@ -862,6 +860,8 @@ export interface components {
         };
         /** @description The decisions of the verdict of the overview, as indices into the lists of this view. */
         ViewVerdict: {
+            /** @description The findings shown, counted by the severities at or above the floor of the profile, in the order critical, attention, healthy. The detailed profile lists the three; the executive profile lists critical and attention. */
+            totals: components["schemas"]["ViewTotal"][];
             /** @description Index in findings of the worst finding of the cluster. */
             cluster_finding: number | null;
             /** @description Index in quality.warnings of the warning that the evidence of the nodes is incomplete. */
@@ -871,6 +871,11 @@ export interface components {
             pressure: components["schemas"]["ViewPressure"][];
             /** @description The scope types other than the cluster with a finding, the worst first. */
             scopes: components["schemas"]["ViewScope"][];
+        };
+        /** @description The number of findings shown of one severity. */
+        ViewTotal: {
+            severity: components["schemas"]["ViewSeverity"];
+            count: number;
         };
         /** @description The depth gauge in whole nodes; null unless the autoscaling is enabled with a known current and a positive maximum. */
         ViewGauge: {
@@ -959,6 +964,8 @@ export interface components {
             desired: components["schemas"]["ViewStatistic"];
             /** @description The situation cell of the PDF. */
             situation: string;
+            /** @description The worst severity among all findings of the HPA, healthy when it has none. */
+            status: components["schemas"]["ViewSeverity"];
             situation_status: components["schemas"]["ViewMark"];
         };
         ViewNode: {
@@ -986,6 +993,8 @@ export interface components {
         ViewNodepool: {
             name: string;
             confidence: components["schemas"]["ViewConfidence"];
+            /** @description The worst severity among all findings of the pool and of its nodes, healthy when there is none. */
+            status: components["schemas"]["ViewSeverity"];
             nodes: string[];
         };
         /** @description The quality of the collection, whole at every minimum. */
