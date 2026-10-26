@@ -472,20 +472,23 @@ profile shows: the detailed profile every finding, the executive profile the
 critical and attention findings. Every stored report is carried forward, and
 the upgrade cannot be undone.
 
-- **Back up the database first,** as the commands above do. A 2.x program
-  cannot read a database that 3.0.0 has migrated, so a rollback is a restore
-  of that backup (section 7).
-- **Stop the worker before the new version starts,** and wait until it has
-  stopped, so that no 2.x worker stores a report after the migration. With
-  Compose, run `docker compose stop worker` before `docker compose up -d
-  --wait`. With the chart, run `kubectl -n capacity-room scale deployment
-  capacity-room-worker --replicas 0` before `helm upgrade`, which starts the
-  worker again.
+- **Stop first, then back up.** Stop what could store or read a report
+  while the schema changes, wait until it has stopped, and only then take
+  the backup, so that it holds every stored report. With Compose, run
+  `docker compose stop worker`, then the `pg_dump` and the rest of the
+  commands above; `docker compose up -d --wait` replaces `serve` and starts
+  the worker again. With the chart, run `kubectl -n capacity-room scale
+  deployment capacity-room-serve capacity-room-worker --replicas 0`, back up
+  the database, then run `helm upgrade`, which starts both again; a 2.x
+  `serve` left running could not read the reports the new version migrates.
+- **A rollback is a restore of that backup** (section 7): a 2.x program
+  cannot read a database that 3.0.0 has migrated.
 - **Remove the option from your files.** `min_severity` in `report.toml`,
   and `default_min_severity` and `permitted_min_severities` in a profiles
   file of `admin import-profiles` or in the `profiles` of the chart's values,
-  are now refused as unknown keys. The flag `--min-severity` and the variable
-  `CAPACITYROOM_MIN_SEVERITY` are gone. A client of the API that sends
+  are now refused as unknown keys, and so is the flag `--min-severity`. The
+  variable `CAPACITYROOM_MIN_SEVERITY` is no longer read: a run that still
+  sets it writes the report of its profile. A client of the API that sends
   `min_severity` in `POST /reports` is answered 400.
 - **What the migration changes.** Every stored snapshot is rewritten without
   the field, as schema 3.0, the two keys leave every profile revision, and

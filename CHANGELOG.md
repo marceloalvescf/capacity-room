@@ -14,7 +14,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
-- The minimum severity is gone: the `--min-severity` flag, the `CAPACITYROOM_MIN_SEVERITY` variable, `min_severity` in `report.toml`, a profile's default and permitted minimum severities, and the field of a report request, each of which is now refused.
+- The minimum severity is gone: the `--min-severity` flag, `min_severity` in `report.toml`, a profile's default and permitted minimum severities, and the field of a report request are now refused, and the `CAPACITYROOM_MIN_SEVERITY` variable is no longer read.
 - The opening page of the PDF no longer lists a minimum severity, and the name of a PDF no longer carries one.
 - A snapshot file written by 2.x is refused, and the operations guide shows the one edit that converts it.
 
