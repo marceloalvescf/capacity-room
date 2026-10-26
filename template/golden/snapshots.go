@@ -307,7 +307,7 @@ var Snapshots = []Snapshot{
 			"it, the partial-coverage callout after the replica ceiling " +
 			"table, the undetermined pool in the situation table, the " +
 			"plan running over a page break, and the appendix as " +
-			"section 2 at the raised minimum, with the one partial " +
+			"section 2 at the executive floor, with the one partial " +
 			"capability and the notes",
 	},
 	{
@@ -316,10 +316,11 @@ var Snapshots = []Snapshot{
 		Data:   "tests/capacity/fixtures/command/direct-complete.executive.en.json",
 		Pages:  []int{1, 2, 3},
 		Protects: "the executive profile in English on three pages: the " +
-			"verdict page, the outline, and the English headers of the " +
-			"four tables that have rows with the three fallback " +
-			"sentences of the subsections that have none, followed by " +
-			"the appendix as its fallback sentence, since no capability " +
-			"reaches the raised minimum",
+			"verdict page, whose totals and ring count the critical and " +
+			"attention findings alone, the outline, and the English " +
+			"headers of the four tables that have rows with the three " +
+			"fallback sentences of the subsections that have none, " +
+			"followed by the appendix as its fallback sentence, since " +
+			"every capability is available",
 	},
 }
