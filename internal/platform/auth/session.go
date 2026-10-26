@@ -45,6 +45,9 @@ type Sessions struct {
 	Idle     time.Duration
 	Now      func() time.Time
 
+	// clients bounds the password work in flight to one sign-in per client.
+	clients clientSlots
+
 	// beforeSession runs before the transaction that inserts the session of
 	// a sign-in. Tests set it; it is nil otherwise.
 	beforeSession func()
@@ -81,6 +84,29 @@ type Issued struct {
 	Principal Principal
 }
 
+// checkPassword verifies password against stored during the turn of client,
+// and returns whether a found user matched and, when the hash needs it, a
+// fresh hash of password. The turn comes before any hash slot, so a sign-in
+// waiting for it holds no slot, and it ends with the password work.
+func (s *Sessions) checkPassword(ctx context.Context, client, password, stored string, found bool) (matched bool, fresh string, err error) {
+	release, err := s.clients.hold(ctx, client)
+	if err != nil {
+		return false, "", fmt.Errorf("verify password: %w", err)
+	}
+	defer release()
+	match, rehash, err := VerifyPassword(ctx, password, stored)
+	if err != nil {
+		return false, "", fmt.Errorf("verify password: %w", err)
+	}
+	matched = found && match
+	if matched && rehash {
+		if fresh, err = HashPassword(ctx, password); err != nil {
+			return false, "", fmt.Errorf("hash password: %w", err)
+		}
+	}
+	return matched, fresh, nil
+}
+
 // Login runs the sign-in: the throttle, one hash verification, the audit
 // row, the rotation of a presented session, the new session. presented is
 // the session cookie of the request, or empty.
@@ -109,16 +135,9 @@ func (s *Sessions) Login(ctx context.Context, username, password, clientAddress,
 	if found {
 		stored = user.PasswordHash
 	}
-	match, rehash, err := VerifyPassword(ctx, password, stored)
+	matched, fresh, err := s.checkPassword(ctx, clientKey(clientAddress), password, stored, found)
 	if err != nil {
-		return Issued{}, fmt.Errorf("verify password: %w", err)
-	}
-	matched := found && match
-	var fresh string
-	if matched && rehash {
-		if fresh, err = HashPassword(ctx, password); err != nil {
-			return Issued{}, fmt.Errorf("hash password: %w", err)
-		}
+		return Issued{}, err
 	}
 	// verified is the hash the password is known to match: the stored one,
 	// or the fresh one once the rehash wrote it. A rehash refused because

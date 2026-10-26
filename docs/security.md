@@ -144,7 +144,7 @@ reason.
 | The server secret is read uncapped, from any kind of file | 5 | hardening | fixed: a regular file of at most 64 KiB; its mode is the operator's | `f181191`, `docs/operations.md` |
 | A reference file is checked, then opened by path; a FIFO swapped in between blocks the read | 5 | hardening | fixed: one non-blocking open inside the folder, checked on the handle | `c77760e` |
 | A profile test against a port that does not speak HTTP answers 500 and writes no audit row | 3 | hardening | fixed: `ENDPOINT_UNREACHABLE`, audited | `813fc1c` |
-| Sign-ins with varying user names queue Argon2 work, and a waiting sign-in ignores its client leaving | 1 | hardening | fixed for the queue; a per-address limit deferred, since it changes the throttle's rule | `9037ad2`; the guide advises a proxy rate limit |
+| Sign-ins with varying user names queue Argon2 work, and a waiting sign-in ignores its client leaving | 1 | hardening | fixed: one verification in flight per client address, and another waits holding no hash slot | `9037ad2`; the guide advises a proxy rate limit |
 | The throttle keys on raw `X-Forwarded-For` text and on the full IPv6 address | 1 | hardening | fixed: a canonical address, IPv6 by /64 | `9037ad2` |
 | The dummy hash is made on first use, so the first unknown-user sign-in is slower | 1 | hardening | fixed: made at start | `9037ad2` |
 | PostgreSQL runs without `no-new-privileges`; a password with URL characters breaks the DSN | 7 | hardening | fixed; the guide makes a hexadecimal password | `8bfcef5`, `docs/operations.md` |

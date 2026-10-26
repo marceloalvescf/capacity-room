@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -491,8 +492,7 @@ func TestLoginHoldsNoConnectionDuringTheHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	sessions := *f.sessions
-	sessions.Pool = pool
+	sessions := &Sessions{Pool: pool, Throttle: f.sessions.Throttle, TTL: f.sessions.TTL, Idle: f.sessions.Idle, Now: f.sessions.Now}
 
 	// Every hash slot is held, so the sign-in waits at its hash.
 	for range cap(hashSlots) {
@@ -566,5 +566,40 @@ func TestLoginSessionWaitsForAPasswordChange(t *testing.T) {
 	}
 	if live != 0 {
 		t.Fatalf("%d live sessions after the password change", live)
+	}
+}
+
+func TestLoginWaitsForItsClientsTurn(t *testing.T) {
+	f := newSessionFixture(t)
+	const other = "10.0.0.2"
+
+	release, err := f.sessions.clients.hold(context.Background(), clientKey(testAddress))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	errs := make(chan error)
+	go func() {
+		_, err := f.sessions.Login(ctx, "admin", adminPassword, testAddress, "")
+		errs <- err
+	}()
+	for f.sessions.clients.users(clientKey(testAddress)) != 2 {
+		runtime.Gosched()
+	}
+
+	if _, err := f.sessions.Login(context.Background(), "reader", readerPassword, other, ""); err != nil {
+		t.Fatalf("another client was held: %v", err)
+	}
+
+	cancel()
+	if err := <-errs; !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v, want context.Canceled", err)
+	}
+	release()
+	if _, err := f.sessions.Login(context.Background(), "admin", adminPassword, testAddress, ""); err != nil {
+		t.Fatalf("sign-in after the turn was free: %v", err)
+	}
+	if got := len(f.sessions.clients.held); got != 0 {
+		t.Fatalf("entries left = %d, want 0", got)
 	}
 }
