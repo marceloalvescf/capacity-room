@@ -1923,7 +1923,7 @@
         }
       },
       "situation": "Indisponível",
-      "status": "healthy",
+      "status": null,
       "situation_status": "unavailable"
     },
     {

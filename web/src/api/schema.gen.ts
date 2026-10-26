@@ -734,6 +734,8 @@ export interface components {
         };
         /** @enum {string} */
         ViewSeverity: "healthy" | "attention" | "critical";
+        /** @enum {string|null} */
+        ViewSeverityOrNone: "healthy" | "attention" | "critical" | null;
         /** @enum {string} */
         ViewScopeType: "namespace" | "workload" | "hpa" | "node" | "nodepool" | "cluster";
         /** @enum {string} */
@@ -954,8 +956,8 @@ export interface components {
             desired: components["schemas"]["ViewStatistic"];
             /** @description The situation cell of the PDF. */
             situation: string;
-            /** @description The worst severity among all findings of the HPA, healthy when it has none. */
-            status: components["schemas"]["ViewSeverity"];
+            /** @description The worst severity among all findings of the HPA, null when it has none. */
+            status: components["schemas"]["ViewSeverityOrNone"];
             situation_status: components["schemas"]["ViewMark"];
         };
         ViewNode: {
@@ -983,8 +985,8 @@ export interface components {
         ViewNodepool: {
             name: string;
             confidence: components["schemas"]["ViewConfidence"];
-            /** @description The worst severity among all findings of the pool and of its nodes, healthy when there is none. */
-            status: components["schemas"]["ViewSeverity"];
+            /** @description The worst severity among all findings of the pool and of its nodes, null when there is none. */
+            status: components["schemas"]["ViewSeverityOrNone"];
             nodes: string[];
         };
         /** @description The quality of the collection, whole at every minimum. */

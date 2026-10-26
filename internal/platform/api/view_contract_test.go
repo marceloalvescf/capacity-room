@@ -380,6 +380,7 @@ func TestViewEnumsEqualTheRegistries(t *testing.T) {
 	}
 	enums := map[string]enum{
 		"ViewSeverity":          {want: analysis.Severities},
+		"ViewSeverityOrNone":    {want: analysis.Severities},
 		"ViewHazard":            {want: document.GaugeHazards},
 		"ViewScopeType":         {want: keys(scopeTypes)},
 		"ViewConfidence":        {want: []string{discovery.ConfidenceExact, discovery.ConfidenceInferred, discovery.ConfidenceUnknown}},
@@ -447,8 +448,8 @@ func TestViewFieldsTakeTheirEnums(t *testing.T) {
 		"ViewNamespace":      {"status": "ViewSeverity"},
 		"ViewWorkload":       {"status": "ViewSeverity", "hpa_coverage": "ViewHPACoverage"},
 		"ViewNode":           {"status": "ViewSeverity", "pool_confidence": "ViewConfidence"},
-		"ViewNodepool":       {"confidence": "ViewConfidence", "status": "ViewSeverity"},
-		"ViewHPA":            {"status": "ViewSeverity"},
+		"ViewNodepool":       {"confidence": "ViewConfidence", "status": "ViewSeverityOrNone"},
+		"ViewHPA":            {"status": "ViewSeverityOrNone"},
 		"ViewTotal":          {"severity": "ViewSeverity"},
 		"ViewAutoscaling":    {"status": "ViewAutoscalingStatus", "source": "ViewAutoscalingSource", "confidence": "ViewConfidence"},
 		"ViewCapability":     {"name": "ViewCapabilityName", "state": "ViewCapabilityState", "strategy": "ViewStrategy"},

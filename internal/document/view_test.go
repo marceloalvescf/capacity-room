@@ -1136,6 +1136,7 @@ func TestViewPoolAndHPAStatusReadAllTheirFindings(t *testing.T) {
 				[]snapshot.Node{
 					testNode("n1", "busy", valueStat(10, 20), valueStat(10, 20)),
 					testNode("n2", "calm", valueStat(10, 20), valueStat(10, 20)),
+					testNode("n3", "idle", valueStat(10, 20), valueStat(10, 20)),
 				},
 				nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1"),
 				hpaFinding("HPA_NEAR_MAX_REPLICAS", analysis.SeverityAttention, "payments/near", number("current_average", 8), number("spec_max", 10)),
@@ -1146,8 +1147,9 @@ func TestViewPoolAndHPAStatusReadAllTheirFindings(t *testing.T) {
 			s.HPAs = []snapshot.HPA{
 				maxedHPA("near", "Deployment", "near", 2, 10, 9),
 				maxedHPA("pinned", "Deployment", "pinned", 4, 4, 3),
+				maxedHPA("quiet", "Deployment", "quiet", 2, 10, 3),
 			}
-			s.Summary.HPAs, s.Summary.Nodes, s.Summary.Nodepools = 2, 2, 2
+			s.Summary.HPAs, s.Summary.Nodes, s.Summary.Nodepools = 3, 3, 3
 			s.Summary.Findings = float64(len(s.Findings))
 			s.Summary.Healthy, s.Summary.Attention = 2, 2
 			s.Recommendations = deriveRecommendations(s.Findings)
@@ -1156,16 +1158,16 @@ func TestViewPoolAndHPAStatusReadAllTheirFindings(t *testing.T) {
 
 			pools := map[string]string{}
 			for _, p := range view.Nodepools {
-				pools[p.Name] = p.Status
+				pools[p.Name] = statusText(p.Status)
 			}
-			if want := map[string]string{"calm": "healthy", "busy": "attention"}; !reflect.DeepEqual(pools, want) {
+			if want := map[string]string{"calm": "healthy", "busy": "attention", "idle": "null"}; !reflect.DeepEqual(pools, want) {
 				t.Errorf("pool statuses = %v, want %v", pools, want)
 			}
 			hpas := map[string]string{}
 			for _, h := range view.HPAs {
-				hpas[h.Name] = h.Status
+				hpas[h.Name] = statusText(h.Status)
 			}
-			if want := map[string]string{"pinned": "healthy", "near": "attention"}; !reflect.DeepEqual(hpas, want) {
+			if want := map[string]string{"pinned": "healthy", "near": "attention", "quiet": "null"}; !reflect.DeepEqual(hpas, want) {
 				t.Errorf("HPA statuses = %v, want %v", hpas, want)
 			}
 		})

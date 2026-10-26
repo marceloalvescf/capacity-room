@@ -1996,6 +1996,10 @@ components:
     ViewSeverity:
       type: string
       enum: [healthy, attention, critical]
+    ViewSeverityOrNone:
+      type: string
+      nullable: true
+      enum: [healthy, attention, critical, null]
     ViewScopeType:
       type: string
       enum: [namespace, workload, hpa, node, nodepool, cluster]
@@ -2530,8 +2534,8 @@ components:
           description: The situation cell of the PDF.
         status:
           allOf:
-            - $ref: "#/components/schemas/ViewSeverity"
-          description: The worst severity among all findings of the HPA, healthy when it has none.
+            - $ref: "#/components/schemas/ViewSeverityOrNone"
+          description: The worst severity among all findings of the HPA, null when it has none.
         situation_status:
           $ref: "#/components/schemas/ViewMark"
     ViewNode:
@@ -2605,10 +2609,10 @@ components:
           $ref: "#/components/schemas/ViewConfidence"
         status:
           allOf:
-            - $ref: "#/components/schemas/ViewSeverity"
+            - $ref: "#/components/schemas/ViewSeverityOrNone"
           description: >-
             The worst severity among all findings of the pool and of its nodes,
-            healthy when there is none.
+            null when there is none.
         nodes:
           type: array
           items:

@@ -421,12 +421,6 @@ func worstSeverity(findings []snapshot.Finding) string {
 	return severity
 }
 
-// poolSeverity is the highest severity among all findings of a pool and of
-// its nodes.
-func poolSeverity(pool snapshot.NodePool, findings []snapshot.Finding) string {
-	return worstSeverity(poolFindings(pool, findings))
-}
-
 // nodepoolStatus writes one row for every pool: its name, the highest
 // severity among its own findings and those of its nodes, and the
 // observations of the findings at that severity. Highest severity first,

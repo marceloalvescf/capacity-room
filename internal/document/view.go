@@ -184,9 +184,9 @@ type ViewHPA struct {
 	Current    Statistic `json:"current"`
 	Desired    Statistic `json:"desired"`
 	Situation  string    `json:"situation"`
-	// Status is the worst severity among all findings of the HPA, healthy
+	// Status is the worst severity among all findings of the HPA, nil
 	// when it has none.
-	Status string `json:"status"`
+	Status *string `json:"status"`
 	// SituationStatus is the mark of the situation cell.
 	SituationStatus *string `json:"situation_status"`
 }
@@ -222,8 +222,8 @@ type ViewNodepool struct {
 	Name       string `json:"name"`
 	Confidence string `json:"confidence"`
 	// Status is the worst severity among all findings of the pool and of
-	// its nodes, healthy when there is none.
-	Status string   `json:"status"`
+	// its nodes, nil when there is none.
+	Status *string  `json:"status"`
 	Nodes  []string `json:"nodes"`
 }
 
@@ -638,7 +638,7 @@ func (vb *viewBuilder) hpas(hpas []snapshot.HPA, findings []snapshot.Finding) []
 			Current:         vb.replicas(h.Current),
 			Desired:         vb.replicas(h.Desired),
 			Situation:       situation,
-			Status:          scopeSeverity(findings, analysis.ScopeHPA, h.Namespace+"/"+h.Name, ""),
+			Status:          hpaStatus(findings, h),
 			SituationStatus: mark(situationStatus),
 		})
 	}
@@ -689,10 +689,35 @@ func requestShare(value Value, findings []snapshot.Finding, node, code string) V
 	return value
 }
 
+// poolStatus is the worst severity among all findings of a pool and of its
+// nodes, nil when it has none.
+func poolStatus(pool snapshot.NodePool, findings []snapshot.Finding) *string {
+	own := poolFindings(pool, findings)
+	if len(own) == 0 {
+		return nil
+	}
+	return mark(worstSeverity(own))
+}
+
+// hpaStatus is the worst severity among all findings of an HPA, nil when it
+// has none.
+func hpaStatus(findings []snapshot.Finding, h snapshot.HPA) *string {
+	var own []snapshot.Finding
+	for _, f := range findings {
+		if f.ScopeType == analysis.ScopeHPA && f.ScopeName == h.Namespace+"/"+h.Name && f.ScopeKind == "" {
+			own = append(own, f)
+		}
+	}
+	if len(own) == 0 {
+		return nil
+	}
+	return mark(worstSeverity(own))
+}
+
 func (vb *viewBuilder) nodepools(pools []snapshot.NodePool, findings []snapshot.Finding) []ViewNodepool {
 	out := make([]ViewNodepool, 0, len(pools))
 	for _, p := range pools {
-		out = append(out, ViewNodepool{Name: p.Name, Confidence: p.Confidence, Status: poolSeverity(p, findings), Nodes: nonNilStrings(p.Nodes)})
+		out = append(out, ViewNodepool{Name: p.Name, Confidence: p.Confidence, Status: poolStatus(p, findings), Nodes: nonNilStrings(p.Nodes)})
 	}
 	return out
 }

@@ -35,6 +35,7 @@ output-options:
     - ViewCapability
     - ViewMessage
     - ViewSeverity
+    - ViewSeverityOrNone
     - ViewScopeType
     - ViewConfidence
     - ViewHPACoverage
