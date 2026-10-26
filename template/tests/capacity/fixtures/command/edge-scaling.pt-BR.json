@@ -517,20 +517,6 @@
               [
                 {
                   "kind": "text",
-                  "text": "Severidade mínima"
-                }
-              ],
-              [
-                {
-                  "kind": "text",
-                  "text": "Todas"
-                }
-              ]
-            ],
-            [
-              [
-                {
-                  "kind": "text",
                   "text": "Namespaces"
                 }
               ],

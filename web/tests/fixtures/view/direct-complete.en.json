@@ -1,6 +1,5 @@
 {
   "language": "en",
-  "min_severity": "all",
   "report": {
     "id": "00000000-0000-4000-8000-000000000001",
     "cluster_name": "prod",
@@ -456,6 +455,20 @@
     }
   ],
   "verdict": {
+    "totals": [
+      {
+        "severity": "critical",
+        "count": 4
+      },
+      {
+        "severity": "attention",
+        "count": 3
+      },
+      {
+        "severity": "healthy",
+        "count": 6
+      }
+    ],
     "cluster_finding": 7,
     "node_evidence_warning": null,
     "gauge": null,
@@ -1314,6 +1327,7 @@
         }
       },
       "situation": "Below the maximum",
+      "status": "attention",
       "situation_status": "attention"
     }
   ],
@@ -1410,6 +1424,7 @@
     {
       "name": "pool-a",
       "confidence": "exact",
+      "status": "healthy",
       "nodes": [
         "node-1"
       ]

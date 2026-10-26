@@ -491,20 +491,6 @@
               [
                 {
                   "kind": "text",
-                  "text": "Minimum severity"
-                }
-              ],
-              [
-                {
-                  "kind": "text",
-                  "text": "All"
-                }
-              ]
-            ],
-            [
-              [
-                {
-                  "kind": "text",
                   "text": "Namespaces"
                 }
               ],

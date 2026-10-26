@@ -41,12 +41,6 @@
             "label": "Attention",
             "count": "3",
             "value": 3
-          },
-          {
-            "status": "healthy",
-            "label": "Healthy",
-            "count": "6",
-            "value": 6
           }
         ],
         "none": null
@@ -431,20 +425,6 @@
                 {
                   "kind": "text",
                   "text": "Executive"
-                }
-              ]
-            ],
-            [
-              [
-                {
-                  "kind": "text",
-                  "text": "Minimum severity"
-                }
-              ],
-              [
-                {
-                  "kind": "text",
-                  "text": "Attention and critical"
                 }
               ]
             ],
@@ -1164,7 +1144,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "No capability reaches the minimum severity of this report."
+          "text": "Every capability of this report is available."
         }
       ]
     },

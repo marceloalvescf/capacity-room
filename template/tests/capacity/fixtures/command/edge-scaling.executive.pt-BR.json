@@ -41,12 +41,6 @@
             "label": "Atenção",
             "count": "11",
             "value": 11
-          },
-          {
-            "status": "healthy",
-            "label": "Saudável",
-            "count": "7",
-            "value": 7
           }
         ],
         "none": null
@@ -480,20 +474,6 @@
                 {
                   "kind": "text",
                   "text": "Executivo"
-                }
-              ]
-            ],
-            [
-              [
-                {
-                  "kind": "text",
-                  "text": "Severidade mínima"
-                }
-              ],
-              [
-                {
-                  "kind": "text",
-                  "text": "Atenção e crítico"
                 }
               ]
             ],

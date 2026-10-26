@@ -1,6 +1,5 @@
 {
   "language": "en",
-  "min_severity": "all",
   "report": {
     "id": "00000000-0000-4000-8000-000000000001",
     "cluster_name": "prod",
@@ -785,6 +784,20 @@
     }
   ],
   "verdict": {
+    "totals": [
+      {
+        "severity": "critical",
+        "count": 10
+      },
+      {
+        "severity": "attention",
+        "count": 11
+      },
+      {
+        "severity": "healthy",
+        "count": 7
+      }
+    ],
     "cluster_finding": 1,
     "node_evidence_warning": 1,
     "gauge": null,
@@ -1910,6 +1923,7 @@
         }
       },
       "situation": "Unavailable",
+      "status": "healthy",
       "situation_status": "unavailable"
     },
     {
@@ -1974,6 +1988,7 @@
         }
       },
       "situation": "Pinned",
+      "status": "healthy",
       "situation_status": "healthy"
     },
     {
@@ -2038,6 +2053,7 @@
         }
       },
       "situation": "Below the maximum",
+      "status": "attention",
       "situation_status": "attention"
     },
     {
@@ -2102,6 +2118,7 @@
         }
       },
       "situation": "Maximum reached",
+      "status": "critical",
       "situation_status": "critical"
     }
   ],
@@ -2459,6 +2476,7 @@
     {
       "name": "agentpool",
       "confidence": "inferred",
+      "status": "critical",
       "nodes": [
         "aks-agentpool-12345678-vmss000000"
       ]
@@ -2466,6 +2484,7 @@
     {
       "name": "pool-a",
       "confidence": "exact",
+      "status": "critical",
       "nodes": [
         "pool-a-1",
         "pool-a-2"
@@ -2474,6 +2493,7 @@
     {
       "name": "unknown",
       "confidence": "unknown",
+      "status": "attention",
       "nodes": [
         "orphan"
       ]

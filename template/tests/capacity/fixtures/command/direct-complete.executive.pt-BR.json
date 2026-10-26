@@ -41,12 +41,6 @@
             "label": "Atenção",
             "count": "3",
             "value": 3
-          },
-          {
-            "status": "healthy",
-            "label": "Saudável",
-            "count": "6",
-            "value": 6
           }
         ],
         "none": null
@@ -431,20 +425,6 @@
                 {
                   "kind": "text",
                   "text": "Executivo"
-                }
-              ]
-            ],
-            [
-              [
-                {
-                  "kind": "text",
-                  "text": "Severidade mínima"
-                }
-              ],
-              [
-                {
-                  "kind": "text",
-                  "text": "Atenção e crítico"
                 }
               ]
             ],
@@ -1164,7 +1144,7 @@
       "runs": [
         {
           "kind": "text",
-          "text": "Nenhuma capacidade atinge a severidade mínima deste relatório."
+          "text": "Todas as capacidades deste relatório estão disponíveis."
         }
       ]
     },

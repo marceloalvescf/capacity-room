@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "report": {
     "id": "00000000-0000-4000-8000-000000000001",
     "generator_version": "0.0.0-golden",
@@ -8,7 +8,6 @@
     "period_end": "2026-07-14T00:00:00-03:00",
     "timezone": "America/Sao_Paulo",
     "profile": "detailed",
-    "min_severity": "all",
     "organization": "ACME",
     "classification": "Uso interno",
     "author": "Time SRE",

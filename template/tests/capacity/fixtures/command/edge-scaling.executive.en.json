@@ -41,12 +41,6 @@
             "label": "Attention",
             "count": "11",
             "value": 11
-          },
-          {
-            "status": "healthy",
-            "label": "Healthy",
-            "count": "7",
-            "value": 7
           }
         ],
         "none": null
@@ -480,20 +474,6 @@
                 {
                   "kind": "text",
                   "text": "Executive"
-                }
-              ]
-            ],
-            [
-              [
-                {
-                  "kind": "text",
-                  "text": "Minimum severity"
-                }
-              ],
-              [
-                {
-                  "kind": "text",
-                  "text": "Attention and critical"
                 }
               ]
             ],
