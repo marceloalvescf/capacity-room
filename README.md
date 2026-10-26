@@ -1,63 +1,128 @@
-# CapacityRoom
+<p align="center">
+  <img src="web/public/favicon.svg" width="72" height="72" alt="">
+</p>
+
+<h1 align="center">CapacityRoom</h1>
+
+<p align="center">
+  <strong>Kubernetes capacity reports from your metrics alone.</strong><br>
+  A PDF and a web report of requests, limits, usage, HPAs, and nodes, read from
+  a Prometheus-compatible API. No kubeconfig, no cluster access, no cloud
+  credentials.
+</p>
+
+<p align="center">
+  <a href="https://github.com/marceloalvescf/capacity-room/actions/workflows/ci.yml"><img alt="checks" src="https://img.shields.io/github/check-runs/marceloalvescf/capacity-room/main?nameFilter=checks&label=checks"></a>
+  <a href="https://github.com/marceloalvescf/capacity-room/actions/workflows/ci.yml"><img alt="integration" src="https://img.shields.io/github/check-runs/marceloalvescf/capacity-room/main?nameFilter=integration&label=integration"></a>
+  <a href="https://github.com/marceloalvescf/capacity-room/actions/workflows/ci.yml"><img alt="e2e" src="https://img.shields.io/github/check-runs/marceloalvescf/capacity-room/main?nameFilter=e2e&label=e2e"></a>
+  <a href="https://github.com/marceloalvescf/capacity-room/actions/workflows/audit.yml"><img alt="audit" src="https://github.com/marceloalvescf/capacity-room/actions/workflows/audit.yml/badge.svg"></a>
+  <br>
+  <a href="https://github.com/marceloalvescf/capacity-room/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/marceloalvescf/capacity-room?sort=semver"></a>
+  <a href="https://hub.docker.com/r/alvesmarcelocf/capacity-room"><img alt="image" src="https://img.shields.io/docker/v/alvesmarcelocf/capacity-room?sort=semver&label=image"></a>
+  <a href="go.mod"><img alt="Go" src="https://img.shields.io/github/go-mod/go-version/marceloalvescf/capacity-room"></a>
+  <a href="LICENSE"><img alt="licence" src="https://img.shields.io/github/license/marceloalvescf/capacity-room"></a>
+</p>
+
+<table>
+  <tr>
+    <td width="58%"><img src="docs/assets/web-overview.png" alt="The overview of a report in the web interface: the findings by severity, whether the cluster can grow, the pressure on each scope, and the action plan."></td>
+    <td width="42%"><img src="template/tests/golden/command-complete-en-1.png" alt="The verdict page of a PDF report: the findings by severity, the pressure on each scope, the cluster autoscaling, and the first actions."></td>
+  </tr>
+</table>
 
 `capacity-room` generates Kubernetes capacity reports from a
-Prometheus-compatible API. It reads metrics only: it never uses a kubeconfig,
+Prometheus-compatible API, such as Prometheus, Thanos Query Frontend,
+VictoriaMetrics, or Cortex. It reads metrics only: it never uses a kubeconfig,
 the Kubernetes API, or cloud credentials. Reports are produced as PDF through
-Typst, in Portuguese (Brazil) or English. The product is called CapacityRoom;
-the command and the image are named `capacity-room`.
+Typst, in Portuguese (Brazil) or English, and as a web report on the platform.
+The product is called CapacityRoom; the command and the image are named
+`capacity-room`.
 
-The project is under construction. This file documents what exists today; the
-full design is in
+The full design is in
 [docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md](docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md).
 
-## What exists today
+## Quick start
+
+### One PDF, with Docker
+
+The image `alvesmarcelocf/capacity-room` carries the command and Typst. Write
+a configuration that names your endpoint, the cluster, and its namespaces,
+then run the image over the folder that holds it:
+
+```bash
+cat > report.toml <<'EOF'
+[metrics]
+url = "https://prometheus.example.org"
+
+[cluster]
+name = "prod"
+namespaces = ["payments", "checkout"]
+EOF
+
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
+  alvesmarcelocf/capacity-room:4.0.0 \
+  report --config report.toml --lang en --output report.pdf
+```
+
+Add `--check` in place of `--output` to see what the endpoint offers before a
+full run. An endpoint that needs a bearer token reads it from a variable that
+`metrics.token_env` names, passed with `-e`; see
+[Configuration](#configuration).
+
+### The web platform, with Docker Compose
+
+The platform puts the reports on the web: sign-in with three roles, the
+metric sources as profiles, reports requested from the browser, their PDFs in
+both languages, and a report screen of seven tabs.
+[Section 2 of the operations guide](docs/operations.md#2-install) installs it
+with `deploy/compose.yaml`, PostgreSQL 18, and a TLS proxy of your own.
+
+### On Kubernetes, with Helm
+
+The chart is published as an OCI chart. Get its folder, which holds
+`values.yaml` and the examples, and follow
+[its quick start](deploy/helm/capacity-room/README.md):
+
+```bash
+helm pull oci://ghcr.io/marceloalvescf/charts/capacity-room --version 4.0.0 --untar
+```
+
+## What it does
 
 - The command `report`. It checks a Prometheus-compatible endpoint, stores
   what it found in a snapshot, and writes a PDF.
-- The PDF holds the cover, the report metadata, the status legend, the
-  capacity of each namespace, the resources of each workload, the HPA
-  history, the resource usage by node pool, the executive summary, the
-  technical quality appendix, and the interpretation notes of the
-  collection. The `executive` profile writes the cover, the opening page,
-  the executive summary, and the appendix.
+- The PDF opens on a verdict page: the findings by severity, whether the
+  cluster can grow, the pressure on each scope, and the first actions. Then
+  come the opening page, the executive summary, the capacity of each
+  namespace, the resources of each workload, the HPA history, the resource
+  usage by node pool, and an appendix with the technical quality of the data
+  and the interpretation notes. The `executive` profile writes the verdict
+  page, the opening page, the executive summary, and the appendix.
 - The command `serve`, the backend of the web platform: sign-in with local
   accounts in three roles, sessions, the reader's own account, the
   administration of users and of metric-source profiles, and the reports,
   over an HTTP API described in [api/openapi.yaml](api/openapi.yaml).
 - The web interface, served by `serve`, in Portuguese (Brazil) and English,
-  in a light and a dark theme: sign-in; an account screen where a reader
-  changes their password and language; the list of reports, with bulk
-  delete; the form that requests a report, with quick and typed periods;
-  and the progress page of a report, where its PDFs are downloaded and the
-  PDF of the other language is generated. A collected report opens from its
-  progress page on a screen of seven tabs: overview, findings, namespaces,
-  workloads, autoscaling, nodes, and data quality. It is worded as its PDF,
-  and the PDFs are one click away. An administrator manages the users
-  (create, change the role, the language, or the password, deactivate,
-  reactivate) and the metric-source profiles (list, create, edit, delete,
-  and test a profile's connection, saved or before saving it).
+  in a light and a dark theme: a home page with the latest report of each
+  profile; an account screen where a reader changes their password and
+  language; the list of reports, with bulk delete; the form that requests a
+  report, with quick, calendar, and typed periods; and the progress page of a
+  report, where its PDFs are downloaded and the PDF of the other language is
+  generated. A collected report opens on a screen of seven tabs: overview,
+  findings, namespaces, workloads, autoscaling, nodes, and data quality. It
+  is worded as its PDF, and the PDFs are one click away. An administrator
+  manages the users (create, change the role, the language, or the password,
+  deactivate, reactivate) and the metric-source profiles (list, create, edit,
+  delete, and test a profile's connection, saved or before saving it).
 - The command `worker`, which runs the report jobs of the platform: it
   collects a requested report through the outbound policy, stores its
   snapshot, writes the PDF of the language it was requested in, writes the
   other language's PDF when someone asks for it, and expires and removes
   reports after their retention.
-- The command `admin`, with `migrate`, `bootstrap-admin`, `probe`, and
-  `import-profiles`.
-- A container image that carries the binary and Typst 0.15.1.
-- The report template, in two layers under [template/](template/): a generic
-  page shell and the layout of the capacity report.
-- Guards that protect the structure of the repository, and golden files that
-  pin the snapshot, the data file, and the rendered pages.
-
-## Requirements
-
-- Go 1.27
-- Node 26 with npm, to build the interface
-- Docker with Buildx
-- For `serve`, `worker`, and `admin`: PostgreSQL 18
-- For `worker`: `typst` 0.15.1, as for a PDF
-- To write a PDF outside the container: `typst` 0.15.1 on `PATH`, or its path
-  in `CAPACITYROOM_TYPST`. Any other version is refused.
+- The command `admin`, with `migrate`, `bootstrap-admin`, `reset-password`,
+  `probe`, and `import-profiles`.
+- A container image that carries the binary and Typst 0.15.1, and a Helm
+  chart that runs the platform on Kubernetes.
 
 ## Generating a report
 
@@ -123,7 +188,7 @@ through `--snapshot` followed by `--from-snapshot`, once for each language.
 `--report-profile`, and `--output`, and the variables `CAPACITYROOM_LANGUAGE`,
 `CAPACITYROOM_REPORT_PROFILE`, and `CAPACITYROOM_OUTPUT_DIRECTORY`. The profile
 comes from the flag, else from the variable, else from the stored snapshot. A
-snapshot written by 2.x is refused; section 8 of
+snapshot written by 2.x or 3.x is refused; section 8 of
 [`docs/operations.md`](docs/operations.md) shows how to convert one.
 
 Without `--output`, the PDF is written to `report.output_directory` under the
@@ -141,8 +206,9 @@ Add `--verbose` to any mode for a few more lines about the run.
 
 ### What a run collects
 
-A run that writes a PDF or a snapshot asks the endpoint about the period
-`analysis.period`, which ends when the run starts. For each namespace of
+A run that writes a PDF or a snapshot asks the endpoint about its period: the
+length `analysis.period`, which ends when the run starts, or the range from
+`analysis.start` to `analysis.end`. For each namespace of
 `cluster.namespaces`, and for each workload in them, it reads the consumption
 of CPU and memory, the requests, and the limits, and reduces each to an
 average, a minimum, a peak, and the last value. It also reads the HPAs of
@@ -243,23 +309,88 @@ Four rules stop a run:
 A failure prints one line on standard error, which starts with `error: `, and
 nothing on standard output.
 
+## Running the platform
+
+The platform puts the reports on the web: `serve` holds the interface and the
+API, `worker` collects the reports and compiles their PDFs, and PostgreSQL
+keeps everything, run together by `deploy/compose.yaml` behind a TLS proxy
+of your own. Upgrading to 3.0.0 or to 4.0.0 carries the stored reports
+forward and cannot be undone: back up the database first.
+
+- [`docs/operations.md`](docs/operations.md) is the guide to install,
+  configure, back up, upgrade, and troubleshoot it. Section 12 runs it on
+  Kubernetes.
+- [`deploy/helm/capacity-room/README.md`](deploy/helm/capacity-room/README.md)
+  is the quick start of the Helm chart.
+- [`docs/security.md`](docs/security.md) describes what it defends against,
+  and [`SECURITY.md`](SECURITY.md) how to report a vulnerability.
+
+`deploy/compose.integration.yaml` and the files of `deploy/platform/` serve
+`make e2e` alone, and never a deployment.
+
+## Development
+
+### Requirements
+
+The Nix flake's development shell holds every tool at its pinned version:
+run each command inside `nix develop`. Without Nix, you need:
+
+- Go 1.27
+- Node 26 with npm, to build the interface
+- Docker with Buildx and the Compose plugin
+- `typst` 0.15.1 and `pdftotext`, for the tests that compile a PDF. Any other
+  version of `typst` is refused; `CAPACITYROOM_TYPST` may give its path.
+- For `serve`, `worker`, and `admin`: PostgreSQL 18
+
+### Commands
+
+```bash
+make web              # the interface, built into web/dist
+make build            # bin/capacity-room, with the interface embedded
+make test             # Go tests that need no service and no tool, and the interface's tests
+make lint             # gofmt, go vet, golangci-lint, and tsc and ESLint over web/
+make image            # runtime image and test image
+make test-toolchain   # checks typst and pdftotext inside the test image
+make test-template    # compiles the template and writes reports in the test image
+make test-golden      # compares rendered pages with the golden pages
+make test-chart       # helm lint, the chart's tests, and kubeconform in the test image
+make check-runtime    # runs the runtime image as the release ships it
+make generate         # writes the Go and TypeScript types of api/openapi.yaml
+make generate-check   # fails when the committed generated file is stale
+make postgres-up      # starts PostgreSQL 18 for the platform tests, through Compose
+make postgres-down    # removes it, with its volume
+make test-postgres    # postgres-up, the tests tagged postgres (and the worker's with typst), postgres-down
+make e2e              # the Compose stack and the browser test of the interface
+make gate             # every check above, from freshly built images
+make audit            # the scanners of the Go modules, the interface's dependencies, and the image
+make update-golden    # rewrites the golden pages after an intended change
+make update-testdata  # rewrites the golden snapshots and data files
+```
+
+CI runs the same targets on every pull request and push to `main`. A pushed
+version tag runs `make gate` and `make audit` again, then publishes the image,
+the chart, and a draft GitHub release.
+
 ### Trying it without a Prometheus
 
 The repository holds seven scenarios and a server that answers from them.
-Five are recorded answers, in `testdata/prometheus/`. The other two were
-written for this project, in `testdata/prometheus-own/`: `edge-values` holds
-values at the edge, such as a sample that is not a number, a request of zero,
-and a workload with no request at all; `edge-scaling` holds the edges of the
-HPAs and of the nodes. Each answer is given once, so the server
-is started again for each run that collects.
+Five are recorded answers, in `testdata/prometheus/`, with the answers to the
+queries the original never sent in `testdata/prometheus-added/`. The other
+two were written for this project, in `testdata/prometheus-own/`:
+`edge-values` holds values at the edge, such as a sample that is not a
+number, a request of zero, and a workload with no request at all;
+`edge-scaling` holds the edges of the HPAs and of the nodes. Each answer is
+given once, so the server is started again for each run that collects.
 
 ```bash
 make build
 go build -o bin/fake-prometheus ./cmd/fake-prometheus
 
 bin/fake-prometheus --fixture testdata/prometheus/direct-complete.json \
+  --added testdata/prometheus-added/direct-complete.json \
   --listen 127.0.0.1:9090 &
 
+mkdir -p .cache
 cat > .cache/report.toml <<'EOF'
 [metrics]
 url = "http://127.0.0.1:9090/api/v1"
@@ -273,74 +404,54 @@ bin/capacity-room report --config .cache/report.toml --check
 kill %1
 ```
 
-## Running the platform
-
-The platform puts the reports on the web: `serve` holds the interface and the
-API, `worker` collects the reports and compiles their PDFs, and PostgreSQL
-keeps everything, run together by `deploy/compose.yaml` behind a TLS proxy
-of your own. A Helm chart in `deploy/helm/capacity-room` runs the platform on
-Kubernetes; its quick start is `deploy/helm/capacity-room/README.md`, and
-section 12 of the operations guide is the full text.
-[`docs/operations.md`](docs/operations.md) is the guide to
-install, configure, back up, upgrade, and troubleshoot it, and
-[`docs/security.md`](docs/security.md) describes what it defends against.
-`deploy/compose.integration.yaml` and the files of `deploy/platform/` serve
-`make e2e` alone, and never a deployment.
-
 ### Working on the interface
 
 Vite serves the interface with live reload and passes `/api` and `/health`
-to `serve` on port 8080:
+to `serve` on port 8080. `serve` and `worker` read their settings from a
+`platform.toml`, whose keys section 3 of the operations guide lists; the one
+below lets them reach a fake Prometheus on the same host.
 
 ```bash
 make postgres-up
 export CAPACITYROOM_DATABASE_DSN='postgres://capacityroom_test:capacityroom_test_only@127.0.0.1:55432/capacityroom_test?sslmode=disable'
-make build && bin/capacity-room serve --config platform.toml --listen 127.0.0.1:8080
-cd web && npm run dev    # http://localhost:5173
-```
 
-## Commands
+mkdir -p .cache/dev
+head -c 32 /dev/urandom > .cache/dev/server-secret
+cat > .cache/dev/platform.toml <<EOF
+server_secret_path = "$PWD/.cache/dev/server-secret"
+allowed_endpoint_cidrs = ["127.0.0.1/32"]
+EOF
 
-```bash
-make web              # the interface, built into web/dist
-make build            # bin/capacity-room, with the interface embedded
-make test             # Go tests that need no service and no tool, and the interface's tests
-make lint             # gofmt, go vet, golangci-lint, and tsc and ESLint over web/
-make image            # runtime image and test image
-make test-toolchain   # checks typst and pdftotext inside the test image
-make test-template    # compiles the template and writes reports in the test image
-make test-golden      # compares rendered pages with the golden pages
-make generate         # writes the Go and TypeScript types of api/openapi.yaml
-make generate-check   # fails when the committed generated file is stale
-make postgres-up      # starts PostgreSQL 18 for the platform tests, through Compose
-make postgres-down    # removes it, with its volume
-make test-postgres    # postgres-up, the tests tagged postgres (and the worker's with typst), postgres-down
-make e2e              # the Compose stack and the browser test of the interface
-make gate             # everything above, from freshly built images
-make audit            # the scanners of the Go modules, the interface's dependencies, and the image
-make update-golden    # rewrites the golden pages after an intended change
-make update-testdata  # rewrites the golden snapshots and data files
+make build
+printf 'a-local-password-1\n' | CAPACITYROOM_BOOTSTRAP_MODE=1 \
+  bin/capacity-room admin bootstrap-admin --username admin --password-stdin --config .cache/dev/platform.toml
+bin/capacity-room serve --config .cache/dev/platform.toml --listen 127.0.0.1:8080 &
+bin/capacity-room worker --config .cache/dev/platform.toml &
+cd web && npm run dev    # http://localhost:5173, sign in as admin
 ```
 
 ## Documents
 
 | File | Content |
 |---|---|
-| [AGENTS.md](AGENTS.md) | Working agreement: environment, gates, phases, versioning |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each version |
 | [docs/operations.md](docs/operations.md) | The operations guide of the platform |
 | [docs/security.md](docs/security.md) | The threat model, the controls, and the security review |
+| [SECURITY.md](SECURITY.md) | How to report a vulnerability |
+| [deploy/helm/capacity-room/README.md](deploy/helm/capacity-room/README.md) | The quick start of the Helm chart |
+| [AGENTS.md](AGENTS.md) | Working agreement: environment, gates, phases, versioning |
 | [docs/superpowers/specs/](docs/superpowers/specs/) | Design |
 | [docs/superpowers/plans/](docs/superpowers/plans/) | Implementation plans, one per phase |
 | [docs/decisions/](docs/decisions/) | Decisions taken from measurements |
 | [docs/reference/](docs/reference/) | Documents and inventories of the two original projects |
 | [template/graphite/README.md](template/graphite/README.md) | The generic template package |
 | [testdata/prometheus/README.md](testdata/prometheus/README.md) | The five recorded scenarios |
+| [testdata/prometheus-added/README.md](testdata/prometheus-added/README.md) | The answers the original never asked for |
 | [testdata/prometheus-own/README.md](testdata/prometheus-own/README.md) | The two scenarios written for this project |
 | [testdata/python/README.md](testdata/python/README.md) | The numbers and queries of the original, for the seven scenarios |
 
 ## Licence
 
-The code is under the MIT licence, in [LICENSE](LICENSE). The Liberation Sans
-fonts under `template/graphite/assets/fonts` are under the SIL Open Font
-License, kept beside them.
+The code is under the MIT licence, in [LICENSE](LICENSE). The fonts under
+`template/graphite/assets/fonts`, Public Sans, JetBrains Mono, and Liberation
+Sans, are under the SIL Open Font License, each kept beside them.
