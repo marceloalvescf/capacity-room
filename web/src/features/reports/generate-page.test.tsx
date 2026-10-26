@@ -32,7 +32,6 @@ const staging = profileSummary({
   default_period: "7d",
   default_timezone: "UTC",
   default_report_profile: "executive",
-  default_min_severity: "attention",
 });
 
 afterEach(() => {
@@ -84,7 +83,7 @@ describe("new report form", () => {
     mock.session = signedIn({ language: "pt-BR" });
     await open("/generate", "pt-BR");
     expect(profileSelect().value).toBe("prod");
-    expect(screen.getByText(summaryLine("America/Sao_Paulo · Detalhado · Todas"))).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("America/Sao_Paulo · Detalhado"))).toBeInTheDocument();
     expect(screen.getAllByRole("checkbox").filter((box) => (box as HTMLInputElement).checked)).toEqual([]);
     expect(screen.getByRole("radio", { name: "Português (Brasil)" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "English" })).not.toBeChecked();
@@ -97,7 +96,7 @@ describe("new report form", () => {
     await user.selectOptions(profileSelect(), "staging");
     expect(screen.queryByRole("checkbox", { name: "payments" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("checkbox").filter((box) => (box as HTMLInputElement).checked)).toEqual([]);
-    expect(screen.getByText(summaryLine("UTC · Executive · Attention and critical"))).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("UTC · Executive"))).toBeInTheDocument();
   });
 
   it("namespaces are shown in monospace", async () => {
@@ -178,7 +177,6 @@ describe("new report form", () => {
       end: null,
       timezone: "America/Sao_Paulo",
       report_profile: "detailed",
-      min_severity: "all",
     });
     expect(posts()[0]?.csrf).toBe("csrf-1");
   });
@@ -342,6 +340,14 @@ describe("new report form", () => {
     expect(names).toEqual(expect.arrayContaining(Intl.supportedValuesOf("timeZone")));
   });
 
+  it("opens the time zone and the report profile, and no minimum severity", async () => {
+    const { user } = await open();
+    await user.click(screen.getByRole("button", { name: t("generate.change") }));
+    expect(screen.getByLabelText(t("generate.timezone"))).toBeInTheDocument();
+    expect(screen.getByLabelText(t("generate.reportProfile"))).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: /severity|gravidade/i })).toBeNull();
+  });
+
   it("permitted time zones, in their order", async () => {
     mock.profiles = [
       profileSummary({
@@ -349,8 +355,6 @@ describe("new report form", () => {
         permitted_timezones: ["America/Sao_Paulo", "UTC"],
         permitted_report_profiles: ["executive"],
         default_report_profile: "executive",
-        permitted_min_severities: ["critical"],
-        default_min_severity: "critical",
       }),
     ];
     const { user } = await open();
@@ -359,8 +363,6 @@ describe("new report form", () => {
     expect([...zones.options].map((option) => option.value)).toEqual(["America/Sao_Paulo", "UTC"]);
     const kinds = screen.getByLabelText<HTMLSelectElement>(t("generate.reportProfile"));
     expect([...kinds.options].map((option) => option.textContent)).toEqual([t("reportProfile.executive")]);
-    const severities = screen.getByLabelText<HTMLSelectElement>(t("generate.minSeverity"));
-    expect([...severities.options].map((option) => option.textContent)).toEqual([t("minSeverity.critical")]);
   });
 
   it("server fields", async () => {
@@ -500,8 +502,7 @@ describe("new report form", () => {
         end: null,
         timezone: "America/Sao_Paulo",
         report_profile: "detailed",
-        min_severity: "critical",
-        language: "pt-BR",
+          language: "pt-BR",
       },
     });
     mock.reports = [failed];
@@ -510,7 +511,7 @@ describe("new report form", () => {
     expect(namespace("checkout")).toBeChecked();
     expect(namespace("web")).not.toBeChecked();
     expect(screen.getByRole("radio", { name: "Português (Brasil)" })).toBeChecked();
-    expect(screen.getByText(summaryLine("America/Sao_Paulo · Detailed · Critical only"))).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("America/Sao_Paulo · Detailed"))).toBeInTheDocument();
   });
 
   it("a report that cannot be read leaves a blank form", async () => {
@@ -522,7 +523,7 @@ describe("new report form", () => {
   it("opens on the profile in the address", async () => {
     await open("/generate?profile=staging");
     expect(profileSelect().value).toBe("staging");
-    expect(screen.getByText(summaryLine("UTC · Executive · Attention and critical"))).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("UTC · Executive"))).toBeInTheDocument();
   });
 
   it("ignores an unknown profile", async () => {
@@ -713,13 +714,12 @@ describe("calendar ranges", () => {
         end: "2026-10-01 00:00",
         timezone: "America/Sao_Paulo",
         report_profile: "detailed",
-        min_severity: "all",
-        language: "en",
+          language: "en",
       },
     });
     mock.reports = [source];
     await open(`/generate?from=${source.id}`);
-    const summary = screen.getByText(summaryLine("America/Sao_Paulo · Detailed · All"));
+    const summary = screen.getByText(summaryLine("America/Sao_Paulo · Detailed"));
     expect(within(summary).getByText("America/Sao_Paulo")).toHaveClass("font-mono");
     expect(within(summary).getByText("Detailed")).not.toHaveClass("font-mono");
     expect(screen.getByRole("button", { name: new RegExp(t("generate.period")) })).toHaveTextContent(
@@ -822,13 +822,12 @@ describe("calendar ranges", () => {
         end: "2026-10-01 00:00",
         timezone: "America/Sao_Paulo",
         report_profile: "detailed",
-        min_severity: "all",
-        language: "en",
+          language: "en",
       },
     });
     mock.reports = [source];
     await open(`/generate?from=${source.id}`);
-    expect(screen.getByText(summaryLine("America/Sao_Paulo · Detailed · All"))).toBeInTheDocument();
+    expect(screen.getByText(summaryLine("America/Sao_Paulo · Detailed"))).toBeInTheDocument();
   });
 
   it("long range", async () => {

@@ -88,7 +88,6 @@ export function report(overrides: Partial<Report> = {}): Report {
       end: null,
       timezone: "America/Sao_Paulo",
       report_profile: "detailed",
-      min_severity: "all",
       language: "en",
     },
     ...overrides,
@@ -106,8 +105,6 @@ export function profileSummary(overrides: Partial<ProfileSummary> = {}): Profile
     default_timezone: "America/Sao_Paulo",
     permitted_report_profiles: ["detailed", "executive"],
     default_report_profile: "detailed",
-    permitted_min_severities: ["all", "attention", "critical"],
-    default_min_severity: "all",
     ...overrides,
   };
 }
@@ -154,8 +151,6 @@ export function adminProfile(overrides: Partial<AdminProfile> = {}): AdminProfil
     default_timezone: null,
     permitted_report_profiles: [],
     default_report_profile: null,
-    permitted_min_severities: [],
-    default_min_severity: null,
     thresholds: {
       warning_percent: 70,
       critical_percent: 85,

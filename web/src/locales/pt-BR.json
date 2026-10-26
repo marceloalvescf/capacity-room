@@ -163,11 +163,6 @@
     "detailed": "Detalhado",
     "executive": "Executivo"
   },
-  "minSeverity": {
-    "all": "Todas",
-    "attention": "Atenção e crítico",
-    "critical": "Somente crítico"
-  },
   "pdfFailure": {
     "PDF_COMPILE_FAILED": "Não foi possível compilar o PDF.",
     "PDF_TOO_LARGE": "O PDF passa do tamanho permitido.",
@@ -293,7 +288,6 @@
     "period": "Período",
     "timezone": "Fuso horário",
     "reportProfile": "Perfil do relatório",
-    "minSeverity": "Severidade mínima",
     "submit": "Gerar relatório",
     "submitting": "Gerando…",
     "noProfiles": "Nenhum perfil disponível. Um administrador cria os perfis.",
@@ -427,7 +421,6 @@
       "title": "Sobre este relatório",
       "timezone": "Fuso horário",
       "namespaces": "Namespaces",
-      "minSeverity": "Severidade mínima",
       "issued": "Emitido em",
       "version": "Versão do gerador"
     },
@@ -500,7 +493,7 @@
       "severity": "Severidade",
       "scope": "Escopo",
       "allScopes": "Todos os escopos",
-      "none": "Este relatório não tem achados.",
+      "none": "Nada pede atenção.",
       "noMatch": "Nenhum achado corresponde a estes filtros.",
       "showAll": "Mostrar todos os achados",
       "choose": "Escolha um achado para ver o que foi observado, o que fazer e as evidências.",
@@ -776,8 +769,6 @@
       "defaultZone": "Fuso horário padrão",
       "profiles": "Perfis de relatório permitidos",
       "defaultProfile": "Perfil de relatório padrão",
-      "severities": "Severidades mínimas permitidas",
-      "defaultSeverity": "Severidade mínima padrão",
       "noneTickedHint": "Nenhum marcado: qualquer um.",
       "fallback": "Padrão ({{value}})",
       "threshold": {

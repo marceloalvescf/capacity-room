@@ -163,11 +163,6 @@
     "detailed": "Detailed",
     "executive": "Executive"
   },
-  "minSeverity": {
-    "all": "All",
-    "attention": "Attention and critical",
-    "critical": "Critical only"
-  },
   "pdfFailure": {
     "PDF_COMPILE_FAILED": "The PDF could not be compiled.",
     "PDF_TOO_LARGE": "The PDF is larger than allowed.",
@@ -293,7 +288,6 @@
     "period": "Period",
     "timezone": "Time zone",
     "reportProfile": "Report profile",
-    "minSeverity": "Minimum severity",
     "submit": "Request report",
     "submitting": "Requesting…",
     "noProfiles": "No profile is available. An administrator creates profiles.",
@@ -427,7 +421,6 @@
       "title": "About this report",
       "timezone": "Time zone",
       "namespaces": "Namespaces",
-      "minSeverity": "Minimum severity",
       "issued": "Issued",
       "version": "Generator version"
     },
@@ -500,7 +493,7 @@
       "severity": "Severity",
       "scope": "Scope",
       "allScopes": "All scopes",
-      "none": "This report holds no findings.",
+      "none": "Nothing needs attention.",
       "noMatch": "No finding matches these filters.",
       "showAll": "Show all findings",
       "choose": "Choose a finding to see what was observed, what to do, and its evidence.",
@@ -776,8 +769,6 @@
       "defaultZone": "Default time zone",
       "profiles": "Permitted report profiles",
       "defaultProfile": "Default report profile",
-      "severities": "Permitted minimum severities",
-      "defaultSeverity": "Default minimum severity",
       "noneTickedHint": "None ticked: any.",
       "fallback": "Default ({{value}})",
       "threshold": {

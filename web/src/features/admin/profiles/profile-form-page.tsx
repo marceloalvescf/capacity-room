@@ -15,7 +15,6 @@ import { errorText, toError } from "@/api/errors";
 import {
   endpointTypeValues,
   filterModeValues,
-  minSeverityValues,
   nodeAutoscalingValues,
   reportProfileValues,
 } from "@/api/schema.gen";
@@ -469,25 +468,6 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
           {reportProfileValues.map((value) => (
             <option key={value} value={value}>
               {t(`reportProfile.${value}`)}
-            </option>
-          ))}
-        </Select>
-        <CheckGroup
-          legend={t("admin.profile.severities")}
-          hint={t("admin.profile.noneTickedHint")}
-          error={fieldError(errors.permitted_min_severities?.message)}
-          options={minSeverityValues.map((value) => ({ value, label: t(`minSeverity.${value}`) }))}
-          registration={register("permitted_min_severities")}
-        />
-        <Select
-          label={t("admin.profile.defaultSeverity")}
-          error={fieldError(errors.default_min_severity?.message)}
-          {...register("default_min_severity")}
-        >
-          <option value="">{t("admin.profile.fallback", { value: t("minSeverity.all") })}</option>
-          {minSeverityValues.map((value) => (
-            <option key={value} value={value}>
-              {t(`minSeverity.${value}`)}
             </option>
           ))}
         </Select>

@@ -45,9 +45,10 @@ describe("the profile form", () => {
       expect(screen.getByRole("button", { name })).toHaveAttribute("aria-expanded", "false");
       expect(screen.getByRole("button", { name })).toHaveTextContent(/^Change$/);
     }
+    expect(screen.queryByText(/severity/i)).toBeNull();
     expect(screen.getByLabelText("Active")).toHaveAccessibleDescription("An active profile is offered in the new report form.");
     const choices = screen.getByText("Any period").closest("p") as HTMLElement;
-    expect(choices).toHaveTextContent(/^Any period · 24h · America\/Sao_Paulo · Detailed · All$/);
+    expect(choices).toHaveTextContent(/^Any period · 24h · America\/Sao_Paulo · Detailed$/);
     expect(choices).not.toHaveClass("font-mono");
     expect(within(choices).getByText("America/Sao_Paulo")).toHaveClass("font-mono");
     const thresholds = screen.getByText("Low utilization").closest("p") as HTMLElement;
@@ -81,6 +82,7 @@ describe("the profile form", () => {
     });
     expect(changes()).toHaveLength(1);
     expect(changes()[0]).toMatchObject({ method: "POST", path: "/admin/profiles" });
+    expect(Object.keys(changes()[0]?.body as object).filter((key) => key.includes("severity"))).toEqual([]);
     expect(changes()[0]?.body).toEqual({
       id: "lab",
       display_name: "Lab",
@@ -104,8 +106,6 @@ describe("the profile form", () => {
       default_timezone: null,
       permitted_report_profiles: [],
       default_report_profile: null,
-      permitted_min_severities: [],
-      default_min_severity: null,
       thresholds: {
         warning_percent: 70,
         critical_percent: 85,

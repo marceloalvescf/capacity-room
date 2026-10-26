@@ -1,7 +1,6 @@
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
-import { cn } from "@/lib/cn";
 import { FindingsChart } from "./findings-chart";
 import { AnswerStrip, GrowthPair, Plan, QualityNotice } from "./overview-parts";
 import { useView } from "./report-page";
@@ -9,12 +8,11 @@ import { useView } from "./report-page";
 function About() {
   const { t } = useTranslation();
   const view = useView();
-  const rows: { label: string; value: string; mono: boolean }[] = [
-    { label: t("report.about.timezone"), value: view.report.timezone, mono: true },
-    { label: t("report.about.namespaces"), value: view.report.namespaces.join(", "), mono: true },
-    { label: t("report.about.minSeverity"), value: t(`minSeverity.${view.min_severity}`), mono: false },
-    { label: t("report.about.issued"), value: view.report.emitted_at_text, mono: true },
-    { label: t("report.about.version"), value: view.report.generator_version, mono: true },
+  const rows: { label: string; value: string }[] = [
+    { label: t("report.about.timezone"), value: view.report.timezone },
+    { label: t("report.about.namespaces"), value: view.report.namespaces.join(", ") },
+    { label: t("report.about.issued"), value: view.report.emitted_at_text },
+    { label: t("report.about.version"), value: view.report.generator_version },
   ];
   return (
     <details className="group text-sm">
@@ -26,7 +24,7 @@ function About() {
         {rows.map((row) => (
           <div key={row.label} className="contents">
             <dt className="text-muted-fg">{row.label}</dt>
-            <dd className={cn(row.mono && "font-mono")}>{row.value}</dd>
+            <dd className="font-mono">{row.value}</dd>
           </div>
         ))}
       </dl>

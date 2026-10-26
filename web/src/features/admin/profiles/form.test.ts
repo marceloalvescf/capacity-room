@@ -44,8 +44,6 @@ describe("values of a profile", () => {
       default_timezone: "UTC",
       permitted_report_profiles: ["executive"],
       default_report_profile: null,
-      permitted_min_severities: ["all", "critical"],
-      default_min_severity: "critical",
     });
     expect(valuesOf(profile)).toEqual({
       id: "production",
@@ -70,8 +68,6 @@ describe("values of a profile", () => {
       default_timezone: "UTC",
       permitted_report_profiles: ["executive"],
       default_report_profile: "",
-      permitted_min_severities: ["all", "critical"],
-      default_min_severity: "critical",
       thresholds: {
         warning_percent: "70",
         critical_percent: "85",
@@ -101,17 +97,17 @@ describe("summaries", () => {
       adminProfile({ permitted_periods: ["24h", "7d"], default_period: "7d", default_report_profile: "executive" }),
     );
     const { choices, thresholds } = summaries(values, t);
-    expect(summaryText(choices)).toBe("24h, 7d · 7d · America/Sao_Paulo · Executive · All");
+    expect(summaryText(choices)).toBe("24h, 7d · 7d · America/Sao_Paulo · Executive");
     expect(summaryText(thresholds)).toBe(
       "Attention 70% · Critical 85% · Low utilization 30% · Near maximum 80% · Node pool spread 30 · Variation 100% · Divergence 1",
     );
-    expect(choices.map((entry) => entry.map((part) => part.value))).toEqual([[true], [true], [true], [false], [false]]);
+    expect(choices.map((entry) => entry.map((part) => part.value))).toEqual([[true], [true], [true], [false]]);
     expect(thresholds.every(([label, number]) => label?.value === false && number?.value === true)).toBe(true);
   });
 
   it("falls back to the defaults of an empty choice", () => {
     const { choices } = summaries(valuesOf(adminProfile()), t);
-    expect(summaryText(choices)).toBe("Any period · 24h · America/Sao_Paulo · Detailed · All");
+    expect(summaryText(choices)).toBe("Any period · 24h · America/Sao_Paulo · Detailed");
     expect(choices[0]?.[0]?.value).toBe(false);
   });
 
@@ -153,8 +149,6 @@ describe("new values", () => {
       default_timezone: "",
       permitted_report_profiles: [],
       default_report_profile: "",
-      permitted_min_severities: [],
-      default_min_severity: "",
       thresholds: {
         warning_percent: "70",
         critical_percent: "85",
@@ -176,7 +170,6 @@ describe("document of the values", () => {
       permitted_periods: ["24h", "7d"],
       default_period: "7d",
       permitted_report_profiles: ["executive"],
-      default_min_severity: "critical",
     });
     const document = Object.fromEntries(
       Object.entries(profile).filter(([key]) => !["id", "revision_id", "revision", "created_at"].includes(key)),
@@ -190,7 +183,6 @@ describe("document of the values", () => {
     expect(document.default_period).toBeNull();
     expect(document.default_timezone).toBe("Europe/Lisbon");
     expect(document.default_report_profile).toBeNull();
-    expect(document.default_min_severity).toBeNull();
   });
 
   it("sends numbers as numbers and lists as trimmed lines", () => {
@@ -270,9 +262,6 @@ describe("checks of the form", () => {
     expect(
       problems({ ...valid, permitted_report_profiles: ["executive"], default_report_profile: "detailed" }),
     ).toEqual(["default_report_profile: validation.defaultNotPermitted"]);
-    expect(problems({ ...valid, permitted_min_severities: ["all"], default_min_severity: "critical" })).toEqual([
-      "default_min_severity: validation.defaultNotPermitted",
-    ]);
     expect(problems({ ...valid, permitted_periods: "24h", default_period: "24h" })).toEqual([]);
     expect(problems({ ...valid, thresholds: { ...valid.thresholds, low_utilization_percent: "-1" } })).toEqual([
       "thresholds.low_utilization_percent: validation.notNegative",

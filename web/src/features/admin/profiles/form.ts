@@ -56,8 +56,6 @@ export interface ProfileValues {
   default_timezone: string;
   permitted_report_profiles: Schemas["ReportProfile"][];
   default_report_profile: string;
-  permitted_min_severities: Schemas["MinSeverity"][];
-  default_min_severity: string;
   thresholds: Record<ThresholdKey, string>;
 }
 
@@ -86,8 +84,6 @@ export function valuesOf(profile: Profile): ProfileValues {
     default_timezone: profile.default_timezone ?? "",
     permitted_report_profiles: profile.permitted_report_profiles,
     default_report_profile: profile.default_report_profile ?? "",
-    permitted_min_severities: profile.permitted_min_severities,
-    default_min_severity: profile.default_min_severity ?? "",
     thresholds: {
       warning_percent: String(profile.thresholds.warning_percent),
       critical_percent: String(profile.thresholds.critical_percent),
@@ -109,7 +105,6 @@ export function summaries(values: ProfileValues, t: TFunction): { choices: Summa
       valuePart(values.default_period === "" ? "24h" : values.default_period),
       valuePart(values.default_timezone === "" ? "America/Sao_Paulo" : values.default_timezone),
       wordPart(t(`reportProfile.${values.default_report_profile === "" ? "detailed" : values.default_report_profile}`)),
-      wordPart(t(`minSeverity.${values.default_min_severity === "" ? "all" : values.default_min_severity}`)),
     ],
     thresholds: thresholdKeys.map((key) => [
       ...wordPart(t(`admin.profile.short.${key}`)),
@@ -144,8 +139,6 @@ export function newProfileValues(): ProfileValues {
     default_timezone: "",
     permitted_report_profiles: [],
     default_report_profile: "",
-    permitted_min_severities: [],
-    default_min_severity: "",
     thresholds: {
       warning_percent: "70",
       critical_percent: "85",
@@ -187,8 +180,6 @@ export function documentOf(values: ProfileValues): ProfileDocument {
     default_timezone: nullIfEmpty(values.default_timezone),
     permitted_report_profiles: values.permitted_report_profiles,
     default_report_profile: nullIfEmpty(values.default_report_profile),
-    permitted_min_severities: values.permitted_min_severities,
-    default_min_severity: nullIfEmpty(values.default_min_severity),
     thresholds: {
       warning_percent: Number(values.thresholds.warning_percent),
       critical_percent: Number(values.thresholds.critical_percent),
@@ -217,8 +208,6 @@ const choiceFields: readonly string[] = [
   "default_timezone",
   "permitted_report_profiles",
   "default_report_profile",
-  "permitted_min_severities",
-  "default_min_severity",
 ];
 
 // The section that holds a field of the form, when it is one of the folded ones.
@@ -261,7 +250,6 @@ export function profileSchema(isNew: boolean): z.ZodType<ProfileValues, ProfileV
       [toLines(values.permitted_periods), values.default_period, "default_period"],
       [toLines(values.permitted_timezones), values.default_timezone, "default_timezone"],
       [values.permitted_report_profiles, values.default_report_profile, "default_report_profile"],
-      [values.permitted_min_severities, values.default_min_severity, "default_min_severity"],
     ];
     for (const [permitted, value, field] of defaults) {
       if (value !== "" && permitted.length > 0 && !permitted.includes(value)) {

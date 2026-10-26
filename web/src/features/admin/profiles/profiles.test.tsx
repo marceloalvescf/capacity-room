@@ -30,7 +30,6 @@ const production = adminProfile({
   default_period: "24h",
   default_timezone: "America/Sao_Paulo",
   default_report_profile: "detailed",
-  default_min_severity: "all",
 });
 const staging = adminProfile({
   id: "staging",
@@ -87,7 +86,7 @@ describe("the profiles screen", () => {
     expect(revision.querySelector(".font-mono")).toBeNull();
     expect(within(fact("Namespaces") as HTMLElement).getByText("payments, billing")).toHaveClass("font-mono");
     const choices = fact("Report form choices") as HTMLElement;
-    expect(choices).toHaveTextContent("Any period · 24h · America/Sao_Paulo · Detailed · All");
+    expect(choices).toHaveTextContent("Any period · 24h · America/Sao_Paulo · Detailed");
     expect(within(choices).getByText("Any period")).not.toHaveClass("font-mono");
     expect(within(choices).getByText("America/Sao_Paulo")).toHaveClass("font-mono");
     expect(screen.getByRole("link", { name: "Edit" })).toHaveAttribute("href", "/profiles/production/edit");

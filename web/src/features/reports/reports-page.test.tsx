@@ -382,7 +382,6 @@ describe("report list", () => {
         end: null,
         timezone: "UTC",
         report_profile: "detailed",
-        min_severity: "all",
         language: n === 0 ? "en" : "pt-BR",
       },
     }));

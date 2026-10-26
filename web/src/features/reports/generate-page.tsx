@@ -24,10 +24,9 @@ interface Values {
   period: PeriodValue;
   timezone: string;
   reportProfile: string;
-  minSeverity: string;
 }
 
-type Marked = "namespaces" | "period" | "timezone" | "report_profile" | "min_severity";
+type Marked = "namespaces" | "period" | "timezone" | "report_profile";
 type Problem = "notPermitted" | "invalid" | "required" | "wallClock" | "order" | "future";
 
 const markable: readonly string[] = [
@@ -35,7 +34,6 @@ const markable: readonly string[] = [
   "period",
   "timezone",
   "report_profile",
-  "min_severity",
 ] satisfies Marked[];
 
 // How the form words a reason the server gives for the start or the end.
@@ -54,7 +52,6 @@ function defaultsOf(profile: ProfileSummary, language: Language): Values {
     period: { kind: "length", period: profile.default_period },
     timezone: profile.default_timezone,
     reportProfile: profile.default_report_profile,
-    minSeverity: profile.default_min_severity,
   };
 }
 
@@ -102,7 +99,6 @@ function fromReport(
       period,
       timezone: selection.timezone,
       reportProfile: selection.report_profile,
-      minSeverity: selection.min_severity,
     },
     notices,
   };
@@ -292,7 +288,6 @@ function GenerateForm({
           ...when,
           timezone: values.timezone,
           report_profile: values.reportProfile,
-          min_severity: values.minSeverity,
         },
       });
       // The lock stays on after an accepted request: the page is being left,
@@ -349,7 +344,6 @@ function GenerateForm({
   const summary: Summary = [
     valuePart(values.timezone),
     wordPart(t(`reportProfile.${values.reportProfile}`)),
-    wordPart(t(`minSeverity.${values.minSeverity}`)),
   ];
   const namespaceProblem = problemText("namespaces");
 
@@ -481,20 +475,6 @@ function GenerateForm({
               {withCurrent(profile.permitted_report_profiles, values.reportProfile).map((kind) => (
                 <option key={kind} value={kind}>
                   {t(`reportProfile.${kind}`)}
-                </option>
-              ))}
-            </Select>
-            <Select
-              label={t("generate.minSeverity")}
-              value={values.minSeverity}
-              error={problemText("min_severity")}
-              onChange={(event) => {
-                edit({ minSeverity: event.target.value }, ["min_severity"]);
-              }}
-            >
-              {withCurrent(profile.permitted_min_severities, values.minSeverity).map((level) => (
-                <option key={level} value={level}>
-                  {t(`minSeverity.${level}`)}
                 </option>
               ))}
             </Select>
