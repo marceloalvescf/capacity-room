@@ -75,7 +75,7 @@ func fixedEmittedAt() (time.Time, error) {
 // never reads it into the stored snapshot.
 func fixedConfig(scenario promtest.Scenario, serverURL string) config.Config {
 	cfg := config.Default()
-	cfg.Metrics.URL = serverURL + scenario.APIRoot
+	cfg.Metrics.URL = serverURL + "/api/v1"
 	cfg.Cluster.Name = clusterName
 	cfg.Cluster.Namespaces = namespaces
 	cfg.Analysis.NodeAutoscaling = scenario.NodeAutoscaling
@@ -131,7 +131,6 @@ func run(ctx context.Context, scenario promtest.Scenario) (runOutput, *promtest.
 
 	client, err := prom.Connect(ctx, prom.Options{
 		Metrics: cfg.Metrics,
-		Token:   scenario.Token,
 	})
 	if err != nil {
 		return runOutput{}, nil, fmt.Errorf("%s: connecting: %w", scenario.Name, err)

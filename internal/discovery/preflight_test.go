@@ -19,7 +19,7 @@ import (
 // autoscaling setting of the scenario.
 func preflightConfig(url string, scenario promtest.Scenario) config.Config {
 	cfg := config.Default()
-	cfg.Metrics.URL = url + scenario.APIRoot
+	cfg.Metrics.URL = url + "/api/v1"
 	cfg.Cluster.Name = "prod"
 	cfg.Cluster.Namespaces = []string{"payments"}
 	cfg.Analysis.NodeAutoscaling = scenario.NodeAutoscaling

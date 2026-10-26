@@ -423,11 +423,10 @@ func TestScopeScenario(t *testing.T) {
 
 			client, err := prom.Connect(context.Background(), prom.Options{
 				Metrics: config.Metrics{
-					URL:            ts.URL + scenario.APIRoot,
+					URL:            ts.URL + "/api/v1",
 					TLSVerify:      true,
 					TimeoutSeconds: 5,
 				},
-				Token: scenario.Token,
 			})
 			if err != nil {
 				t.Fatalf("Connect: %v", err)

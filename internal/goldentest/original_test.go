@@ -1589,7 +1589,7 @@ func compareNumbers(scenario string, snap snapshot.Snapshot, collected collect.C
 	return diffs
 }
 
-// TestNumbersEqualTheOriginal runs each of the eight scenarios through
+// TestNumbersEqualTheOriginal runs each of the seven scenarios through
 // Snapshot and compares the result with its recorded file of the original,
 // row by row and number by number.
 func TestNumbersEqualTheOriginal(t *testing.T) {
@@ -1616,7 +1616,7 @@ func TestNumbersEqualTheOriginal(t *testing.T) {
 	}
 }
 
-// TestCollectionStatesEqualTheOriginal checks, for each of the eight
+// TestCollectionStatesEqualTheOriginal checks, for each of the seven
 // scenarios, that the states of the five collectors equal the five
 // collection states of the recorded file. The status of the node autoscaling
 // is not compared: see docs/decisions/0002-differences-from-the-original.md.
@@ -1656,7 +1656,7 @@ func TestCollectionStatesEqualTheOriginal(t *testing.T) {
 	}
 }
 
-// TestWindowEqualsTheOriginal checks, for each of the eight scenarios,
+// TestWindowEqualsTheOriginal checks, for each of the seven scenarios,
 // that the start and the end of the query window, in seconds since the
 // epoch, equal period_start and period_end of the recorded file, and that
 // the step collect.Step gives for the period equals its step.
@@ -1740,7 +1740,7 @@ func withoutLinesHolding(lines []string, parts ...string) ([]string, int) {
 	return kept, len(lines) - len(kept)
 }
 
-// TestQueriesEqualTheOriginal checks, for each of the eight scenarios,
+// TestQueriesEqualTheOriginal checks, for each of the seven scenarios,
 // that the project's own golden queries file equals the recorded queries
 // file of the original line for line, whole, and that neither is longer
 // than the other, once each side has lost the lines of node autoscaling,

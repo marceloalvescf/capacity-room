@@ -316,7 +316,7 @@ func TestExecutiveProfile(t *testing.T) {
 		if viaFlag {
 			extra = append(extra, "--report-profile", "executive")
 		}
-		_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, scenario, extra...))
+		_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, extra...))
 		if code != 0 {
 			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
 		}
@@ -1580,7 +1580,7 @@ node_autoscaling = %q
 
 [report]
 output_directory = %q
-`, server.URL+scenario.APIRoot, scenario.NodeAutoscaling, outDir)
+`, server.URL+"/api/v1", scenario.NodeAutoscaling, outDir)
 }
 
 // TestEmptyPeriodStopsBeforeAnyRequest proves that a period the zone's own
@@ -1812,7 +1812,7 @@ func TestGoldenFlowEqualsTheCommand(t *testing.T) {
 			cfgPath := writeConfig(t, fixedGoldenConfig(server, sc, outDir))
 			snapPath := filepath.Join(t.TempDir(), "s.json")
 
-			args := scenarioArgs(cfgPath, sc, "--snapshot", snapPath)
+			args := scenarioArgs(cfgPath, "--snapshot", snapPath)
 			_, stderr, code := runArgs(context.Background(), fixedGoldenEnv(t), args)
 			if code != 0 {
 				t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)

@@ -58,7 +58,7 @@ func newRun(t *testing.T, scenario promtest.Scenario, serverURL string) fixture 
 	emittedAt := time.Date(2026, time.July, 15, 14, 30, 0, 0, loc)
 
 	cfg := config.Default()
-	cfg.Metrics.URL = serverURL + scenario.APIRoot
+	cfg.Metrics.URL = serverURL + "/api/v1"
 	cfg.Cluster.Name = "prod"
 	cfg.Cluster.Namespaces = []string{"payments"}
 	cfg.Analysis.NodeAutoscaling = scenario.NodeAutoscaling
@@ -76,7 +76,7 @@ func newRun(t *testing.T, scenario promtest.Scenario, serverURL string) fixture 
 	var steps []pipeline.Step
 	f := fixture{nowCalls: &nowCalls, idCalls: &idCalls, steps: &steps}
 	f.run = pipeline.Run{
-		Options:   prom.Options{Metrics: cfg.Metrics, Token: scenario.Token},
+		Options:   prom.Options{Metrics: cfg.Metrics},
 		Config:    cfg,
 		Window:    window,
 		EmittedAt: emittedAt,

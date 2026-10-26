@@ -10,10 +10,8 @@ import (
 // Scenario names one of the scenarios and the settings the original
 // tests, or this project, ran it with.
 type Scenario struct {
-	Name    string // file stem
-	Folder  string // "prometheus" or "prometheus-own"
-	APIRoot string // path to add to the server address
-	Token   string // empty when the scenario needs none
+	Name   string // file stem
+	Folder string // "prometheus" or "prometheus-own"
 	// NodeAutoscaling is the value of analysis.node_autoscaling the
 	// original tests, or this project, ran the scenario with.
 	NodeAutoscaling string
@@ -30,20 +28,20 @@ type Scenario struct {
 // bytes as direct-complete; only the node autoscaling setting the original
 // tests ran it with tells the two apart.
 var Scenarios = []Scenario{
-	{Name: "direct-complete", Folder: "prometheus", APIRoot: "/api/v1", Token: "", NodeAutoscaling: "auto"},
-	{Name: "thanos-multicluster", Folder: "prometheus", APIRoot: "/api/v1", Token: "", NodeAutoscaling: "auto"},
-	{Name: "raw-fallback", Folder: "prometheus", APIRoot: "/api/v1", Token: "", NodeAutoscaling: "auto"},
-	{Name: "partial-data", Folder: "prometheus", APIRoot: "/api/v1", Token: "", NodeAutoscaling: "auto"},
-	{Name: "value-edge-cases", Folder: "prometheus", APIRoot: "/api/v1", Token: "", NodeAutoscaling: "disabled"},
-	{Name: "edge-values", Folder: "prometheus-own", APIRoot: "/api/v1", Token: "", NodeAutoscaling: "auto"},
-	{Name: "edge-scaling", Folder: "prometheus-own", APIRoot: "/api/v1", Token: "", NodeAutoscaling: "auto"},
+	{Name: "direct-complete", Folder: "prometheus", NodeAutoscaling: "auto"},
+	{Name: "thanos-multicluster", Folder: "prometheus", NodeAutoscaling: "auto"},
+	{Name: "raw-fallback", Folder: "prometheus", NodeAutoscaling: "auto"},
+	{Name: "partial-data", Folder: "prometheus", NodeAutoscaling: "auto"},
+	{Name: "value-edge-cases", Folder: "prometheus", NodeAutoscaling: "disabled"},
+	{Name: "edge-values", Folder: "prometheus-own", NodeAutoscaling: "auto"},
+	{Name: "edge-scaling", Folder: "prometheus-own", NodeAutoscaling: "auto"},
 }
 
 // RangeScenarios holds the scenarios that ask about a calendar range. Each
 // reads the recorded answers of another scenario, so it stays apart from
 // Scenarios, whose every entry is compared with the original.
 var RangeScenarios = []Scenario{
-	{Name: "direct-complete-range", Fixture: "direct-complete", Folder: "prometheus", APIRoot: "/api/v1", NodeAutoscaling: "auto", Start: "2026-07-13 00:00", End: "2026-07-14 00:00"},
+	{Name: "direct-complete-range", Fixture: "direct-complete", Folder: "prometheus", NodeAutoscaling: "auto", Start: "2026-07-13 00:00", End: "2026-07-14 00:00"},
 }
 
 // scenarioPath returns the scenario file of name, under its own folder, found by

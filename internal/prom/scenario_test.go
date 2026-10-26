@@ -26,11 +26,10 @@ func TestScenarioProbe(t *testing.T) {
 			sleep, _ := recordingSleep()
 			opts := Options{
 				Metrics: config.Metrics{
-					URL:            ts.URL + scenario.APIRoot,
+					URL:            ts.URL + "/api/v1",
 					TLSVerify:      true,
 					TimeoutSeconds: 5,
 				},
-				Token: scenario.Token,
 				Sleep: sleep,
 			}
 

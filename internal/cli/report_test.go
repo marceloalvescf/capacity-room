@@ -168,14 +168,11 @@ organization = "ACME"
 classification = "Uso interno"
 author = "Time SRE"
 output_directory = %q
-`, server.URL+scenario.APIRoot, scenario.NodeAutoscaling, outputDir)
+`, server.URL+"/api/v1", scenario.NodeAutoscaling, outputDir)
 }
 
-func scenarioArgs(cfgPath string, scenario promtest.Scenario, extra ...string) []string {
+func scenarioArgs(cfgPath string, extra ...string) []string {
 	args := []string{"report", "--config", cfgPath}
-	if scenario.Token != "" {
-		args = append(args, "--token", scenario.Token)
-	}
 	return append(args, extra...)
 }
 
@@ -189,7 +186,7 @@ func TestSnapshotModeWritesTheGoldenFile(t *testing.T) {
 			cfgPath := writeConfig(t, fixedGoldenConfig(server, scenario, outDir))
 			snapPath := filepath.Join(t.TempDir(), "s.json")
 
-			args := scenarioArgs(cfgPath, scenario, "--snapshot", snapPath)
+			args := scenarioArgs(cfgPath, "--snapshot", snapPath)
 			_, stderr, code := runArgs(context.Background(), fixedGoldenEnv(t), args)
 			if code != 0 {
 				t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
@@ -250,7 +247,7 @@ func TestPDFModeWritesTheFile(t *testing.T) {
 	outPath := filepath.Join(t.TempDir(), "r.pdf")
 
 	env := withTypst(t, fixedGoldenEnv(t))
-	args := scenarioArgs(cfgPath, scenario, "--lang", "en", "--output", outPath)
+	args := scenarioArgs(cfgPath, "--lang", "en", "--output", outPath)
 	_, stderr, code := runArgs(context.Background(), env, args)
 	if code != 0 {
 		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
@@ -279,7 +276,7 @@ func TestPDFModeDefaultsToPortuguese(t *testing.T) {
 	outPath := filepath.Join(t.TempDir(), "r.pdf")
 
 	env := withTypst(t, fixedGoldenEnv(t))
-	args := scenarioArgs(cfgPath, scenario, "--output", outPath)
+	args := scenarioArgs(cfgPath, "--output", outPath)
 	_, stderr, code := runArgs(context.Background(), env, args)
 	if code != 0 {
 		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
@@ -311,7 +308,7 @@ func TestPDFModeDefaultName(t *testing.T) {
 	cfgPath := writeConfig(t, fixedGoldenConfig(server, scenario, outDir))
 
 	env := withTypst(t, fixedGoldenEnv(t))
-	args := scenarioArgs(cfgPath, scenario, "--lang", "en")
+	args := scenarioArgs(cfgPath, "--lang", "en")
 	stdout, stderr, code := runArgs(context.Background(), env, args)
 	if code != 0 {
 		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
@@ -386,7 +383,7 @@ func TestSnapshotThenFromSnapshotEqualsPDFMode(t *testing.T) {
 	pdfOut := filepath.Join(t.TempDir(), "direct.pdf")
 
 	env1 := withTypst(t, fixedGoldenEnv(t))
-	_, stderr, code := runArgs(context.Background(), env1, scenarioArgs(pdfCfg, scenario, "--output", pdfOut))
+	_, stderr, code := runArgs(context.Background(), env1, scenarioArgs(pdfCfg, "--output", pdfOut))
 	if code != 0 {
 		t.Fatalf("PDF mode: code = %d, want 0; stderr = %q", code, stderr)
 	}
@@ -399,7 +396,7 @@ func TestSnapshotThenFromSnapshotEqualsPDFMode(t *testing.T) {
 	snapPath := filepath.Join(t.TempDir(), "s.json")
 
 	env2 := fixedGoldenEnv(t)
-	_, stderr, code = runArgs(context.Background(), env2, scenarioArgs(snapCfg, scenario2, "--snapshot", snapPath))
+	_, stderr, code = runArgs(context.Background(), env2, scenarioArgs(snapCfg, "--snapshot", snapPath))
 	if code != 0 {
 		t.Fatalf("snapshot mode: code = %d, want 0; stderr = %q", code, stderr)
 	}

@@ -1001,11 +1001,10 @@ func scenarioClient(t *testing.T, scenario promtest.Scenario) (*prom.Client, Sco
 
 	client, err := prom.Connect(context.Background(), prom.Options{
 		Metrics: config.Metrics{
-			URL:            ts.URL + scenario.APIRoot,
+			URL:            ts.URL + "/api/v1",
 			TLSVerify:      true,
 			TimeoutSeconds: 5,
 		},
-		Token: scenario.Token,
 	})
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
@@ -1192,11 +1191,10 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 
 			client, err := prom.Connect(context.Background(), prom.Options{
 				Metrics: config.Metrics{
-					URL:            ts.URL + scenario.APIRoot,
+					URL:            ts.URL + "/api/v1",
 					TLSVerify:      true,
 					TimeoutSeconds: 5,
 				},
-				Token: scenario.Token,
 			})
 			if err != nil {
 				t.Fatalf("Connect: %v", err)
@@ -1243,7 +1241,7 @@ type scenarioCapability struct {
 // baseline scenarios name for workload_usage and node_utilization
 // (recording_rule); every other unlisted capability is raw_metrics, the
 // only strategy its available case can carry. Evidence values were
-// confirmed against an actual run of Detect for all six scenarios, not
+// confirmed against an actual run of Detect for all seven scenarios, not
 // derived from the table by hand.
 func scenarioWant(name string) []scenarioCapability {
 	baseline := []scenarioCapability{

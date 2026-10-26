@@ -121,7 +121,7 @@ func TestRealReportFromEachScenario(t *testing.T) {
 				outPath := filepath.Join(outDir, "r.pdf")
 
 				env := realEnv(t)
-				args := scenarioArgs(cfgPath, scenario, "--lang", string(lang), "--output", outPath)
+				args := scenarioArgs(cfgPath, "--lang", string(lang), "--output", outPath)
 				_, stderr, code := runArgs(context.Background(), env, args)
 				if code != 0 {
 					t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
@@ -174,7 +174,7 @@ func TestRealReportPageCount(t *testing.T) {
 	outPath := filepath.Join(outDir, "r.pdf")
 
 	env := realEnv(t)
-	_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, scenario, "--output", outPath))
+	_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, "--output", outPath))
 	if code != 0 {
 		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
 	}
@@ -202,7 +202,7 @@ func TestRealReportShowsPartialData(t *testing.T) {
 			outPath := filepath.Join(outDir, "r.pdf")
 
 			env := realEnv(t)
-			args := scenarioArgs(cfgPath, scenario, "--lang", string(lang), "--output", outPath)
+			args := scenarioArgs(cfgPath, "--lang", string(lang), "--output", outPath)
 			_, stderr, code := runArgs(context.Background(), env, args)
 			if code != 0 {
 				t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
@@ -245,7 +245,7 @@ func TestRealReportFromSnapshotIsTheSame(t *testing.T) {
 		outPath := filepath.Join(outDir, "direct.pdf")
 
 		env := realEnv(t)
-		_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, scenario, "--output", outPath))
+		_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, "--output", outPath))
 		if code != 0 {
 			t.Fatalf("PDF mode: code = %d, want 0; stderr = %q", code, stderr)
 		}
@@ -264,7 +264,7 @@ func TestRealReportFromSnapshotIsTheSame(t *testing.T) {
 		snapPath := filepath.Join(snapDir, "s.json")
 
 		env := realEnv(t)
-		_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, scenario, "--snapshot", snapPath))
+		_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, "--snapshot", snapPath))
 		if code != 0 {
 			t.Fatalf("snapshot mode: code = %d, want 0; stderr = %q", code, stderr)
 		}
@@ -307,7 +307,7 @@ func TestRealReportInFolderWithSpace(t *testing.T) {
 	env := realEnv(t)
 	env.TempDir = workDir
 
-	_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, scenario, "--output", outPath))
+	_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, "--output", outPath))
 	if code != 0 {
 		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
 	}
@@ -372,7 +372,7 @@ func TestRealReportIsDeterministic(t *testing.T) {
 		outPath := filepath.Join(outDir, "r.pdf")
 
 		env := realEnv(t)
-		_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, scenario, "--output", outPath))
+		_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, "--output", outPath))
 		if code != 0 {
 			t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
 		}
@@ -404,7 +404,7 @@ func TestFromSnapshotPrintsTheSections(t *testing.T) {
 	snapPath := filepath.Join(outDir, "s.json")
 
 	env := realEnv(t)
-	_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, scenario, "--snapshot", snapPath))
+	_, stderr, code := runArgs(context.Background(), env, scenarioArgs(cfgPath, "--snapshot", snapPath))
 	if code != 0 {
 		t.Fatalf("snapshot mode: code = %d, want 0; stderr = %q", code, stderr)
 	}
@@ -453,7 +453,7 @@ func TestRealReportExecutiveProfile(t *testing.T) {
 			outDir := t.TempDir()
 			cfgPath := writeConfig(t, scenarioConfig(server, scenario, outDir))
 			outPath := filepath.Join(outDir, "r.pdf")
-			args := scenarioArgs(cfgPath, scenario, "--lang", string(lang), "--report-profile", "executive", "--output", outPath)
+			args := scenarioArgs(cfgPath, "--lang", string(lang), "--report-profile", "executive", "--output", outPath)
 			_, stderr, code := runArgs(context.Background(), realEnv(t), args)
 			if code != 0 {
 				t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
@@ -583,7 +583,7 @@ func headingPage(pages []string, want string) int {
 	return -1
 }
 
-// TestRealReportTextOfEveryScenario checks, for every one of the eight
+// TestRealReportTextOfEveryScenario checks, for every one of the seven
 // scenarios and both languages, that the compiled PDF: names the numbered
 // headings of the six parts (executive summary 1, namespaces 2, workloads 3,
 // HPA history 4, node pools 5, appendix 6) in the outline, on page 2; carries each of
@@ -628,7 +628,7 @@ func TestRealReportTextOfEveryScenario(t *testing.T) {
 					outPath := filepath.Join(outDir, "r.pdf")
 
 					env := realEnv(t)
-					args := scenarioArgs(cfgPath, sc, "--lang", string(lang), "--output", outPath)
+					args := scenarioArgs(cfgPath, "--lang", string(lang), "--output", outPath)
 					_, stderr, code := runArgs(context.Background(), env, args)
 					if code != 0 {
 						t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
@@ -752,7 +752,7 @@ func TestRealReportHoldsSectionsThreeAndFour(t *testing.T) {
 					outDir := t.TempDir()
 					cfgPath := writeConfig(t, scenarioConfig(server, sc, outDir))
 					outPath := filepath.Join(outDir, "r.pdf")
-					args := scenarioArgs(cfgPath, sc, "--lang", string(lang), "--output", outPath)
+					args := scenarioArgs(cfgPath, "--lang", string(lang), "--output", outPath)
 					_, stderr, code := runArgs(context.Background(), realEnv(t), args)
 					if code != 0 {
 						t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
