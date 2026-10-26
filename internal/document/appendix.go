@@ -157,8 +157,8 @@ func noticeText(b *builder, n snapshot.Message) string {
 
 // buildNotes assembles the interpretation notes that follow the appendix:
 // one row for every warning, then every notice, of the snapshot, each text
-// written once; or no block at all when there is neither. The minimum
-// severity does not filter these rows.
+// written once; or no block at all when there is neither. The floor of
+// the profile does not filter these rows.
 func buildNotes(b *builder, s snapshot.Snapshot) []Block {
 	var rows [][][]Run
 	seen := make(map[string]bool)

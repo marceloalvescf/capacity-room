@@ -254,8 +254,8 @@ type ViewMessage struct {
 
 // BuildView words a snapshot in the catalog's language for the web,
 // narrowed as the PDF of the same report is: findings, recommendations,
-// and the rows of namespaces, workloads, and nodes below the minimum
-// floor of the profile are left out. HPAs, node pools, the summary, and the
+// and the rows of namespaces, workloads, and nodes below the floor of
+// the profile are left out. HPAs, node pools, the summary, and the
 // quality are whole.
 func BuildView(s snapshot.Snapshot, c *catalog.Catalog) (View, error) {
 	profile, err := resolve(s, Options{})

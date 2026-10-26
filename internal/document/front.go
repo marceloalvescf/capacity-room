@@ -147,7 +147,7 @@ func legendTable(b *builder) Table {
 }
 
 // qualityList counts every capability of the snapshot by effective state, always
-// over all nine, regardless of the minimum severity, and builds the three
+// over all nine, at either floor, and builds the three
 // bullet items of the opening page.
 func qualityList(b *builder, s snapshot.Snapshot) List {
 	var available, partial, unavailable int

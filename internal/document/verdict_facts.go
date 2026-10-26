@@ -14,7 +14,7 @@ import (
 var GaugeHazards = []string{analysis.SeverityCritical, analysis.SeverityAttention}
 
 // verdictFacts are the decisions of the verdict, before any word: the
-// indices point into the findings at or above the minimum and into the
+// indices point into the findings at or above the floor and into the
 // warnings of the data.
 type verdictFacts struct {
 	ClusterFinding  int // -1 when the cluster has no finding

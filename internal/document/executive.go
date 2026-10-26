@@ -424,7 +424,7 @@ func worstSeverity(findings []snapshot.Finding) string {
 // nodepoolStatus writes one row for every pool: its name, the highest
 // severity among its own findings and those of its nodes, and the
 // observations of the findings at that severity. Highest severity first,
-// then the name as the reader sees it. No minimum filters it.
+// then the name as the reader sees it. No floor filters it.
 func nodepoolStatus(b *builder, s snapshot.Snapshot) []Block {
 	type poolRow struct {
 		name, displayed string
@@ -598,7 +598,7 @@ func recommendationScope(b *builder, r snapshot.Recommendation) Run {
 
 // materialLimitations writes one row for every capability that is not
 // available, then one for every warning whose text no row printed. No
-// minimum filters it.
+// floor filters it.
 func materialLimitations(b *builder, s snapshot.Snapshot) []Block {
 	var rows [][][]Run
 	var remarks []string

@@ -18,7 +18,7 @@ const deploymentKind = "Deployment" // wording: not reader text, a workload kind
 // introduction, a note when the HPA data is incomplete, and then, for every
 // namespace of the scope, the HPAs observed there and the workloads no HPA
 // targets. A namespace with neither gets one paragraph. This section
-// applies no minimum severity.
+// is whole at either floor.
 func buildHPAsSection(b *builder, s snapshot.Snapshot) []Block {
 	period := b.period(b.time(s.Report.PeriodStart), b.time(s.Report.PeriodEnd))
 	blocks := []Block{
