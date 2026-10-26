@@ -6,6 +6,23 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- A report shows the findings its profile shows, and every count of the PDF and of the web counts only those: an executive report counts its critical and attention findings, and a report that shows none says "Nothing needs attention."
+- The upgrade to this version carries every stored report and profile forward and cannot be undone, so back up the database and stop the worker before it, as the operations guide says.
+- The PDF says "Every capability of this report is available." when its appendix has nothing to list, and "No workload has observed usage in this period." when no workload has a number to show.
+
+### Removed
+
+- The minimum severity is gone: the `--min-severity` flag, the `CAPACITYROOM_MIN_SEVERITY` variable, `min_severity` in `report.toml`, a profile's default and permitted minimum severities, and the field of a report request, each of which is now refused.
+- The opening page of the PDF no longer lists a minimum severity, and the name of a PDF no longer carries one.
+- A snapshot file written by 2.x is refused, and the operations guide shows the one edit that converts it.
+
+### Fixed
+
+- A node pool or an HPA on the web takes the status of all its findings, as the PDF does, so a pool whose findings are all healthy no longer reads "No finding".
+- The bars of each scope on the web no longer show a healthy count that an executive report does not show.
+
 ## [2.8.0] - 2026-10-21
 
 ### Added
