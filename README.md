@@ -120,24 +120,22 @@ The modes exclude each other. One collection gives a PDF in both languages
 through `--snapshot` followed by `--from-snapshot`, once for each language.
 
 `--from-snapshot` reads no configuration file. It takes `--lang`,
-`--report-profile`, `--min-severity`, and `--output`, and the variables
-`CAPACITYROOM_LANGUAGE`, `CAPACITYROOM_REPORT_PROFILE`, `CAPACITYROOM_MIN_SEVERITY`, and
-`CAPACITYROOM_OUTPUT_DIRECTORY`. The profile and the minimum severity come from the
-flag, else from the variable, else from the stored snapshot.
+`--report-profile`, and `--output`, and the variables `CAPACITYROOM_LANGUAGE`,
+`CAPACITYROOM_REPORT_PROFILE`, and `CAPACITYROOM_OUTPUT_DIRECTORY`. The profile
+comes from the flag, else from the variable, else from the stored snapshot. A
+snapshot written by 2.x is refused; section 8 of
+[`docs/operations.md`](docs/operations.md) shows how to convert one.
 
 Without `--output`, the PDF is written to `report.output_directory` under the
-name `report-resources-<cluster>-<language>-<date>-<time>.pdf`. When the
-minimum severity is not `all`, it comes after the cluster:
-`report-resources-<cluster>-<severity>-<language>-<date>-<time>.pdf`.
+name `report-resources-<cluster>-<language>-<date>-<time>.pdf`.
 
 The report profile is `detailed`, the default, or `executive`. Set it with
 `report.profile`, `--report-profile`, or `CAPACITYROOM_REPORT_PROFILE`. The `executive`
 profile writes the verdict page, the opening page, the executive summary as its only
-numbered section, 1, and the appendix as section 2. Its minimum severity is
-raised to at least attention for the whole report, the appendix included. Its
-PDF is named
-`report-resources-<cluster>-executive-<language>-<date>-<time>.pdf`: the
-suffix `-executive` takes the place of the severity.
+numbered section, 1, and the appendix as section 2. It shows the critical and
+attention findings alone, in every count and every section, the appendix
+included; the detailed profile shows every finding. Its PDF is named
+`report-resources-<cluster>-executive-<language>-<date>-<time>.pdf`.
 
 Add `--verbose` to any mode for a few more lines about the run.
 
@@ -184,8 +182,7 @@ the program and the date closes the document.
   attention; the namespaces with workloads at risk; the workloads at their
   replica maximum and without an HPA; the situation of the node pools; the
   prioritized action plan, which names each scope with its kind; and the
-  material limitations. Its rows start at the severity attention, whatever
-  the minimum.
+  material limitations. Its rows start at the severity attention.
 - **Capacity by namespace** (section 2). For each namespace, the average and
   peak usage of CPU and memory, its requests and limits, and the two ratios
   of the peak to the request and to the limit.

@@ -465,6 +465,48 @@ kube-state-metrics cannot be opened by 2.3.0 or earlier. A rollback to 2.3.0
 loses the view and the PDF renders of those reports; reports stored before the
 upgrade are read as before.
 
+### Upgrading from 2.x to 3.0.0
+
+Version 3.0.0 removes the minimum severity. A report shows the findings its
+profile shows: the detailed profile every finding, the executive profile the
+critical and attention findings. Every stored report is carried forward, and
+the upgrade cannot be undone.
+
+- **Back up the database first,** as the commands above do. A 2.x program
+  cannot read a database that 3.0.0 has migrated, so a rollback is a restore
+  of that backup (section 7).
+- **Stop the worker before the new version starts,** and wait until it has
+  stopped, so that no 2.x worker stores a report after the migration. With
+  Compose, run `docker compose stop worker` before `docker compose up -d
+  --wait`. With the chart, run `kubectl -n capacity-room scale deployment
+  capacity-room-worker --replicas 0` before `helm upgrade`, which starts the
+  worker again.
+- **Remove the option from your files.** `min_severity` in `report.toml`,
+  and `default_min_severity` and `permitted_min_severities` in a profiles
+  file of `admin import-profiles` or in the `profiles` of the chart's values,
+  are now refused as unknown keys. The flag `--min-severity` and the variable
+  `CAPACITYROOM_MIN_SEVERITY` are gone. A client of the API that sends
+  `min_severity` in `POST /reports` is answered 400.
+- **What the migration changes.** Every stored snapshot is rewritten without
+  the field, as schema 3.0, the two keys leave every profile revision, and
+  the field leaves every stored request. The worst severity of each report
+  is worked out again for its profile.
+- **What it keeps.** A PDF stored before the upgrade is kept as it was
+  issued: it may print a minimum severity row, and one made at `critical`
+  lists fewer findings than its view shows now. An idempotency key used
+  before the upgrade answers `IDEMPOTENCY_KEY_REUSED` if it is sent again;
+  the web app then makes a new key.
+- **A snapshot file of 2.x** is refused by `--from-snapshot` with a line that
+  names its version. This edit converts it, and keeps the original as
+  `cluster.json.bak`:
+
+```bash
+sed -E -i.bak \
+  -e '2s/^  "schema_version": "2\.0",$/  "schema_version": "3.0",/' \
+  -e '/^    "min_severity": "(all|attention|critical)",$/d' \
+  cluster.json
+```
+
 ## 9. Sizing
 
 A report stores its snapshot and one PDF per language asked for. On a real

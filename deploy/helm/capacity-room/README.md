@@ -161,6 +161,9 @@ Secret.
 ## Upgrade and uninstall
 
 To upgrade, check out the new version and run the install command again.
+Before an upgrade from 2.x to 3.0.0, back up the database, scale the worker
+to zero, and remove `default_min_severity` and `permitted_min_severities`
+from `profiles`; section 8 of `docs/operations.md` says why.
 
 ```bash
 helm uninstall capacity-room -n capacity-room

@@ -132,7 +132,7 @@ No guard checks these. The reviewer of each task does.
   (spec 15.1). The public surface is the API under `/api/v1` as
   `api/openapi.yaml` describes it, the commands with their flags,
   environment variables, and exit codes, the keys of `report.toml` and
-  `platform.toml`, and the snapshot file (`schema_version` 2.0). Breaking it
+  `platform.toml`, and the snapshot file (`schema_version` 3.0). Breaking it
   is a major version; adding to it is a minor one. Stored data is converted
   forward by a migration, and the code keeps one path, never a reader of an
   earlier shape; data that cannot be carried forward is dropped on purpose,
@@ -172,9 +172,16 @@ No guard checks these. The reviewer of each task does.
   they are the same `float64`. A test of the comparison has no tolerance,
   and an expected number in a test is a literal, never the expression of
   the code written again.
-- **The executive profile raises the minimum severity to at least attention
-  for the whole document, the appendix included; the detailed profile raises
-  it for the executive summary alone and never for the appendix.**
+- **A report's floor is its profile's, and no option sets it.** The
+  executive profile shows the critical and attention findings alone in the
+  whole document, the appendix included; the detailed profile shows every
+  finding, and raises the floor to attention for its executive summary
+  alone, never for the appendix.
+- **Every count follows the floor.** The totals, the ring, the bars of each
+  scope, and the empty states of the PDF and of the web count only the
+  findings shown; a report that shows none says "Nothing needs attention."
+  The status of a node pool or an HPA row is the worst of all its findings,
+  as the PDF's tables give it.
 
 Build tags in use:
 
@@ -281,8 +288,9 @@ below the command; the core never imports `internal/platform/`.
 - **The snapshot file has one reading.** The reader walks the file against
   the contract, letter for letter, and fills the snapshot from what it
   walked. It names a wrong schema version before anything else. The schema
-  is `2.0`, with no `report.period`: a snapshot `1.0` is named and refused,
-  with no reader of it. Its period ends at or before its emission.
+  is `3.0`, with no `report.period` and no `report.min_severity`: a snapshot
+  `1.0` or `2.0` is named and refused, with no reader of it. Its period ends
+  at or before its emission.
 - **The probes keep the order of the original**, short cuts included, except
   that the ninth probe asks `count(kube_configmap_info)` in place of the
   original's probe of the cluster autoscaler (decision 0002). The fake
@@ -549,6 +557,14 @@ redactor the moment the settings are loaded, before the pool opens.
 - **A snapshot is stored as the bytes `snapshot.Encode` wrote,** in `bytea`,
   at most 32 MiB, with its SHA-256 and size, never as `jsonb`; a PDF at most
   64 MiB. A render recomputes the snapshot's SHA-256 before decoding it.
+- **`00008_drop_min_severity.sql` carried 2.x forward, one way.** It
+  rewrote every stored 2.0 snapshot as text into the bytes 3.0's `Encode`
+  writes (the version on line 2, the one `min_severity` line gone), with its
+  SHA-256 and size, removed the option from every profile revision and
+  stored request, and worked `worst_severity` out again; it disabled each
+  immutability trigger for its statement alone and enabled it again. A
+  test proves the bytes against the golden snapshots. Its down refuses.
+  Stored PDFs stay as issued, and fingerprints as computed at creation.
 - **The maintenance job runs every minute** on the elected River leader, in
   six steps of their own: reconcile (a report or PDF row whose River job is
   gone or final fails `JOB_ATTEMPTS_EXHAUSTED` or `PDF_ATTEMPTS_EXHAUSTED`),
@@ -763,7 +779,8 @@ redactor the moment the settings are loaded, before the pool opens.
   held, except a 404 or a 410 of either, or a 409 of the view, which opens
   the progress page.
 - **The overview opens on its answer, built from the view alone.** First the
-  answer strip: the severity totals and any data-quality warnings. Then the
+  answer strip: the totals of `view.verdict.totals`, one per severity the
+  profile shows, and any data-quality warnings. Then the
   verdict band, which comes from `view.verdict` and keeps no rule of the web
   app: whether the cluster can grow (its nodes against the autoscaler's
   maximum as a proof bar, the worst cluster finding, and the node-evidence

@@ -225,7 +225,6 @@ column.
 | `thresholds.bursty_gap_percent` | number | `100` | Zero or more, no upper limit |
 | `thresholds.hpa_replica_divergence` | number | `1` | Zero or more, a replica count |
 | `report.profile` | string | `detailed` | `detailed`, `executive` |
-| `report.min_severity` | string | `all` | `all`, `attention`, `critical` |
 | `report.language` | string | `pt-BR` | `pt-BR`, `en` |
 | `report.organization` | string | empty | |
 | `report.classification` | string | empty | |
@@ -238,13 +237,13 @@ named by `metrics.token_env` or from `--token`, and is held in memory only.
 Environment variables carry the prefix `CAPACITYROOM_`:
 `CAPACITYROOM_METRICS_URL`, `CAPACITYROOM_ENDPOINT_TYPE`, `CAPACITYROOM_CLUSTER`, `CAPACITYROOM_CLUSTER_LABEL`,
 `CAPACITYROOM_CLUSTER_FILTER`, `CAPACITYROOM_NAMESPACES`, `CAPACITYROOM_PERIOD`, `CAPACITYROOM_TIMEZONE`,
-`CAPACITYROOM_NODE_AUTOSCALING`, `CAPACITYROOM_MIN_SEVERITY`, `CAPACITYROOM_REPORT_PROFILE`,
+`CAPACITYROOM_NODE_AUTOSCALING`, `CAPACITYROOM_REPORT_PROFILE`,
 `CAPACITYROOM_OUTPUT_DIRECTORY`, plus the new `CAPACITYROOM_LANGUAGE`, `CAPACITYROOM_TYPST`,
 `CAPACITYROOM_START`, and `CAPACITYROOM_END`.
 
 Flags: `--config`, `--metrics-url`, `--endpoint-type`, `--token`, `--insecure`,
 `--cluster`, `--cluster-label`, `--cluster-filter`, `--namespaces`, `--period`,
-`--start`, `--end`, `--timezone`, `--node-autoscaling`, `--min-severity`,
+`--start`, `--end`, `--timezone`, `--node-autoscaling`,
 `--report-profile`, `--lang`, `--output`, `--snapshot`, `--from-snapshot`,
 `--check`, `--verbose`.
 
@@ -395,9 +394,16 @@ The registry is the single list of valid codes. The catalog guards in section
 
 - Severity: `healthy`, `attention`, `critical`, in that order.
 - Confidence: `exact`, `inferred`, `unknown`.
-- The executive profile raises the minimum severity to `attention`.
-- Minimum severity is applied when a report is shown or compiled, never when
-  it is stored.
+- A report shows the findings at or above the floor of its profile: the
+  detailed profile shows every finding, and raises the floor to `attention`
+  for its executive summary alone; the executive profile raises it to
+  `attention` for the whole document, the appendix included. No other option
+  sets the floor (3.0.0 removed the minimum severity).
+- Every count of a page or of the web follows that floor: the totals, the
+  ring, the bars of each scope, and the empty states count only the findings
+  shown, and a report that shows none says "Nothing needs attention." The
+  floor is applied when a report is shown or compiled, never when it is
+  stored.
 
 ### 7.4 Recommendations
 
@@ -407,8 +413,13 @@ exact confidence, and are ordered by severity, confidence, scope, and code.
 
 ## 8. Snapshot
 
-The snapshot is one JSON document, `schema_version` `"2.0"`. It is a new
+The snapshot is one JSON document, `schema_version` `"3.0"`. It is a new
 format and does not read snapshots written by the Python platform.
+
+Version `3.0` replaced `2.0` when the minimum severity left the program:
+`report.min_severity` left the document. The reader names `2.0` and refuses
+it. The platform's migration rewrites every stored 2.0 snapshot to the bytes
+3.0 writes, and the operations guide gives the same edit for a file.
 
 Version `2.0` replaced `1.0` with calendar ranges: `report.period`, the
 requested length, left the document, since the start and the end say what
@@ -420,7 +431,7 @@ viewed or given a new PDF, and is requested again.
 report        id, generator version, emission time, period start and end,
               time zone, thresholds (all seven), non-secret settings,
               organization, classification, author,
-              requested profile and minimum severity
+              requested profile
 scope         cluster name and label, filter mode, matcher state, confidence,
               discovered values, namespaces selected and excluded,
               excluded containers
@@ -559,8 +570,7 @@ minor version.
 
 Go decides what is said. The template decides how it looks.
 
-- `document/` builds `report.json` from a snapshot, a language, a profile, and
-  a minimum severity.
+- `document/` builds `report.json` from a snapshot, a language, and a profile.
 - `template/capacity/` reads `report.json` and lays it out.
 - `template/graphite/` provides the page shell.
 
@@ -800,7 +810,7 @@ A profile describes one metric source.
 | References | Credential file name, CA bundle file name |
 | Cluster | Name, label, filter mode, node pool label, node autoscaling |
 | Namespaces | Allowed namespaces, excluded containers |
-| Choices | Permitted and default period, time zone, report profile, minimum severity |
+| Choices | Permitted and default period, time zone, report profile |
 | Thresholds | The seven thresholds |
 
 - Every change adds a new revision. A revision is never updated or deleted,
@@ -942,7 +952,8 @@ All routes are under `/api/v1` and are described in `api/openapi.yaml`.
 ### 11.11 Report view
 
 `GET /reports/{id}/view` returns the snapshot worded in the requested
-language and narrowed by minimum severity. Each value carries the raw number,
+language and narrowed to the floor of its profile (7.3), with the totals of
+the findings shown. Each value carries the raw number,
 for sorting, and the display text. Each finding carries its code, severity,
 sentence, action, and formatted evidence.
 
@@ -1052,15 +1063,16 @@ the administration.
 - The address holds the state of every tab, so that a link opens the same
   view: the severities, scope, search, and selected finding of the
   findings, and the search, sort, and opened row of each table.
-- Overview: three tiles count the findings by severity, critical, attention,
-  and healthy, each with a link that opens the findings with that severity
-  alone. Then the inventory in one row, each count above its name:
+- Overview: the totals count the findings shown by severity, critical,
+  attention, and healthy for a detailed report, critical and attention for an
+  executive one, each with a link that opens the findings with that severity
+  alone; a report that shows none says "Nothing needs attention." Then the inventory in one row, each count above its name:
   namespaces, workloads, HPAs, workloads without HPA, nodes, node pools.
   Then the PDF's prioritized action plan, in its order, with the columns
   order, priority, action, scope, and confidence. Last, "About this
-  report", folded: the time zone, the namespaces, the minimum severity, the
-  emission time, and the generator version.
-- Findings: a search, the three severities as toggle chips with their
+  report", folded: the time zone, the namespaces, the emission time, and the
+  generator version.
+- Findings: a search, the severities shown as toggle chips with their
   counts, and a scope select. The list is grouped under one heading per
   severity, critical first, and shows the mark, scope type, scope name, and
   sentence of each finding. Beside it, the selected finding is shown whole:
@@ -1147,9 +1159,8 @@ the administration.
 
 Profile, namespaces from the profile's allowed list, and the report
 language, as two joined buttons that start on the interface language. Below
-them one line shows the period, time zone, report profile, and minimum
-severity, taken from the profile's defaults, with a button that opens the
-four fields in place. Choosing a profile loads its defaults.
+them one line shows the period, time zone, and report profile, taken from
+the profile's defaults, with a button that opens the three fields in place. Choosing a profile loads its defaults.
 
 - The period picker holds one of three kinds of value: a length, a calendar
   range by name, or a typed range. On the left, two joined buttons switch
@@ -1177,8 +1188,7 @@ four fields in place. Choosing a profile loads its defaults.
 - A profile with permitted periods offers those alone, with no custom length,
   no range, and no calendar range. The form warns when the period, or the
   range, is longer than 15 days.
-- Profile, time zone, report profile, and minimum severity use the
-  browser's own select. The time zones are the profile's, or, when it
+- Profile, time zone, and report profile use the browser's own select. The time zones are the profile's, or, when it
   permits any, the browser's list.
 - Each attempt carries a new `Idempotency-Key` once a value changed after
   an attempt was sent.
@@ -1463,7 +1473,7 @@ The public surface is:
    fields, codes, and status answers;
 2. the command line: commands, flags, environment variables, and exit codes;
 3. the keys of `report.toml` and of `platform.toml`;
-4. the snapshot file, `schema_version` 2.0, which `--from-snapshot` reads
+4. the snapshot file, `schema_version` 3.0, which `--from-snapshot` reads
    and the API serves.
 
 - A change that breaks the public surface is a major version. Adding to it
