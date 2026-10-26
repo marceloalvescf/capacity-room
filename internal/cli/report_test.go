@@ -22,7 +22,7 @@ import (
 var reportFlagNames = []string{
 	"config", "metrics-url", "endpoint-type", "token", "insecure",
 	"cluster", "cluster-label", "cluster-filter", "namespaces", "period", "start", "end",
-	"timezone", "node-autoscaling", "min-severity", "report-profile", "lang",
+	"timezone", "node-autoscaling", "report-profile", "lang",
 	"output", "snapshot", "from-snapshot", "check", "verbose",
 }
 
@@ -378,27 +378,6 @@ func TestFromSnapshotMakesNoRequest(t *testing.T) {
 	}
 }
 
-func TestFromSnapshotOverridesSeverity(t *testing.T) {
-	snapPath, err := goldentest.SnapshotPath("partial-data")
-	if err != nil {
-		t.Fatalf("SnapshotPath: %v", err)
-	}
-	outPath := filepath.Join(t.TempDir(), "r.pdf")
-
-	env := withTypst(t, testEnv(t))
-	args := []string{"report", "--from-snapshot", snapPath, "--min-severity", "critical", "--output", outPath}
-	_, stderr, code := runArgs(context.Background(), env, args)
-	if code != 0 {
-		t.Fatalf("code = %d, want 0; stderr = %q", code, stderr)
-	}
-
-	got := pdfBody(t, outPath)
-	rows := bytes.Count(got, []byte(`"type": "table"`))
-	if rows == 0 {
-		t.Fatalf("expected at least one table in the overridden report")
-	}
-}
-
 func TestSnapshotThenFromSnapshotEqualsPDFMode(t *testing.T) {
 	// Direct PDF mode.
 	pdfServer, _, scenario := startScenario(t, "direct-complete")
@@ -593,7 +572,6 @@ func TestDefaultNameEndToEnd(t *testing.T) {
 		{"cluster prod", func(*snapshot.Snapshot) {}, "en", "report-resources-prod-en-20260715-143000.pdf"},
 		{"cluster with punctuation", func(s *snapshot.Snapshot) { s.Scope.ClusterName = "Prod West_1" }, "en", "report-resources-prod-west-1-en-20260715-143000.pdf"},
 		{"cluster all punctuation", func(s *snapshot.Snapshot) { s.Scope.ClusterName = "---" }, "en", "report-resources-cluster-en-20260715-143000.pdf"},
-		{"minimum severity", func(s *snapshot.Snapshot) { s.Report.MinSeverity = "attention" }, "en", "report-resources-prod-attention-en-20260715-143000.pdf"},
 		{"language pt-BR", func(*snapshot.Snapshot) {}, "pt-BR", "report-resources-prod-pt-br-20260715-143000.pdf"},
 	}
 

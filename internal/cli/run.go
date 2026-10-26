@@ -413,7 +413,6 @@ func buildConfigFlags(cmd *cobra.Command, f *reportFlags) config.Flags {
 		End:             stringFlagOrNil(cmd, "end", f.end),
 		Timezone:        stringFlagOrNil(cmd, "timezone", f.timezone),
 		NodeAutoscaling: stringFlagOrNil(cmd, "node-autoscaling", f.nodeAutoscaling),
-		MinSeverity:     stringFlagOrNil(cmd, "min-severity", f.minSeverity),
 		ReportProfile:   stringFlagOrNil(cmd, "report-profile", f.reportProfile),
 		Language:        stringFlagOrNil(cmd, "lang", f.lang),
 		Insecure:        cmd.Flags().Changed("insecure") && f.insecure,
@@ -588,7 +587,7 @@ func runPDF(ctx context.Context, env Env, redactor *redact.Redactor, cmd *cobra.
 
 	outputPath := f.output
 	if !cmd.Flags().Changed("output") {
-		name := defaultOutputName(loaded.Config.Cluster.Name, loaded.Config.Report.Profile, loaded.Config.Report.MinSeverity, loaded.Config.Report.Language, emittedAt.In(loc))
+		name := defaultOutputName(loaded.Config.Cluster.Name, loaded.Config.Report.Profile, loaded.Config.Report.Language, emittedAt.In(loc))
 		outputPath = filepath.Join(loaded.Config.Report.OutputDirectory, name)
 	}
 	outputPath, err = filepath.Abs(outputPath)
@@ -673,10 +672,6 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 	if outputDir == "" {
 		outputDir = "."
 	}
-	severity := opts.MinSeverity
-	if severity == "" {
-		severity = snap.Report.MinSeverity
-	}
 	emittedAt, err := snapshot.Time(snap.Report.EmittedAt)
 	if err != nil {
 		return nil, err
@@ -684,7 +679,7 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 
 	outputPath := f.output
 	if !cmd.Flags().Changed("output") {
-		name := defaultOutputName(snap.Scope.ClusterName, profile, severity, opts.Language, emittedAt)
+		name := defaultOutputName(snap.Scope.ClusterName, profile, opts.Language, emittedAt)
 		outputPath = filepath.Join(outputDir, name)
 	}
 	outputPath, err = filepath.Abs(outputPath)
@@ -707,7 +702,7 @@ func runFromSnapshot(ctx context.Context, env Env, cmd *cobra.Command, f *report
 	if err != nil {
 		return nil, err
 	}
-	data, err := render.Document(snap, lang, document.Options{Profile: opts.Profile, MinSeverity: opts.MinSeverity})
+	data, err := render.Document(snap, lang, document.Options{Profile: opts.Profile})
 	if err != nil {
 		return nil, err
 	}

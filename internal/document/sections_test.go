@@ -117,7 +117,7 @@ func TestIdentRun(t *testing.T) {
 
 func TestSectionsOfDirectCompleteInPortuguese(t *testing.T) {
 	b := &builder{cat: mustCatalog(t, catalog.PortugueseBrazil)}
-	blocks := buildNamespacesSection(b, []snapshot.Namespace{directCompleteNamespace()}, nil, config.Default().Thresholds, "all")
+	blocks := buildNamespacesSection(b, []snapshot.Namespace{directCompleteNamespace()}, config.Default().Thresholds)
 	if b.err != nil {
 		t.Fatalf("builder error = %v", b.err)
 	}
@@ -153,7 +153,7 @@ func TestSectionsOfDirectCompleteInPortuguese(t *testing.T) {
 
 func TestSectionsOfDirectCompleteInEnglish(t *testing.T) {
 	b := &builder{cat: mustCatalog(t, catalog.English)}
-	blocks := buildNamespacesSection(b, []snapshot.Namespace{directCompleteNamespace()}, nil, config.Default().Thresholds, "all")
+	blocks := buildNamespacesSection(b, []snapshot.Namespace{directCompleteNamespace()}, config.Default().Thresholds)
 	if b.err != nil {
 		t.Fatalf("builder error = %v", b.err)
 	}
@@ -227,7 +227,6 @@ func scenarioSnapshot(t *testing.T) snapshot.Snapshot {
 			PeriodEnd:        "2026-07-15T14:30:00-03:00",
 			Timezone:         "America/Sao_Paulo",
 			Profile:          "detailed",
-			MinSeverity:      "all",
 			Thresholds: snapshot.Thresholds{
 				WarningPercent:           70,
 				CriticalPercent:          85,
@@ -425,7 +424,7 @@ func TestNamespaceThatAnsweredNothingIsPrinted(t *testing.T) {
 	b := &builder{cat: mustCatalog(t, catalog.English)}
 	row := unavailableNamespace("payments")
 
-	blocks := buildNamespacesSection(b, []snapshot.Namespace{row}, nil, config.Default().Thresholds, "all")
+	blocks := buildNamespacesSection(b, []snapshot.Namespace{row}, config.Default().Thresholds)
 	if b.err != nil {
 		t.Fatalf("builder error = %v", b.err)
 	}
@@ -447,76 +446,11 @@ func TestNamespaceThatAnsweredNothingIsPrinted(t *testing.T) {
 	}
 }
 
-func TestMinimumSeverityFiltersRows(t *testing.T) {
-	b := &builder{cat: mustCatalog(t, catalog.English)}
-	rows := []snapshot.Namespace{unavailableNamespace("a"), unavailableNamespace("b")}
-	findings := []snapshot.Finding{
-		{Code: "X", Severity: analysis.SeverityCritical, ScopeType: analysis.ScopeNamespace, ScopeName: "a"},
-	}
-
-	tests := []struct {
-		severity string
-		want     []string
-	}{
-		{"all", []string{"a", "b"}},
-		{"attention", []string{"a"}},
-		{"critical", []string{"a"}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.severity, func(t *testing.T) {
-			blocks := buildNamespacesSection(b, rows, findings, config.Default().Thresholds, tt.severity)
-			if got := namespacesShown(t, blocks); !slices.Equal(got, tt.want) {
-				t.Errorf("shown = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestMinimumSeverityJudgesByKind(t *testing.T) {
-	b := &builder{cat: mustCatalog(t, catalog.English)}
-	rows := []snapshot.Workload{
-		unavailableWorkload("payments", "Deployment", "api"),
-		unavailableWorkload("payments", "StatefulSet", "api"),
-	}
-	findings := []snapshot.Finding{
-		{Code: "X", Severity: analysis.SeverityCritical, ScopeType: analysis.ScopeWorkload, ScopeName: "payments/api", ScopeKind: "Deployment"},
-	}
-
-	blocks := buildWorkloadsSection(b, rows, findings, config.Default().Thresholds, "critical")
-	table, ok := blocks[2].(Table)
-	if !ok {
-		t.Fatalf("blocks[2] is %T, want Table", blocks[2])
-	}
-	if len(table.Rows) != 1 {
-		t.Fatalf("len(Rows) = %d, want 1", len(table.Rows))
-	}
-	if got := runText(t, table.Rows[0][0][0]); got != "api" {
-		t.Errorf("workload name = %q, want %q", got, "api")
-	}
-}
-
-func TestWorkloadSectionSkipsANamespaceWithoutRows(t *testing.T) {
-	b := &builder{cat: mustCatalog(t, catalog.English)}
-	rows := []snapshot.Workload{
-		unavailableWorkload("a", "Deployment", "svc"),
-		unavailableWorkload("b", "Deployment", "svc"),
-	}
-	findings := []snapshot.Finding{
-		{Code: "X", Severity: analysis.SeverityCritical, ScopeType: analysis.ScopeWorkload, ScopeName: "a/svc", ScopeKind: "Deployment"},
-	}
-
-	blocks := buildWorkloadsSection(b, rows, findings, config.Default().Thresholds, "critical")
-	want := []string{"a"}
-	if got := namespacesShown(t, blocks); !slices.Equal(got, want) {
-		t.Errorf("namespaces shown = %v, want %v", got, want)
-	}
-}
-
 func TestEmptySections(t *testing.T) {
 	b := &builder{cat: mustCatalog(t, catalog.English)}
 	sections := map[string][]Block{
-		"namespaces": buildNamespacesSection(b, nil, nil, config.Default().Thresholds, "all"),
-		"workloads":  buildWorkloadsSection(b, nil, nil, config.Default().Thresholds, "all"),
+		"namespaces": buildNamespacesSection(b, nil, config.Default().Thresholds),
+		"workloads":  buildWorkloadsSection(b, nil, config.Default().Thresholds),
 	}
 	for name, blocks := range sections {
 		t.Run(name, func(t *testing.T) {
@@ -855,11 +789,11 @@ func TestDocumentEqualsParityForItsSections(t *testing.T) {
 	}
 
 	var blocks []Block
-	blocks = append(blocks, buildNamespacesSection(b, s.Namespaces, s.Findings, thresholds, "all")...)
-	blocks = append(blocks, buildWorkloadsSection(b, s.Workloads, s.Findings, thresholds, "all")...)
+	blocks = append(blocks, buildNamespacesSection(b, s.Namespaces, thresholds)...)
+	blocks = append(blocks, buildWorkloadsSection(b, s.Workloads, thresholds)...)
 	blocks = append(blocks, buildHPAsSection(b, s)...)
-	blocks = append(blocks, buildNodepoolsSection(b, s, thresholds, "all")...)
-	blocks = append(blocks, buildExecutiveSection(b, s, thresholds, "all", false)...)
+	blocks = append(blocks, buildNodepoolsSection(b, s, thresholds)...)
+	blocks = append(blocks, buildExecutiveSection(b, s, thresholds, false)...)
 	blocks = append(blocks, buildNotes(b, s)...)
 	if b.err != nil {
 		t.Fatalf("builder error = %v", b.err)
@@ -1047,7 +981,7 @@ func TestWorkloadsSectionSkipsCoverageOnlyRows(t *testing.T) {
 	coverageOnly.ObservedUsage = false
 	coverageOnly.HPACoverage = "uncovered"
 
-	blocks := buildWorkloadsSection(b, []snapshot.Workload{observed, coverageOnly}, nil, config.Default().Thresholds, "all")
+	blocks := buildWorkloadsSection(b, []snapshot.Workload{observed, coverageOnly}, config.Default().Thresholds)
 	table, ok := blocks[2].(Table)
 	if !ok {
 		t.Fatalf("blocks[2] is %T, want Table", blocks[2])
@@ -1065,11 +999,16 @@ func TestWorkloadsSectionIsEmptyWithOnlyCoverageRows(t *testing.T) {
 	coverageOnly := unavailableWorkload("payments", "Deployment", "worker")
 	coverageOnly.ObservedUsage = false
 
-	blocks := buildWorkloadsSection(b, []snapshot.Workload{coverageOnly}, nil, config.Default().Thresholds, "all")
+	blocks := buildWorkloadsSection(b, []snapshot.Workload{coverageOnly}, config.Default().Thresholds)
 	if len(blocks) != 2 {
 		t.Fatalf("len(blocks) = %d, want 2", len(blocks))
 	}
-	if _, ok := blocks[1].(Paragraph); !ok {
-		t.Errorf("blocks[1] is %T, want Paragraph", blocks[1])
+	para, ok := blocks[1].(Paragraph)
+	if !ok {
+		t.Fatalf("blocks[1] is %T, want Paragraph", blocks[1])
+	}
+	want := catText(t, mustCatalog(t, catalog.English), catalog.SectionsWorkloadsNoUsage, nil)
+	if got := runText(t, para.Runs[0]); got != want {
+		t.Errorf("empty paragraph = %q, want %q", got, want)
 	}
 }

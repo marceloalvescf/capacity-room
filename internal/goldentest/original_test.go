@@ -887,7 +887,9 @@ func headingText(block document.Block, level int) (string, bool) {
 }
 
 // compareExecutive builds the Portuguese executive document of the
-// snapshot at each of the two minimums the original recorded, and compares
+// snapshot and compares it with the recording of the original at attention,
+// the floor of the executive profile. The recording at critical has no
+// counterpart since the option left. It compares
 // the rows of its seven tables with the recorded ones: the count of rows,
 // and for every cell the count of runs and, for every run, its kind, its
 // status, and its text as compareRun says. The note of the HPA data is
@@ -917,13 +919,13 @@ func compareExecutive(scenario string, snap snapshot.Snapshot, want map[string]p
 	nodeAutoscaling := title(catalog.CapabilityName("node_autoscaling"))
 	const originalNodeAutoscaling = "Escalonamento autom\u00e1tico de n\u00f3s"
 
-	for _, minimum := range []string{"attention", "critical"} {
+	for _, minimum := range []string{"attention"} {
 		recorded, ok := want[minimum]
 		if !ok {
 			diffs = append(diffs, fmt.Sprintf("%s: executive.%s: missing from the original", scenario, minimum))
 			continue
 		}
-		doc, err := document.Build(snap, cat, document.Options{Profile: "executive", MinSeverity: minimum})
+		doc, err := document.Build(snap, cat, document.Options{Profile: "executive"})
 		if err != nil {
 			diffs = append(diffs, fmt.Sprintf("%s: executive.%s: building the document: %v", scenario, minimum, err))
 			continue
@@ -2274,17 +2276,6 @@ func TestComparisonCanFail(t *testing.T) {
 		})
 	})
 
-	t.Run("the two minimums swapped", func(t *testing.T) {
-		want := freshScaling(t)
-		want.Executive["attention"], want.Executive["critical"] = want.Executive["critical"], want.Executive["attention"]
-		checkScaling(t, want, []string{
-			scaling.Name + `: executive.attention.replica_ceiling: rows: got 2, want 1`,
-			scaling.Name + `: executive.attention.action_plan: rows: got 10, want 7`,
-			scaling.Name + `: executive.critical.replica_ceiling: rows: got 1, want 2`,
-			scaling.Name + `: executive.critical.action_plan: rows: got 7, want 10`,
-		})
-	})
-
 	t.Run("two recommendations swapped", func(t *testing.T) {
 		want := freshScaling(t)
 		want.Recommendations[0], want.Recommendations[1] = want.Recommendations[1], want.Recommendations[0]
@@ -2309,11 +2300,11 @@ func TestComparisonCanFail(t *testing.T) {
 		})
 	})
 
-	t.Run("the executive entry of a minimum removed", func(t *testing.T) {
+	t.Run("the executive entry removed", func(t *testing.T) {
 		want := freshScaling(t)
-		delete(want.Executive, "critical")
+		delete(want.Executive, "attention")
 		checkScaling(t, want, []string{
-			scaling.Name + `: executive.critical: missing from the original`,
+			scaling.Name + `: executive.attention: missing from the original`,
 		})
 	})
 
@@ -2552,7 +2543,7 @@ func TestPartialNodeUtilizationRowIsRewritten(t *testing.T) {
 			if err != nil {
 				t.Fatalf("run: %v", err)
 			}
-			doc, err := document.Build(out.Snapshot, cat, document.Options{Profile: "executive", MinSeverity: "attention"})
+			doc, err := document.Build(out.Snapshot, cat, document.Options{Profile: "executive"})
 			if err != nil {
 				t.Fatalf("Build: %v", err)
 			}

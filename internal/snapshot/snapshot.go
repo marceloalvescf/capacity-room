@@ -10,7 +10,7 @@ package snapshot
 
 // SchemaVersion is the only schema version this package writes, and the
 // only one Decode accepts.
-const SchemaVersion = "2.0"
+const SchemaVersion = "3.0"
 
 // Snapshot is the stored contract of one report run.
 type Snapshot struct {
@@ -29,7 +29,7 @@ type Snapshot struct {
 }
 
 // Report identifies the run and carries the settings that shaped it: the
-// requested profile and minimum severity, the organization line, and the
+// requested profile, the organization line, and the
 // numbers the analysis compared against. It never carries an address, a
 // host name, a token, or a path.
 type Report struct {
@@ -40,7 +40,6 @@ type Report struct {
 	PeriodEnd        string     `json:"period_end"`
 	Timezone         string     `json:"timezone"`
 	Profile          string     `json:"profile"`
-	MinSeverity      string     `json:"min_severity"`
 	Organization     string     `json:"organization"`
 	Classification   string     `json:"classification"`
 	Author           string     `json:"author"`

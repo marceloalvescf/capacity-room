@@ -44,10 +44,6 @@ const (
 	FrontMetadataProfile              Key = "front.metadata.profile"
 	FrontMetadataProfileDetailed      Key = "front.metadata.profile_detailed"
 	FrontMetadataProfileExecutive     Key = "front.metadata.profile_executive"
-	FrontMetadataMinSeverity          Key = "front.metadata.min_severity"
-	FrontMetadataMinSeverityAll       Key = "front.metadata.min_severity_all"
-	FrontMetadataMinSeverityAttention Key = "front.metadata.min_severity_attention"
-	FrontMetadataMinSeverityCritical  Key = "front.metadata.min_severity_critical"
 
 	FrontLegendHeading       Key = "front.legend.heading"
 	FrontLegendHeaderStatus  Key = "front.legend.header_status"
@@ -108,7 +104,6 @@ const (
 
 	SectionsNamespacesHeading           Key = "sections.namespaces.heading"
 	SectionsNamespacesEmpty             Key = "sections.namespaces.empty"
-	SectionsNamespacesBelowMinimum      Key = "sections.namespaces.below_minimum"
 	SectionsNamespacesHeaderResource    Key = "sections.namespaces.header_resource"
 	SectionsNamespacesHeaderAverage     Key = "sections.namespaces.header_average"
 	SectionsNamespacesHeaderPeak        Key = "sections.namespaces.header_peak"
@@ -121,7 +116,7 @@ const (
 
 	SectionsWorkloadsHeading             Key = "sections.workloads.heading"
 	SectionsWorkloadsEmpty               Key = "sections.workloads.empty"
-	SectionsWorkloadsBelowMinimum        Key = "sections.workloads.below_minimum"
+	SectionsWorkloadsNoUsage             Key = "sections.workloads.no_usage"
 	SectionsWorkloadsHeaderWorkload      Key = "sections.workloads.header_workload"
 	SectionsWorkloadsHeaderPods          Key = "sections.workloads.header_pods"
 	SectionsWorkloadsHeaderCPUAverage    Key = "sections.workloads.header_cpu_average"
@@ -191,7 +186,6 @@ const (
 	SectionsNodepoolsEmptySummary            Key = "sections.nodepools.empty_summary"
 	SectionsNodepoolsEmptyProfile            Key = "sections.nodepools.empty_profile"
 	SectionsNodepoolsEmptyDetail             Key = "sections.nodepools.empty_detail"
-	SectionsNodepoolsBelowMinimum            Key = "sections.nodepools.below_minimum"
 	SectionsNodepoolsNoFinding               Key = "sections.nodepools.no_finding"
 
 	NodeStateReady         Key = "node_state.ready"
@@ -292,8 +286,6 @@ var wordingKeys = []Key{
 	FooterPageLabel,
 	FrontOutlineTitle,
 	FrontMetadataProfile, FrontMetadataProfileDetailed, FrontMetadataProfileExecutive,
-	FrontMetadataMinSeverity, FrontMetadataMinSeverityAll, FrontMetadataMinSeverityAttention,
-	FrontMetadataMinSeverityCritical,
 	FrontMetadataHeading, FrontMetadataHeaderField, FrontMetadataHeaderValue,
 	FrontMetadataEnvironment, FrontMetadataPeriod, FrontMetadataPeriodRange,
 	FrontMetadataNamespaces, FrontMetadataExcludedContainers,
@@ -322,11 +314,11 @@ var wordingKeys = []Key{
 	CapabilityReasonNodeAddressMappingIncomplete, CapabilityReasonNodepoolLabelsNotFound,
 	CapabilityReasonNodeAutoscalingUndetermined,
 	SectionsNamespaceLabel,
-	SectionsNamespacesHeading, SectionsNamespacesEmpty, SectionsNamespacesBelowMinimum, SectionsNamespacesHeaderResource,
+	SectionsNamespacesHeading, SectionsNamespacesEmpty, SectionsNamespacesHeaderResource,
 	SectionsNamespacesHeaderAverage, SectionsNamespacesHeaderPeak, SectionsNamespacesHeaderRequest,
 	SectionsNamespacesHeaderLimit, SectionsNamespacesHeaderPeakRequest, SectionsNamespacesHeaderPeakLimit,
 	SectionsNamespacesRowCPU, SectionsNamespacesRowMemory,
-	SectionsWorkloadsHeading, SectionsWorkloadsEmpty, SectionsWorkloadsBelowMinimum, SectionsWorkloadsHeaderWorkload,
+	SectionsWorkloadsHeading, SectionsWorkloadsEmpty, SectionsWorkloadsNoUsage, SectionsWorkloadsHeaderWorkload,
 	SectionsWorkloadsHeaderPods, SectionsWorkloadsHeaderCPUAverage, SectionsWorkloadsHeaderCPUPeak,
 	SectionsWorkloadsHeaderCPURequest, SectionsWorkloadsHeaderCPULimit, SectionsWorkloadsHeaderMemoryAverage,
 	SectionsWorkloadsHeaderMemoryPeak, SectionsWorkloadsHeaderMemoryRequest, SectionsWorkloadsHeaderMemoryLimit,
@@ -349,7 +341,7 @@ var wordingKeys = []Key{
 	SectionsNodepoolsHeaderMemoryRequested, SectionsNodepoolsHeaderNode,
 	SectionsNodepoolsHeaderCPUAvgPeak, SectionsNodepoolsHeaderMemoryAvgPeak,
 	SectionsNodepoolsHeaderReason, SectionsNodepoolsHeaderState, SectionsNodepoolsEmptySummary,
-	SectionsNodepoolsEmptyProfile, SectionsNodepoolsEmptyDetail, SectionsNodepoolsBelowMinimum, SectionsNodepoolsNoFinding,
+	SectionsNodepoolsEmptyProfile, SectionsNodepoolsEmptyDetail, SectionsNodepoolsNoFinding,
 	NodeStateReady, NodeStateNotReady, NodeStateSchedulable, NodeStateUnschedulable,
 	PlaceholderUndetermined, PlaceholderEmptyCell,
 	ValueYes, ValueNo,

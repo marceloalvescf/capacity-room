@@ -269,26 +269,19 @@ func TestViewSaysWhatThePDFSays(t *testing.T) {
 
 func TestViewNarrowsAsThePDF(t *testing.T) {
 	cases := []struct {
-		name, profile, severity string
-		wantMin                 string
-		findings, recs          int
+		name, profile  string
+		findings, recs int
 	}{
-		{"all", "detailed", "all", "all", 28, 10},
-		{"attention", "detailed", "attention", "attention", 21, 10},
-		{"critical", "detailed", "critical", "critical", 10, 7},
-		{"executive at all", "executive", "all", "attention", 21, 10},
-		{"executive at critical", "executive", "critical", "critical", 10, 7},
+		{"detailed", "detailed", 28, 10},
+		{"executive", "executive", 21, 10},
 	}
 	for _, tc := range cases {
 		for _, lang := range catalog.Languages() {
 			t.Run(tc.name+"/"+string(lang), func(t *testing.T) {
 				s := goldenSnapshot(t, "edge-scaling")
-				s.Report.Profile, s.Report.MinSeverity = tc.profile, tc.severity
+				s.Report.Profile = tc.profile
 				view := mustView(t, s, lang)
 
-				if view.MinSeverity != tc.wantMin {
-					t.Errorf("min_severity = %q, want %q", view.MinSeverity, tc.wantMin)
-				}
 				if len(view.Findings) != tc.findings {
 					t.Errorf("findings = %d, want %d", len(view.Findings), tc.findings)
 				}
@@ -296,11 +289,10 @@ func TestViewNarrowsAsThePDF(t *testing.T) {
 					t.Errorf("recommendations = %d, want %d", len(view.Recommendations), tc.recs)
 				}
 
-				// The rows are those the detailed PDF of the same
-				// effective minimum prints.
-				effective := s
-				effective.Report.Profile, effective.Report.MinSeverity = "detailed", tc.wantMin
-				doc := detailedDocument(t, effective, lang)
+				// The rows of the detailed view are those the detailed PDF
+				// prints; the executive view keeps the rows at or above
+				// attention of them.
+				doc := detailedDocument(t, s, lang)
 				var pdfNamespaces, pdfWorkloads, pdfNodes int
 				pdfTables(doc, func(_ string, table Table) {
 					switch table.ID {
@@ -318,23 +310,20 @@ func TestViewNarrowsAsThePDF(t *testing.T) {
 						observed++
 					}
 				}
-				if len(view.Namespaces) != pdfNamespaces || observed != pdfWorkloads || len(view.Nodes) != pdfNodes {
+				if tc.profile == "detailed" && (len(view.Namespaces) != pdfNamespaces || observed != pdfWorkloads || len(view.Nodes) != pdfNodes) {
 					t.Errorf("namespaces, workloads, nodes = %d, %d, %d; the PDF prints %d, %d, %d",
 						len(view.Namespaces), observed, len(view.Nodes), pdfNamespaces, pdfWorkloads, pdfNodes)
 				}
 
-				floor := analysis.Rank(tc.wantMin)
-				if tc.wantMin == "all" {
-					floor = analysis.Rank(analysis.SeverityHealthy)
-				}
+				floor := profileFloor(tc.profile)
 				for _, f := range view.Findings {
 					if analysis.Rank(f.Severity) < floor {
-						t.Errorf("finding %s of severity %s is below %s", f.Code, f.Severity, tc.wantMin)
+						t.Errorf("finding %s of severity %s is below the floor of the %s profile", f.Code, f.Severity, tc.profile)
 					}
 				}
 				for _, r := range view.Recommendations {
 					if analysis.Rank(r.Severity) < floor {
-						t.Errorf("recommendation %s of severity %s is below %s", r.Code, r.Severity, tc.wantMin)
+						t.Errorf("recommendation %s of severity %s is below the floor of the %s profile", r.Code, r.Severity, tc.profile)
 					}
 				}
 				if tc.profile == "executive" {
@@ -388,12 +377,9 @@ func TestViewKeepsTheWholeOfTheRest(t *testing.T) {
 	}
 	for _, lang := range catalog.Languages() {
 		var first *rest
-		for _, setting := range [][2]string{
-			{"detailed", "all"}, {"detailed", "attention"}, {"detailed", "critical"},
-			{"executive", "all"}, {"executive", "critical"},
-		} {
+		for _, setting := range []string{"detailed", "executive"} {
 			s := goldenSnapshot(t, "edge-scaling")
-			s.Report.Profile, s.Report.MinSeverity = setting[0], setting[1]
+			s.Report.Profile = setting
 			view := mustView(t, s, lang)
 			got := rest{view.Summary, view.HPAs, view.Nodepools, view.Quality}
 			if len(got.HPAs) != len(s.HPAs) || len(got.Nodepools) != len(s.Nodepools) || len(got.Quality.Capabilities) != len(s.Quality.Capabilities) {
@@ -404,7 +390,7 @@ func TestViewKeepsTheWholeOfTheRest(t *testing.T) {
 			if first == nil {
 				first = &got
 			} else if !reflect.DeepEqual(*first, got) {
-				t.Errorf("%v: HPAs, node pools, summary, or quality differ from those at detailed all", setting)
+				t.Errorf("%v: HPAs, node pools, summary, or quality differ from those of the detailed profile", setting)
 			}
 		}
 	}
@@ -564,7 +550,7 @@ func TestViewListsAreNeverNull(t *testing.T) {
 		s.Quality.Capabilities[i].Evidence = nil
 	}
 	s.Quality.Warnings, s.Quality.Notices = nil, nil
-	view, err := buildView(s, mustCatalog(t, catalog.English), "all")
+	view, err := buildView(s, mustCatalog(t, catalog.English), profileFloor("detailed"))
 	if err != nil {
 		t.Fatalf("buildView() error = %v", err)
 	}
@@ -606,12 +592,12 @@ func TestViewRaisesThePlanMinimum(t *testing.T) {
 			Code: "NAMESPACE_CPU_LIMIT_HEALTHY", Severity: "healthy", ScopeType: "namespace",
 			Scopes: []string{"payments"}, Confidence: "exact",
 		}}
-		view, err := buildView(s, cat, "all")
+		view, err := buildView(s, cat, profileFloor("detailed"))
 		if err != nil {
 			t.Fatalf("buildView() error = %v", err)
 		}
 		b := &builder{cat: cat}
-		blocks := actionPlan(b, s, executiveMinimum("all"))
+		blocks := actionPlan(b, s)
 		plan := 0
 		for _, blk := range blocks {
 			if table, ok := blk.(Table); ok {
@@ -634,12 +620,6 @@ func TestViewRefusesWhatCheckRefuses(t *testing.T) {
 	_, err := BuildView(s, mustCatalog(t, catalog.English))
 	if err == nil || err.Error() != want.Error() {
 		t.Errorf("BuildView() error = %v, want %v", err, want)
-	}
-
-	s = goldenSnapshot(t, "direct-complete")
-	s.Report.MinSeverity = "healthy"
-	if _, err := BuildView(s, mustCatalog(t, catalog.English)); err == nil {
-		t.Error("BuildView() accepted an unknown minimum severity")
 	}
 }
 
@@ -727,7 +707,7 @@ func TestViewVerdictPointsAtWhatThePDFWords(t *testing.T) {
 	for _, name := range goldenNames {
 		s := goldenSnapshot(t, name)
 		view := mustView(t, s, catalog.English)
-		pdf := englishVerdict(t, s, view.MinSeverity)
+		pdf := englishVerdict(t, s, "detailed")
 		where := name
 		v := view.Verdict
 
@@ -794,6 +774,7 @@ func zero(count string) string {
 func TestViewVerdictOfEdgeScaling(t *testing.T) {
 	v := mustView(t, goldenSnapshot(t, "edge-scaling"), catalog.English).Verdict
 	want := ViewVerdict{
+		Totals:              []ViewTotal{{"critical", 10}, {"attention", 11}, {"healthy", 7}},
 		ClusterFinding:      intPtr(1),
 		NodeEvidenceWarning: intPtr(1),
 		Pressure: []ViewPressure{
@@ -821,10 +802,7 @@ func TestViewVerdictOfTheExecutiveProfile(t *testing.T) {
 	s.Report.Profile = "executive"
 	view := mustView(t, s, catalog.English)
 	v := view.Verdict
-	if view.MinSeverity != "attention" {
-		t.Fatalf("MinSeverity = %q, want attention", view.MinSeverity)
-	}
-	pdf := englishVerdict(t, s, view.MinSeverity)
+	pdf := englishVerdict(t, s, "executive")
 	if v.ClusterFinding == nil || pdf.Growth.Finding == nil {
 		t.Fatalf("cluster finding %v, PDF %v, want both", v.ClusterFinding, pdf.Growth.Finding)
 	}
@@ -881,7 +859,7 @@ func TestViewRecommendationFinding(t *testing.T) {
 // viewOf builds the view past Check, so a summary Check refuses can be tried.
 func viewOf(t *testing.T, s snapshot.Snapshot) View {
 	t.Helper()
-	view, err := buildView(s, mustCatalog(t, catalog.English), "all")
+	view, err := buildView(s, mustCatalog(t, catalog.English), profileFloor("detailed"))
 	if err != nil {
 		t.Fatalf("buildView() error = %v", err)
 	}
@@ -963,7 +941,7 @@ func TestExecutiveCountsANodeNotReadyWithoutAnAction(t *testing.T) {
 	if !found {
 		t.Error("the node scope has no pressure row")
 	}
-	pdf := englishVerdict(t, s, view.MinSeverity)
+	pdf := englishVerdict(t, s, "executive")
 	if len(pdf.Pressure.Rows) != len(view.Verdict.Pressure) {
 		t.Errorf("PDF has %d pressure rows, view %d", len(pdf.Pressure.Rows), len(view.Verdict.Pressure))
 	}
@@ -1096,5 +1074,100 @@ func TestViewVerdictScopesAreAnEmptyListWhenNoFindingIsShown(t *testing.T) {
 	}
 	if !strings.Contains(string(encoded), `"scopes":[]`) {
 		t.Errorf("verdict JSON = %s, want scopes as []", encoded)
+	}
+}
+
+// viewTotals lists the severities and counts of a view's verdict totals.
+func viewTotals(view View) []ViewTotal { return view.Verdict.Totals }
+
+func TestViewTotalsCountTheFindingsShown(t *testing.T) {
+	tests := []struct {
+		name, profile string
+		want          []ViewTotal
+	}{
+		{"detailed", "detailed", []ViewTotal{{"critical", 4}, {"attention", 3}, {"healthy", 6}}},
+		{"executive", "executive", []ViewTotal{{"critical", 4}, {"attention", 3}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := goldenSnapshot(t, "direct-complete")
+			s.Report.Profile = tt.profile
+			view := mustView(t, s, catalog.English)
+			if got := viewTotals(view); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("totals = %+v, want %+v", got, tt.want)
+			}
+			sum, scopes := 0, 0
+			for _, total := range viewTotals(view) {
+				sum += total.Count
+			}
+			for _, scope := range view.Verdict.Scopes {
+				scopes += scope.Critical + scope.Attention + scope.Healthy
+			}
+			if tt.profile == "executive" && sum != scopes {
+				t.Errorf("totals sum to %d, the scopes count %d", sum, scopes)
+			}
+		})
+	}
+}
+
+func TestExecutiveReportOfHealthyFindingsHasNothingToCount(t *testing.T) {
+	s := withFindings(t, "executive", "healthy")
+	view := mustView(t, s, catalog.English)
+	if got, want := viewTotals(view), []ViewTotal{{"critical", 0}, {"attention", 0}}; !reflect.DeepEqual(got, want) {
+		t.Errorf("view totals = %+v, want %+v", got, want)
+	}
+	if len(view.Verdict.Scopes) != 0 {
+		t.Errorf("view scopes = %+v, want none", view.Verdict.Scopes)
+	}
+
+	totals := englishVerdict(t, s, "executive").Totals
+	if len(totals.Items) != 0 || totals.None == nil || *totals.None != "Nothing needs attention." {
+		t.Errorf("PDF totals = %+v, want no items and the sentence that nothing needs attention", totals)
+	}
+}
+
+func TestViewPoolAndHPAStatusReadAllTheirFindings(t *testing.T) {
+	hpaFinding := func(code, severity, name string, evidence ...snapshot.Evidence) snapshot.Finding {
+		return snapshot.Finding{Code: code, Severity: severity, ScopeType: analysis.ScopeHPA, ScopeName: name, Evidence: evidence, Confidence: "exact"}
+	}
+	for _, profile := range []string{"detailed", "executive"} {
+		t.Run(profile, func(t *testing.T) {
+			s := poolSnapshot(t,
+				[]snapshot.Node{
+					testNode("n1", "busy", valueStat(10, 20), valueStat(10, 20)),
+					testNode("n2", "calm", valueStat(10, 20), valueStat(10, 20)),
+				},
+				nodeFinding("NODE_NOT_READY", analysis.SeverityAttention, "n1"),
+				hpaFinding("HPA_NEAR_MAX_REPLICAS", analysis.SeverityAttention, "payments/near", number("current_average", 8), number("spec_max", 10)),
+				nodeFinding("NODE_CPU_USAGE_HEALTHY", analysis.SeverityHealthy, "n2", number("average_percent", 10), number("peak_percent", 20)),
+				hpaFinding("HPA_PINNED_REPLICAS", analysis.SeverityHealthy, "payments/pinned", number("spec_min", 4), number("spec_max", 4)),
+			)
+			s.Report.Profile = profile
+			s.HPAs = []snapshot.HPA{
+				maxedHPA("near", "Deployment", "near", 2, 10, 9),
+				maxedHPA("pinned", "Deployment", "pinned", 4, 4, 3),
+			}
+			s.Summary.HPAs, s.Summary.Nodes, s.Summary.Nodepools = 2, 2, 2
+			s.Summary.Findings = float64(len(s.Findings))
+			s.Summary.Healthy, s.Summary.Attention = 2, 2
+			s.Recommendations = deriveRecommendations(s.Findings)
+			s.Summary.Recommendations = float64(len(s.Recommendations))
+			view := mustView(t, s, catalog.English)
+
+			pools := map[string]string{}
+			for _, p := range view.Nodepools {
+				pools[p.Name] = p.Status
+			}
+			if want := map[string]string{"calm": "healthy", "busy": "attention"}; !reflect.DeepEqual(pools, want) {
+				t.Errorf("pool statuses = %v, want %v", pools, want)
+			}
+			hpas := map[string]string{}
+			for _, h := range view.HPAs {
+				hpas[h.Name] = h.Status
+			}
+			if want := map[string]string{"pinned": "healthy", "near": "attention"}; !reflect.DeepEqual(hpas, want) {
+				t.Errorf("HPA statuses = %v, want %v", hpas, want)
+			}
+		})
 	}
 }

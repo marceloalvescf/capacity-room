@@ -49,7 +49,6 @@ func fullConfig() Config {
 		},
 		Report: Report{
 			Profile:         "executive",
-			MinSeverity:     "attention",
 			Language:        "en",
 			Organization:    "Acme",
 			Classification:  "internal",
@@ -127,7 +126,6 @@ func TestLoadEnvironmentOverridesFile(t *testing.T) {
 		{"analysis.period", "CAPACITYROOM_PERIOD", fixedVal("4h"), func(c *Config, v string) { c.Analysis.Period = v }},
 		{"analysis.timezone", "CAPACITYROOM_TIMEZONE", fixedVal("Europe/Lisbon"), func(c *Config, v string) { c.Analysis.Timezone = v }},
 		{"analysis.node_autoscaling", "CAPACITYROOM_NODE_AUTOSCALING", fixedVal("disabled"), func(c *Config, v string) { c.Analysis.NodeAutoscaling = v }},
-		{"report.min_severity", "CAPACITYROOM_MIN_SEVERITY", fixedVal("critical"), func(c *Config, v string) { c.Report.MinSeverity = v }},
 		{"report.profile", "CAPACITYROOM_REPORT_PROFILE", fixedVal("detailed"), func(c *Config, v string) { c.Report.Profile = v }},
 		{"report.output_directory", "CAPACITYROOM_OUTPUT_DIRECTORY", func(t *testing.T) string { return t.TempDir() }, func(c *Config, v string) { c.Report.OutputDirectory = v }},
 		{"report.language", "CAPACITYROOM_LANGUAGE", fixedVal("pt-BR"), func(c *Config, v string) { c.Report.Language = v }},
@@ -182,8 +180,6 @@ func TestLoadFlagOverridesEnvironment(t *testing.T) {
 			func(f *Flags, v string) { f.Timezone = &v }, func(c *Config, v string) { c.Analysis.Timezone = v }},
 		{"analysis.node_autoscaling", "CAPACITYROOM_NODE_AUTOSCALING", "auto", "disabled",
 			func(f *Flags, v string) { f.NodeAutoscaling = &v }, func(c *Config, v string) { c.Analysis.NodeAutoscaling = v }},
-		{"report.min_severity", "CAPACITYROOM_MIN_SEVERITY", "all", "critical",
-			func(f *Flags, v string) { f.MinSeverity = &v }, func(c *Config, v string) { c.Report.MinSeverity = v }},
 		// report.profile has only two valid values; the file's own value
 		// ("executive") is reused for the flag so that reaching it proves
 		// the flag won rather than the file surviving untouched, since the
@@ -501,6 +497,26 @@ namespaces = ["default"]
 	}
 }
 
+func TestLoadRejectsTheMinimumSeverityKey(t *testing.T) {
+	path := writeFile(t, `
+[metrics]
+url = "https://prom.example.org"
+
+[cluster]
+name = "prod"
+namespaces = ["default"]
+
+[report]
+min_severity = "all"
+`)
+
+	_, err := Load(Source{File: path, Getenv: noEnv})
+	want := "unknown report keys: min_severity"
+	if err == nil || err.Error() != want {
+		t.Fatalf("Load() error = %v, want %q", err, want)
+	}
+}
+
 func TestLoadRejectsOldPackageKey(t *testing.T) {
 	path := writeFile(t, `
 [metrics]
@@ -598,9 +614,8 @@ func TestLoadRenderOptions(t *testing.T) {
 			}
 			return ""
 		}, Flags{}, RenderOptions{}, "report.profile must be detailed or executive"},
-		{"invalid minimum severity", noEnv, Flags{MinSeverity: strPtr("High")}, RenderOptions{}, "report.min_severity must be all, attention, or critical"},
-		{"valid profile and minimum severity", noEnv, Flags{ReportProfile: strPtr("executive"), MinSeverity: strPtr("critical")}, RenderOptions{Language: "pt-BR", Profile: "executive", MinSeverity: "critical"}, ""},
-		{"empty profile and minimum severity kept as stored", noEnv, Flags{ReportProfile: strPtr(""), MinSeverity: strPtr("")}, RenderOptions{Language: "pt-BR"}, ""},
+		{"valid profile", noEnv, Flags{ReportProfile: strPtr("executive")}, RenderOptions{Language: "pt-BR", Profile: "executive"}, ""},
+		{"empty profile kept as stored", noEnv, Flags{ReportProfile: strPtr("")}, RenderOptions{Language: "pt-BR"}, ""},
 	}
 
 	for _, tt := range tests {

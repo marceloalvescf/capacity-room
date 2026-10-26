@@ -24,18 +24,18 @@ const (
 var verdictScopeTypes = catalog.VerdictPressureScopes
 
 // buildVerdict assembles the first page from the findings at or above the
-// minimum severity, the summary, the quality warnings, and the action plan.
-func buildVerdict(b *builder, s snapshot.Snapshot, severity string) Verdict {
-	findings := shownFindings(s, severity)
+// floor, the quality warnings, and the action plan.
+func buildVerdict(b *builder, s snapshot.Snapshot, floor int) Verdict {
+	findings := shownFindings(s, floor)
 	facts := decideVerdict(s, findings)
 
 	return Verdict{
-		Totals:   verdictTotals(b, s.Summary),
+		Totals:   verdictTotals(b, findings, floor),
 		Quality:  verdictQuality(b, s),
 		Growth:   verdictGrowth(b, s, findings, facts),
-		Pressure: verdictPressure(b, findings, facts, severity),
+		Pressure: verdictPressure(b, findings, facts, floor),
 		Findings: verdictFindings(b),
-		Plan:     verdictPlan(b, s, severity),
+		Plan:     verdictPlan(b, s),
 		Legend:   verdictLegend(b),
 	}
 }
@@ -57,16 +57,20 @@ func verdictCount(b *builder, status string, count float64) VerdictCount {
 	return VerdictCount{Status: status, Label: statusLabel(b, status), Count: b.cat.Count(count), Value: int(count)}
 }
 
-func verdictTotals(b *builder, m snapshot.Summary) VerdictTotals {
-	if m.Critical == 0 && m.Attention == 0 && m.Healthy == 0 {
+// verdictTotals counts the findings shown, by the severities at or above the
+// floor; when there is none it holds the sentence that says nothing needs
+// attention instead.
+func verdictTotals(b *builder, findings []snapshot.Finding, floor int) VerdictTotals {
+	counts := shownTotals(findings, floor)
+	if totalCount(counts) == 0 {
 		none := b.text(catalog.VerdictNone, nil)
 		return VerdictTotals{None: &none}
 	}
-	return VerdictTotals{Items: []VerdictCount{
-		verdictCount(b, analysis.SeverityCritical, m.Critical),
-		verdictCount(b, analysis.SeverityAttention, m.Attention),
-		verdictCount(b, analysis.SeverityHealthy, m.Healthy),
-	}}
+	items := make([]VerdictCount, 0, len(counts))
+	for _, c := range counts {
+		items = append(items, verdictCount(b, c.Severity, float64(c.Count)))
+	}
+	return VerdictTotals{Items: items}
 }
 
 // verdictQuality lists the first warnings of the data in words, or is nil
@@ -170,10 +174,10 @@ func knownFacts(b *builder, vb *viewBuilder, facts []growthFact) []VerdictFact {
 
 // verdictPressure words the scope types that hold a finding, the worst
 // first, with a bar of their findings. The healthy count is kept only when
-// the minimum severity lets a healthy finding through.
-func verdictPressure(b *builder, findings []snapshot.Finding, facts verdictFacts, severity string) VerdictPressure {
+// the floor lets a healthy finding through.
+func verdictPressure(b *builder, findings []snapshot.Finding, facts verdictFacts, floor int) VerdictPressure {
 	pressure := VerdictPressure{Title: b.text(catalog.VerdictPressureTitle, nil)}
-	showHealthy := minimumRank(severity) <= analysis.Rank(analysis.SeverityHealthy)
+	showHealthy := floor <= analysis.Rank(analysis.SeverityHealthy)
 	scale := 0
 	for _, f := range facts.Scopes {
 		scale = max(scale, f.Critical+f.Attention+f.Healthy)
@@ -217,9 +221,9 @@ func verdictFindings(b *builder) VerdictFindings {
 
 // verdictPlan holds the first actions of the executive action plan, and the
 // line that says how many there are in all when they are more.
-func verdictPlan(b *builder, s snapshot.Snapshot, severity string) VerdictPlan {
+func verdictPlan(b *builder, s snapshot.Snapshot) VerdictPlan {
 	plan := VerdictPlan{Title: b.text(catalog.VerdictPlanTitle, nil)}
-	included := planRecommendations(s, executiveMinimum(severity))
+	included := planRecommendations(s, attentionRank)
 	shown := included[:min(len(included), verdictActions)]
 	plan.Table = newTable(b, "verdict-plan", []catalog.Key{
 		catalog.VerdictPlanOrder, catalog.VerdictPlanPriority,

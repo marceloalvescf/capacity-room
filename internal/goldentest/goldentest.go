@@ -227,8 +227,7 @@ func Queries(ctx context.Context, scenario promtest.Scenario) ([]byte, error) {
 }
 
 // DataFile decodes an encoded snapshot and returns the encoded document in
-// one language and one profile, with the severity stored in the snapshot.
-// An empty profile keeps the snapshot's.
+// one language and one profile. An empty profile keeps the snapshot's.
 func DataFile(snap []byte, lang catalog.Language, profile string) ([]byte, error) {
 	decoded, err := snapshot.Decode(snap)
 	if err != nil {

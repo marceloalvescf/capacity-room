@@ -25,7 +25,7 @@ var sectionKeys = map[string][]string{
 	"cluster":    {"name", "namespaces", "label", "filter_mode", "nodepool_label"},
 	"analysis":   {"period", "start", "end", "timezone", "node_autoscaling", "excluded_containers"},
 	"thresholds": {"warning_percent", "critical_percent", "low_utilization_percent", "autoscaler_near_max_percent", "nodepool_spread_points", "bursty_gap_percent", "hpa_replica_divergence"},
-	"report":     {"profile", "min_severity", "language", "organization", "classification", "author", "output_directory"},
+	"report":     {"profile", "language", "organization", "classification", "author", "output_directory"},
 }
 
 // tomlConfig mirrors Config for decoding, with the lower snake case keys of
@@ -66,7 +66,6 @@ type tomlConfig struct {
 	}
 	Report struct {
 		Profile         string `toml:"profile"`
-		MinSeverity     string `toml:"min_severity"`
 		Language        string `toml:"language"`
 		Organization    string `toml:"organization"`
 		Classification  string `toml:"classification"`
@@ -102,7 +101,6 @@ func fromConfig(c Config) tomlConfig {
 	t.Thresholds.BurstyGapPercent = c.Thresholds.BurstyGapPercent
 	t.Thresholds.HPAReplicaDivergence = c.Thresholds.HPAReplicaDivergence
 	t.Report.Profile = c.Report.Profile
-	t.Report.MinSeverity = c.Report.MinSeverity
 	t.Report.Language = c.Report.Language
 	t.Report.Organization = c.Report.Organization
 	t.Report.Classification = c.Report.Classification
@@ -147,7 +145,6 @@ func toConfig(t tomlConfig) Config {
 		},
 		Report: Report{
 			Profile:         t.Report.Profile,
-			MinSeverity:     t.Report.MinSeverity,
 			Language:        t.Report.Language,
 			Organization:    t.Report.Organization,
 			Classification:  t.Report.Classification,
@@ -373,9 +370,6 @@ func applyEnvironment(cfg *Config, getenv func(string) string) error {
 	if v := getenv("CAPACITYROOM_NODE_AUTOSCALING"); v != "" {
 		cfg.Analysis.NodeAutoscaling = v
 	}
-	if v := getenv("CAPACITYROOM_MIN_SEVERITY"); v != "" {
-		cfg.Report.MinSeverity = v
-	}
 	if v := getenv("CAPACITYROOM_REPORT_PROFILE"); v != "" {
 		cfg.Report.Profile = v
 	}
@@ -425,9 +419,6 @@ func applyFlags(cfg *Config, flags Flags) error {
 	}
 	if flags.NodeAutoscaling != nil {
 		cfg.Analysis.NodeAutoscaling = *flags.NodeAutoscaling
-	}
-	if flags.MinSeverity != nil {
-		cfg.Report.MinSeverity = *flags.MinSeverity
 	}
 	if flags.ReportProfile != nil {
 		cfg.Report.Profile = *flags.ReportProfile
@@ -484,17 +475,16 @@ func resolveToken(getenv func(string) string, flagToken *string, tokenEnv string
 
 // RenderOptions are the settings that --from-snapshot reads: no file, the
 // environment, then the flags. A value left empty means "as stored in the
-// snapshot" for Profile and MinSeverity.
+// snapshot" for Profile.
 type RenderOptions struct {
 	Language        string
 	Profile         string
-	MinSeverity     string
 	OutputDirectory string
 }
 
 // LoadRenderOptions builds RenderOptions from the environment, then the
-// flags, and validates its language, its profile, and its minimum
-// severity; an empty profile or minimum severity is left as stored.
+// flags, and validates its language and its profile; an empty profile is
+// left as stored.
 func LoadRenderOptions(getenv func(string) string, flags Flags) (RenderOptions, error) {
 	if getenv == nil {
 		getenv = func(string) string { return "" }
@@ -508,9 +498,6 @@ func LoadRenderOptions(getenv func(string) string, flags Flags) (RenderOptions, 
 	if v := getenv("CAPACITYROOM_REPORT_PROFILE"); v != "" {
 		opts.Profile = v
 	}
-	if v := getenv("CAPACITYROOM_MIN_SEVERITY"); v != "" {
-		opts.MinSeverity = v
-	}
 	if v := getenv("CAPACITYROOM_OUTPUT_DIRECTORY"); v != "" {
 		opts.OutputDirectory = v
 	}
@@ -521,9 +508,6 @@ func LoadRenderOptions(getenv func(string) string, flags Flags) (RenderOptions, 
 	if flags.ReportProfile != nil {
 		opts.Profile = *flags.ReportProfile
 	}
-	if flags.MinSeverity != nil {
-		opts.MinSeverity = *flags.MinSeverity
-	}
 
 	if opts.Language != "pt-BR" && opts.Language != "en" {
 		return RenderOptions{}, errReportLanguage
@@ -532,11 +516,6 @@ func LoadRenderOptions(getenv func(string) string, flags Flags) (RenderOptions, 
 	case "", "detailed", "executive":
 	default:
 		return RenderOptions{}, errReportProfile
-	}
-	switch opts.MinSeverity {
-	case "", "all", "attention", "critical":
-	default:
-		return RenderOptions{}, errReportSeverity
 	}
 	return opts, nil
 }

@@ -33,10 +33,6 @@ classification = "Classification"
 profile = "Profile"
 profile_detailed = "Detailed"
 profile_executive = "Executive"
-min_severity = "Minimum severity"
-min_severity_all = "All"
-min_severity_attention = "Attention and critical"
-min_severity_critical = "Critical only"
 
 [front.legend]
 heading = "Status legend"
@@ -61,7 +57,7 @@ header_coverage = "Coverage"
 header_source = "Source"
 header_remark = "Remark"
 header_evidence = "Technical evidence"
-empty = "No capability reaches the minimum severity of this report."
+empty = "Every capability of this report is available."
 
 [state]
 available = "Available"
@@ -151,7 +147,6 @@ namespace_label = "Namespace:"
 [sections.namespaces]
 heading = "Capacity by namespace"
 empty = "No namespace data is available."
-below_minimum = "No namespace reaches the minimum severity of this report."
 header_resource = "Resource"
 header_average = "Average usage"
 header_peak = "Peak"
@@ -165,7 +160,7 @@ row_memory = "Memory"
 [sections.workloads]
 heading = "Resources by workload"
 empty = "No workload data is available."
-below_minimum = "No workload reaches the minimum severity of this report."
+no_usage = "No workload has observed usage in this period."
 header_workload = "Workload"
 header_pods = "Pods"
 header_cpu_average = "Average CPU"
@@ -231,7 +226,6 @@ header_state = "State"
 empty_summary = "No node pool was identified."
 empty_profile = "No aggregate profile is available."
 empty_detail = "No node was identified."
-below_minimum = "No node reaches the minimum severity of this report."
 no_finding = "No finding"
 
 [node_state]
@@ -564,7 +558,7 @@ cpu = "CPU: variation of {{.Percent}}"
 memory = "Memory: variation of {{.Percent}}"
 
 [verdict]
-none = "This report holds no findings."
+none = "Nothing needs attention."
 quality = "Data quality"
 more_warnings = "+{{.Count}}"
 

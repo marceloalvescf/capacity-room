@@ -97,7 +97,6 @@ func baseSnapshot(t *testing.T) snapshot.Snapshot {
 			PeriodEnd:        "2026-07-15T14:30:00-03:00",
 			Timezone:         "America/Sao_Paulo",
 			Profile:          "detailed",
-			MinSeverity:      "all",
 			Organization:     "Example Org",
 			Classification:   "internal",
 			Author:           "capacity-bot",
@@ -479,11 +478,11 @@ func TestBuildExecutiveProfile(t *testing.T) {
 	}
 }
 
-func TestBuildExecutiveRaisesTheMinimum(t *testing.T) {
+func TestBuildExecutiveKeepsTheAttentionFloor(t *testing.T) {
 	cat := mustCatalog(t, catalog.English)
 	s := goldenSnapshot(t, "direct-complete")
-	executive := mustBuild(t, s, cat, Options{Profile: "executive", MinSeverity: "all"})
-	detailed := mustBuild(t, s, cat, Options{Profile: "detailed", MinSeverity: "all"})
+	executive := mustBuild(t, s, cat, Options{Profile: "executive"})
+	detailed := mustBuild(t, s, cat, Options{Profile: "detailed"})
 
 	isWeak := func(b Block) bool { pb, ok := b.(PageBreak); return ok && pb.Weak }
 	dw := slices.IndexFunc(detailed.Blocks, isWeak)
@@ -539,10 +538,10 @@ func TestBuildMetadataRows(t *testing.T) {
 		mutate   func(*snapshot.Snapshot)
 		wantRows int
 	}{
-		{"all set", func(*snapshot.Snapshot) {}, 8},
-		{"no organization", func(s *snapshot.Snapshot) { s.Report.Organization = "" }, 7},
-		{"no classification", func(s *snapshot.Snapshot) { s.Report.Classification = "" }, 7},
-		{"no excluded container", func(s *snapshot.Snapshot) { s.Scope.ExcludedContainers = []string{} }, 8},
+		{"all set", func(*snapshot.Snapshot) {}, 7},
+		{"no organization", func(s *snapshot.Snapshot) { s.Report.Organization = "" }, 6},
+		{"no classification", func(s *snapshot.Snapshot) { s.Report.Classification = "" }, 6},
+		{"no excluded container", func(s *snapshot.Snapshot) { s.Scope.ExcludedContainers = []string{} }, 7},
 	}
 	cat := mustCatalog(t, catalog.English)
 	for _, tt := range tests {
@@ -572,7 +571,7 @@ func TestBuildMetadataNoExcludedContainersFallback(t *testing.T) {
 			s.Scope.ExcludedContainers = []string{}
 			doc := mustBuild(t, s, mustCatalog(t, tt.lang), Options{})
 			table := findTable(t, frontBlock(t, doc).Blocks, "report-metadata")
-			got := runText(t, table.Rows[5][1][0])
+			got := runText(t, table.Rows[4][1][0])
 			if got != tt.want {
 				t.Errorf("excluded containers value = %q, want %q", got, tt.want)
 			}
@@ -596,8 +595,8 @@ func TestBuildMetadataNamesAreIdentRuns(t *testing.T) {
 
 	want := map[int][]Run{
 		0: {Ident("prod-east")},
-		4: {Ident("a"), Text(", "), Ident("b"), Text(", "), Ident("c")},
-		5: {Ident("istio-proxy"), Text(", "), Ident("linkerd")},
+		3: {Ident("a"), Text(", "), Ident("b"), Text(", "), Ident("c")},
+		4: {Ident("istio-proxy"), Text(", "), Ident("linkerd")},
 	}
 	for row, runs := range want {
 		if got := table.Rows[row][1]; !reflect.DeepEqual(got, runs) {
@@ -617,7 +616,7 @@ func TestBuildPrintsNamesAsTheyAre(t *testing.T) {
 	}
 
 	table := findTable(t, frontBlock(t, doc).Blocks, "report-metadata")
-	if got := runText(t, table.Rows[6][1][0]); got != s.Report.Organization {
+	if got := runText(t, table.Rows[5][1][0]); got != s.Report.Organization {
 		t.Errorf("Organization value = %q, want %q", got, s.Report.Organization)
 	}
 

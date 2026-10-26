@@ -15,28 +15,17 @@ import (
 const unknownPool = "unknown"
 
 // buildNodepoolsSection assembles section 4: a numbered heading, then the
-// summary and the profile of the pools whose own findings clear severity,
-// then the detail of the nodes whose own findings do. The two filters
-// differ: a pool is judged by the findings of the pool, a node by those of
-// the node.
-func buildNodepoolsSection(b *builder, s snapshot.Snapshot, thresholds config.Thresholds, severity string) []Block {
-	minRank := minimumRank(severity)
+// summary and the profile of the pools, then the detail of their nodes.
+func buildNodepoolsSection(b *builder, s snapshot.Snapshot, thresholds config.Thresholds) []Block {
 	nodes := make(map[string]snapshot.Node, len(s.Nodes))
 	for _, n := range s.Nodes {
 		nodes[n.Name] = n
 	}
 
-	var pools []snapshot.NodePool
-	for _, pool := range s.Nodepools {
-		if analysis.Rank(scopeSeverity(s.Findings, analysis.ScopeNodepool, pool.Name, "")) >= minRank {
-			pools = append(pools, pool)
-		}
-	}
-
 	blocks := []Block{Heading{Level: 1, Numbered: true, Runs: []Run{Text(b.text(catalog.SectionsNodepoolsHeading, nil))}}}
-	blocks = append(blocks, poolSummary(b, pools, nodes, thresholds)...)
-	blocks = append(blocks, poolProfile(b, pools, nodes)...)
-	blocks = append(blocks, nodeDetail(b, s, nodes, minRank, thresholds)...)
+	blocks = append(blocks, poolSummary(b, s.Nodepools, nodes, thresholds)...)
+	blocks = append(blocks, poolProfile(b, s.Nodepools, nodes)...)
+	blocks = append(blocks, nodeDetail(b, s, nodes, thresholds)...)
 	return blocks
 }
 
@@ -251,20 +240,14 @@ func poolProfile(b *builder, pools []snapshot.NodePool, nodes map[string]snapsho
 	}}
 }
 
-// nodeDetail builds the detail heading, then for every pool with a node
-// that clears minRank a heading and a table; or one paragraph when no pool
-// has one.
-func nodeDetail(b *builder, s snapshot.Snapshot, nodes map[string]snapshot.Node, minRank int, thresholds config.Thresholds) []Block {
+// nodeDetail builds the detail heading, then for every pool with a node a
+// heading and a table; or one paragraph when no pool has one.
+func nodeDetail(b *builder, s snapshot.Snapshot, nodes map[string]snapshot.Node, thresholds config.Thresholds) []Block {
 	blocks := []Block{numberedHeading(b, catalog.SectionsNodepoolsDetailHeading)}
 	shown := false
-	total := 0
 	for _, pool := range s.Nodepools {
 		var rows [][][]Run
-		total += len(poolNodes(pool, nodes))
 		for _, n := range poolNodes(pool, nodes) {
-			if analysis.Rank(scopeSeverity(s.Findings, analysis.ScopeNode, n.Name, "")) < minRank {
-				continue
-			}
 			rows = append(rows, nodeRow(b, n, s.Findings, thresholds))
 		}
 		if len(rows) == 0 {
@@ -289,11 +272,7 @@ func nodeDetail(b *builder, s snapshot.Snapshot, nodes map[string]snapshot.Node,
 			})
 	}
 	if !shown {
-		key := catalog.SectionsNodepoolsBelowMinimum
-		if total == 0 {
-			key = catalog.SectionsNodepoolsEmptyDetail
-		}
-		blocks = append(blocks, Paragraph{Runs: []Run{Text(b.text(key, nil))}})
+		blocks = append(blocks, Paragraph{Runs: []Run{Text(b.text(catalog.SectionsNodepoolsEmptyDetail, nil))}})
 	}
 	return blocks
 }

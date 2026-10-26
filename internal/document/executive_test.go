@@ -52,10 +52,10 @@ func podsWorkload(namespace, kind, name string, pods float64) snapshot.Workload 
 }
 
 // executiveBlocks builds the executive section of s.
-func executiveBlocks(t *testing.T, s snapshot.Snapshot, lang catalog.Language, severity string, executiveProfile bool) []Block {
+func executiveBlocks(t *testing.T, s snapshot.Snapshot, lang catalog.Language, executiveProfile bool) []Block {
 	t.Helper()
 	b := &builder{cat: mustCatalog(t, lang)}
-	blocks := buildExecutiveSection(b, s, config.Default().Thresholds, severity, executiveProfile)
+	blocks := buildExecutiveSection(b, s, config.Default().Thresholds, executiveProfile)
 	if b.err != nil {
 		t.Fatalf("builder error = %v", b.err)
 	}
@@ -176,7 +176,7 @@ func assertFallback(t *testing.T, cat *catalog.Catalog, sub []Block, key catalog
 func TestExecutiveOrder(t *testing.T) {
 	cat := mustCatalog(t, catalog.PortugueseBrazil)
 	_, s := paritySnapshot(t)
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "all", false)
+	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, false)
 
 	h, ok := blocks[0].(Heading)
 	if !ok || h.Level != 1 || !h.Numbered || runString(h.Runs[0]) != "text:"+pt(t, catalog.SectionsExecutiveHeading, nil) {
@@ -220,7 +220,7 @@ func TestExecutiveRaisesAllToAttention(t *testing.T) {
 	s := executiveSnapshot(t,
 		[]snapshot.Workload{podsWorkload("payments", "Deployment", "api", 3)},
 		workloadFinding("WORKLOAD_CPU_REQUEST_HEALTHY", analysis.SeverityHealthy, "payments", "api", "Deployment", parityEvidence(40, 50)...))
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "all", false)
+	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, false)
 
 	assertFallback(t, cat, subsection(t, blocks, 0), catalog.SectionsExecutiveCriticalEmpty)
 	assertFallback(t, cat, subsection(t, blocks, 1), catalog.SectionsExecutiveAttentionEmpty)
@@ -240,22 +240,6 @@ func TestExecutiveRaisesAllToAttention(t *testing.T) {
 	}
 }
 
-func TestExecutiveAtCriticalOmitsAttention(t *testing.T) {
-	cat := mustCatalog(t, catalog.PortugueseBrazil)
-	s := executiveSnapshot(t,
-		[]snapshot.Workload{podsWorkload("payments", "Deployment", "api", 4), podsWorkload("payments", "Deployment", "worker", 2)},
-		workloadFinding("WORKLOAD_CPU_REQUEST_CRITICAL", analysis.SeverityCritical, "payments", "api", "Deployment", parityEvidence(88, 97)...),
-		workloadFinding("WORKLOAD_MEMORY_REQUEST_ATTENTION", analysis.SeverityAttention, "payments", "worker", "Deployment", parityEvidence(60, 75)...))
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "critical", false)
-
-	assertRows(t, subsection(t, blocks, 0), []string{"ident:payments", "ident:api", "text:4", "text:" + reason(t, "request_peak", "cpu", "97%")})
-	assertFallback(t, cat, subsection(t, blocks, 1), catalog.SectionsExecutiveAttentionEmpty)
-	rows := rowsOf(t, subsection(t, blocks, 2))
-	if len(rows) != 1 || rows[0][4] != "text:"+pt(t, catalog.RiskCount("critical", 1), nil) {
-		t.Errorf("namespaces rows = %q, want one row counting 1 crítica", rows)
-	}
-}
-
 func TestPriorityRowsConsolidateOneWorkload(t *testing.T) {
 	cat := mustCatalog(t, catalog.PortugueseBrazil)
 	s := executiveSnapshot(t,
@@ -263,7 +247,7 @@ func TestPriorityRowsConsolidateOneWorkload(t *testing.T) {
 		workloadFinding("WORKLOAD_MEMORY_REQUEST_CRITICAL", analysis.SeverityCritical, "payments", "api", "Deployment", number("peak_percent", 131.2)),
 		workloadFinding("WORKLOAD_CPU_BURSTY", analysis.SeverityAttention, "payments", "api", "Deployment", number("gap_percent", 96.1)),
 		workloadFinding("WORKLOAD_CPU_OVERREQUESTED", analysis.SeverityAttention, "payments", "api", "Deployment", number("average_percent", 7.1)))
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
+	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, false)
 
 	assertRows(t, subsection(t, blocks, 0), []string{
 		"ident:payments", "ident:api", "text:50",
@@ -277,7 +261,7 @@ func TestPriorityRowsTellHomonymsApart(t *testing.T) {
 		[]snapshot.Workload{podsWorkload("payments", "Deployment", "api", 4), podsWorkload("payments", "StatefulSet", "api", 3)},
 		workloadFinding("WORKLOAD_MEMORY_LIMIT_CRITICAL", analysis.SeverityCritical, "payments", "api", "Deployment", number("peak_percent", 95)),
 		workloadFinding("WORKLOAD_CPU_REQUEST_ATTENTION", analysis.SeverityAttention, "payments", "api", "StatefulSet", number("average_percent", 72)))
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
+	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, false)
 
 	assertRows(t, subsection(t, blocks, 0), []string{"ident:payments", "ident:api (Deployment)", "text:4", "text:" + reason(t, "limit_peak", "memory", "95%")})
 	assertRows(t, subsection(t, blocks, 1), []string{"ident:payments", "ident:api (StatefulSet)", "text:3", "text:" + reason(t, "request_average", "cpu", "72%")})
@@ -290,7 +274,7 @@ func TestPriorityRowsWithoutPods(t *testing.T) {
 	s := executiveSnapshot(t, []snapshot.Workload{jobs},
 		workloadFinding("WORKLOAD_MEMORY_LIMIT_ATTENTION", analysis.SeverityAttention, "payments", "jobs", "CronJob", number("peak_percent", 78)))
 
-	summaries, err := workloadSummaries(s, minimumRank("attention"))
+	summaries, err := workloadSummaries(s, attentionRank)
 	if err != nil {
 		t.Fatalf("workloadSummaries() error = %v", err)
 	}
@@ -298,7 +282,7 @@ func TestPriorityRowsWithoutPods(t *testing.T) {
 		t.Fatalf("summaries = %+v, want one CronJob with nil pods", summaries)
 	}
 
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
+	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, false)
 	assertRows(t, subsection(t, blocks, 1), []string{"ident:payments", "ident:jobs", "text:" + pt(t, catalog.PlaceholderEmptyCell, nil), "text:" + reason(t, "limit_peak", "memory", "78%")})
 }
 
@@ -307,7 +291,7 @@ func TestWorkloadSummariesRefuseAScopeWithoutNamespace(t *testing.T) {
 		Code: "WORKLOAD_CPU_REQUEST_CRITICAL", Severity: analysis.SeverityCritical,
 		ScopeType: analysis.ScopeWorkload, ScopeKind: "Deployment", ScopeName: "api", Confidence: "exact",
 	})
-	_, err := workloadSummaries(s, minimumRank("attention"))
+	_, err := workloadSummaries(s, attentionRank)
 	if err == nil || err.Error() != "finding WORKLOAD_CPU_REQUEST_CRITICAL names no namespace" {
 		t.Errorf("workloadSummaries() error = %v", err)
 	}
@@ -319,7 +303,7 @@ func TestCoverageCodesNeverReachThePriorityTables(t *testing.T) {
 	worker.HPACoverage = snapshot.CoverageUncovered
 	s := executiveSnapshot(t, []snapshot.Workload{worker},
 		workloadFinding("DEPLOYMENT_WITHOUT_HPA", analysis.SeverityAttention, "payments", "worker", "Deployment"))
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
+	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, false)
 
 	assertFallback(t, cat, subsection(t, blocks, 0), catalog.SectionsExecutiveCriticalEmpty)
 	assertFallback(t, cat, subsection(t, blocks, 1), catalog.SectionsExecutiveAttentionEmpty)
@@ -341,7 +325,7 @@ func TestNamespacesAtRiskRows(t *testing.T) {
 		workloadFinding("WORKLOAD_CPU_REQUEST_CRITICAL", analysis.SeverityCritical, "payments", "api", "Deployment", number("peak_percent", 97)),
 		workloadFinding("WORKLOAD_CPU_REQUEST_ATTENTION", analysis.SeverityAttention, "stock", "worker", "Deployment", number("peak_percent", 75)))
 	s.Namespaces = []snapshot.Namespace{namespaceWithLimits("payments", 49.9, 76.8), namespaceWithLimits("stock", 37.9, 45.4)}
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
+	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, false)
 
 	assertRows(t, subsection(t, blocks, 2),
 		[]string{"ident:payments", "status/healthy:49,9%", "status/attention:76,8%", "text:" + reason(t, "request_peak", "cpu", "97%"), "text:" + pt(t, catalog.RiskCount("critical", 1), nil), "status/critical:Crítico"},
@@ -354,7 +338,7 @@ func TestNamespacesAtRiskSortsByLargestPeak(t *testing.T) {
 		workloadFinding("WORKLOAD_CPU_REQUEST_CRITICAL", analysis.SeverityCritical, "a", "x", "Deployment", number("peak_percent", 97)),
 		workloadFinding("WORKLOAD_CPU_REQUEST_CRITICAL", analysis.SeverityCritical, "b", "y", "Deployment", number("peak_percent", 97)))
 	s.Namespaces = []snapshot.Namespace{namespaceWithLimits("a", 90, 10), namespaceWithLimits("b", 20, 95)}
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
+	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, false)
 
 	rows := rowsOf(t, subsection(t, blocks, 2))
 	if len(rows) != 2 || rows[0][0] != "ident:b" || rows[1][0] != "ident:a" {
@@ -367,7 +351,7 @@ func TestNamespacesAtRiskCountsBoth(t *testing.T) {
 		[]snapshot.Workload{podsWorkload("payments", "Deployment", "api", 1), podsWorkload("payments", "Deployment", "queue", 1)},
 		workloadFinding("WORKLOAD_CPU_REQUEST_CRITICAL", analysis.SeverityCritical, "payments", "api", "Deployment", number("peak_percent", 97)),
 		workloadFinding("WORKLOAD_CPU_REQUEST_ATTENTION", analysis.SeverityAttention, "payments", "queue", "Deployment", number("peak_percent", 75)))
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
+	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, false)
 
 	rows := rowsOf(t, subsection(t, blocks, 2))
 	if len(rows) != 1 || rows[0][4] != "text:"+pt(t, catalog.SectionsExecutiveRiskStatusBoth, catalog.Params{"Critical": pt(t, catalog.RiskCount("critical", 1), nil), "Attention": pt(t, catalog.RiskCount("attention", 1), nil)}) || rows[0][3] != "text:"+reason(t, "request_peak", "cpu", "97%") || rows[0][5] != "status/critical:"+pt(t, catalog.Priority("critical"), nil) {
@@ -379,7 +363,7 @@ func TestNamespacesAtRiskUnavailablePercent(t *testing.T) {
 	s := executiveSnapshot(t,
 		[]snapshot.Workload{podsWorkload("payments", "Deployment", "api", 1)},
 		workloadFinding("WORKLOAD_CPU_REQUEST_CRITICAL", analysis.SeverityCritical, "payments", "api", "Deployment", number("peak_percent", 97)))
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
+	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, false)
 
 	rows := rowsOf(t, subsection(t, blocks, 2))
 	if len(rows) != 1 || rows[0][1] != "status/unavailable:"+pt(t, catalog.PlaceholderUnavailable, nil) || rows[0][2] != "status/unavailable:"+pt(t, catalog.PlaceholderUnavailable, nil) {
@@ -408,7 +392,7 @@ func uncoveredDeployment(name string, pods *float64, observed bool) snapshot.Wor
 func TestReplicaCeilingRows(t *testing.T) {
 	s := executiveSnapshot(t, []snapshot.Workload{podsWorkload("payments", "Deployment", "api", 4), uncoveredDeployment("worker", floatPtr(2), true)})
 	s.HPAs = []snapshot.HPA{maxedHPA("api", "Deployment", "api", 2, 10, 10)}
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
+	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, false)
 
 	assertRows(t, subsection(t, blocks, 3),
 		[]string{"ident:payments", "ident:api", "text:Deployment", "text:" + pt(t, catalog.SectionsExecutiveReplicasObserved, catalog.Params{"Peak": "10", "Max": "10"}), "status/critical:" + pt(t, catalog.SectionsExecutiveSituationHPAMax, nil)},
@@ -417,7 +401,7 @@ func TestReplicaCeilingRows(t *testing.T) {
 
 func TestReplicaCeilingSingularActive(t *testing.T) {
 	s := executiveSnapshot(t, []snapshot.Workload{uncoveredDeployment("worker", floatPtr(1), true)})
-	rows := rowsOf(t, subsection(t, executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false), 3))
+	rows := rowsOf(t, subsection(t, executiveBlocks(t, s, catalog.PortugueseBrazil, false), 3))
 	if len(rows) != 1 || rows[0][3] != "text:"+pt(t, catalog.SectionsExecutiveActiveReplicasSingular, nil) {
 		t.Errorf("rows = %q, want the replicas 1 ativo", rows)
 	}
@@ -425,7 +409,7 @@ func TestReplicaCeilingSingularActive(t *testing.T) {
 
 func TestReplicaCeilingUncoveredWithoutPods(t *testing.T) {
 	s := executiveSnapshot(t, []snapshot.Workload{uncoveredDeployment("api", nil, false)})
-	rows := rowsOf(t, subsection(t, executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false), 3))
+	rows := rowsOf(t, subsection(t, executiveBlocks(t, s, catalog.PortugueseBrazil, false), 3))
 	if len(rows) != 1 || rows[0][3] != "text:"+pt(t, catalog.PlaceholderUnavailable, nil) {
 		t.Errorf("rows = %q, want the replicas Indisponível", rows)
 	}
@@ -437,14 +421,14 @@ func TestReplicaCeilingSkipsPinnedAndStatefulSets(t *testing.T) {
 	sts.HPACoverage = snapshot.CoverageUncovered
 	s := executiveSnapshot(t, []snapshot.Workload{sts})
 	s.HPAs = []snapshot.HPA{maxedHPA("pinned", "Deployment", "pinned", 1, 1, 1)}
-	assertFallback(t, cat, subsection(t, executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false), 3), catalog.SectionsExecutiveScalingEmpty)
+	assertFallback(t, cat, subsection(t, executiveBlocks(t, s, catalog.PortugueseBrazil, false), 3), catalog.SectionsExecutiveScalingEmpty)
 }
 
 func TestReplicaCeilingUnidentifiedTarget(t *testing.T) {
 	s := executiveSnapshot(t, nil)
 	// Listed out of name order on purpose.
 	s.HPAs = []snapshot.HPA{maxedHPA("api-hpa", "", "", 2, 10, 10), maxedHPA("api-cpu", "", "svc", 2, 10, 10)}
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false)
+	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, false)
 
 	assertRows(t, subsection(t, blocks, 3),
 		[]string{"ident:payments", "ident:api-cpu|text: |placeholder:" + pt(t, catalog.SectionsExecutiveTargetUnknown, nil), "text:" + pt(t, catalog.PlaceholderUnavailable, nil), "text:" + pt(t, catalog.SectionsExecutiveReplicasObserved, catalog.Params{"Peak": "10", "Max": "10"}), "status/critical:" + pt(t, catalog.SectionsExecutiveSituationHPAMax, nil)},
@@ -454,19 +438,10 @@ func TestReplicaCeilingUnidentifiedTarget(t *testing.T) {
 func TestReplicaCeilingDeduplicatesTargets(t *testing.T) {
 	s := executiveSnapshot(t, nil)
 	s.HPAs = []snapshot.HPA{maxedHPA("a", "Deployment", "api", 2, 10, 10), maxedHPA("b", "Deployment", "api", 2, 10, 10)}
-	rows := rowsOf(t, subsection(t, executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", false), 3))
+	rows := rowsOf(t, subsection(t, executiveBlocks(t, s, catalog.PortugueseBrazil, false), 3))
 	if len(rows) != 1 {
 		t.Errorf("rows = %q, want one", rows)
 	}
-}
-
-func TestReplicaCeilingAtCriticalHidesUncovered(t *testing.T) {
-	s := executiveSnapshot(t, []snapshot.Workload{podsWorkload("payments", "Deployment", "api", 4), uncoveredDeployment("worker", floatPtr(2), true)})
-	s.HPAs = []snapshot.HPA{maxedHPA("api", "Deployment", "api", 2, 10, 10)}
-	blocks := executiveBlocks(t, s, catalog.PortugueseBrazil, "critical", false)
-
-	assertRows(t, subsection(t, blocks, 3),
-		[]string{"ident:payments", "ident:api", "text:Deployment", "text:" + pt(t, catalog.SectionsExecutiveReplicasObserved, catalog.Params{"Peak": "10", "Max": "10"}), "status/critical:" + pt(t, catalog.SectionsExecutiveSituationHPAMax, nil)})
 }
 
 func TestReplicaCeilingNotePlacement(t *testing.T) {
@@ -478,7 +453,7 @@ func TestReplicaCeilingNotePlacement(t *testing.T) {
 		if withRow {
 			s.HPAs = []snapshot.HPA{maxedHPA("api", "Deployment", "api", 2, 10, 10)}
 		}
-		return subsection(t, executiveBlocks(t, s, catalog.PortugueseBrazil, "attention", executiveProfile), 3)
+		return subsection(t, executiveBlocks(t, s, catalog.PortugueseBrazil, executiveProfile), 3)
 	}
 	assertCallout := func(blk Block) {
 		t.Helper()
@@ -510,10 +485,10 @@ func TestReplicaCeilingNotePlacement(t *testing.T) {
 
 // poolStatusRows builds section 5 of a snapshot of nodes and findings and
 // returns the rows of its pool table.
-func poolStatusRows(t *testing.T, lang catalog.Language, severity string, nodes []snapshot.Node, findings ...snapshot.Finding) [][]string {
+func poolStatusRows(t *testing.T, lang catalog.Language, nodes []snapshot.Node, findings ...snapshot.Finding) [][]string {
 	t.Helper()
 	s := poolSnapshot(t, nodes, findings...)
-	return rowsOf(t, subsection(t, executiveBlocks(t, s, lang, severity, false), 4))
+	return rowsOf(t, subsection(t, executiveBlocks(t, s, lang, false), 4))
 }
 
 func plainNode(name, pool string) snapshot.Node {
@@ -521,7 +496,7 @@ func plainNode(name, pool string) snapshot.Node {
 }
 
 func TestNodepoolStatusRows(t *testing.T) {
-	rows := poolStatusRows(t, catalog.PortugueseBrazil, "attention",
+	rows := poolStatusRows(t, catalog.PortugueseBrazil,
 		[]snapshot.Node{plainNode("worker-b", "stable"), plainNode("worker-a", "apps")},
 		nodeFinding("NODE_MEMORY_USAGE_CRITICAL", analysis.SeverityCritical, "worker-a", number("peak_percent", 91)))
 
@@ -535,7 +510,7 @@ func TestNodepoolStatusRows(t *testing.T) {
 }
 
 func TestNodepoolStatusKeepsTheHighestSeverityOnly(t *testing.T) {
-	rows := poolStatusRows(t, catalog.PortugueseBrazil, "attention",
+	rows := poolStatusRows(t, catalog.PortugueseBrazil,
 		[]snapshot.Node{plainNode("pool-a-1", "pool-a")},
 		snapshot.Finding{Code: "NODEPOOL_CPU_UNEVEN", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeNodepool, ScopeName: "pool-a", Confidence: "exact"},
 		snapshot.Finding{Code: "NODEPOOL_MEMORY_UNEVEN", Severity: analysis.SeverityAttention, ScopeType: analysis.ScopeNodepool, ScopeName: "pool-a", Confidence: "exact"},
@@ -563,7 +538,7 @@ func TestNodepoolStatusUndeterminedSortsByItsWord(t *testing.T) {
 			findings = append(findings, attention(pool))
 		}
 		var out []string
-		for _, row := range poolStatusRows(t, lang, "attention", nodes, findings...) {
+		for _, row := range poolStatusRows(t, lang, nodes, findings...) {
 			out = append(out, row[0])
 		}
 		return out
@@ -585,7 +560,7 @@ func TestNodepoolStatusUndeterminedSortsByItsWord(t *testing.T) {
 }
 
 func TestNodepoolStatusNotFiltered(t *testing.T) {
-	rows := poolStatusRows(t, catalog.PortugueseBrazil, "critical", []snapshot.Node{plainNode("n1", "stable")})
+	rows := poolStatusRows(t, catalog.PortugueseBrazil, []snapshot.Node{plainNode("n1", "stable")})
 	if len(rows) != 1 || rows[0][1] != "status/healthy:"+pt(t, catalog.SectionsExecutivePoolStable, nil) {
 		t.Errorf("rows = %q, want the stable pool", rows)
 	}
@@ -606,12 +581,12 @@ func recommendation(code, severity, scopeType string, scopes ...string) snapshot
 
 // planRows builds the action plan of recommendations by hand and returns
 // its rows, or the builder error.
-func planRows(t *testing.T, severity string, recommendations ...snapshot.Recommendation) ([][]string, []Block, error) {
+func planRows(t *testing.T, recommendations ...snapshot.Recommendation) ([][]string, []Block, error) {
 	t.Helper()
 	s := baseSnapshot(t)
 	s.Recommendations = recommendations
 	b := &builder{cat: mustCatalog(t, catalog.PortugueseBrazil)}
-	blocks := actionPlan(b, s, minimumRank(raiseToAttention(severity)))
+	blocks := actionPlan(b, s)
 	if b.err != nil {
 		return nil, blocks, b.err
 	}
@@ -622,7 +597,7 @@ func planRows(t *testing.T, severity string, recommendations ...snapshot.Recomme
 }
 
 func TestActionPlanRows(t *testing.T) {
-	rows, _, err := planRows(t, "attention",
+	rows, _, err := planRows(t,
 		recommendation("NAMESPACE_MEMORY_LIMIT_CRITICAL", "critical", "namespace", "payments"),
 		recommendation("NAMESPACE_MEMORY_REQUEST_CRITICAL", "critical", "namespace", "payments"),
 		recommendation("WORKLOAD_MEMORY_LIMIT_CRITICAL", "critical", "workload", "payments/payments-web"),
@@ -664,7 +639,7 @@ func TestActionPlanSpeaksEnglish(t *testing.T) {
 		recommendation("WORKLOAD_CPU_REQUEST_ATTENTION", "attention", "workload", "payments/web"),
 	}
 	b := &builder{cat: mustCatalog(t, catalog.English)}
-	rows := rowsOf(t, actionPlan(b, s, minimumRank(raiseToAttention("attention"))))
+	rows := rowsOf(t, actionPlan(b, s))
 	if b.err != nil {
 		t.Fatalf("builder error = %v", b.err)
 	}
@@ -700,7 +675,7 @@ func edgeScalingRecommendations() []snapshot.Recommendation {
 }
 
 func TestActionPlanNamesNoQualifier(t *testing.T) {
-	rows, _, err := planRows(t, "attention", edgeScalingRecommendations()...)
+	rows, _, err := planRows(t, edgeScalingRecommendations()...)
 	if err != nil {
 		t.Fatalf("builder error = %v", err)
 	}
@@ -722,7 +697,7 @@ func TestActionPlanNamesNoQualifier(t *testing.T) {
 
 func TestActionPlanExcludesNodeAndPoolCodes(t *testing.T) {
 	cat := mustCatalog(t, catalog.PortugueseBrazil)
-	_, blocks, err := planRows(t, "attention",
+	_, blocks, err := planRows(t,
 		recommendation("NODE_MEMORY_USAGE_CRITICAL", "critical", "node", "n1"),
 		recommendation("NODEPOOL_MEMORY_UNEVEN", "attention", "nodepool", "pool-a"),
 		recommendation("NODE_AUTOSCALING_DISABLED_PRESSURE", "critical", "cluster", "cluster"))
@@ -736,7 +711,7 @@ func TestActionPlanScopeSummary(t *testing.T) {
 	four := func(prefix string) []string {
 		return []string{prefix + "1", prefix + "2", prefix + "3", prefix + "4"}
 	}
-	rows, _, err := planRows(t, "attention",
+	rows, _, err := planRows(t,
 		recommendation("DEPLOYMENT_WITHOUT_HPA", "attention", "workload", four("payments/app-")...),
 		recommendation("NAMESPACE_CPU_REQUEST_ATTENTION", "attention", "namespace", four("ns-")...),
 		recommendation("HPA_MAX_REPLICAS_REACHED", "critical", "hpa", four("payments/hpa-")...))
@@ -755,7 +730,7 @@ func TestActionPlanScopeSummary(t *testing.T) {
 }
 
 func TestActionPlanScopeNames(t *testing.T) {
-	rows, _, err := planRows(t, "attention",
+	rows, _, err := planRows(t,
 		recommendation("WORKLOAD_CPU_REQUEST_ATTENTION", "attention", "workload", "payments/api", "payments/worker"),
 		recommendation("WORKLOAD_MEMORY_LIMIT_ATTENTION", "attention", "workload", "a/api", "b/api"))
 	if err != nil {
@@ -767,7 +742,7 @@ func TestActionPlanScopeNames(t *testing.T) {
 }
 
 func TestActionPlanRefusesAnUnnameableScope(t *testing.T) {
-	_, _, err := planRows(t, "attention",
+	_, _, err := planRows(t,
 		recommendation("DEPLOYMENT_WITHOUT_HPA", "attention", "cluster", "a", "b", "c", "d"))
 	if err == nil || !strings.Contains(err.Error(), `"cluster"`) {
 		t.Errorf("builder error = %v, want one naming cluster", err)
@@ -785,9 +760,9 @@ func availableCapabilities() []snapshot.Capability {
 	return caps
 }
 
-func limitationRows(t *testing.T, s snapshot.Snapshot, severity string) [][]string {
+func limitationRows(t *testing.T, s snapshot.Snapshot) [][]string {
 	t.Helper()
-	return rowsOf(t, subsection(t, executiveBlocks(t, s, catalog.PortugueseBrazil, severity, false), 6))
+	return rowsOf(t, subsection(t, executiveBlocks(t, s, catalog.PortugueseBrazil, false), 6))
 }
 
 func TestMaterialLimitationsRows(t *testing.T) {
@@ -802,7 +777,7 @@ func TestMaterialLimitationsRows(t *testing.T) {
 		{"text:" + catText(t, cat, catalog.CapabilityName("node_autoscaling"), nil), "status/unavailable:" + pt(t, catalog.State("unavailable"), nil), "text:" + catText(t, cat, catalog.CapabilityReason("NODE_AUTOSCALING_UNDETERMINED"), nil)},
 		{"text:" + pt(t, catalog.SectionsExecutiveInterpretation, nil), "status/attention:" + pt(t, catalog.State("partial"), nil), "text:" + catText(t, cat, catalog.Warning(collect.WarningWorkloadHistoryCurrentAssociation), nil)},
 	}
-	rows := limitationRows(t, s, "attention")
+	rows := limitationRows(t, s)
 	if len(rows) != 2 || !slices.Equal(rows[0], want[0]) || !slices.Equal(rows[1], want[1]) {
 		t.Errorf("rows = %q, want %q", rows, want)
 	}
@@ -813,7 +788,7 @@ func TestMaterialLimitationsSkipsAWarningThatIsARemark(t *testing.T) {
 	s.Quality.Capabilities = availableCapabilities()
 	s.Quality.Warnings = []snapshot.Message{{Code: collect.WarningHPAAmbiguousSpec, Params: map[string]float64{}}}
 
-	rows := limitationRows(t, s, "attention")
+	rows := limitationRows(t, s)
 	if len(rows) != 1 || rows[0][1] != "status/attention:"+pt(t, catalog.State("partial"), nil) || strings.HasPrefix(rows[0][0], "text:"+pt(t, catalog.SectionsExecutiveInterpretation, nil)) {
 		t.Errorf("rows = %q, want the one effective capability", rows)
 	}
@@ -825,14 +800,14 @@ func TestMaterialLimitationsNotFiltered(t *testing.T) {
 	s.Quality.Capabilities[6].State = discovery.StatePartial
 	s.Quality.Capabilities[6].Reasons = []string{discovery.ReasonCodes[2]}
 
-	rows := limitationRows(t, s, "critical")
+	rows := limitationRows(t, s)
 	if len(rows) != 1 || rows[0][1] != "status/attention:"+pt(t, catalog.State("partial"), nil) {
 		t.Errorf("rows = %q, want the partial capability", rows)
 	}
 }
 
 func TestActionPlanRefusesAStatefulSetSummary(t *testing.T) {
-	_, _, err := planRows(t, "attention",
+	_, _, err := planRows(t,
 		recommendation("STATEFULSET_WITHOUT_HPA_INFO", "attention", "workload", "a/1", "a/2", "a/3", "a/4"))
 	want := `recommendation STATEFULSET_WITHOUT_HPA_INFO of scope type "workload" has no summary`
 	if err == nil || err.Error() != want {

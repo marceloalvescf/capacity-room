@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/marceloalvescf/capacity-room/internal/analysis"
 	"github.com/marceloalvescf/capacity-room/internal/catalog"
 	"github.com/marceloalvescf/capacity-room/internal/collect"
 	"github.com/marceloalvescf/capacity-room/internal/discovery"
@@ -99,12 +100,12 @@ func TestNotesAreLeftOutWhenEmpty(t *testing.T) {
 	}
 }
 
-func TestNotesIgnoreTheMinimumSeverity(t *testing.T) {
+func TestNotesIgnoreTheProfileFloor(t *testing.T) {
 	s := baseSnapshot(t)
 	s.Quality.Warnings = []snapshot.Message{
 		{Code: collect.WarningNamespaceUsageIncomplete, Params: map[string]float64{}},
 	}
-	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{MinSeverity: "critical"})
+	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{Profile: "executive"})
 
 	table := findTable(t, doc.Blocks, "interpretation-notes")
 	if len(table.Rows) != 1 {
@@ -186,14 +187,17 @@ func TestAppendixStatusDrawsUnavailableAsUnavailable(t *testing.T) {
 	}
 }
 
-func TestCriticalMinimumKeepsOnlyUnavailableCapabilities(t *testing.T) {
+func TestAttentionFloorKeepsPartialAndUnavailableCapabilities(t *testing.T) {
 	for state, want := range map[string]bool{
 		discovery.StateAvailable:   false,
-		discovery.StatePartial:     false,
+		discovery.StatePartial:     true,
 		discovery.StateUnavailable: true,
 	} {
-		if got := passesSeverity(state, "critical"); got != want {
-			t.Errorf("passesSeverity(%q, critical) = %v, want %v", state, got, want)
+		if got := passesFloor(state, attentionRank); got != want {
+			t.Errorf("passesFloor(%q, attention) = %v, want %v", state, got, want)
+		}
+		if !passesFloor(state, analysis.Rank(analysis.SeverityHealthy)) {
+			t.Errorf("passesFloor(%q, healthy) = false, want true", state)
 		}
 	}
 }

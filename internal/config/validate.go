@@ -49,7 +49,6 @@ var (
 	errHPADivergence        = errors.New("thresholds.hpa_replica_divergence must not be negative")
 	errWarningCritical      = errors.New("thresholds.warning_percent must be lower than critical_percent")
 	errReportProfile        = errors.New("report.profile must be detailed or executive")
-	errReportSeverity       = errors.New("report.min_severity must be all, attention, or critical")
 	errReportLanguage       = errors.New("report.language must be pt-BR or en")
 	errReportOutputDir      = errors.New("report.output_directory must exist and be writable")
 )
@@ -235,11 +234,6 @@ func validateReport(r Report) error {
 	case "detailed", "executive":
 	default:
 		return errReportProfile
-	}
-	switch r.MinSeverity {
-	case "all", "attention", "critical":
-	default:
-		return errReportSeverity
 	}
 	switch r.Language {
 	case "pt-BR", "en":

@@ -21,7 +21,6 @@ import (
 // language; a number travels with its raw value and its text.
 type View struct {
 	Language        string               `json:"language"`
-	MinSeverity     string               `json:"min_severity"`
 	Report          ViewReport           `json:"report"`
 	Summary         ViewSummary          `json:"summary"`
 	Findings        []ViewFinding        `json:"findings"`
@@ -185,6 +184,9 @@ type ViewHPA struct {
 	Current    Statistic `json:"current"`
 	Desired    Statistic `json:"desired"`
 	Situation  string    `json:"situation"`
+	// Status is the worst severity among all findings of the HPA, healthy
+	// when it has none.
+	Status string `json:"status"`
 	// SituationStatus is the mark of the situation cell.
 	SituationStatus *string `json:"situation_status"`
 }
@@ -217,9 +219,12 @@ type ViewNode struct {
 
 // ViewNodepool is one node pool and the names of its nodes.
 type ViewNodepool struct {
-	Name       string   `json:"name"`
-	Confidence string   `json:"confidence"`
-	Nodes      []string `json:"nodes"`
+	Name       string `json:"name"`
+	Confidence string `json:"confidence"`
+	// Status is the worst severity among all findings of the pool and of
+	// its nodes, healthy when there is none.
+	Status string   `json:"status"`
+	Nodes  []string `json:"nodes"`
 }
 
 // ViewQuality is what the run could tell about its own coverage.
@@ -250,40 +255,34 @@ type ViewMessage struct {
 // BuildView words a snapshot in the catalog's language for the web,
 // narrowed as the PDF of the same report is: findings, recommendations,
 // and the rows of namespaces, workloads, and nodes below the minimum
-// severity are left out; the minimum is raised to attention for the
-// executive profile. HPAs, node pools, the summary, and the quality are
-// whole.
+// floor of the profile are left out. HPAs, node pools, the summary, and the
+// quality are whole.
 func BuildView(s snapshot.Snapshot, c *catalog.Catalog) (View, error) {
-	profile, severity, err := resolve(s, Options{})
+	profile, err := resolve(s, Options{})
 	if err != nil {
 		return View{}, err
 	}
-	if profile == "executive" {
-		severity = raiseToAttention(severity)
-	}
-	return buildView(s, c, severity)
+	return buildView(s, c, profileFloor(profile))
 }
 
-// buildView words a snapshot that passed Check, narrowed by severity.
-func buildView(s snapshot.Snapshot, c *catalog.Catalog, severity string) (View, error) {
+// buildView words a snapshot that passed Check, narrowed by the floor.
+func buildView(s snapshot.Snapshot, c *catalog.Catalog, minRank int) (View, error) {
 	b := &builder{cat: c}
 	vb := &viewBuilder{b: b, thresholds: thresholdsFromSnapshot(s.Report.Thresholds)}
-	minRank := minimumRank(severity)
-	findings := shownFindings(s, severity)
+	findings := shownFindings(s, minRank)
 
 	view := View{
 		Language:        string(c.Language()),
-		MinSeverity:     severity,
 		Report:          vb.report(s),
 		Summary:         vb.summary(s.Summary),
 		Findings:        vb.findings(findings),
-		Recommendations: vb.recommendations(planRecommendations(s, executiveMinimum(severity)), findings),
-		Verdict:         vb.verdict(decideVerdict(s, findings)),
+		Recommendations: vb.recommendations(planRecommendations(s, attentionRank), findings),
+		Verdict:         vb.verdict(decideVerdict(s, findings), shownTotals(findings, minRank)),
 		Namespaces:      vb.namespaces(s, minRank),
 		Workloads:       vb.workloads(s, minRank),
 		HPAs:            vb.hpas(s.HPAs, s.Findings),
 		Nodes:           vb.nodes(s, minRank),
-		Nodepools:       vb.nodepools(s.Nodepools),
+		Nodepools:       vb.nodepools(s.Nodepools, s.Findings),
 		Quality:         vb.quality(s),
 	}
 	if b.err != nil {
@@ -582,8 +581,8 @@ type workloadKey struct{ namespace, kind, name string }
 
 func (vb *viewBuilder) workloads(s snapshot.Snapshot, minRank int) []ViewWorkload {
 	// The reason of a workload is the one the executive priority tables
-	// print, so it follows their minimum, raised to attention.
-	summaries, err := workloadSummaries(s, max(minRank, minimumRank(analysis.SeverityAttention)))
+	// print, so it follows their floor, which is at least attention.
+	summaries, err := workloadSummaries(s, max(minRank, attentionRank))
 	if err != nil && vb.b.err == nil {
 		vb.b.err = err
 	}
@@ -639,6 +638,7 @@ func (vb *viewBuilder) hpas(hpas []snapshot.HPA, findings []snapshot.Finding) []
 			Current:         vb.replicas(h.Current),
 			Desired:         vb.replicas(h.Desired),
 			Situation:       situation,
+			Status:          scopeSeverity(findings, analysis.ScopeHPA, h.Namespace+"/"+h.Name, ""),
 			SituationStatus: mark(situationStatus),
 		})
 	}
@@ -689,10 +689,10 @@ func requestShare(value Value, findings []snapshot.Finding, node, code string) V
 	return value
 }
 
-func (vb *viewBuilder) nodepools(pools []snapshot.NodePool) []ViewNodepool {
+func (vb *viewBuilder) nodepools(pools []snapshot.NodePool, findings []snapshot.Finding) []ViewNodepool {
 	out := make([]ViewNodepool, 0, len(pools))
 	for _, p := range pools {
-		out = append(out, ViewNodepool{Name: p.Name, Confidence: p.Confidence, Nodes: nonNilStrings(p.Nodes)})
+		out = append(out, ViewNodepool{Name: p.Name, Confidence: p.Confidence, Status: poolSeverity(p, findings), Nodes: nonNilStrings(p.Nodes)})
 	}
 	return out
 }
@@ -736,11 +736,18 @@ func nonNilStrings(values []string) []string {
 // ViewVerdict holds the decisions of the verdict of the overview, as
 // indices into the lists of the view.
 type ViewVerdict struct {
+	Totals              []ViewTotal    `json:"totals"`
 	ClusterFinding      *int           `json:"cluster_finding"`
 	NodeEvidenceWarning *int           `json:"node_evidence_warning"`
 	Gauge               *ViewGauge     `json:"gauge"`
 	Pressure            []ViewPressure `json:"pressure"`
 	Scopes              []ViewScope    `json:"scopes"`
+}
+
+// ViewTotal counts the findings shown of one severity.
+type ViewTotal struct {
+	Severity string `json:"severity"`
+	Count    int    `json:"count"`
 }
 
 // ViewGauge is the depth gauge: whole nodes and the hazard of its last band.
@@ -771,8 +778,9 @@ type ViewScope struct {
 }
 
 // verdict carries the decisions of the verdict into the view.
-func (vb *viewBuilder) verdict(facts verdictFacts) ViewVerdict {
+func (vb *viewBuilder) verdict(facts verdictFacts, totals []severityCount) ViewVerdict {
 	v := ViewVerdict{
+		Totals:              make([]ViewTotal, 0, len(totals)),
 		ClusterFinding:      indexOrNil(facts.ClusterFinding),
 		NodeEvidenceWarning: indexOrNil(facts.EvidenceWarning),
 		Pressure:            make([]ViewPressure, 0, len(facts.Pressure)),
@@ -783,6 +791,9 @@ func (vb *viewBuilder) verdict(facts verdictFacts) ViewVerdict {
 		if g.Hazard != "" {
 			v.Gauge.Hazard = &g.Hazard
 		}
+	}
+	for _, t := range totals {
+		v.Totals = append(v.Totals, ViewTotal(t))
 	}
 	for _, p := range facts.Pressure {
 		v.Pressure = append(v.Pressure, ViewPressure{

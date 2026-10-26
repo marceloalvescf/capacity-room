@@ -90,7 +90,6 @@ type Thresholds struct {
 // Report configures how the report is written.
 type Report struct {
 	Profile         string // detailed, executive
-	MinSeverity     string // all, attention, critical
 	Language        string // pt-BR, en
 	Organization    string
 	Classification  string
@@ -126,7 +125,6 @@ func Default() Config {
 		},
 		Report: Report{
 			Profile:         "detailed",
-			MinSeverity:     "all",
 			Language:        "pt-BR",
 			OutputDirectory: ".",
 		},
@@ -144,7 +142,7 @@ type Flags struct {
 	Cluster, ClusterLabel, ClusterFilter          *string
 	Namespaces, Period, Timezone, NodeAutoscaling *string
 	Start, End                                    *string
-	MinSeverity, ReportProfile, Language          *string
+	ReportProfile, Language                       *string
 	Insecure                                      bool
 }
 

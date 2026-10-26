@@ -27,7 +27,6 @@ type reportFlags struct {
 	end             string
 	timezone        string
 	nodeAutoscaling string
-	minSeverity     string
 	reportProfile   string
 	lang            string
 	output          string
@@ -80,7 +79,6 @@ func newReportCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobr
 	flags.StringVar(&f.end, "end", "", "End of a calendar range, such as 2026-10-01 00:00, in the time zone.")
 	flags.StringVar(&f.timezone, "timezone", "", "IANA time zone of the analysis.")
 	flags.StringVar(&f.nodeAutoscaling, "node-autoscaling", "", "Node autoscaling: auto, enabled, or disabled.")
-	flags.StringVar(&f.minSeverity, "min-severity", "", "Minimum severity shown: all, attention, or critical.")
 	flags.StringVar(&f.reportProfile, "report-profile", "", "Report profile: detailed or executive.")
 	flags.StringVar(&f.lang, "lang", "", "Report language: pt-BR or en.")
 	flags.StringVar(&f.output, "output", "", "Path of the PDF to write.")

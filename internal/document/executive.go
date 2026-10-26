@@ -22,35 +22,23 @@ const (
 	statefulSetWithoutHPA = "STATEFULSET_WITHOUT_HPA_INFO"
 )
 
-// raiseToAttention returns severity, or attention when it is all: the
-// executive body never shows a healthy row.
-func raiseToAttention(severity string) string {
-	if severity == "all" {
-		return analysis.SeverityAttention
-	}
-	return severity
-}
-
-// executiveMinimum is the rank the executive body and the action plan
-// clear: the minimum severity, raised to at least attention.
-func executiveMinimum(severity string) int {
-	return minimumRank(raiseToAttention(severity))
-}
+// attentionRank is the rank the executive body and the action plan clear:
+// they never show a healthy row.
+var attentionRank = analysis.Rank(analysis.SeverityAttention)
 
 // buildExecutiveSection assembles the executive body: the numbered
 // heading, the intro, and the seven level-2 numbered subsections, each a
 // heading and a table or a fallback paragraph, in the order of the
 // original: critical workloads, attention workloads, namespaces at risk,
 // replica ceiling, pool situation, action plan, material limitations. The
-// minimum is raised to at least attention. In the executive profile the
+// rows kept are those at or above attention. In the executive profile the
 // note of the HPA data follows the replica ceiling table when it has
 // rows; in both profiles it follows the fallback sentence when it has
 // none.
-func buildExecutiveSection(b *builder, s snapshot.Snapshot, thresholds config.Thresholds, severity string, executiveProfile bool) []Block {
-	minRank := executiveMinimum(severity)
+func buildExecutiveSection(b *builder, s snapshot.Snapshot, thresholds config.Thresholds, executiveProfile bool) []Block {
 	period := b.period(b.time(s.Report.PeriodStart), b.time(s.Report.PeriodEnd))
 
-	summaries, err := workloadSummaries(s, minRank)
+	summaries, err := workloadSummaries(s, attentionRank)
 	if err != nil && b.err == nil {
 		b.err = err
 	}
@@ -61,18 +49,13 @@ func buildExecutiveSection(b *builder, s snapshot.Snapshot, thresholds config.Th
 	}
 	blocks = append(blocks, tableOrFallback(b, catalog.SectionsExecutiveCriticalHeading, catalog.SectionsExecutiveCriticalEmpty, priorityTable(b, priorityRows(b, summaries, analysis.SeverityCritical)))...)
 
-	// The attention table is built only when the raised minimum is
-	// attention: at critical it prints its fallback.
-	var attention [][][]Run
-	if minRank <= analysis.Rank(analysis.SeverityAttention) {
-		attention = priorityRows(b, summaries, analysis.SeverityAttention)
-	}
+	attention := priorityRows(b, summaries, analysis.SeverityAttention)
 	blocks = append(blocks, tableOrFallback(b, catalog.SectionsExecutiveAttentionHeading, catalog.SectionsExecutiveAttentionEmpty, priorityTable(b, attention))...)
 
 	blocks = append(blocks, namespacesAtRisk(b, s, summaries, thresholds)...)
-	blocks = append(blocks, replicaCeiling(b, s, minRank, executiveProfile)...)
+	blocks = append(blocks, replicaCeiling(b, s, executiveProfile)...)
 	blocks = append(blocks, nodepoolStatus(b, s)...)
-	blocks = append(blocks, actionPlan(b, s, minRank)...)
+	blocks = append(blocks, actionPlan(b, s)...)
 	blocks = append(blocks, materialLimitations(b, s)...)
 	return blocks
 }
@@ -315,11 +298,11 @@ func riskStatus(b *builder, critical, attention int) string {
 	return ""
 }
 
-// replicaCeiling writes the HPAs at their maximum, then, when the raised
-// minimum is attention, the Deployments no HPA targets. The note of the
+// replicaCeiling writes the HPAs at their maximum, then the Deployments no
+// HPA targets. The note of the
 // HPA data follows the table in the executive profile and the fallback
 // sentence in both. It follows _scaling_risk_rows of the original.
-func replicaCeiling(b *builder, s snapshot.Snapshot, minRank int, executiveProfile bool) []Block {
+func replicaCeiling(b *builder, s snapshot.Snapshot, executiveProfile bool) []Block {
 	type identity struct{ namespace, kind, name string }
 	type candidate struct {
 		hpa        snapshot.HPA
@@ -372,21 +355,19 @@ func replicaCeiling(b *builder, s snapshot.Snapshot, minRank int, executiveProfi
 		})
 	}
 
-	if minRank <= analysis.Rank(analysis.SeverityAttention) {
-		for _, w := range s.Workloads {
-			id := identity{w.Namespace, w.Kind, w.Name}
-			if w.HPACoverage != snapshot.CoverageUncovered || w.Kind != deploymentKind || seen[id] {
-				continue
-			}
-			seen[id] = true
-			rows = append(rows, [][]Run{
-				{Ident(w.Namespace)},
-				{Ident(w.Name)},
-				{Text(w.Kind)},
-				{Text(activeReplicas(b, w.Pods))},
-				{StatusValue("attention", b.text(catalog.SectionsHPAsSituationNoHPA, nil), statusWord(b, "attention"))},
-			})
+	for _, w := range s.Workloads {
+		id := identity{w.Namespace, w.Kind, w.Name}
+		if w.HPACoverage != snapshot.CoverageUncovered || w.Kind != deploymentKind || seen[id] {
+			continue
 		}
+		seen[id] = true
+		rows = append(rows, [][]Run{
+			{Ident(w.Namespace)},
+			{Ident(w.Name)},
+			{Text(w.Kind)},
+			{Text(activeReplicas(b, w.Pods))},
+			{StatusValue("attention", b.text(catalog.SectionsHPAsSituationNoHPA, nil), statusWord(b, "attention"))},
+		})
 	}
 
 	table := newTable(b, "replica-ceiling", []catalog.Key{
@@ -416,6 +397,36 @@ func activeReplicas(b *builder, pods *float64) string {
 	}
 }
 
+// poolFindings are the findings of a pool and of its nodes.
+func poolFindings(pool snapshot.NodePool, findings []snapshot.Finding) []snapshot.Finding {
+	var own []snapshot.Finding
+	for _, f := range findings {
+		if (f.ScopeType == analysis.ScopeNodepool && f.ScopeName == pool.Name) ||
+			(f.ScopeType == analysis.ScopeNode && slices.Contains(pool.Nodes, f.ScopeName)) {
+			own = append(own, f)
+		}
+	}
+	return own
+}
+
+// worstSeverity is the highest severity of findings, healthy when there is
+// none.
+func worstSeverity(findings []snapshot.Finding) string {
+	severity := analysis.SeverityHealthy
+	for _, f := range findings {
+		if analysis.Rank(f.Severity) > analysis.Rank(severity) {
+			severity = f.Severity
+		}
+	}
+	return severity
+}
+
+// poolSeverity is the highest severity among all findings of a pool and of
+// its nodes.
+func poolSeverity(pool snapshot.NodePool, findings []snapshot.Finding) string {
+	return worstSeverity(poolFindings(pool, findings))
+}
+
 // nodepoolStatus writes one row for every pool: its name, the highest
 // severity among its own findings and those of its nodes, and the
 // observations of the findings at that severity. Highest severity first,
@@ -428,19 +439,8 @@ func nodepoolStatus(b *builder, s snapshot.Snapshot) []Block {
 	}
 	var pools []poolRow
 	for _, pool := range s.Nodepools {
-		var own []snapshot.Finding
-		severity := analysis.SeverityHealthy
-		for _, f := range s.Findings {
-			inPool := (f.ScopeType == analysis.ScopeNodepool && f.ScopeName == pool.Name) ||
-				(f.ScopeType == analysis.ScopeNode && slices.Contains(pool.Nodes, f.ScopeName))
-			if !inPool {
-				continue
-			}
-			own = append(own, f)
-			if analysis.Rank(f.Severity) > analysis.Rank(severity) {
-				severity = f.Severity
-			}
-		}
+		own := poolFindings(pool, s.Findings)
+		severity := worstSeverity(own)
 
 		var observations []string
 		if severity != analysis.SeverityHealthy {
@@ -532,8 +532,8 @@ func planRecommendations(s snapshot.Snapshot, minRank int) []snapshot.Recommenda
 
 // actionPlan writes the rows of planRecommendations. It follows
 // _recommendation_rows of the original.
-func actionPlan(b *builder, s snapshot.Snapshot, minRank int) []Block {
-	rows := actionRows(b, planRecommendations(s, minRank))
+func actionPlan(b *builder, s snapshot.Snapshot) []Block {
+	rows := actionRows(b, planRecommendations(s, attentionRank))
 	return tableOrFallback(b, catalog.SectionsExecutiveActionsHeading, catalog.SectionsExecutiveActionsEmpty,
 		newTable(b, "action-plan", []catalog.Key{
 			catalog.VerdictPlanOrder, catalog.VerdictPlanPriority,

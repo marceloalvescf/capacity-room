@@ -199,7 +199,7 @@ func TestRunConfig(t *testing.T) {
 	want.Metrics = config.Metrics{URL: "https://metrics.internal", EndpointType: "grafana", TLSVerify: true, TimeoutSeconds: 45}
 	want.Cluster = config.Cluster{Name: "prod-east", Namespaces: []string{"payments"}, Label: "cluster", FilterMode: "required", NodepoolLabel: "pool"}
 	want.Analysis = config.Analysis{Period: "7d", Timezone: "UTC", NodeAutoscaling: "enabled", ExcludedContainers: []string{"istio-proxy"}}
-	want.Report.Profile, want.Report.MinSeverity = "executive", "critical"
+	want.Report.Profile = "executive"
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v\nwant %+v", got, want)
 	}

@@ -8,10 +8,8 @@ import (
 )
 
 // The three states a snapshot.Statistics carries, spec 8.1. internal/collect
-// keeps the same three constants, unexported here for the same reason
-// build.go's own severities is not read from internal/snapshot: a stored
-// snapshot must be readable by a version that never imports that package's
-// unexported list.
+// keeps the same three constants, unexported; they are written here so that
+// a stored snapshot is readable without importing that package.
 const (
 	stateValue       = "value"
 	stateNoBase      = "no_base"
@@ -33,18 +31,14 @@ func thresholdsFromSnapshot(t snapshot.Thresholds) config.Thresholds {
 	}
 }
 
-// minimumRank turns a report's minimum severity into the lowest
-// analysis.Rank a row must reach to be shown: "all" is the rank of healthy,
-// so every row clears it.
-func minimumRank(severity string) int {
-	switch severity {
-	case "critical":
-		return analysis.Rank(analysis.SeverityCritical)
-	case "attention":
-		return analysis.Rank(analysis.SeverityAttention)
-	default:
-		return analysis.Rank(analysis.SeverityHealthy)
+// profileFloor is the lowest analysis.Rank a finding must reach to be shown
+// in the verdict, the opening page, and the appendix: the executive profile
+// shows nothing below attention, the detailed profile shows everything.
+func profileFloor(profile string) int {
+	if profile == "executive" {
+		return attentionRank
 	}
+	return analysis.Rank(analysis.SeverityHealthy)
 }
 
 // scopeSeverity returns the highest severity of the findings whose scope
@@ -123,26 +117,17 @@ func ratioRun(b *builder, stat snapshot.Statistics, thresholds config.Thresholds
 }
 
 // buildNamespacesSection assembles section 1: a numbered heading, then one
-// heading and table for every row whose severity clears severity, in the
-// order rows holds them; or, when none clears it, one paragraph that says
-// there is no data or that no row reaches the minimum.
-func buildNamespacesSection(b *builder, rows []snapshot.Namespace, findings []snapshot.Finding, thresholds config.Thresholds, severity string) []Block {
+// heading and table for every row, in the order rows holds them; or, when
+// there is none, one paragraph that says there is no data.
+func buildNamespacesSection(b *builder, rows []snapshot.Namespace, thresholds config.Thresholds) []Block {
 	heading := Heading{Level: 1, Numbered: true, Runs: []Run{Text(b.text(catalog.SectionsNamespacesHeading, nil))}}
 
-	minRank := minimumRank(severity)
+	if len(rows) == 0 {
+		return []Block{heading, Paragraph{Runs: []Run{Text(b.text(catalog.SectionsNamespacesEmpty, nil))}}}
+	}
 	var shown []Block
 	for _, row := range rows {
-		if analysis.Rank(scopeSeverity(findings, analysis.ScopeNamespace, row.Name, "")) < minRank {
-			continue
-		}
 		shown = append(shown, namespaceHeading(b, row.Name), namespaceTable(b, row, thresholds))
-	}
-	if len(shown) == 0 {
-		key := catalog.SectionsNamespacesBelowMinimum
-		if len(rows) == 0 {
-			key = catalog.SectionsNamespacesEmpty
-		}
-		return []Block{heading, Paragraph{Runs: []Run{Text(b.text(key, nil))}}}
 	}
 	return append([]Block{heading}, shown...)
 }
@@ -188,13 +173,12 @@ func capacityRow(
 }
 
 // buildWorkloadsSection assembles section 2: a numbered heading, then one
-// heading and table for every namespace that has at least one row whose
-// severity clears severity, in the order those namespaces first appear
-// among rows; or, when none clears it, the section's own empty paragraph.
-func buildWorkloadsSection(b *builder, rows []snapshot.Workload, findings []snapshot.Finding, thresholds config.Thresholds, severity string) []Block {
+// heading and table for every namespace that has at least one row with
+// observed usage, in the order those namespaces first appear among rows; or,
+// when there is none, the section's own empty paragraph.
+func buildWorkloadsSection(b *builder, rows []snapshot.Workload, thresholds config.Thresholds) []Block {
 	heading := Heading{Level: 1, Numbered: true, Runs: []Run{Text(b.text(catalog.SectionsWorkloadsHeading, nil))}}
 
-	minRank := minimumRank(severity)
 	var order []string
 	grouped := make(map[string][][][]Run)
 	for _, row := range rows {
@@ -203,21 +187,13 @@ func buildWorkloadsSection(b *builder, rows []snapshot.Workload, findings []snap
 		if !row.ObservedUsage {
 			continue
 		}
-		// A namespace and a workload name are both refused if either holds a
-		// slash (internal/collect, internal/snapshot), so this join is the
-		// same reversible one internal/analysis builds a finding's scope
-		// name from: the two can never collide with a different pair.
-		scopeName := row.Namespace + "/" + row.Name
-		if analysis.Rank(scopeSeverity(findings, analysis.ScopeWorkload, scopeName, row.Kind)) < minRank {
-			continue
-		}
 		if _, ok := grouped[row.Namespace]; !ok {
 			order = append(order, row.Namespace)
 		}
 		grouped[row.Namespace] = append(grouped[row.Namespace], workloadRow(b, row, thresholds))
 	}
 	if len(order) == 0 {
-		key := catalog.SectionsWorkloadsBelowMinimum
+		key := catalog.SectionsWorkloadsNoUsage
 		if len(rows) == 0 {
 			key = catalog.SectionsWorkloadsEmpty
 		}

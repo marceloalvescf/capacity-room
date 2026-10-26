@@ -93,15 +93,11 @@ func slug(name string) string {
 
 // defaultOutputName builds the default PDF file name:
 // report-resources-<slug><suffix>-<language>-<YYYYMMDD-HHMMSS>.pdf. The suffix
-// is -executive for the executive profile, else the minimum severity unless it
-// is all. emittedAt must already be in the zone the name is written for.
-func defaultOutputName(cluster, profile, minSeverity, language string, emittedAt time.Time) string {
+// is -executive for the executive profile. emittedAt must already be in the zone the name is written for.
+func defaultOutputName(cluster, profile, language string, emittedAt time.Time) string {
 	suffix := ""
-	switch {
-	case profile == "executive":
+	if profile == "executive" {
 		suffix = "-executive"
-	case minSeverity != "all":
-		suffix = "-" + minSeverity
 	}
 	return fmt.Sprintf(
 		"report-resources-%s%s-%s-%s.pdf",

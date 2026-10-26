@@ -63,11 +63,10 @@ type Footer struct {
 	PageLabel      string  `json:"page_label"`
 }
 
-// Options narrows what Build reads from the snapshot: an empty field keeps
-// the value the snapshot already stores.
+// Options narrows what Build reads from the snapshot: an empty profile keeps
+// the one the snapshot already stores.
 type Options struct {
-	Profile     string
-	MinSeverity string
+	Profile string
 }
 
 // Block is one entry of "blocks", or of a "front" block's own "blocks".
@@ -224,8 +223,8 @@ type Verdict struct {
 
 func (Verdict) blockType() string { return "verdict" }
 
-// VerdictTotals holds the three counts, critical first, or the sentence
-// that says there is no finding (then Items is empty).
+// VerdictTotals holds the counts of the findings shown, critical first, or
+// the sentence that says nothing needs attention (then Items is empty).
 type VerdictTotals struct {
 	Items []VerdictCount
 	None  *string

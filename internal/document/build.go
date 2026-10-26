@@ -9,12 +9,6 @@ import (
 	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
-// severities lists the minimum severities Build accepts. internal/snapshot
-// keeps the same list, unexported: a stored snapshot must be able to judge
-// a file no configuration of this version produced, so this copy is
-// deliberate, not a shortcut.
-var severities = []string{"all", "attention", "critical"}
-
 // builder collects the first error Build meets, the way bufio.Scanner
 // keeps the first error of a read: every call after that one is a no-op.
 // A hundred calls to the catalog need no error check of their own this
@@ -66,30 +60,21 @@ func (b *builder) period(start, end time.Time) string {
 	return text
 }
 
-// resolve checks the snapshot and returns the profile and the minimum
-// severity a document of it is built with: the options, or what the
-// snapshot stores where an option is empty.
-func resolve(s snapshot.Snapshot, opts Options) (profile, severity string, err error) {
+// resolve checks the snapshot and returns the profile a document of it is
+// built with: the option, or what the snapshot stores when it is empty.
+func resolve(s snapshot.Snapshot, opts Options) (string, error) {
 	if err := s.Check(); err != nil {
-		return "", "", err
+		return "", err
 	}
 
-	profile = opts.Profile
+	profile := opts.Profile
 	if profile == "" {
 		profile = s.Report.Profile
 	}
 	if profile != "detailed" && profile != "executive" {
-		return "", "", fmt.Errorf("unknown report profile %q", profile)
+		return "", fmt.Errorf("unknown report profile %q", profile)
 	}
-
-	severity = opts.MinSeverity
-	if severity == "" {
-		severity = s.Report.MinSeverity
-	}
-	if !slices.Contains(severities, severity) {
-		return "", "", fmt.Errorf("unknown minimum severity %q", severity)
-	}
-	return profile, severity, nil
+	return profile, nil
 }
 
 // Build assembles the document of a snapshot: a cover, the verdict, the
@@ -97,10 +82,10 @@ func resolve(s snapshot.Snapshot, opts Options) (profile, severity string, err e
 // the four sections of the evidence, and a quality appendix with its notes.
 // The executive profile keeps the cover, the verdict, the opening page, the
 // executive section, and the appendix with its notes, and raises the
-// minimum severity to at least attention for the whole document; the
+// floor of the findings shown to attention for the whole document; the
 // detailed profile raises it for the executive section alone.
 func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, error) {
-	profile, severity, err := resolve(s, opts)
+	profile, err := resolve(s, opts)
 	if err != nil {
 		return Document{}, err
 	}
@@ -108,24 +93,17 @@ func Build(s snapshot.Snapshot, c *catalog.Catalog, opts Options) (Document, err
 	b := &builder{cat: c}
 	thresholds := thresholdsFromSnapshot(s.Report.Thresholds)
 
-	shownSeverity := severity
-	if profile == "executive" {
-		shownSeverity = raiseToAttention(severity)
-	}
-	front := buildFront(b, s, profile, shownSeverity)
-	blocks := []Block{buildVerdict(b, s, shownSeverity), PageBreak{Weak: false}, front, PageBreak{Weak: false}}
-	blocks = append(blocks, buildExecutiveSection(b, s, thresholds, severity, profile == "executive")...)
+	floor := profileFloor(profile)
+	front := buildFront(b, s, profile)
+	blocks := []Block{buildVerdict(b, s, floor), PageBreak{Weak: false}, front, PageBreak{Weak: false}}
+	blocks = append(blocks, buildExecutiveSection(b, s, thresholds, profile == "executive")...)
 	if profile == "detailed" {
-		blocks = append(blocks, buildNamespacesSection(b, s.Namespaces, s.Findings, thresholds, severity)...)
-		blocks = append(blocks, buildWorkloadsSection(b, s.Workloads, s.Findings, thresholds, severity)...)
+		blocks = append(blocks, buildNamespacesSection(b, s.Namespaces, thresholds)...)
+		blocks = append(blocks, buildWorkloadsSection(b, s.Workloads, thresholds)...)
 		blocks = append(blocks, buildHPAsSection(b, s)...)
-		blocks = append(blocks, buildNodepoolsSection(b, s, thresholds, severity)...)
+		blocks = append(blocks, buildNodepoolsSection(b, s, thresholds)...)
 	}
-	appendixSeverity := severity
-	if profile == "executive" {
-		appendixSeverity = raiseToAttention(severity)
-	}
-	appendix := buildAppendix(b, s, appendixSeverity)
+	appendix := buildAppendix(b, s, floor)
 	if slices.ContainsFunc(appendix, func(block Block) bool { _, ok := block.(Table); return ok }) {
 		blocks = append(blocks, PageBreak{Weak: true})
 	}

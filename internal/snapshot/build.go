@@ -57,7 +57,6 @@ func Build(in Input) (Snapshot, error) {
 			PeriodEnd:        formatTime(in.Window.End, loc),
 			Timezone:         in.Config.Analysis.Timezone,
 			Profile:          in.Config.Report.Profile,
-			MinSeverity:      in.Config.Report.MinSeverity,
 			Organization:     in.Config.Report.Organization,
 			Classification:   in.Config.Report.Classification,
 			Author:           in.Config.Report.Author,

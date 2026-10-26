@@ -131,7 +131,6 @@ func baseInput() Input {
 			},
 			Report: config.Report{
 				Profile:        "detailed",
-				MinSeverity:    "all",
 				Organization:   "Example Org",
 				Classification: "internal",
 				Author:         "capacity-bot",
@@ -185,9 +184,6 @@ func TestBuildCopiesEveryField(t *testing.T) {
 	}
 	if snap.Report.Profile != in.Config.Report.Profile {
 		t.Errorf("Report.Profile = %q, want %q", snap.Report.Profile, in.Config.Report.Profile)
-	}
-	if snap.Report.MinSeverity != in.Config.Report.MinSeverity {
-		t.Errorf("Report.MinSeverity = %q, want %q", snap.Report.MinSeverity, in.Config.Report.MinSeverity)
 	}
 	if snap.Report.Organization != in.Config.Report.Organization {
 		t.Errorf("Report.Organization = %q, want %q", snap.Report.Organization, in.Config.Report.Organization)
@@ -378,7 +374,6 @@ func TestBuildEveryFieldChangesTheBytes(t *testing.T) {
 		{"Config.Thresholds.BurstyGapPercent", func(in *Input) { in.Config.Thresholds.BurstyGapPercent = 101 }},
 		{"Config.Thresholds.HPAReplicaDivergence", func(in *Input) { in.Config.Thresholds.HPAReplicaDivergence = 2 }},
 		{"Config.Report.Profile", func(in *Input) { in.Config.Report.Profile = "executive" }},
-		{"Config.Report.MinSeverity", func(in *Input) { in.Config.Report.MinSeverity = "critical" }},
 		{"Config.Report.Organization", func(in *Input) { in.Config.Report.Organization = "Other Org" }},
 		{"Config.Report.Classification", func(in *Input) { in.Config.Report.Classification = "public" }},
 		{"Config.Report.Author", func(in *Input) { in.Config.Report.Author = "other-author" }},

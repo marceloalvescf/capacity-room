@@ -881,10 +881,10 @@ func TestSnapshotFileRefusals(t *testing.T) {
 	}{
 		{"missing file", func(t *testing.T) string { return filepath.Join(t.TempDir(), "missing.json") }},
 		{"other schema version", func(t *testing.T) string {
-			return writeVariant(t, []byte(strings.Replace(string(golden), `"schema_version": "2.0"`, `"schema_version": "9.9"`, 1)))
+			return writeVariant(t, []byte(strings.Replace(string(golden), `"schema_version": "3.0"`, `"schema_version": "9.9"`, 1)))
 		}},
 		{"unknown key", func(t *testing.T) string {
-			return writeVariant(t, []byte(strings.Replace(string(golden), "\"schema_version\": \"2.0\",", "\"schema_version\": \"2.0\", \"bogus\": true,", 1)))
+			return writeVariant(t, []byte(strings.Replace(string(golden), "\"schema_version\": \"3.0\",", "\"schema_version\": \"3.0\", \"bogus\": true,", 1)))
 		}},
 		{"two documents", func(t *testing.T) string {
 			return writeVariant(t, append(append([]byte{}, golden...), golden...))
@@ -908,11 +908,11 @@ func TestSnapshotFileRefusals(t *testing.T) {
 	}
 }
 
-// TestFromSnapshotRefusesABadProfileOrSeverity proves that a profile or a
-// minimum severity outside its values stops a run from a snapshot with the
+// TestFromSnapshotRefusesABadProfile proves that a profile
+// outside its values stops a run from a snapshot with the
 // configuration's own message and exit code 2, before the output path is
 // checked: the path given lies in a folder that does not exist.
-func TestFromSnapshotRefusesABadProfileOrSeverity(t *testing.T) {
+func TestFromSnapshotRefusesABadProfile(t *testing.T) {
 	snapPath, err := snapshotFixturePath(t, "direct-complete")
 	if err != nil {
 		t.Fatalf("snapshotFixturePath: %v", err)
@@ -922,7 +922,6 @@ func TestFromSnapshotRefusesABadProfileOrSeverity(t *testing.T) {
 		want string
 	}{
 		{"--report-profile=Executive", "error: report.profile must be detailed or executive\n"},
-		{"--min-severity=High", "error: report.min_severity must be all, attention, or critical\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.flag, func(t *testing.T) {
@@ -1775,7 +1774,7 @@ func TestCommandStopsOnASlash(t *testing.T) {
 // missing key: it is read straight from internal/snapshot's own fixture,
 // never copied.
 func TestFromSnapshotRefusesASnapshotOfThePartBefore(t *testing.T) {
-	snapPath, err := filepath.Abs(filepath.Join("..", "snapshot", "testdata", "schema-2.0-before-rows.json"))
+	snapPath, err := filepath.Abs(filepath.Join("..", "snapshot", "testdata", "schema-3.0-before-rows.json"))
 	if err != nil {
 		t.Fatalf("resolving path: %v", err)
 	}
@@ -2030,5 +2029,18 @@ func TestRunRefusesARangeAfterTheRun(t *testing.T) {
 				t.Fatalf("the server saw %d requests, want 0", len(handler.Seen()))
 			}
 		})
+	}
+}
+
+// TestReportRefusesTheMinimumSeverityFlag proves that the removed
+// --min-severity flag is an unknown flag, with exit code 2.
+func TestReportRefusesTheMinimumSeverityFlag(t *testing.T) {
+	snapPath, err := snapshotFixturePath(t, "direct-complete")
+	if err != nil {
+		t.Fatalf("snapshotFixturePath: %v", err)
+	}
+	stdout, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--from-snapshot", snapPath, "--min-severity=all"})
+	if code != 2 || stdout != "" || stderr != "error: unknown flag; run the command with --help to see its flags\n" {
+		t.Errorf("code = %d, stdout = %q, stderr = %q; want 2, nothing, the unknown flag message", code, stdout, stderr)
 	}
 }

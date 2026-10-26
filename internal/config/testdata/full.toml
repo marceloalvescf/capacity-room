@@ -30,7 +30,6 @@ hpa_replica_divergence = 2
 
 [report]
 profile = "executive"
-min_severity = "attention"
 language = "en"
 organization = "Acme"
 classification = "internal"

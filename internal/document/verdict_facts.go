@@ -43,9 +43,8 @@ type scopeFacts struct {
 	Critical, Attention, Healthy int
 }
 
-// shownFindings are the findings at or above the severity, in order.
-func shownFindings(s snapshot.Snapshot, severity string) []snapshot.Finding {
-	minRank := minimumRank(severity)
+// shownFindings are the findings at or above the floor, in order.
+func shownFindings(s snapshot.Snapshot, minRank int) []snapshot.Finding {
 	findings := make([]snapshot.Finding, 0, len(s.Findings))
 	for _, f := range s.Findings {
 		if analysis.Rank(f.Severity) >= minRank {
@@ -53,6 +52,40 @@ func shownFindings(s snapshot.Snapshot, severity string) []snapshot.Finding {
 		}
 	}
 	return findings
+}
+
+// severityCount is the number of shown findings of one severity.
+type severityCount struct {
+	Severity string
+	Count    int
+}
+
+// shownTotals counts the findings by the severities at or above the floor,
+// in the order critical, attention, healthy.
+func shownTotals(findings []snapshot.Finding, minRank int) []severityCount {
+	var counts []severityCount
+	for _, severity := range []string{analysis.SeverityCritical, analysis.SeverityAttention, analysis.SeverityHealthy} {
+		if analysis.Rank(severity) < minRank {
+			continue
+		}
+		n := 0
+		for _, f := range findings {
+			if f.Severity == severity {
+				n++
+			}
+		}
+		counts = append(counts, severityCount{severity, n})
+	}
+	return counts
+}
+
+// totalCount is the sum of counts.
+func totalCount(counts []severityCount) int {
+	total := 0
+	for _, c := range counts {
+		total += c.Count
+	}
+	return total
 }
 
 // decideVerdict makes the decisions of the verdict over the shown findings.

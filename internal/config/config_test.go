@@ -46,7 +46,6 @@ func TestDefaultMatchesSpec(t *testing.T) {
 		},
 		Report: Report{
 			Profile:         "detailed",
-			MinSeverity:     "all",
 			Language:        "pt-BR",
 			Organization:    "",
 			Classification:  "",

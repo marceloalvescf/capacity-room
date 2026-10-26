@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/marceloalvescf/capacity-room/internal/analysis"
 	"github.com/marceloalvescf/capacity-room/internal/catalog"
 	"github.com/marceloalvescf/capacity-room/internal/collect"
 	"github.com/marceloalvescf/capacity-room/internal/discovery"
@@ -12,11 +13,11 @@ import (
 
 // buildAppendix assembles the numbered appendix heading and either the
 // "quality-appendix" table or its fallback paragraph, when no row of it
-// passes the minimum severity.
-func buildAppendix(b *builder, s snapshot.Snapshot, severity string) []Block {
+// reaches the floor.
+func buildAppendix(b *builder, s snapshot.Snapshot, floor int) []Block {
 	heading := Heading{Level: 1, Numbered: true, Runs: []Run{Text(b.text(catalog.AppendixHeading, nil))}}
 
-	rows := appendixRows(b, effectiveCapabilities(s), severity)
+	rows := appendixRows(b, effectiveCapabilities(s), floor)
 	if len(rows) == 0 {
 		return []Block{heading, Paragraph{Runs: []Run{Text(b.text(catalog.AppendixEmpty, nil))}}}
 	}
@@ -56,27 +57,23 @@ func capabilityState(b *builder, state string) Run {
 	return StatusValue(status, b.text(catalog.State(state), nil), statusWord(b, status))
 }
 
-// passesSeverity reports whether a capability's state clears the minimum
-// severity: "all" keeps every row, "attention" keeps partial and
-// unavailable, "critical" keeps unavailable. It does not touch the three
-// counts of the opening page, which count every capability regardless.
-func passesSeverity(state, severity string) bool {
-	switch severity {
-	case "attention":
-		return state == discovery.StatePartial || state == discovery.StateUnavailable
-	case "critical":
-		return state == discovery.StateUnavailable
-	default: // "all"
+// passesFloor reports whether a capability's state clears the floor: a floor
+// of healthy keeps every row, a floor of attention keeps partial and
+// unavailable. It does not touch the three counts of the opening page, which
+// count every capability regardless.
+func passesFloor(state string, floor int) bool {
+	if floor <= analysis.Rank(analysis.SeverityHealthy) {
 		return true
 	}
+	return state == discovery.StatePartial || state == discovery.StateUnavailable
 }
 
-// appendixRows builds one row per capability that passes severity, in the
+// appendixRows builds one row per capability that passes the floor, in the
 // order the snapshot stores them.
-func appendixRows(b *builder, capabilities []snapshot.Capability, severity string) [][][]Run {
+func appendixRows(b *builder, capabilities []snapshot.Capability, floor int) [][][]Run {
 	var rows [][][]Run
 	for _, c := range capabilities {
-		if !passesSeverity(c.State, severity) {
+		if !passesFloor(c.State, floor) {
 			continue
 		}
 		rows = append(rows, [][]Run{

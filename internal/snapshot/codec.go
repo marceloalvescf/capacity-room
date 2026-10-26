@@ -20,7 +20,7 @@ import (
 	"github.com/marceloalvescf/capacity-room/internal/discovery"
 )
 
-// validProfiles, validSeverities, validFilterModes, validEndpointTypes, and
+// validProfiles, validFilterModes, validEndpointTypes, and
 // validNodeAutoscaling are the values of the configuration that report and
 // settings may hold. They are written here as literals, not read from
 // internal/config, so that a stored file keeps its meaning even if config's
@@ -37,7 +37,6 @@ import (
 // configuration.
 var (
 	validProfiles        = []string{"detailed", "executive"}
-	validSeverities      = []string{"all", "attention", "critical"}
 	validFilterModes     = []string{"required", "auto", "none"}
 	validEndpointTypes   = []string{"prometheus", "grafana"}
 	validNodeAutoscaling = []string{"auto", "enabled", "disabled"}
@@ -475,9 +474,6 @@ func (s Snapshot) Check() error {
 	}
 
 	if err := checkEnum("report.profile", s.Report.Profile, validProfiles); err != nil {
-		return err
-	}
-	if err := checkEnum("report.min_severity", s.Report.MinSeverity, validSeverities); err != nil {
 		return err
 	}
 	if err := checkEnum("scope.filter_mode", s.Scope.FilterMode, validFilterModes); err != nil {

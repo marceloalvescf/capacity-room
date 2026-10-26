@@ -10,10 +10,10 @@ import (
 	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
-func englishVerdict(t *testing.T, s snapshot.Snapshot, severity string) Verdict {
+func englishVerdict(t *testing.T, s snapshot.Snapshot, profile string) Verdict {
 	t.Helper()
 	b := &builder{cat: mustCatalog(t, catalog.English)}
-	v := buildVerdict(b, s, severity)
+	v := buildVerdict(b, s, profileFloor(profile))
 	if b.err != nil {
 		t.Fatalf("builder error = %v", b.err)
 	}
@@ -25,7 +25,7 @@ func strPtr(s string) *string { return &s }
 func intPtr(n int) *int { return &n }
 
 func TestVerdictOfEdgeScalingTotalsAndQuality(t *testing.T) {
-	v := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "all")
+	v := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "detailed")
 
 	wantTotals := []VerdictCount{
 		{"critical", "Critical", "10", 10},
@@ -62,7 +62,7 @@ func scalingWithBounds(t *testing.T) snapshot.Snapshot {
 }
 
 func TestVerdictOfEdgeScalingGrowth(t *testing.T) {
-	g := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "all").Growth
+	g := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "detailed").Growth
 
 	want := VerdictGrowth{
 		Title:   "Cluster autoscaling",
@@ -82,7 +82,7 @@ func TestVerdictPressureRowsFollowTheScopes(t *testing.T) {
 	for i := range s.Findings {
 		s.Findings[i].Code = code
 	}
-	p := englishVerdict(t, s, "all").Pressure
+	p := englishVerdict(t, s, "detailed").Pressure
 
 	if p.Title != "Pressure by scope" || p.Empty != nil {
 		t.Errorf("Pressure title = %q, empty = %v", p.Title, p.Empty)
@@ -109,7 +109,7 @@ func TestVerdictPressureRowsFollowTheScopes(t *testing.T) {
 
 func TestVerdictCountsOfTheExecutiveProfile(t *testing.T) {
 	s := goldenSnapshot(t, "edge-scaling")
-	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{Profile: "executive", MinSeverity: "all"})
+	doc := mustBuild(t, s, mustCatalog(t, catalog.English), Options{Profile: "executive"})
 	rows := doc.Blocks[0].(Verdict).Pressure.Rows
 	if len(rows) == 0 {
 		t.Fatal("no pressure row")
@@ -123,20 +123,22 @@ func TestVerdictCountsOfTheExecutiveProfile(t *testing.T) {
 
 func TestVerdictTotalsCarryValues(t *testing.T) {
 	s := goldenSnapshot(t, "edge-scaling")
-	s.Summary.Critical, s.Summary.Attention, s.Summary.Healthy = 4, 3, 2
-	items := englishVerdict(t, s, "all").Totals.Items
-	if got := []int{items[0].Value, items[1].Value, items[2].Value}; !reflect.DeepEqual(got, []int{4, 3, 2}) {
-		t.Errorf("totals values = %v, want [4 3 2]", got)
+	items := englishVerdict(t, s, "detailed").Totals.Items
+	if len(items) != 3 {
+		t.Fatalf("totals = %+v, want three items", items)
+	}
+	if got := []int{items[0].Value, items[1].Value, items[2].Value}; !reflect.DeepEqual(got, []int{10, 11, 7}) {
+		t.Errorf("totals values = %v, want [10 11 7]", got)
 	}
 }
 
 func TestVerdictFindingsWords(t *testing.T) {
 	s := goldenSnapshot(t, "edge-scaling")
-	if got, want := englishVerdict(t, s, "all").Findings, (VerdictFindings{"Findings", "findings"}); got != want {
+	if got, want := englishVerdict(t, s, "detailed").Findings, (VerdictFindings{"Findings", "findings"}); got != want {
 		t.Errorf("en findings = %+v, want %+v", got, want)
 	}
 	b := &builder{cat: mustCatalog(t, catalog.PortugueseBrazil)}
-	if got, want := buildVerdict(b, s, "all").Findings, (VerdictFindings{"Achados", "achados"}); got != want {
+	if got, want := buildVerdict(b, s, profileFloor("detailed")).Findings, (VerdictFindings{"Achados", "achados"}); got != want {
 		t.Errorf("pt-BR findings = %+v, want %+v", got, want)
 	}
 }
@@ -151,7 +153,7 @@ func TestVerdictCountsTheFindingsOfAPoolNotItsRows(t *testing.T) {
 	}
 	s.Findings = kept
 
-	for _, row := range englishVerdict(t, s, "all").Pressure.Rows {
+	for _, row := range englishVerdict(t, s, "detailed").Pressure.Rows {
 		if row.Label == "Node pools" {
 			if row.Status != "attention" || row.Bar.Critical != 0 || row.Bar.Attention != 1 {
 				t.Errorf("node pools row = %+v, want attention with one finding", row)
@@ -163,7 +165,7 @@ func TestVerdictCountsTheFindingsOfAPoolNotItsRows(t *testing.T) {
 }
 
 func TestVerdictOfEdgeScalingPlan(t *testing.T) {
-	plan := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "all").Plan
+	plan := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "detailed").Plan
 
 	if plan.Title != "Prioritized action plan" || plan.Empty != nil {
 		t.Errorf("Plan title = %q, empty = %v", plan.Title, plan.Empty)
@@ -191,7 +193,7 @@ func TestVerdictOfEdgeScalingPlan(t *testing.T) {
 }
 
 func TestVerdictLegendFollowsTheOrderOfTheLegend(t *testing.T) {
-	legend := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "all").Legend
+	legend := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "detailed").Legend
 	want := []VerdictLegendItem{
 		{"healthy", "Healthy"},
 		{"attention", "Attention"},
@@ -205,7 +207,7 @@ func TestVerdictLegendFollowsTheOrderOfTheLegend(t *testing.T) {
 }
 
 func TestVerdictOfDirectComplete(t *testing.T) {
-	v := englishVerdict(t, goldenSnapshot(t, "direct-complete"), "all")
+	v := englishVerdict(t, goldenSnapshot(t, "direct-complete"), "detailed")
 
 	wantTotals := []VerdictCount{
 		{"critical", "Critical", "4", 4},
@@ -230,7 +232,7 @@ func TestVerdictOfDirectComplete(t *testing.T) {
 func TestVerdictWithoutAutoscaling(t *testing.T) {
 	s := goldenSnapshot(t, "edge-scaling")
 	s.Summary.Autoscaling.Status = "disabled"
-	g := englishVerdict(t, s, "all").Growth
+	g := englishVerdict(t, s, "detailed").Growth
 
 	if g.State == nil || *g.State != "Disabled" {
 		t.Errorf("State = %v, want Disabled", g.State)
@@ -245,7 +247,7 @@ func TestVerdictEnabledWithoutAMaximumStatesTheKnownCounts(t *testing.T) {
 	a := &s.Summary.Autoscaling
 	a.CurrentNodes, a.MinNodes, a.MaxNodes = floatPtr(1), nil, nil
 	a.ScaleEvents, a.UnschedulablePods = floatPtr(1), floatPtr(1)
-	g := englishVerdict(t, s, "all").Growth
+	g := englishVerdict(t, s, "detailed").Growth
 
 	if g.State == nil || *g.State != "Enabled" {
 		t.Errorf("State = %v, want Enabled", g.State)
@@ -263,7 +265,7 @@ func TestVerdictEnabledWithAMaximumDrawsThePairWithoutAMinimum(t *testing.T) {
 	s := scalingWithBounds(t)
 	a := &s.Summary.Autoscaling
 	a.MinNodes, a.UnschedulablePods, a.ScaleEvents = nil, floatPtr(2), floatPtr(1)
-	g := englishVerdict(t, s, "all").Growth
+	g := englishVerdict(t, s, "detailed").Growth
 
 	if g.Current == nil || *g.Current != "3" || g.Max == nil || *g.Max != "3" {
 		t.Errorf("Current = %v, Max = %v, want 3 and 3", g.Current, g.Max)
@@ -294,7 +296,7 @@ func storedSnapshot(t *testing.T) snapshot.Snapshot {
 }
 
 func TestVerdictOfAReportStoredBy230KeepsItsPair(t *testing.T) {
-	g := englishVerdict(t, storedSnapshot(t), "all").Growth
+	g := englishVerdict(t, storedSnapshot(t), "detailed").Growth
 
 	if g.Current == nil || *g.Current != "3" || g.Max == nil || *g.Max != "3" || g.Gauge == nil {
 		t.Errorf("Current = %v, Max = %v, Gauge = %+v, want 3, 3, and a gauge", g.Current, g.Max, g.Gauge)
@@ -306,7 +308,7 @@ func TestVerdictOfAReportStoredBy230KeepsItsPair(t *testing.T) {
 }
 
 func TestVerdictDisabledFromRawMetricsStatesTheWordAlone(t *testing.T) {
-	g := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "all").Growth
+	g := englishVerdict(t, goldenSnapshot(t, "edge-scaling"), "detailed").Growth
 
 	if g.State == nil || *g.State != "Disabled" || g.Current != nil || len(g.Facts) != 0 {
 		t.Errorf("Growth = %+v, want the word Disabled and no facts", g)
@@ -317,7 +319,7 @@ func TestVerdictWithoutACurrentCountStatesTheKnownFacts(t *testing.T) {
 	s := scalingWithBounds(t)
 	s.Summary.Autoscaling.CurrentNodes = nil
 	s.Summary.Autoscaling.UnschedulablePods = floatPtr(2)
-	g := englishVerdict(t, s, "all").Growth
+	g := englishVerdict(t, s, "detailed").Growth
 
 	if g.State == nil || *g.State != "Enabled" || g.Current != nil || g.Max != nil || g.Gauge != nil {
 		t.Errorf("Growth = %+v, want the word Enabled and no pair", g)
@@ -343,7 +345,7 @@ func TestVerdictDrawsTheMinimumOnlyBetweenNoneAndTheMaximum(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			s := scalingWithBounds(t)
 			s.Summary.Autoscaling.MinNodes = floatPtr(tc.minimum)
-			g := englishVerdict(t, s, "all").Growth.Gauge
+			g := englishVerdict(t, s, "detailed").Growth.Gauge
 			if g == nil {
 				t.Fatal("Gauge = nil, want a gauge")
 			}
@@ -358,7 +360,7 @@ func TestVerdictRoundsTheGaugeToWholeNodes(t *testing.T) {
 	s := scalingWithBounds(t)
 	s.Summary.Autoscaling.CurrentNodes = floatPtr(7.4)
 	s.Summary.Autoscaling.MaxNodes = floatPtr(5.6)
-	g := englishVerdict(t, s, "all").Growth
+	g := englishVerdict(t, s, "detailed").Growth
 
 	if want := (&VerdictGauge{Current: 6, Max: 6, Min: intPtr(2), Hazard: true, Status: strPtr("critical")}); !reflect.DeepEqual(g.Gauge, want) {
 		t.Errorf("Gauge = %+v, want %+v", g.Gauge, want)
@@ -370,10 +372,10 @@ func TestVerdictWithNoFindings(t *testing.T) {
 	s.Findings = []snapshot.Finding{}
 	s.Recommendations = []snapshot.Recommendation{}
 	s.Summary.Critical, s.Summary.Attention, s.Summary.Healthy = 0, 0, 0
-	v := englishVerdict(t, s, "all")
+	v := englishVerdict(t, s, "detailed")
 
-	if len(v.Totals.Items) != 0 || v.Totals.None == nil || *v.Totals.None != "This report holds no findings." {
-		t.Errorf("Totals = %+v, want the sentence of no findings", v.Totals)
+	if len(v.Totals.Items) != 0 || v.Totals.None == nil || *v.Totals.None != "Nothing needs attention." {
+		t.Errorf("Totals = %+v, want the sentence that nothing needs attention", v.Totals)
 	}
 	if len(v.Pressure.Rows) != 0 || v.Pressure.Empty == nil || *v.Pressure.Empty != "Nothing needs attention." {
 		t.Errorf("Pressure = %+v, want the empty sentence", v.Pressure)
@@ -386,8 +388,8 @@ func TestVerdictWithNoFindings(t *testing.T) {
 	}
 }
 
-func TestVerdictOfTheExecutiveProfileRaisesTheMinimum(t *testing.T) {
-	doc := mustBuild(t, goldenSnapshot(t, "edge-scaling"), mustCatalog(t, catalog.English), Options{Profile: "executive", MinSeverity: "all"})
+func TestVerdictOfTheExecutiveProfileCountsTheShownFindings(t *testing.T) {
+	doc := mustBuild(t, goldenSnapshot(t, "edge-scaling"), mustCatalog(t, catalog.English), Options{Profile: "executive"})
 	v, ok := doc.Blocks[0].(Verdict)
 	if !ok {
 		t.Fatalf("first block is %T, want the verdict", doc.Blocks[0])
@@ -396,7 +398,6 @@ func TestVerdictOfTheExecutiveProfileRaisesTheMinimum(t *testing.T) {
 	wantTotals := []VerdictCount{
 		{"critical", "Critical", "10", 10},
 		{"attention", "Attention", "11", 11},
-		{"healthy", "Healthy", "7", 7},
 	}
 	if !reflect.DeepEqual(v.Totals.Items, wantTotals) {
 		t.Errorf("Totals = %+v, want %+v", v.Totals.Items, wantTotals)
@@ -413,17 +414,17 @@ func TestVerdictOfTheExecutiveProfileRaisesTheMinimum(t *testing.T) {
 	}
 }
 
-func TestVerdictOfAttentionMinimumLeavesOutAHealthyClusterFinding(t *testing.T) {
+func TestVerdictOfTheExecutiveProfileLeavesOutAHealthyClusterFinding(t *testing.T) {
 	s := scalingWithBounds(t)
 	for i := range s.Findings {
 		if s.Findings[i].ScopeType == "cluster" {
 			s.Findings[i].Severity = "healthy"
 		}
 	}
-	if g := englishVerdict(t, s, "attention").Growth; g.Finding != nil || g.Gauge == nil || g.Gauge.Hazard {
+	if g := englishVerdict(t, s, "executive").Growth; g.Finding != nil || g.Gauge == nil || g.Gauge.Hazard {
 		t.Errorf("Growth = %+v, want no finding and a gauge without hazard", g)
 	}
-	if g := englishVerdict(t, s, "all").Growth; g.Finding == nil || g.Finding.Status != "healthy" || g.Gauge.Hazard {
+	if g := englishVerdict(t, s, "detailed").Growth; g.Finding == nil || g.Finding.Status != "healthy" || g.Gauge.Hazard {
 		t.Errorf("Growth = %+v, want the healthy finding and a gauge without hazard", g)
 	}
 }

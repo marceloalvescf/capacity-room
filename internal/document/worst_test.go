@@ -46,10 +46,10 @@ func TestWorstSeverityLiterals(t *testing.T) {
 
 // withFindings returns a copy of a golden snapshot that holds only the
 // findings of the given severities, with its counts made to agree.
-func withFindings(t *testing.T, profile, minSeverity string, keep ...string) snapshot.Snapshot {
+func withFindings(t *testing.T, profile string, keep ...string) snapshot.Snapshot {
 	t.Helper()
 	s := goldenSnapshot(t, "edge-scaling")
-	s.Report.Profile, s.Report.MinSeverity = profile, minSeverity
+	s.Report.Profile = profile
 	var findings []snapshot.Finding
 	for _, f := range s.Findings {
 		if slices.Contains(keep, f.Severity) {
@@ -82,19 +82,20 @@ func withFindings(t *testing.T, profile, minSeverity string, keep ...string) sna
 	return s
 }
 
-func TestWorstSeverityAppliesTheFilters(t *testing.T) {
+func TestWorstSeverityFollowsTheProfileFloor(t *testing.T) {
 	tests := []struct {
-		name, profile, minSeverity string
-		keep                       []string
-		want                       string
+		name, profile string
+		keep          []string
+		want          string
 	}{
-		{"executive, healthy findings only", "executive", "all", []string{"healthy"}, "healthy"},
-		{"detailed, minimum critical hides attention", "detailed", "critical", []string{"attention", "healthy"}, "healthy"},
-		{"detailed, minimum all shows attention", "detailed", "all", []string{"attention", "healthy"}, "attention"},
+		{"executive, healthy findings only", "executive", []string{"healthy"}, "healthy"},
+		{"executive, attention shows", "executive", []string{"attention", "healthy"}, "attention"},
+		{"detailed, healthy findings only", "detailed", []string{"healthy"}, "healthy"},
+		{"detailed, attention shows", "detailed", []string{"attention", "healthy"}, "attention"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := withFindings(t, tt.profile, tt.minSeverity, tt.keep...)
+			s := withFindings(t, tt.profile, tt.keep...)
 			got, err := WorstSeverity(s)
 			if err != nil || got != tt.want {
 				t.Errorf("WorstSeverity = %q, %v; want %q", got, err, tt.want)

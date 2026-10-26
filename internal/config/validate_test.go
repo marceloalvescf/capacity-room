@@ -69,7 +69,6 @@ func TestValidate(t *testing.T) {
 			c.Thresholds.CriticalPercent = 85
 		}, "thresholds.warning_percent must be lower than critical_percent"},
 		{"report.profile invalid", func(c *Config) { c.Report.Profile = "bogus" }, "report.profile must be detailed or executive"},
-		{"report.min_severity invalid", func(c *Config) { c.Report.MinSeverity = "bogus" }, "report.min_severity must be all, attention, or critical"},
 		{"report.language invalid", func(c *Config) { c.Report.Language = "fr" }, "report.language must be pt-BR or en"},
 		{"report.output_directory missing", func(c *Config) { c.Report.OutputDirectory = "/no/such/directory" }, "report.output_directory must exist and be writable"},
 	}

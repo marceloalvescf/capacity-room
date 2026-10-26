@@ -33,24 +33,21 @@ func TestDefaultOutputName(t *testing.T) {
 	emittedAt := time.Date(2026, time.July, 15, 14, 30, 0, 0, time.UTC)
 
 	tests := []struct {
-		name                                    string
-		cluster, profile, minSeverity, language string
-		want                                    string
+		name                       string
+		cluster, profile, language string
+		want                       string
 	}{
-		{"cluster prod", "prod", "detailed", "all", "en", "report-resources-prod-en-20260715-143000.pdf"},
-		{"cluster with punctuation", "Prod West_1", "detailed", "all", "en", "report-resources-prod-west-1-en-20260715-143000.pdf"},
-		{"cluster all punctuation", "---", "detailed", "all", "en", "report-resources-cluster-en-20260715-143000.pdf"},
-		{"minimum severity", "prod", "detailed", "attention", "en", "report-resources-prod-attention-en-20260715-143000.pdf"},
-		{"language pt-BR", "prod", "detailed", "all", "pt-BR", "report-resources-prod-pt-br-20260715-143000.pdf"},
-		{"executive profile", "prod", "executive", "critical", "en", "report-resources-prod-executive-en-20260715-143000.pdf"},
-		{"detailed with severity in pt-BR", "prod", "detailed", "critical", "pt-BR", "report-resources-prod-critical-pt-br-20260715-143000.pdf"},
-		{"detailed with all severities", "prod", "detailed", "all", "en", "report-resources-prod-en-20260715-143000.pdf"},
+		{"cluster prod", "prod", "detailed", "en", "report-resources-prod-en-20260715-143000.pdf"},
+		{"cluster with punctuation", "Prod West_1", "detailed", "en", "report-resources-prod-west-1-en-20260715-143000.pdf"},
+		{"cluster all punctuation", "---", "detailed", "en", "report-resources-cluster-en-20260715-143000.pdf"},
+		{"language pt-BR", "prod", "detailed", "pt-BR", "report-resources-prod-pt-br-20260715-143000.pdf"},
+		{"executive profile", "prod", "executive", "en", "report-resources-prod-executive-en-20260715-143000.pdf"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := defaultOutputName(tt.cluster, tt.profile, tt.minSeverity, tt.language, emittedAt)
+			got := defaultOutputName(tt.cluster, tt.profile, tt.language, emittedAt)
 			if got != tt.want {
-				t.Errorf("defaultOutputName(%q, %q, %q, %q) = %q, want %q", tt.cluster, tt.profile, tt.minSeverity, tt.language, got, tt.want)
+				t.Errorf("defaultOutputName(%q, %q, %q) = %q, want %q", tt.cluster, tt.profile, tt.language, got, tt.want)
 			}
 		})
 	}
