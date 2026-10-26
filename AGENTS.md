@@ -21,6 +21,9 @@ the authority when this file and the code disagree with it.
   prints `default`, and `docker info --format '{{.OperatingSystem}}'` starts
   with `NixOS`; anything else is the wrong engine. An agent never starts the
   daemon; when it is down, the owner starts it.
+- The rules above bind the development host. CI runs the same make targets
+  inside `nix develop` on GitHub's ubuntu-latest, with the runner's Docker
+  daemon.
 - Scratch files go under `.cache/`, never under `/tmp` on the host.
 - `older/` holds the two original projects as read-only reference. It is
   never tracked and never edited.
@@ -47,17 +50,22 @@ make gate             # everything above, from freshly built images
 make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files
 make audit            # govulncheck, npm audit, and trivy over the image; needs the network and Docker
-make push             # the runtime image to Docker Hub; outward, main thread, on the owner's word
-make push-chart       # the chart to GHCR as an OCI chart; outward, main thread, on the owner's word
 ```
 
 `make audit` is not part of `make gate`, whose result must not change with a
 public database. It runs at the review of a release and on its version
-commit. trivy leaves out an advisory with no fixed version, and those named
+commit, in `.github/workflows/release.yml`, and weekly in
+`.github/workflows/audit.yml`. trivy leaves out an advisory with no fixed version, and those named
 in `deploy/trivy-ignore.yaml`, each with a statement and an expiry.
 
 `make gate` writes one log per step under `.cache/gate/`. It builds the images
 without cache and runs the tests without cached results.
+
+A release is the version commit on `main`, CI green on that commit, and then
+the owner pushes the annotated tag `vX.Y.Z`. `.github/workflows/release.yml`
+does the rest: it runs the gate and the audit, pushes the image and the chart,
+and creates a draft GitHub release from the changelog, which the owner
+publishes.
 
 Run one test while iterating:
 
@@ -957,7 +965,8 @@ design, and section 12 of `docs/operations.md` is the operator's guide to it.
 
 - **The chart lives in `deploy/helm/capacity-room/` and is published only as
   the OCI chart `oci://ghcr.io/marceloalvescf/charts/capacity-room`,** by
-  `make push-chart`, with the version of `VERSION`. An operator installs from
+  `.github/workflows/release.yml` on a version tag, with the version of
+  `VERSION`. An operator installs from
   it, or from the chart folder of a checkout, never from the repository root.
 - **The chart's README is the quick start of section 12.** It links to
   `docs/operations.md` and changes with it in the same commit.
@@ -985,17 +994,17 @@ The main thread plans, judges, and runs the gates. Subagents implement.
 
 - A subagent may run `go`, `npm` inside `web/`, `make web`, `make build`,
   `make test`, `make lint`, `make generate`, and `make generate-check`.
-- A subagent must not run `make push-chart`: it is outward, and only the main
-  thread runs it, on the owner's word.
 - A subagent must not run Docker, so `make image`, `make test-toolchain`,
   `make test-template`, `make test-golden`, `make update-golden`,
   `make postgres-up`, `make postgres-down`, `make test-postgres`,
-  `make test-chart`, `make push`, `make e2e`, and `make gate` stay on the main thread. The main thread starts PostgreSQL
+  `make test-chart`, `make e2e`, and `make gate` stay on the main thread. The main thread starts PostgreSQL
   with `make postgres-up` and gives the subagent the DSN; the subagent runs
   the tagged tests with `CAPACITYROOM_TEST_DATABASE_DSN` set.
 - Two agents in one checkout break each other's builds when they share a Go
   package. Give a reviewer a diff file, and let it run tests only on packages
   nobody is editing.
+- A subagent never pushes a tag and never edits the secrets or environment
+  settings of `.github/workflows/release.yml`.
 - A subagent cannot declare a task or a phase finished.
 - Interface design, API design, and catalog wording stay on the main thread.
 - Tasks that share a file run in sequence. When in doubt, treat two tasks as
@@ -1073,8 +1082,9 @@ Versioning.
 - The newest version heading equals `VERSION`. A guard checks it.
 - A defect fix is a patch. A change to when a finding appears, to a sentence
   of the report, or to a visual default is a minor version.
-- A tag is `vX.Y.Z`, annotated, and created only after `make gate` passes on
-  that commit. Its logs are kept under `.cache/release-X.Y.Z/`.
+- A tag is `vX.Y.Z`, annotated, and created only on a commit whose CI is
+  green and after `make gate` passed locally. The release workflow runs the
+  gate and the audit again, and its artifacts are the release logs.
 
 ## Commits
 

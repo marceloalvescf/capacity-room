@@ -49,7 +49,7 @@ WEB_STAMP := web/node_modules/.package-lock.json
 
 .PHONY: web build test lint image test-toolchain test-template test-golden test-chart \
 	update-golden update-testdata check-runtime gate postgres-up postgres-down \
-	test-postgres generate generate-check e2e audit push push-chart
+	test-postgres generate generate-check e2e audit
 
 $(WEB_STAMP): web/package-lock.json
 	cd web && npm ci
@@ -276,31 +276,3 @@ audit:
 	( trivy --version && trivy image --scanners vuln --no-progress --ignore-unfixed --ignorefile deploy/trivy-ignore.yaml --exit-code 1 $(IMAGE) ) > .cache/audit/trivy.log 2>&1 || status=1; \
 	for log in govulncheck npm-audit trivy; do echo "audit: .cache/audit/$$log.log"; done; \
 	exit $$status
-
-# Builds the runtime image for linux/amd64 and pushes it to Docker Hub under
-# the version. It refuses a working tree with changes, so the image is the
-# commit's. It is outward: run `docker login` first, and run it only on the
-# word of the owner. make gate never runs it.
-PUSH_IMAGE := alvesmarcelocf/capacity-room:$(VERSION)
-
-push:
-	@test -z "$$(git status --porcelain)" || { echo "push: the working tree has changes"; exit 1; }
-	docker build --platform linux/amd64 --file deploy/Containerfile --target runtime --tag $(PUSH_IMAGE) .
-	docker push $(PUSH_IMAGE)
-
-# Packages the Helm chart and pushes it to GHCR as an OCI chart under the
-# version. It refuses a working tree with changes, so the chart is the
-# commit's. It is outward: run `helm registry login ghcr.io` first, since the
-# target handles no credential, and run it only on the word of the owner.
-# GHCR makes a new package private: the owner makes it public once, in the
-# package's settings, or nobody can pull it.
-# make gate never runs it.
-CHART_PACKAGE_DIR := .cache/chart-package
-
-push-chart:
-	@test -z "$$(git status --porcelain)" || { echo "push-chart: the working tree has changes"; exit 1; }
-	rm -rf $(CHART_PACKAGE_DIR)
-	mkdir -p $(CHART_PACKAGE_DIR)
-	helm package deploy/helm/capacity-room --destination $(CHART_PACKAGE_DIR)
-	@test "$$(ls $(CHART_PACKAGE_DIR))" = "capacity-room-$(VERSION).tgz" || { echo "push-chart: the package is not capacity-room-$(VERSION).tgz"; exit 1; }
-	helm push $(CHART_PACKAGE_DIR)/capacity-room-$(VERSION).tgz oci://ghcr.io/marceloalvescf/charts
