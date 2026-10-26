@@ -20,7 +20,7 @@ import (
 // reportFlagNames lists every flag report.go declares; TestReportHelpListsEveryFlag
 // checks each one appears in the command's own help text.
 var reportFlagNames = []string{
-	"config", "metrics-url", "endpoint-type", "token", "insecure",
+	"config", "metrics-url", "token", "insecure",
 	"cluster", "cluster-label", "cluster-filter", "namespaces", "period", "start", "end",
 	"timezone", "node-autoscaling", "report-profile", "lang",
 	"output", "snapshot", "from-snapshot", "check", "verbose",
@@ -154,7 +154,6 @@ func fixedGoldenEnv(t *testing.T) Env {
 func fixedGoldenConfig(server *httptest.Server, scenario promtest.Scenario, outputDir string) string {
 	return fmt.Sprintf(`[metrics]
 url = %q
-endpoint_type = %q
 
 [cluster]
 name = "prod"
@@ -169,7 +168,7 @@ organization = "ACME"
 classification = "Uso interno"
 author = "Time SRE"
 output_directory = %q
-`, server.URL+scenario.APIRoot, scenario.EndpointType, scenario.NodeAutoscaling, outputDir)
+`, server.URL+scenario.APIRoot, scenario.NodeAutoscaling, outputDir)
 }
 
 func scenarioArgs(cfgPath string, scenario promtest.Scenario, extra ...string) []string {
@@ -703,5 +702,12 @@ func TestReportCommandRefusesARange(t *testing.T) {
 	}
 	if stdout != "" {
 		t.Fatalf("stdout = %q, want empty", stdout)
+	}
+}
+
+func TestReportRefusesTheEndpointTypeFlag(t *testing.T) {
+	stdout, stderr, code := runArgs(context.Background(), testEnv(t), []string{"report", "--endpoint-type", "prometheus"})
+	if code != 2 || stdout != "" || stderr != "error: unknown flag; run the command with --help to see its flags\n" {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q", code, stdout, stderr)
 	}
 }

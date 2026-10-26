@@ -260,7 +260,6 @@ func TestEverythingDetectGivesPassesCheck(t *testing.T) {
 				GeneratorVersion:    "0.0.0-test",
 				EmittedAt:           emittedAt,
 				Config:              runCfg,
-				EndpointKind:        "prometheus",
 				Scope:               scope,
 				Capabilities:        capabilities,
 				CollectionStarted:   emittedAt,

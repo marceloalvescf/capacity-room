@@ -36,14 +36,12 @@ func recordingSleep() (func(context.Context, time.Duration) error, *[]time.Durat
 	}, waits
 }
 
-// baseOptions builds the Options every test starts from: an explicit
-// "prometheus" endpoint type (so Candidates never guesses), TLS verified,
-// and a generous timeout. Tests override what they need to.
+// baseOptions builds the Options every test starts from: TLS verified and a
+// generous timeout. Tests override what they need to.
 func baseOptions(rawURL string) Options {
 	return Options{
 		Metrics: config.Metrics{
 			URL:            rawURL,
-			EndpointType:   "prometheus",
 			TLSVerify:      true,
 			TimeoutSeconds: 5,
 		},

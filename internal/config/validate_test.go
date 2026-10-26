@@ -44,11 +44,6 @@ func TestValidate(t *testing.T) {
 		{"metrics.url has credentials", func(c *Config) { c.Metrics.URL = "https://user:pass@prom.example.org" }, "metrics.url must not embed credentials"},
 		{"metrics.url has a query", func(c *Config) { c.Metrics.URL = "https://prom.example.org?x=1" }, "metrics.url must not include a query string"},
 		{"metrics.url has a fragment", func(c *Config) { c.Metrics.URL = "https://prom.example.org#f" }, "metrics.url must not include a fragment"},
-		{"metrics.endpoint_type invalid", func(c *Config) { c.Metrics.EndpointType = "bogus" }, "metrics.endpoint_type must be auto, prometheus, or grafana"},
-		{"grafana url without datasource or proxy", func(c *Config) {
-			c.Metrics.EndpointType = "grafana"
-			c.Metrics.URL = "https://prom.example.org/api/v1"
-		}, "metrics.url must identify a Grafana datasource proxy API root"},
 		{"metrics.ca_bundle missing", func(c *Config) { c.Metrics.CABundle = "/no/such/file.pem" }, "metrics.ca_bundle must be an existing file"},
 		{"metrics.timeout_seconds not positive", func(c *Config) { c.Metrics.TimeoutSeconds = 0 }, "metrics.timeout_seconds must be positive"},
 		{"cluster.name blank", func(c *Config) { c.Cluster.Name = "" }, "cluster.name is required"},
@@ -138,37 +133,6 @@ func TestValidateAcceptsBoundaries(t *testing.T) {
 
 			if err := cfg.Validate(); err != nil {
 				t.Fatalf("Validate() error = %v, want nil", err)
-			}
-		})
-	}
-}
-
-func TestValidateGrafanaPath(t *testing.T) {
-	tests := []struct {
-		name    string
-		url     string
-		message string // empty means valid
-	}{
-		{"datasource path", "https://grafana.example.org/api/datasources/uid/x", ""},
-		{"proxy substring path", "https://grafana.example.org/myproxything", ""},
-		{"neither", "https://grafana.example.org/prom", "metrics.url must identify a Grafana datasource proxy API root"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := validConfig(t)
-			cfg.Metrics.EndpointType = "grafana"
-			cfg.Metrics.URL = tt.url
-
-			err := cfg.Validate()
-			if tt.message == "" {
-				if err != nil {
-					t.Fatalf("Validate() error = %v, want nil", err)
-				}
-				return
-			}
-			if err == nil || err.Error() != tt.message {
-				t.Fatalf("Validate() = %v, want %q", err, tt.message)
 			}
 		})
 	}

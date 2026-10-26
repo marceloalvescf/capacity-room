@@ -59,7 +59,6 @@ func newRun(t *testing.T, scenario promtest.Scenario, serverURL string) fixture 
 
 	cfg := config.Default()
 	cfg.Metrics.URL = serverURL + scenario.APIRoot
-	cfg.Metrics.EndpointType = scenario.EndpointType
 	cfg.Cluster.Name = "prod"
 	cfg.Cluster.Namespaces = []string{"payments"}
 	cfg.Analysis.NodeAutoscaling = scenario.NodeAutoscaling

@@ -237,7 +237,6 @@ func scenarioSnapshot(t *testing.T) snapshot.Snapshot {
 				HPAReplicaDivergence:     1,
 			},
 			Settings: snapshot.Settings{
-				EndpointType:    "prometheus",
 				TLSVerify:       true,
 				TimeoutSeconds:  42,
 				NodeAutoscaling: "auto",

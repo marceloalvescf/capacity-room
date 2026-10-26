@@ -224,7 +224,6 @@ func (d Document) RunConfig(period, start, end, timezone, reportProfile string, 
 	c := config.Default()
 	c.Metrics = config.Metrics{
 		URL:            d.EndpointURL,
-		EndpointType:   d.EndpointType,
 		TLSVerify:      d.TLSVerify,
 		TimeoutSeconds: d.TimeoutSeconds,
 	}

@@ -1,5 +1,5 @@
 {
-  "schema_version": "3.0",
+  "schema_version": "4.0",
   "report": {
     "id": "00000000-0000-4000-8000-000000000001",
     "generator_version": "0.0.0-golden",
@@ -21,7 +21,6 @@
       "hpa_replica_divergence": 1
     },
     "settings": {
-      "endpoint_type": "prometheus",
       "tls_verify": true,
       "timeout_seconds": 90,
       "node_autoscaling": "auto",

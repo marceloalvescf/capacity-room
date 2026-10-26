@@ -1002,7 +1002,6 @@ func scenarioClient(t *testing.T, scenario promtest.Scenario) (*prom.Client, Sco
 	client, err := prom.Connect(context.Background(), prom.Options{
 		Metrics: config.Metrics{
 			URL:            ts.URL + scenario.APIRoot,
-			EndpointType:   scenario.EndpointType,
 			TLSVerify:      true,
 			TimeoutSeconds: 5,
 		},
@@ -1109,9 +1108,8 @@ func unusedScriptedRequests(scripted []promtest.Request, seen []promtest.Seen, w
 
 func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 	want := map[string]int{
-		"direct-complete":       29,
-		"grafana-authenticated": 29,
-		"thanos-multicluster":   29,
+		"direct-complete":     29,
+		"thanos-multicluster": 29,
 		// the CPU rule (instance:node_cpu_utilisation:rate5m) is present but
 		// the memory rule (instance:node_memory_utilisation:ratio) answers
 		// absent; node_utilization still falls back to raw_metrics, so no
@@ -1142,14 +1140,13 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 	// kube_deployment_labels nor kube_statefulset_labels is present there
 	// (so the short-circuited *_spec_replicas probes are not skipped).
 	windowLen := map[string]int{
-		"direct-complete":       35,
-		"grafana-authenticated": 35,
-		"thanos-multicluster":   35,
-		"raw-fallback":          37,
-		"partial-data":          30,
-		"value-edge-cases":      30,
-		"edge-values":           35,
-		"edge-scaling":          36,
+		"direct-complete":     35,
+		"thanos-multicluster": 35,
+		"raw-fallback":        37,
+		"partial-data":        30,
+		"value-edge-cases":    30,
+		"edge-values":         35,
+		"edge-scaling":        36,
 	}
 
 	// collectorAnswers are the added answers that Detect never asks for: the
@@ -1174,14 +1171,13 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 	// verified facts of the fixture files, not something this test's code
 	// chooses to ignore.
 	wantUnused := map[string][]string{
-		"direct-complete":       slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
-		"grafana-authenticated": slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
-		"thanos-multicluster":   slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
-		"raw-fallback":          slices.Concat(collectorAnswers, []string{"kube_pod_status_phase", "instance:node_memory_utilisation:ratio"}),
-		"partial-data":          {"instance:node_memory_utilisation:ratio", "node_memory_MemAvailable_bytes", "node_memory_MemTotal_bytes", "cluster_autoscaler_"},
-		"value-edge-cases":      {"cluster_autoscaler_"},
-		"edge-values":           slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
-		"edge-scaling":          slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
+		"direct-complete":     slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
+		"thanos-multicluster": slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
+		"raw-fallback":        slices.Concat(collectorAnswers, []string{"kube_pod_status_phase", "instance:node_memory_utilisation:ratio"}),
+		"partial-data":        {"instance:node_memory_utilisation:ratio", "node_memory_MemAvailable_bytes", "node_memory_MemTotal_bytes", "cluster_autoscaler_"},
+		"value-edge-cases":    {"cluster_autoscaler_"},
+		"edge-values":         slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
+		"edge-scaling":        slices.Concat(collectorAnswers, []string{"cluster_autoscaler_"}),
 	}
 
 	for _, scenario := range promtest.Scenarios {
@@ -1197,7 +1193,6 @@ func TestDetectScenarioUsesTheExpectedRequests(t *testing.T) {
 			client, err := prom.Connect(context.Background(), prom.Options{
 				Metrics: config.Metrics{
 					URL:            ts.URL + scenario.APIRoot,
-					EndpointType:   scenario.EndpointType,
 					TLSVerify:      true,
 					TimeoutSeconds: 5,
 				},
@@ -1295,7 +1290,7 @@ func scenarioWant(name string) []scenarioCapability {
 	}
 
 	switch name {
-	case "direct-complete", "grafana-authenticated", "thanos-multicluster":
+	case "direct-complete", "thanos-multicluster":
 		return baseline
 	case "value-edge-cases":
 		return set(baseline, map[string]scenarioCapability{

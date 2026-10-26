@@ -190,7 +190,7 @@ func TestRunConfig(t *testing.T) {
 	d.NodepoolLabel = "pool"
 	got := d.RunConfig("7d", "", "", "UTC", "executive", []string{"payments"})
 	want := config.Default()
-	want.Metrics = config.Metrics{URL: "https://metrics.internal", EndpointType: "grafana", TLSVerify: true, TimeoutSeconds: 45}
+	want.Metrics = config.Metrics{URL: "https://metrics.internal", TLSVerify: true, TimeoutSeconds: 45}
 	want.Cluster = config.Cluster{Name: "prod-east", Namespaces: []string{"payments"}, Label: "cluster", FilterMode: "required", NodepoolLabel: "pool"}
 	want.Analysis = config.Analysis{Period: "7d", Timezone: "UTC", NodeAutoscaling: "enabled", ExcludedContainers: []string{"istio-proxy"}}
 	want.Report.Profile = "executive"

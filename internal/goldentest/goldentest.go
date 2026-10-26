@@ -29,9 +29,8 @@ import (
 	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
 
-// DataFileScenarios names the scenarios that have golden data files. Of the
-// other two, grafana-authenticated and thanos-multicluster give, in this
-// part, the same document as direct-complete.
+// DataFileScenarios names the scenarios that have golden data files.
+// thanos-multicluster has none: it gives the same document as direct-complete.
 var DataFileScenarios = []string{
 	"direct-complete", "partial-data", "raw-fallback", "value-edge-cases", "edge-values", "edge-scaling",
 }
@@ -77,7 +76,6 @@ func fixedEmittedAt() (time.Time, error) {
 func fixedConfig(scenario promtest.Scenario, serverURL string) config.Config {
 	cfg := config.Default()
 	cfg.Metrics.URL = serverURL + scenario.APIRoot
-	cfg.Metrics.EndpointType = scenario.EndpointType
 	cfg.Cluster.Name = clusterName
 	cfg.Cluster.Namespaces = namespaces
 	cfg.Analysis.NodeAutoscaling = scenario.NodeAutoscaling
@@ -175,7 +173,6 @@ func run(ctx context.Context, scenario promtest.Scenario) (runOutput, *promtest.
 		GeneratorVersion:    generatorVersion,
 		EmittedAt:           emittedAt,
 		Config:              cfg,
-		EndpointKind:        client.Kind(),
 		Scope:               scope,
 		Capabilities:        capabilities,
 		CollectionStarted:   emittedAt,

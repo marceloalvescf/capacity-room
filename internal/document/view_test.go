@@ -15,7 +15,7 @@ import (
 
 // goldenNames lists the scenarios of testdata/snapshot/.
 var goldenNames = []string{
-	"direct-complete", "edge-scaling", "edge-values", "grafana-authenticated",
+	"direct-complete", "edge-scaling", "edge-values",
 	"partial-data", "raw-fallback", "thanos-multicluster", "value-edge-cases",
 }
 

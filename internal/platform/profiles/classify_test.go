@@ -57,7 +57,7 @@ func TestSourceErrorCarriesOnlyTheCode(t *testing.T) {
 func TestPolicyRefusalReachesClassifyThroughTheClient(t *testing.T) {
 	transport := &netpolicy.Transport{}
 	_, err := prom.Connect(context.Background(), prom.Options{
-		Metrics:   config.Metrics{URL: "http://127.0.0.1:9/api/v1", EndpointType: "prometheus", TimeoutSeconds: 5},
+		Metrics:   config.Metrics{URL: "http://127.0.0.1:9/api/v1", TimeoutSeconds: 5},
 		Transport: transport,
 		Sleep:     func(context.Context, time.Duration) error { return nil },
 	})

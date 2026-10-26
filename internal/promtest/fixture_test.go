@@ -20,7 +20,6 @@ func TestLoadReadsEachScenario(t *testing.T) {
 		requests int
 	}{
 		{"direct-complete", 70},
-		{"grafana-authenticated", 70},
 		{"thanos-multicluster", 70},
 		{"raw-fallback", 73},
 		{"partial-data", 63},
@@ -149,18 +148,12 @@ func TestServerMatchesOutOfOrder(t *testing.T) {
 }
 
 func TestServerRequiresAuthorization(t *testing.T) {
-	path, err := scenarioPath("grafana-authenticated")
-	if err != nil {
-		t.Fatalf("Path: %v", err)
-	}
-	fixture, err := Load(path)
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	server := NewServer(fixture)
+	server := NewServer(Fixture{Requests: []Request{
+		{Method: "POST", Path: "/api/v1/query", QueryContains: "vector(1)", Authorization: "Bearer token", Status: 200, Body: json.RawMessage(`{}`)},
+	}})
 
 	w := httptest.NewRecorder()
-	server.ServeHTTP(w, postQuery("/api/datasources/uid/prom/resources/api/v1/query", "vector(1)"))
+	server.ServeHTTP(w, postQuery("/api/v1/query", "vector(1)"))
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d: the request carried no Authorization header", w.Code, http.StatusBadRequest)
@@ -346,7 +339,6 @@ func TestLoadScenarioHoldsTheAddedAnswersFirst(t *testing.T) {
 		requests int
 	}{
 		{"direct-complete", 76},
-		{"grafana-authenticated", 76},
 		{"thanos-multicluster", 76},
 		{"raw-fallback", 79},
 		{"partial-data", 64},

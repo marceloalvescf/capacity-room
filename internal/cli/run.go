@@ -339,7 +339,7 @@ const (
 // collectingFlagNames lists the flags of spec 5.2 that configure a
 // collecting run; --from-snapshot refuses every one of them.
 var collectingFlagNames = []string{
-	"metrics-url", "endpoint-type", "token", "insecure", "cluster",
+	"metrics-url", "token", "insecure", "cluster",
 	"cluster-label", "cluster-filter", "namespaces", "period", "start", "end",
 	"timezone", "node-autoscaling",
 }
@@ -402,7 +402,6 @@ func stringFlagOrNil(cmd *cobra.Command, name, value string) *string {
 func buildConfigFlags(cmd *cobra.Command, f *reportFlags) config.Flags {
 	return config.Flags{
 		MetricsURL:      stringFlagOrNil(cmd, "metrics-url", f.metricsURL),
-		EndpointType:    stringFlagOrNil(cmd, "endpoint-type", f.endpointType),
 		Token:           stringFlagOrNil(cmd, "token", f.token),
 		Cluster:         stringFlagOrNil(cmd, "cluster", f.cluster),
 		ClusterLabel:    stringFlagOrNil(cmd, "cluster-label", f.clusterLabel),

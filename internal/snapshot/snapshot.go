@@ -10,7 +10,7 @@ package snapshot
 
 // SchemaVersion is the only schema version this package writes, and the
 // only one Decode accepts.
-const SchemaVersion = "3.0"
+const SchemaVersion = "4.0"
 
 // Snapshot is the stored contract of one report run.
 type Snapshot struct {
@@ -62,7 +62,6 @@ type Thresholds struct {
 // Settings holds the non-secret settings of the run: never an address, a
 // token, or a path.
 type Settings struct {
-	EndpointType    string  `json:"endpoint_type"` // the kind that answered: prometheus or grafana, never auto
 	TLSVerify       bool    `json:"tls_verify"`
 	TimeoutSeconds  float64 `json:"timeout_seconds"`
 	NodeAutoscaling string  `json:"node_autoscaling"`

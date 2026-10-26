@@ -81,7 +81,6 @@ type Options struct {
 type Client struct {
 	httpClient *http.Client
 	root       string
-	kind       string
 	token      string
 	sleep      func(ctx context.Context, d time.Duration) error
 	answered   bool
@@ -98,9 +97,6 @@ type Client struct {
 // Root returns the API root that answered.
 func (c *Client) Root() string { return c.root }
 
-// Kind returns the endpoint kind, "prometheus" or "grafana".
-func (c *Client) Kind() string { return c.kind }
-
 // Connect tries each candidate root with the probe `vector(1)` and returns
 // a client bound to the first root that answers as a Prometheus API.
 func Connect(ctx context.Context, opts Options) (*Client, error) {
@@ -110,7 +106,7 @@ func Connect(ctx context.Context, opts Options) (*Client, error) {
 	}
 	foreignTransport := opts.Transport != nil
 
-	roots, kind := Candidates(opts.Metrics.URL, opts.Metrics.EndpointType)
+	roots := Candidates(opts.Metrics.URL)
 
 	for _, root := range roots {
 		answered := false
@@ -122,7 +118,6 @@ func Connect(ctx context.Context, opts Options) (*Client, error) {
 			return &Client{
 				httpClient:       httpClient,
 				root:             root,
-				kind:             kind,
 				token:            opts.Token,
 				sleep:            opts.Sleep,
 				answered:         true,

@@ -16,7 +16,7 @@ committed.
 | `<scenario>.json` | The namespaces, the workloads, the HPAs, the workloads without an HPA, the nodes, the node pools, the cluster autoscaling evidence, the node pressure, every finding, the recommendations, the summary counts, the coverage of every workload row, the rows of the seven tables of the executive body at the two effective minimums, and the warnings and notices of the five collectors |
 | `<scenario>.queries.txt` | Every request the original sends for the scenario, in order, one line for each: the path, a tab, the query |
 
-There is one pair of files for each of the eight scenarios: the six of
+There is one pair of files for each of the seven scenarios: the five of
 `testdata/prometheus/` and `edge-values` and `edge-scaling` of
 `testdata/prometheus-own/`.
 
@@ -104,7 +104,6 @@ changed.
 90e491c7e2cb4132d5ef9774b515f636bf68b2e759275f3e2797da1aa1dcea79  direct-complete.json
 1fddbeab42ee6f9ca2b147f8ebe18d7f32f61c17ef4adfee84337e4a08947b6a  edge-scaling.json
 3bbd3804fda091d7efe9f97269b21dbfb79cca694b31a1779aa7805dbc968910  edge-values.json
-98f5d628bcf3781be9c1f694e911cdcaa79a66965f9b467f0ced023f735391ae  grafana-authenticated.json
 7f4eafc98755e3f9c0958974fb0530c43d8fd6044b962f9779ff4b3a3d46a720  partial-data.json
 fba40069ebeced6521d48a677e721b4e51b368b5619604c22cf0238f4f961cf1  raw-fallback.json
 9b61e84fd168ae9748f25bf912e4a192fd5106c0dff7b3e2595a6265a1d7a9e0  thanos-multicluster.json
@@ -112,7 +111,6 @@ fba40069ebeced6521d48a677e721b4e51b368b5619604c22cf0238f4f961cf1  raw-fallback.j
 51ea605045169cf7397bef8c6887d931ad86fb4c0d7c03b639645f68cd33a540  direct-complete.queries.txt
 f552ed8b6bb6b27dec20c03c3e7bc5a2db2292b3f3d32c06f16e79dec02bedaa  edge-scaling.queries.txt
 51ea605045169cf7397bef8c6887d931ad86fb4c0d7c03b639645f68cd33a540  edge-values.queries.txt
-d538e9fc978df2e9fb8789da1ec1d713b1c9593bbd429e82b7dcc1475870982d  grafana-authenticated.queries.txt
 664f32e829cad22af13e9802cf1c59cef455b2b74b7ff8a88a34d1a461796787  partial-data.queries.txt
 200606fc6c00cb8b0feafc7e246a34dce5ffaa203fb779c43973f19e4f63a6dc  raw-fallback.queries.txt
 51ea605045169cf7397bef8c6887d931ad86fb4c0d7c03b639645f68cd33a540  thanos-multicluster.queries.txt

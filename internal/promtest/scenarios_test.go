@@ -13,11 +13,11 @@ import (
 	"testing"
 )
 
-// TestScenariosHoldEight checks that Scenarios holds eight entries, six
+// TestScenariosHoldSeven checks that Scenarios holds seven entries, five
 // under the folder prometheus and two under prometheus-own.
-func TestScenariosHoldEight(t *testing.T) {
-	if len(Scenarios) != 8 {
-		t.Fatalf("len(Scenarios) = %d, want 8", len(Scenarios))
+func TestScenariosHoldSeven(t *testing.T) {
+	if len(Scenarios) != 7 {
+		t.Fatalf("len(Scenarios) = %d, want 7", len(Scenarios))
 	}
 
 	var names []string
@@ -33,8 +33,8 @@ func TestScenariosHoldEight(t *testing.T) {
 			t.Fatalf("scenario %q has folder %q, want %q or %q", s.Name, s.Folder, "prometheus", "prometheus-own")
 		}
 	}
-	if prometheus != 6 {
-		t.Errorf("%d scenarios hold the folder %q, want 6: %v", prometheus, "prometheus", names)
+	if prometheus != 5 {
+		t.Errorf("%d scenarios hold the folder %q, want 5: %v", prometheus, "prometheus", names)
 	}
 	if own != 2 {
 		t.Errorf("%d scenarios hold the folder %q, want 2: %v", own, "prometheus-own", names)
@@ -107,7 +107,7 @@ func sha256File(t *testing.T, path string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// TestOriginalScenariosAreUntouched checks every one of the six files of
+// TestOriginalScenariosAreUntouched checks every one of the five files of
 // testdata/prometheus against the checksum testdata/prometheus/README.md
 // names for it, so that a change to a byte of a recorded answer is caught
 // without holding a checksum here as a literal of its own.
@@ -120,8 +120,8 @@ func TestOriginalScenariosAreUntouched(t *testing.T) {
 	readmePath := filepath.Join(dir, "README.md")
 	checksums := readmeChecksums(t, readmePath)
 
-	if len(checksums) != 6 {
-		t.Fatalf("%s names %d checksums, want 6: %v", readmePath, len(checksums), checksums)
+	if len(checksums) != 5 {
+		t.Fatalf("%s names %d checksums, want 5: %v", readmePath, len(checksums), checksums)
 	}
 
 	for name, want := range checksums {
@@ -218,7 +218,7 @@ func TestAddedAnswersComeFirst(t *testing.T) {
 	}
 }
 
-// TestAddedAnswersMatchTheirChecksums checks the eight files of
+// TestAddedAnswersMatchTheirChecksums checks the seven files of
 // testdata/prometheus-added against the checksum its README names for each,
 // and refuses a file of the folder that the README does not name.
 func TestAddedAnswersMatchTheirChecksums(t *testing.T) {
@@ -230,8 +230,8 @@ func TestAddedAnswersMatchTheirChecksums(t *testing.T) {
 	readmePath := filepath.Join(dir, "README.md")
 	checksums := readmeChecksums(t, readmePath)
 
-	if len(checksums) != 8 {
-		t.Fatalf("%s names %d checksums, want 8: %v", readmePath, len(checksums), checksums)
+	if len(checksums) != 7 {
+		t.Fatalf("%s names %d checksums, want 7: %v", readmePath, len(checksums), checksums)
 	}
 
 	for name, want := range checksums {

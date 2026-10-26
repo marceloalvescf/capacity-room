@@ -224,8 +224,8 @@ func namesUnifiedRequestsLimits(query string) bool {
 // whose path ends in /query and whose query is a count() probe naming the
 // unified requests or limits metric: the four lines
 // TestQueriesTellTheProbesApart pins down. A collector's own range query
-// of the same metric, over the same path suffix a Grafana proxy also
-// carries, is told apart by requiring the query itself, not only the
+// of the same metric, over the same path suffix,
+// is told apart by requiring the query itself, not only the
 // path, to mark it as a probe.
 func unifiedRequestsLimitsProbeLines(lines []string) []string {
 	var out []string
@@ -485,13 +485,10 @@ func TestSnapshotIsTheSameTwice(t *testing.T) {
 	}
 }
 
-// withoutAddressFields decodes a snapshot and clears the two fields that
-// may legitimately differ between direct-complete and one of its
-// stand-ins: scope.discovered_values and settings.endpoint_type each
-// describe how the client reached the endpoint (which cluster label value
-// it found, whether as Prometheus or as a Grafana datasource proxy), not
-// the resources measured, so a scenario that only changes the endpoint's
-// shape still produces the same document once these two are set aside.
+// withoutAddressFields decodes a snapshot and clears scope.discovered_values,
+// which describes which cluster label values the client found, not the
+// resources measured, so a scenario that only changes those values still
+// produces the same document once it is set aside.
 func withoutAddressFields(t *testing.T, data []byte) snapshot.Snapshot {
 	t.Helper()
 	snap, err := snapshot.Decode(data)
@@ -499,15 +496,13 @@ func withoutAddressFields(t *testing.T, data []byte) snapshot.Snapshot {
 		t.Fatalf("Decode: %v", err)
 	}
 	snap.Scope.DiscoveredValues = nil
-	snap.Report.Settings.EndpointType = ""
 	return snap
 }
 
-// TestOtherScenariosGiveTheSameDocument checks that grafana-authenticated
-// and thanos-multicluster, which have no golden data file of their own,
-// build the same document as direct-complete in each language, and that
-// their snapshots differ from it only in scope.discovered_values and
-// settings.endpoint_type.
+// TestOtherScenariosGiveTheSameDocument checks that thanos-multicluster,
+// which has no golden data file of its own, builds the same document as
+// direct-complete in each language, and that its snapshot differs from it
+// only in scope.discovered_values.
 func TestOtherScenariosGiveTheSameDocument(t *testing.T) {
 	baselineScenario := scenarioByName(t, "direct-complete")
 	baselineSnap, err := Snapshot(context.Background(), baselineScenario)
@@ -516,7 +511,7 @@ func TestOtherScenariosGiveTheSameDocument(t *testing.T) {
 	}
 	baselineComparable := withoutAddressFields(t, baselineSnap)
 
-	for _, name := range []string{"grafana-authenticated", "thanos-multicluster"} {
+	for _, name := range []string{"thanos-multicluster"} {
 		t.Run(name, func(t *testing.T) {
 			scenario := scenarioByName(t, name)
 			snap, err := Snapshot(context.Background(), scenario)
@@ -526,7 +521,7 @@ func TestOtherScenariosGiveTheSameDocument(t *testing.T) {
 
 			scenarioComparable := withoutAddressFields(t, snap)
 			if !reflect.DeepEqual(scenarioComparable, baselineComparable) {
-				t.Errorf("%s snapshot differs from direct-complete beyond scope.discovered_values and settings.endpoint_type", name)
+				t.Errorf("%s snapshot differs from direct-complete beyond scope.discovered_values", name)
 			}
 
 			for _, lang := range catalog.Languages() {

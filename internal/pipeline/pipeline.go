@@ -89,7 +89,6 @@ func Collect(ctx context.Context, r Run) (Result, error) {
 		GeneratorVersion:    r.Version,
 		EmittedAt:           r.EmittedAt,
 		Config:              r.Config,
-		EndpointKind:        c.Client.Kind(),
 		Scope:               c.Scope,
 		Capabilities:        c.Capabilities,
 		CollectionStarted:   r.EmittedAt,

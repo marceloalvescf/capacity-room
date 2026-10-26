@@ -12,7 +12,7 @@ meant for an added one. The format is the format of the recorded files.
 All but `partial-data` and `value-edge-cases` answer the probe of node
 autoscaling and the five queries of its collector, from kube-state-metrics.
 
-- `direct-complete.json`, `grafana-authenticated.json`, and
+- `direct-complete.json` and
   `thanos-multicluster.json`: ConfigMaps are collected (41), the status
   ConfigMap of the cluster autoscaler exists and was written 120 times, one
   node, one node added, and one unschedulable pod. Enabled.
@@ -36,7 +36,6 @@ autoscaling and the five queries of its collector, from kube-state-metrics.
 156fbf184ceddf9fdfbf423db03e51dde1cd0858fa2043712a422aa404270267  direct-complete.json
 3fc4c0cda6822636d51380ff9f1181cf9a6694efb7b1c205c60e57b907fbfc29  edge-scaling.json
 9a989bdc0faae70a6760f9239f1ca157ee6be3c9796d70566b15e36e84629c4d  edge-values.json
-8b3d00b60b9c4f49fad1d9dda7fb3dc5027613d28357f079914806bc94a2dc5d  grafana-authenticated.json
 960321a97d2a4197e46dbb5966aa861639c26145c94610bccc287310b50679bc  partial-data.json
 7f9ee96161d29a3aa92cb63733d665ca23ff2dfe42a830fef317a57559b9b456  raw-fallback.json
 156fbf184ceddf9fdfbf423db03e51dde1cd0858fa2043712a422aa404270267  thanos-multicluster.json

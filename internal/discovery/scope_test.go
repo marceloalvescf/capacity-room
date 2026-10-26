@@ -424,7 +424,6 @@ func TestScopeScenario(t *testing.T) {
 			client, err := prom.Connect(context.Background(), prom.Options{
 				Metrics: config.Metrics{
 					URL:            ts.URL + scenario.APIRoot,
-					EndpointType:   scenario.EndpointType,
 					TLSVerify:      true,
 					TimeoutSeconds: 5,
 				},
@@ -469,7 +468,6 @@ func TestScopeScenarioMultipleClusters(t *testing.T) {
 	client, err := prom.Connect(context.Background(), prom.Options{
 		Metrics: config.Metrics{
 			URL:            ts.URL + "/api/v1",
-			EndpointType:   "prometheus",
 			TLSVerify:      true,
 			TimeoutSeconds: 5,
 		},

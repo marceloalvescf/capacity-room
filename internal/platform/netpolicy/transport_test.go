@@ -388,7 +388,6 @@ func TestTransportThroughThePromClient(t *testing.T) {
 	client, err := prom.Connect(ctx, prom.Options{
 		Metrics: config.Metrics{
 			URL:            "http://metrics.test:" + serverPort(t, server) + "/api/v1",
-			EndpointType:   "prometheus",
 			TLSVerify:      true,
 			TimeoutSeconds: 10,
 		},
@@ -411,7 +410,6 @@ func TestTransportThroughThePromClient(t *testing.T) {
 	_, err = prom.Connect(ctx, prom.Options{
 		Metrics: config.Metrics{
 			URL:            "http://metrics.test:" + serverPort(t, server) + "/api/v1",
-			EndpointType:   "prometheus",
 			TLSVerify:      true,
 			TimeoutSeconds: 10,
 		},

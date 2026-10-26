@@ -20,7 +20,6 @@ type Input struct {
 	GeneratorVersion    string
 	EmittedAt           time.Time
 	Config              config.Config
-	EndpointKind        string // the kind that answered: "prometheus" or "grafana"
 	Scope               discovery.Scope
 	Capabilities        []discovery.Capability
 	CollectionStarted   time.Time
@@ -70,7 +69,6 @@ func Build(in Input) (Snapshot, error) {
 				HPAReplicaDivergence:     in.Config.Thresholds.HPAReplicaDivergence,
 			},
 			Settings: Settings{
-				EndpointType:    in.EndpointKind,
 				TLSVerify:       in.Config.Metrics.TLSVerify,
 				TimeoutSeconds:  in.Config.Metrics.TimeoutSeconds,
 				NodeAutoscaling: in.Config.Analysis.NodeAutoscaling,

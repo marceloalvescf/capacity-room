@@ -15,7 +15,6 @@ import (
 type reportFlags struct {
 	config          string
 	metricsURL      string
-	endpointType    string
 	token           string
 	insecure        bool
 	cluster         string
@@ -67,7 +66,6 @@ func newReportCmd(ctx context.Context, env Env, redactor *redact.Redactor) *cobr
 	flags := cmd.Flags()
 	flags.StringVar(&f.config, "config", "report.toml", "Path of the TOML configuration file.")
 	flags.StringVar(&f.metricsURL, "metrics-url", "", "Address of the metrics endpoint.")
-	flags.StringVar(&f.endpointType, "endpoint-type", "", "Endpoint kind: auto, prometheus, or grafana.")
 	flags.StringVar(&f.token, "token", "", "Bearer token sent to the metrics endpoint.")
 	flags.BoolVar(&f.insecure, "insecure", false, "Skip TLS certificate verification.")
 	flags.StringVar(&f.cluster, "cluster", "", "Name of the cluster this report covers.")

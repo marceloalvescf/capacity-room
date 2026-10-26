@@ -31,11 +31,9 @@ var (
 	errMetricsURLCreds      = errors.New("metrics.url must not embed credentials")
 	errMetricsURLQuery      = errors.New("metrics.url must not include a query string")
 	errMetricsURLFrag       = errors.New("metrics.url must not include a fragment")
-	errMetricsURLGraf       = errors.New("metrics.url must identify a Grafana datasource proxy API root")
 	errMetricsCABundle      = errors.New("metrics.ca_bundle must be an existing file")
 	errMetricsTimeout       = errors.New("metrics.timeout_seconds must be positive")
 	errMetricsURLReq        = errors.New("metrics.url is required")
-	errEndpointType         = errors.New("metrics.endpoint_type must be auto, prometheus, or grafana")
 	errClusterName          = errors.New("cluster.name is required")
 	errClusterNS            = errors.New("cluster.namespaces must contain at least one non-empty namespace")
 	errClusterLabel         = errors.New("cluster.label must be a valid Prometheus label name")
@@ -89,15 +87,6 @@ func validateMetrics(m Metrics) error {
 	}
 	if parsed.Fragment != "" {
 		return errMetricsURLFrag
-	}
-
-	switch m.EndpointType {
-	case "auto", "prometheus", "grafana":
-	default:
-		return errEndpointType
-	}
-	if m.EndpointType == "grafana" && !strings.Contains(parsed.Path, "datasource") && !strings.Contains(parsed.Path, "proxy") {
-		return errMetricsURLGraf
 	}
 
 	if m.CABundle != "" {

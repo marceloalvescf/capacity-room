@@ -8,33 +8,20 @@ import (
 	"strings"
 )
 
-// Candidates returns the API roots to try, in order, and the endpoint
-// kind, "prometheus" or "grafana". The address was validated by config.
-//
-// The kind is the given endpointType when it is not "auto". Otherwise it is
-// "grafana" when the path holds "datasource" or "/proxy/", and
-// "prometheus" otherwise. A second root, the first with "/api/v1"
-// appended, is added unless the path already ends in "/api/v1" or holds
-// "/api/v1/".
-func Candidates(address, endpointType string) (roots []string, kind string) {
+// Candidates returns the API roots to try, in order: the address with its
+// trailing slashes stripped, then the same with "/api/v1" appended unless
+// the path already ends in "/api/v1" or holds "/api/v1/". The address was
+// validated by config.
+func Candidates(address string) []string {
 	normalized := normalizeRoot(address)
 	path := pathOf(normalized)
-
-	kind = endpointType
-	if kind == "auto" {
-		if strings.Contains(path, "datasource") || strings.Contains(path, "/proxy/") {
-			kind = "grafana"
-		} else {
-			kind = "prometheus"
-		}
-	}
 
 	candidates := []string{normalized}
 	if !strings.HasSuffix(path, "/api/v1") && !strings.Contains(path, "/api/v1/") {
 		candidates = append(candidates, normalized+"/api/v1")
 	}
 
-	return dedupe(candidates), kind
+	return dedupe(candidates)
 }
 
 // normalizeRoot strips every trailing slash from the path of address,

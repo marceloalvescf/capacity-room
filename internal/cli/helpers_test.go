@@ -179,7 +179,6 @@ func scenarioConfig(server *httptest.Server, scenario promtest.Scenario, outputD
 	}
 	return fmt.Sprintf(`[metrics]
 url = %q
-endpoint_type = %q
 %s
 [cluster]
 name = "prod"
@@ -190,7 +189,7 @@ node_autoscaling = %q
 
 [report]
 output_directory = %q
-`, server.URL+scenario.APIRoot, scenario.EndpointType, tokenLine, scenario.NodeAutoscaling, outputDir)
+`, server.URL+scenario.APIRoot, tokenLine, scenario.NodeAutoscaling, outputDir)
 }
 
 // runArgs runs the command against args with ctx and returns its stdout,

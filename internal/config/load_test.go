@@ -19,7 +19,6 @@ func fullConfig() Config {
 	return Config{
 		Metrics: Metrics{
 			URL:            "https://prom.example.org/api/v1",
-			EndpointType:   "prometheus",
 			TokenEnv:       "CAPACITYROOM_FULL_TOKEN",
 			TLSVerify:      false,
 			CABundle:       "testdata/ca.pem",
@@ -118,7 +117,6 @@ func TestLoadEnvironmentOverridesFile(t *testing.T) {
 		mutate func(*Config, string)
 	}{
 		{"metrics.url", "CAPACITYROOM_METRICS_URL", fixedVal("https://override.example/metrics"), func(c *Config, v string) { c.Metrics.URL = v }},
-		{"metrics.endpoint_type", "CAPACITYROOM_ENDPOINT_TYPE", fixedVal("auto"), func(c *Config, v string) { c.Metrics.EndpointType = v }},
 		{"cluster.name", "CAPACITYROOM_CLUSTER", fixedVal("staging"), func(c *Config, v string) { c.Cluster.Name = v }},
 		{"cluster.label", "CAPACITYROOM_CLUSTER_LABEL", fixedVal("team"), func(c *Config, v string) { c.Cluster.Label = v }},
 		{"cluster.filter_mode", "CAPACITYROOM_CLUSTER_FILTER", fixedVal("none"), func(c *Config, v string) { c.Cluster.FilterMode = v }},
@@ -164,8 +162,6 @@ func TestLoadFlagOverridesEnvironment(t *testing.T) {
 	}{
 		{"metrics.url", "CAPACITYROOM_METRICS_URL", "https://env.example/metrics", "https://flag.example/metrics",
 			func(f *Flags, v string) { f.MetricsURL = &v }, func(c *Config, v string) { c.Metrics.URL = v }},
-		{"metrics.endpoint_type", "CAPACITYROOM_ENDPOINT_TYPE", "grafana", "auto",
-			func(f *Flags, v string) { f.EndpointType = &v }, func(c *Config, v string) { c.Metrics.EndpointType = v }},
 		{"cluster.name", "CAPACITYROOM_CLUSTER", "envcluster", "flagcluster",
 			func(f *Flags, v string) { f.Cluster = &v }, func(c *Config, v string) { c.Cluster.Name = v }},
 		{"cluster.label", "CAPACITYROOM_CLUSTER_LABEL", "envlabel", "flaglabel",
@@ -764,5 +760,23 @@ nodepool_label = ""
 				t.Fatalf("Load().Config = %+v, did not keep the explicit zero value", loaded.Config)
 			}
 		})
+	}
+}
+
+func TestLoadRefusesEndpointType(t *testing.T) {
+	path := writeFile(t, `
+[metrics]
+url = "https://prom.example.org"
+endpoint_type = "prometheus"
+
+[cluster]
+name = "prod"
+namespaces = ["default"]
+`)
+
+	_, err := Load(Source{File: path, Getenv: noEnv})
+	want := "unknown metrics keys: endpoint_type"
+	if err == nil || err.Error() != want {
+		t.Fatalf("Load() error = %v, want %q", err, want)
 	}
 }

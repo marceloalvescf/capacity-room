@@ -51,7 +51,6 @@ type Config struct {
 // Metrics configures the Prometheus-compatible endpoint the report reads.
 type Metrics struct {
 	URL            string // metrics.url
-	EndpointType   string // metrics.endpoint_type: auto, prometheus, grafana
 	TokenEnv       string // metrics.token_env
 	TLSVerify      bool   // metrics.tls_verify
 	CABundle       string // metrics.ca_bundle
@@ -101,7 +100,6 @@ type Report struct {
 func Default() Config {
 	return Config{
 		Metrics: Metrics{
-			EndpointType:   "auto",
 			TLSVerify:      true,
 			TimeoutSeconds: 90,
 		},
@@ -138,7 +136,7 @@ var periodRe = regexp.MustCompile(`^[1-9][0-9]*[mhd]$`)
 // Flags holds the values given on the command line. A nil field was not
 // given.
 type Flags struct {
-	MetricsURL, EndpointType, Token               *string
+	MetricsURL, Token                             *string
 	Cluster, ClusterLabel, ClusterFilter          *string
 	Namespaces, Period, Timezone, NodeAutoscaling *string
 	Start, End                                    *string

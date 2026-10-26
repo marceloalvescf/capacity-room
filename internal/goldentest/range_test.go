@@ -120,11 +120,11 @@ func TestRangeScenarioEqualsItsBase(t *testing.T) {
 	}
 }
 
-// TestOriginalComparisonsWalkEight proves that the list the comparisons with
-// the original walk holds eight scenarios and none of them is a range.
-func TestOriginalComparisonsWalkEight(t *testing.T) {
-	if len(promtest.Scenarios) != 8 {
-		t.Fatalf("len(promtest.Scenarios) = %d, want 8", len(promtest.Scenarios))
+// TestOriginalComparisonsWalkSeven proves that the list the comparisons with
+// the original walk holds seven scenarios and none of them is a range.
+func TestOriginalComparisonsWalkSeven(t *testing.T) {
+	if len(promtest.Scenarios) != 7 {
+		t.Fatalf("len(promtest.Scenarios) = %d, want 7", len(promtest.Scenarios))
 	}
 	for _, s := range promtest.Scenarios {
 		if s.Start != "" || s.End != "" {

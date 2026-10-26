@@ -16,7 +16,6 @@ func TestDefaultMatchesSpec(t *testing.T) {
 	want := Config{
 		Metrics: Metrics{
 			URL:            "",
-			EndpointType:   "auto",
 			TokenEnv:       "",
 			TLSVerify:      true,
 			CABundle:       "",

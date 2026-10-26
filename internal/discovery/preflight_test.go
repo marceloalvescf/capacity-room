@@ -20,7 +20,6 @@ import (
 func preflightConfig(url string, scenario promtest.Scenario) config.Config {
 	cfg := config.Default()
 	cfg.Metrics.URL = url + scenario.APIRoot
-	cfg.Metrics.EndpointType = scenario.EndpointType
 	cfg.Cluster.Name = "prod"
 	cfg.Cluster.Namespaces = []string{"payments"}
 	cfg.Analysis.NodeAutoscaling = scenario.NodeAutoscaling
@@ -46,9 +45,6 @@ func TestRunPreflightAgainstTheFakeServer(t *testing.T) {
 	}
 	if got.Client == nil {
 		t.Fatal("Client is nil")
-	}
-	if got.Client.Kind() != "prometheus" {
-		t.Errorf("Client.Kind() = %q, want %q", got.Client.Kind(), "prometheus")
 	}
 	if got.Scope.ClusterName != "prod" {
 		t.Errorf("Scope.ClusterName = %q, want %q", got.Scope.ClusterName, "prod")
@@ -84,7 +80,6 @@ func TestRunPreflightStopsAtTheFirstFailure(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.Metrics.URL = ts.URL + "/api/v1"
-	cfg.Metrics.EndpointType = "prometheus"
 	cfg.Cluster.Name = "prod"
 	cfg.Cluster.Namespaces = []string{"payments"}
 
@@ -113,7 +108,6 @@ func TestRunPreflightInsufficient(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.Metrics.URL = ts.URL + "/api/v1"
-	cfg.Metrics.EndpointType = "prometheus"
 	cfg.Cluster.Name = "prod"
 	cfg.Cluster.Namespaces = []string{"payments"}
 	cfg.Cluster.FilterMode = "none"

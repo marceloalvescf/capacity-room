@@ -50,14 +50,9 @@ func TestCanonicalEndpointValidatesEveryCandidate(t *testing.T) {
 	}
 }
 
-func TestCanonicalEndpointGrafanaNeedsDatasource(t *testing.T) {
-	var pe *netpolicy.Error
-	_, err := CanonicalEndpoint(netpolicy.Policy{}, "https://grafana.internal", "grafana")
-	if !errors.As(err, &pe) || pe.Code != netpolicy.CodeURLRejected {
-		t.Fatalf("err = %v", err)
-	}
-	got, err := CanonicalEndpoint(netpolicy.Policy{}, "https://grafana.internal/api/datasources/proxy/1", "grafana")
-	if err != nil || got != "https://grafana.internal/api/datasources/proxy/1" {
+func TestCanonicalEndpointIgnoresTheGrafanaPath(t *testing.T) {
+	got, err := CanonicalEndpoint(netpolicy.Policy{}, "https://grafana.internal", "grafana")
+	if err != nil || got != "https://grafana.internal" {
 		t.Fatalf("got %q, %v", got, err)
 	}
 }

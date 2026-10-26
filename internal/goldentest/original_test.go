@@ -1718,11 +1718,11 @@ func readQueriesLines(t *testing.T, path string) []string {
 // mode configured, or no ConfigMap found, only the probe is asked.
 var (
 	originalAutoscalerQueries = map[string]int{
-		"direct-complete": 7, "grafana-authenticated": 7, "thanos-multicluster": 7, "raw-fallback": 7,
+		"direct-complete": 7, "thanos-multicluster": 7, "raw-fallback": 7,
 		"partial-data": 7, "value-edge-cases": 1, "edge-values": 7, "edge-scaling": 7,
 	}
 	projectAutoscalerQueries = map[string]int{
-		"direct-complete": 6, "grafana-authenticated": 6, "thanos-multicluster": 6, "raw-fallback": 6,
+		"direct-complete": 6, "thanos-multicluster": 6, "raw-fallback": 6,
 		"partial-data": 1, "value-edge-cases": 1, "edge-values": 6, "edge-scaling": 6,
 	}
 )

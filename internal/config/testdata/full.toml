@@ -1,6 +1,5 @@
 [metrics]
 url = "https://prom.example.org/api/v1"
-endpoint_type = "prometheus"
 token_env = "CAPACITYROOM_FULL_TOKEN"
 tls_verify = false
 ca_bundle = "testdata/ca.pem"

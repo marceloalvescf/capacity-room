@@ -21,7 +21,7 @@ var sectionOrder = []string{"metrics", "cluster", "analysis", "thresholds", "rep
 
 // sectionKeys is the allow-list of keys for each section of sectionOrder.
 var sectionKeys = map[string][]string{
-	"metrics":    {"url", "endpoint_type", "token_env", "tls_verify", "ca_bundle", "timeout_seconds"},
+	"metrics":    {"url", "token_env", "tls_verify", "ca_bundle", "timeout_seconds"},
 	"cluster":    {"name", "namespaces", "label", "filter_mode", "nodepool_label"},
 	"analysis":   {"period", "start", "end", "timezone", "node_autoscaling", "excluded_containers"},
 	"thresholds": {"warning_percent", "critical_percent", "low_utilization_percent", "autoscaler_near_max_percent", "nodepool_spread_points", "bursty_gap_percent", "hpa_replica_divergence"},
@@ -34,7 +34,6 @@ var sectionKeys = map[string][]string{
 type tomlConfig struct {
 	Metrics struct {
 		URL            string  `toml:"url"`
-		EndpointType   string  `toml:"endpoint_type"`
 		TokenEnv       string  `toml:"token_env"`
 		TLSVerify      bool    `toml:"tls_verify"`
 		CABundle       string  `toml:"ca_bundle"`
@@ -77,7 +76,6 @@ type tomlConfig struct {
 func fromConfig(c Config) tomlConfig {
 	var t tomlConfig
 	t.Metrics.URL = c.Metrics.URL
-	t.Metrics.EndpointType = c.Metrics.EndpointType
 	t.Metrics.TokenEnv = c.Metrics.TokenEnv
 	t.Metrics.TLSVerify = c.Metrics.TLSVerify
 	t.Metrics.CABundle = c.Metrics.CABundle
@@ -113,7 +111,6 @@ func toConfig(t tomlConfig) Config {
 	return Config{
 		Metrics: Metrics{
 			URL:            t.Metrics.URL,
-			EndpointType:   t.Metrics.EndpointType,
 			TokenEnv:       t.Metrics.TokenEnv,
 			TLSVerify:      t.Metrics.TLSVerify,
 			CABundle:       t.Metrics.CABundle,
@@ -336,9 +333,6 @@ func applyEnvironment(cfg *Config, getenv func(string) string) error {
 	if v := getenv("CAPACITYROOM_METRICS_URL"); v != "" {
 		cfg.Metrics.URL = v
 	}
-	if v := getenv("CAPACITYROOM_ENDPOINT_TYPE"); v != "" {
-		cfg.Metrics.EndpointType = v
-	}
 	if v := getenv("CAPACITYROOM_CLUSTER"); v != "" {
 		cfg.Cluster.Name = v
 	}
@@ -386,9 +380,6 @@ func applyEnvironment(cfg *Config, getenv func(string) string) error {
 func applyFlags(cfg *Config, flags Flags) error {
 	if flags.MetricsURL != nil {
 		cfg.Metrics.URL = *flags.MetricsURL
-	}
-	if flags.EndpointType != nil {
-		cfg.Metrics.EndpointType = *flags.EndpointType
 	}
 	if flags.Cluster != nil {
 		cfg.Cluster.Name = *flags.Cluster

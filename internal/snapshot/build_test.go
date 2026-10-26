@@ -104,7 +104,6 @@ func baseInput() Input {
 		Config: config.Config{
 			Metrics: config.Metrics{
 				URL:            "https://prom.example.org", // never read by Build
-				EndpointType:   "auto",                     // never read by Build
 				TLSVerify:      true,
 				TimeoutSeconds: 42,
 			},
@@ -136,7 +135,6 @@ func baseInput() Input {
 				Author:         "capacity-bot",
 			},
 		},
-		EndpointKind: "prometheus",
 		Scope: discovery.Scope{
 			ClusterName:      "prod",
 			ClusterLabel:     "cluster",
@@ -218,9 +216,6 @@ func TestBuildCopiesEveryField(t *testing.T) {
 		t.Errorf("Thresholds.HPAReplicaDivergence = %v, want %v", snap.Report.Thresholds.HPAReplicaDivergence, th.HPAReplicaDivergence)
 	}
 
-	if snap.Report.Settings.EndpointType != in.EndpointKind {
-		t.Errorf("Settings.EndpointType = %q, want %q (the answering kind, not config.metrics.endpoint_type)", snap.Report.Settings.EndpointType, in.EndpointKind)
-	}
 	if snap.Report.Settings.TLSVerify != in.Config.Metrics.TLSVerify {
 		t.Errorf("Settings.TLSVerify = %v, want %v", snap.Report.Settings.TLSVerify, in.Config.Metrics.TLSVerify)
 	}
@@ -314,7 +309,6 @@ func TestBuildEveryFieldChangesTheBytes(t *testing.T) {
 			in.EmittedAt = in.EmittedAt.Add(time.Hour)
 			in.Window = windowFor(in.Config.Analysis, in.EmittedAt)
 		}},
-		{"Input.EndpointKind", func(in *Input) { in.EndpointKind = "grafana" }},
 		{"Input.Scope.ClusterName", func(in *Input) {
 			in.Scope.ClusterName = "other"
 		}},

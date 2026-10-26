@@ -20,8 +20,7 @@ import (
 	"github.com/marceloalvescf/capacity-room/internal/discovery"
 )
 
-// validProfiles, validFilterModes, validEndpointTypes, and
-// validNodeAutoscaling are the values of the configuration that report and
+// validProfiles, validFilterModes, and validNodeAutoscaling are the values of the configuration that report and
 // settings may hold. They are written here as literals, not read from
 // internal/config, so that a stored file keeps its meaning even if config's
 // own rules change later.
@@ -38,7 +37,6 @@ import (
 var (
 	validProfiles        = []string{"detailed", "executive"}
 	validFilterModes     = []string{"required", "auto", "none"}
-	validEndpointTypes   = []string{"prometheus", "grafana"}
 	validNodeAutoscaling = []string{"auto", "enabled", "disabled"}
 	validConfidences     = []string{discovery.ConfidenceExact, discovery.ConfidenceInferred, discovery.ConfidenceUnknown}
 
@@ -480,9 +478,6 @@ func (s Snapshot) Check() error {
 		return err
 	}
 	if err := checkEnum("scope.confidence", s.Scope.Confidence, validConfidences); err != nil {
-		return err
-	}
-	if err := checkEnum("report.settings.endpoint_type", s.Report.Settings.EndpointType, validEndpointTypes); err != nil {
 		return err
 	}
 

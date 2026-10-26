@@ -881,10 +881,10 @@ func TestSnapshotFileRefusals(t *testing.T) {
 	}{
 		{"missing file", func(t *testing.T) string { return filepath.Join(t.TempDir(), "missing.json") }},
 		{"other schema version", func(t *testing.T) string {
-			return writeVariant(t, []byte(strings.Replace(string(golden), `"schema_version": "3.0"`, `"schema_version": "9.9"`, 1)))
+			return writeVariant(t, []byte(strings.Replace(string(golden), `"schema_version": "4.0"`, `"schema_version": "9.9"`, 1)))
 		}},
 		{"unknown key", func(t *testing.T) string {
-			return writeVariant(t, []byte(strings.Replace(string(golden), "\"schema_version\": \"3.0\",", "\"schema_version\": \"3.0\", \"bogus\": true,", 1)))
+			return writeVariant(t, []byte(strings.Replace(string(golden), "\"schema_version\": \"4.0\",", "\"schema_version\": \"4.0\", \"bogus\": true,", 1)))
 		}},
 		{"two documents", func(t *testing.T) string {
 			return writeVariant(t, append(append([]byte{}, golden...), golden...))
@@ -1568,7 +1568,6 @@ func TestCheckPrintsNoCollectionLine(t *testing.T) {
 func emptyPeriodConfig(server *httptest.Server, scenario promtest.Scenario, outDir string) string {
 	return fmt.Sprintf(`[metrics]
 url = %q
-endpoint_type = %q
 
 [cluster]
 name = "prod"
@@ -1581,7 +1580,7 @@ node_autoscaling = %q
 
 [report]
 output_directory = %q
-`, server.URL+scenario.APIRoot, scenario.EndpointType, scenario.NodeAutoscaling, outDir)
+`, server.URL+scenario.APIRoot, scenario.NodeAutoscaling, outDir)
 }
 
 // TestEmptyPeriodStopsBeforeAnyRequest proves that a period the zone's own
@@ -1774,7 +1773,7 @@ func TestCommandStopsOnASlash(t *testing.T) {
 // missing key: it is read straight from internal/snapshot's own fixture,
 // never copied.
 func TestFromSnapshotRefusesASnapshotOfThePartBefore(t *testing.T) {
-	snapPath, err := filepath.Abs(filepath.Join("..", "snapshot", "testdata", "schema-3.0-before-rows.json"))
+	snapPath, err := filepath.Abs(filepath.Join("..", "snapshot", "testdata", "schema-4.0-before-rows.json"))
 	if err != nil {
 		t.Fatalf("resolving path: %v", err)
 	}
