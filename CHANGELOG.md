@@ -6,10 +6,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-10-26
+
 ### Added
 
 - In every table whose rows open, J or Down moves the focus to the next row and K or Up to the previous one, while a row's open button has the focus.
-- The Helm chart is published as the OCI chart `oci://ghcr.io/marceloalvescf/charts/capacity-room`, so it installs without a checkout of the repository.
+- The Helm chart is published as the OCI chart `oci://ghcr.io/marceloalvescf/charts/capacity-room` with its examples, and the guide installs it from the chart's folder.
 
 ### Security
 
