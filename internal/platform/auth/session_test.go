@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -583,9 +582,7 @@ func TestLoginWaitsForItsClientsTurn(t *testing.T) {
 		_, err := f.sessions.Login(ctx, "admin", adminPassword, testAddress, "")
 		errs <- err
 	}()
-	for f.sessions.clients.users(clientKey(testAddress)) != 2 {
-		runtime.Gosched()
-	}
+	waitUsers(t, &f.sessions.clients, clientKey(testAddress), 2)
 
 	if _, err := f.sessions.Login(context.Background(), "reader", readerPassword, other, ""); err != nil {
 		t.Fatalf("another client was held: %v", err)
