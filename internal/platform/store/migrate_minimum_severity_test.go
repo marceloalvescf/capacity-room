@@ -59,7 +59,7 @@ func carriedReports(t *testing.T) []carriedReport {
 		out = append(out, carriedReport{
 			name:      c.name,
 			old:       fileOf(t, "testdata/schema-2.0/"+c.name+".json"),
-			want:      fileOf(t, "../../../testdata/snapshot/"+c.name+".json"),
+			want:      fileOf(t, "testdata/schema-3.0/"+c.name+".json"),
 			request:   `{"language":"en","period":"24h","min_severity":"` + c.request + `"}`,
 			stored:    str("critical"),
 			wantWorst: str("critical"),
@@ -70,7 +70,7 @@ func carriedReports(t *testing.T) []carriedReport {
 	// Every finding of attention at most: 2.8 stored healthy under the floor
 	// "critical", and the report now shows its attention findings.
 	attentionOld := strings.ReplaceAll(fileOf(t, "testdata/schema-2.0/direct-complete.json"), `"severity": "critical"`, `"severity": "attention"`)
-	attentionWant := strings.ReplaceAll(fileOf(t, "../../../testdata/snapshot/direct-complete.json"), `"severity": "critical"`, `"severity": "attention"`)
+	attentionWant := strings.ReplaceAll(fileOf(t, "testdata/schema-3.0/direct-complete.json"), `"severity": "critical"`, `"severity": "attention"`)
 	out = append(out, carriedReport{
 		name: "attention-only", old: attentionOld, want: attentionWant,
 		request: `{"language":"en","period":"24h","min_severity":"critical"}`,
@@ -89,7 +89,7 @@ func carriedReports(t *testing.T) []carriedReport {
 	// jsonb refuses \u0000: the body is carried forward as text and the
 	// stored worst severity is left as it was.
 	nulOld := strings.Replace(fileOf(t, "testdata/schema-2.0/direct-complete.json"), `"organization": "ACME"`, `"organization": "A\u0000CME"`, 1)
-	nulWant := strings.Replace(fileOf(t, "../../../testdata/snapshot/direct-complete.json"), `"organization": "ACME"`, `"organization": "A\u0000CME"`, 1)
+	nulWant := strings.Replace(fileOf(t, "testdata/schema-3.0/direct-complete.json"), `"organization": "ACME"`, `"organization": "A\u0000CME"`, 1)
 	out = append(out, carriedReport{
 		name: "nul-escape", old: nulOld, want: nulWant,
 		request: `{"language":"en","period":"24h","min_severity":"all"}`,
@@ -98,7 +98,7 @@ func carriedReports(t *testing.T) []carriedReport {
 
 	// A report collected before the summary existed keeps no worst severity.
 	out = append(out, carriedReport{
-		name: "no-summary", old: fileOf(t, "testdata/schema-2.0/direct-complete.json"), want: fileOf(t, "../../../testdata/snapshot/direct-complete.json"),
+		name: "no-summary", old: fileOf(t, "testdata/schema-2.0/direct-complete.json"), want: fileOf(t, "testdata/schema-3.0/direct-complete.json"),
 		request:   `{"language":"en","period":"24h","min_severity":"all"}`,
 		collected: true, snapshot: true,
 	})
@@ -170,7 +170,7 @@ VALUES ($1, '2.0', $2, $3, $4, now())`, ids[i], []byte(c.old), hex.EncodeToStrin
 		}
 	}
 
-	if _, err := provider.Up(ctx); err != nil {
+	if _, err := provider.UpTo(ctx, 8); err != nil {
 		t.Fatalf("migrate to 8: %v", err)
 	}
 
@@ -251,7 +251,7 @@ func TestMigrationEightRefusesASnapshotItCannotCarry(t *testing.T) {
 		t.Fatal(err)
 	}
 	seedReport(ctx, t, pool, strings.Replace(fileOf(t, "testdata/schema-2.0/direct-complete.json"), "\n    \"min_severity\": \"all\",", "\n    \"min_severity\": \"all\",\n    \"min_severity\": \"all\",", 1))
-	if _, err := provider.Up(ctx); err == nil {
+	if _, err := provider.UpTo(ctx, 8); err == nil {
 		t.Fatal("a snapshot that keeps its minimum severity must stop the migration")
 	}
 	if version, err := provider.GetDBVersion(ctx); err != nil || version != 7 {
