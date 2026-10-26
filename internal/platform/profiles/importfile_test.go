@@ -85,6 +85,8 @@ func TestReadImportFileRefusals(t *testing.T) {
 		{"api_key", head + "api_key = \"x\"\n", "unknown key profiles.api_key"},
 		{"ca_bundle", head + "ca_bundle = \"/x\"\n", "unknown key profiles.ca_bundle"},
 		{"ca_bundle_path", head + "ca_bundle_path = \"/x\"\n", "unknown key profiles.ca_bundle_path"},
+		{"default_min_severity", head + "default_min_severity = \"all\"\n", "unknown key profiles.default_min_severity"},
+		{"permitted_min_severities", head + "permitted_min_severities = [\"all\"]\n", "unknown key profiles.permitted_min_severities"},
 		{"unknown threshold", head + "[profiles.thresholds]\nloud = 1\n", "unknown key profiles.thresholds.loud"},
 		{"repeated id", head + head, "profile a is repeated"},
 		{"missing id", strings.Replace(head, "id = \"a\"\n", "", 1), "profile 1: id invalid"},

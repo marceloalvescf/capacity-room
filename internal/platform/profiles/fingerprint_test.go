@@ -73,7 +73,7 @@ func TestCanonicalJSONIsStable(t *testing.T) {
 }
 
 func TestFingerprintUsesTheCapacityRoomDomain(t *testing.T) {
-	const want = "d2586307634bff3fa133e3d74952eeda07c5908d35c6b3a0fc6e2a79298047ee"
+	const want = "60469c00afde439529af05ea88c5fe89459b1b757414d2a7383e97520e51b435"
 	if got := Fingerprint(validExample(), nil); got != want {
 		t.Fatalf("Fingerprint = %s, want %s", got, want)
 	}

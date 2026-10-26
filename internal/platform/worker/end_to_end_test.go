@@ -146,7 +146,7 @@ func TestReportEndToEnd(t *testing.T) {
 	if err := json.Unmarshal(requested.Request, &r); err != nil {
 		t.Fatal(err)
 	}
-	cfg := rev.Document.RunConfig(r.Period, r.Start, r.End, r.Timezone, r.ReportProfile, r.MinSeverity, r.Namespaces)
+	cfg := rev.Document.RunConfig(r.Period, r.Start, r.End, r.Timezone, r.ReportProfile, r.Namespaces)
 	opts, err := e.profiles.Source(rev.Document, cfg.Metrics)
 	if err != nil {
 		t.Fatal(err)

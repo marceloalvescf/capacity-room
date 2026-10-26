@@ -468,7 +468,7 @@ func TestCollectStoresTheSnapshot(t *testing.T) {
 	if err := json.Unmarshal(report.Request, &r); err != nil {
 		t.Fatal(err)
 	}
-	cfg := rev.Document.RunConfig(r.Period, r.Start, r.End, r.Timezone, r.ReportProfile, r.MinSeverity, r.Namespaces)
+	cfg := rev.Document.RunConfig(r.Period, r.Start, r.End, r.Timezone, r.ReportProfile, r.Namespaces)
 	opts, err := e.profiles.Source(rev.Document, cfg.Metrics)
 	if err != nil {
 		t.Fatal(err)
@@ -1005,7 +1005,7 @@ func TestCollectRunsAnInactiveRevision(t *testing.T) {
 		t.Fatal("the revision is still active")
 	}
 	request, err := json.Marshal(reports.Resolved{
-		Namespaces: []string{"payments"}, Period: "24h", Timezone: "America/Sao_Paulo", ReportProfile: "detailed", MinSeverity: "all", Language: "en",
+		Namespaces: []string{"payments"}, Period: "24h", Timezone: "America/Sao_Paulo", ReportProfile: "detailed", Language: "en",
 	})
 	if err != nil {
 		t.Fatal(err)

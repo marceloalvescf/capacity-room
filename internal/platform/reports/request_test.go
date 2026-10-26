@@ -49,7 +49,7 @@ func TestRequestStoresAndQueues(t *testing.T) {
 	if err := json.Unmarshal(r.Request, &stored); err != nil {
 		t.Fatal(err)
 	}
-	want := Resolved{Namespaces: []string{"payments", "billing"}, Period: "24h", Timezone: "America/Sao_Paulo", ReportProfile: "detailed", MinSeverity: "all", Language: "en"}
+	want := Resolved{Namespaces: []string{"payments", "billing"}, Period: "24h", Timezone: "America/Sao_Paulo", ReportProfile: "detailed", Language: "en"}
 	if !reflect.DeepEqual(stored, want) {
 		t.Fatalf("stored selection = %+v, want %+v", stored, want)
 	}
@@ -343,7 +343,6 @@ func TestRequestSyntax(t *testing.T) {
 		{"period empty", func(s *Selection) { s.Period = ptr("") }, "period", "invalid"},
 		{"timezone invalid", func(s *Selection) { s.Timezone = ptr("Nowhere/Land") }, "timezone", "invalid"},
 		{"report profile invalid", func(s *Selection) { s.ReportProfile = ptr("full") }, "report_profile", "invalid"},
-		{"min severity invalid", func(s *Selection) { s.MinSeverity = ptr("warning") }, "min_severity", "invalid"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -589,7 +588,7 @@ func TestRequestStoresTheDigest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if digest != "d7b88d2ce0f570e772b732b3da3570d7df393ce531168ba0e3e9866aae88c5d9" {
+	if digest != "74cd3960b2b7a10abbf912157fc707527a502e0a16203757545f1d6cfead31df" {
 		t.Fatalf("digest = %s", digest)
 	}
 }
@@ -689,7 +688,7 @@ func TestRequestStoresARange(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := Resolved{Namespaces: []string{"payments"}, Period: "", Start: "2026-09-01 00:00", End: "2026-10-01 00:00",
-		Timezone: "America/Sao_Paulo", ReportProfile: "detailed", MinSeverity: "all", Language: "en"}
+		Timezone: "America/Sao_Paulo", ReportProfile: "detailed", Language: "en"}
 	if !reflect.DeepEqual(stored, want) {
 		t.Fatalf("stored selection = %+v, want %+v", stored, want)
 	}

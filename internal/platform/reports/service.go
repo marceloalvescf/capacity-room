@@ -87,7 +87,6 @@ type Selection struct {
 	End           *string  `json:"end"`
 	Timezone      *string  `json:"timezone"`
 	ReportProfile *string  `json:"report_profile"`
-	MinSeverity   *string  `json:"min_severity"`
 	Language      *string  `json:"language"`
 }
 
@@ -99,7 +98,6 @@ type Resolved struct {
 	End           string   `json:"end"`
 	Timezone      string   `json:"timezone"`
 	ReportProfile string   `json:"report_profile"`
-	MinSeverity   string   `json:"min_severity"`
 	Language      string   `json:"language"`
 }
 

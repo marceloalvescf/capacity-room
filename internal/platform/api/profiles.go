@@ -95,7 +95,6 @@ func (s *Server) listProfileSummaries(w http.ResponseWriter, r *http.Request, _ 
 			PermittedPeriods: p.PermittedPeriods, DefaultPeriod: p.DefaultPeriod,
 			PermittedTimezones: p.PermittedTimezones, DefaultTimezone: p.DefaultTimezone,
 			PermittedReportProfiles: p.PermittedReportProfiles, DefaultReportProfile: p.DefaultReportProfile,
-			PermittedMinSeverities: p.PermittedMinSeverities, DefaultMinSeverity: p.DefaultMinSeverity,
 		})
 	}
 	writeJSON(w, http.StatusOK, list)
@@ -162,14 +161,8 @@ func documentOf(b ProfileCreate) profiles.Document {
 			d.PermittedReportProfiles = append(d.PermittedReportProfiles, string(v))
 		}
 	}
-	if b.PermittedMinSeverities != nil {
-		d.PermittedMinSeverities = make([]string, 0, len(*b.PermittedMinSeverities))
-		for _, v := range *b.PermittedMinSeverities {
-			d.PermittedMinSeverities = append(d.PermittedMinSeverities, string(v))
-		}
-	}
 	d.DefaultPeriod, d.DefaultTimezone = b.DefaultPeriod, b.DefaultTimezone
-	d.DefaultReportProfile, d.DefaultMinSeverity = b.DefaultReportProfile, b.DefaultMinSeverity
+	d.DefaultReportProfile = b.DefaultReportProfile
 	if t := b.Thresholds; t != nil {
 		for dst, src := range map[*float64]*float64{
 			&d.Thresholds.WarningPercent: t.WarningPercent, &d.Thresholds.CriticalPercent: t.CriticalPercent,

@@ -400,7 +400,6 @@ export interface components {
             end: string | null;
             timezone: string;
             report_profile: components["schemas"]["ReportProfile"];
-            min_severity: components["schemas"]["MinSeverity"];
             language: components["schemas"]["Language"];
         };
         /** @description A selection; a field left out or null takes the profile's default, except the language, which is required. */
@@ -416,8 +415,6 @@ export interface components {
             timezone?: string | null;
             /** @description detailed or executive. */
             report_profile?: string | null;
-            /** @description all, attention, or critical. */
-            min_severity?: string | null;
         };
         ReportAccepted: {
             /** Format: uuid */
@@ -453,7 +450,7 @@ export interface components {
             expired: boolean;
             /** @description null in the list when the stored request cannot be read; the report itself then answers 500. */
             selection: components["schemas"]["ReportSelection"] | null;
-            /** @description The worst severity among the findings the report shows, its minimum severity applied; healthy when it shows none. Set when the collection is stored; null before, and for a report collected before 1.6.0. */
+            /** @description The worst severity among the findings the report shows, its report profile's floor applied; healthy when it shows none. Set when the collection is stored; null before, and for a report collected before 1.6.0. */
             worst_severity: components["schemas"]["Severity"] | null;
             /** @description The cluster name of the snapshot. Set when the collection is stored; null before, and for a report collected before 1.6.0. */
             cluster_name: string | null;
@@ -608,8 +605,6 @@ export interface components {
         NodeAutoscaling: "auto" | "enabled" | "disabled";
         /** @enum {string} */
         ReportProfile: "detailed" | "executive";
-        /** @enum {string} */
-        MinSeverity: "all" | "attention" | "critical";
         /** @description The seven thresholds of a report; a key left out keeps its value. */
         ProfileThresholds: {
             /** Format: double */
@@ -665,9 +660,6 @@ export interface components {
             permitted_report_profiles?: components["schemas"]["ReportProfile"][];
             /** @description detailed or executive; null means detailed. */
             default_report_profile?: string | null;
-            permitted_min_severities?: components["schemas"]["MinSeverity"][];
-            /** @description all, attention, or critical; null means all. */
-            default_min_severity?: string | null;
             thresholds?: components["schemas"]["ProfileThresholds"];
         };
         /** @description The body of POST /admin/profiles; a field left out takes its default. */
@@ -712,8 +704,6 @@ export interface components {
             default_timezone: string;
             permitted_report_profiles: string[];
             default_report_profile: string;
-            permitted_min_severities: string[];
-            default_min_severity: string;
         };
         ProfileSummaryList: {
             profiles: components["schemas"]["ProfileSummary"][];
@@ -2226,7 +2216,6 @@ export const endpointTypeValues: ReadonlyArray<FlattenedDeepRequired<components>
 export const filterModeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FilterMode"]> = ["required", "auto", "none"];
 export const nodeAutoscalingValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["NodeAutoscaling"]> = ["auto", "enabled", "disabled"];
 export const reportProfileValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportProfile"]> = ["detailed", "executive"];
-export const minSeverityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["MinSeverity"]> = ["all", "attention", "critical"];
 export const profileTestCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ProfileTestCode"]> = ["PROFILE_OK", "ENDPOINT_URL_REJECTED", "ENDPOINT_ADDRESS_REJECTED", "ENDPOINT_RESOLUTION_FAILED", "ENDPOINT_CONNECTION_REJECTED", "ENDPOINT_REDIRECT_REJECTED", "PROFILE_CREDENTIAL_UNAVAILABLE", "PROFILE_CA_BUNDLE_UNAVAILABLE", "ENDPOINT_TLS_FAILED", "ENDPOINT_AUTH_REJECTED", "ENDPOINT_API_NOT_FOUND", "ENDPOINT_UNREACHABLE", "CLUSTER_SCOPE_NOT_FOUND", "CAPABILITIES_INSUFFICIENT"];
 export const viewSeverityValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewSeverity"]> = ["healthy", "attention", "critical"];
 export const viewScopeTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ViewScopeType"]> = ["namespace", "workload", "hpa", "node", "nodepool", "cluster"];

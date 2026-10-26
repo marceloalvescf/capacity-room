@@ -216,7 +216,7 @@ func (w *CollectWorker) collect(ctx context.Context, job *river.Job[reports.Coll
 	if _, err := catalog.ParseLanguage(r.Language); err != nil {
 		return fmt.Errorf("stored request of report %s: %w", id, err)
 	}
-	cfg := rev.Document.RunConfig(r.Period, r.Start, r.End, r.Timezone, r.ReportProfile, r.MinSeverity, r.Namespaces)
+	cfg := rev.Document.RunConfig(r.Period, r.Start, r.End, r.Timezone, r.ReportProfile, r.Namespaces)
 	opts, err := d.Profiles.Source(rev.Document, cfg.Metrics)
 	if err != nil {
 		return err

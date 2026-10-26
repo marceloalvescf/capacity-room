@@ -69,27 +69,6 @@ func (e Language) Valid() bool {
 	}
 }
 
-// Defines values for MinSeverity.
-const (
-	MinSeverityAll       MinSeverity = "all"
-	MinSeverityAttention MinSeverity = "attention"
-	MinSeverityCritical  MinSeverity = "critical"
-)
-
-// Valid indicates whether the value is a known member of the MinSeverity enum.
-func (e MinSeverity) Valid() bool {
-	switch e {
-	case MinSeverityAll:
-		return true
-	case MinSeverityAttention:
-		return true
-	case MinSeverityCritical:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for NodeAutoscaling.
 const (
 	NodeAutoscalingAuto     NodeAutoscaling = "auto"
@@ -398,19 +377,19 @@ func (e Role) Valid() bool {
 
 // Defines values for Severity.
 const (
-	SeverityAttention Severity = "attention"
-	SeverityCritical  Severity = "critical"
-	SeverityHealthy   Severity = "healthy"
+	Attention Severity = "attention"
+	Critical  Severity = "critical"
+	Healthy   Severity = "healthy"
 )
 
 // Valid indicates whether the value is a known member of the Severity enum.
 func (e Severity) Valid() bool {
 	switch e {
-	case SeverityAttention:
+	case Attention:
 		return true
-	case SeverityCritical:
+	case Critical:
 		return true
-	case SeverityHealthy:
+	case Healthy:
 		return true
 	default:
 		return false
@@ -489,9 +468,6 @@ type LoginRequest struct {
 	Username string `json:"username"`
 }
 
-// MinSeverity defines model for MinSeverity.
-type MinSeverity string
-
 // NewUser defines model for NewUser.
 type NewUser struct {
 	Language *Language `json:"language,omitempty"`
@@ -550,9 +526,6 @@ type Profile struct {
 	// CredentialFile A file name under the credential folder; empty means no credential.
 	CredentialFile string `json:"credential_file"`
 
-	// DefaultMinSeverity all, attention, or critical; null means all.
-	DefaultMinSeverity *string `json:"default_min_severity"`
-
 	// DefaultPeriod Null means 24h; must be within permitted_periods when that list is not empty.
 	DefaultPeriod *string `json:"default_period"`
 
@@ -572,8 +545,7 @@ type Profile struct {
 	NodeAutoscaling    NodeAutoscaling `json:"node_autoscaling"`
 
 	// NodepoolLabel A Prometheus label name, or empty.
-	NodepoolLabel          string        `json:"nodepool_label"`
-	PermittedMinSeverities []MinSeverity `json:"permitted_min_severities"`
+	NodepoolLabel string `json:"nodepool_label"`
 
 	// PermittedPeriods Empty means unrestricted.
 	PermittedPeriods        []string        `json:"permitted_periods"`
@@ -611,9 +583,6 @@ type ProfileChange struct {
 	// CredentialFile A file name under the credential folder; empty means no credential.
 	CredentialFile *string `json:"credential_file,omitempty"`
 
-	// DefaultMinSeverity all, attention, or critical; null means all.
-	DefaultMinSeverity *string `json:"default_min_severity,omitempty"`
-
 	// DefaultPeriod Null means 24h; must be within permitted_periods when that list is not empty.
 	DefaultPeriod *string `json:"default_period,omitempty"`
 
@@ -632,8 +601,7 @@ type ProfileChange struct {
 	NodeAutoscaling    *NodeAutoscaling `json:"node_autoscaling,omitempty"`
 
 	// NodepoolLabel A Prometheus label name, or empty.
-	NodepoolLabel          *string        `json:"nodepool_label,omitempty"`
-	PermittedMinSeverities *[]MinSeverity `json:"permitted_min_severities,omitempty"`
+	NodepoolLabel *string `json:"nodepool_label,omitempty"`
 
 	// PermittedPeriods Empty means unrestricted.
 	PermittedPeriods        *[]string        `json:"permitted_periods,omitempty"`
@@ -666,9 +634,6 @@ type ProfileCreate struct {
 	// CredentialFile A file name under the credential folder; empty means no credential.
 	CredentialFile *string `json:"credential_file,omitempty"`
 
-	// DefaultMinSeverity all, attention, or critical; null means all.
-	DefaultMinSeverity *string `json:"default_min_severity,omitempty"`
-
 	// DefaultPeriod Null means 24h; must be within permitted_periods when that list is not empty.
 	DefaultPeriod *string `json:"default_period,omitempty"`
 
@@ -690,8 +655,7 @@ type ProfileCreate struct {
 	NodeAutoscaling *NodeAutoscaling `json:"node_autoscaling,omitempty"`
 
 	// NodepoolLabel A Prometheus label name, or empty.
-	NodepoolLabel          *string        `json:"nodepool_label,omitempty"`
-	PermittedMinSeverities *[]MinSeverity `json:"permitted_min_severities,omitempty"`
+	NodepoolLabel *string `json:"nodepool_label,omitempty"`
 
 	// PermittedPeriods Empty means unrestricted.
 	PermittedPeriods        *[]string        `json:"permitted_periods,omitempty"`
@@ -724,9 +688,6 @@ type ProfileDocument struct {
 	// CredentialFile A file name under the credential folder; empty means no credential.
 	CredentialFile *string `json:"credential_file,omitempty"`
 
-	// DefaultMinSeverity all, attention, or critical; null means all.
-	DefaultMinSeverity *string `json:"default_min_severity,omitempty"`
-
 	// DefaultPeriod Null means 24h; must be within permitted_periods when that list is not empty.
 	DefaultPeriod *string `json:"default_period,omitempty"`
 
@@ -745,8 +706,7 @@ type ProfileDocument struct {
 	NodeAutoscaling    *NodeAutoscaling `json:"node_autoscaling,omitempty"`
 
 	// NodepoolLabel A Prometheus label name, or empty.
-	NodepoolLabel          *string        `json:"nodepool_label,omitempty"`
-	PermittedMinSeverities *[]MinSeverity `json:"permitted_min_severities,omitempty"`
+	NodepoolLabel *string `json:"nodepool_label,omitempty"`
 
 	// PermittedPeriods Empty means unrestricted.
 	PermittedPeriods        *[]string        `json:"permitted_periods,omitempty"`
@@ -771,13 +731,11 @@ type ProfileList struct {
 // ProfileSummary An active profile as every signed-in reader sees it; the defaults are resolved.
 type ProfileSummary struct {
 	AllowedNamespaces       []string `json:"allowed_namespaces"`
-	DefaultMinSeverity      string   `json:"default_min_severity"`
 	DefaultPeriod           string   `json:"default_period"`
 	DefaultReportProfile    string   `json:"default_report_profile"`
 	DefaultTimezone         string   `json:"default_timezone"`
 	DisplayName             string   `json:"display_name"`
 	Id                      string   `json:"id"`
-	PermittedMinSeverities  []string `json:"permitted_min_severities"`
 	PermittedPeriods        []string `json:"permitted_periods"`
 	PermittedReportProfiles []string `json:"permitted_report_profiles"`
 	PermittedTimezones      []string `json:"permitted_timezones"`
@@ -844,7 +802,7 @@ type Report struct {
 	StartedAt *time.Time      `json:"started_at"`
 	Status    ReportStatus    `json:"status"`
 
-	// WorstSeverity The worst severity among the findings the report shows, its minimum severity applied; healthy when it shows none. Set when the collection is stored; null before, and for a report collected before 1.6.0.
+	// WorstSeverity The worst severity among the findings the report shows, its report profile's floor applied; healthy when it shows none. Set when the collection is stored; null before, and for a report collected before 1.6.0.
 	WorstSeverity *Severity `json:"worst_severity"`
 }
 
@@ -911,14 +869,11 @@ type ReportProfile string
 // ReportRequest A selection; a field left out or null takes the profile's default, except the language, which is required.
 type ReportRequest struct {
 	// End The last wall time of a calendar range, in the request's resolved time zone; at or before the request time.
-	End      *string  `json:"end,omitempty"`
-	Language Language `json:"language"`
-
-	// MinSeverity all, attention, or critical.
-	MinSeverity *string   `json:"min_severity,omitempty"`
-	Namespaces  *[]string `json:"namespaces,omitempty"`
-	Period      *string   `json:"period,omitempty"`
-	ProfileId   string    `json:"profile_id"`
+	End        *string   `json:"end,omitempty"`
+	Language   Language  `json:"language"`
+	Namespaces *[]string `json:"namespaces,omitempty"`
+	Period     *string   `json:"period,omitempty"`
+	ProfileId  string    `json:"profile_id"`
 
 	// ReportProfile detailed or executive.
 	ReportProfile *string `json:"report_profile,omitempty"`
@@ -931,10 +886,9 @@ type ReportRequest struct {
 // ReportSelection The selection the report runs, with every default resolved.
 type ReportSelection struct {
 	// End The last wall time of a calendar range, in the report's time zone; null for a length.
-	End         *string     `json:"end"`
-	Language    Language    `json:"language"`
-	MinSeverity MinSeverity `json:"min_severity"`
-	Namespaces  []string    `json:"namespaces"`
+	End        *string  `json:"end"`
+	Language   Language `json:"language"`
+	Namespaces []string `json:"namespaces"`
 
 	// Period The length of the period; null for a calendar range.
 	Period        *string       `json:"period"`
@@ -976,7 +930,7 @@ type ReportSummary struct {
 	Selection *ReportSelection `json:"selection"`
 	Status    ReportStatus     `json:"status"`
 
-	// WorstSeverity The worst severity among the findings the report shows, its minimum severity applied; healthy when it shows none. Set when the collection is stored; null before, and for a report collected before 1.6.0.
+	// WorstSeverity The worst severity among the findings the report shows, its report profile's floor applied; healthy when it shows none. Set when the collection is stored; null before, and for a report collected before 1.6.0.
 	WorstSeverity *Severity `json:"worst_severity"`
 }
 

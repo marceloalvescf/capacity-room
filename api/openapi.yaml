@@ -1144,7 +1144,7 @@ components:
     ReportSelection:
       type: object
       description: The selection the report runs, with every default resolved.
-      required: [namespaces, period, start, end, timezone, report_profile, min_severity, language]
+      required: [namespaces, period, start, end, timezone, report_profile, language]
       properties:
         namespaces:
           type: array
@@ -1166,8 +1166,6 @@ components:
           type: string
         report_profile:
           $ref: "#/components/schemas/ReportProfile"
-        min_severity:
-          $ref: "#/components/schemas/MinSeverity"
         language:
           $ref: "#/components/schemas/Language"
     ReportRequest:
@@ -1205,10 +1203,6 @@ components:
           type: string
           nullable: true
           description: detailed or executive.
-        min_severity:
-          type: string
-          nullable: true
-          description: all, attention, or critical.
     ReportAccepted:
       type: object
       required: [id, status, phase, expires_at, replayed]
@@ -1306,8 +1300,8 @@ components:
             - $ref: "#/components/schemas/Severity"
           nullable: true
           description: >-
-            The worst severity among the findings the report shows, its minimum
-            severity applied; healthy when it shows none. Set when the collection
+            The worst severity among the findings the report shows, its report
+            profile's floor applied; healthy when it shows none. Set when the collection
             is stored; null before, and for a report collected before 1.6.0.
         cluster_name:
           type: string
@@ -1654,9 +1648,6 @@ components:
     ReportProfile:
       type: string
       enum: [detailed, executive]
-    MinSeverity:
-      type: string
-      enum: [all, attention, critical]
     ProfileThresholds:
       type: object
       description: The seven thresholds of a report; a key left out keeps its value.
@@ -1762,14 +1753,6 @@ components:
           type: string
           nullable: true
           description: detailed or executive; null means detailed.
-        permitted_min_severities:
-          type: array
-          items:
-            $ref: "#/components/schemas/MinSeverity"
-        default_min_severity:
-          type: string
-          nullable: true
-          description: all, attention, or critical; null means all.
         thresholds:
           $ref: "#/components/schemas/ProfileThresholds"
     ProfileCreate:
@@ -1845,8 +1828,6 @@ components:
             - default_timezone
             - permitted_report_profiles
             - default_report_profile
-            - permitted_min_severities
-            - default_min_severity
             - thresholds
           properties:
             id:
@@ -1885,8 +1866,6 @@ components:
         - default_timezone
         - permitted_report_profiles
         - default_report_profile
-        - permitted_min_severities
-        - default_min_severity
       properties:
         id:
           type: string
@@ -1913,12 +1892,6 @@ components:
           items:
             type: string
         default_report_profile:
-          type: string
-        permitted_min_severities:
-          type: array
-          items:
-            type: string
-        default_min_severity:
           type: string
     ProfileSummaryList:
       type: object

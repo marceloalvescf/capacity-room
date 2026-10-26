@@ -68,8 +68,6 @@ type ImportEntry struct {
 	DefaultTimezone         *string           `toml:"default_timezone"`
 	PermittedReportProfiles *[]string         `toml:"permitted_report_profiles"`
 	DefaultReportProfile    *string           `toml:"default_report_profile"`
-	PermittedMinSeverities  *[]string         `toml:"permitted_min_severities"`
-	DefaultMinSeverity      *string           `toml:"default_min_severity"`
 	Thresholds              *ImportThresholds `toml:"thresholds"`
 
 	Document Document `toml:"-"`
@@ -103,11 +101,9 @@ func (e ImportEntry) document() Document {
 	overlay(&d.PermittedPeriods, e.PermittedPeriods)
 	overlay(&d.PermittedTimezones, e.PermittedTimezones)
 	overlay(&d.PermittedReportProfiles, e.PermittedReportProfiles)
-	overlay(&d.PermittedMinSeverities, e.PermittedMinSeverities)
 	d.DefaultPeriod = e.DefaultPeriod
 	d.DefaultTimezone = e.DefaultTimezone
 	d.DefaultReportProfile = e.DefaultReportProfile
-	d.DefaultMinSeverity = e.DefaultMinSeverity
 	if t := e.Thresholds; t != nil {
 		overlay(&d.Thresholds.WarningPercent, t.WarningPercent)
 		overlay(&d.Thresholds.CriticalPercent, t.CriticalPercent)

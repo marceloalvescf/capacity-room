@@ -230,15 +230,15 @@ func TestGetCarriesTheRequest(t *testing.T) {
 	f := newFixture(t)
 	id := f.seedReport(t, "running", "collecting", fixedNow.Add(time.Hour), "")
 	f.exec(t, `UPDATE reports SET request = $2, attempt = 2, started_at = $3 WHERE id = $1`, id,
-		`{"namespaces":["payments"],"period":"24h","timezone":"UTC","report_profile":"detailed","min_severity":"all","language":"pt-BR"}`, fixedNow)
+		`{"namespaces":["payments"],"period":"24h","timezone":"UTC","report_profile":"detailed","language":"pt-BR"}`, fixedNow)
 	d, err := f.svc.Get(context.Background(), f.read, id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Resolved{Namespaces: []string{"payments"}, Period: "24h", Timezone: "UTC", ReportProfile: "detailed", MinSeverity: "all", Language: "pt-BR"}
+	want := Resolved{Namespaces: []string{"payments"}, Period: "24h", Timezone: "UTC", ReportProfile: "detailed", Language: "pt-BR"}
 	if d.Attempt != 2 || d.StartedAt == nil || d.CollectedAt != nil || d.ProfileRevisionID == uuid.Nil ||
 		!slices.Equal(d.Selection.Namespaces, want.Namespaces) || d.Selection.Period != want.Period ||
-		d.Selection.Timezone != want.Timezone || d.Selection.ReportProfile != want.ReportProfile || d.Selection.MinSeverity != want.MinSeverity ||
+		d.Selection.Timezone != want.Timezone || d.Selection.ReportProfile != want.ReportProfile ||
 		d.Selection.Language != want.Language {
 		t.Fatalf("detail %+v", d)
 	}
@@ -371,12 +371,12 @@ func TestListCarriesTheSelectionOfARange(t *testing.T) {
 	f := newFixture(t)
 	f.seedReport(t, "collected", "complete", fixedNow.Add(time.Hour), "")
 	f.exec(t, `UPDATE reports SET request = $1`,
-		`{"namespaces":["payments","billing"],"start":"2026-10-01 00:00","end":"2026-10-02 00:00","timezone":"UTC","report_profile":"detailed","min_severity":"all","language":"en"}`)
+		`{"namespaces":["payments","billing"],"start":"2026-10-01 00:00","end":"2026-10-02 00:00","timezone":"UTC","report_profile":"detailed","language":"en"}`)
 	page, err := f.svc.List(context.Background(), f.read, "", 10)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Resolved{Namespaces: []string{"payments", "billing"}, Start: "2026-10-01 00:00", End: "2026-10-02 00:00", Timezone: "UTC", ReportProfile: "detailed", MinSeverity: "all", Language: "en"}
+	want := Resolved{Namespaces: []string{"payments", "billing"}, Start: "2026-10-01 00:00", End: "2026-10-02 00:00", Timezone: "UTC", ReportProfile: "detailed", Language: "en"}
 	if len(page.Items) != 1 || !slices.Equal(page.Items[0].Selection.Namespaces, want.Namespaces) ||
 		page.Items[0].Selection.Period != "" || page.Items[0].Selection.Start != want.Start ||
 		page.Items[0].Selection.End != want.End || page.Items[0].Selection.Language != "en" {

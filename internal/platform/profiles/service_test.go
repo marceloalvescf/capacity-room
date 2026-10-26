@@ -203,9 +203,9 @@ func TestCreateStoresCanonicalAndAudits(t *testing.T) {
 	}
 	wantFields := []any{
 		"active", "allowed_namespaces", "ca_bundle_file", "cluster_label", "cluster_name", "credential_file",
-		"default_min_severity", "default_period", "default_report_profile", "default_timezone", "display_name",
+		"default_period", "default_report_profile", "default_timezone", "display_name",
 		"endpoint_type", "endpoint_url", "excluded_containers", "filter_mode", "node_autoscaling", "nodepool_label",
-		"permitted_min_severities", "permitted_periods", "permitted_report_profiles", "permitted_timezones",
+		"permitted_periods", "permitted_report_profiles", "permitted_timezones",
 		"thresholds", "timeout_seconds", "tls_verify",
 	}
 	if !reflect.DeepEqual(got[0].Meta["fields"], wantFields) || got[0].Meta["revision"] != float64(1) || got[0].Meta["revision_id"] != c.RevisionID.String() {
@@ -628,12 +628,11 @@ func TestListActiveSummaries(t *testing.T) {
 		PermittedPeriods: []string{"24h", "7d"}, DefaultPeriod: "7d",
 		PermittedTimezones: []string{}, DefaultTimezone: "America/Sao_Paulo",
 		PermittedReportProfiles: []string{}, DefaultReportProfile: "detailed",
-		PermittedMinSeverities: []string{}, DefaultMinSeverity: "all",
 	}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v", got)
 	}
-	if n := reflect.TypeOf(Summary{}).NumField(); n != 11 {
+	if n := reflect.TypeOf(Summary{}).NumField(); n != 9 {
 		t.Fatalf("%d fields", n)
 	}
 }

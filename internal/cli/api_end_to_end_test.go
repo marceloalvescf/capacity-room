@@ -231,7 +231,7 @@ func TestReportThroughTheAPI(t *testing.T) {
 	if err := json.Unmarshal(stored.Request, &resolved); err != nil {
 		t.Fatal(err)
 	}
-	cfg := rev.Document.RunConfig(resolved.Period, resolved.Start, resolved.End, resolved.Timezone, resolved.ReportProfile, resolved.MinSeverity, resolved.Namespaces)
+	cfg := rev.Document.RunConfig(resolved.Period, resolved.Start, resolved.End, resolved.Timezone, resolved.ReportProfile, resolved.Namespaces)
 	opts, err := service.Source(rev.Document, cfg.Metrics)
 	if err != nil {
 		t.Fatal(err)

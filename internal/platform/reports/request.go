@@ -70,9 +70,6 @@ func checkSyntax(sel Selection) map[string]string {
 	if sel.ReportProfile != nil && !slices.Contains([]string{"detailed", "executive"}, *sel.ReportProfile) {
 		fields["report_profile"] = wordInvalid
 	}
-	if sel.MinSeverity != nil && !slices.Contains([]string{"all", "attention", "critical"}, *sel.MinSeverity) {
-		fields["min_severity"] = wordInvalid
-	}
 	switch {
 	case sel.Language == nil:
 		fields["language"] = wordMissing
@@ -88,7 +85,7 @@ func checkSyntax(sel Selection) map[string]string {
 // resolve fills the defaults of the selection from the document of the
 // pinned revision. A range has no period.
 func resolve(sel Selection, d profiles.Document) Resolved {
-	period, zone, reportProfile, severity := d.ResolvedDefaults()
+	period, zone, reportProfile := d.ResolvedDefaults()
 	var start, end string
 	switch {
 	case sel.Start != nil:
@@ -102,12 +99,9 @@ func resolve(sel Selection, d profiles.Document) Resolved {
 	if sel.ReportProfile != nil {
 		reportProfile = *sel.ReportProfile
 	}
-	if sel.MinSeverity != nil {
-		severity = *sel.MinSeverity
-	}
 	return Resolved{
 		Namespaces: slices.Clone(sel.Namespaces), Period: period, Start: start, End: end, Timezone: zone,
-		ReportProfile: reportProfile, MinSeverity: severity, Language: *sel.Language,
+		ReportProfile: reportProfile, Language: *sel.Language,
 	}
 }
 
@@ -142,7 +136,7 @@ func judgeRange(start, end string, zone *time.Location, now time.Time) map[strin
 // permits judges a resolved selection against the permitted lists of the
 // document. A range is held against the permitted periods as a whole.
 func permits(sel Selection, out Resolved, d profiles.Document) map[string]string {
-	period, zone, reportProfile, severity := out.Period, out.Timezone, out.ReportProfile, out.MinSeverity
+	period, zone, reportProfile := out.Period, out.Timezone, out.ReportProfile
 	fields := map[string]string{}
 	if sel.Start != nil && len(d.PermittedPeriods) > 0 {
 		fields["start"] = wordNotPermitted
@@ -159,7 +153,6 @@ func permits(sel Selection, out Resolved, d profiles.Document) map[string]string
 		{"period", period, periodsOf(sel, d)},
 		{"timezone", zone, d.PermittedTimezones},
 		{"report_profile", reportProfile, d.PermittedReportProfiles},
-		{"min_severity", severity, d.PermittedMinSeverities},
 	} {
 		if len(c.permitted) > 0 && !slices.Contains(c.permitted, c.value) {
 			fields[c.field] = wordNotPermitted

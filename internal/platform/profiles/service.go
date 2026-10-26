@@ -81,8 +81,6 @@ type Summary struct {
 	DefaultTimezone         string
 	PermittedReportProfiles []string
 	DefaultReportProfile    string
-	PermittedMinSeverities  []string
-	DefaultMinSeverity      string
 }
 
 // Change is the body of a revise: the revision it was written against and
@@ -492,13 +490,12 @@ func (s *Service) ListActive(ctx context.Context) ([]Summary, error) {
 		if !d.Active {
 			continue
 		}
-		period, zone, profile, severity := d.ResolvedDefaults()
+		period, zone, profile := d.ResolvedDefaults()
 		out = append(out, Summary{
 			ID: c.ID, DisplayName: d.DisplayName, AllowedNamespaces: d.AllowedNamespaces,
 			PermittedPeriods: d.PermittedPeriods, DefaultPeriod: period,
 			PermittedTimezones: d.PermittedTimezones, DefaultTimezone: zone,
 			PermittedReportProfiles: d.PermittedReportProfiles, DefaultReportProfile: profile,
-			PermittedMinSeverities: d.PermittedMinSeverities, DefaultMinSeverity: severity,
 		})
 	}
 	return out, nil

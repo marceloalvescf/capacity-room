@@ -13,7 +13,7 @@ import (
 func CanonicalJSON(d Document) ([]byte, error) {
 	for _, l := range []*[]string{
 		&d.AllowedNamespaces, &d.ExcludedContainers, &d.PermittedPeriods,
-		&d.PermittedTimezones, &d.PermittedReportProfiles, &d.PermittedMinSeverities,
+		&d.PermittedTimezones, &d.PermittedReportProfiles,
 	} {
 		if *l == nil {
 			*l = []string{}

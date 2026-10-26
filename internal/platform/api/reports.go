@@ -106,8 +106,8 @@ func failureCodeOf(code *string) *ReportFailureCode {
 func reportSelectionOf(r reports.Resolved) ReportSelection {
 	return ReportSelection{
 		Namespaces: r.Namespaces, Period: nullable(r.Period), Start: nullable(r.Start), End: nullable(r.End), Timezone: r.Timezone,
-		ReportProfile: ReportProfile(r.ReportProfile), MinSeverity: MinSeverity(r.MinSeverity),
-		Language: Language(r.Language),
+		ReportProfile: ReportProfile(r.ReportProfile),
+		Language:      Language(r.Language),
 	}
 }
 

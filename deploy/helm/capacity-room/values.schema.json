@@ -48,8 +48,6 @@
           "default_timezone": {"type": "string"},
           "permitted_report_profiles": {"type": "array", "items": {"type": "string"}},
           "default_report_profile": {"type": "string"},
-          "permitted_min_severities": {"type": "array", "items": {"type": "string"}},
-          "default_min_severity": {"type": "string"},
           "thresholds": {
             "type": "object", "additionalProperties": false,
             "properties": {

@@ -188,7 +188,7 @@ func (ts *testServer) seedReport(t *testing.T, o stored) uuid.UUID {
 	}
 	r := store.Report{
 		ID: uuid.New(), OwnerID: o.owner, ProfileID: "prod", ProfileRevisionID: ts.profileRevision(t),
-		Request: []byte(`{"namespaces":["payments"],"period":"24h","timezone":"UTC","report_profile":"detailed","min_severity":"all","language":"` + o.language + `"}`),
+		Request: []byte(`{"namespaces":["payments"],"period":"24h","timezone":"UTC","report_profile":"detailed","language":"` + o.language + `"}`),
 		Status:  o.status, Phase: o.phase, CollectJobID: 1,
 		CreatedAt: o.created, ExpiresAt: o.expires, UpdatedAt: o.created,
 	}
@@ -339,6 +339,7 @@ func TestRequestReportRoute(t *testing.T) {
 	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports", body, nil), 400, "IDEMPOTENCY_KEY_INVALID", nil)
 	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports", body, map[string]string{"Idempotency-Key": "bad key!"}), 400, "IDEMPOTENCY_KEY_INVALID", nil)
 	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports", `{"profile_id":"prod","namespaces":["payments"],"language":"en","extra":1}`, key), 400, CodeRequestInvalid, map[string]string{"extra": "unknown"})
+	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports", `{"profile_id":"prod","namespaces":["payments"],"language":"en","min_severity":"all"}`, key), 400, CodeRequestInvalid, map[string]string{"min_severity": "unknown"})
 	wantProblem(t, ts.as(t, &c.ops, "POST", "/api/v1/reports", `{"profile_id":"nope","namespaces":["payments"],"language":"en"}`, map[string]string{"Idempotency-Key": "key-2"}), 404, CodeProfileNotFound, nil)
 }
 

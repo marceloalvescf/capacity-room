@@ -33,8 +33,6 @@ func validExample() Document {
 		DefaultTimezone:         sp("UTC"),
 		PermittedReportProfiles: []string{"detailed", "executive"},
 		DefaultReportProfile:    sp("executive"),
-		PermittedMinSeverities:  []string{"all", "critical"},
-		DefaultMinSeverity:      sp("critical"),
 		Thresholds:              config.Default().Thresholds,
 	}
 }
@@ -54,13 +52,13 @@ func TestDefaults(t *testing.T) {
 	}
 	for name, l := range map[string][]string{
 		"allowed": d.AllowedNamespaces, "excluded": d.ExcludedContainers, "periods": d.PermittedPeriods,
-		"zones": d.PermittedTimezones, "profiles": d.PermittedReportProfiles, "severities": d.PermittedMinSeverities,
+		"zones": d.PermittedTimezones, "profiles": d.PermittedReportProfiles,
 	} {
 		if l == nil || len(l) != 0 {
 			t.Fatalf("%s should be an empty list, got %#v", name, l)
 		}
 	}
-	if d.DefaultPeriod != nil || d.DefaultTimezone != nil || d.DefaultReportProfile != nil || d.DefaultMinSeverity != nil {
+	if d.DefaultPeriod != nil || d.DefaultTimezone != nil || d.DefaultReportProfile != nil {
 		t.Fatal("defaults must be null")
 	}
 }
@@ -116,10 +114,6 @@ func TestValidateEachField(t *testing.T) {
 		{"default profile not permitted", func(d *Document) {
 			d.PermittedReportProfiles = []string{"detailed"}
 		}, "default_report_profile", "not_permitted"},
-		{"severity invalid", func(d *Document) { d.PermittedMinSeverities = []string{"critical", "high"} }, "permitted_min_severities", "invalid"},
-		{"severity repeated", func(d *Document) { d.PermittedMinSeverities = []string{"critical", "critical"} }, "permitted_min_severities", "repeated"},
-		{"default severity invalid", func(d *Document) { d.DefaultMinSeverity = sp("high") }, "default_min_severity", "invalid"},
-		{"default severity not permitted", func(d *Document) { d.DefaultMinSeverity = sp("attention") }, "default_min_severity", "not_permitted"},
 		{"thresholds", func(d *Document) { d.Thresholds.WarningPercent = 90 }, "thresholds", "invalid"},
 	}
 	for _, c := range cases {
@@ -178,13 +172,13 @@ func TestDocumentDefaultsWithinPermitted(t *testing.T) {
 }
 
 func TestResolvedDefaults(t *testing.T) {
-	p, z, r, m := Defaults().ResolvedDefaults()
-	if p != "24h" || z != "America/Sao_Paulo" || r != "detailed" || m != "all" {
-		t.Fatalf("fallbacks = %q %q %q %q", p, z, r, m)
+	p, z, r := Defaults().ResolvedDefaults()
+	if p != "24h" || z != "America/Sao_Paulo" || r != "detailed" {
+		t.Fatalf("fallbacks = %q %q %q", p, z, r)
 	}
-	p, z, r, m = validExample().ResolvedDefaults()
-	if p != "7d" || z != "UTC" || r != "executive" || m != "critical" {
-		t.Fatalf("set = %q %q %q %q", p, z, r, m)
+	p, z, r = validExample().ResolvedDefaults()
+	if p != "7d" || z != "UTC" || r != "executive" {
+		t.Fatalf("set = %q %q %q", p, z, r)
 	}
 }
 
@@ -194,7 +188,7 @@ func TestRunConfig(t *testing.T) {
 	d.TimeoutSeconds = 45
 	d.NodeAutoscaling = "enabled"
 	d.NodepoolLabel = "pool"
-	got := d.RunConfig("7d", "", "", "UTC", "executive", "critical", []string{"payments"})
+	got := d.RunConfig("7d", "", "", "UTC", "executive", []string{"payments"})
 	want := config.Default()
 	want.Metrics = config.Metrics{URL: "https://metrics.internal", EndpointType: "grafana", TLSVerify: true, TimeoutSeconds: 45}
 	want.Cluster = config.Cluster{Name: "prod-east", Namespaces: []string{"payments"}, Label: "cluster", FilterMode: "required", NodepoolLabel: "pool"}
@@ -211,7 +205,7 @@ func TestRunConfig(t *testing.T) {
 func nan() float64 { var z float64; return z / z }
 
 func TestRunConfigCarriesARange(t *testing.T) {
-	got := validExample().RunConfig("", "2026-09-01 00:00", "2026-10-01 00:00", "UTC", "executive", "critical", []string{"payments"})
+	got := validExample().RunConfig("", "2026-09-01 00:00", "2026-10-01 00:00", "UTC", "executive", []string{"payments"})
 	a := got.Analysis
 	if a.Period != "" || a.Start != "2026-09-01 00:00" || a.End != "2026-10-01 00:00" || a.Timezone != "UTC" {
 		t.Fatalf("analysis = %+v", a)

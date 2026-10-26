@@ -35,8 +35,6 @@ type Document struct {
 	DefaultTimezone         *string           `json:"default_timezone"`
 	PermittedReportProfiles []string          `json:"permitted_report_profiles"`
 	DefaultReportProfile    *string           `json:"default_report_profile"`
-	PermittedMinSeverities  []string          `json:"permitted_min_severities"`
-	DefaultMinSeverity      *string           `json:"default_min_severity"`
 	Thresholds              config.Thresholds `json:"thresholds"`
 }
 
@@ -45,7 +43,6 @@ const (
 	FallbackPeriod        = "24h"
 	FallbackTimezone      = "America/Sao_Paulo"
 	FallbackReportProfile = "detailed"
-	FallbackMinSeverity   = "all"
 )
 
 // Defaults are the values a body may leave out.
@@ -62,7 +59,6 @@ func Defaults() Document {
 		PermittedPeriods:        []string{},
 		PermittedTimezones:      []string{},
 		PermittedReportProfiles: []string{},
-		PermittedMinSeverities:  []string{},
 		Thresholds:              config.Default().Thresholds,
 	}
 }
@@ -92,12 +88,11 @@ func ValidNamespace(name string) bool {
 	return namespacePattern.MatchString(name)
 }
 
-// ResolvedDefaults returns the four effective defaults of d.
-func (d Document) ResolvedDefaults() (period, timezone, reportProfile, minSeverity string) {
+// ResolvedDefaults returns the three effective defaults of d.
+func (d Document) ResolvedDefaults() (period, timezone, reportProfile string) {
 	return orFallback(d.DefaultPeriod, FallbackPeriod),
 		orFallback(d.DefaultTimezone, FallbackTimezone),
-		orFallback(d.DefaultReportProfile, FallbackReportProfile),
-		orFallback(d.DefaultMinSeverity, FallbackMinSeverity)
+		orFallback(d.DefaultReportProfile, FallbackReportProfile)
 }
 
 func orFallback(v *string, fallback string) string {
@@ -167,9 +162,8 @@ func (d Document) Validate() []Problem {
 	}
 	add("excluded_containers", checkList(d.ExcludedContainers, containerNamePattern.MatchString))
 
-	period, zone, profile, severity := d.ResolvedDefaults()
+	period, zone, profile := d.ResolvedDefaults()
 	isProfile := func(s string) bool { return s == "detailed" || s == "executive" }
-	isSeverity := func(s string) bool { return s == "all" || s == "attention" || s == "critical" }
 	validPeriod := func(s string) bool { return config.ValidatePeriod(s) == nil }
 	validZone := func(s string) bool { return config.ValidateTimezone(s) == nil }
 
@@ -179,8 +173,6 @@ func (d Document) Validate() []Problem {
 	add("default_timezone", checkDefault(d.DefaultTimezone, zone, d.PermittedTimezones, validZone))
 	add("permitted_report_profiles", checkList(d.PermittedReportProfiles, isProfile))
 	add("default_report_profile", checkDefault(d.DefaultReportProfile, profile, d.PermittedReportProfiles, isProfile))
-	add("permitted_min_severities", checkList(d.PermittedMinSeverities, isSeverity))
-	add("default_min_severity", checkDefault(d.DefaultMinSeverity, severity, d.PermittedMinSeverities, isSeverity))
 
 	add("thresholds", flag(config.ValidateThresholds(d.Thresholds) != nil))
 	return out
@@ -228,7 +220,7 @@ func checkDefault(set *string, resolved string, permitted []string, ok func(stri
 // RunConfig builds the configuration of a run from the document and the
 // selection. The token never enters the configuration, and neither does the
 // CA bundle: the caller's transport carries it.
-func (d Document) RunConfig(period, start, end, timezone, reportProfile, _ string, namespaces []string) config.Config {
+func (d Document) RunConfig(period, start, end, timezone, reportProfile string, namespaces []string) config.Config {
 	c := config.Default()
 	c.Metrics = config.Metrics{
 		URL:            d.EndpointURL,

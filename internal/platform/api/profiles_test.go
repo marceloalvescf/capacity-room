@@ -105,8 +105,8 @@ func TestProfilesListAsReader(t *testing.T) {
 	}
 	sort.Strings(keys)
 	want := []string{
-		"allowed_namespaces", "default_min_severity", "default_period", "default_report_profile", "default_timezone",
-		"display_name", "id", "permitted_min_severities", "permitted_periods", "permitted_report_profiles", "permitted_timezones",
+		"allowed_namespaces", "default_period", "default_report_profile", "default_timezone",
+		"display_name", "id", "permitted_periods", "permitted_report_profiles", "permitted_timezones",
 	}
 	if !reflect.DeepEqual(keys, want) {
 		t.Fatalf("keys %v", keys)
