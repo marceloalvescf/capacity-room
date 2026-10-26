@@ -26,8 +26,9 @@ migration, no route, no screen, and no number changes.
   14, linux/amd64 only, tagged with `VERSION` and never `latest`, one image
   (the `runtime` stage) for `serve`, `worker`, and `admin`. The owner runs
   `docker login` and creates the pull secret, so no agent sees a token.
-- The chart lives in the repository and is not published as a chart. Its
-  values are generic. It has a Gateway API `HTTPRoute` template, proven live
+- The chart lives in the repository and is published only as the OCI chart
+  `oci://ghcr.io/marceloalvescf/charts/capacity-room`, by `make push-chart`
+  (amended 2026-10-26). Its values are generic. It has a Gateway API `HTTPRoute` template, proven live
   on the homelab, and an `Ingress` template, proven by schema and by a
   server-side dry run only, since the homelab has no Ingress controller.
 - The chart creates no Secret. Values name existing Secrets.
@@ -59,7 +60,6 @@ The chart is `deploy/helm/capacity-room/`:
 | `Chart.yaml` | `apiVersion: v2`, `name: capacity-room`, `version` and `appVersion` equal to `VERSION` |
 | `values.yaml` | the defaults, each value documented by a comment above it |
 | `values.schema.json` | the shape of the values, `additionalProperties: false` at every level |
-| `.helmignore` | keeps the schema tools and the examples out of a packaged chart |
 | `templates/_helpers.tpl` | names, labels, the pod security context, the shared mounts |
 | `templates/configmap.yaml` | `platform.toml`, and `profiles.toml` when `profiles` is not empty |
 | `templates/serviceaccount.yaml` | one service account, `automountServiceAccountToken: false` |
@@ -379,8 +379,7 @@ Each changes in the commit that changes what it describes.
 
 ## 9. Out of scope
 
-- A published chart, a chart repository, and an OCI chart (phase 14 may take
-  them).
+- A chart repository. The OCI chart is published since 2026-10-26.
 - A NetworkPolicy, a PodDisruptionBudget, autoscaling, and more than one
   replica.
 - A read-only mark for profiles that the values name.

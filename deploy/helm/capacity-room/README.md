@@ -5,25 +5,30 @@ Deployment (the interface and the API), a `worker` Deployment (it collects the
 reports and compiles their PDFs), a Service, a Gateway API HTTPRoute or an
 Ingress, the ConfigMap that holds `platform.toml`, and two hook Jobs that
 create the first administrator and import the profiles. It ships no database
-and creates no Secret. It is published as an OCI chart on GHCR, and it can
-also be installed from a checkout of the repository. This page is the quick
-start; section 12 of `docs/operations.md` is the full text.
+and creates no Secret. It is published as the OCI chart
+`oci://ghcr.io/marceloalvescf/charts/capacity-room`, and a checkout of the repository holds
+it too. This page is the quick start; section 12 of `docs/operations.md` is
+the full text.
 
 ## Prerequisites
 
 - A Kubernetes cluster and `kubectl` pointed at it.
-- Helm 3.8 or later, or Helm 4 (the chart's tests use Helm 4.3.0).
+- Helm 3.13 or later, or Helm 4 (the chart's tests use Helm 4.3.0).
 - A Gateway API gateway or an Ingress controller.
 - A PostgreSQL 18 database the cluster reaches. Step 1 shows how to run one
   with CloudNativePG.
 
-The chart is `oci://ghcr.io/marceloalvescf/charts/capacity-room`, or the folder
-`deploy/helm/capacity-room` of a checkout, never the root of the repository.
-The commands below install the OCI chart. To install from a checkout, run
-them from its root with `deploy/helm/capacity-room` in place of
-`oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0`. The
-package leaves out `examples/`, which the checkout holds. `capacity-room` is
-the release and the namespace.
+Get the chart's folder first. It holds `values.yaml` and the `examples/`
+that the steps below use.
+
+```bash
+helm pull oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0 --untar
+```
+
+This writes the folder `capacity-room`. A checkout of the repository holds the
+same folder as `deploy/helm/capacity-room`; there, run the commands from
+`deploy/helm`, never from the root of the repository, which Helm would read as
+the chart. `capacity-room` is also the release and the namespace.
 
 ## 1. A database
 
@@ -45,7 +50,7 @@ helm repo add cnpg https://cloudnative-pg.github.io/charts
 helm upgrade -i cnpg cnpg/cloudnative-pg --version 0.29.1 -n cnpg-system --create-namespace --wait
 ```
 
-Then make the database from `examples/cloudnative-pg-cluster.yaml`. It is a
+Then make the database from `capacity-room/examples/cloudnative-pg-cluster.yaml`. It is a
 manifest for `kubectl apply`, not a values file: one instance of PostgreSQL 18,
 a `capacityroom` database owned by `capacityroom`, and 5Gi of storage. Set
 `storage.size` to your need, name a `storage.storageClass` if the cluster has
@@ -55,7 +60,7 @@ no default one, and pin the image by digest,
 prints.
 
 ```bash
-kubectl apply -n capacity-room -f deploy/helm/capacity-room/examples/cloudnative-pg-cluster.yaml
+kubectl apply -n capacity-room -f capacity-room/examples/cloudnative-pg-cluster.yaml
 kubectl -n capacity-room wait cluster/capacity-room-db --for=condition=Ready --timeout=300s
 ```
 
@@ -112,8 +117,8 @@ profile gives.
 
 ## 3. A values file
 
-Copy `examples/gateway.yaml` for a Gateway API route, or `examples/ingress.yaml`
-for an Ingress, to `values.yaml`. Replace the hosts (`example.com`), the Secret
+Copy `capacity-room/examples/gateway.yaml` for a Gateway API route, or
+`capacity-room/examples/ingress.yaml` for an Ingress, to `values.yaml`. Replace the hosts (`example.com`), the Secret
 names, the gateway's `parentRefs`, and the profile. Set `database.existingSecret`
 to the Secret of step 1. The chart refuses a route and an Ingress enabled
 together, and a key it does not know.
@@ -127,8 +132,8 @@ or every client counts as the gateway for the sign-in throttle; section 12 of
 `docs/operations.md` shows how to find it, and why the gateway's Service needs
 `externalTrafficPolicy: Local`.
 
-The main values follow. Each has a comment in `values.yaml` that is the
-reference.
+The main values follow. Each has a comment in `capacity-room/values.yaml`
+that is the reference.
 
 | Value | Default | What it does |
 |---|---|---|
@@ -152,8 +157,8 @@ reference.
 Check the render against the cluster first, then install.
 
 ```bash
-helm upgrade -i capacity-room oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0 -n capacity-room --dry-run=server -f values.yaml
-helm upgrade -i capacity-room oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0 -n capacity-room -f values.yaml --wait --timeout 10m
+helm upgrade -i capacity-room ./capacity-room -n capacity-room --dry-run=server -f values.yaml
+helm upgrade -i capacity-room ./capacity-room -n capacity-room -f values.yaml --wait --timeout 10m
 kubectl -n capacity-room get pods
 ```
 
@@ -165,8 +170,8 @@ Secret.
 
 ## Upgrade and uninstall
 
-To upgrade, run the install command again with the new `--version`, or check
-out the new version and run it from the checkout.
+To upgrade, remove the `capacity-room` folder and pull the new version, or
+check out the new version, then run the install command again.
 Before an upgrade from 2.x to 3.0.0, scale both Deployments to zero, then
 back up the database, and remove `default_min_severity` and
 `permitted_min_severities` from `profiles`; section 8 of

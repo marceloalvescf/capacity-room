@@ -535,8 +535,10 @@ raise the worker's limit with `worker_slots`.
 - No outbound proxy: the worker connects to the metric sources directly.
 - The sign-in throttle counts failures per user and client address. It does
   not limit the number of user names one address tries, but one address
-  checks one password at a time: its other sign-ins wait their turn. A rate
-  limit on `/api/v1/auth/login` in your proxy adds a bound on the attempts.
+  checks one password at a time: its other sign-ins wait their turn. Behind
+  a proxy that `trusted_proxies` does not name, every user has the proxy's
+  address, so all sign-ins take one turn. A rate limit on
+  `/api/v1/auth/login` in your proxy adds a bound on the attempts.
 - A metric source that the allowlists admit is trusted to answer with
   reasonable sizes: an answer of up to 256 MiB is read, and decoding it takes
   many times that in memory. The memory limits of section 2 keep such an
@@ -568,17 +570,23 @@ A user blocked by the sign-in throttle is free again after five minutes.
 
 The Helm chart in `deploy/helm/capacity-room` runs the platform on a
 Kubernetes cluster. It is published as the OCI chart
-`oci://ghcr.io/marceloalvescf/charts/capacity-room`, and it can also be installed
-from a checkout. The chart is that address, or the folder
-`deploy/helm/capacity-room`, never the root of the repository. The commands
-below install the OCI chart. To install from a checkout, run them from its
-root with `deploy/helm/capacity-room` in place of
-`oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0`. The
-package leaves out `examples/`, which the checkout holds.
-It needs Helm 3.8 or later, or Helm 4 (the chart's tests use Helm 4.3.0), a PostgreSQL database that the cluster reaches, and either a
-Gateway API gateway or an Ingress controller. Its values are documented by
-the comments of `deploy/helm/capacity-room/values.yaml`, which this section
-points at rather than repeats.
+`oci://ghcr.io/marceloalvescf/charts/capacity-room`. Get its folder first; it
+holds `values.yaml` and the `examples/` that this section uses.
+
+```bash
+helm pull oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0 --untar
+```
+
+This writes the folder `capacity-room`, and the commands of this section run
+from the folder that holds it. A checkout of the repository holds the same
+folder as `deploy/helm/capacity-room`; there, run them from `deploy/helm`,
+never from the root of the repository, which Helm would read as the chart.
+
+It needs Helm 3.13 or later, or Helm 4 (the chart's tests use Helm 4.3.0), a
+PostgreSQL database that the cluster reaches, and either a Gateway API
+gateway or an Ingress controller. Its values are documented by the comments
+of `capacity-room/values.yaml`, which this section points at rather than
+repeats.
 
 ### What runs
 
@@ -609,7 +617,7 @@ helm repo add cnpg https://cloudnative-pg.github.io/charts
 helm upgrade -i cnpg cnpg/cloudnative-pg --version 0.29.1 -n cnpg-system --create-namespace --wait
 ```
 
-Then make the database from `deploy/helm/capacity-room/examples/cloudnative-pg-cluster.yaml`.
+Then make the database from `capacity-room/examples/cloudnative-pg-cluster.yaml`.
 It is a manifest for `kubectl apply`, not a values file: one instance of
 PostgreSQL 18, a `capacityroom` database owned by `capacityroom`, and 5Gi of
 storage. Set `storage.size` to your need, name a `storage.storageClass` if the
@@ -619,7 +627,7 @@ cluster has no default one, and pin the image by digest,
 prints.
 
 ```bash
-kubectl apply -n capacity-room -f deploy/helm/capacity-room/examples/cloudnative-pg-cluster.yaml
+kubectl apply -n capacity-room -f capacity-room/examples/cloudnative-pg-cluster.yaml
 kubectl -n capacity-room wait cluster/capacity-room-db --for=condition=Ready --timeout=300s
 ```
 
@@ -680,8 +688,8 @@ is the file name that a profile gives. A key of the admin Secret other than
 
 ### A values file
 
-Start from `deploy/helm/capacity-room/examples/gateway.yaml` for a Gateway API
-route, or `examples/ingress.yaml` for an Ingress. Replace the hosts, the
+Start from `capacity-room/examples/gateway.yaml` for a Gateway API route, or
+`capacity-room/examples/ingress.yaml` for an Ingress. Replace the hosts, the
 Secret names, the gateway's `parentRefs`, and the profile.
 
 Three settings decide whether the first install works:
@@ -711,8 +719,8 @@ goes in the values, and none enters Helm's release state.
 Check the render against the cluster first, then install.
 
 ```bash
-helm upgrade -i capacity-room oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0 -n capacity-room --dry-run=server -f values.yaml
-helm upgrade -i capacity-room oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0 -n capacity-room -f values.yaml --wait --timeout 10m
+helm upgrade -i capacity-room ./capacity-room -n capacity-room --dry-run=server -f values.yaml
+helm upgrade -i capacity-room ./capacity-room -n capacity-room -f values.yaml --wait --timeout 10m
 ```
 
 With `--wait`, Helm runs the Jobs once the new pods are ready, after the old ones are gone, so a Job never migrates while an old pod is still stopping.
@@ -777,9 +785,9 @@ container, such as an Azure Policy initiative or Gatekeeper, takes
 
 ### Upgrade and uninstall
 
-To upgrade, run the same `helm upgrade -i` command with the new `--version`,
-or check out the new version and run it from the checkout. Both pods are
-recreated, and the schema is applied under the lock
+To upgrade, remove the `capacity-room` folder and pull the new version, or
+check out the new version, then run the same `helm upgrade -i` command. Both
+pods are recreated, and the schema is applied under the lock
 by the first command that starts. The image tag is the chart's `appVersion`
 unless `image.tag` is set.
 

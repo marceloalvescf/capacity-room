@@ -292,6 +292,8 @@ push:
 # version. It refuses a working tree with changes, so the chart is the
 # commit's. It is outward: run `helm registry login ghcr.io` first, since the
 # target handles no credential, and run it only on the word of the owner.
+# GHCR makes a new package private: the owner makes it public once, in the
+# package's settings, or nobody can pull it.
 # make gate never runs it.
 CHART_PACKAGE_DIR := .cache/chart-package
 
