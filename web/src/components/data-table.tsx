@@ -9,7 +9,7 @@ import {
   type SortingState,
   type Updater,
 } from "@tanstack/react-table";
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useAnnounce } from "@/app/live-region";
 import { IconButton } from "@/components/ui/icon-button";
@@ -171,6 +171,28 @@ export function DataTable<Row extends RowData>({
     }
   }, [openKey, data]);
 
+  const body = useRef<HTMLTableSectionElement>(null);
+  // Active only while an opener has focus. The default of all four keys is prevented there, the first and last row
+  // included, so that an arrow does not scroll the page from a row that has no neighbour.
+  function moveFocus(event: KeyboardEvent<HTMLElement>) {
+    const step = event.key === "j" || event.key === "ArrowDown" ? 1 : event.key === "k" || event.key === "ArrowUp" ? -1 : 0;
+    if (step === 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.nativeEvent.isComposing) {
+      return;
+    }
+    event.preventDefault();
+    // The openers of this table's own rows, so that a table inside an opened row never joins the walk.
+    const openers = Array.from(body.current?.rows ?? [])
+      .map((row) => row.cells[0]?.querySelector<HTMLElement>(":scope > [data-opener]"))
+      .filter((opener) => opener !== null && opener !== undefined);
+    const target = openers[openers.indexOf(event.currentTarget) + step];
+    const row = target?.closest("tr");
+    if (target === undefined || row === null || row === undefined || head.current === null) {
+      return;
+    }
+    target.focus({ preventScroll: true });
+    revealRows(row, row, head.current.getBoundingClientRect().height);
+  }
+
   const searchBar =
     search === undefined ? null : (
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -234,7 +256,7 @@ export function DataTable<Row extends RowData>({
                 </tr>
               ))}
             </thead>
-            <tbody className="[&>tr>td]:border-b [&>tr>td]:border-border">
+            <tbody ref={body} className="[&>tr>td]:border-b [&>tr>td]:border-border">
               {table.getRowModel().rows.map((row) => {
                 const opened = row.id === openKey;
                 const name = rowName(row.original);
@@ -247,6 +269,9 @@ export function DataTable<Row extends RowData>({
                             label={t(opened ? "table.close" : "table.open", { name })}
                             variant="secondary"
                             aria-expanded={opened}
+                            aria-keyshortcuts="j k ArrowDown ArrowUp"
+                            data-opener=""
+                            onKeyDown={moveFocus}
                             className="border-transparent bg-transparent"
                             onClick={() => {
                               address.write((next) => {

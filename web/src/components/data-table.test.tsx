@@ -348,6 +348,86 @@ describe("data table", () => {
   });
 });
 
+describe("keyboard movement between rows", () => {
+  const opener = (name: string) => screen.getByRole("button", { name: `Show the details of ${name}` });
+
+  it("j and ArrowDown focus the next opener, k and ArrowUp the previous", async () => {
+    vi.spyOn(reveal, "revealRows").mockImplementation(() => undefined);
+    mount(named, "/", "view");
+    opener("payments-web").focus();
+    await userEvent.keyboard("j");
+    expect(opener("api-gateway")).toHaveFocus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(opener("db")).toHaveFocus();
+    await userEvent.keyboard("k");
+    expect(opener("api-gateway")).toHaveFocus();
+    await userEvent.keyboard("{ArrowUp}");
+    expect(opener("payments-web")).toHaveFocus();
+  });
+
+  it("stops at the first and the last row and opens nothing", async () => {
+    vi.spyOn(reveal, "revealRows").mockImplementation(() => undefined);
+    const router = mount(named, "/", "view");
+    opener("payments-web").focus();
+    await userEvent.keyboard("k{ArrowUp}");
+    expect(opener("payments-web")).toHaveFocus();
+    opener("db").focus();
+    await userEvent.keyboard("j{ArrowDown}");
+    expect(opener("db")).toHaveFocus();
+    expect(search(router)).toBe("");
+  });
+
+  it("reveals the row it moves to", async () => {
+    const spy = vi.spyOn(reveal, "revealRows").mockImplementation(() => undefined);
+    mount(named, "/", "view");
+    opener("payments-web").focus();
+    await userEvent.keyboard("j");
+    const row = opener("api-gateway").closest("tr");
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(row, row, document.querySelector("thead")?.getBoundingClientRect().height);
+  });
+
+  it("ignores a key with Ctrl, Meta, Alt, or Shift held", async () => {
+    mount(named, "/", "view");
+    opener("payments-web").focus();
+    await userEvent.keyboard("{Control>}j{/Control}{Meta>}j{/Meta}{Alt>}{ArrowDown}{/Alt}{Shift>}J{/Shift}");
+    expect(opener("payments-web")).toHaveFocus();
+  });
+
+  it("ignores a key typed while composing", () => {
+    mount(named, "/", "view");
+    opener("payments-web").focus();
+    fireEvent.keyDown(opener("payments-web"), { key: "j", isComposing: true });
+    expect(opener("payments-web")).toHaveFocus();
+  });
+
+  it("does nothing while focus is not on an opener", async () => {
+    mount(named, "/", "view");
+    const field = screen.getByRole("searchbox", { name: "Search things" });
+    await userEvent.click(field);
+    await userEvent.keyboard("j");
+    expect(field).toHaveFocus();
+    expect(field).toHaveValue("j");
+  });
+
+  it("follows the sorted order", async () => {
+    vi.spyOn(reveal, "revealRows").mockImplementation(() => undefined);
+    mount(named, "/?sort=name.asc", "view");
+    opener("api-gateway").focus();
+    await userEvent.keyboard("j");
+    expect(opener("db")).toHaveFocus();
+    await userEvent.keyboard("j");
+    expect(opener("payments-web")).toHaveFocus();
+  });
+
+  it("declares the shortcuts on every opener", () => {
+    mount(named, "/", "view");
+    for (const name of ["payments-web", "api-gateway", "db"]) {
+      expect(opener(name)).toHaveAttribute("aria-keyshortcuts", "j k ArrowDown ArrowUp");
+    }
+  });
+});
+
 describe("a table whose rows open nothing", () => {
   it("has no expander column and ignores open", () => {
     const router = createMemoryRouter(
