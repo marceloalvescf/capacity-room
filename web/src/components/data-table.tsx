@@ -172,14 +172,13 @@ export function DataTable<Row extends RowData>({
   }, [openKey, data]);
 
   const body = useRef<HTMLTableSectionElement>(null);
-  // Active only while an opener has focus. The default of all four keys is prevented there, the first and last row
-  // included, so that an arrow does not scroll the page from a row that has no neighbour.
+  // Active only while an opener has focus. A key is taken only when it moves the focus, so at the first and the last
+  // row an arrow still scrolls the page.
   function moveFocus(event: KeyboardEvent<HTMLElement>) {
     const step = event.key === "j" || event.key === "ArrowDown" ? 1 : event.key === "k" || event.key === "ArrowUp" ? -1 : 0;
     if (step === 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.nativeEvent.isComposing) {
       return;
     }
-    event.preventDefault();
     // The openers of this table's own rows, so that a table inside an opened row never joins the walk.
     const openers = Array.from(body.current?.rows ?? [])
       .map((row) => row.cells[0]?.querySelector<HTMLElement>(":scope > [data-opener]"))
@@ -189,6 +188,7 @@ export function DataTable<Row extends RowData>({
     if (target === undefined || row === null || row === undefined || head.current === null) {
       return;
     }
+    event.preventDefault();
     target.focus({ preventScroll: true });
     revealRows(row, row, head.current.getBoundingClientRect().height);
   }

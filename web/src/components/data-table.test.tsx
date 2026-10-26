@@ -377,6 +377,14 @@ describe("keyboard movement between rows", () => {
     expect(search(router)).toBe("");
   });
 
+  it("takes a key only when it moves the focus, so an arrow at an end still scrolls", () => {
+    vi.spyOn(reveal, "revealRows").mockImplementation(() => undefined);
+    mount(named, "/", "view");
+    expect(fireEvent.keyDown(opener("payments-web"), { key: "ArrowUp" })).toBe(true);
+    expect(fireEvent.keyDown(opener("db"), { key: "ArrowDown" })).toBe(true);
+    expect(fireEvent.keyDown(opener("payments-web"), { key: "ArrowDown" })).toBe(false);
+  });
+
   it("reveals the row it moves to", async () => {
     const spy = vi.spyOn(reveal, "revealRows").mockImplementation(() => undefined);
     mount(named, "/", "view");
