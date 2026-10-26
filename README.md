@@ -245,8 +245,8 @@ nothing on standard output.
 
 ### Trying it without a Prometheus
 
-The repository holds eight scenarios and a server that answers from them.
-Six are recorded answers, in `testdata/prometheus/`. The other two were
+The repository holds seven scenarios and a server that answers from them.
+Five are recorded answers, in `testdata/prometheus/`. The other two were
 written for this project, in `testdata/prometheus-own/`: `edge-values` holds
 values at the edge, such as a sample that is not a number, a request of zero,
 and a workload with no request at all; `edge-scaling` holds the edges of the
@@ -335,9 +335,9 @@ make update-testdata  # rewrites the golden snapshots and data files
 | [docs/decisions/](docs/decisions/) | Decisions taken from measurements |
 | [docs/reference/](docs/reference/) | Documents and inventories of the two original projects |
 | [template/graphite/README.md](template/graphite/README.md) | The generic template package |
-| [testdata/prometheus/README.md](testdata/prometheus/README.md) | The six recorded scenarios |
+| [testdata/prometheus/README.md](testdata/prometheus/README.md) | The five recorded scenarios |
 | [testdata/prometheus-own/README.md](testdata/prometheus-own/README.md) | The two scenarios written for this project |
-| [testdata/python/README.md](testdata/python/README.md) | The numbers and queries of the original, for the eight scenarios |
+| [testdata/python/README.md](testdata/python/README.md) | The numbers and queries of the original, for the seven scenarios |
 
 ## Licence
 

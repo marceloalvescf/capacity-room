@@ -201,7 +201,6 @@ column.
 | Key | Type | Default | Rule |
 |---|---|---|---|
 | `metrics.url` | string | required | Absolute `http` or `https` URL; no user info, query, or fragment |
-| `metrics.endpoint_type` | string | `auto` | `auto`, `prometheus`, `grafana` |
 | `metrics.token_env` | string | empty | Name of the variable holding the token |
 | `metrics.tls_verify` | boolean | `true` | |
 | `metrics.ca_bundle` | path | empty | Must exist when set |
@@ -235,13 +234,13 @@ column.
 named by `metrics.token_env` or from `--token`, and is held in memory only.
 
 Environment variables carry the prefix `CAPACITYROOM_`:
-`CAPACITYROOM_METRICS_URL`, `CAPACITYROOM_ENDPOINT_TYPE`, `CAPACITYROOM_CLUSTER`, `CAPACITYROOM_CLUSTER_LABEL`,
+`CAPACITYROOM_METRICS_URL`, `CAPACITYROOM_CLUSTER`, `CAPACITYROOM_CLUSTER_LABEL`,
 `CAPACITYROOM_CLUSTER_FILTER`, `CAPACITYROOM_NAMESPACES`, `CAPACITYROOM_PERIOD`, `CAPACITYROOM_TIMEZONE`,
 `CAPACITYROOM_NODE_AUTOSCALING`, `CAPACITYROOM_REPORT_PROFILE`,
 `CAPACITYROOM_OUTPUT_DIRECTORY`, plus the new `CAPACITYROOM_LANGUAGE`, `CAPACITYROOM_TYPST`,
 `CAPACITYROOM_START`, and `CAPACITYROOM_END`.
 
-Flags: `--config`, `--metrics-url`, `--endpoint-type`, `--token`, `--insecure`,
+Flags: `--config`, `--metrics-url`, `--token`, `--insecure`,
 `--cluster`, `--cluster-label`, `--cluster-filter`, `--namespaces`, `--period`,
 `--start`, `--end`, `--timezone`, `--node-autoscaling`,
 `--report-profile`, `--lang`, `--output`, `--snapshot`, `--from-snapshot`,
@@ -413,8 +412,15 @@ exact confidence, and are ordered by severity, confidence, scope, and code.
 
 ## 8. Snapshot
 
-The snapshot is one JSON document, `schema_version` `"3.0"`. It is a new
+The snapshot is one JSON document, `schema_version` `"4.0"`. It is a new
 format and does not read snapshots written by the Python platform.
+
+Version `4.0` replaced `3.0` when the endpoint type left the program:
+`report.settings.endpoint_type` left the document, since a source is a
+Prometheus-compatible API (Prometheus, Thanos Query Frontend,
+VictoriaMetrics, Cortex) and nothing else. The reader names `3.0` and refuses
+it. The platform's migration rewrites every stored 3.0 snapshot to the bytes
+4.0 writes, and the operations guide gives the same edit for a file.
 
 Version `3.0` replaced `2.0` when the minimum severity left the program:
 `report.min_severity` left the document. The reader names `2.0` and refuses
@@ -1258,8 +1264,9 @@ when the tool is missing.
 | Structure guards | Nothing | No Kubernetes or cloud client; imports point one way |
 | Platform | PostgreSQL | Accounts, permissions, policy, queue, storage, retention, audit |
 
-The six scenarios of the original are carried over: complete, Grafana with
-token, several clusters, raw fallback, partial data, and value edge cases.
+The five scenarios of the original that read a Prometheus-compatible API are
+carried over: complete, several clusters, raw fallback, partial data, and
+value edge cases. The sixth, Grafana with token, left with the endpoint type.
 A scenario of this project runs the complete one over a calendar range that
 ends before the emission time; the original had no ranges, so it has no
 record of the original to compare with.
@@ -1474,7 +1481,7 @@ The public surface is:
    fields, codes, and status answers;
 2. the command line: commands, flags, environment variables, and exit codes;
 3. the keys of `report.toml` and of `platform.toml`;
-4. the snapshot file, `schema_version` 3.0, which `--from-snapshot` reads
+4. the snapshot file, `schema_version` 4.0, which `--from-snapshot` reads
    and the API serves.
 
 - A change that breaks the public surface is a major version. Adding to it

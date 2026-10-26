@@ -6,6 +6,16 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The upgrade to this version carries every stored report and profile forward and cannot be undone, so back up the database and stop the worker before it, as the operations guide says.
+
+### Removed
+
+- Grafana is no longer a metric source: a source is the URL of a Prometheus-compatible API, such as Prometheus, Thanos Query Frontend, VictoriaMetrics, or Cortex.
+- The endpoint type is gone: the `--endpoint-type` flag, `endpoint_type` in `report.toml`, in a profile, in the import file, and in the chart's profiles, and the field of a profile in the API are now refused, and the `CAPACITYROOM_ENDPOINT_TYPE` variable is no longer read.
+- A snapshot file written by 3.x is refused, and the operations guide shows the one edit that converts it.
+
 ## [3.1.0] - 2026-10-26
 
 ### Added

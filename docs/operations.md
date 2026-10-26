@@ -237,7 +237,6 @@ cat > "$CAPACITYROOM_HOME/profiles.toml" <<'EOF'
 id = "prod"
 display_name = "Production"
 endpoint_url = "https://prometheus.example.com/api/v1"  # example: replace
-endpoint_type = "prometheus"
 cluster_name = "prod"  # example: replace
 allowed_namespaces = ["payments", "checkout"]  # example: replace
 credential_file = "prometheus-bearer"
@@ -464,6 +463,40 @@ A report stored by this version whose node autoscaling reads disabled from
 kube-state-metrics cannot be opened by 2.3.0 or earlier. A rollback to 2.3.0
 loses the view and the PDF renders of those reports; reports stored before the
 upgrade are read as before.
+
+### Upgrading from 3.x to 4.0.0
+
+Version 4.0.0 reads Prometheus-compatible APIs alone, such as Prometheus,
+Thanos Query Frontend, VictoriaMetrics, or Cortex, and removes the endpoint
+type. A report reads the same. Every stored report and profile is carried
+forward, and the upgrade cannot be undone.
+
+- **Stop first, then back up,** in the order of the 2.x section below. With
+  Compose, run `docker compose stop worker`, then the `pg_dump` and the rest
+  of the commands above. With the chart, scale both Deployments to zero
+  with `kubectl -n capacity-room scale deployment capacity-room-serve
+  capacity-room-worker --replicas 0`, back up the database, then run `helm
+  upgrade`. A 3.x `serve` left running could not read the reports the new
+  version migrates.
+- **A rollback is a restore of that backup** (section 7): a 3.x program
+  cannot read a database that 4.0.0 has migrated.
+- **Remove the option from your files.** `endpoint_type` in `report.toml`, in
+  the profiles of an import file, and in the `profiles` of the chart's values
+  is now refused as an unknown key, and so is the flag `--endpoint-type`. The
+  variable `CAPACITYROOM_ENDPOINT_TYPE` is no longer read. Edit any script
+  that passes the flag or sets the variable. A client of the API that sends
+  `endpoint_type` in a profile is answered 400.
+- **What the migration changes.** Every stored snapshot is rewritten without
+  the field, as schema 4.0, and the key leaves every profile revision.
+- **A Grafana URL keeps working as a URL.** A profile whose URL is a Grafana
+  datasource proxy keeps it. The new version treats it as any
+  Prometheus-compatible URL.
+- **A snapshot file of 3.x** is refused by `--from-snapshot` with a line that
+  names its version. This edit converts it:
+
+```bash
+sed -i -e '2s/"3\.0"/"4.0"/' -e '/^      "endpoint_type": /d' cluster.json
+```
 
 ### Upgrading from 2.x to 3.0.0
 

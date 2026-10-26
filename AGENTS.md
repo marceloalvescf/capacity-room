@@ -133,7 +133,7 @@ No guard checks these. The reviewer of each task does.
   (spec 15.1). The public surface is the API under `/api/v1` as
   `api/openapi.yaml` describes it, the commands with their flags,
   environment variables, and exit codes, the keys of `report.toml` and
-  `platform.toml`, and the snapshot file (`schema_version` 3.0). Breaking it
+  `platform.toml`, and the snapshot file (`schema_version` 4.0). Breaking it
   is a major version; adding to it is a minor one. Stored data is converted
   forward by a migration, and the code keeps one path, never a reader of an
   earlier shape; data that cannot be carried forward is dropped on purpose,
@@ -289,8 +289,8 @@ below the command; the core never imports `internal/platform/`.
 - **The snapshot file has one reading.** The reader walks the file against
   the contract, letter for letter, and fills the snapshot from what it
   walked. It names a wrong schema version before anything else. The schema
-  is `3.0`, with no `report.period` and no `report.min_severity`: a snapshot
-  `1.0` or `2.0` is named and refused, with no reader of it. Its period ends
+  is `4.0`, with no `report.period`, no `report.min_severity`, and no
+  `report.settings.endpoint_type`: a snapshot `1.0`, `2.0`, or `3.0` is named and refused, with no reader of it. Its period ends
   at or before its emission.
 - **The probes keep the order of the original**, short cuts included, except
   that the ninth probe asks `count(kube_configmap_info)` in place of the
@@ -566,6 +566,15 @@ redactor the moment the settings are loaded, before the pool opens.
   immutability trigger for its statement alone and enabled it again. A
   test proves the bytes against the golden snapshots. Its down refuses.
   Stored PDFs stay as issued, and fingerprints as computed at creation.
+- **`00009_drop_endpoint_type.sql` carries 3.x forward, one way.** It
+  rewrites every stored 3.0 snapshot as text into the bytes 4.0's `Encode`
+  writes (the version on line 2, the one `endpoint_type` line gone), with its
+  SHA-256 and size, and removes the key from every profile revision; it
+  disables each immutability trigger for its statement
+  alone and enables it again. Its guard refuses a body that `Encode` did not
+  write, so a snapshot of another shape stops the migration. A test proves
+  the bytes against the golden snapshots. Its down refuses. Stored PDFs stay
+  as issued, and fingerprints as computed at creation.
 - **The maintenance job runs every minute** on the elected River leader, in
   six steps of their own: reconcile (a report or PDF row whose River job is
   gone or final fails `JOB_ATTEMPTS_EXHAUSTED` or `PDF_ATTEMPTS_EXHAUSTED`),
@@ -598,7 +607,8 @@ redactor the moment the settings are loaded, before the pool opens.
   `direct-complete` over a range of 24 hours that ended the day before the
   fixed emission. It has a snapshot and a list of queries, and no data file
   and no golden page. It stays outside `promtest.Scenarios`, so every
-  comparison with the original walks the eight it always walked.
+  comparison with the original walks the five recorded scenarios it always
+  walked.
 - A test never writes one. `make update-testdata` does. It needs no image.
 - After `make update-testdata`, read every file that changed, whole, before
   committing. A value that cannot be explained is a defect.
@@ -610,7 +620,7 @@ redactor the moment the settings are loaded, before the pool opens.
   answer exercises. A file there is not edited once its recorded numbers
   exist.
 - `testdata/python/` holds what the original computes and asks for each of
-  the eight scenarios: its numbers for every section the program computes,
+  the seven scenarios: its numbers for every section the program computes,
   and its queries in order. The recording script lives under
   `.cache/phase-2/part-4/python/`. It also records the recommendations, the
   summary counts, the coverage of every row, and the executive rows, with a
