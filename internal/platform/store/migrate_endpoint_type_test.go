@@ -3,9 +3,11 @@
 package store_test
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -15,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 
+	"github.com/marceloalvescf/capacity-room/internal/platform/profiles"
 	"github.com/marceloalvescf/capacity-room/internal/platform/storetest"
 	"github.com/marceloalvescf/capacity-room/internal/snapshot"
 )
@@ -134,18 +137,39 @@ func TestMigrationNineDropsTheKeyFromRevisions(t *testing.T) {
 	ctx := context.Background()
 	pool := storetest.NewEmpty(t)
 	provider := migrateTo(ctx, t, pool, 8)
-	const url = "https://grafana.example.com/api/datasources/proxy/uid/abc"
-	_, revision := seedProfile(ctx, t, pool, `{"display_name":"Prod","endpoint_type":"grafana","endpoint_url":"`+url+`"}`)
+	const url = "https://grafana.example.com/api/datasources/uid/prom/resources/api/v1"
+	d := profiles.Defaults()
+	d.DisplayName = "Prod"
+	d.EndpointURL = url
+	d.ClusterName = "prod"
+	d.AllowedNamespaces = []string{"payments"}
+	raw, err := json.Marshal(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	document := strings.Replace(string(raw), "{", `{"endpoint_type":"grafana",`, 1)
+	_, revision := seedProfile(ctx, t, pool, document)
 	if _, err := provider.UpTo(ctx, 9); err != nil {
 		t.Fatal(err)
 	}
-	var carried bool
-	if err := pool.QueryRow(ctx, `SELECT document = $1::jsonb FROM profile_revisions WHERE id = $2`,
-		`{"display_name":"Prod","endpoint_url":"`+url+`"}`, revision).Scan(&carried); err != nil {
+	var stored []byte
+	if err := pool.QueryRow(ctx, `SELECT document::text FROM profile_revisions WHERE id = $1`, revision).Scan(&stored); err != nil {
 		t.Fatal(err)
 	}
-	if !carried {
-		t.Error("the revision still holds the endpoint type or lost another key")
+	if strings.Contains(string(stored), "endpoint_type") {
+		t.Errorf("the revision still holds the endpoint type: %s", stored)
+	}
+	var back profiles.Document
+	dec := json.NewDecoder(bytes.NewReader(stored))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&back); err != nil {
+		t.Fatalf("the stored document does not decode strictly: %v", err)
+	}
+	if problems := back.Validate(); len(problems) > 0 {
+		t.Errorf("the stored document is not valid: %v", problems)
+	}
+	if back.EndpointURL != url {
+		t.Errorf("endpoint_url = %q, want %q", back.EndpointURL, url)
 	}
 	var enabled string
 	if err := pool.QueryRow(ctx, `SELECT tgenabled FROM pg_trigger WHERE tgname = 'profile_revisions_are_immutable'`).Scan(&enabled); err != nil || enabled != "O" {
@@ -153,20 +177,42 @@ func TestMigrationNineDropsTheKeyFromRevisions(t *testing.T) {
 	}
 }
 
-func TestMigrationNineRefusesASnapshotItCannotCarry(t *testing.T) {
+// refuseSnapshot stores body at schema 3.0, expects migration 9 to fail and
+// roll back, and checks that the row is as it was.
+func refuseSnapshot(t *testing.T, body string) {
+	t.Helper()
 	ctx := context.Background()
 	pool := storetest.NewEmpty(t)
 	provider := migrateTo(ctx, t, pool, 8)
 	owner, revision := seedProfile(ctx, t, pool, `{"display_name":"Prod"}`)
-	line := "\n      \"endpoint_type\": \"prometheus\","
-	body := strings.Replace(fileOf(t, "testdata/schema-3.0/direct-complete.json"), line, line+line, 1)
-	seedSnapshot(ctx, t, pool, owner, revision, 1, body)
+	report := seedSnapshot(ctx, t, pool, owner, revision, 1, body)
 	if _, err := provider.UpTo(ctx, 9); err == nil {
-		t.Fatal("a snapshot the pattern cannot carry must stop the migration")
+		t.Fatal("a snapshot the migration cannot carry must stop it")
 	}
 	if version, err := provider.GetDBVersion(ctx); err != nil || version != 8 {
 		t.Fatalf("version after the refusal = %d, %v; want 8", version, err)
 	}
+	var version string
+	var stored []byte
+	if err := pool.QueryRow(ctx, `SELECT schema_version, body FROM report_snapshots WHERE report_id = $1`, report).Scan(&version, &stored); err != nil {
+		t.Fatal(err)
+	}
+	if version != "3.0" || string(stored) != body {
+		t.Errorf("the row changed: version %q, body equal %v", version, string(stored) == body)
+	}
+}
+
+func TestMigrationNineRefusesASnapshotItCannotCarry(t *testing.T) {
+	var out bytes.Buffer
+	if err := json.Indent(&out, []byte(fileOf(t, "testdata/schema-3.0/direct-complete.json")), "", "    "); err != nil {
+		t.Fatal(err)
+	}
+	refuseSnapshot(t, out.String())
+}
+
+func TestMigrationNineRefusesARepeatedEndpointTypeLine(t *testing.T) {
+	line := "\n      \"endpoint_type\": \"prometheus\","
+	refuseSnapshot(t, strings.Replace(fileOf(t, "testdata/schema-3.0/direct-complete.json"), line, line+line, 1))
 }
 
 func TestMigrationNineCannotBeReverted(t *testing.T) {

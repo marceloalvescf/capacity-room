@@ -4,8 +4,9 @@
 -- first member turns to 4.0 and the one line that holds the endpoint type of
 -- the report is removed. Encode writes two-space indented JSON, and a raw
 -- newline cannot occur inside a JSON string, so the patterns are exact. The
--- digest and the size follow the new bytes. The immutability trigger stays
--- off for this one statement alone.
+-- digest and the size follow the new bytes. Only a snapshot that holds both
+-- patterns is converted; any other stays at 3.0 for the check below. The
+-- immutability trigger stays off for this one statement alone.
 ALTER TABLE report_snapshots DISABLE TRIGGER report_snapshots_are_immutable;
 UPDATE report_snapshots AS s
 SET body = n.body,
@@ -21,6 +22,8 @@ FROM (
                'UTF8') AS body
     FROM report_snapshots
     WHERE schema_version = '3.0'
+      AND convert_from(body, 'UTF8') ~ '^\{\n  "schema_version": "3\.0",'
+      AND convert_from(body, 'UTF8') ~ '\n      "endpoint_type": "(prometheus|grafana)",'
 ) AS n
 WHERE s.report_id = n.report_id;
 ALTER TABLE report_snapshots ENABLE TRIGGER report_snapshots_are_immutable;
