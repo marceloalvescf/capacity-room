@@ -534,8 +534,9 @@ raise the worker's limit with `worker_slots`.
 - `serve` speaks plain HTTP: TLS is the proxy's.
 - No outbound proxy: the worker connects to the metric sources directly.
 - The sign-in throttle counts failures per user and client address. It does
-  not limit the number of user names one address tries; a rate limit on
-  `/api/v1/auth/login` in your proxy adds that bound.
+  not limit the number of user names one address tries, but one address
+  checks one password at a time: its other sign-ins wait their turn. A rate
+  limit on `/api/v1/auth/login` in your proxy adds a bound on the attempts.
 - A metric source that the allowlists admit is trusted to answer with
   reasonable sizes: an answer of up to 256 MiB is read, and decoding it takes
   many times that in memory. The memory limits of section 2 keep such an
@@ -566,8 +567,15 @@ A user blocked by the sign-in throttle is free again after five minutes.
 ## 12. Kubernetes
 
 The Helm chart in `deploy/helm/capacity-room` runs the platform on a
-Kubernetes cluster. It is installed from a checkout and is not published.
-It needs Helm 3 or 4 (the chart's tests use Helm 4.3.0), a PostgreSQL database that the cluster reaches, and either a
+Kubernetes cluster. It is published as the OCI chart
+`oci://ghcr.io/marceloalvescf/charts/capacity-room`, and it can also be installed
+from a checkout. The chart is that address, or the folder
+`deploy/helm/capacity-room`, never the root of the repository. The commands
+below install the OCI chart. To install from a checkout, run them from its
+root with `deploy/helm/capacity-room` in place of
+`oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0`. The
+package leaves out `examples/`, which the checkout holds.
+It needs Helm 3.8 or later, or Helm 4 (the chart's tests use Helm 4.3.0), a PostgreSQL database that the cluster reaches, and either a
 Gateway API gateway or an Ingress controller. Its values are documented by
 the comments of `deploy/helm/capacity-room/values.yaml`, which this section
 points at rather than repeats.
@@ -703,8 +711,8 @@ goes in the values, and none enters Helm's release state.
 Check the render against the cluster first, then install.
 
 ```bash
-helm upgrade -i capacity-room deploy/helm/capacity-room -n capacity-room --dry-run=server -f values.yaml
-helm upgrade -i capacity-room deploy/helm/capacity-room -n capacity-room -f values.yaml --wait --timeout 10m
+helm upgrade -i capacity-room oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0 -n capacity-room --dry-run=server -f values.yaml
+helm upgrade -i capacity-room oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0 -n capacity-room -f values.yaml --wait --timeout 10m
 ```
 
 With `--wait`, Helm runs the Jobs once the new pods are ready, after the old ones are gone, so a Job never migrates while an old pod is still stopping.
@@ -769,8 +777,9 @@ container, such as an Azure Policy initiative or Gatekeeper, takes
 
 ### Upgrade and uninstall
 
-To upgrade, check out the new version and run the same `helm upgrade -i`
-command. Both pods are recreated, and the schema is applied under the lock
+To upgrade, run the same `helm upgrade -i` command with the new `--version`,
+or check out the new version and run it from the checkout. Both pods are
+recreated, and the schema is applied under the lock
 by the first command that starts. The image tag is the chart's `appVersion`
 unless `image.tag` is set.
 
@@ -825,7 +834,8 @@ The range is enough only when the gateway sees each client's own address.
 With `externalTrafficPolicy: Cluster`, the default of a `LoadBalancer`
 Service, kube-proxy replaces the client's address with a node's before the
 gateway writes `X-Forwarded-For`, so every client that arrives through one
-node still counts as one. Set `externalTrafficPolicy: Local` on the gateway's
+node still counts as one, and their sign-ins check one password at a time.
+Set `externalTrafficPolicy: Local` on the gateway's
 Service to keep the client's address.
 
 ## Reporting a vulnerability

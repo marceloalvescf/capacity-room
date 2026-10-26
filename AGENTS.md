@@ -48,6 +48,7 @@ make update-golden    # rewrites the golden pages after an intended change
 make update-testdata  # rewrites the golden snapshots and data files
 make audit            # govulncheck, npm audit, and trivy over the image; needs the network and Docker
 make push             # the runtime image to Docker Hub; outward, main thread, on the owner's word
+make push-chart       # the chart to GHCR as an OCI chart; outward, main thread, on the owner's word
 ```
 
 `make audit` is not part of `make gate`, whose result must not change with a
@@ -944,8 +945,10 @@ looks.
 `docs/superpowers/specs/2026-10-14-kubernetes-deployment-design.md` is its
 design, and section 12 of `docs/operations.md` is the operator's guide to it.
 
-- **The chart lives in `deploy/helm/capacity-room/` and is not published.** An
-  operator installs it from a checkout.
+- **The chart lives in `deploy/helm/capacity-room/` and is published only as
+  the OCI chart `oci://ghcr.io/marceloalvescf/charts/capacity-room`,** by
+  `make push-chart`, with the version of `VERSION`. An operator installs from
+  it, or from the chart folder of a checkout, never from the repository root.
 - **The chart's README is the quick start of section 12.** It links to
   `docs/operations.md` and changes with it in the same commit.
 - **It creates no Secret, no PersistentVolumeClaim, and no NetworkPolicy.**
@@ -972,6 +975,8 @@ The main thread plans, judges, and runs the gates. Subagents implement.
 
 - A subagent may run `go`, `npm` inside `web/`, `make web`, `make build`,
   `make test`, `make lint`, `make generate`, and `make generate-check`.
+- A subagent must not run `make push-chart`: it is outward, and only the main
+  thread runs it, on the owner's word.
 - A subagent must not run Docker, so `make image`, `make test-toolchain`,
   `make test-template`, `make test-golden`, `make update-golden`,
   `make postgres-up`, `make postgres-down`, `make test-postgres`,

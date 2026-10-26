@@ -5,19 +5,24 @@ Deployment (the interface and the API), a `worker` Deployment (it collects the
 reports and compiles their PDFs), a Service, a Gateway API HTTPRoute or an
 Ingress, the ConfigMap that holds `platform.toml`, and two hook Jobs that
 create the first administrator and import the profiles. It ships no database
-and creates no Secret. It is installed from a checkout of the repository and
-is not published. This page is the quick start; section 12 of
-`docs/operations.md` is the full text.
+and creates no Secret. It is published as an OCI chart on GHCR, and it can
+also be installed from a checkout of the repository. This page is the quick
+start; section 12 of `docs/operations.md` is the full text.
 
 ## Prerequisites
 
 - A Kubernetes cluster and `kubectl` pointed at it.
-- Helm 3 or 4 (the chart's tests use Helm 4.3.0).
+- Helm 3.8 or later, or Helm 4 (the chart's tests use Helm 4.3.0).
 - A Gateway API gateway or an Ingress controller.
 - A PostgreSQL 18 database the cluster reaches. Step 1 shows how to run one
   with CloudNativePG.
 
-Run every command below from the root of the checkout, with `capacity-room` as
+The chart is `oci://ghcr.io/marceloalvescf/charts/capacity-room`, or the folder
+`deploy/helm/capacity-room` of a checkout, never the root of the repository.
+The commands below install the OCI chart. To install from a checkout, run
+them from its root with `deploy/helm/capacity-room` in place of
+`oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0`. The
+package leaves out `examples/`, which the checkout holds. `capacity-room` is
 the release and the namespace.
 
 ## 1. A database
@@ -147,8 +152,8 @@ reference.
 Check the render against the cluster first, then install.
 
 ```bash
-helm upgrade -i capacity-room deploy/helm/capacity-room -n capacity-room --dry-run=server -f values.yaml
-helm upgrade -i capacity-room deploy/helm/capacity-room -n capacity-room -f values.yaml --wait --timeout 10m
+helm upgrade -i capacity-room oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0 -n capacity-room --dry-run=server -f values.yaml
+helm upgrade -i capacity-room oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.0.0 -n capacity-room -f values.yaml --wait --timeout 10m
 kubectl -n capacity-room get pods
 ```
 
@@ -160,7 +165,8 @@ Secret.
 
 ## Upgrade and uninstall
 
-To upgrade, check out the new version and run the install command again.
+To upgrade, run the install command again with the new `--version`, or check
+out the new version and run it from the checkout.
 Before an upgrade from 2.x to 3.0.0, scale both Deployments to zero, then
 back up the database, and remove `default_min_severity` and
 `permitted_min_severities` from `profiles`; section 8 of
