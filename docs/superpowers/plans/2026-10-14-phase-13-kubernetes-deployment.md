@@ -24,7 +24,7 @@
 - Diagnostics are English; a message may repeat a path the user gave, never the content of a password file.
 - Every subagent: never wait on standard input, never write to `/tmp` (scratch goes under `.cache/`), leave no background process, run `go` and `make` only inside `nix develop -c ...`, never run Docker, never run `git stash`, `git restore`, `git checkout` of a path, or `git clean`; every commit names its paths (`git add <paths>`).
 - Comments say what the code does; no comment names a task, a phase, a step, or a path under `.cache/`.
-- `example.com`, the homelab's addresses, and its kube context never enter the chart, its examples, the tests, or a document for operators; those use `example.com`. Only the spec and this plan name the homelab, as the record of the phase.
+- The homelab's own host name, its addresses, and its kube context never enter the chart, its examples, the tests, or a document for operators; those use `example.com`. Only the spec and this plan name the homelab, as the record of the phase.
 
 ## Review Focus
 
