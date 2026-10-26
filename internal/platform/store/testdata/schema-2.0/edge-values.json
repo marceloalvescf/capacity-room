@@ -1,0 +1,910 @@
+{
+  "schema_version": "2.0",
+  "report": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "generator_version": "0.0.0-golden",
+    "emitted_at": "2026-07-15T14:30:00-03:00",
+    "period_start": "2026-07-14T14:30:00-03:00",
+    "period_end": "2026-07-15T14:30:00-03:00",
+    "timezone": "America/Sao_Paulo",
+    "profile": "detailed",
+    "min_severity": "all",
+    "organization": "ACME",
+    "classification": "Uso interno",
+    "author": "Time SRE",
+    "thresholds": {
+      "warning_percent": 70,
+      "critical_percent": 85,
+      "low_utilization_percent": 30,
+      "autoscaler_near_max_percent": 80,
+      "nodepool_spread_points": 30,
+      "bursty_gap_percent": 100,
+      "hpa_replica_divergence": 1
+    },
+    "settings": {
+      "endpoint_type": "prometheus",
+      "tls_verify": true,
+      "timeout_seconds": 90,
+      "node_autoscaling": "auto",
+      "nodepool_label": ""
+    }
+  },
+  "scope": {
+    "cluster_name": "prod",
+    "cluster_label": "cluster",
+    "filter_mode": "required",
+    "matcher_enabled": true,
+    "confidence": "exact",
+    "discovered_values": [
+      "prod"
+    ],
+    "namespaces": [
+      "payments"
+    ],
+    "excluded_containers": [
+      "istio-proxy"
+    ]
+  },
+  "quality": {
+    "capabilities": [
+      {
+        "name": "namespace_usage",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "container_cpu_usage_seconds_total",
+          "container_memory_working_set_bytes"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "workload_usage",
+        "state": "available",
+        "strategy": "recording_rule",
+        "evidence": [
+          "namespace_workload_pod:kube_pod_owner:relabel",
+          "container_cpu_usage_seconds_total",
+          "container_memory_working_set_bytes"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "requests_limits",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_pod_container_resource_requests",
+          "kube_pod_container_resource_limits"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "hpa_history",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_horizontalpodautoscaler_info",
+          "kube_horizontalpodautoscaler_spec_min_replicas",
+          "kube_horizontalpodautoscaler_spec_max_replicas",
+          "kube_horizontalpodautoscaler_status_current_replicas",
+          "kube_horizontalpodautoscaler_status_desired_replicas"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "workloads_without_hpa",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_deployment_labels",
+          "kube_statefulset_labels",
+          "kube_horizontalpodautoscaler_info"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "ip_node_mapping",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_node_info"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "nodepool_discovery",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_node_labels"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "node_utilization",
+        "state": "available",
+        "strategy": "recording_rule",
+        "evidence": [
+          "instance:node_cpu_utilisation:rate5m",
+          "instance:node_memory_utilisation:ratio"
+        ],
+        "reasons": []
+      },
+      {
+        "name": "node_autoscaling",
+        "state": "available",
+        "strategy": "raw_metrics",
+        "evidence": [
+          "kube_configmap_info"
+        ],
+        "reasons": []
+      }
+    ],
+    "warnings": [],
+    "notices": [
+      {
+        "code": "WORKLOADS_OMITTED_NO_USAGE",
+        "params": {
+          "count": 1
+        }
+      },
+      {
+        "code": "JOBS_OMITTED",
+        "params": {
+          "count": 1
+        }
+      }
+    ],
+    "collection_started_at": "2026-07-15T14:30:00-03:00",
+    "collection_completed_at": "2026-07-15T14:30:42-03:00"
+  },
+  "summary": {
+    "namespaces": 1,
+    "workloads": 2,
+    "hpas": 1,
+    "nodes": 1,
+    "nodepools": 1,
+    "findings": 17,
+    "recommendations": 11,
+    "healthy": 6,
+    "attention": 9,
+    "critical": 2,
+    "workloads_without_hpa": 1,
+    "autoscaling": {
+      "status": "disabled",
+      "source": "raw_metrics",
+      "confidence": "inferred",
+      "managed_node_groups": null,
+      "current_nodes": 1,
+      "min_nodes": null,
+      "max_nodes": null,
+      "scale_events": 0,
+      "unschedulable_pods": 0
+    }
+  },
+  "namespaces": [
+    {
+      "name": "payments",
+      "pods": 3,
+      "approximate": true,
+      "cpu_usage": {
+        "state": "value",
+        "average": 0.5,
+        "minimum": 0.5,
+        "peak": 0.5,
+        "current": 0.5
+      },
+      "memory_usage": {
+        "state": "value",
+        "average": 105,
+        "minimum": 60,
+        "peak": 150,
+        "current": 60
+      },
+      "cpu_requests": {
+        "state": "value",
+        "average": 0,
+        "minimum": 0,
+        "peak": 0,
+        "current": 0
+      },
+      "memory_requests": {
+        "state": "value",
+        "average": 200,
+        "minimum": 200,
+        "peak": 200,
+        "current": 200
+      },
+      "cpu_limits": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_limits": {
+        "state": "value",
+        "average": 300,
+        "minimum": 300,
+        "peak": 300,
+        "current": 300
+      },
+      "cpu_request_percent": {
+        "state": "no_base",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_request_percent": {
+        "state": "value",
+        "average": 52.5,
+        "minimum": 30,
+        "peak": 75,
+        "current": 30
+      },
+      "cpu_limit_percent": {
+        "state": "no_base",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_limit_percent": {
+        "state": "value",
+        "average": 35,
+        "minimum": 20,
+        "peak": 50,
+        "current": 20
+      }
+    }
+  ],
+  "workloads": [
+    {
+      "namespace": "payments",
+      "kind": "Deployment",
+      "name": "api",
+      "observed_usage": true,
+      "hpa_coverage": "unknown",
+      "pods": 4,
+      "approximate": false,
+      "cpu_usage": {
+        "state": "value",
+        "average": 0.55,
+        "minimum": 0.2,
+        "peak": 0.9,
+        "current": 0.9
+      },
+      "memory_usage": {
+        "state": "value",
+        "average": 110,
+        "minimum": 100,
+        "peak": 120,
+        "current": 120
+      },
+      "cpu_requests": {
+        "state": "value",
+        "average": 1,
+        "minimum": 1,
+        "peak": 1,
+        "current": 1
+      },
+      "memory_requests": {
+        "state": "value",
+        "average": 400,
+        "minimum": 400,
+        "peak": 400,
+        "current": 400
+      },
+      "cpu_limits": {
+        "state": "value",
+        "average": 1,
+        "minimum": 1,
+        "peak": 1,
+        "current": 1
+      },
+      "memory_limits": {
+        "state": "value",
+        "average": 800,
+        "minimum": 800,
+        "peak": 800,
+        "current": 800
+      },
+      "cpu_request_percent": {
+        "state": "value",
+        "average": 55,
+        "minimum": 20,
+        "peak": 90,
+        "current": 90
+      },
+      "memory_request_percent": {
+        "state": "value",
+        "average": 27.5,
+        "minimum": 25,
+        "peak": 30,
+        "current": 30
+      },
+      "cpu_limit_percent": {
+        "state": "value",
+        "average": 55,
+        "minimum": 20,
+        "peak": 90,
+        "current": 90
+      },
+      "memory_limit_percent": {
+        "state": "value",
+        "average": 13.75,
+        "minimum": 12.5,
+        "peak": 15,
+        "current": 15
+      }
+    },
+    {
+      "namespace": "payments",
+      "kind": "StatefulSet",
+      "name": "payments-worker",
+      "observed_usage": false,
+      "hpa_coverage": "uncovered",
+      "pods": null,
+      "approximate": false,
+      "cpu_usage": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_usage": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "cpu_requests": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_requests": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "cpu_limits": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_limits": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "cpu_request_percent": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_request_percent": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "cpu_limit_percent": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_limit_percent": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      }
+    },
+    {
+      "namespace": "payments",
+      "kind": "StatefulSet",
+      "name": "queue",
+      "observed_usage": true,
+      "hpa_coverage": "unknown",
+      "pods": 2,
+      "approximate": false,
+      "cpu_usage": {
+        "state": "value",
+        "average": 0.1,
+        "minimum": 0.1,
+        "peak": 0.1,
+        "current": 0.1
+      },
+      "memory_usage": {
+        "state": "value",
+        "average": 10,
+        "minimum": 10,
+        "peak": 10,
+        "current": 10
+      },
+      "cpu_requests": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_requests": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "cpu_limits": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_limits": {
+        "state": "unavailable",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "cpu_request_percent": {
+        "state": "no_base",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_request_percent": {
+        "state": "no_base",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "cpu_limit_percent": {
+        "state": "no_base",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      },
+      "memory_limit_percent": {
+        "state": "no_base",
+        "average": null,
+        "minimum": null,
+        "peak": null,
+        "current": null
+      }
+    }
+  ],
+  "hpas": [
+    {
+      "namespace": "payments",
+      "name": "payments-web",
+      "target_kind": "Deployment",
+      "target_name": "payments-web",
+      "spec_min": 1,
+      "spec_max": 4,
+      "current": {
+        "state": "value",
+        "average": 2.5,
+        "minimum": 2,
+        "peak": 3,
+        "current": 3
+      },
+      "desired": {
+        "state": "value",
+        "average": 3.5,
+        "minimum": 3,
+        "peak": 4,
+        "current": 4
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "name": "node-1",
+      "pool": "pool-a",
+      "pool_confidence": "exact",
+      "cpu_capacity": 4,
+      "memory_capacity": 8,
+      "cpu_allocatable": 4,
+      "memory_allocatable": 8,
+      "cpu_usage_percent": {
+        "state": "value",
+        "average": 57.5,
+        "minimum": 55,
+        "peak": 60,
+        "current": 60
+      },
+      "memory_usage_percent": {
+        "state": "value",
+        "average": 62.5,
+        "minimum": 60,
+        "peak": 65,
+        "current": 65
+      },
+      "cpu_request_percent": 25,
+      "memory_request_percent": 25,
+      "ready": true,
+      "schedulable": true
+    }
+  ],
+  "nodepools": [
+    {
+      "name": "pool-a",
+      "confidence": "exact",
+      "nodes": [
+        "node-1"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "code": "WORKLOAD_CPU_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/api",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "value": 55
+        },
+        {
+          "name": "peak_percent",
+          "value": 90
+        }
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/api",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "value": 55
+        },
+        {
+          "name": "peak_percent",
+          "value": 90
+        }
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NODE_AUTOSCALING_DISABLED",
+      "severity": "attention",
+      "scope_type": "cluster",
+      "scope_kind": "",
+      "scope_name": "cluster",
+      "evidence": [
+        {
+          "name": "node_pressure",
+          "value": false
+        }
+      ],
+      "confidence": "inferred"
+    },
+    {
+      "code": "NAMESPACE_CPU_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "evidence": [],
+      "confidence": "exact"
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "value": 52.5
+        },
+        {
+          "name": "peak_percent",
+          "value": 75
+        }
+      ],
+      "confidence": "inferred"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_OVERREQUESTED",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/api",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "value": 27.5
+        },
+        {
+          "name": "peak_percent",
+          "value": 30
+        }
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "HPA_REPLICA_DIVERGENCE",
+      "severity": "attention",
+      "scope_type": "hpa",
+      "scope_kind": "",
+      "scope_name": "payments/payments-web",
+      "evidence": [
+        {
+          "name": "average_difference",
+          "value": 1
+        }
+      ],
+      "confidence": "inferred"
+    },
+    {
+      "code": "WORKLOAD_CPU_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/queue",
+      "evidence": [],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/queue",
+      "evidence": [],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/queue",
+      "evidence": [],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/queue",
+      "evidence": [],
+      "confidence": "exact"
+    },
+    {
+      "code": "NODE_CPU_USAGE_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "node-1",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "value": 57.5
+        },
+        {
+          "name": "peak_percent",
+          "value": 60
+        }
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NODE_MEMORY_USAGE_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "node",
+      "scope_kind": "",
+      "scope_name": "node-1",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "value": 62.5
+        },
+        {
+          "name": "peak_percent",
+          "value": 65
+        }
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NAMESPACE_MEMORY_LIMIT_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "namespace",
+      "scope_kind": "",
+      "scope_name": "payments",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "value": 35
+        },
+        {
+          "name": "peak_percent",
+          "value": 50
+        }
+      ],
+      "confidence": "inferred"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/api",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "value": 13.75
+        },
+        {
+          "name": "peak_percent",
+          "value": 15
+        }
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_HEALTHY",
+      "severity": "healthy",
+      "scope_type": "workload",
+      "scope_kind": "Deployment",
+      "scope_name": "payments/api",
+      "evidence": [
+        {
+          "name": "average_percent",
+          "value": 27.5
+        },
+        {
+          "name": "peak_percent",
+          "value": 30
+        }
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "STATEFULSET_WITHOUT_HPA_INFO",
+      "severity": "healthy",
+      "scope_type": "workload",
+      "scope_kind": "StatefulSet",
+      "scope_name": "payments/payments-worker",
+      "evidence": [],
+      "confidence": "exact"
+    }
+  ],
+  "recommendations": [
+    {
+      "code": "WORKLOAD_CPU_LIMIT_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/api"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_CRITICAL",
+      "severity": "critical",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/api"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NAMESPACE_CPU_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_OVERREQUESTED",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/api"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_CPU_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/queue"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_CPU_REQUEST_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/queue"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_LIMIT_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/queue"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "WORKLOAD_MEMORY_REQUEST_MISSING",
+      "severity": "attention",
+      "scope_type": "workload",
+      "scopes": [
+        "payments/queue"
+      ],
+      "confidence": "exact"
+    },
+    {
+      "code": "NODE_AUTOSCALING_DISABLED",
+      "severity": "attention",
+      "scope_type": "cluster",
+      "scopes": [
+        "cluster"
+      ],
+      "confidence": "inferred"
+    },
+    {
+      "code": "NAMESPACE_MEMORY_REQUEST_ATTENTION",
+      "severity": "attention",
+      "scope_type": "namespace",
+      "scopes": [
+        "payments"
+      ],
+      "confidence": "inferred"
+    },
+    {
+      "code": "HPA_REPLICA_DIVERGENCE",
+      "severity": "attention",
+      "scope_type": "hpa",
+      "scopes": [
+        "payments/payments-web"
+      ],
+      "confidence": "inferred"
+    }
+  ]
+}

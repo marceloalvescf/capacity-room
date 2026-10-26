@@ -56,8 +56,8 @@ func TestMigrateIsIdempotent(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if version != 7 {
-			t.Fatalf("version = %d, want 7", version)
+		if version != 8 {
+			t.Fatalf("version = %d, want 8", version)
 		}
 		pending, err := store.HasPending(ctx, pool)
 		if err != nil {
@@ -224,15 +224,15 @@ const insertProfile = `INSERT INTO profiles (id, current_revision_id, created_at
 const insertRevision = `INSERT INTO profile_revisions (id, profile_id, revision, fingerprint, display_name, active, document, credential_file, ca_bundle_file, created_by, created_at)
 VALUES ($1, $2, $3, $4, 'name', true, '{}', '', '', NULL, now())`
 
-func TestMigrateToVersionSeven(t *testing.T) {
+func TestMigrateToVersionEight(t *testing.T) {
 	ctx := context.Background()
 	pool := storetest.NewEmpty(t)
 	version, err := store.Migrate(ctx, pool)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != 7 {
-		t.Fatalf("version = %d, want 7", version)
+	if version != 8 {
+		t.Fatalf("version = %d, want 8", version)
 	}
 	for _, table := range []string{"profiles", "profile_revisions", "river_job", "reports", "report_snapshots", "report_pdfs", "report_idempotency_keys"} {
 		var exists bool
@@ -356,11 +356,11 @@ func TestProfileIDCheck(t *testing.T) {
 	}
 }
 
-// TestMigrateDownAndUp runs the four newest Down sections through goose, over the
-// migration files of the folder, and applies the migrations again.
+// TestMigrateDownAndUp runs the Down sections of versions 7 to 3 through goose, over the
+// migration files of the folder, and applies the migrations again, to version 8.
 func TestMigrateDownAndUp(t *testing.T) {
 	ctx := context.Background()
-	pool := storetest.New(t)
+	pool := storetest.NewEmpty(t)
 	db := stdlib.OpenDBFromPool(pool)
 	defer func() { _ = db.Close() }()
 	provider, err := goose.NewProvider(goose.DialectPostgres, db, os.DirFS("migrations"), goose.WithDisableGlobalRegistry(true))
@@ -368,6 +368,9 @@ func TestMigrateDownAndUp(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = provider.Close() }()
+	if _, err := provider.UpTo(ctx, 7); err != nil {
+		t.Fatal(err)
+	}
 
 	exists := func(table string) bool {
 		var found bool
@@ -437,8 +440,8 @@ func TestMigrateDownAndUp(t *testing.T) {
 	}
 
 	version, err := store.Migrate(ctx, pool)
-	if err != nil || version != 7 {
-		t.Fatalf("version after up = %d, %v; want 7", version, err)
+	if err != nil || version != 8 {
+		t.Fatalf("version after up = %d, %v; want 8", version, err)
 	}
 	for _, table := range []string{"profiles", "profile_revisions", "river_job", "reports", "report_snapshots", "report_pdfs", "report_idempotency_keys"} {
 		if !exists(table) {
