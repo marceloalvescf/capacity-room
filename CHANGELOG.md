@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-10-26
+
 ### Changed
 
 - The upgrade to this version carries every stored report and profile forward and cannot be undone, so back up the database and stop the worker before it, as the operations guide says.

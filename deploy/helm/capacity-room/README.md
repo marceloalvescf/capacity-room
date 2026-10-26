@@ -22,7 +22,7 @@ Get the chart's folder first. It holds `values.yaml` and the `examples/`
 that the steps below use.
 
 ```bash
-helm pull oci://ghcr.io/marceloalvescf/charts/capacity-room --version 3.1.0 --untar
+helm pull oci://ghcr.io/marceloalvescf/charts/capacity-room --version 4.0.0 --untar
 ```
 
 This writes the folder `capacity-room`. A checkout of the repository holds the
