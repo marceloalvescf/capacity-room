@@ -687,7 +687,6 @@
       },
       "fact": {
         "endpoint": "Endpoint",
-        "type": "Type",
         "credential": "Credential file",
         "ca": "CA bundle file",
         "revision": "Revision",
@@ -745,7 +744,6 @@
       "active": "Active",
       "activeHint": "An active profile is offered in the new report form.",
       "url": "Endpoint URL",
-      "type": "Type",
       "timeout": "Timeout (seconds)",
       "tls": "Verify the TLS certificate",
       "credential": "Credential file",
@@ -788,11 +786,6 @@
       "created": "The profile {{name}} was created.",
       "saved": "The profile {{name}} was saved."
     }
-  },
-  "endpointType": {
-    "auto": "Detect",
-    "prometheus": "Prometheus",
-    "grafana": "Grafana"
   },
   "profileTest": {
     "PROFILE_OK": "Connected. The source answers every query the report needs.",

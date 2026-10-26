@@ -133,7 +133,6 @@ export function adminProfile(overrides: Partial<AdminProfile> = {}): AdminProfil
     display_name: "Production",
     active: true,
     endpoint_url: "https://prometheus.example.com",
-    endpoint_type: "auto",
     timeout_seconds: 90,
     tls_verify: true,
     credential_file: "",

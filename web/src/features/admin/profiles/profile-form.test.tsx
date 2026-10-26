@@ -88,7 +88,6 @@ describe("the profile form", () => {
       display_name: "Lab",
       active: false,
       endpoint_url: "https://lab.example.com",
-      endpoint_type: "auto",
       timeout_seconds: 90,
       tls_verify: true,
       credential_file: "",
@@ -462,7 +461,7 @@ describe("the profile form", () => {
     const connected = "Connected. The source answers every query the report needs.";
     await user.click(screen.getByRole("button", { name: "Test connection" }));
     await findShown(connected);
-    await user.selectOptions(screen.getByLabelText("Type"), "Prometheus");
+    await user.selectOptions(screen.getByLabelText("Node autoscaling"), "Enabled");
     expect(shown(connected)).toEqual([]);
     await user.click(screen.getByRole("button", { name: "Test connection" }));
     await findShown(connected);

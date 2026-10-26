@@ -687,7 +687,6 @@
       },
       "fact": {
         "endpoint": "Endpoint",
-        "type": "Tipo",
         "credential": "Arquivo de credencial",
         "ca": "Arquivo do CA bundle",
         "revision": "Revisão",
@@ -745,7 +744,6 @@
       "active": "Ativo",
       "activeHint": "Um perfil ativo aparece no formulário de novo relatório.",
       "url": "URL do endpoint",
-      "type": "Tipo",
       "timeout": "Timeout (segundos)",
       "tls": "Verificar o certificado TLS",
       "credential": "Arquivo de credencial",
@@ -788,11 +786,6 @@
       "created": "O perfil {{name}} foi criado.",
       "saved": "O perfil {{name}} foi salvo."
     }
-  },
-  "endpointType": {
-    "auto": "Detectar",
-    "prometheus": "Prometheus",
-    "grafana": "Grafana"
   },
   "profileTest": {
     "PROFILE_OK": "Conectado. A fonte responde a todas as consultas que o relatório usa.",

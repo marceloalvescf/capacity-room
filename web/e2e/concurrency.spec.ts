@@ -110,7 +110,6 @@ test.beforeAll(async ({ browser }, testInfo) => {
         id: profile.id,
         display_name: profile.name,
         endpoint_url: "http://fake-prometheus:9091/api/v1",
-        endpoint_type: "prometheus",
         cluster_name: "prod",
         allowed_namespaces: [namespace],
         active: true,

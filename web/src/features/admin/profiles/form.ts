@@ -38,7 +38,6 @@ export interface ProfileValues {
   display_name: string;
   active: boolean;
   endpoint_url: string;
-  endpoint_type: Schemas["EndpointType"];
   timeout_seconds: string;
   tls_verify: boolean;
   credential_file: string;
@@ -66,7 +65,6 @@ export function valuesOf(profile: Profile): ProfileValues {
     display_name: profile.display_name,
     active: profile.active,
     endpoint_url: profile.endpoint_url,
-    endpoint_type: profile.endpoint_type,
     timeout_seconds: String(profile.timeout_seconds),
     tls_verify: profile.tls_verify,
     credential_file: profile.credential_file,
@@ -121,7 +119,6 @@ export function newProfileValues(): ProfileValues {
     display_name: "",
     active: false,
     endpoint_url: "",
-    endpoint_type: "auto",
     timeout_seconds: "90",
     tls_verify: true,
     credential_file: "",
@@ -162,7 +159,6 @@ export function documentOf(values: ProfileValues): ProfileDocument {
     display_name: values.display_name,
     active: values.active,
     endpoint_url: values.endpoint_url,
-    endpoint_type: values.endpoint_type,
     timeout_seconds: Number(values.timeout_seconds),
     tls_verify: values.tls_verify,
     credential_file: values.credential_file,
@@ -286,7 +282,6 @@ const documentFields: readonly string[] = [
   "display_name",
   "active",
   "endpoint_url",
-  "endpoint_type",
   "timeout_seconds",
   "tls_verify",
   "credential_file",

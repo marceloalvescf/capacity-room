@@ -13,7 +13,6 @@ import { Link, useNavigate, useParams } from "react-router";
 import { ApiFailure } from "@/api/client";
 import { errorText, toError } from "@/api/errors";
 import {
-  endpointTypeValues,
   filterModeValues,
   nodeAutoscalingValues,
   reportProfileValues,
@@ -308,17 +307,6 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
           error={fieldError(errors.endpoint_url?.message)}
           {...register("endpoint_url")}
         />
-        <Select
-          label={t("admin.profile.type")}
-          error={fieldError(errors.endpoint_type?.message)}
-          {...register("endpoint_type")}
-        >
-          {endpointTypeValues.map((value) => (
-            <option key={value} value={value}>
-              {t(`endpointType.${value}`)}
-            </option>
-          ))}
-        </Select>
         <Field
           label={t("admin.profile.timeout")}
           inputMode="decimal"

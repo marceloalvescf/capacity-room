@@ -71,7 +71,6 @@ function ProfileRow({
         <Fact label={t("admin.profiles.fact.endpoint")} wide>
           <span className="font-mono">{profile.endpoint_url}</span>
         </Fact>
-        <Fact label={t("admin.profiles.fact.type")}>{t(`endpointType.${profile.endpoint_type}`)}</Fact>
         <Fact label={t("admin.profiles.fact.credential")}>
           <FileName name={profile.credential_file} />
         </Fact>

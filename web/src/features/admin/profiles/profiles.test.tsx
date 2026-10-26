@@ -78,7 +78,6 @@ describe("the profiles screen", () => {
     const fact = (label: string) => screen.getByText(label).closest("div");
     expect(fact("Endpoint")).toHaveTextContent("https://prometheus.example.com");
     expect(within(fact("Endpoint") as HTMLElement).getByText("https://prometheus.example.com")).toHaveClass("font-mono");
-    expect(fact("Type")).toHaveTextContent("Detect");
     expect(within(fact("Credential file") as HTMLElement).getByText("production-token")).toHaveClass("font-mono");
     expect(within(fact("CA bundle file") as HTMLElement).getByText("None")).toHaveClass("text-muted-fg");
     const revision = fact("Revision") as HTMLElement;

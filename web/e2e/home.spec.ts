@@ -42,7 +42,6 @@ test("the home page shows the clusters and the way to request a report", async (
         id: empty.id,
         display_name: empty.name,
         endpoint_url: "http://fake-prometheus:9091/api/v1",
-        endpoint_type: "prometheus",
         cluster_name: "prod",
         allowed_namespaces: ["payments"],
         active: true,

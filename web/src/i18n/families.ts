@@ -1,5 +1,4 @@
 import {
-  endpointTypeValues,
   errorCodeValues,
   filterModeValues,
   languageValues,
@@ -53,7 +52,6 @@ export const families: Readonly<Record<string, readonly string[]>> = {
   capabilityState: viewCapabilityStateValues,
   "period.calendar": calendarRanges,
   profileTest: profileTestCodeValues,
-  endpointType: endpointTypeValues,
   filterMode: filterModeValues,
   nodeAutoscaling: nodeAutoscalingValues,
   fieldProblem: fieldProblems,
