@@ -49,7 +49,7 @@ func (f *fixture) markDeleted(t *testing.T, id uuid.UUID) {
 
 func (f *fixture) addSnapshot(t *testing.T, id uuid.UUID, body string) {
 	t.Helper()
-	if err := store.InsertSnapshot(context.Background(), f.pool, id, "1", []byte(body), fixedNow); err != nil {
+	if err := store.InsertSnapshot(context.Background(), f.pool, id, "4.0", []byte(body), fixedNow); err != nil {
 		t.Fatal(err)
 	}
 }

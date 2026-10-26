@@ -75,7 +75,7 @@ func collectedReport(t *testing.T, pool *pgxpool.Pool, f reportFixture, expires 
 	}
 	r.ExpiresAt = expires
 	mustInsertReport(t, pool, r)
-	if err := store.InsertSnapshot(ctx, pool, r.ID, "1", []byte("{}"), now); err != nil {
+	if err := store.InsertSnapshot(ctx, pool, r.ID, "4.0", []byte("{}"), now); err != nil {
 		t.Fatal(err)
 	}
 	for lang, status := range statuses {

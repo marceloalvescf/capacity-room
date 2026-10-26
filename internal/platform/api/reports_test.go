@@ -206,7 +206,7 @@ func (ts *testServer) seedReport(t *testing.T, o stored) uuid.UUID {
 		t.Fatal(err)
 	}
 	if o.snapshot != nil {
-		if err := store.InsertSnapshot(ctx, ts.pool, r.ID, "1.0", o.snapshot, ts.now); err != nil {
+		if err := store.InsertSnapshot(ctx, ts.pool, r.ID, "4.0", o.snapshot, ts.now); err != nil {
 			t.Fatal(err)
 		}
 	}

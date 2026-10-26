@@ -176,8 +176,11 @@ Before an upgrade from 2.x to 3.0.0, scale both Deployments to zero, then
 back up the database, and remove `default_min_severity` and
 `permitted_min_severities` from `profiles`; section 8 of
 `docs/operations.md` says why.
-Before an upgrade from 3.x to 4.0.0, do the same, and remove `endpoint_type`
-from `profiles`; section 8 says why.
+Before an upgrade from 3.x to 4.0.0, do the same, wait until both pods are
+gone (`kubectl -n capacity-room wait --for=delete pod -l
+app.kubernetes.io/component=worker --timeout=180s`, and the same for
+`serve`) before the backup, and remove `endpoint_type` from `profiles`;
+section 8 says why.
 
 ```bash
 helm uninstall capacity-room -n capacity-room

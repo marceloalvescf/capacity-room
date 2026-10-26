@@ -112,7 +112,7 @@ func TestReportChecks(t *testing.T) {
 	wantSQLState(t, "ready PDF without a body", err, "23514")
 	_, err = pool.Exec(ctx, `INSERT INTO report_pdfs (report_id, language, status, job_id, updated_at) VALUES ($1, 'es', 'pending', 1, now())`, reportID)
 	wantSQLState(t, "PDF language es", err, "23514")
-	_, err = pool.Exec(ctx, `INSERT INTO report_snapshots (report_id, schema_version, body, sha256, size_bytes, created_at) VALUES ($1, '1', $2, $3, 65, now())`,
+	_, err = pool.Exec(ctx, `INSERT INTO report_snapshots (report_id, schema_version, body, sha256, size_bytes, created_at) VALUES ($1, '4.0', $2, $3, 65, now())`,
 		reportID, []byte(strings.Repeat("a", 64)), strings.Repeat("0", 64))
 	wantSQLState(t, "snapshot declaring 65 bytes for 64", err, "23514")
 
@@ -129,7 +129,7 @@ func TestReportSnapshotsAreImmutable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO report_snapshots (report_id, schema_version, body, sha256, size_bytes, created_at) VALUES ($1, '1', $2, $3, 4, now())`,
+	if _, err := pool.Exec(ctx, `INSERT INTO report_snapshots (report_id, schema_version, body, sha256, size_bytes, created_at) VALUES ($1, '4.0', $2, $3, 4, now())`,
 		reportID, []byte("abcd"), strings.Repeat("0", 64)); err != nil {
 		t.Fatal(err)
 	}

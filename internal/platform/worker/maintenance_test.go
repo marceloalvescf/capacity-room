@@ -147,7 +147,7 @@ func (e *env) seedDueRows() dueRows {
 	d.stuck = e.seedReport("running", "collecting", absentJob, future, nil).ID
 
 	d.rendering = e.seedReport("collected", "rendering", absentJob, future, nil).ID
-	if err := store.InsertSnapshot(ctx, e.pool, d.rendering, "1", []byte("{}"), fixedNow); err != nil {
+	if err := store.InsertSnapshot(ctx, e.pool, d.rendering, "4.0", []byte("{}"), fixedNow); err != nil {
 		e.t.Fatal(err)
 	}
 	if err := store.InsertPendingPDF(ctx, e.pool, d.rendering, "en", e.insertJobRow("discarded"), fixedNow); err != nil {
@@ -155,7 +155,7 @@ func (e *env) seedDueRows() dueRows {
 	}
 
 	d.toExpire = e.seedReport("collected", "complete", absentJob, fixedNow, nil).ID
-	if err := store.InsertSnapshot(ctx, e.pool, d.toExpire, "1", []byte("{}"), fixedNow); err != nil {
+	if err := store.InsertSnapshot(ctx, e.pool, d.toExpire, "4.0", []byte("{}"), fixedNow); err != nil {
 		e.t.Fatal(err)
 	}
 
@@ -261,7 +261,7 @@ func TestMaintenanceDoesNotBlameARenderPastExpiry(t *testing.T) {
 	e := maintenanceEnv(t)
 	past := fixedNow.Add(-time.Minute)
 	id := e.seedReport("collected", "rendering", absentJob, past, nil).ID
-	if err := store.InsertSnapshot(context.Background(), e.pool, id, "1", []byte("{}"), fixedNow); err != nil {
+	if err := store.InsertSnapshot(context.Background(), e.pool, id, "4.0", []byte("{}"), fixedNow); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.InsertPendingPDF(context.Background(), e.pool, id, "en", e.insertJobRow("completed"), fixedNow); err != nil {
@@ -341,7 +341,7 @@ func TestSweepStepRemovesDeleted(t *testing.T) {
 	running := e.seedReport("running", "collecting", live, future, nil)
 	live2 := e.insertJobRow("running")
 	untouched := e.seedReport("queued", "waiting", live2, future, nil)
-	if err := store.InsertSnapshot(ctx, e.pool, collected.ID, "1", []byte("{}"), fixedNow); err != nil {
+	if err := store.InsertSnapshot(ctx, e.pool, collected.ID, "4.0", []byte("{}"), fixedNow); err != nil {
 		t.Fatal(err)
 	}
 	for _, lang := range []string{"en", "pt-BR"} {

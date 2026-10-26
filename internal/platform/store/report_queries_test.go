@@ -373,7 +373,7 @@ func TestFinishPDFAndInsertSnapshotRefuseANilBody(t *testing.T) {
 	if err := store.FinishPDF(ctx, pool, r.ID, "en", 1, 0, nil, now); err == nil || errors.Is(err, store.ErrStaleAttempt) {
 		t.Fatalf("FinishPDF nil: %v", err)
 	}
-	if err := store.InsertSnapshot(ctx, pool, r.ID, "1.0", nil, now); err == nil {
+	if err := store.InsertSnapshot(ctx, pool, r.ID, "4.0", nil, now); err == nil {
 		t.Fatal("InsertSnapshot nil: accepted")
 	}
 	if got, _ := store.GetPDF(ctx, pool, r.ID, "en"); got.Status != "pending" {
@@ -423,14 +423,14 @@ func TestInsertSnapshotDigest(t *testing.T) {
 	r := queuedReport(f, f.profile, f.revision)
 	mustInsertReport(t, pool, r)
 
-	if err := store.InsertSnapshot(ctx, pool, r.ID, "1.0", []byte("{\"a\":1}\n"), now); err != nil {
+	if err := store.InsertSnapshot(ctx, pool, r.ID, "4.0", []byte("{\"a\":1}\n"), now); err != nil {
 		t.Fatal(err)
 	}
 	version, body, sum, err := store.GetSnapshot(ctx, pool, r.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != "1.0" || string(body) != "{\"a\":1}\n" ||
+	if version != "4.0" || string(body) != "{\"a\":1}\n" ||
 		sum != "e346432021b04179518d9614f3560ccd71354a4ee101ddcb893d6959a9d6301c" {
 		t.Fatalf("got %q, %q, %s", version, body, sum)
 	}

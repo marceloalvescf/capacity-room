@@ -471,13 +471,17 @@ Thanos Query Frontend, VictoriaMetrics, or Cortex, and removes the endpoint
 type. A report reads the same. Every stored report and profile is carried
 forward, and the upgrade cannot be undone.
 
-- **Stop first, then back up,** in the order of the 2.x section below. With
-  Compose, run `docker compose stop worker`, then the `pg_dump` and the rest
-  of the commands above. With the chart, scale both Deployments to zero
-  with `kubectl -n capacity-room scale deployment capacity-room-serve
-  capacity-room-worker --replicas 0`, back up the database, then run `helm
-  upgrade`. A 3.x `serve` left running could not read the reports the new
-  version migrates.
+- **Stop first, then back up.** With Compose, run `docker compose stop
+  worker`, which returns once the worker has stopped, then the `pg_dump` and
+  the rest of the commands above. With the chart, scale both Deployments to
+  zero with `kubectl -n capacity-room scale deployment capacity-room-serve
+  capacity-room-worker --replicas 0`, then wait for the pods to go with
+  `kubectl -n capacity-room wait --for=delete pod -l
+  app.kubernetes.io/component=worker --timeout=180s` and the same with
+  `app.kubernetes.io/component=serve`. Back up the database only when both
+  pods are gone, then run `helm upgrade`. A 3.x `serve` left running could
+  not read the reports the new version migrates, and a 3.x worker that is
+  still draining could store a snapshot the new schema refuses.
 - **A rollback is a restore of that backup** (section 7): a 3.x program
   cannot read a database that 4.0.0 has migrated.
 - **Remove the option from your files.** `endpoint_type` in `report.toml`, in

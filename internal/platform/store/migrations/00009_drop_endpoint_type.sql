@@ -29,20 +29,29 @@ WHERE s.report_id = n.report_id;
 ALTER TABLE report_snapshots ENABLE TRIGGER report_snapshots_are_immutable;
 
 -- Stops the migration, and so rolls it back, when a snapshot is left at
--- schema 3.0 or still holds the endpoint type line.
+-- schema 3.0 or still holds the endpoint type line, and names the report of
+-- the first one it refuses.
 -- +goose StatementBegin
 DO $$
+DECLARE
+    bad_id uuid;
 BEGIN
-    IF EXISTS (
-        SELECT 1 FROM report_snapshots
-        WHERE schema_version = '3.0'
-           OR convert_from(body, 'UTF8') ~ '\n      "endpoint_type": '
-    ) THEN
-        RAISE EXCEPTION 'a stored snapshot still holds the endpoint type';
+    SELECT report_id INTO bad_id
+    FROM report_snapshots
+    WHERE schema_version = '3.0'
+       OR convert_from(body, 'UTF8') ~ '\n      "endpoint_type": '
+    ORDER BY report_id
+    LIMIT 1;
+    IF bad_id IS NOT NULL THEN
+        RAISE EXCEPTION 'the snapshot of report % cannot be carried to schema 4.0', bad_id;
     END IF;
 END;
 $$;
 -- +goose StatementEnd
+
+-- A snapshot of another schema is refused at insert, so a worker still
+-- running the previous version cannot store one after this migration.
+ALTER TABLE report_snapshots ADD CONSTRAINT report_snapshots_schema_version CHECK (schema_version = '4.0');
 
 -- Profile revisions lose the endpoint type. The fingerprints stay as they
 -- were computed when each revision was created.
