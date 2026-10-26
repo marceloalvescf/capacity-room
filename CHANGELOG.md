@@ -25,6 +25,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A node pool or an HPA on the web takes the status of all its findings, as the PDF does, so a pool whose findings are all healthy no longer reads "No finding".
 - The bars of each scope on the web no longer show a healthy count that an executive report does not show.
 
+### Security
+
+- The web app checks its forms with Zod 4.6.7, which no longer exhausts memory on an oversized list.
+
 ## [2.8.0] - 2026-10-21
 
 ### Added
