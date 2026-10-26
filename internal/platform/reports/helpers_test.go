@@ -78,7 +78,6 @@ func baseDocument() profiles.Document {
 	d.DisplayName = "Production"
 	d.Active = true
 	d.EndpointURL = "https://metrics.test/api/v1"
-	d.EndpointType = "prometheus"
 	d.ClusterName = "prod"
 	d.AllowedNamespaces = []string{"payments", "billing"}
 	return d

@@ -133,9 +133,6 @@ func documentOf(b ProfileCreate) profiles.Document {
 	if b.Active != nil {
 		d.Active = *b.Active
 	}
-	if b.EndpointType != nil {
-		d.EndpointType = string(*b.EndpointType)
-	}
 	if b.TimeoutSeconds != nil {
 		d.TimeoutSeconds = *b.TimeoutSeconds
 	}

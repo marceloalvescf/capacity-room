@@ -4,7 +4,6 @@ profiles:
   - id: prod
     display_name: 'Prod "east" \ ação <b> & co'
     endpoint_url: http://prometheus.monitoring.svc.cluster.local:9090
-    endpoint_type: prometheus
     cluster_name: prod
     allowed_namespaces: ["payments"]
     timeout_seconds: 30
@@ -12,7 +11,6 @@ profiles:
   - id: staging
     display_name: Staging
     endpoint_url: http://prometheus.monitoring.svc.cluster.local:9090
-    endpoint_type: prometheus
     cluster_name: staging
     allowed_namespaces: ["default"]
     active: false

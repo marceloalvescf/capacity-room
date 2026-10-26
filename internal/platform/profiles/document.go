@@ -17,7 +17,6 @@ type Document struct {
 	DisplayName             string            `json:"display_name"`
 	Active                  bool              `json:"active"`
 	EndpointURL             string            `json:"endpoint_url"`
-	EndpointType            string            `json:"endpoint_type"` // auto, prometheus, grafana
 	TimeoutSeconds          float64           `json:"timeout_seconds"`
 	TLSVerify               bool              `json:"tls_verify"`
 	CredentialFile          string            `json:"credential_file"` // "" for none
@@ -48,7 +47,6 @@ const (
 // Defaults are the values a body may leave out.
 func Defaults() Document {
 	return Document{
-		EndpointType:            "auto",
 		TimeoutSeconds:          90,
 		TLSVerify:               true,
 		ClusterLabel:            "cluster",
@@ -128,7 +126,6 @@ func (d Document) Validate() []Problem {
 	if d.EndpointURL == "" {
 		add("endpoint_url", "missing")
 	}
-	add("endpoint_type", oneOf(d.EndpointType, "auto", "prometheus", "grafana"))
 	add("timeout_seconds", flag(math.IsNaN(d.TimeoutSeconds) || d.TimeoutSeconds <= 0 || d.TimeoutSeconds > 600))
 	add("credential_file", flag(d.CredentialFile != "" && !ValidReferenceName(d.CredentialFile)))
 

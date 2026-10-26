@@ -391,6 +391,10 @@ func TestAdminImportProfilesRefusals(t *testing.T) {
 	if err := os.WriteFile(invalid, []byte("[[profiles]]\nid = \"a\"\ntoken = \"hunter2value\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	endpointType := filepath.Join(dir, "endpoint-type.toml")
+	if err := os.WriteFile(endpointType, []byte("[[profiles]]\nid = \"a\"\nendpoint_type = \"prometheus\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	missing := filepath.Join(dir, "missing.toml")
 	cases := []struct {
 		name, want string
@@ -399,6 +403,7 @@ func TestAdminImportProfilesRefusals(t *testing.T) {
 		{"no file flag", "error: --file is required\n", nil},
 		{"missing file", "error: " + missing + ": cannot be read: no such file or directory\n", []string{"--file", missing}},
 		{"invalid file", "error: " + invalid + ": unknown key profiles.token\n", []string{"--file", invalid}},
+		{"endpoint type", "error: " + endpointType + ": unknown key profiles.endpoint_type\n", []string{"--file", endpointType}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

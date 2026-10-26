@@ -127,7 +127,7 @@ func TestReportThroughTheAPI(t *testing.T) {
 	}
 	profileFile := filepath.Join(dir, "profiles.toml")
 	profileText := fmt.Sprintf("[[profiles]]\nid = \"prod\"\ndisplay_name = \"Production\"\nendpoint_url = %q\n"+
-		"endpoint_type = \"prometheus\"\ncluster_name = \"prod\"\nallowed_namespaces = [\"payments\"]\nactive = true\n",
+		"cluster_name = \"prod\"\nallowed_namespaces = [\"payments\"]\nactive = true\n",
 		"http://"+source.Listener.Addr().String()+"/api/v1")
 	if err := os.WriteFile(profileFile, []byte(profileText), 0o600); err != nil {
 		t.Fatal(err)

@@ -15,7 +15,6 @@ func validExample() Document {
 		DisplayName:             "Production",
 		Active:                  true,
 		EndpointURL:             "https://metrics.internal",
-		EndpointType:            "auto",
 		TimeoutSeconds:          90,
 		TLSVerify:               true,
 		CredentialFile:          "prod-token",
@@ -39,7 +38,7 @@ func validExample() Document {
 
 func TestDefaults(t *testing.T) {
 	d := Defaults()
-	if d.EndpointType != "auto" || d.TimeoutSeconds != 90 || !d.TLSVerify ||
+	if d.TimeoutSeconds != 90 || !d.TLSVerify ||
 		d.ClusterLabel != "cluster" || d.FilterMode != "required" || d.NodeAutoscaling != "auto" {
 		t.Fatalf("scalar defaults wrong: %+v", d)
 	}
@@ -81,7 +80,6 @@ func TestValidateEachField(t *testing.T) {
 		{"display long", func(d *Document) { d.DisplayName = strings.Repeat("a", 129) }, "display_name", "invalid"},
 		{"display control", func(d *Document) { d.DisplayName = "a\nb" }, "display_name", "invalid"},
 		{"url missing", func(d *Document) { d.EndpointURL = "" }, "endpoint_url", "missing"},
-		{"type invalid", func(d *Document) { d.EndpointType = "thanos" }, "endpoint_type", "invalid"},
 		{"timeout zero", func(d *Document) { d.TimeoutSeconds = 0 }, "timeout_seconds", "invalid"},
 		{"timeout big", func(d *Document) { d.TimeoutSeconds = 601 }, "timeout_seconds", "invalid"},
 		{"timeout nan", func(d *Document) { d.TimeoutSeconds = nan() }, "timeout_seconds", "invalid"},
@@ -131,9 +129,8 @@ func TestValidateEachField(t *testing.T) {
 func TestValidateReportsEveryField(t *testing.T) {
 	d := validExample()
 	d.Thresholds.CriticalPercent = 10
-	d.EndpointType = "x"
 	d.DisplayName = ""
-	want := []Problem{{"display_name", "empty"}, {"endpoint_type", "invalid"}, {"thresholds", "invalid"}}
+	want := []Problem{{"display_name", "empty"}, {"thresholds", "invalid"}}
 	if got := d.Validate(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v, want %v", got, want)
 	}
@@ -184,7 +181,6 @@ func TestResolvedDefaults(t *testing.T) {
 
 func TestRunConfig(t *testing.T) {
 	d := validExample()
-	d.EndpointType = "grafana"
 	d.TimeoutSeconds = 45
 	d.NodeAutoscaling = "enabled"
 	d.NodepoolLabel = "pool"

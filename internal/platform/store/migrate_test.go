@@ -56,8 +56,8 @@ func TestMigrateIsIdempotent(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if version != 8 {
-			t.Fatalf("version = %d, want 8", version)
+		if version != 9 {
+			t.Fatalf("version = %d, want 9", version)
 		}
 		pending, err := store.HasPending(ctx, pool)
 		if err != nil {
@@ -224,15 +224,15 @@ const insertProfile = `INSERT INTO profiles (id, current_revision_id, created_at
 const insertRevision = `INSERT INTO profile_revisions (id, profile_id, revision, fingerprint, display_name, active, document, credential_file, ca_bundle_file, created_by, created_at)
 VALUES ($1, $2, $3, $4, 'name', true, '{}', '', '', NULL, now())`
 
-func TestMigrateToVersionEight(t *testing.T) {
+func TestMigrateToVersionNine(t *testing.T) {
 	ctx := context.Background()
 	pool := storetest.NewEmpty(t)
 	version, err := store.Migrate(ctx, pool)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != 8 {
-		t.Fatalf("version = %d, want 8", version)
+	if version != 9 {
+		t.Fatalf("version = %d, want 9", version)
 	}
 	for _, table := range []string{"profiles", "profile_revisions", "river_job", "reports", "report_snapshots", "report_pdfs", "report_idempotency_keys"} {
 		var exists bool
@@ -357,7 +357,7 @@ func TestProfileIDCheck(t *testing.T) {
 }
 
 // TestMigrateDownAndUp runs the Down sections of versions 7 to 3 through goose, over the
-// migration files of the folder, and applies the migrations again, to version 8.
+// migration files of the folder, and applies the migrations again, to version 9.
 func TestMigrateDownAndUp(t *testing.T) {
 	ctx := context.Background()
 	pool := storetest.NewEmpty(t)
@@ -440,8 +440,8 @@ func TestMigrateDownAndUp(t *testing.T) {
 	}
 
 	version, err := store.Migrate(ctx, pool)
-	if err != nil || version != 8 {
-		t.Fatalf("version after up = %d, %v; want 8", version, err)
+	if err != nil || version != 9 {
+		t.Fatalf("version after up = %d, %v; want 9", version, err)
 	}
 	for _, table := range []string{"profiles", "profile_revisions", "river_job", "reports", "report_snapshots", "report_pdfs", "report_idempotency_keys"} {
 		if !exists(table) {

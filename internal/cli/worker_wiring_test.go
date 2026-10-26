@@ -150,7 +150,6 @@ func newRig(t *testing.T, slots, drain int) *rig {
 	doc.DisplayName = "Production"
 	doc.Active = true
 	doc.EndpointURL = "http://" + source.Listener.Addr().String() + "/api/v1"
-	doc.EndpointType = "prometheus"
 	doc.ClusterName = "prod"
 	doc.AllowedNamespaces = []string{"payments"}
 	doc.CredentialFile = "token"

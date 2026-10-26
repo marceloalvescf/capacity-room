@@ -28,7 +28,6 @@ func TestHomeAnswersEveryActiveProfile(t *testing.T) {
 	d.DisplayName = "Retired"
 	d.Active = false
 	d.EndpointURL = "https://metrics.test/api/v1"
-	d.EndpointType = "prometheus"
 	d.ClusterName = "retired"
 	raw, err := json.Marshal(d)
 	if err != nil {

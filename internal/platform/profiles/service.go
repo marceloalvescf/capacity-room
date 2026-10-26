@@ -165,7 +165,7 @@ func (s *Service) checkDocument(d *Document) error {
 	if problems := d.Validate(); len(problems) > 0 {
 		return &DocumentError{Problems: problems}
 	}
-	canonical, err := CanonicalEndpoint(s.Policy, d.EndpointURL, d.EndpointType)
+	canonical, err := CanonicalEndpoint(s.Policy, d.EndpointURL)
 	if err != nil {
 		return err
 	}
@@ -389,9 +389,8 @@ func (s *Service) Revise(ctx context.Context, actor auth.Principal, id string, c
 			return &DocumentError{Problems: problems}
 		}
 		_, endpointURL := c.Fields["endpoint_url"]
-		_, endpointType := c.Fields["endpoint_type"]
-		if endpointURL || endpointType {
-			canonical, err := CanonicalEndpoint(s.Policy, merged.EndpointURL, merged.EndpointType)
+		if endpointURL {
+			canonical, err := CanonicalEndpoint(s.Policy, merged.EndpointURL)
 			if err != nil {
 				return err
 			}

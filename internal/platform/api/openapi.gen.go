@@ -9,27 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Defines values for EndpointType.
-const (
-	EndpointTypeAuto       EndpointType = "auto"
-	EndpointTypeGrafana    EndpointType = "grafana"
-	EndpointTypePrometheus EndpointType = "prometheus"
-)
-
-// Valid indicates whether the value is a known member of the EndpointType enum.
-func (e EndpointType) Valid() bool {
-	switch e {
-	case EndpointTypeAuto:
-		return true
-	case EndpointTypeGrafana:
-		return true
-	case EndpointTypePrometheus:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for FilterMode.
 const (
 	FilterModeAuto     FilterMode = "auto"
@@ -416,9 +395,6 @@ type AnonymousSession struct {
 	LoginCsrf string `json:"login_csrf"`
 }
 
-// EndpointType defines model for EndpointType.
-type EndpointType string
-
 // Error defines model for Error.
 type Error struct {
 	Error ErrorBody `json:"error"`
@@ -533,9 +509,8 @@ type Profile struct {
 	DefaultReportProfile *string `json:"default_report_profile"`
 
 	// DefaultTimezone Null means America/Sao_Paulo.
-	DefaultTimezone *string      `json:"default_timezone"`
-	DisplayName     string       `json:"display_name"`
-	EndpointType    EndpointType `json:"endpoint_type"`
+	DefaultTimezone *string `json:"default_timezone"`
+	DisplayName     string  `json:"display_name"`
 
 	// EndpointUrl Stored in canonical form after the outbound policy accepts it.
 	EndpointUrl        string          `json:"endpoint_url"`
@@ -590,9 +565,8 @@ type ProfileChange struct {
 	DefaultReportProfile *string `json:"default_report_profile,omitempty"`
 
 	// DefaultTimezone Null means America/Sao_Paulo.
-	DefaultTimezone *string       `json:"default_timezone,omitempty"`
-	DisplayName     *string       `json:"display_name,omitempty"`
-	EndpointType    *EndpointType `json:"endpoint_type,omitempty"`
+	DefaultTimezone *string `json:"default_timezone,omitempty"`
+	DisplayName     *string `json:"display_name,omitempty"`
 
 	// EndpointUrl Stored in canonical form after the outbound policy accepts it.
 	EndpointUrl        *string          `json:"endpoint_url,omitempty"`
@@ -641,9 +615,8 @@ type ProfileCreate struct {
 	DefaultReportProfile *string `json:"default_report_profile,omitempty"`
 
 	// DefaultTimezone Null means America/Sao_Paulo.
-	DefaultTimezone *string       `json:"default_timezone,omitempty"`
-	DisplayName     string        `json:"display_name"`
-	EndpointType    *EndpointType `json:"endpoint_type,omitempty"`
+	DefaultTimezone *string `json:"default_timezone,omitempty"`
+	DisplayName     string  `json:"display_name"`
 
 	// EndpointUrl Stored in canonical form after the outbound policy accepts it.
 	EndpointUrl        string      `json:"endpoint_url"`
@@ -695,9 +668,8 @@ type ProfileDocument struct {
 	DefaultReportProfile *string `json:"default_report_profile,omitempty"`
 
 	// DefaultTimezone Null means America/Sao_Paulo.
-	DefaultTimezone *string       `json:"default_timezone,omitempty"`
-	DisplayName     *string       `json:"display_name,omitempty"`
-	EndpointType    *EndpointType `json:"endpoint_type,omitempty"`
+	DefaultTimezone *string `json:"default_timezone,omitempty"`
+	DisplayName     *string `json:"display_name,omitempty"`
 
 	// EndpointUrl Stored in canonical form after the outbound policy accepts it.
 	EndpointUrl        *string          `json:"endpoint_url,omitempty"`

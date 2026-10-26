@@ -162,8 +162,8 @@ func TestImportIsOneTransaction(t *testing.T) {
 
 	// The file is judged whole before any write.
 	bad := strings.Replace(importExample, `endpoint_url = "https://metrics.test/api/v1"
-endpoint_type`, `endpoint_url = "http://169.254.169.254/"
-endpoint_type`, 1)
+cluster_name = "stage"`, `endpoint_url = "http://169.254.169.254/"
+cluster_name = "stage"`, 1)
 	if _, err := ReadImportFile(writeImport(t, bad), staticPolicy()); err == nil || !strings.Contains(err.Error(), "profile stage: endpoint_url invalid") {
 		t.Fatalf("err = %v, want the second profile refused", err)
 	}

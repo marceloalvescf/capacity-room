@@ -8,7 +8,7 @@ import (
 // CanonicalEndpoint applies the static rules of the policy to every
 // candidate root of the endpoint and to the /query and /query_range of
 // each, and returns the canonical URL of the endpoint. It resolves nothing.
-func CanonicalEndpoint(p netpolicy.Policy, endpointURL, _ string) (string, error) {
+func CanonicalEndpoint(p netpolicy.Policy, endpointURL string) (string, error) {
 	origin, err := p.ValidateURL(endpointURL)
 	if err != nil {
 		return "", err

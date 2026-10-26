@@ -235,7 +235,6 @@ func (e *env) addProfile(endpoint, credentialFile string) {
 	d.DisplayName = "Production"
 	d.Active = true
 	d.EndpointURL = endpoint
-	d.EndpointType = "prometheus"
 	d.ClusterName = "prod"
 	d.AllowedNamespaces = []string{"payments"}
 	d.CredentialFile = credentialFile

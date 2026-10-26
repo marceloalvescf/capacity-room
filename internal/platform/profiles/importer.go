@@ -50,7 +50,6 @@ type ImportEntry struct {
 	DisplayName             *string           `toml:"display_name"`
 	Active                  *bool             `toml:"active"`
 	EndpointURL             *string           `toml:"endpoint_url"`
-	EndpointType            *string           `toml:"endpoint_type"`
 	TimeoutSeconds          *float64          `toml:"timeout_seconds"`
 	TLSVerify               *bool             `toml:"tls_verify"`
 	CredentialFile          *string           `toml:"credential_file"`
@@ -86,7 +85,6 @@ func (e ImportEntry) document() Document {
 	overlay(&d.DisplayName, e.DisplayName)
 	overlay(&d.Active, e.Active)
 	overlay(&d.EndpointURL, e.EndpointURL)
-	overlay(&d.EndpointType, e.EndpointType)
 	overlay(&d.TimeoutSeconds, e.TimeoutSeconds)
 	overlay(&d.TLSVerify, e.TLSVerify)
 	overlay(&d.CredentialFile, e.CredentialFile)
@@ -146,7 +144,7 @@ func ReadImportFile(path string, p netpolicy.Policy) ([]ImportEntry, error) {
 		if problems := d.Validate(); len(problems) > 0 {
 			return nil, fmt.Errorf("%s: profile %s: %s %s", path, e.ID, problems[0].Field, problems[0].Word)
 		}
-		canonical, err := CanonicalEndpoint(p, d.EndpointURL, d.EndpointType)
+		canonical, err := CanonicalEndpoint(p, d.EndpointURL)
 		if err != nil {
 			return nil, fmt.Errorf("%s: profile %s: endpoint_url invalid", path, e.ID)
 		}

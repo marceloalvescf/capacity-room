@@ -30,7 +30,6 @@
           "display_name": {"type": "string"},
           "active": {"type": "boolean"},
           "endpoint_url": {"type": "string"},
-          "endpoint_type": {"type": "string"},
           "timeout_seconds": {"type": "number"},
           "tls_verify": {"type": "boolean"},
           "credential_file": {"type": "string"},

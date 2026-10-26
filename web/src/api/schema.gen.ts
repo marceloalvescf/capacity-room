@@ -598,8 +598,6 @@ export interface components {
             language_follows_browser?: boolean;
         };
         /** @enum {string} */
-        EndpointType: "auto" | "prometheus" | "grafana";
-        /** @enum {string} */
         FilterMode: "required" | "auto" | "none";
         /** @enum {string} */
         NodeAutoscaling: "auto" | "enabled" | "disabled";
@@ -629,7 +627,6 @@ export interface components {
             active?: boolean;
             /** @description Stored in canonical form after the outbound policy accepts it. */
             endpoint_url?: string;
-            endpoint_type?: components["schemas"]["EndpointType"];
             /**
              * Format: double
              * @description Over 0 and at most 600; defaults to 90.
@@ -2214,7 +2211,6 @@ export const reportDeleteOutcomeValues: ReadonlyArray<FlattenedDeepRequired<comp
 export const errorCodeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ErrorCode"]> = ["REQUEST_INVALID", "INVALID_CREDENTIALS", "UNAUTHENTICATED", "CSRF_REJECTED", "FORBIDDEN", "USER_NOT_FOUND", "NOT_FOUND", "METHOD_NOT_ALLOWED", "USERNAME_TAKEN", "LAST_ADMIN", "SELF_DELETE", "SELF_DEACTIVATE", "SELF_DEMOTE", "INVALID_USERNAME", "PASSWORD_TOO_SHORT", "PASSWORD_TOO_LONG", "AUTH_RATE_LIMITED", "DATABASE_UNAVAILABLE", "PROFILE_NOT_FOUND", "PROFILE_ID_TAKEN", "PROFILE_REVISION_STALE", "PROFILE_DOCUMENT_INVALID", "ENDPOINT_URL_REJECTED", "ENDPOINT_ADDRESS_REJECTED", "INTERNAL_ERROR", "IDEMPOTENCY_KEY_INVALID", "CURSOR_INVALID", "REPORT_NOT_FOUND", "IDEMPOTENCY_KEY_REUSED", "PROFILE_INACTIVE", "SNAPSHOT_NOT_READY", "PDF_NOT_READY", "PDF_ALREADY_READY", "REPORT_EXPIRED", "REPORT_SELECTION_NOT_PERMITTED", "ADMISSION_GLOBAL_LIMIT", "ADMISSION_PROFILE_LIMIT"];
 export const roleValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Role"]> = ["administrator", "operator", "reader"];
 export const languageValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["Language"]> = ["pt-BR", "en"];
-export const endpointTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["EndpointType"]> = ["auto", "prometheus", "grafana"];
 export const filterModeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["FilterMode"]> = ["required", "auto", "none"];
 export const nodeAutoscalingValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["NodeAutoscaling"]> = ["auto", "enabled", "disabled"];
 export const reportProfileValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["ReportProfile"]> = ["detailed", "executive"];

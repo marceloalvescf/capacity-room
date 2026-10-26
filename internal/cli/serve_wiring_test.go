@@ -98,7 +98,6 @@ func TestServeRevealsACredential(t *testing.T) {
 	doc.DisplayName = "Production"
 	doc.Active = true
 	doc.EndpointURL = "http://" + source.Listener.Addr().String() + "/"
-	doc.EndpointType = "prometheus"
 	doc.ClusterName = "prod"
 	doc.AllowedNamespaces = []string{"payments"}
 	doc.CredentialFile = "token"
@@ -164,7 +163,6 @@ func TestServeBuildsTheReportRoutes(t *testing.T) {
 	doc.DisplayName = "Production"
 	doc.Active = true
 	doc.EndpointURL = "http://" + source.Listener.Addr().String() + "/"
-	doc.EndpointType = "prometheus"
 	doc.ClusterName = "prod"
 	doc.AllowedNamespaces = []string{"payments"}
 	seed := &profiles.Service{

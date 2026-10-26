@@ -23,7 +23,6 @@ active = true
 id = "stage"
 display_name = "Staging"
 endpoint_url = "https://metrics.test/api/v1"
-endpoint_type = "prometheus"
 cluster_name = "stage"
 allowed_namespaces = ["payments"]
 timeout_seconds = 30
@@ -57,14 +56,14 @@ func TestReadImportFileAcceptsTheExample(t *testing.T) {
 	}
 	prod := entries[0].Document
 	if !prod.Active || prod.DisplayName != "Production" || prod.EndpointURL != "https://metrics.test/api/v1" ||
-		prod.EndpointType != "auto" || prod.TimeoutSeconds != 90 || !prod.TLSVerify || prod.ClusterLabel != "cluster" ||
+		prod.TimeoutSeconds != 90 || !prod.TLSVerify || prod.ClusterLabel != "cluster" ||
 		prod.FilterMode != "required" || prod.NodeAutoscaling != "auto" || prod.DefaultPeriod != nil ||
 		!reflect.DeepEqual(prod.AllowedNamespaces, []string{"payments", "checkout"}) ||
 		prod.Thresholds.WarningPercent != 70 || len(prod.PermittedPeriods) != 0 {
 		t.Fatalf("prod = %+v", prod)
 	}
 	stage := entries[1].Document
-	if stage.Active || stage.TimeoutSeconds != 30 || stage.EndpointType != "prometheus" ||
+	if stage.Active || stage.TimeoutSeconds != 30 ||
 		stage.DefaultPeriod == nil || *stage.DefaultPeriod != "7d" ||
 		stage.Thresholds.WarningPercent != 60 || stage.Thresholds.CriticalPercent != 85 {
 		t.Fatalf("stage = %+v", stage)
@@ -77,6 +76,7 @@ func TestReadImportFileRefusals(t *testing.T) {
 		name, content, want string
 	}{
 		{"unknown key", head + "colour = \"red\"\n", "unknown key profiles.colour"},
+		{"endpoint_type", head + "endpoint_type = \"prometheus\"\n", "unknown key profiles.endpoint_type"},
 		{"token", head + "token = \"x\"\n", "unknown key profiles.token"},
 		{"token_env", head + "token_env = \"x\"\n", "unknown key profiles.token_env"},
 		{"credential", head + "credential = \"x\"\n", "unknown key profiles.credential"},

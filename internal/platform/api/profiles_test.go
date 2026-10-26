@@ -54,7 +54,7 @@ func writeCredential(t *testing.T, dir, name, content string) {
 }
 
 func createBody(endpoint, credential string, extra string) string {
-	b := `{"id":"prod","display_name":"Production","endpoint_url":"` + endpoint + `","endpoint_type":"prometheus",` +
+	b := `{"id":"prod","display_name":"Production","endpoint_url":"` + endpoint + `",` +
 		`"cluster_name":"prod","allowed_namespaces":["payments"],"active":true`
 	if credential != "" {
 		b += `,"credential_file":"` + credential + `"`
@@ -185,6 +185,7 @@ func TestAdminProfilesCreateRefusals(t *testing.T) {
 		{"bad url", `{"id":"prod","display_name":"P","endpoint_url":"not a url","cluster_name":"c","allowed_namespaces":["a"]}`, 422, CodeEndpointURLRejected, map[string]string{"endpoint_url": "invalid"}},
 		{"repeated namespace", head + `,"cluster_name":"c","allowed_namespaces":["a","a"]}`, 422, CodeProfileDocumentInvalid, map[string]string{"allowed_namespaces": "repeated"}},
 		{"unknown key", head + `,"cluster_name":"c","allowed_namespaces":["a"],"x":1}`, 400, CodeRequestInvalid, map[string]string{"x": "unknown"}},
+		{"endpoint type", head + `,"cluster_name":"c","allowed_namespaces":["a"],"endpoint_type":"prometheus"}`, 400, CodeRequestInvalid, map[string]string{"endpoint_type": "unknown"}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			wantProblem(t, ts.send(t, "POST", profilesPath, c.body, cookie, csrf), c.status, c.code, c.fields)
@@ -334,6 +335,7 @@ func TestAdminProfilesTestDraftOrder(t *testing.T) {
 	huge := draftBody(endpoint, credential, `,"display_name_pad":"`+strings.Repeat("x", 65*1024)+`"`)
 	wantProblem(t, ts.send(t, "POST", draftPath, huge, cookie, csrf), 400, CodeRequestInvalid, map[string]string{"": "too_long"})
 	wantProblem(t, ts.send(t, "POST", draftPath, draftBody(endpoint, credential, `,"x":1`), cookie, csrf), 400, CodeRequestInvalid, map[string]string{"x": "unknown"})
+	wantProblem(t, ts.send(t, "POST", draftPath, draftBody(endpoint, credential, `,"endpoint_type":"prometheus"`), cookie, csrf), 400, CodeRequestInvalid, map[string]string{"endpoint_type": "unknown"})
 	noName := strings.Replace(good, `"display_name":"Production",`, "", 1)
 	wantProblem(t, ts.send(t, "POST", draftPath, noName, cookie, csrf), 400, CodeRequestInvalid, map[string]string{"display_name": "missing"})
 }

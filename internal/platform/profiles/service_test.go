@@ -74,7 +74,6 @@ func baseDocument() Document {
 	d.DisplayName = "Production"
 	d.Active = true
 	d.EndpointURL = "https://metrics.test/api/v1"
-	d.EndpointType = "prometheus"
 	d.ClusterName = "prod"
 	d.AllowedNamespaces = []string{"payments"}
 	return d
@@ -204,7 +203,7 @@ func TestCreateStoresCanonicalAndAudits(t *testing.T) {
 	wantFields := []any{
 		"active", "allowed_namespaces", "ca_bundle_file", "cluster_label", "cluster_name", "credential_file",
 		"default_period", "default_report_profile", "default_timezone", "display_name",
-		"endpoint_type", "endpoint_url", "excluded_containers", "filter_mode", "node_autoscaling", "nodepool_label",
+		"endpoint_url", "excluded_containers", "filter_mode", "node_autoscaling", "nodepool_label",
 		"permitted_periods", "permitted_report_profiles", "permitted_timezones",
 		"thresholds", "timeout_seconds", "tls_verify",
 	}

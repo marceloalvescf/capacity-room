@@ -290,15 +290,9 @@ VALUES ($1, '2.0', $2, $3, $4, now())`, report, []byte(body), hex.EncodeToString
 
 func TestMigrationEightCannotBeReverted(t *testing.T) {
 	ctx := context.Background()
-	pool := storetest.New(t)
-	db := stdlib.OpenDBFromPool(pool)
-	defer func() { _ = db.Close() }()
-	provider, err := goose.NewProvider(goose.DialectPostgres, db, os.DirFS("migrations"), goose.WithDisableGlobalRegistry(true))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = provider.Close() }()
-	_, err = provider.Down(ctx)
+	pool := storetest.NewEmpty(t)
+	provider := migrateTo(ctx, t, pool, 8)
+	_, err := provider.Down(ctx)
 	if err == nil || !strings.Contains(err.Error(), "this migration cannot be reverted") {
 		t.Fatalf("down from 8 = %v, want the refusal", err)
 	}

@@ -24,19 +24,18 @@ func TestCanonicalEndpointValidatesEveryCandidate(t *testing.T) {
 	cases := []struct {
 		policy netpolicy.Policy
 		url    string
-		kind   string
 		want   string
 		code   netpolicy.Code
 	}{
-		{open, "https://metrics.internal", "auto", "https://metrics.internal", ""},
-		{open, "https://metrics.internal/api/v1", "auto", "https://metrics.internal/api/v1", ""},
-		{open, "https://metrics.internal/api/v1/../x", "auto", "", netpolicy.CodeURLRejected},
-		{open, "https://127.0.0.1:9090", "auto", "", netpolicy.CodeAddressRejected},
-		{loop, "https://127.0.0.1:9090", "auto", "https://127.0.0.1:9090", ""},
-		{open, long, "prometheus", "", netpolicy.CodeURLRejected},
+		{open, "https://metrics.internal", "https://metrics.internal", ""},
+		{open, "https://metrics.internal/api/v1", "https://metrics.internal/api/v1", ""},
+		{open, "https://metrics.internal/api/v1/../x", "", netpolicy.CodeURLRejected},
+		{open, "https://127.0.0.1:9090", "", netpolicy.CodeAddressRejected},
+		{loop, "https://127.0.0.1:9090", "https://127.0.0.1:9090", ""},
+		{open, long, "", netpolicy.CodeURLRejected},
 	}
 	for _, c := range cases {
-		got, err := CanonicalEndpoint(c.policy, c.url, c.kind)
+		got, err := CanonicalEndpoint(c.policy, c.url)
 		if c.code == "" {
 			if err != nil || got != c.want {
 				t.Errorf("%s: got %q, %v", c.url, got, err)
@@ -50,15 +49,8 @@ func TestCanonicalEndpointValidatesEveryCandidate(t *testing.T) {
 	}
 }
 
-func TestCanonicalEndpointIgnoresTheGrafanaPath(t *testing.T) {
-	got, err := CanonicalEndpoint(netpolicy.Policy{}, "https://grafana.internal", "grafana")
-	if err != nil || got != "https://grafana.internal" {
-		t.Fatalf("got %q, %v", got, err)
-	}
-}
-
 func TestCanonicalEndpointForm(t *testing.T) {
-	got, err := CanonicalEndpoint(netpolicy.Policy{}, "HTTPS://Metrics.Internal.:443/api/v1/", "auto")
+	got, err := CanonicalEndpoint(netpolicy.Policy{}, "HTTPS://Metrics.Internal.:443/api/v1/")
 	if err != nil || got != "https://metrics.internal/api/v1" {
 		t.Fatalf("got %q, %v", got, err)
 	}
