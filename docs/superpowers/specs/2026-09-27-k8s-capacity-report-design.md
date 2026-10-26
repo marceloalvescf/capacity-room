@@ -1159,8 +1159,9 @@ the administration.
 
 Profile, namespaces from the profile's allowed list, and the report
 language, as two joined buttons that start on the interface language. Below
-them one line shows the period, time zone, and report profile, taken from
-the profile's defaults, with a button that opens the three fields in place. Choosing a profile loads its defaults.
+them the period picker, then one line that shows the time zone and the report
+profile, taken from the profile's defaults, with a button that opens the two
+fields in place. Choosing a profile loads its defaults.
 
 - The period picker holds one of three kinds of value: a length, a calendar
   range by name, or a typed range. On the left, two joined buttons switch
