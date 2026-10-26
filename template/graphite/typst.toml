@@ -1,6 +1,6 @@
 [package]
 name = "graphite-report"
-version = "2.8.0"
+version = "3.0.0"
 entrypoint = "lib.typ"
 authors = ["Marcelo Alves"]
 license = "MIT"

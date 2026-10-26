@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-10-25
+
 ### Changed
 
 - A report shows the findings its profile shows, and every count of the PDF and of the web counts only those: an executive report counts its critical and attention findings, and a report that shows none says "Nothing needs attention."
