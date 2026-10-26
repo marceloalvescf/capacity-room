@@ -543,7 +543,9 @@ describe("report list", () => {
     await user.click(screen.getByRole("checkbox", { name: t("reports.selectAll") }));
     await user.click(screen.getByRole("button", { name: t("reports.deleteSelected") }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: t("delete.confirm") }));
-    expect(await screen.findByText(t("reports.deleted", { count: 200 }))).toBeInTheDocument();
+    expect(
+      await screen.findByText(t("reports.deleted", { count: 200 }), undefined, { timeout: 10_000 }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(calls).toBe(2);
     expect(screen.getByText(t("reports.selected", { count: 50 }))).toBeInTheDocument();

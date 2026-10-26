@@ -668,7 +668,15 @@ func TestRenderSuccessWritePastItsDeadlineIsInternal(t *testing.T) {
 func TestRenderSkipsAReportExpiredBetweenTransactions(t *testing.T) {
 	e, _, _ := scenarioEnv(t, nil)
 	var once sync.Once
+	// The collection queues the first render itself, so the report expires
+	// only once the second PDF is requested, or that request is refused.
+	requested := make(chan struct{})
 	e.startRender(both(pdfToolchain(t)), 2, renderHooks{beforeStore: func(ctx context.Context, _ string) {
+		select {
+		case <-requested:
+		case <-ctx.Done():
+			return
+		}
 		once.Do(func() {
 			past := fixedNow.Add(-time.Hour)
 			if _, err := e.pool.Exec(ctx, `UPDATE reports SET expired_at = $1, expires_at = $1`, past); err != nil {
@@ -677,6 +685,7 @@ func TestRenderSkipsAReportExpiredBetweenTransactions(t *testing.T) {
 		})
 	}})
 	report := e.collectedBoth()
+	close(requested)
 	for _, lang := range []string{langPT, langEN} {
 		e.waitJob(e.pdfJob(report.ID, lang), rivertype.JobStateCompleted)
 		if row := e.pdf(report.ID, lang); row.Status != "pending" || e.pdfBody(report.ID, lang) != nil {

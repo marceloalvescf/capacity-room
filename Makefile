@@ -191,7 +191,9 @@ check-runtime: $(IMAGE_DEP)
 # is a copy of deploy/platform made for the run, with a server secret of its own
 # that no file of the repository holds. No log of the stack holds a secret the
 # run used. The stack is removed with its volumes
-# first and last.
+# first and last. The Playwright container mounts a volume at web/node_modules
+# inside a read-only mount of web/, so that folder must exist on the host, as
+# it does not on a fresh checkout.
 E2E_COMPOSE := docker compose -f deploy/compose.yaml -f deploy/compose.integration.yaml
 E2E_FAKES := fake-prometheus fake-recovery
 
@@ -205,6 +207,7 @@ e2e: $(IMAGE_DEP)
 		&& head -c 32 /dev/urandom > .cache/e2e/config/secret/server-secret \
 		&& chmod -R a+rX .cache/e2e/config \
 		|| { echo 'e2e: the settings folder could not be made'; exit 1; }; \
+	mkdir -p web/node_modules; \
 	export CAPACITYROOM_VERSION=$(VERSION) CAPACITYROOM_CONFIG_DIR=$(CURDIR)/.cache/e2e/config CAPACITYROOM_POSTGRES_PASSWORD=capacityroom_e2e_only; \
 	: > .cache/e2e/one-shot.log; \
 	$(E2E_COMPOSE) down --volumes; \
