@@ -290,8 +290,9 @@ below the command; the core never imports `internal/platform/`.
   the contract, letter for letter, and fills the snapshot from what it
   walked. It names a wrong schema version before anything else. The schema
   is `4.0`, with no `report.period`, no `report.min_severity`, and no
-  `report.settings.endpoint_type`: a snapshot `1.0`, `2.0`, or `3.0` is named and refused, with no reader of it. Its period ends
-  at or before its emission.
+  `report.settings.endpoint_type`: a snapshot `1.0`, `2.0`, or `3.0` is
+  named and refused, with no reader of it. Its period ends at or before
+  its emission.
 - **The probes keep the order of the original**, short cuts included, except
   that the ninth probe asks `count(kube_configmap_info)` in place of the
   original's probe of the cluster autoscaler (decision 0002). The fake
@@ -607,8 +608,7 @@ redactor the moment the settings are loaded, before the pool opens.
   `direct-complete` over a range of 24 hours that ended the day before the
   fixed emission. It has a snapshot and a list of queries, and no data file
   and no golden page. It stays outside `promtest.Scenarios`, so every
-  comparison with the original walks the five recorded scenarios it always
-  walked.
+  comparison with the original walks the seven of `promtest.Scenarios`.
 - A test never writes one. `make update-testdata` does. It needs no image.
 - After `make update-testdata`, read every file that changed, whole, before
   committing. A value that cannot be explained is a defect.

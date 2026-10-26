@@ -225,7 +225,7 @@ test.
 
 | Status | Covered by |
 |---|---|
-| enabled, ConfigMap written in the window | `direct-complete`, `grafana-authenticated`, `thanos-multicluster` (with the cluster matcher) |
+| enabled, ConfigMap written in the window | `direct-complete`, `thanos-multicluster` (with the cluster matcher) |
 | enabled, no resource version exported, ConfigMap present | `raw-fallback` |
 | disabled, no ConfigMap, empty answers read as zero | `edge-values` |
 | disabled with node pressure, ConfigMap left unwritten | `edge-scaling` |

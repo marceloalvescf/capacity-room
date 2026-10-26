@@ -20,10 +20,10 @@ import (
 	"github.com/marceloalvescf/capacity-room/internal/discovery"
 )
 
-// validProfiles, validFilterModes, and validNodeAutoscaling are the values of the configuration that report and
-// settings may hold. They are written here as literals, not read from
-// internal/config, so that a stored file keeps its meaning even if config's
-// own rules change later.
+// validProfiles, validFilterModes, and validNodeAutoscaling are the values
+// of the configuration that report and settings may hold. They are written
+// here as literals, not read from internal/config, so that a stored file
+// keeps its meaning even if config's own rules change later.
 //
 // validConfidences is the one list that is not a literal: discovery keeps
 // no list of the confidences, only the three constants ConfidenceExact,

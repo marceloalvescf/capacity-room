@@ -31,6 +31,6 @@ f0ae19bf0b07f5446dd8dae717fba35f48388589e455999d272ac16f11e1bdcb  thanos-multicl
 114e04d41f69d77fceddd71433228fa16ff0d835cb73a3e1ee25384921b14f4f  value-edge-cases.json
 ```
 
-A seventh scenario, with values at the edge that no answer of the original
-tool holds, is not carried over from it and lives in
+Two further scenarios, with values at the edge that no answer of the original
+tool holds, are not carried over from it and live in
 `testdata/prometheus-own/`, described in its own README.

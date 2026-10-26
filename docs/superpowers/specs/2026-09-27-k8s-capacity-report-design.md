@@ -1612,7 +1612,7 @@ not work as written is a defect of the guide.
 | Risk | Answer |
 |---|---|
 | The English wording is new and has no earlier reviewer | The owner reviews the English catalog before phase 2 closes |
-| Output differs from the Python tool on the same data | Phase 2 compares both tools on the six scenarios, number by number |
+| Output differs from the Python tool on the same data | Phase 2 compares both tools on the five recorded scenarios, number by number |
 | PDFs enlarge the database | Size limits, seven-day retention, and a sizing note in the operations guide |
 | Typst 0.15.1 renders differently from 0.15.0 | Every golden image is produced and reviewed under 0.15.1 |
 | A rendering difference between macOS and Linux | Exact-output checks run only in the Linux image |
