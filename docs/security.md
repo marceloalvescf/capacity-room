@@ -107,7 +107,7 @@ its own secret and passwords: the Compose guide in section 4 of
 
 ## The review of 1.0.0
 
-On 2026-10-10 the program was reviewed whole at commit `4166418`, as an
+On 2026-10-10 the program was reviewed whole at commit `af799fb`, as an
 attacker would read it, in eight areas, each by its own reviewer:
 
 1. sign-in and sessions;
@@ -136,18 +136,18 @@ reason.
 
 | Claim | Area | Class | Ruling | Commit or reason |
 |---|---|---|---|---|
-| The Go standard library 1.27.1 holds ten vulnerabilities the program calls (net/http, http2, net/textproto, crypto/tls) | scanners, 7 | blocking: known vulnerability, called | fixed: Go 1.27.2 | `74ccbf0` |
-| A flag error repeats what was typed, so a secret typed at the wrong place reaches standard error and a container's log | 4 | blocking: secret to a log | fixed | `d17a8b6`, `01b7c1d` |
-| A password read on the host, and the server secret, never enter the redactor; nothing printed them | 4 | hardening | fixed | `d17a8b6`, `01b7c1d` |
-| Behind a host proxy, every client shares one address unless `trusted_proxies` names the proxy, so anyone can block a user's sign-in | 1, 7 | hardening | fixed: a fixed Compose subnet, and the guide sets `trusted_proxies` | `ffd80c0`, `docs/operations.md` |
-| A credential folder pointed at the settings folder lets an administrator send the server secret to a source as a token | 7 | hardening | fixed: such a folder is refused | `f181191` |
-| The server secret is read uncapped, from any kind of file | 5 | hardening | fixed: a regular file of at most 64 KiB; its mode is the operator's | `f181191`, `docs/operations.md` |
-| A reference file is checked, then opened by path; a FIFO swapped in between blocks the read | 5 | hardening | fixed: one non-blocking open inside the folder, checked on the handle | `c77760e` |
-| A profile test against a port that does not speak HTTP answers 500 and writes no audit row | 3 | hardening | fixed: `ENDPOINT_UNREACHABLE`, audited | `813fc1c` |
-| Sign-ins with varying user names queue Argon2 work, and a waiting sign-in ignores its client leaving | 1 | hardening | fixed: one verification in flight per client address, and another waits holding no hash slot | `9037ad2`; the guide advises a proxy rate limit |
-| The throttle keys on raw `X-Forwarded-For` text and on the full IPv6 address | 1 | hardening | fixed: a canonical address, IPv6 by /64 | `9037ad2` |
-| The dummy hash is made on first use, so the first unknown-user sign-in is slower | 1 | hardening | fixed: made at start | `9037ad2` |
-| PostgreSQL runs without `no-new-privileges`; a password with URL characters breaks the DSN | 7 | hardening | fixed; the guide makes a hexadecimal password | `8bfcef5`, `docs/operations.md` |
+| The Go standard library 1.27.1 holds ten vulnerabilities the program calls (net/http, http2, net/textproto, crypto/tls) | scanners, 7 | blocking: known vulnerability, called | fixed: Go 1.27.2 | `74d796c` |
+| A flag error repeats what was typed, so a secret typed at the wrong place reaches standard error and a container's log | 4 | blocking: secret to a log | fixed | `8dffe97`, `428ef69` |
+| A password read on the host, and the server secret, never enter the redactor; nothing printed them | 4 | hardening | fixed | `8dffe97`, `428ef69` |
+| Behind a host proxy, every client shares one address unless `trusted_proxies` names the proxy, so anyone can block a user's sign-in | 1, 7 | hardening | fixed: a fixed Compose subnet, and the guide sets `trusted_proxies` | `baf224e`, `docs/operations.md` |
+| A credential folder pointed at the settings folder lets an administrator send the server secret to a source as a token | 7 | hardening | fixed: such a folder is refused | `a3c37e6` |
+| The server secret is read uncapped, from any kind of file | 5 | hardening | fixed: a regular file of at most 64 KiB; its mode is the operator's | `a3c37e6`, `docs/operations.md` |
+| A reference file is checked, then opened by path; a FIFO swapped in between blocks the read | 5 | hardening | fixed: one non-blocking open inside the folder, checked on the handle | `917e185` |
+| A profile test against a port that does not speak HTTP answers 500 and writes no audit row | 3 | hardening | fixed: `ENDPOINT_UNREACHABLE`, audited | `7521380` |
+| Sign-ins with varying user names queue Argon2 work, and a waiting sign-in ignores its client leaving | 1 | hardening | fixed: one verification in flight per client address, and another waits holding no hash slot | `65655f2`; the guide advises a proxy rate limit |
+| The throttle keys on raw `X-Forwarded-For` text and on the full IPv6 address | 1 | hardening | fixed: a canonical address, IPv6 by /64 | `65655f2` |
+| The dummy hash is made on first use, so the first unknown-user sign-in is slower | 1 | hardening | fixed: made at start | `65655f2` |
+| PostgreSQL runs without `no-new-privileges`; a password with URL characters breaks the DSN | 7 | hardening | fixed; the guide makes a hexadecimal password | `77d38f2`, `docs/operations.md` |
 | No memory limits; `/tmp` unbounded; Typst without a memory bound | 6, 7 | hardening | documented: the guide sets memory limits, which bound `/tmp` too | `docs/operations.md` |
 | The DSN shows in `docker inspect` | 7 | out of scope (needs the Docker socket) | documented | `docs/operations.md` |
 | The README made the server secret world-readable | 7 | hardening | documented: the guide gives the folder to user 10001 alone | `docs/operations.md` |

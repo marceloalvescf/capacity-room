@@ -8,9 +8,9 @@
 
 **Tech Stack:** Go 1.27; River v0.49.0 (`github.com/riverqueue/river`, `riverdriver`, `riverdriver/riverpgxv5`, `rivershared`, `rivertype`, all pinned to the same version) over the existing pgx v5.11.0 pool; `encoding/json/v2` of the standard library for the duplicate-key refusal; PostgreSQL 18 through the harness of 3.1; Typst 0.15.1; the fake Prometheus of `internal/promtest`.
 
-**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, sections 3, 4.2, 4.3, 8, 11.1, 11.2, 11.7, 11.8, 11.9, 13.2, 15. The inventory of the original is `docs/reference/inventory/platform.md`. The research of this part, read in the session that wrote the plan, is under `.cache/phase-3/part-3/research/`: `original-worker.md` (the original's queue, states, storage, retention, admission, idempotency, audit, with file and line), `current-code.md` (the code of this repository at `3ecf174`, with file and line), `river.md` (River v0.49.0, with module-cache file and line, behaviour verified against PostgreSQL 18.3). The decisions of the owner are in `ROADMAP.md`.
+**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, sections 3, 4.2, 4.3, 8, 11.1, 11.2, 11.7, 11.8, 11.9, 13.2, 15. The inventory of the original is `docs/reference/inventory/platform.md`. The research of this part, read in the session that wrote the plan, is under `.cache/phase-3/part-3/research/`: `original-worker.md` (the original's queue, states, storage, retention, admission, idempotency, audit, with file and line), `current-code.md` (the code of this repository at `6303688`, with file and line), `river.md` (River v0.49.0, with module-cache file and line, behaviour verified against PostgreSQL 18.3). The decisions of the owner are in `ROADMAP.md`.
 
-**Depends on:** Part 3.2, merged into `main` at `3ecf174` and pushed on 2026-10-06.
+**Depends on:** Part 3.2, merged into `main` at `6303688` and pushed on 2026-10-06.
 
 ## Where this part sits
 
@@ -146,7 +146,7 @@ Each is a decision the spec leaves open, written as decision, reason, and cost i
 
 **Executor:** Main thread.
 
-- [x] **Step 1:** `main` at `3ecf174`, clean, pushed; `ROADMAP.md` and `CHANGELOG.md` read and true.
+- [x] **Step 1:** `main` at `6303688`, clean, pushed; `ROADMAP.md` and `CHANGELOG.md` read and true.
 - [x] **Step 2:** `git switch -c feat/platform-worker`.
 - [ ] **Step 3:** `ROADMAP.md`: the summary line of 3.3 names this plan; a section "Phase 3.3" with P33-0 to P33-12, all `OPEN`; the rulings R119 to R142.
 - [ ] **Step 4:** Commit the plan: `docs(plan): add the plan of part 3.3` (36 characters).

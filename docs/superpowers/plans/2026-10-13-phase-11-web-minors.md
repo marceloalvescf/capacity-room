@@ -31,11 +31,11 @@ The plan is written on the recommended option of each decision. No brief is cut 
 | D13 | F-177: Confidence explained | Text, not a tooltip: the triage proposed a tooltip on the header, but a tooltip needs a focusable trigger and the header is not one. A line under the action plan, "Confidence: exact, read from the metrics; inferred, deduced from approximate or partial evidence; unknown, not established by the metrics." / "Confiança: exata, lida das métricas; inferida, deduzida de evidência aproximada ou parcial; desconhecida, não estabelecida pelas métricas."; and the finding's detail line takes its meaning: "Confidence: Inferred. Deduced from approximate or partial evidence." / "Confiança: Inferida. Deduzida de evidência aproximada ou parcial." | An info icon button beside the header, with the text in its tooltip. | 9 |
 | D14 | F-181: the flip at 1024 px | Close it as checked. Measured on the real build at 1024×768 (`.cache/phase-11/look/before/`): with 1, 8, or 15 namespaces the picker opens below its trigger; with 30, the trigger sits at y 645 and the picker opens upward over the namespaces, inside the window, never over the title. The flip is Radix's collision rule and keeps the whole picker on screen. | Scroll the trigger to the top of the window on open, so the picker always opens below. | 10 |
 
-F-180 closes on the 1024×768 overview of the same folder: the answer strip, the data-quality notice, the gauge, and the pressure by scope stand above the fold, and the action-plan rows open their finding since 89c547c. It is shown to the owner at the look and closed there.
+F-180 closes on the 1024×768 overview of the same folder: the answer strip, the data-quality notice, the gauge, and the pressure by scope stand above the fold, and the action-plan rows open their finding since 6edf691. It is shown to the owner at the look and closed there.
 
 ## Global Constraints
 
-- Branch `feat/web-minors`, opened from `75cbf7a`; nothing is edited on `main`.
+- Branch `feat/web-minors`, opened from `4605fcf`; nothing is edited on `main`.
 - The public surface changes only by addition (minor version 1.6.0): `ReportSummary` (and so `Report`) gains `worst_severity` and `cluster_name`, both required and nullable; a new schema `Severity`. The released migrations are never edited; `00005_report_summary.sql` is new. No stored row is rewritten: a report collected before the upgrade keeps both columns null, and the screens show a dash (spec 15.1: nothing is lost, nothing is backfilled).
 - Every reader text comes from `web/src/locales/en.json` and `pt-BR.json`, both holding the same keys with the same parameters; every key is used; a family of keys is declared in `web/src/i18n/families.ts`. Technical terms stay English in both languages (namespace, cluster, request, limit); only common nouns are Portuguese.
 - The web applies no threshold and derives no status the view or the API does not give: the worst severity is stored by Go and drawn by the list.
@@ -288,7 +288,7 @@ The main thread then runs `make test-postgres` (Docker) and `make postgres-up` a
 - Consumes: the contract of Task 1.
 - Produces: the walker of `TestViewMatchesTheContract` accepts a property written `allOf: [ $ref ]` with a sibling `description`, as `ReportSummary` writes its nullable fields.
 
-OpenAPI 3.0 ignores the siblings of a `$ref`, so commit a88b288 dropped four descriptions when it turned the fields into enums. Restore them in the form the file already uses:
+OpenAPI 3.0 ignores the siblings of a `$ref`, so commit 1137957 dropped four descriptions when it turned the fields into enums. Restore them in the form the file already uses:
 
 ```yaml
         min_severity:

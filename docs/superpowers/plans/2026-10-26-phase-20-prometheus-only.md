@@ -32,7 +32,7 @@
 ### Task 1: Fixtures of schema 3.0 for the migration tests (main thread, before any code change)
 
 **Files:**
-- Create: `internal/platform/store/testdata/schema-3.0/*.json` (copies of every `testdata/snapshot/*.json` at 199de7d, `grafana-authenticated.json` included)
+- Create: `internal/platform/store/testdata/schema-3.0/*.json` (copies of every `testdata/snapshot/*.json` at 5748b4f, `grafana-authenticated.json` included)
 - Modify: `internal/platform/store/migrate_minimum_severity_test.go` (compare the migrated 2.0 rows with `testdata/schema-3.0/` instead of `testdata/snapshot/`, and migrate to version 8 alone)
 
 - [ ] Copy the files; run `go test -tags=postgres -run MigrationEight ./internal/platform/store/` against the running PostgreSQL: PASS.

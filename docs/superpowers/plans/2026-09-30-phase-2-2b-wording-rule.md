@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, sections 3, 9.1, 9.3, 9.5, 10.3, 13.2, 15; Task 1 of this plan amends 3 and 9.3. The decision of the owner of 2026-09-30 is recorded in `ROADMAP.md` under the decisions of the owner and as finding F-74.
 
-**Depends on:** Part 2.2, merged into `main` at `db354ae`.
+**Depends on:** Part 2.2, merged into `main` at `8847162`.
 
 ## Where this part sits
 
@@ -189,7 +189,7 @@ with the plan.
 
 - [ ] **Step 1:** Run `git status`, `git log --oneline -3`, and
   `go test -count=1 ./...`. Read `ROADMAP.md` and `CHANGELOG.md` and confirm
-  they describe what the commands show: `main` at `db354ae`, part 2.2 merged,
+  they describe what the commands show: `main` at `8847162`, part 2.2 merged,
   seven entries of part 2.2 under `Unreleased`.
 - [ ] **Step 2:** Confirm the branch.
 

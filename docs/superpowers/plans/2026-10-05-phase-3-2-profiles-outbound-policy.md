@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, sections 2, 3, 4, 5.2 (the fields a profile carries), 6.1 (the candidate roots), 11.2, 11.5, 11.6, 11.9, 11.10 (the profile rows), 13.2, 15. The inventory of the original is `docs/reference/inventory/platform.md`; the facts of this part, quoted from the original with file and line, are in `.cache/phase-3/part-2/research/original-profiles.md`. The decisions of the owner are in `ROADMAP.md`.
 
-**Depends on:** Part 3.1, merged into `main` at `ff0a2e4`.
+**Depends on:** Part 3.1, merged into `main` at `41e720b`.
 
 ## Where this part sits
 
@@ -130,7 +130,7 @@ Each is a decision the spec leaves open, written as decision, reason, and cost i
 
 **Executor:** Main thread.
 
-- [ ] **Step 1:** `git status`, `git log --oneline -3`, `go test -count=1 ./...`: `main` at `ff0a2e4`, clean, green.
+- [ ] **Step 1:** `git status`, `git log --oneline -3`, `go test -count=1 ./...`: `main` at `41e720b`, clean, green.
 - [ ] **Step 2:** `git switch -c feat/platform-profiles` and confirm.
 - [ ] **Step 3:** `ROADMAP.md`: the summary line of 3.2 names this plan and the branch; a section "Phase 3.2" with P32-0 to P32-12, all `OPEN`; the rulings R99 to R118; F-114 in the findings log.
 - [ ] **Step 4:** Commit the plan: `docs(plan): add the plan of part 3.2`.

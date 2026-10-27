@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go 1.27, Helm 4.3.0, kubeconform 0.8.0, Kubernetes 1.37, Gateway API, Docker Compose, GNU make, all inside `nix develop`.
 
-**Spec:** `docs/superpowers/specs/2026-10-14-kubernetes-deployment-design.md` (1c1f4a2, approved 2026-10-14). Read it before any task; this plan argues from it.
+**Spec:** `docs/superpowers/specs/2026-10-14-kubernetes-deployment-design.md` (eabf5b1, approved 2026-10-14). Read it before any task; this plan argues from it.
 
 ## Global Constraints
 

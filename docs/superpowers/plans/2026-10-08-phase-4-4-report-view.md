@@ -8,9 +8,9 @@
 
 **Tech Stack:** As in part 4.3, plus one dependency: `@tanstack/react-table` 9.2.6, exact. Go 1.27; React 19.3.0, React Router 8.4.0, TanStack Query 5.104.1, Radix UI 1.7.0, Tailwind CSS 4.3.3, react-i18next 17.0.16, openapi-typescript 7.13.0; Vitest with MSW; Playwright.
 
-**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md` as amended in `087a622` (approved by the owner on 2026-10-08): section 12.2 and the new 12.2.1. The owner's choices are logged in `.cache/phase-4/part-4/brainstorm-decisions.md` (answers 1 to 12). The mockups they approved are under `.cache/phase-4/brainstorm/.superpowers/brainstorm/`: `401575-1791487146/content/q4-frame.html` (frame 4C), `…/q5-overview-5d-v2.html` (overview 5D), and in `106198-1791491599/content/`: `q7-tables.html` (6C without the code, top; tables 7B), `q8-sheet.html` (8B), `q9-tabs-v2.html` (the remaining tabs, rows across the full width). Their source is `.cache/phase-4/part-4/mock/src/`, and an implementer may read it for layout and classes; the words in this plan win over the mock's.
+**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md` as amended in `61b7fbb` (approved by the owner on 2026-10-08): section 12.2 and the new 12.2.1. The owner's choices are logged in `.cache/phase-4/part-4/brainstorm-decisions.md` (answers 1 to 12). The mockups they approved are under `.cache/phase-4/brainstorm/.superpowers/brainstorm/`: `401575-1791487146/content/q4-frame.html` (frame 4C), `…/q5-overview-5d-v2.html` (overview 5D), and in `106198-1791491599/content/`: `q7-tables.html` (6C without the code, top; tables 7B), `q8-sheet.html` (8B), `q9-tabs-v2.html` (the remaining tabs, rows across the full width). Their source is `.cache/phase-4/part-4/mock/src/`, and an implementer may read it for layout and classes; the words in this plan win over the mock's.
 
-**Depends on:** `main` at `600fd0a` (release 0.4.0). Branch `feat/report-view`, which holds the host commits `cb2c904`, `ecdf83d`, `45a9cd4`, `083142c` (F-141, `make gate` passed on `083142c`) and the spec amendment `087a622`.
+**Depends on:** `main` at `90c4f38` (release 0.4.0). Branch `feat/report-view`, which holds the host commits `8c18113`, `8dd855a`, `2e48112`, `56b6e4a` (F-141, `make gate` passed on `56b6e4a`) and the spec amendment `61b7fbb`.
 
 ## Global Constraints
 
@@ -45,9 +45,9 @@ Each line names an input the spec implies and no requirement spells out, and the
 
 | Part | Delivers | Proof at the end |
 |---|---|---|
-| 4.1 Foundation | Toolchain, serving, theme, i18n, session, sign-in, account | Done (`aa55455`) |
-| 4.2 Reports | List, form, progress, PDFs, delete | Done (`ec5c210`), released as 0.3.0 |
-| 4.3 Calendar ranges | Ranges in the command, the snapshot `2.0`, the API, the picker | Done (`f7a1dcc`), released as 0.4.0 |
+| 4.1 Foundation | Toolchain, serving, theme, i18n, session, sign-in, account | Done (`2f52cd7`) |
+| 4.2 Reports | List, form, progress, PDFs, delete | Done (`5090fb7`), released as 0.3.0 |
+| 4.3 Calendar ranges | Ranges in the command, the snapshot `2.0`, the API, the picker | Done (`15083c8`), released as 0.4.0 |
 | **4.4 The report (this plan)** | The seven tabs | In a real browser: a collected report opened from its progress screen, every tab passing axe and the CSP |
 | 4.5 Administration | Profiles and users | An administrator creates a profile and a user |
 | 4.6 End-to-end | Security, concurrency, PDF recovery specs | `make e2e` runs the four specs of spec 13.4 |
@@ -110,7 +110,7 @@ Each ruling is a decision the amended spec leaves open: decision, grounds, cost 
 |---|---|
 | F-137 (a) and (b) | Task 9 |
 | E253, the no-style scope minor | Task 8 |
-| F-141 | Already closed on this branch (`ecdf83d`, `45a9cd4`, `083142c`) |
+| F-141 | Already closed on this branch (`8dd855a`, `2e48112`, `56b6e4a`) |
 
 ## File structure
 
@@ -140,9 +140,9 @@ Each ruling is a decision the amended spec leaves open: decision, grounds, cost 
 
 **Executor:** Main thread.
 
-- [x] **Step 1:** `ROADMAP.md` and `CHANGELOG.md` read and true; `main` at `600fd0a`, pushed; tag `v0.4.0` local.
-- [x] **Step 2:** `git switch -c feat/report-view`; the host commits; `make gate` passed on `083142c` (`.cache/nixos-gate/`).
-- [x] **Step 3:** The brainstorm (answers 1 to 12) and the spec amendment `087a622`, approved by the owner on 2026-10-08.
+- [x] **Step 1:** `ROADMAP.md` and `CHANGELOG.md` read and true; `main` at `90c4f38`, pushed; tag `v0.4.0` local.
+- [x] **Step 2:** `git switch -c feat/report-view`; the host commits; `make gate` passed on `56b6e4a` (`.cache/nixos-gate/`).
+- [x] **Step 3:** The brainstorm (answers 1 to 12) and the spec amendment `61b7fbb`, approved by the owner on 2026-10-08.
 - [ ] **Step 4:** `ROADMAP.md`: a section "Phase 4.4" with P44-0 to P44-10 `OPEN`, the rulings R213 to R231 named, the host commits under P44-0; the plan's commit named in P44-0.
 
 ---

@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go 1.27, React and TypeScript under `web/`, Typst 0.15.1, Docker Compose, GNU make, all inside `nix develop`.
 
-**Spec:** `docs/superpowers/specs/2026-10-14-capacity-room-rename-design.md` (approved 2026-10-14, amended at 1c823b9). Read it before any task; it holds the name map this plan applies.
+**Spec:** `docs/superpowers/specs/2026-10-14-capacity-room-rename-design.md` (approved 2026-10-14, amended at eb5585f). Read it before any task; it holds the name map this plan applies.
 
 ## Global Constraints
 

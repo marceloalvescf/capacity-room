@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go 1.27, PostgreSQL 18 (goose), Typst 0.15.1, React + TypeScript + Vite + Tailwind + Vitest, Radix, TanStack Table, Helm.
 
-**Spec:** `docs/superpowers/specs/2026-10-20-visual-reports-design.md` (4b2b1b9, D7 in 5089f20). Approved mocks: `.cache/phase-16/look/dash.html` (overview `opt=B`, findings `opt=D`), `pdf6.html` (`mode=A`), `spread.html` (`opt=B`), `pools.html` (`opt=B`).
+**Spec:** `docs/superpowers/specs/2026-10-20-visual-reports-design.md` (6b0ce55, D7 in 0654698). Approved mocks: `.cache/phase-16/look/dash.html` (overview `opt=B`, findings `opt=D`), `pdf6.html` (`mode=A`), `spread.html` (`opt=B`), `pools.html` (`opt=B`).
 
 ## Global Constraints
 

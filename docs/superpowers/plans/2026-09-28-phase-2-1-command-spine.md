@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, sections 4, 5, 6.1 to 6.3, 8, 9, 10, 13.2, 15, and 16.
 
-**Depends on:** Phases 0 and 1 and the adversarial review of 2026-09-28, merged into `main` at `7f150d9`.
+**Depends on:** Phases 0 and 1 and the adversarial review of 2026-09-28, merged into `main` at `1b630fc`.
 
 ## Where this part sits
 
@@ -212,7 +212,7 @@ of them.
 | E30 | 14 | the default completion command of cobra is turned off, and a test runs every command with an extra argument and looks for it in the streams — the design names no such command, and with it gone every command is one whose arguments this package checks — if wrong, a user who wants shell completion has none until the design asks for it |
 | E31 | 14 | a value read from a file that the operator named (a schema version, a period, a state) is repeated in the diagnostic on purpose — the operator needs it to find the fault, and it was not typed on the command line — if wrong, a secret pasted into a snapshot or a configuration file under the wrong key is printed |
 | E32 | 14 | round 4 resumes the same implementer, where the process asks for a fresh one on a stronger model — the loop is not stuck: every round closed what it was given, and each new finding was a wider reading of the class by the reviewer — if wrong, the implementer repeats a blind spot |
-| E33 | — | the controller changed the recipe of check-runtime itself (commit b9e83cb): the folder is kept and only the file is removed, and a snapshot path that names no file is refused before Docker runs — only the main thread may run Docker, so only it can see this recipe fail and pass — if wrong, a change of three recipe lines went in without a task review; the whole-branch review reads it |
+| E33 | — | the controller changed the recipe of check-runtime itself (commit 1bd5036): the folder is kept and only the file is removed, and a snapshot path that names no file is refused before Docker runs — only the main thread may run Docker, so only it can see this recipe fail and pass — if wrong, a change of three recipe lines went in without a task review; the whole-branch review reads it |
 | E34 | — | Decode reads the schema version first and judges the rest only for the version it reads — the order of the plan, and of the controller's ruling in the first fix round of Task 9, was wrong — if wrong, a file is parsed twice |
 | E35 | 9 | the fix of Task 9 after its close gets no scoped re-review of its own; the review of the whole branch is given it as a point to judge — the whole-branch review is the next step and reads the same file — if wrong, a defect of that fix is found one step later. It was: the review found that one file could have two readings |
 | E36 | 18 | the final review is four adversarial reviewers by area, not one reviewer over the whole diff — the diff of the branch is 740 kB, more than one reviewer can read with care — if wrong, a defect that lies between two areas is seen by neither |

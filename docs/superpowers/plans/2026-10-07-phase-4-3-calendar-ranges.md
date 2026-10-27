@@ -8,9 +8,9 @@
 
 **Tech Stack:** As in part 4.2, plus one dependency: `@daypicker/react` 10.0.2, exact, which brings `react-day-picker`, `date-fns`, and `@date-fns/tz` transitively. Go 1.27; React 19.3.0, TanStack Query 5.104.1, React Hook Form 7.89.0 with Zod 4.6.5, Radix UI 1.7.0, Tailwind CSS 4.3.3, react-i18next 17.0.16; Vitest 5.0.3 with MSW 3.0.2; Playwright 1.63.0.
 
-**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md` as amended in `fa7c054` (approved by the owner on 2026-10-07): sections 3, 5.1, 5.2, 6.4, 8, 8.3, 11.6, 11.7, 12.3, 13.2. The mockups the owner chose are under `.cache/phase-4/brainstorm/.superpowers/brainstorm/34726-1791403860/content/`: `range-picker.html` (option 1A, chosen) and `section-3-form.html` (the behaviour and every word, approved). The HTML they were drawn from is `.cache/phase-4/part-3/look/recap.html`.
+**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md` as amended in `693ae1e` (approved by the owner on 2026-10-07): sections 3, 5.1, 5.2, 6.4, 8, 8.3, 11.6, 11.7, 12.3, 13.2. The mockups the owner chose are under `.cache/phase-4/brainstorm/.superpowers/brainstorm/34726-1791403860/content/`: `range-picker.html` (option 1A, chosen) and `section-3-form.html` (the behaviour and every word, approved). The HTML they were drawn from is `.cache/phase-4/part-3/look/recap.html`.
 
-**Depends on:** Release 0.3.0 (`4646053`), on `main` and pushed. Branch `feat/calendar-ranges`, opened from `4646053`.
+**Depends on:** Release 0.3.0 (`f391d26`), on `main` and pushed. Branch `feat/calendar-ranges`, opened from `f391d26`.
 
 ## Global Constraints
 
@@ -43,8 +43,8 @@ Each line names an input the spec implies and no requirement spells out, and the
 
 | Part | Delivers | Proof at the end |
 |---|---|---|
-| 4.1 Foundation | Toolchain, serving, theme, i18n, session, sign-in, account | Done (`aa55455`) |
-| 4.2 Reports | List, form, progress, PDFs, delete | Done (`ec5c210`), released as 0.3.0 |
+| 4.1 Foundation | Toolchain, serving, theme, i18n, session, sign-in, account | Done (`2f52cd7`) |
+| 4.2 Reports | List, form, progress, PDFs, delete | Done (`5090fb7`), released as 0.3.0 |
 | **4.3 Calendar ranges (this plan)** | Ranges in the command, the snapshot `2.0`, the API, and the picker | In a real browser: a report of the previous week requested and collected; on the command line, a report of a past day |
 | 4.4 The report | The seven tabs | Every tab of a golden scenario in both languages |
 | 4.5 Administration | Profiles and users | An administrator creates a profile and a user |
@@ -123,9 +123,9 @@ Each ruling is a decision the amended spec leaves open: decision, grounds, cost 
 
 **Executor:** Main thread.
 
-- [x] **Step 1:** `ROADMAP.md` and `CHANGELOG.md` read and true; `main` at `4646053`, pushed, tag `v0.3.0`.
+- [x] **Step 1:** `ROADMAP.md` and `CHANGELOG.md` read and true; `main` at `f391d26`, pushed, tag `v0.3.0`.
 - [x] **Step 2:** `git switch -c feat/calendar-ranges`.
-- [x] **Step 3:** The spec amendment, `fa7c054`, approved by the owner on 2026-10-07.
+- [x] **Step 3:** The spec amendment, `693ae1e`, approved by the owner on 2026-10-07.
 - [ ] **Step 4:** `ROADMAP.md`: P43-1 to P43-8 `OPEN`, the rulings R198 to R212 named; the plan's commit named in P43-0.
 
 ---

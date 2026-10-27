@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, sections 6.1, 6.4, 7.1 to 7.3, 8, 9.1 to 9.3, 10.2, 10.3, 13.2, 13.3, 15, 16, and 17.
 
-**Depends on:** Part 2.1, merged into `main` at `2d38ce2`.
+**Depends on:** Part 2.1, merged into `main` at `ca7b12a`.
 
 ## Where this part sits
 
@@ -1417,7 +1417,7 @@ type Input struct {
 | `TestDecodeRefusesNullElsewhere` | `null` at a text, at a list, at an object of parameters, inside it | each refused; the message names the path |
 | `TestDecodeRefusesTextAsNumber` | `"average": "1"`; `"count": "3"` | each refused as a value of the wrong kind |
 | `TestDecodeRefusesUnknownKeyInNewSections` | an unknown key in a namespace, a workload, a statistic, a finding, an evidence, a message | each refused; the message names the path |
-| `TestDecodeRefusesMissingNewSection` | a snapshot of part 2.1, from `git show 2d38ce2:testdata/snapshot/direct-complete.json`, kept as a fixture | refused: `snapshot lacks the key quality.warnings` |
+| `TestDecodeRefusesMissingNewSection` | a snapshot of part 2.1, from `git show ca7b12a:testdata/snapshot/direct-complete.json`, kept as a fixture | refused: `snapshot lacks the key quality.warnings` |
 | `TestCheckRules` | one case for each of the nine rules, and for each part of a rule | each refused with the message of its rule |
 | `TestCheckAcceptsTwoWorkloadsOfOneName` | `Deployment` `api` and `StatefulSet` `api` | accepted |
 | `TestKeyWalkRefusesOtherPointersAndMaps` | a type with `*string`; one with `map[string]string` | the message of the unsupported key |

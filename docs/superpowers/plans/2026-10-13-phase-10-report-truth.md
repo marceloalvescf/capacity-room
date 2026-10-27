@@ -16,7 +16,7 @@ The plan is written on the recommended option of each open entry of the wording 
 
 ## Global Constraints
 
-- Branch `feat/report-truth`, opened from `7096f11`; nothing is edited on `main`.
+- Branch `feat/report-truth`, opened from `382fc95`; nothing is edited on `main`.
 - Go decides what is said; the template and the web decide how it looks. The web applies no threshold and derives no status the view does not give.
 - Every reader text comes from the catalog (Go) or the locale files (web); both catalog languages and both locale files hold the same keys with the same parameters, and every key is used.
 - Technical terms stay English in both languages (request, limit, node, workload, cordon, HPA); only common nouns are Portuguese.
@@ -38,7 +38,7 @@ The plan is written on the recommended option of each open entry of the wording 
 4. **A snapshot stored before this phase** (a not-ready node with no readiness finding) builds its view and its PDF without error, the state unmarked. Pinned by Task 7.
 5. **The comparison with the original still fails on a stray difference.** The ruled table removes findings by code alone; a ruled code that no scenario writes fails a test; `TestComparisonCanFail` still fails on a changed number. Pinned by Task 6.
 
-The search of the web tables reads names, words, sentences, and remarks, never a value with a unit (checked at `7096f11`: `data-table.tsx:108`, `findings-tab.tsx:131`, `workloads-tab.tsx:59`, and every tab's `searchText`), so the no-break space of Task 1 changes no search.
+The search of the web tables reads names, words, sentences, and remarks, never a value with a unit (checked at `382fc95`: `data-table.tsx:108`, `findings-tab.tsx:131`, `workloads-tab.tsx:59`, and every tab's `searchText`), so the no-break space of Task 1 changes no search.
 
 ---
 
@@ -127,7 +127,7 @@ Run `make update-testdata`, read the diff of every changed file (only the separa
 
 ### Task 2: A status mark and its label stay on one line (F-12)
 
-Reproduced at `7096f11` on the golden page `capacity-pt-5`: in the quality appendix the Coverage cell of "Escalonamento automático de nós" sets the critical mark on one line and the bold "Indisponível" under it.
+Reproduced at `382fc95` on the golden page `capacity-pt-5`: in the quality appendix the Coverage cell of "Escalonamento automático de nós" sets the critical mark on one line and the bold "Indisponível" under it.
 
 **Files:**
 - Modify: `template/capacity/runs.typ:49-53` (the status run), and `template/capacity/tables.typ` only if a label cannot fit its column even on a line of its own
@@ -229,7 +229,7 @@ git commit -m "feat(catalog): write every date in ISO form"
 - Create: `docs/decisions/0002-differences-from-the-original.md`
 
 **Interfaces:**
-- Produces: `NAMESPACE_CPU_BURSTY` and `WORKLOAD_CPU_BURSTY` are judged only when the CPU average is at least 0.001 cores; the memory codes keep `Average > 0`. No recorded scenario has a CPU average below 1 mCPU (checked at `7096f11`: the lowest is 0.1 cores in `edge-values`), so no number of `testdata/python` and no golden file moves.
+- Produces: `NAMESPACE_CPU_BURSTY` and `WORKLOAD_CPU_BURSTY` are judged only when the CPU average is at least 0.001 cores; the memory codes keep `Average > 0`. No recorded scenario has a CPU average below 1 mCPU (checked at `382fc95`: the lowest is 0.1 cores in `edge-values`), so no number of `testdata/python` and no golden file moves.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -700,7 +700,7 @@ git commit -m "feat(view): give the node state its status"
 
 ### Task 8: An HPA's situation carries its worst finding (F-178, W8 A)
 
-Reproduced at `7096f11` on the golden view `web/tests/fixtures/view/edge-scaling.en.json`: `payments/idle` reads "Below the maximum" with `situation_status` `healthy` while the view's findings hold `HPA_REPLICA_DIVERGENCE` of attention for `payments/idle`.
+Reproduced at `382fc95` on the golden view `web/tests/fixtures/view/edge-scaling.en.json`: `payments/idle` reads "Below the maximum" with `situation_status` `healthy` while the view's findings hold `HPA_REPLICA_DIVERGENCE` of attention for `payments/idle`.
 
 **Files:**
 - Modify: `internal/document/hpas.go:181-202` (`hpaSituation`, `hpaSituationText`) and their callers in `hpas.go` and `executive.go`, `internal/document/view.go:617-634` (`hpas`)

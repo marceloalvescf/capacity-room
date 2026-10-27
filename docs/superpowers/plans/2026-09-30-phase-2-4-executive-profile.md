@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, sections 5.1 to 5.3, 7.3, 7.4, 8, 9.1 to 9.5, 10.2, 10.3, 13.2, 13.3, 15, 16, and 17. The decisions of the owner are in `ROADMAP.md`.
 
-**Depends on:** Part 2.3, merged into `main` at `afaced6`.
+**Depends on:** Part 2.3, merged into `main` at `2821953`.
 
 ## Where this part sits
 
@@ -66,7 +66,7 @@ Rules for every subagent brief:
 - When a brief lists the tests that fail after a change, it names every
   reader of the artefact that changes, found by grep, not the one test that
   owns it. `.cache/phase-2/part-4/research/go-interfaces.md` section 10
-  holds the list of readers at `afaced6`.
+  holds the list of readers at `2821953`.
 - The main thread commits its own changes before it dispatches.
 
 Reference material, read-only and never tracked:
@@ -82,7 +82,7 @@ Reference material, read-only and never tracked:
   (`build_recommendations`, the summary counts, the coverage, the action
   plan), `original-sentences.md` (the 66 summaries and actions, the
   fragments, the observations, the small tables), and `go-interfaces.md`
-  (the Go side at `afaced6`, with file and line): the facts extracted for
+  (the Go side at `2821953`, with file and line): the facts extracted for
   this part. A brief quotes the lines it needs; an implementer that finds
   the brief and the original in disagreement stops and reports.
 - `.cache/phase-2/part-4/python/out/<scenario>.json`: what the original
@@ -233,7 +233,7 @@ reviewing this plan. The numbering continues that of part 2.3.
 
 - [ ] **Step 1:** Run `git status`, `git log --oneline -3`, and
   `go test -count=1 ./...`. Read `ROADMAP.md` and `CHANGELOG.md` and confirm
-  they describe the real state: `main` at `afaced6`, clean, every package
+  they describe the real state: `main` at `2821953`, clean, every package
   green, no entry of this part in the changelog. Correct `ROADMAP.md` first
   if it disagrees (the ruling E78 of part 2.3 was missing from its table
   and was added on 2026-09-30).

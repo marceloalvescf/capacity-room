@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, sections 2, 3, 4, 11.1 to 11.4, 11.9, 11.10 (the auth, account, and user rows), 11.12, 13.1, 13.2, 13.5, 14, 15, and 16. The inventory of the original is `docs/reference/inventory/platform.md`. The decisions of the owner of 2026-10-05 are in `ROADMAP.md`.
 
-**Depends on:** Release 0.1.0, `main` at `92959d4`, tagged `v0.1.0`.
+**Depends on:** Release 0.1.0, `main` at `5de4568`, tagged `v0.1.0`.
 
 ## Where this part sits
 
@@ -221,7 +221,7 @@ this plan. The numbering continues that of part 2.4.
 
 **Executor:** Main thread.
 
-- [ ] **Step 1:** Run `git status`, `git log --oneline -3`, `git describe --tags`, and `go test -count=1 ./...`. Confirm `main` at `92959d4`, clean, every package green, the changelog's `## [Unreleased]` empty.
+- [ ] **Step 1:** Run `git status`, `git log --oneline -3`, `git describe --tags`, and `go test -count=1 ./...`. Confirm `main` at `5de4568`, clean, every package green, the changelog's `## [Unreleased]` empty.
 - [ ] **Step 2:** Create the branch and confirm it.
 
 ```bash

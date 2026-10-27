@@ -8,7 +8,7 @@
 
 **Tech Stack:** Go 1.27, typst 0.15.1, React and TypeScript (Vitest), PromQL over kube-state-metrics, GNU make, all inside `nix develop`.
 
-**Spec:** `docs/superpowers/specs/2026-10-16-node-autoscaling-design.md` (c751feb, amended 1c70089 and af04888, approved 2026-10-16). Read it before any task; this plan argues from it.
+**Spec:** `docs/superpowers/specs/2026-10-16-node-autoscaling-design.md` (f79bc8b, amended aaa5094 and 618c92e, approved 2026-10-16). Read it before any task; this plan argues from it.
 
 ## Global Constraints
 
@@ -57,7 +57,7 @@
 
 ### Task 1: every PDF carries a creation time (F-269)
 
-> **Superseded during execution (2026-10-16).** A report PDF holds no date (the template sets `date: none`), so the creation-time plumbing below would change no byte of a report. It was implemented (33a1fc8) and reverted; the task became: `TestRealCompileIsDeterministic` compiles a document that sets `date: none`, and a test tagged `template` compiles a real report data file twice 1.1 s apart and finds equal bytes and no date. Spec section 9 says so.
+> **Superseded during execution (2026-10-16).** A report PDF holds no date (the template sets `date: none`), so the creation-time plumbing below would change no byte of a report. It was implemented (a9bdda0) and reverted; the task became: `TestRealCompileIsDeterministic` compiles a document that sets `date: none`, and a test tagged `template` compiles a real report data file twice 1.1 s apart and finds equal bytes and no date. Spec section 9 says so.
 
 **Files:**
 - Modify: `internal/typst/compile.go` (the `Job` struct at :24-34, `Args`)

@@ -117,7 +117,7 @@ enters it by an edit that a reviewer reads.
 
 ## Execution
 
-Branch `refactor/capacity-room`, cut from `main` at `b59bbb6`. The tasks share
+Branch `refactor/capacity-room`, cut from `main` at `5dfc3af`. The tasks share
 files, so they run in sequence, each with a fresh Sonnet implementer and a
 task reviewer, briefs and reports as files, and the ledger under
 `.superpowers/sdd/2026-10-14-phase-12-rename/`.

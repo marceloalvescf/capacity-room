@@ -14,7 +14,7 @@
 - React and TypeScript, TanStack Query, openapi-fetch, react-router, i18next.
 - Vitest and Playwright.
 
-**Spec:** `docs/superpowers/specs/2026-10-21-home-page-design.md` (b108497). Read it before any task.
+**Spec:** `docs/superpowers/specs/2026-10-21-home-page-design.md` (e40c7bc). Read it before any task.
 
 ## Global Constraints
 

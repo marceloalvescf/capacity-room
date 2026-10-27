@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, sections 5.3, 6.3, 6.4, 7.1 to 7.3, 8, 9.1 to 9.3, 10.2, 10.3, 13.2, 13.3, 15, 16, and 17. The decisions of the owner of 2026-09-30 are in `ROADMAP.md`.
 
-**Depends on:** Part 2.2b, merged into `main` at `41fdced`.
+**Depends on:** Part 2.2b, merged into `main` at `995fd89`.
 
 ## Where this part sits
 
@@ -258,7 +258,7 @@ the rulings of part 2.2b.
 
 - [ ] **Step 1:** Run `git status`, `git log --oneline -3`, and
   `go test -count=1 ./...`. Read `ROADMAP.md` and `CHANGELOG.md` and confirm
-  they describe what the commands show: `main` at `41fdced`, parts 2.2 and
+  they describe what the commands show: `main` at `995fd89`, parts 2.2 and
   2.2b merged, F-74 and F-75 done, F-76 open.
 - [ ] **Step 2:** Confirm the branch.
 

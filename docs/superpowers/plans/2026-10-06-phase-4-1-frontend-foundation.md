@@ -15,9 +15,9 @@
 - **Generated client:** `openapi-typescript` 7.13.0 and `openapi-fetch` 0.17.0.
 - **Database:** PostgreSQL 18 through the harness of 3.1.
 
-**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, sections 2, 4.1, 11.3, 11.4, 11.8, 11.10, 11.12, 12 (all of it, as amended in `92cf428`), 13.1, 13.4, 13.5, 14, 15, 16. The original frontend, read-only, is `older/kubernetes-report/frontend/`; its stack and patterns are summarised in `docs/reference/inventory/document-frontend.md`. The measurement behind F-127 is in `.cache/phase-3/part-4/review/rereview.md` ("E182 (download slots)").
+**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, sections 2, 4.1, 11.3, 11.4, 11.8, 11.10, 11.12, 12 (all of it, as amended in `82b070e`), 13.1, 13.4, 13.5, 14, 15, 16. The original frontend, read-only, is `older/kubernetes-report/frontend/`; its stack and patterns are summarised in `docs/reference/inventory/document-frontend.md`. The measurement behind F-127 is in `.cache/phase-3/part-4/review/rereview.md` ("E182 (download slots)").
 
-**Depends on:** Release 0.2.0, `main` at `6da725a`, tagged `v0.2.0` and pushed on 2026-10-06.
+**Depends on:** Release 0.2.0, `main` at `855a93d`, tagged `v0.2.0` and pushed on 2026-10-06.
 
 ## Where this part sits
 
@@ -99,7 +99,7 @@ A brief quotes the lines it needs. An implementer that finds the brief and the o
 Every constraint of the plans of phases 0 to 3.4 stands. The ones below are added or are the ones this part leans on most.
 
 **Spec and Go**
-- The design spec as amended in `92cf428` is the authority. Section 12 is read whole before any frontend task.
+- The design spec as amended in `82b070e` is the authority. Section 12 is read whole before any frontend task.
 - `guard.Layers` gains `web` at rank 0 (Task 5), and no other package. No new Go module.
 
 **Pinning and contract**
@@ -187,9 +187,9 @@ Each ruling is a decision the spec leaves open, written as decision, reason, and
 
 **Executor:** Main thread.
 
-- [x] **Step 1:** `main` is at `6da725a`, tagged and pushed. `ROADMAP.md` and `CHANGELOG.md` were read and are true. The decisions log lacked the 3.4 merge and release 0.2.0, and those entries are now added. `feat/platform-worker` is deleted at the owner's word.
+- [x] **Step 1:** `main` is at `855a93d`, tagged and pushed. `ROADMAP.md` and `CHANGELOG.md` were read and are true. The decisions log lacked the 3.4 merge and release 0.2.0, and those entries are now added. `feat/platform-worker` is deleted at the owner's word.
 - [x] **Step 2:** `git switch -c feat/frontend-foundation`.
-- [x] **Step 3:** The spec amendment, committed as `92cf428` and approved by the owner.
+- [x] **Step 3:** The spec amendment, committed as `82b070e` and approved by the owner.
 - [ ] **Step 4:** `ROADMAP.md`:
   - the summary line of 4.1 names this plan;
   - a section "Phase 4.1" holds P41-0 to P41-10, all `OPEN`, and the rulings R164 to R180;

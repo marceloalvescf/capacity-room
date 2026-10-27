@@ -8,9 +8,9 @@
 
 **Tech Stack:** As in part 4.4, with no new dependency. Go 1.27; React 19.3.0, React Router 8.4.0 (data router), TanStack Query 5.104.1, TanStack Table 9.2.6, React Hook Form 7.89.0 with `@hookform/resolvers` 5.9.1 and Zod 4.6.5, Radix UI 1.7.0, Tailwind CSS 4.3.3, react-i18next 17.0.16, openapi-typescript 7.13.0; Vitest with MSW; Playwright.
 
-**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md` as amended in `0ea5daa` (approved by the owner on 2026-10-09): sections 11.6, 11.10, 12.2.1 (the fit line), and the new 12.2.2. The owner's answers are in `.cache/phase-4/part-5/brainstorm-decisions.md` (1 to 13). The mockups they approved are in `.cache/phase-4/brainstorm/.superpowers/brainstorm/16696-1791545815/content/`: `q3-profile-form.html` (form 4C), `q4-profile-list.html` (list 5B), `q5-users.html` (users 6A). Their source is `.cache/phase-4/part-5/mock/src/`; an implementer may read it for layout and classes. The words in this plan win over the mock's.
+**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md` as amended in `9b870b9` (approved by the owner on 2026-10-09): sections 11.6, 11.10, 12.2.1 (the fit line), and the new 12.2.2. The owner's answers are in `.cache/phase-4/part-5/brainstorm-decisions.md` (1 to 13). The mockups they approved are in `.cache/phase-4/brainstorm/.superpowers/brainstorm/16696-1791545815/content/`: `q3-profile-form.html` (form 4C), `q4-profile-list.html` (list 5B), `q5-users.html` (users 6A). Their source is `.cache/phase-4/part-5/mock/src/`; an implementer may read it for layout and classes. The words in this plan win over the mock's.
 
-**Depends on:** `main` at `2f0e020` (release 0.5.0). Branch `feat/administration`, which holds the spec amendment `0ea5daa`.
+**Depends on:** `main` at `f74bc36` (release 0.5.0). Branch `feat/administration`, which holds the spec amendment `9b870b9`.
 
 ## Global Constraints
 
@@ -136,8 +136,8 @@ Each ruling is a decision the amended spec leaves open: decision, grounds, cost 
 
 **Executor:** Main thread.
 
-- [x] **Step 1:** `ROADMAP.md` and `CHANGELOG.md` read and true; F-144 names `7578916`.
-- [x] **Step 2:** The brainstorm (answers 1 to 13), the branch `feat/administration` from `2f0e020`, the spec amendment `0ea5daa`, approved by the owner on 2026-10-09.
+- [x] **Step 1:** `ROADMAP.md` and `CHANGELOG.md` read and true; F-144 names `a986cb6`.
+- [x] **Step 2:** The brainstorm (answers 1 to 13), the branch `feat/administration` from `f74bc36`, the spec amendment `9b870b9`, approved by the owner on 2026-10-09.
 - [ ] **Step 3:** This plan committed; `ROADMAP.md`: P45-1 to P45-8 `OPEN` under "Phase 4.5", the rulings R232 to R253 named, the plan's commit in P45-0.
 
 ---

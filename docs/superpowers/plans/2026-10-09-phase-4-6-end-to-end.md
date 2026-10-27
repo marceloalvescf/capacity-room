@@ -8,9 +8,9 @@
 
 **Tech Stack:** As in part 4.5, with no new dependency. Go 1.27 (standard library only for the two test programs); Playwright 1.63.0 in its pinned image; Docker Compose; GNU make with bash.
 
-**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md` as amended in `875caca` (approved by the owner on 2026-10-09): the new section 13.4.1 and the sub-bullets of 14.2. The owner's answers are in `.cache/phase-4/part-6/brainstorm-decisions.md` (1 to 5).
+**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md` as amended in `45a928f` (approved by the owner on 2026-10-09): the new section 13.4.1 and the sub-bullets of 14.2. The owner's answers are in `.cache/phase-4/part-6/brainstorm-decisions.md` (1 to 5).
 
-**Depends on:** `main` at `b5a00e8` (release 0.6.0). Branch `feat/end-to-end`, which holds the spec amendment `875caca`.
+**Depends on:** `main` at `403d45c` (release 0.6.0). Branch `feat/end-to-end`, which holds the spec amendment `45a928f`.
 
 ## Global Constraints
 
@@ -128,7 +128,7 @@ Each ruling is a decision the amended spec leaves open: decision, grounds, cost 
 **Executor:** Main thread.
 
 - [x] **Step 1:** `ROADMAP.md` and `CHANGELOG.md` read and true (4.5 DONE, 0.6.0 released, `[Unreleased]` empty).
-- [x] **Step 2:** The brainstorm (answers 1 to 5), the branch `feat/end-to-end` from `b5a00e8`, the spec amendment `875caca`, approved by the owner on 2026-10-09.
+- [x] **Step 2:** The brainstorm (answers 1 to 5), the branch `feat/end-to-end` from `403d45c`, the spec amendment `45a928f`, approved by the owner on 2026-10-09.
 - [ ] **Step 3:** This plan committed; `ROADMAP.md`: a "Phase 4.6" section with P46-0 to P46-7 `OPEN`, the rulings R254 to R268 named, the plan's commit in P46-0, and the summary row of phase 4 naming 4.6 as open.
 
 ---

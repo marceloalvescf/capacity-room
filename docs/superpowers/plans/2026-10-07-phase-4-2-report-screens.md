@@ -8,9 +8,9 @@
 
 **Tech Stack:** As in part 4.1, with no new dependency: Go 1.27; React 19.3.0, React Router 8.4.0, TanStack Query 5.104.1, React Hook Form 7.89.0 with Zod 4.6.5, Radix UI 1.7.0 (`Popover`, `AlertDialog`), Tailwind CSS 4.3.3, react-i18next 17.0.16; Vitest 5.0.3 with MSW 3.0.2; Playwright 1.63.0.
 
-**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md` as amended in `10416ec` (approved by the owner on 2026-10-07): sections 4.3, 11.1, 11.3, 11.7, 11.10, 12.2, 12.3, 12.4, 12.5, 12.6, 13.4, 13.5, 14.2. The decisions behind the amendment, with the mockups the owner chose, are in the companion pages under `.cache/phase-4/brainstorm/.superpowers/brainstorm/9007-1791377823/content/` (`section-1.html` is the screens as approved; `section-3.html` the build; `section-4.html` the browser test). The original frontend, read-only, is `older/kubernetes-report/frontend/src/features/{history,generate,reports}/`.
+**Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md` as amended in `228fef0` (approved by the owner on 2026-10-07): sections 4.3, 11.1, 11.3, 11.7, 11.10, 12.2, 12.3, 12.4, 12.5, 12.6, 13.4, 13.5, 14.2. The decisions behind the amendment, with the mockups the owner chose, are in the companion pages under `.cache/phase-4/brainstorm/.superpowers/brainstorm/9007-1791377823/content/` (`section-1.html` is the screens as approved; `section-3.html` the build; `section-4.html` the browser test). The original frontend, read-only, is `older/kubernetes-report/frontend/src/features/{history,generate,reports}/`.
 
-**Depends on:** Part 4.1, merged into `main` at `aa55455` and pushed on 2026-10-07. Branch `feat/report-screens`, opened from `aa55455`.
+**Depends on:** Part 4.1, merged into `main` at `2f52cd7` and pushed on 2026-10-07. Branch `feat/report-screens`, opened from `2f52cd7`.
 
 ## Global Constraints
 
@@ -42,7 +42,7 @@ Each line names an input the spec implies and no requirement spells out, and the
 
 | Part | Delivers | Proof at the end |
 |---|---|---|
-| 4.1 Foundation | Toolchain, serving, theme, i18n, session, sign-in, account | Done (`aa55455`) |
+| 4.1 Foundation | Toolchain, serving, theme, i18n, session, sign-in, account | Done (`2f52cd7`) |
 | **4.2 Reports (this plan)** | Report list, new report form, progress with the PDFs, delete; a request names its language; the other language on request; F-128, F-129 | In a real browser: a report requested, followed, downloaded, its other language generated, and deleted; a reader downloads |
 | 4.3 Calendar ranges (F-131) | A period with a start and an end chosen on a calendar | Owner's decision of 2026-10-07: the part right after 4.2 |
 | 4.4 The report | The seven tabs; the PDF block moves to the report header | Every tab of a golden scenario in both languages |
@@ -134,9 +134,9 @@ Each ruling is a decision the amended spec leaves open: decision, grounds, cost 
 
 **Executor:** Main thread.
 
-- [x] **Step 1:** `ROADMAP.md` and `CHANGELOG.md` read and true; `main` at `aa55455`, pushed.
+- [x] **Step 1:** `ROADMAP.md` and `CHANGELOG.md` read and true; `main` at `2f52cd7`, pushed.
 - [x] **Step 2:** `git switch -c feat/report-screens`.
-- [x] **Step 3:** The spec amendment, `10416ec`, approved by the owner on 2026-10-07.
+- [x] **Step 3:** The spec amendment, `228fef0`, approved by the owner on 2026-10-07.
 - [ ] **Step 4:** `ROADMAP.md`: a section "Phase 4.2" with P42-0 to P42-10, all `OPEN`, and the rulings R181 to R197; the summary line names this plan.
 - [ ] **Step 5:** Commit the plan: `docs(plan): add the plan of part 4.2` (36 characters).
 

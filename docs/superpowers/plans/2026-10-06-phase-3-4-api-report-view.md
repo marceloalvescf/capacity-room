@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-27-k8s-capacity-report-design.md`, sections 4.3, 5.4, 11.3, 11.7, 11.8, 11.9, 11.10, 11.11, 11.12, 16. The research of this part is `.cache/phase-3/part-4/research/original-api.md` (the original's report routes, with file and line). The findings are in `ROADMAP.md`; the probe of F-118 and the latent gaps of F-119 to F-122 are in `.cache/phase-3/part-3/review/rereview.md` (N1 to N4) with their sources under `.cache/phase-3/part-3/review/probe/rereview-notes/`; the minors of F-125 are in `.cache/phase-3/part-3/review/ledger-minors-and-rulings.md`.
 
-**Depends on:** Part 3.3, merged into `main` at `6ea960b` and pushed on 2026-10-06.
+**Depends on:** Part 3.3, merged into `main` at `7f56c92` and pushed on 2026-10-06.
 
 ## Where this part sits
 
@@ -145,7 +145,7 @@ Each is a decision the spec leaves open, written as decision, reason, and cost i
 
 **Executor:** Main thread.
 
-- [x] **Step 1:** `main` at `6ea960b`, pushed; `ROADMAP.md` and `CHANGELOG.md` read and true; F-126 recorded.
+- [x] **Step 1:** `main` at `7f56c92`, pushed; `ROADMAP.md` and `CHANGELOG.md` read and true; F-126 recorded.
 - [x] **Step 2:** `git switch -c feat/platform-api`.
 - [x] **Step 3:** Commit the OrbStack instructions (F-126): `git add AGENTS.md Makefile`; `docs: run Docker through OrbStack` (31 characters).
 - [x] **Step 4:** `ROADMAP.md`: the summary line of 3.4 names this plan; a section "Phase 3.4" with P34-0 to P34-11, all `OPEN`; the rulings R143 to R163; the owner's approval with its date.
