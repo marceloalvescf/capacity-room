@@ -20,7 +20,7 @@
   <a href="https://github.com/marceloalvescf/capacity-room/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/marceloalvescf/capacity-room?sort=semver"></a>
   <a href="https://hub.docker.com/r/alvesmarcelocf/capacity-room"><img alt="image" src="https://img.shields.io/docker/v/alvesmarcelocf/capacity-room?sort=semver&label=image"></a>
   <a href="go.mod"><img alt="Go" src="https://img.shields.io/github/go-mod/go-version/marceloalvescf/capacity-room"></a>
-  <a href="LICENSE"><img alt="licence" src="https://img.shields.io/github/license/marceloalvescf/capacity-room"></a>
+  <a href="LICENSE"><img alt="licence" src="https://img.shields.io/badge/license-MIT-blue"></a>
 </p>
 
 <table>
