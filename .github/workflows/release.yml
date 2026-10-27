@@ -19,7 +19,9 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 180
-    environment: release
+    # The environment holds the write token and admits only `v*` tags, so the
+    # dry run from a branch runs without it and never sees that token.
+    environment: ${{ github.event_name == 'push' && 'release' || '' }}
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_READ_TOKEN: ${{ secrets.DOCKERHUB_READ_TOKEN }}
