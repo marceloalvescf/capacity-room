@@ -1,7 +1,7 @@
 # Base images are pinned by tag and by index digest. To move one, resolve the
 # new digest with `docker buildx imagetools inspect <image>:<tag>`.
 
-FROM node:26-trixie-slim@sha256:930557a230abacbc3f4fd9b8648abf8f4bee1e17cb72195dcdfb2f709bc85b33 AS frontend
+FROM node:26-trixie-slim@sha256:94816674c62774da0d099a947bf4613b9e1972a2733abd0d0cd80e795f8411d0 AS frontend
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
