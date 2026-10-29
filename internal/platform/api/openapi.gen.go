@@ -715,7 +715,7 @@ type ProfileNamespaces struct {
 	// Limited True when the profile limits its namespaces.
 	Limited bool `json:"limited"`
 
-	// Namespaces The namespaces a report of the profile can cover, sorted. When code is PROFILE_OK and the profile limits its namespaces, the discovered names that the limit holds; when it does not, every discovered name. Empty when code is any other.
+	// Namespaces The namespaces a report of the profile can cover, sorted: the profile's allowed namespaces when it limits them, whether or not the source shows them; otherwise every namespace with pods at the source. Empty when code is not PROFILE_OK.
 	Namespaces []string `json:"namespaces"`
 }
 

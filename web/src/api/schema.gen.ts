@@ -195,7 +195,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List the namespaces with pods at the source of an active profile, for an operator or an administrator, through the outbound policy. */
+        /** List the namespaces a report of an active profile can cover, for an operator or an administrator: its allowed namespaces when it limits them, with no request to the source; otherwise the namespaces with pods at the source, asked through the outbound policy. */
         get: operations["listProfileNamespaces"];
         put?: never;
         post?: never;
@@ -740,7 +740,7 @@ export interface components {
         };
         ProfileNamespaces: {
             code: components["schemas"]["ProfileTestCode"];
-            /** @description The namespaces a report of the profile can cover, sorted. When code is PROFILE_OK and the profile limits its namespaces, the discovered names that the limit holds; when it does not, every discovered name. Empty when code is any other. */
+            /** @description The namespaces a report of the profile can cover, sorted: the profile's allowed namespaces when it limits them, whether or not the source shows them; otherwise every namespace with pods at the source. Empty when code is not PROFILE_OK. */
             namespaces: string[];
             /** @description True when the profile limits its namespaces. */
             limited: boolean;

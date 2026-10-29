@@ -190,10 +190,12 @@ type NamespaceList struct {
 	Limited    bool
 }
 
-// Namespaces runs the preflight of the saved test against the current
-// revision of an active profile and lists the namespaces with pods at the
-// source, narrowed to the revision's allowed namespaces when it names any.
-// It writes no audit row. A failure of the source is a code, not an error.
+// Namespaces lists the namespaces a report of the current revision of an
+// active profile can cover. A revision that names allowed namespaces answers
+// them, sorted, and sends no request, as a collection of all namespaces runs
+// them; one that names none connects, resolves the scope, and lists the
+// namespaces with pods at the source. It writes no audit row. A failure of
+// the source is a code, not an error.
 func (s *Service) Namespaces(ctx context.Context, actor auth.Principal, id string) (NamespaceList, error) {
 	if actor.Role != auth.RoleOperator && actor.Role != auth.RoleAdministrator {
 		return NamespaceList{}, ErrForbidden
@@ -209,16 +211,12 @@ func (s *Service) Namespaces(ctx context.Context, actor auth.Principal, id strin
 	if err != nil {
 		return NamespaceList{}, err
 	}
-	allowed := cur.Document.AllowedNamespaces
+	if allowed := cur.Document.AllowedNamespaces; len(allowed) > 0 {
+		return NamespaceList{Code: CodeOK, Namespaces: slices.Sorted(slices.Values(allowed)), Limited: true}, nil
+	}
 	result, err := s.runTest(ctx, cur.Document, false)
 	if err != nil {
 		return NamespaceList{}, err
 	}
-	out := NamespaceList{Code: result.Code, Namespaces: []string{}, Limited: len(allowed) > 0}
-	for _, name := range result.Namespaces {
-		if !out.Limited || slices.Contains(allowed, name) {
-			out.Namespaces = append(out.Namespaces, name)
-		}
-	}
-	return out, nil
+	return NamespaceList{Code: result.Code, Namespaces: append([]string{}, result.Namespaces...)}, nil
 }

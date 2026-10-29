@@ -553,13 +553,16 @@ func TestTestDraftNamespaceQueryErrorIsMapped(t *testing.T) {
 
 func TestNamespacesLimited(t *testing.T) {
 	f := newFixture(t)
-	_, endpoint, fixture := fakePrometheus(t)
+	server, endpoint, fixture := fakePrometheus(t)
 	f.createServed(t, "prod", endpoint, fixture, []string{"payments", "zeta", "absent"})
 	ops := newPrincipal(t, f.pool, "ops", auth.RoleOperator)
 	got := f.namespaces(t, ops, "prod")
-	want := NamespaceList{Code: "PROFILE_OK", Namespaces: []string{"payments", "zeta"}, Limited: true}
+	want := NamespaceList{Code: "PROFILE_OK", Namespaces: []string{"absent", "payments", "zeta"}, Limited: true}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v", got)
+	}
+	if n := len(server.Seen()); n != 0 {
+		t.Fatalf("%d requests reached the source, want 0", n)
 	}
 	if n := len(f.audits(t, "profile.test")); n != 0 {
 		t.Fatalf("%d audit rows", n)
@@ -593,9 +596,9 @@ func TestNamespacesUnlimited(t *testing.T) {
 func TestNamespacesFailingSource(t *testing.T) {
 	f := newFixture(t)
 	_, endpoint, fixture := fakePrometheusWith(t, namespacesAnswer(401))
-	f.createServed(t, "prod", endpoint, fixture, []string{"payments"})
+	f.createServed(t, "prod", endpoint, fixture, []string{})
 	got := f.namespaces(t, f.root, "prod")
-	want := NamespaceList{Code: "ENDPOINT_AUTH_REJECTED", Namespaces: []string{}, Limited: true}
+	want := NamespaceList{Code: "ENDPOINT_AUTH_REJECTED", Namespaces: []string{}, Limited: false}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v", got)
 	}

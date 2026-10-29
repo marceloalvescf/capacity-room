@@ -457,11 +457,11 @@ func TestProfileNamespacesAnswers(t *testing.T) {
 		want    ProfileNamespaces
 	}{
 		{"limited", `["payments","zeta","absent"]`, namespacesAnswer(200, "zeta", "checkout", "payments"),
-			ProfileNamespaces{Code: "PROFILE_OK", Namespaces: []string{"payments", "zeta"}, Limited: true}},
+			ProfileNamespaces{Code: "PROFILE_OK", Namespaces: []string{"absent", "payments", "zeta"}, Limited: true}},
 		{"unlimited", `[]`, namespacesAnswer(200, "zeta", "checkout", "payments"),
 			ProfileNamespaces{Code: "PROFILE_OK", Namespaces: []string{"checkout", "payments", "zeta"}, Limited: false}},
-		{"failing", `["payments"]`, namespacesAnswer(401),
-			ProfileNamespaces{Code: "ENDPOINT_AUTH_REJECTED", Namespaces: []string{}, Limited: true}},
+		{"failing", `[]`, namespacesAnswer(401),
+			ProfileNamespaces{Code: "ENDPOINT_AUTH_REJECTED", Namespaces: []string{}, Limited: false}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
