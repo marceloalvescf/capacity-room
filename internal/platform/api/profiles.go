@@ -41,6 +41,8 @@ func profileProblem(err error) *Problem {
 		return &Problem{Code: CodeForbidden}
 	case errors.Is(err, profiles.ErrNotFound):
 		return &Problem{Code: CodeProfileNotFound}
+	case errors.Is(err, profiles.ErrInactive):
+		return &Problem{Code: CodeProfileInactive}
 	case errors.Is(err, profiles.ErrIDTaken):
 		return &Problem{Code: CodeProfileIDTaken}
 	case errors.Is(err, profiles.ErrRevisionStale):
@@ -262,7 +264,11 @@ func (s *Server) testProfile(w http.ResponseWriter, r *http.Request, a auth.Auth
 	if capabilities == nil {
 		capabilities = []string{}
 	}
-	writeJSON(w, http.StatusOK, ProfileTestResult{Ok: result.OK, Code: ProfileTestCode(result.Code), Capabilities: capabilities})
+	namespaces := result.Namespaces
+	if namespaces == nil {
+		namespaces = []string{}
+	}
+	writeJSON(w, http.StatusOK, ProfileTestResult{Ok: result.OK, Code: ProfileTestCode(result.Code), Capabilities: capabilities, Namespaces: namespaces})
 }
 
 func (s *Server) testProfileDraft(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
@@ -281,9 +287,26 @@ func (s *Server) testProfileDraft(w http.ResponseWriter, r *http.Request, a auth
 	if capabilities == nil {
 		capabilities = []string{}
 	}
-	writeJSON(w, http.StatusOK, ProfileTestResult{Ok: result.OK, Code: ProfileTestCode(result.Code), Capabilities: capabilities})
+	namespaces := result.Namespaces
+	if namespaces == nil {
+		namespaces = []string{}
+	}
+	writeJSON(w, http.StatusOK, ProfileTestResult{Ok: result.OK, Code: ProfileTestCode(result.Code), Capabilities: capabilities, Namespaces: namespaces})
 }
 
 // ProfileDraft is the body of the draft test: a ProfileCreate whose id may be
 // empty. The generated request body type names it.
 type ProfileDraft = ProfileCreate
+
+func (s *Server) listProfileNamespaces(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
+	id, ok := profileID(w, r)
+	if !ok {
+		return
+	}
+	list, err := s.Profiles.Namespaces(r.Context(), a.Principal, id)
+	if err != nil {
+		s.failProfile(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, ProfileNamespaces{Code: ProfileTestCode(list.Code), Namespaces: list.Namespaces, Limited: list.Limited})
+}

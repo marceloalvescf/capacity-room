@@ -420,6 +420,38 @@ paths:
           $ref: "#/components/responses/ProfileNotFound"
         default:
           $ref: "#/components/responses/Unexpected"
+  /profiles/{id}/namespaces:
+    parameters:
+      - $ref: "#/components/parameters/ProfileID"
+    get:
+      operationId: listProfileNamespaces
+      summary: >-
+        List the namespaces with pods at the source of an active profile, for
+        an operator or an administrator, through the outbound policy.
+      responses:
+        "200":
+          description: >-
+            The outcome, whatever it is: PROFILE_OK with the names, or one of
+            the codes of ProfileTestCode with none. Never a URL, an address, or
+            the text of a failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileNamespaces"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/ProfileNotFound"
+        "409":
+          description: PROFILE_INACTIVE.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          $ref: "#/components/responses/Unexpected"
   /admin/profiles/{id}/test:
     parameters:
       - $ref: "#/components/parameters/ProfileID"
@@ -1918,7 +1950,7 @@ components:
         - CAPABILITIES_INSUFFICIENT
     ProfileTestResult:
       type: object
-      required: [ok, code, capabilities]
+      required: [ok, code, capabilities, namespaces]
       properties:
         ok:
           type: boolean
@@ -1929,6 +1961,31 @@ components:
           description: The names of the capabilities the source offers, in their order; empty when not ok.
           items:
             type: string
+        namespaces:
+          type: array
+          description: >-
+            The namespaces with pods at the source, sorted, with no limit of
+            the profile applied; empty when not ok.
+          items:
+            type: string
+    ProfileNamespaces:
+      type: object
+      required: [code, namespaces, limited]
+      properties:
+        code:
+          $ref: "#/components/schemas/ProfileTestCode"
+        namespaces:
+          type: array
+          description: >-
+            The namespaces a report of the profile can cover, sorted. When code
+            is PROFILE_OK and the profile limits its namespaces, the discovered
+            names that the limit holds; when it does not, every discovered
+            name. Empty when code is any other.
+          items:
+            type: string
+        limited:
+          type: boolean
+          description: True when the profile limits its namespaces.
     ReportView:
       type: object
       description: >-

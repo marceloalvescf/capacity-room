@@ -20,7 +20,7 @@ trail, and the platform's availability.
 |---|---|---|
 | A visitor with no account | Network access to the proxy | Any read or write, a session, users locked out, the names of accounts |
 | A signed-in reader | A reader's session | An operator's or an administrator's rights, another user's data or session |
-| An operator | An operator's session | An administrator's rights, other users' reports deleted, the platform exhausted |
+| An operator | An operator's session | An administrator's rights, other users' reports deleted, the platform exhausted, the metric source of a profile asked again and again |
 | An administrator abusing profiles | An administrator's session | An address the outbound policy refuses, a file outside the credential and CA folders, a map of the internal network |
 | A hostile metric source | The answers of an allowed source | Markup or script run in the PDF or the browser, memory or time exhausted, a redirect to an internal address |
 
@@ -43,6 +43,7 @@ including running the two commands that need `CAPACITYROOM_BOOTSTRAP_MODE=1`.
 | Checks in one order on every route (session, role, CSRF, body, then the service); role read from the database on every request | A route that forgets a check | `internal/platform/api/` |
 | Reports readable by every signed-in user, deletable by an administrator or their owner; idempotency keys scoped to their owner | One user acting on another's report | `internal/platform/reports/` |
 | Outbound policy: `http` and `https` only, refused address classes, allowlists by name or range, resolution before each request, connection to the literal address, peer checked after connecting, no redirect, no proxy | SSRF to the metadata service, loopback, or the internal network | `internal/platform/netpolicy/` |
+| A signed-in operator or administrator can make `serve` send requests to a metric source an administrator configured, by listing the namespaces of a profile: the role is checked before the service runs, every request passes the outbound policy, one list costs the bounded work of a profile test (at most 120 seconds), and the answer carries codes and namespace names only, never a URL, an address, or the text of a failure | A reader or a visitor reaching a source; the route used to reach an address the policy refuses; a hanging source holding the request; a source's text or address reaching a client | `internal/platform/api/routes.go`, `internal/platform/profiles/test.go`, `internal/platform/netpolicy/` |
 | Credential and CA files named by a strict pattern, opened once inside their folder, regular files of at most 1 MiB; the folders may not hold the settings file or the server secret | Reading other files of the host, or sending them as a token | `internal/platform/profiles/refs.go`, `internal/platform/settings/settings.go` |
 | One redactor per run, fed every secret as soon as it is known (database password, credentials, server secret, passwords typed on the host), over every log line and every message | Secrets in logs | `internal/redact/`, `internal/cli/` |
 | No flag error repeats what the user typed | A secret typed at the wrong place reaching a log | `internal/cli/run.go` |

@@ -92,7 +92,7 @@ describe("the profiles screen", () => {
   });
 
   it("tests the saved revision", async () => {
-    mock.profileTests.set("staging", { ok: false, code: "ENDPOINT_AUTH_REJECTED", capabilities: [] });
+    mock.profileTests.set("staging", { ok: false, code: "ENDPOINT_AUTH_REJECTED", capabilities: [], namespaces: [] });
     await renderApp("/profiles");
     const user = await openRow("production");
     await user.click(screen.getByRole("button", { name: "Test connection" }));
@@ -120,7 +120,7 @@ describe("the profiles screen", () => {
     server.use(
       http.post(`${window.location.origin}/api/v1/admin/profiles/production/test`, async () => {
         await answered;
-        return HttpResponse.json({ ok: true, code: "PROFILE_OK", capabilities: [] });
+        return HttpResponse.json({ ok: true, code: "PROFILE_OK", capabilities: [], namespaces: [] });
       }),
     );
     await renderApp("/profiles");

@@ -185,6 +185,26 @@ export interface paths {
         patch: operations["reviseProfile"];
         trace?: never;
     };
+    "/profiles/{id}/namespaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The identifier of a profile, a reference name of 1 to 63 characters. */
+                id: components["parameters"]["ProfileID"];
+            };
+            cookie?: never;
+        };
+        /** List the namespaces with pods at the source of an active profile, for an operator or an administrator, through the outbound policy. */
+        get: operations["listProfileNamespaces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/profiles/{id}/test": {
         parameters: {
             query?: never;
@@ -715,6 +735,15 @@ export interface components {
             code: components["schemas"]["ProfileTestCode"];
             /** @description The names of the capabilities the source offers, in their order; empty when not ok. */
             capabilities: string[];
+            /** @description The namespaces with pods at the source, sorted, with no limit of the profile applied; empty when not ok. */
+            namespaces: string[];
+        };
+        ProfileNamespaces: {
+            code: components["schemas"]["ProfileTestCode"];
+            /** @description The namespaces a report of the profile can cover, sorted. When code is PROFILE_OK and the profile limits its namespaces, the discovered names that the limit holds; when it does not, every discovered name. Empty when code is any other. */
+            namespaces: string[];
+            /** @description True when the profile limits its namespaces. */
+            limited: boolean;
         };
         /** @description A report worded in one language for the web, narrowed as its PDF is: the findings, recommendations, and the namespace, workload, and node rows below the floor of the profile are left out; the HPAs, node pools, summary counts, and quality are whole. Every text is the text the PDF prints for the same quantity. A closed set travels as its code, which a client words. */
         ReportView: {
@@ -1740,6 +1769,42 @@ export interface operations {
             404: components["responses"]["ProfileNotFound"];
             409: components["responses"]["ProfileRevisionStale"];
             422: components["responses"]["ProfileRefused"];
+            default: components["responses"]["Unexpected"];
+        };
+    };
+    listProfileNamespaces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The identifier of a profile, a reference name of 1 to 63 characters. */
+                id: components["parameters"]["ProfileID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The outcome, whatever it is: PROFILE_OK with the names, or one of the codes of ProfileTestCode with none. Never a URL, an address, or the text of a failure. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileNamespaces"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["ProfileNotFound"];
+            /** @description PROFILE_INACTIVE. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             default: components["responses"]["Unexpected"];
         };
     };

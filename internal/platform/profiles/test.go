@@ -2,6 +2,7 @@ package profiles
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/marceloalvescf/capacity-room/internal/discovery"
@@ -47,6 +48,7 @@ type TestResult struct {
 	OK           bool
 	Code         string
 	Capabilities []string // the names whose state is not unavailable, in their order
+	Namespaces   []string // the namespaces with pods at the source, sorted, with no limit applied; empty when not ok
 }
 
 // Test resolves the references, runs the preflight through the policy
@@ -137,7 +139,12 @@ func (s *Service) runTest(ctx context.Context, d Document) (TestResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, min(time.Duration(3*d.TimeoutSeconds*float64(time.Second)), testCeiling))
 	defer cancel()
 
-	pf, err := discovery.RunPreflight(ctx, opts, cfg.Cluster, cfg.Analysis, s.now())
+	at := s.now()
+	pf, err := discovery.RunPreflight(ctx, opts, cfg.Cluster, cfg.Analysis, at)
+	if err != nil {
+		return resultOf(ctx, err)
+	}
+	found, err := discovery.ListNamespaces(ctx, pf.Client, pf.Scope, at, 0)
 	if err != nil {
 		return resultOf(ctx, err)
 	}
@@ -147,7 +154,7 @@ func (s *Service) runTest(ctx context.Context, d Document) (TestResult, error) {
 			names = append(names, c.Name)
 		}
 	}
-	return TestResult{OK: true, Code: CodeOK, Capabilities: names}, nil
+	return TestResult{OK: true, Code: CodeOK, Capabilities: names, Namespaces: found}, nil
 }
 
 // resultOf maps an error of the run to a failed result. An error Classify
@@ -161,4 +168,45 @@ func resultOf(ctx context.Context, err error) (TestResult, error) {
 		return failure(CodeUnreachable), nil
 	}
 	return TestResult{}, err
+}
+
+// NamespaceList is the answer of Namespaces: the namespaces a report of the
+// profile can cover, and whether the profile limits them.
+type NamespaceList struct {
+	Code       string
+	Namespaces []string
+	Limited    bool
+}
+
+// Namespaces runs the preflight of the saved test against the current
+// revision of an active profile and lists the namespaces with pods at the
+// source, narrowed to the revision's allowed namespaces when it names any.
+// It writes no audit row. A failure of the source is a code, not an error.
+func (s *Service) Namespaces(ctx context.Context, actor auth.Principal, id string) (NamespaceList, error) {
+	if actor.Role != auth.RoleOperator && actor.Role != auth.RoleAdministrator {
+		return NamespaceList{}, ErrForbidden
+	}
+	rev, err := store.GetCurrentRevision(ctx, s.Pool, id)
+	if err != nil {
+		return NamespaceList{}, notFound(err)
+	}
+	if !rev.Active {
+		return NamespaceList{}, ErrInactive
+	}
+	cur, err := currentOf(rev)
+	if err != nil {
+		return NamespaceList{}, err
+	}
+	allowed := cur.Document.AllowedNamespaces
+	result, err := s.runTest(ctx, cur.Document)
+	if err != nil {
+		return NamespaceList{}, err
+	}
+	out := NamespaceList{Code: result.Code, Namespaces: []string{}, Limited: len(allowed) > 0}
+	for _, name := range result.Namespaces {
+		if !out.Limited || slices.Contains(allowed, name) {
+			out.Namespaces = append(out.Namespaces, name)
+		}
+	}
+	return out, nil
 }

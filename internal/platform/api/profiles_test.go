@@ -4,6 +4,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -11,11 +12,13 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 
+	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
 	"github.com/marceloalvescf/capacity-room/internal/promtest"
 )
 
@@ -29,10 +32,35 @@ const (
 // name to use when the scenario's requests carry a token.
 func (ts *testServer) fakeEndpoint(t *testing.T) (endpoint, credential string) {
 	t.Helper()
+	return ts.fakeEndpointWith(t, namespacesAnswer(200, "zeta", "checkout", "payments"))
+}
+
+// namespacesAnswer scripts the answer to the namespace listing: the names as
+// the series of the query, in the order given, with the status.
+func namespacesAnswer(status int, names ...string) promtest.Request {
+	result := make([]map[string]any, 0, len(names))
+	for _, name := range names {
+		result = append(result, map[string]any{"metric": map[string]string{"namespace": name}, "value": []any{1784136600, "3"}})
+	}
+	body, err := json.Marshal(map[string]any{"status": "success", "data": map[string]any{"resultType": "vector", "result": result}})
+	if err != nil {
+		panic(err)
+	}
+	return promtest.Request{
+		Method: "POST", Path: "/api/v1/query", QueryContains: "count by (namespace) (kube_pod_status_phase",
+		Status: status, Body: body,
+	}
+}
+
+// fakeEndpointWith serves the direct-complete scenario after the given
+// answer to the namespace listing.
+func (ts *testServer) fakeEndpointWith(t *testing.T, namespaces promtest.Request) (endpoint, credential string) {
+	t.Helper()
 	fixture, err := promtest.LoadScenario("direct-complete")
 	if err != nil {
 		t.Fatal(err)
 	}
+	fixture = promtest.Merge(promtest.Fixture{Requests: []promtest.Request{namespaces}}, fixture)
 	server := httptest.NewServer(promtest.NewServer(fixture))
 	t.Cleanup(server.Close)
 	addr := server.Listener.Addr().String()
@@ -250,7 +278,7 @@ func TestAdminProfilesTest(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
-	want := ProfileTestResult{Ok: true, Code: "PROFILE_OK", Capabilities: []string{
+	want := ProfileTestResult{Ok: true, Code: "PROFILE_OK", Namespaces: []string{"checkout", "payments", "zeta"}, Capabilities: []string{
 		"namespace_usage", "workload_usage", "requests_limits", "hpa_history", "workloads_without_hpa",
 		"ip_node_mapping", "nodepool_discovery", "node_utilization", "node_autoscaling",
 	}}
@@ -272,7 +300,7 @@ func TestAdminProfilesTestRefused(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]any{"ok": false, "code": "ENDPOINT_ADDRESS_REJECTED", "capabilities": []any{}}
+	want := map[string]any{"ok": false, "code": "ENDPOINT_ADDRESS_REJECTED", "capabilities": []any{}, "namespaces": []any{}}
 	if w.Code != 200 || !reflect.DeepEqual(got, want) || strings.Contains(w.Body.String(), "http") {
 		t.Fatalf("%d %s", w.Code, w.Body.String())
 	}
@@ -307,7 +335,7 @@ func TestAdminProfilesTestDraft(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]any{"ok": true, "code": "PROFILE_OK", "capabilities": []any{
+	want := map[string]any{"ok": true, "code": "PROFILE_OK", "namespaces": []any{"checkout", "payments", "zeta"}, "capabilities": []any{
 		"namespace_usage", "workload_usage", "requests_limits", "hpa_history", "workloads_without_hpa",
 		"ip_node_mapping", "nodepool_discovery", "node_utilization", "node_autoscaling",
 	}}
@@ -378,4 +406,97 @@ func TestAdminProfilesPatchJudgesBodyBeforeID(t *testing.T) {
 	base := `"base_revision_id":"` + uuid.NewString() + `"`
 	wantProblem(t, ts.send(t, "PATCH", path, `{`+base+`,"nope":1}`, cookie, csrf), 400, CodeRequestInvalid, map[string]string{"nope": "unknown"})
 	wantProblem(t, ts.send(t, "PATCH", path, `{`+base+`}`, cookie, csrf), 404, CodeProfileNotFound, nil)
+}
+
+const namespacesURL = readerProfilesURL + "/%s/namespaces"
+
+// createNamespaced stores the profile id over a fake source that answers the
+// namespace listing as given, with the allowed namespaces as a JSON list.
+func (ts *testServer) createNamespaced(t *testing.T, id, allowed string, active bool, answer promtest.Request) {
+	t.Helper()
+	cookie, csrf := ts.signIn(t, "root")
+	endpoint, credential := ts.fakeEndpointWith(t, answer)
+	body := `{"id":"` + id + `","display_name":"Profile","endpoint_url":"` + endpoint + `",` +
+		`"cluster_name":"prod","allowed_namespaces":` + allowed + `,"active":` + strconv.FormatBool(active)
+	if credential != "" {
+		body += `,"credential_file":"` + credential + `"`
+	}
+	if w := ts.send(t, "POST", profilesPath, body+"}", cookie, csrf); w.Code != 201 {
+		t.Fatalf("create: %d %s", w.Code, w.Body.String())
+	}
+}
+
+func (ts *testServer) listNamespaces(t *testing.T, id string, cookie *http.Cookie) *httptest.ResponseRecorder {
+	t.Helper()
+	path := fmt.Sprintf(namespacesURL, id)
+	if cookie == nil {
+		return ts.call(t, "GET", path, "", nil)
+	}
+	return ts.call(t, "GET", path, "", nil, cookie)
+}
+
+func TestProfileNamespacesRefusals(t *testing.T) {
+	ts := newTestServer(t)
+	answer := namespacesAnswer(200, "payments")
+	ts.createNamespaced(t, "prod", `[]`, true, answer)
+	ts.createNamespaced(t, "idle", `[]`, false, answer)
+	wantProblem(t, ts.listNamespaces(t, "prod", nil), 401, CodeUnauthenticated, nil)
+	eve, _ := ts.signIn(t, "eve")
+	wantProblem(t, ts.listNamespaces(t, "prod", eve), 403, CodeForbidden, nil)
+	root, _ := ts.signIn(t, "root")
+	wantProblem(t, ts.listNamespaces(t, "absent", root), 404, CodeProfileNotFound, nil)
+	wantProblem(t, ts.listNamespaces(t, "Bad%20Id", root), 404, CodeProfileNotFound, nil)
+	wantProblem(t, ts.listNamespaces(t, "idle", root), 409, CodeProfileInactive, nil)
+}
+
+func TestProfileNamespacesAnswers(t *testing.T) {
+	cases := []struct {
+		name    string
+		allowed string
+		answer  promtest.Request
+		want    ProfileNamespaces
+	}{
+		{"limited", `["payments","zeta","absent"]`, namespacesAnswer(200, "zeta", "checkout", "payments"),
+			ProfileNamespaces{Code: "PROFILE_OK", Namespaces: []string{"payments", "zeta"}, Limited: true}},
+		{"unlimited", `[]`, namespacesAnswer(200, "zeta", "checkout", "payments"),
+			ProfileNamespaces{Code: "PROFILE_OK", Namespaces: []string{"checkout", "payments", "zeta"}, Limited: false}},
+		{"failing", `["payments"]`, namespacesAnswer(401),
+			ProfileNamespaces{Code: "ENDPOINT_AUTH_REJECTED", Namespaces: []string{}, Limited: true}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ts := newTestServer(t)
+			ts.createNamespaced(t, "prod", c.allowed, true, c.answer)
+			before := ts.count(t, countAudits)
+			cookie, _ := ts.signIn(t, "root")
+			w := ts.listNamespaces(t, "prod", cookie)
+			if w.Code != 200 {
+				t.Fatalf("%d %s", w.Code, w.Body.String())
+			}
+			var got ProfileNamespaces
+			if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("got %+v", got)
+			}
+			if strings.Contains(w.Body.String(), "http") {
+				t.Fatalf("body holds a URL: %s", w.Body.String())
+			}
+			// Signing in writes its own audit row; the read writes none.
+			if after := ts.count(t, countAudits); after != before+1 {
+				t.Fatalf("audit rows %d, want %d", after, before+1)
+			}
+		})
+	}
+}
+
+func TestProfileNamespacesForAnOperator(t *testing.T) {
+	ts := newTestServer(t)
+	ts.createNamespaced(t, "prod", `[]`, true, namespacesAnswer(200, "payments"))
+	ops := ts.signInAs(t, seed(t, ts.pool, ts.now, "ops", opsPassword, auth.RoleOperator), opsPassword)
+	w := ts.listNamespaces(t, "prod", ops.cookie)
+	if w.Code != 200 {
+		t.Fatalf("%d %s", w.Code, w.Body.String())
+	}
 }

@@ -40,6 +40,7 @@ var (
 	ErrNotFound      = errors.New("profile not found")
 	ErrIDTaken       = errors.New("profile id taken")
 	ErrRevisionStale = errors.New("profile revision stale")
+	ErrInactive      = errors.New("profile inactive")
 	ErrForbidden     = auth.ErrForbidden
 )
 

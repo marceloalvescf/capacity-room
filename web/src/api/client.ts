@@ -98,6 +98,7 @@ const longRequestTimeout = 150_000;
 const longRoutes: readonly RegExp[] = [
   /^\/admin\/profiles\/test$/,
   /^\/admin\/profiles\/[^/]+\/test$/,
+  /^\/profiles\/[^/]+\/namespaces$/,
   /^\/reports\/[^/]+\/view$/,
 ];
 

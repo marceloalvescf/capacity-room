@@ -390,7 +390,7 @@ describe("the profile form", () => {
   it("tests without the browser's checks", async () => {
     await renderApp("/profiles/new");
     const user = userEvent.setup();
-    mock.profileTests.set("draft", { ok: false, code: "ENDPOINT_UNREACHABLE", capabilities: [] });
+    mock.profileTests.set("draft", { ok: false, code: "ENDPOINT_UNREACHABLE", capabilities: [], namespaces: [] });
     await user.click(await screen.findByRole("button", { name: "Test connection" }));
     expect(await findShown("The source could not be reached, or did not answer.")).toBeInTheDocument();
     expect(mock.calls.filter((call) => call.path === "/admin/profiles/test")).toHaveLength(1);
@@ -439,7 +439,7 @@ describe("the profile form", () => {
   it("shows the failure of a draft in a 200", async () => {
     await renderApp("/profiles/new");
     const user = await fillNew();
-    mock.profileTests.set("draft", { ok: false, code: "ENDPOINT_UNREACHABLE", capabilities: [] });
+    mock.profileTests.set("draft", { ok: false, code: "ENDPOINT_UNREACHABLE", capabilities: [], namespaces: [] });
     await user.click(screen.getByRole("button", { name: "Test connection" }));
     const line = await findShown("The source could not be reached, or did not answer.");
     expect(line.parentElement?.querySelector("svg")).toHaveClass("text-critical");

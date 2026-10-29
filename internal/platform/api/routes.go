@@ -2,6 +2,8 @@ package api
 
 import (
 	"net/http"
+
+	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
 )
 
 // Route is one line of the table the server registers and the contract
@@ -26,6 +28,7 @@ func (s *Server) Routes() []Route {
 		{"PATCH", "/api/v1/admin/users/{id}", s.adminOnly(s.requireCSRF(s.patchUser))},
 		{"DELETE", "/api/v1/admin/users/{id}", s.adminOnly(s.requireCSRF(s.deleteUser))},
 		{"GET", "/api/v1/profiles", s.requireSession(s.listProfileSummaries)},
+		{"GET", "/api/v1/profiles/{id}/namespaces", s.requireRole([]auth.Role{auth.RoleOperator, auth.RoleAdministrator}, s.listProfileNamespaces)},
 		{"GET", "/api/v1/home", s.readerRoute(s.home)},
 		{"GET", "/api/v1/admin/profiles", s.adminOnly(s.listProfiles)},
 		{"POST", "/api/v1/admin/profiles", s.adminOnly(s.requireCSRF(s.createProfile))},

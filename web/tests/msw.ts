@@ -265,7 +265,7 @@ export function installMockApi(initial: Session): Mock {
 
   // The outcome a test set for this profile, or a successful one.
   function testOutcome(key: string): ProfileTestResult {
-    return mock.profileTests.get(key) ?? { ok: true, code: "PROFILE_OK", capabilities: [] };
+    return mock.profileTests.get(key) ?? { ok: true, code: "PROFILE_OK", capabilities: [], namespaces: [] };
   }
 
   const handlers = [

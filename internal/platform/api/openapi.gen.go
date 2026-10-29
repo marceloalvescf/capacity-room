@@ -708,6 +708,17 @@ type ProfileList struct {
 	Profiles []Profile `json:"profiles"`
 }
 
+// ProfileNamespaces defines model for ProfileNamespaces.
+type ProfileNamespaces struct {
+	Code ProfileTestCode `json:"code"`
+
+	// Limited True when the profile limits its namespaces.
+	Limited bool `json:"limited"`
+
+	// Namespaces The namespaces a report of the profile can cover, sorted. When code is PROFILE_OK and the profile limits its namespaces, the discovered names that the limit holds; when it does not, every discovered name. Empty when code is any other.
+	Namespaces []string `json:"namespaces"`
+}
+
 // ProfileSummary An active profile as every signed-in reader sees it; the defaults are resolved.
 type ProfileSummary struct {
 	AllowedNamespaces       []string `json:"allowed_namespaces"`
@@ -734,7 +745,10 @@ type ProfileTestResult struct {
 	// Capabilities The names of the capabilities the source offers, in their order; empty when not ok.
 	Capabilities []string        `json:"capabilities"`
 	Code         ProfileTestCode `json:"code"`
-	Ok           bool            `json:"ok"`
+
+	// Namespaces The namespaces with pods at the source, sorted, with no limit of the profile applied; empty when not ok.
+	Namespaces []string `json:"namespaces"`
+	Ok         bool     `json:"ok"`
 }
 
 // ProfileThresholds The seven thresholds of a report; a key left out keeps its value.

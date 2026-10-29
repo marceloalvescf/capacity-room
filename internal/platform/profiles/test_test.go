@@ -20,6 +20,7 @@ import (
 
 	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
 	"github.com/marceloalvescf/capacity-room/internal/platform/netpolicy"
+	"github.com/marceloalvescf/capacity-room/internal/promtest"
 )
 
 const secretToken = "s3cr3t-token-value"
@@ -58,7 +59,7 @@ func TestTestOK(t *testing.T) {
 	}
 	f.create(t, "prod", d)
 	got := f.runTest(t, "prod")
-	want := TestResult{OK: true, Code: "PROFILE_OK", Capabilities: []string{
+	want := TestResult{OK: true, Code: "PROFILE_OK", Namespaces: []string{"checkout", "payments", "zeta"}, Capabilities: []string{
 		"namespace_usage", "workload_usage", "requests_limits", "hpa_history", "workloads_without_hpa",
 		"ip_node_mapping", "nodepool_discovery", "node_utilization", "node_autoscaling",
 	}}
@@ -321,7 +322,7 @@ func TestTestDraftOK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := TestResult{OK: true, Code: "PROFILE_OK", Capabilities: []string{
+	want := TestResult{OK: true, Code: "PROFILE_OK", Namespaces: []string{"checkout", "payments", "zeta"}, Capabilities: []string{
 		"namespace_usage", "workload_usage", "requests_limits", "hpa_history", "workloads_without_hpa",
 		"ip_node_mapping", "nodepool_discovery", "node_utilization", "node_autoscaling",
 	}}
@@ -501,5 +502,105 @@ func TestTestDraftNonHTTPAnswerIsUnreachable(t *testing.T) {
 	f.assertFailed(t, got, "ENDPOINT_UNREACHABLE")
 	if n := len(f.audits(t, "profile.test")); n != 1 {
 		t.Fatalf("%d audit rows", n)
+	}
+}
+
+// createServed stores a profile whose source is the fake at endpoint, with
+// the credential its scenario asks for.
+func (f *fixture) createServed(t *testing.T, id, endpoint string, fixture promtest.Fixture, allowed []string) {
+	t.Helper()
+	d := baseDocument()
+	d.EndpointURL = endpoint
+	d.AllowedNamespaces = allowed
+	for _, r := range fixture.Requests {
+		if token, ok := strings.CutPrefix(r.Authorization, "Bearer "); ok {
+			writeFile(t, f.credDir, "token", token+"\n")
+			d.CredentialFile = "token"
+			break
+		}
+	}
+	f.create(t, id, d)
+}
+
+func (f *fixture) namespaces(t *testing.T, actor auth.Principal, id string) NamespaceList {
+	t.Helper()
+	got, err := f.svc.Namespaces(context.Background(), actor, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+func TestTestNamespaceQueryErrorIsMapped(t *testing.T) {
+	f := newFixture(t)
+	_, endpoint, fixture := fakePrometheusWith(t, namespacesAnswer(401))
+	f.createServed(t, "prod", endpoint, fixture, []string{"payments"})
+	f.assertFailed(t, f.runTest(t, "prod"), "ENDPOINT_AUTH_REJECTED")
+}
+
+func TestTestDraftNamespaceQueryErrorIsMapped(t *testing.T) {
+	f := newFixture(t)
+	_, endpoint, _ := fakePrometheusWith(t, namespacesAnswer(401))
+	d := baseDocument()
+	d.EndpointURL = endpoint
+	got, err := f.svc.TestDraft(context.Background(), f.root, "", d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.assertFailed(t, got, "ENDPOINT_AUTH_REJECTED")
+}
+
+func TestNamespacesLimited(t *testing.T) {
+	f := newFixture(t)
+	_, endpoint, fixture := fakePrometheus(t)
+	f.createServed(t, "prod", endpoint, fixture, []string{"payments", "zeta", "absent"})
+	ops := newPrincipal(t, f.pool, "ops", auth.RoleOperator)
+	got := f.namespaces(t, ops, "prod")
+	want := NamespaceList{Code: "PROFILE_OK", Namespaces: []string{"payments", "zeta"}, Limited: true}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %+v", got)
+	}
+	if n := len(f.audits(t, "profile.test")); n != 0 {
+		t.Fatalf("%d audit rows", n)
+	}
+}
+
+func TestNamespacesUnlimited(t *testing.T) {
+	f := newFixture(t)
+	_, endpoint, fixture := fakePrometheus(t)
+	f.createServed(t, "prod", endpoint, fixture, []string{})
+	got := f.namespaces(t, f.root, "prod")
+	want := NamespaceList{Code: "PROFILE_OK", Namespaces: []string{"checkout", "payments", "zeta"}, Limited: false}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestNamespacesFailingSource(t *testing.T) {
+	f := newFixture(t)
+	_, endpoint, fixture := fakePrometheusWith(t, namespacesAnswer(401))
+	f.createServed(t, "prod", endpoint, fixture, []string{"payments"})
+	got := f.namespaces(t, f.root, "prod")
+	want := NamespaceList{Code: "ENDPOINT_AUTH_REJECTED", Namespaces: []string{}, Limited: true}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestNamespacesRefusals(t *testing.T) {
+	f := newFixture(t)
+	_, endpoint, fixture := fakePrometheus(t)
+	f.createServed(t, "prod", endpoint, fixture, []string{})
+	if _, err := f.svc.Namespaces(context.Background(), f.eve, "prod"); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("reader: %v", err)
+	}
+	if _, err := f.svc.Namespaces(context.Background(), f.root, "absent"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("unknown: %v", err)
+	}
+	d := baseDocument()
+	d.Active = false
+	f.create(t, "idle", d)
+	if _, err := f.svc.Namespaces(context.Background(), f.root, "idle"); !errors.Is(err, ErrInactive) {
+		t.Fatalf("inactive: %v", err)
 	}
 }

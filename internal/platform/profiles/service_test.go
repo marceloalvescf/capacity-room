@@ -653,12 +653,41 @@ func TestListIncludesInactiveForAdministrators(t *testing.T) {
 
 // fakePrometheus serves the direct-complete scenario once and returns the
 // profile endpoint that reaches it through the stubbed name.
+// namespacesAnswer scripts the answer to the namespace listing: the names as
+// the series of the query, in the order given, or an empty answer with the
+// status when the status is not 200.
+func namespacesAnswer(status int, names ...string) promtest.Request {
+	result := make([]map[string]any, 0, len(names))
+	for _, name := range names {
+		result = append(result, map[string]any{"metric": map[string]string{"namespace": name}, "value": []any{1784136600, "3"}})
+	}
+	body, err := json.Marshal(map[string]any{"status": "success", "data": map[string]any{"resultType": "vector", "result": result}})
+	if err != nil {
+		panic(err)
+	}
+	return promtest.Request{
+		Method: "POST", Path: "/api/v1/query", QueryContains: "count by (namespace) (kube_pod_status_phase",
+		Status: status, Body: body,
+	}
+}
+
+// defaultNamespaces are the names the fake source answers, out of order.
+var defaultNamespaces = []string{"zeta", "checkout", "payments"}
+
 func fakePrometheus(t *testing.T) (*promtest.Server, string, promtest.Fixture) {
+	t.Helper()
+	return fakePrometheusWith(t, namespacesAnswer(200, defaultNamespaces...))
+}
+
+// fakePrometheusWith serves direct-complete after the given answer to the
+// namespace listing.
+func fakePrometheusWith(t *testing.T, namespaces promtest.Request) (*promtest.Server, string, promtest.Fixture) {
 	t.Helper()
 	fixture, err := promtest.LoadScenario("direct-complete")
 	if err != nil {
 		t.Fatal(err)
 	}
+	fixture = promtest.Merge(promtest.Fixture{Requests: []promtest.Request{namespaces}}, fixture)
 	server := promtest.NewServer(fixture)
 	ts := httptest.NewServer(server)
 	t.Cleanup(ts.Close)
