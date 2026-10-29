@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"net/netip"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -567,12 +568,25 @@ func TestNamespacesLimited(t *testing.T) {
 
 func TestNamespacesUnlimited(t *testing.T) {
 	f := newFixture(t)
-	_, endpoint, fixture := fakePrometheus(t)
+	server, endpoint, fixture := fakePrometheus(t)
 	f.createServed(t, "prod", endpoint, fixture, []string{})
 	got := f.namespaces(t, f.root, "prod")
 	want := NamespaceList{Code: "PROFILE_OK", Namespaces: []string{"checkout", "payments", "zeta"}, Limited: false}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v", got)
+	}
+	var queries []string
+	for _, seen := range server.Seen() {
+		if q := seen.Form.Get("query"); q != "" {
+			queries = append(queries, q)
+		}
+	}
+	if wantQueries := []string{
+		"vector(1)",
+		"count by (cluster) (kube_node_info)",
+		`count by (namespace) (kube_pod_status_phase{cluster="prod"})`,
+	}; !slices.Equal(queries, wantQueries) {
+		t.Fatalf("queries = %q, want %q", queries, wantQueries)
 	}
 }
 

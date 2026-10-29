@@ -10,6 +10,7 @@ import (
 	"github.com/marceloalvescf/capacity-room/internal/platform/auth"
 	"github.com/marceloalvescf/capacity-room/internal/platform/netpolicy"
 	"github.com/marceloalvescf/capacity-room/internal/platform/store"
+	"github.com/marceloalvescf/capacity-room/internal/prom"
 )
 
 // The codes of a profile test.
@@ -68,7 +69,7 @@ func (s *Service) Test(ctx context.Context, actor auth.Principal, id string) (Te
 	}
 	d := cur.Document
 
-	result, err := s.runTest(ctx, d)
+	result, err := s.runTest(ctx, d, true)
 	if err != nil {
 		return TestResult{}, err
 	}
@@ -101,7 +102,7 @@ func (s *Service) TestDraft(ctx context.Context, actor auth.Principal, id string
 	if err := s.checkDocument(&d); err != nil {
 		return TestResult{}, err
 	}
-	result, err := s.runTest(ctx, d)
+	result, err := s.runTest(ctx, d, true)
 	if err != nil {
 		return TestResult{}, err
 	}
@@ -129,7 +130,10 @@ func failure(code string) TestResult { return TestResult{Code: code} }
 const testCeiling = 120 * time.Second
 
 // runTest holds no database connection: it reads files and sends requests.
-func (s *Service) runTest(ctx context.Context, d Document) (TestResult, error) {
+// With detect it runs the whole preflight, as a test does; without it, it
+// connects and resolves the scope alone, which is all that listing the
+// namespaces needs, and answers no capability.
+func (s *Service) runTest(ctx context.Context, d Document, detect bool) (TestResult, error) {
 	period, zone, profile := d.ResolvedDefaults()
 	cfg := d.RunConfig(period, "", "", zone, profile, d.AllowedNamespaces)
 	opts, err := s.Source(d, cfg.Metrics)
@@ -140,7 +144,15 @@ func (s *Service) runTest(ctx context.Context, d Document) (TestResult, error) {
 	defer cancel()
 
 	at := s.now()
-	pf, err := discovery.RunPreflight(ctx, opts, cfg.Cluster, cfg.Analysis, at)
+	var pf discovery.Preflight
+	if detect {
+		pf, err = discovery.RunPreflight(ctx, opts, cfg.Cluster, cfg.Analysis, at)
+	} else {
+		pf.Client, err = prom.Connect(ctx, opts)
+		if err == nil {
+			pf.Scope, err = discovery.ResolveScope(ctx, pf.Client, cfg.Cluster, at)
+		}
+	}
 	if err != nil {
 		return resultOf(ctx, err)
 	}
@@ -198,7 +210,7 @@ func (s *Service) Namespaces(ctx context.Context, actor auth.Principal, id strin
 		return NamespaceList{}, err
 	}
 	allowed := cur.Document.AllowedNamespaces
-	result, err := s.runTest(ctx, cur.Document)
+	result, err := s.runTest(ctx, cur.Document, false)
 	if err != nil {
 		return NamespaceList{}, err
 	}
