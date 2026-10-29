@@ -3,8 +3,10 @@ package discovery
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -70,12 +72,12 @@ func ResolveScope(ctx context.Context, q Querier, cluster config.Cluster, at tim
 	}
 }
 
-// labelState runs `count by (label) (metric)` at at and reports the sorted,
+// labelState runs `count by (label) (selector)` at at and reports the sorted,
 // deduplicated, non-empty values of label across the returned series, and
 // whether any returned series carried no value for label. A series counts
 // toward both whatever its sample value is.
-func labelState(ctx context.Context, q Querier, label, metric string, at time.Time) (values []string, unlabeled bool, err error) {
-	query := fmt.Sprintf("count by (%s) (%s)", label, metric)
+func labelState(ctx context.Context, q Querier, label, selector string, at time.Time) (values []string, unlabeled bool, err error) {
+	query := fmt.Sprintf("count by (%s) (%s)", label, selector)
 	samples, err := q.Query(ctx, query, at)
 	if err != nil {
 		return nil, false, err
@@ -174,4 +176,32 @@ func joinOrNone(values []string) string {
 		return "none"
 	}
 	return strings.Join(values, ", ")
+}
+
+// namespacePattern is the Kubernetes DNS-1123 label a namespace name must
+// match.
+var namespacePattern = regexp.MustCompile(`^[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?$`)
+
+// ListNamespaces returns the namespaces that have pods in scope: the sorted,
+// deduplicated values of the namespace label of kube_pod_status_phase that
+// are valid Kubernetes names. A lookback of a second or more reads every
+// series seen in the lookback that ends at at, so a namespace whose pods went
+// away during a period is still found; a shorter one reads the series at at
+// alone. It never returns nil. An error q returns is returned as it is.
+func ListNamespaces(ctx context.Context, q Querier, scope Scope, at time.Time, lookback time.Duration) ([]string, error) {
+	selector := prom.Selector{Metric: "kube_pod_status_phase", Equal: scope.Matchers()}.String()
+	if seconds := int64(lookback / time.Second); seconds > 0 {
+		selector = "max_over_time(" + selector + "[" + strconv.FormatInt(seconds, 10) + "s])"
+	}
+	values, _, err := labelState(ctx, q, "namespace", selector, at)
+	if err != nil {
+		return nil, err
+	}
+	names := make([]string, 0, len(values))
+	for _, value := range values {
+		if namespacePattern.MatchString(value) {
+			names = append(names, value)
+		}
+	}
+	return names, nil
 }

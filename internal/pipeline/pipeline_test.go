@@ -264,3 +264,79 @@ func TestCollectReturnsNothingToReport(t *testing.T) {
 		t.Fatalf("steps = %v, want %v", *f.steps, want)
 	}
 }
+
+// discoveryServer wraps the preflight of direct-complete: the namespace
+// discovery query is answered with namespaces, every other query by the
+// recorded scenario, and the text of each query is recorded in order.
+func discoveryServer(t *testing.T, namespaces []string) (*fixture, *[]string) {
+	t.Helper()
+	scenario := scenarioNamed(t, "direct-complete")
+	recorded, err := promtest.LoadScenario("direct-complete")
+	if err != nil {
+		t.Fatalf("promtest.Load: %v", err)
+	}
+	fake := promtest.NewServer(recorded)
+	var mu sync.Mutex
+	var queries []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		query := r.PostFormValue("query")
+		mu.Lock()
+		queries = append(queries, query)
+		mu.Unlock()
+		if strings.HasPrefix(query, "count by (namespace) (max_over_time(kube_pod_status_phase") {
+			var result []string
+			for _, name := range namespaces {
+				result = append(result, fmt.Sprintf(`{"metric":{"namespace":%q},"value":[1784140200,"1"]}`, name))
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintf(w, `{"status":"success","data":{"resultType":"vector","result":[%s]}}`, strings.Join(result, ","))
+			return
+		}
+		fake.ServeHTTP(w, r)
+	}))
+	t.Cleanup(server.Close)
+	f := newRun(t, scenario, server.URL)
+	f.run.Config.Cluster.Namespaces = nil
+	return &f, &queries
+}
+
+func TestCollectDiscoversNamespacesAfterThePreflight(t *testing.T) {
+	f, queries := discoveryServer(t, []string{"payments"})
+
+	got, err := pipeline.Collect(context.Background(), f.run)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	preflight := preflightRequests(t)
+	if len(*queries) <= preflight {
+		t.Fatalf("%d queries, want more than %d", len(*queries), preflight)
+	}
+	for i, q := range (*queries)[:preflight] {
+		if strings.Contains(q, "count by (namespace) (max_over_time(kube_pod_status_phase") {
+			t.Fatalf("query %d of the preflight is the discovery query: %q", i, q)
+		}
+	}
+	const discovery = `count by (namespace) (max_over_time(kube_pod_status_phase{cluster="prod"}[86400s]))`
+	if (*queries)[preflight] != discovery {
+		t.Fatalf("query %d = %q, want %q", preflight, (*queries)[preflight], discovery)
+	}
+	if !slices.Equal(got.Snapshot.Scope.Namespaces, []string{"payments"}) {
+		t.Fatalf("snapshot namespaces = %q, want [payments]", got.Snapshot.Scope.Namespaces)
+	}
+}
+
+func TestCollectWithNoNamespaceFoundHasNothingToReport(t *testing.T) {
+	f, queries := discoveryServer(t, nil)
+
+	_, err := pipeline.Collect(context.Background(), f.run)
+	if !errors.Is(err, collect.ErrNoUsefulSections) {
+		t.Fatalf("err = %v, want collect.ErrNoUsefulSections", err)
+	}
+	if want := preflightRequests(t) + 1; len(*queries) != want {
+		t.Fatalf("%d queries, want %d (the preflight and the discovery)", len(*queries), want)
+	}
+	if *f.nowCalls != 0 || *f.idCalls != 0 {
+		t.Fatalf("Now read %d times and NewID called %d times, want 0 and 0", *f.nowCalls, *f.idCalls)
+	}
+}

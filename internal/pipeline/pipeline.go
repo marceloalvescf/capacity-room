@@ -56,6 +56,17 @@ func Collect(ctx context.Context, r Run) (Result, error) {
 		return Result{}, err
 	}
 
+	if len(r.Config.Cluster.Namespaces) == 0 {
+		namespaces, err := discovery.ListNamespaces(ctx, c.Client, c.Scope, r.Window.End, r.Window.End.Sub(r.Window.Start))
+		if err != nil {
+			return Result{}, err
+		}
+		if len(namespaces) == 0 {
+			return Result{}, collect.ErrNoUsefulSections
+		}
+		r.Config.Cluster.Namespaces = namespaces
+	}
+
 	collected, err := collect.All(ctx, c.Client, collect.Input{
 		Scope:        c.Scope,
 		Cluster:      r.Config.Cluster,
