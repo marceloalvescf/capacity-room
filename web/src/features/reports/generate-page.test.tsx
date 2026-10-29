@@ -99,7 +99,7 @@ describe("new report form", () => {
     await open("/generate", "pt-BR");
     expect(profileSelect().value).toBe("prod");
     expect(screen.getByText(summaryLine("America/Sao_Paulo · Detalhado"))).toBeInTheDocument();
-    expect(await screen.findByRole("radio", { name: t("namespaces.allCount", { count: 3 }) })).toBeChecked();
+    expect(await screen.findByRole("radio", { name: `${t("namespaces.all")} 3` })).toBeChecked();
     expect(chosen()).toEqual([]);
     expect(screen.getByRole("radio", { name: "Português (Brasil)" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "English" })).not.toBeChecked();
@@ -150,7 +150,7 @@ describe("new report form", () => {
     expect(screen.getByRole("radio", { name: t("namespaces.all") })).toBeChecked();
     mock.profileNamespaces.set("prod", { code: "PROFILE_OK", namespaces: ["checkout", "payments"], limited: false });
     await user.click(screen.getByRole("button", { name: t("reports.retry") }));
-    expect(await screen.findByRole("radio", { name: t("namespaces.allCount", { count: 2 }) })).toBeInTheDocument();
+    expect(await screen.findByRole("radio", { name: `${t("namespaces.all")} 2` })).toBeInTheDocument();
     expect(screen.queryByText(t("profileTest.ENDPOINT_UNREACHABLE"))).not.toBeInTheDocument();
     expect(mock.calls.filter((call) => call.path === "/profiles/prod/namespaces")).toHaveLength(2);
   });

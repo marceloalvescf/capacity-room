@@ -411,7 +411,9 @@ function GenerateForm({
           name="report-namespaces"
           value={values.namespaceScope}
           options={[
-            { value: "all", label: listOk ? t("namespaces.allCount", { count: answer.namespaces.length }) : t("namespaces.all") },
+            listOk
+              ? { value: "all", label: t("namespaces.all"), detail: String(answer.namespaces.length) }
+              : { value: "all", label: t("namespaces.all") },
             { value: "choose", label: t("namespaces.choose") },
           ]}
           onChange={(next) => {

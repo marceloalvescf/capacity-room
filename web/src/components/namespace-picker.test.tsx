@@ -100,7 +100,7 @@ describe("namespace picker", () => {
     await user.click(screen.getByRole("button", { name: /Add a namespace/ }));
     const boxes = await screen.findAllByRole("checkbox");
     expect(boxes).toHaveLength(4);
-    expect(boxes[0]).toBe(screen.getByRole("checkbox", { name: "gone" }));
+    expect(boxes[0]).toBe(screen.getByRole("checkbox", { name: `gone ${i18next.t("namespaces.notFound")}` }));
     expect(within(boxes[0]?.closest("[role=group]") as HTMLElement).getAllByText("not found now")).toHaveLength(1);
   });
 

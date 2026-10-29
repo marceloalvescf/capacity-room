@@ -826,7 +826,7 @@
     "allCount": "All namespaces ({{count}})",
     "choose": "Choose",
     "onlyThese": "Only these",
-    "add": "Add a namespace",
+    "add": "Add a namespace…",
     "filter": "Filter namespaces",
     "count": "Found: {{found}} · Selected: {{selected}}",
     "clear": "Clear",

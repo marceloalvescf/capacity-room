@@ -5,7 +5,7 @@ interface SegmentedProps<T extends string> {
   hideLegend?: boolean;
   name: string;
   value: T;
-  options: readonly { value: T; label: string; lang?: string }[];
+  options: readonly { value: T; label: string; detail?: string; lang?: string }[];
   onChange: (value: T) => void;
 }
 
@@ -44,6 +44,12 @@ export function Segmented<T extends string>({
               }}
             />
             <span lang={option.lang}>{option.label}</span>
+            {option.detail === undefined ? null : (
+              <>
+                {" "}
+                <span className="ml-1 font-mono text-xs">{option.detail}</span>
+              </>
+            )}
           </label>
         ))}
       </div>
