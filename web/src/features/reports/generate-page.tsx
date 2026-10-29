@@ -86,8 +86,9 @@ function fromReport(
   } else {
     period = { kind: "range", start: selection.start ?? "", end: selection.end ?? "" };
   }
-  const namespaces = selection.namespaces.filter((name) => profile.allowed_namespaces.includes(name));
-  const dropped = selection.namespaces.filter((name) => !namespaces.includes(name));
+  const selected = selection.namespaces ?? [];
+  const namespaces = selected.filter((name) => profile.allowed_namespaces.includes(name));
+  const dropped = selected.filter((name) => !namespaces.includes(name));
   if (dropped.length > 0) {
     notices.unshift({ kind: "namespacesDropped", names: dropped });
   }

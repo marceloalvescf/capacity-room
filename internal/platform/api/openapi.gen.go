@@ -486,7 +486,9 @@ type Principal struct {
 // Profile A profile with its current revision, as the administration reads it.
 type Profile struct {
 	// Active Defaults to false.
-	Active            bool     `json:"active"`
+	Active bool `json:"active"`
+
+	// AllowedNamespaces The namespaces a report may select; empty means every namespace the source shows.
 	AllowedNamespaces []string `json:"allowed_namespaces"`
 
 	// CaBundleFile A file name under the CA bundle folder; empty means none; refused while tls_verify is false.
@@ -544,7 +546,9 @@ type Profile struct {
 // ProfileChange The body of PATCH /admin/profiles/{id}: the revision it was read at and the fields that change. A field left out keeps its value; a nullable default set to null is cleared.
 type ProfileChange struct {
 	// Active Defaults to false.
-	Active            *bool     `json:"active,omitempty"`
+	Active *bool `json:"active,omitempty"`
+
+	// AllowedNamespaces The namespaces a report may select; empty means every namespace the source shows.
 	AllowedNamespaces *[]string `json:"allowed_namespaces,omitempty"`
 	BaseRevisionId    uuid.UUID `json:"base_revision_id"`
 
@@ -595,8 +599,10 @@ type ProfileChange struct {
 // ProfileCreate The body of POST /admin/profiles; a field left out takes its default.
 type ProfileCreate struct {
 	// Active Defaults to false.
-	Active            *bool    `json:"active,omitempty"`
-	AllowedNamespaces []string `json:"allowed_namespaces"`
+	Active *bool `json:"active,omitempty"`
+
+	// AllowedNamespaces The namespaces a report may select; empty means every namespace the source shows.
+	AllowedNamespaces *[]string `json:"allowed_namespaces,omitempty"`
 
 	// CaBundleFile A file name under the CA bundle folder; empty means none; refused while tls_verify is false.
 	CaBundleFile *string `json:"ca_bundle_file,omitempty"`
@@ -648,7 +654,9 @@ type ProfileCreate struct {
 // ProfileDocument A profile as an administrator writes it and as a revision stores it. A credential and a CA bundle are named by file name, resolved under the folders of the deployment when a report runs, never here.
 type ProfileDocument struct {
 	// Active Defaults to false.
-	Active            *bool     `json:"active,omitempty"`
+	Active *bool `json:"active,omitempty"`
+
+	// AllowedNamespaces The namespaces a report may select; empty means every namespace the source shows.
 	AllowedNamespaces *[]string `json:"allowed_namespaces,omitempty"`
 
 	// CaBundleFile A file name under the CA bundle folder; empty means none; refused while tls_verify is false.
@@ -841,8 +849,10 @@ type ReportProfile string
 // ReportRequest A selection; a field left out or null takes the profile's default, except the language, which is required.
 type ReportRequest struct {
 	// End The last wall time of a calendar range, in the request's resolved time zone; at or before the request time.
-	End        *string   `json:"end,omitempty"`
-	Language   Language  `json:"language"`
+	End      *string  `json:"end,omitempty"`
+	Language Language `json:"language"`
+
+	// Namespaces The namespaces to report; null or left out means every namespace the source shows, and an empty list is refused.
 	Namespaces *[]string `json:"namespaces,omitempty"`
 	Period     *string   `json:"period,omitempty"`
 	ProfileId  string    `json:"profile_id"`
@@ -858,9 +868,11 @@ type ReportRequest struct {
 // ReportSelection The selection the report runs, with every default resolved.
 type ReportSelection struct {
 	// End The last wall time of a calendar range, in the report's time zone; null for a length.
-	End        *string  `json:"end"`
-	Language   Language `json:"language"`
-	Namespaces []string `json:"namespaces"`
+	End      *string  `json:"end"`
+	Language Language `json:"language"`
+
+	// Namespaces The namespaces the report was requested for; null means every namespace the source shows.
+	Namespaces *[]string `json:"namespaces"`
 
 	// Period The length of the period; null for a calendar range.
 	Period        *string       `json:"period"`

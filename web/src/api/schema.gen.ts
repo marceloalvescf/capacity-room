@@ -391,7 +391,8 @@ export interface components {
         };
         /** @description The selection the report runs, with every default resolved. */
         ReportSelection: {
-            namespaces: string[];
+            /** @description The namespaces the report was requested for; null means every namespace the source shows. */
+            namespaces: string[] | null;
             /** @description The length of the period; null for a calendar range. */
             period: string | null;
             /** @description The first wall time of a calendar range, in the report's time zone; null for a length. */
@@ -406,6 +407,7 @@ export interface components {
         ReportRequest: {
             profile_id: string;
             language: components["schemas"]["Language"];
+            /** @description The namespaces to report; null or left out means every namespace the source shows, and an empty list is refused. */
             namespaces?: string[] | null;
             period?: string | null;
             /** @description The first wall time of a calendar range, in the request's resolved time zone; sent with end, never with period. */
@@ -645,6 +647,7 @@ export interface components {
             /** @description A Prometheus label name, or empty. */
             nodepool_label?: string;
             node_autoscaling?: components["schemas"]["NodeAutoscaling"];
+            /** @description The namespaces a report may select; empty means every namespace the source shows. */
             allowed_namespaces?: string[];
             excluded_containers?: string[];
             /** @description Empty means unrestricted. */

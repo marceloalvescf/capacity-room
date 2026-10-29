@@ -101,12 +101,9 @@ func decodeCursor(cursor string) (store.ReportCursor, error) {
 // decodeSelection reads the stored request of a report; a request that cannot
 // be decoded or holds no valid language is nil.
 func decodeSelection(request []byte) *Resolved {
-	selection := Resolved{Namespaces: []string{}}
+	var selection Resolved
 	if err := json.Unmarshal(request, &selection); err != nil || !validLanguage(selection.Language) {
 		return nil
-	}
-	if selection.Namespaces == nil {
-		selection.Namespaces = []string{}
 	}
 	return &selection
 }

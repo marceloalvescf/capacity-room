@@ -425,10 +425,15 @@ const shownNamespaces = 3;
 function ReportScope({ selection, lengthText, language }: { selection: ReportSelection; lengthText: string; language: string }) {
   const { t } = useTranslation();
   const { namespaces } = selection;
-  const rest = namespaces.length - shownNamespaces;
+  const rest = (namespaces?.length ?? 0) - shownNamespaces;
   return (
     <>
-      {namespaces.length > 0 ? (
+      {namespaces === null ? (
+        <>
+          <span>{t("report.meta.namespaces")}</span>
+          <Separator />
+        </>
+      ) : namespaces.length > 0 ? (
         <>
           <span className="font-mono">{namespaces.slice(0, shownNamespaces).join(", ")}</span>
           {rest > 0 ? <span className="font-mono"> {t("reports.moreNamespaces", { count: rest })}</span> : null}

@@ -126,3 +126,22 @@ func TestReadImportFileMissingFile(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestReadImportFileTakesNoAllowedNamespaces(t *testing.T) {
+	const head = "[[profiles]]\nid = \"a\"\ndisplay_name = \"A\"\nendpoint_url = \"https://metrics.test/api/v1\"\ncluster_name = \"a\"\n"
+	for name, content := range map[string]string{
+		"absent":   head,
+		"explicit": head + "allowed_namespaces = []\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			entries, err := ReadImportFile(writeImport(t, content), staticPolicy())
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := entries[0].Document.AllowedNamespaces
+			if got == nil || len(got) != 0 {
+				t.Fatalf("allowed namespaces = %#v, want an empty list", got)
+			}
+		})
+	}
+}

@@ -119,7 +119,7 @@ func (s *Server) listProfiles(w http.ResponseWriter, r *http.Request, a auth.Aut
 // pointer keeps the default, and thresholds are overlaid key by key.
 func documentOf(b ProfileCreate) profiles.Document {
 	d := profiles.Defaults()
-	d.DisplayName, d.EndpointURL, d.ClusterName, d.AllowedNamespaces = b.DisplayName, b.EndpointUrl, b.ClusterName, b.AllowedNamespaces
+	d.DisplayName, d.EndpointURL, d.ClusterName = b.DisplayName, b.EndpointUrl, b.ClusterName
 	set := func(dst *string, src *string) {
 		if src != nil {
 			*dst = *src
@@ -149,6 +149,7 @@ func documentOf(b ProfileCreate) profiles.Document {
 	if b.NodeAutoscaling != nil {
 		d.NodeAutoscaling = string(*b.NodeAutoscaling)
 	}
+	setList(&d.AllowedNamespaces, b.AllowedNamespaces)
 	setList(&d.ExcludedContainers, b.ExcludedContainers)
 	setList(&d.PermittedPeriods, b.PermittedPeriods)
 	setList(&d.PermittedTimezones, b.PermittedTimezones)
@@ -177,7 +178,7 @@ func documentOf(b ProfileCreate) profiles.Document {
 
 func (s *Server) createProfile(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
 	var body ProfileCreate
-	required := []string{"id", "display_name", "endpoint_url", "cluster_name", "allowed_namespaces"}
+	required := []string{"id", "display_name", "endpoint_url", "cluster_name"}
 	if p := DecodeBody(r, &body, required, profileLimits); p != nil {
 		WriteProblem(w, p)
 		return
@@ -266,7 +267,7 @@ func (s *Server) testProfile(w http.ResponseWriter, r *http.Request, a auth.Auth
 
 func (s *Server) testProfileDraft(w http.ResponseWriter, r *http.Request, a auth.Authenticated) {
 	var body ProfileCreate
-	required := []string{"display_name", "endpoint_url", "cluster_name", "allowed_namespaces"}
+	required := []string{"display_name", "endpoint_url", "cluster_name"}
 	if p := DecodeBody(r, &body, required, profileLimits); p != nil {
 		WriteProblem(w, p)
 		return

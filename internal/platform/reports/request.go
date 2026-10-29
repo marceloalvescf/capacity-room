@@ -32,7 +32,7 @@ func checkSyntax(sel Selection) map[string]string {
 	case !profiles.ValidReferenceName(sel.ProfileID):
 		fields["profile_id"] = wordInvalid
 	}
-	if len(sel.Namespaces) == 0 {
+	if sel.Namespaces != nil && len(sel.Namespaces) == 0 {
 		fields["namespaces"] = wordEmpty
 	}
 	seen := map[string]bool{}
@@ -134,16 +134,19 @@ func judgeRange(start, end string, zone *time.Location, now time.Time) map[strin
 }
 
 // permits judges a resolved selection against the permitted lists of the
-// document. A range is held against the permitted periods as a whole.
+// document. A null namespace selection and an empty allowed list are both
+// unrestricted. A range is held against the permitted periods as a whole.
 func permits(sel Selection, out Resolved, d profiles.Document) map[string]string {
 	period, zone, reportProfile := out.Period, out.Timezone, out.ReportProfile
 	fields := map[string]string{}
 	if sel.Start != nil && len(d.PermittedPeriods) > 0 {
 		fields["start"] = wordNotPermitted
 	}
-	for _, ns := range sel.Namespaces {
-		if !slices.Contains(d.AllowedNamespaces, ns) {
-			fields["namespaces"] = wordNotPermitted
+	if len(d.AllowedNamespaces) > 0 {
+		for _, ns := range sel.Namespaces {
+			if !slices.Contains(d.AllowedNamespaces, ns) {
+				fields["namespaces"] = wordNotPermitted
+			}
 		}
 	}
 	for _, c := range []struct {

@@ -516,7 +516,7 @@ func TestReportRouteStatuses(t *testing.T) {
 	}
 	r := decodeStrict[Report](t, w)
 	if r.Id != queued || r.Status != ReportStatusQueued || r.Phase != Waiting || r.OwnerUsername != "ops" ||
-		r.ProfileId != "prod" || r.Selection.Period == nil || *r.Selection.Period != "24h" || len(r.Selection.Namespaces) != 1 || r.Expired {
+		r.ProfileId != "prod" || r.Selection.Period == nil || *r.Selection.Period != "24h" || r.Selection.Namespaces == nil || len(*r.Selection.Namespaces) != 1 || r.Expired {
 		t.Fatalf("report %+v", r)
 	}
 	if !strings.Contains(w.Body.String(), `"pdfs":[]`) {
@@ -978,7 +978,7 @@ func TestListItemsCarryTheirSelection(t *testing.T) {
 		t.Fatalf("page %+v", page)
 	}
 	sel := page.Items[0].Selection
-	if len(sel.Namespaces) != 1 || sel.Namespaces[0] != "payments" || sel.Period == nil || *sel.Period != "24h" ||
+	if sel.Namespaces == nil || len(*sel.Namespaces) != 1 || (*sel.Namespaces)[0] != "payments" || sel.Period == nil || *sel.Period != "24h" ||
 		sel.Start != nil || sel.End != nil {
 		t.Fatalf("selection %+v", sel)
 	}

@@ -152,11 +152,7 @@ func (d Document) Validate() []Problem {
 	add("nodepool_label", flag(d.NodepoolLabel != "" && !labelNamePattern.MatchString(d.NodepoolLabel)))
 	add("node_autoscaling", oneOf(d.NodeAutoscaling, "auto", "enabled", "disabled"))
 
-	if len(d.AllowedNamespaces) == 0 {
-		add("allowed_namespaces", "empty")
-	} else {
-		add("allowed_namespaces", checkList(d.AllowedNamespaces, namespacePattern.MatchString))
-	}
+	add("allowed_namespaces", checkList(d.AllowedNamespaces, namespacePattern.MatchString))
 	add("excluded_containers", checkList(d.ExcludedContainers, containerNamePattern.MatchString))
 
 	period, zone, profile := d.ResolvedDefaults()

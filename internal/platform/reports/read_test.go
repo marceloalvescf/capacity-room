@@ -383,3 +383,25 @@ func TestListCarriesTheSelectionOfARange(t *testing.T) {
 		t.Fatalf("items %+v", page.Items)
 	}
 }
+
+func TestReadsCarryANullNamespaceSelection(t *testing.T) {
+	f := newFixture(t)
+	id := f.seedReport(t, "collected", "complete", fixedNow.Add(time.Hour), "")
+	f.exec(t, `UPDATE reports SET request = $1`,
+		`{"namespaces":null,"period":"24h","timezone":"UTC","report_profile":"detailed","language":"en"}`)
+	page, err := f.svc.List(context.Background(), f.read, "", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Items) != 1 || page.Items[0].Selection == nil || page.Items[0].Selection.Namespaces != nil ||
+		page.Items[0].Selection.Period != "24h" {
+		t.Fatalf("items %+v", page.Items)
+	}
+	d, err := f.svc.Get(context.Background(), f.read, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Selection.Namespaces != nil || d.Selection.Period != "24h" {
+		t.Fatalf("detail %+v", d)
+	}
+}

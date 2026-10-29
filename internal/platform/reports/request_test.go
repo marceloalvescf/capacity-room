@@ -335,7 +335,6 @@ func TestRequestSyntax(t *testing.T) {
 	}{
 		{"profile missing", func(s *Selection) { s.ProfileID = "" }, "profile_id", "missing"},
 		{"profile invalid", func(s *Selection) { s.ProfileID = "Bad Id" }, "profile_id", "invalid"},
-		{"namespaces absent", func(s *Selection) { s.Namespaces = nil }, "namespaces", "empty"},
 		{"namespaces empty", func(s *Selection) { s.Namespaces = []string{} }, "namespaces", "empty"},
 		{"namespace invalid", func(s *Selection) { s.Namespaces = []string{"Pay!"} }, "namespaces", "invalid"},
 		{"namespace repeated", func(s *Selection) { s.Namespaces = []string{"a", "b", "a"} }, "namespaces", "repeated"},
@@ -792,5 +791,28 @@ func TestKeyReusedWithAnotherRange(t *testing.T) {
 	_, err := f.svc.Request(context.Background(), f.op, "k1", rangeSelection(f, "2026-09-01 00:00", "2026-09-30 00:00"))
 	if e := asError(t, err); e.Code != CodeIdempotencyKeyReused {
 		t.Fatalf("error = %+v", e)
+	}
+}
+
+func TestRequestStoresANullNamespaceSelection(t *testing.T) {
+	f := newFixture(t)
+	f.addProfile(t, "prod", baseDocument())
+	sel := f.selection()
+	sel.Namespaces = nil
+	got, err := f.svc.Request(context.Background(), f.op, "k-null", sel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stored string
+	if err := f.pool.QueryRow(context.Background(),
+		`SELECT request->'namespaces'::text FROM reports WHERE id = $1`, got.ID).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored != "null" {
+		t.Fatalf("stored namespaces = %s, want null", stored)
+	}
+	again, err := f.svc.Request(context.Background(), f.op, "k-null", f.selection())
+	if e := asError(t, err); e.Code != "IDEMPOTENCY_KEY_REUSED" {
+		t.Fatalf("a list under the key of a null selection: %+v, %+v", again, e)
 	}
 }

@@ -1148,6 +1148,8 @@ components:
       properties:
         namespaces:
           type: array
+          nullable: true
+          description: The namespaces the report was requested for; null means every namespace the source shows.
           items:
             type: string
         period:
@@ -1181,6 +1183,7 @@ components:
         namespaces:
           type: array
           nullable: true
+          description: The namespaces to report; null or left out means every namespace the source shows, and an empty list is refused.
           items:
             type: string
         period:
@@ -1717,6 +1720,7 @@ components:
           $ref: "#/components/schemas/NodeAutoscaling"
         allowed_namespaces:
           type: array
+          description: The namespaces a report may select; empty means every namespace the source shows.
           items:
             type: string
         excluded_containers:
@@ -1755,7 +1759,7 @@ components:
       allOf:
         - $ref: "#/components/schemas/ProfileDocument"
         - type: object
-          required: [id, display_name, endpoint_url, cluster_name, allowed_namespaces]
+          required: [id, display_name, endpoint_url, cluster_name]
           properties:
             id:
               type: string
@@ -1768,7 +1772,7 @@ components:
       allOf:
         - $ref: "#/components/schemas/ProfileDocument"
         - type: object
-          required: [display_name, endpoint_url, cluster_name, allowed_namespaces]
+          required: [display_name, endpoint_url, cluster_name]
           properties:
             id:
               type: string

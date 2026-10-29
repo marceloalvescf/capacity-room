@@ -92,7 +92,6 @@ func TestValidateEachField(t *testing.T) {
 		{"filter invalid", func(d *Document) { d.FilterMode = "x" }, "filter_mode", "invalid"},
 		{"nodepool invalid", func(d *Document) { d.NodepoolLabel = "a-b" }, "nodepool_label", "invalid"},
 		{"autoscaling invalid", func(d *Document) { d.NodeAutoscaling = "x" }, "node_autoscaling", "invalid"},
-		{"namespaces empty", func(d *Document) { d.AllowedNamespaces = nil }, "allowed_namespaces", "empty"},
 		{"namespace invalid", func(d *Document) { d.AllowedNamespaces = []string{"Bad_NS"} }, "allowed_namespaces", "invalid"},
 		{"namespace repeated", func(d *Document) { d.AllowedNamespaces = []string{"a", "a"} }, "allowed_namespaces", "repeated"},
 		{"container invalid", func(d *Document) { d.ExcludedContainers = []string{"-x"} }, "excluded_containers", "invalid"},
@@ -205,5 +204,15 @@ func TestRunConfigCarriesARange(t *testing.T) {
 	a := got.Analysis
 	if a.Period != "" || a.Start != "2026-09-01 00:00" || a.End != "2026-10-01 00:00" || a.Timezone != "UTC" {
 		t.Fatalf("analysis = %+v", a)
+	}
+}
+
+func TestValidateAcceptsNoAllowedNamespaces(t *testing.T) {
+	for _, list := range [][]string{nil, {}} {
+		d := validExample()
+		d.AllowedNamespaces = list
+		if problems := d.Validate(); len(problems) != 0 {
+			t.Fatalf("list %#v: problems %v", list, problems)
+		}
 	}
 }
