@@ -6,6 +6,19 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-10-29
+
+### Added
+
+- The New report page lists the namespaces of the metric source and covers all of them by default; Choose picks some from a searchable list.
+- A profile test lists the namespaces it found, and the profile form ticks its allowed namespaces from that list instead of typing them.
+- An operator can read the namespaces a profile's reports can cover through `GET /api/v1/profiles/{id}/namespaces`.
+
+### Changed
+
+- A profile's allowed namespaces are optional: a profile with none lets a report cover every namespace the source shows, found when the collection starts, over the whole period.
+- A report of all namespaces reads "All namespaces" in the Reports list, and on Home with their count, which opens the list of the namespaces it covered.
+
 ## [4.0.0] - 2026-10-26
 
 ### Changed

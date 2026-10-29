@@ -60,7 +60,7 @@ namespaces = ["payments", "checkout"]
 EOF
 
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
-  alvesmarcelocf/capacity-room:4.0.0 \
+  alvesmarcelocf/capacity-room:4.1.0 \
   report --config report.toml --lang en --output report.pdf
 ```
 
@@ -84,7 +84,7 @@ The chart is published as an OCI chart. Get its folder, which holds
 [its quick start](deploy/helm/capacity-room/README.md):
 
 ```bash
-helm pull oci://ghcr.io/marceloalvescf/charts/capacity-room --version 4.0.0 --untar
+helm pull oci://ghcr.io/marceloalvescf/charts/capacity-room --version 4.1.0 --untar
 ```
 
 ## What it does

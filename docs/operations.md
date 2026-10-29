@@ -620,7 +620,7 @@ Kubernetes cluster. It is published as the OCI chart
 holds `values.yaml` and the `examples/` that this section uses.
 
 ```bash
-helm pull oci://ghcr.io/marceloalvescf/charts/capacity-room --version 4.0.0 --untar
+helm pull oci://ghcr.io/marceloalvescf/charts/capacity-room --version 4.1.0 --untar
 ```
 
 This writes the folder `capacity-room`, and the commands of this section run
