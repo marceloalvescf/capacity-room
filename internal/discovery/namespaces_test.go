@@ -24,21 +24,22 @@ func TestListNamespacesQueryText(t *testing.T) {
 		name     string
 		scope    Scope
 		lookback time.Duration
+		step     string
 		want     string
 	}{
-		{"matcher on", Scope{ClusterName: "prod", ClusterLabel: "cluster", MatcherEnabled: true}, 0,
+		{"matcher on", Scope{ClusterName: "prod", ClusterLabel: "cluster", MatcherEnabled: true}, 0, "",
 			`count by (namespace) (kube_pod_status_phase{cluster="prod"})`},
-		{"matcher off", Scope{ClusterName: "prod", ClusterLabel: "cluster"}, 0,
+		{"matcher off", Scope{ClusterName: "prod", ClusterLabel: "cluster"}, 0, "",
 			`count by (namespace) (kube_pod_status_phase)`},
-		{"lookback of a week", Scope{ClusterName: "prod", ClusterLabel: "cluster", MatcherEnabled: true}, 7 * 24 * time.Hour,
-			`count by (namespace) (max_over_time(kube_pod_status_phase{cluster="prod"}[604800s]))`},
-		{"lookback under a second", Scope{}, 999 * time.Millisecond,
+		{"lookback of a week", Scope{ClusterName: "prod", ClusterLabel: "cluster", MatcherEnabled: true}, 7 * 24 * time.Hour, "15m",
+			`count by (namespace) (max_over_time(kube_pod_status_phase{cluster="prod"}[604800s:15m]))`},
+		{"lookback under a second", Scope{}, 999 * time.Millisecond, "15m",
 			`count by (namespace) (kube_pod_status_phase)`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			q := &fakeQuerier{}
-			if _, err := ListNamespaces(context.Background(), q, tt.scope, at, tt.lookback); err != nil {
+			if _, err := ListNamespaces(context.Background(), q, tt.scope, at, tt.lookback, tt.step); err != nil {
 				t.Fatalf("ListNamespaces: %v", err)
 			}
 			if len(q.queries) != 1 || q.queries[0].query != tt.want {
@@ -57,7 +58,7 @@ func TestListNamespacesSortsDedupesAndFilters(t *testing.T) {
 		query: namespaceSeries("payments", "api", "payments", "Bad_Name", "-lead", "trail-", "", "a1"),
 	}}
 
-	got, err := ListNamespaces(context.Background(), q, Scope{}, time.Now(), 0)
+	got, err := ListNamespaces(context.Background(), q, Scope{}, time.Now(), 0, "")
 	if err != nil {
 		t.Fatalf("ListNamespaces: %v", err)
 	}
@@ -68,7 +69,7 @@ func TestListNamespacesSortsDedupesAndFilters(t *testing.T) {
 }
 
 func TestListNamespacesEmptyAnswerIsNotNil(t *testing.T) {
-	got, err := ListNamespaces(context.Background(), &fakeQuerier{}, Scope{}, time.Now(), 0)
+	got, err := ListNamespaces(context.Background(), &fakeQuerier{}, Scope{}, time.Now(), 0, "")
 	if err != nil {
 		t.Fatalf("ListNamespaces: %v", err)
 	}
@@ -81,7 +82,7 @@ func TestListNamespacesDropsAllInvalid(t *testing.T) {
 	q := &fakeQuerier{answers: map[string][]prom.Sample{
 		`count by (namespace) (kube_pod_status_phase)`: namespaceSeries("UPPER"),
 	}}
-	got, err := ListNamespaces(context.Background(), q, Scope{}, time.Now(), 0)
+	got, err := ListNamespaces(context.Background(), q, Scope{}, time.Now(), 0, "")
 	if err != nil || got == nil || len(got) != 0 {
 		t.Fatalf("got %#v, %v, want []string{}, nil", got, err)
 	}
@@ -89,7 +90,7 @@ func TestListNamespacesDropsAllInvalid(t *testing.T) {
 
 func TestListNamespacesPassesTheErrorThrough(t *testing.T) {
 	boom := errors.New("boom")
-	got, err := ListNamespaces(context.Background(), &fakeQuerier{err: boom}, Scope{}, time.Now(), 0)
+	got, err := ListNamespaces(context.Background(), &fakeQuerier{err: boom}, Scope{}, time.Now(), 0, "")
 	if err != boom {
 		t.Fatalf("err = %v, want %v", err, boom)
 	}

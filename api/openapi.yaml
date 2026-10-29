@@ -1178,14 +1178,16 @@ components:
     ReportSelection:
       type: object
       description: The selection the report runs, with every default resolved.
-      required: [namespaces, period, start, end, timezone, report_profile, language]
+      required: [namespaces, all_namespaces, period, start, end, timezone, report_profile, language]
       properties:
         namespaces:
           type: array
-          nullable: true
-          description: The namespaces the report was requested for; null means every namespace the source shows.
+          description: The namespaces the report was requested for; empty when the request named none and covers every namespace the profile allows.
           items:
             type: string
+        all_namespaces:
+          type: boolean
+          description: True when the request named no namespaces and covers every namespace the profile allows, which the worker resolves when the collection starts.
         period:
           type: string
           nullable: true

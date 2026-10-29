@@ -84,6 +84,7 @@ export function report(overrides: Partial<Report> = {}): Report {
     collected_at: "2026-10-07T17:05:00Z",
     selection: {
       namespaces: [],
+      all_namespaces: false,
       period: "24h",
       start: null,
       end: null,

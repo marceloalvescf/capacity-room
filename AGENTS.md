@@ -406,10 +406,13 @@ redactor the moment the settings are loaded, before the pool opens.
   empty, and an empty one limits nothing. The worker runs the request's
   list, else the revision's limit, else an empty list, which
   `pipeline.Collect` fills after the scope and before the collectors with
-  `discovery.ListNamespaces` over the whole period (`max_over_time` of
-  `kube_pod_status_phase` with the cluster matcher); none found is
-  `NOTHING_TO_REPORT`. The snapshot holds the resolved list, so every query
-  keeps its text. `report.toml` and the command line still require a list.
+  `discovery.ListNamespaces` over the whole period, a subquery at the
+  window's step (`max_over_time(kube_pod_status_phase{<cluster>}[<period>s:<step>])`),
+  never the raw samples; none found is `NOTHING_TO_REPORT`. The snapshot
+  holds the resolved list, so every query keeps its text. `report.toml` and
+  the command line still require a list. `ReportSelection` answers
+  `namespaces` as an array always, empty with `all_namespaces` true for a
+  null selection.
 - **A request names its language, and the worker makes that PDF alone.**
   `POST /reports` requires `language`, stored with the selection, so a key
   reused with another language is a conflict. The collect handler queues
@@ -524,8 +527,11 @@ redactor the moment the settings are loaded, before the pool opens.
   /profiles/{id}/namespaces`, for an operator or an administrator, answers
   a profile's `allowed_namespaces`, sorted, with no request, when it limits
   them; otherwise it connects, resolves the scope, and asks the namespaces
-  at that instant, three queries, never the capability probes. A source
-  failure is a `ProfileTestCode` in a 200 answer. It writes no audit row.
+  at that instant, three queries, never the capability probes. Concurrent
+  calls for a revision share one run, which a caller that leaves does not
+  cancel, and a `PROFILE_OK` answer is reused for 30 seconds; a failure is
+  never kept. A source failure is a `ProfileTestCode` in a 200 answer. It
+  writes no audit row.
 - **Every revision of a profile is immutable** (a trigger refuses an update,
   a delete, and a truncate), and `profiles.current_revision_id` pins the
   current one, with a deferred constraint that it names a revision of the

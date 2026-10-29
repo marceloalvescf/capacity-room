@@ -56,7 +56,9 @@ type Service struct {
 	Policy   netpolicy.Policy
 	Settings settings.Settings // the two folders
 	Now      func() time.Time
-	Resolve  netpolicy.Resolver // nil means the system resolver
+
+	namespaces namespaceCache
+	Resolve    netpolicy.Resolver // nil means the system resolver
 	// Reveal is called with every credential read, before it is used. Nil
 	// does nothing.
 	Reveal func(secret string)

@@ -881,12 +881,15 @@ type ReportRequest struct {
 
 // ReportSelection The selection the report runs, with every default resolved.
 type ReportSelection struct {
+	// AllNamespaces True when the request named no namespaces and covers every namespace the profile allows, which the worker resolves when the collection starts.
+	AllNamespaces bool `json:"all_namespaces"`
+
 	// End The last wall time of a calendar range, in the report's time zone; null for a length.
 	End      *string  `json:"end"`
 	Language Language `json:"language"`
 
-	// Namespaces The namespaces the report was requested for; null means every namespace the source shows.
-	Namespaces *[]string `json:"namespaces"`
+	// Namespaces The namespaces the report was requested for; empty when the request named none and covers every namespace the profile allows.
+	Namespaces []string `json:"namespaces"`
 
 	// Period The length of the period; null for a calendar range.
 	Period        *string       `json:"period"`

@@ -377,6 +377,7 @@ describe("report list", () => {
     mock.reports = many(2, (n) => ({
       selection: {
         namespaces: ["payments"],
+        all_namespaces: false,
         period: "24h",
         start: null,
         end: null,

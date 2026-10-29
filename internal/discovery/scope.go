@@ -184,14 +184,16 @@ var namespacePattern = regexp.MustCompile(`^[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?
 
 // ListNamespaces returns the namespaces that have pods in scope: the sorted,
 // deduplicated values of the namespace label of kube_pod_status_phase that
-// are valid Kubernetes names. A lookback of a second or more reads every
-// series seen in the lookback that ends at at, so a namespace whose pods went
-// away during a period is still found; a shorter one reads the series at at
-// alone. It never returns nil. An error q returns is returned as it is.
-func ListNamespaces(ctx context.Context, q Querier, scope Scope, at time.Time, lookback time.Duration) ([]string, error) {
+// are valid Kubernetes names. A lookback of a second or more finds a namespace
+// when its pods show at a step of the period that ends at at, the resolution
+// the collectors read, so a namespace whose pods went away during the period
+// is still found without loading every raw sample; a shorter lookback reads
+// the series at at alone and ignores step. It never returns nil. An error q
+// returns is returned as it is.
+func ListNamespaces(ctx context.Context, q Querier, scope Scope, at time.Time, lookback time.Duration, step string) ([]string, error) {
 	selector := prom.Selector{Metric: "kube_pod_status_phase", Equal: scope.Matchers()}.String()
 	if seconds := int64(lookback / time.Second); seconds > 0 {
-		selector = "max_over_time(" + selector + "[" + strconv.FormatInt(seconds, 10) + "s])"
+		selector = "max_over_time(" + selector + "[" + strconv.FormatInt(seconds, 10) + "s:" + step + "])"
 	}
 	values, _, err := labelState(ctx, q, "namespace", selector, at)
 	if err != nil {

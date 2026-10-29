@@ -564,6 +564,7 @@ describe("new report form", () => {
       status: "failed",
       profile_id: "staging",
       selection: {
+        all_namespaces: false,
         namespaces: ["checkout"],
         period: "36h",
         start: null,
@@ -777,6 +778,7 @@ describe("calendar ranges", () => {
       status: "failed",
       selection: {
         namespaces: [],
+        all_namespaces: false,
         period: null,
         start: "2026-09-01 00:00",
         end: "2026-10-01 00:00",
@@ -885,6 +887,7 @@ describe("calendar ranges", () => {
       status: "failed",
       selection: {
         namespaces: [],
+        all_namespaces: false,
         period: null,
         start: "2026-09-01 00:00",
         end: "2026-10-01 00:00",
@@ -1010,7 +1013,7 @@ describe("what a copied report dropped", () => {
   });
 
   it("a rerun of an all-namespaces report is all", async () => {
-    const source = report({ status: "failed", selection: { ...selection, namespaces: null } });
+    const source = report({ status: "failed", selection: { ...selection, namespaces: [], all_namespaces: true } });
     mock.reports = [source];
     await open(`/generate?from=${source.id}`);
     expect(screen.getByRole("radio", { name: new RegExp(t("namespaces.all")) })).toBeChecked();
@@ -1056,5 +1059,35 @@ describe("the send lock", () => {
     expect(locked).toBeDisabled();
     await user.click(locked);
     expect(posts()).toHaveLength(1);
+  });
+});
+
+describe("the namespace list", () => {
+  it("is asked again at each visit of the form", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity, refetchOnWindowFocus: false } },
+    });
+    await i18next.changeLanguage("en");
+    const visit = async () => {
+      const router = createMemoryRouter(routes, { initialEntries: ["/generate"] });
+      window.history.replaceState(null, "", "/generate");
+      const api = createApi(queryClient, (to) => {
+        void router.navigate(to);
+      });
+      const view = render(<Providers queryClient={queryClient} api={api} router={router} />);
+      await screen.findByRole("button", { name: t("generate.submit") });
+      return view;
+    };
+    const asks = () => mock.calls.filter((call) => call.path === "/profiles/prod/namespaces");
+
+    const first = await visit();
+    await waitFor(() => {
+      expect(asks()).toHaveLength(1);
+    });
+    first.unmount();
+    await visit();
+    await waitFor(() => {
+      expect(asks()).toHaveLength(2);
+    });
   });
 });

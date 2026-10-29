@@ -163,6 +163,7 @@ type stored struct {
 	pdfBody  []byte
 	language string                  // en when empty
 	summary  *store.CollectedSummary // the stored summary of a collected report; none when nil
+	request  string                  // the stored request; payments over 24h when empty
 }
 
 var pdfBody = []byte("%PDF-1.7 stored body")
@@ -185,9 +186,12 @@ func (ts *testServer) seedReport(t *testing.T, o stored) uuid.UUID {
 	if o.language == "" {
 		o.language = "en"
 	}
+	if o.request == "" {
+		o.request = `{"namespaces":["payments"],"period":"24h","timezone":"UTC","report_profile":"detailed","language":"` + o.language + `"}`
+	}
 	r := store.Report{
 		ID: uuid.New(), OwnerID: o.owner, ProfileID: "prod", ProfileRevisionID: ts.profileRevision(t),
-		Request: []byte(`{"namespaces":["payments"],"period":"24h","timezone":"UTC","report_profile":"detailed","language":"` + o.language + `"}`),
+		Request: []byte(o.request),
 		Status:  o.status, Phase: o.phase, CollectJobID: 1,
 		CreatedAt: o.created, ExpiresAt: o.expires, UpdatedAt: o.created,
 	}
@@ -516,7 +520,7 @@ func TestReportRouteStatuses(t *testing.T) {
 	}
 	r := decodeStrict[Report](t, w)
 	if r.Id != queued || r.Status != ReportStatusQueued || r.Phase != Waiting || r.OwnerUsername != "ops" ||
-		r.ProfileId != "prod" || r.Selection.Period == nil || *r.Selection.Period != "24h" || r.Selection.Namespaces == nil || len(*r.Selection.Namespaces) != 1 || r.Expired {
+		r.ProfileId != "prod" || r.Selection.Period == nil || *r.Selection.Period != "24h" || len(r.Selection.Namespaces) != 1 || r.Expired {
 		t.Fatalf("report %+v", r)
 	}
 	if !strings.Contains(w.Body.String(), `"pdfs":[]`) {
@@ -978,7 +982,7 @@ func TestListItemsCarryTheirSelection(t *testing.T) {
 		t.Fatalf("page %+v", page)
 	}
 	sel := page.Items[0].Selection
-	if sel.Namespaces == nil || len(*sel.Namespaces) != 1 || (*sel.Namespaces)[0] != "payments" || sel.Period == nil || *sel.Period != "24h" ||
+	if len(sel.Namespaces) != 1 || sel.Namespaces[0] != "payments" || sel.Period == nil || *sel.Period != "24h" ||
 		sel.Start != nil || sel.End != nil {
 		t.Fatalf("selection %+v", sel)
 	}
@@ -1034,5 +1038,35 @@ func TestReportsCarryTheirSummary(t *testing.T) {
 		if one["worst_severity"] != p.severity || one["cluster_name"] != p.cluster {
 			t.Errorf("get %s: %v, %v; want %v", id, one["worst_severity"], one["cluster_name"], p)
 		}
+	}
+}
+
+func TestSelectionAnswersTheNamespacesAsAnArray(t *testing.T) {
+	ts := newTestServer(t)
+	c := ts.cast(t)
+	named := ts.seedReport(t, stored{owner: c.ops.user.ID})
+	all := ts.seedReport(t, stored{owner: c.ops.user.ID, request: `{"namespaces":null,"period":"24h","timezone":"UTC","report_profile":"detailed","language":"en"}`})
+
+	for _, tt := range []struct {
+		name string
+		id   uuid.UUID
+		want ReportSelection
+	}{
+		{"named", named, ReportSelection{Namespaces: []string{"payments"}, AllNamespaces: false}},
+		{"all", all, ReportSelection{Namespaces: []string{}, AllNamespaces: true}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			w := ts.as(t, &c.eve, "GET", "/api/v1/reports/"+tt.id.String(), "", nil)
+			if w.Code != 200 {
+				t.Fatalf("get: %d %s", w.Code, w.Body.String())
+			}
+			got := decodeStrict[Report](t, w).Selection
+			if !slices.Equal(got.Namespaces, tt.want.Namespaces) || got.Namespaces == nil || got.AllNamespaces != tt.want.AllNamespaces {
+				t.Fatalf("selection %+v, want namespaces %q and all_namespaces %v", got, tt.want.Namespaces, tt.want.AllNamespaces)
+			}
+			if !strings.Contains(w.Body.String(), `"namespaces":[`) {
+				t.Fatalf("body %s holds no namespaces array", w.Body.String())
+			}
+		})
 	}
 }

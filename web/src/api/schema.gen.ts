@@ -411,8 +411,10 @@ export interface components {
         };
         /** @description The selection the report runs, with every default resolved. */
         ReportSelection: {
-            /** @description The namespaces the report was requested for; null means every namespace the source shows. */
-            namespaces: string[] | null;
+            /** @description The namespaces the report was requested for; empty when the request named none and covers every namespace the profile allows. */
+            namespaces: string[];
+            /** @description True when the request named no namespaces and covers every namespace the profile allows, which the worker resolves when the collection starts. */
+            all_namespaces: boolean;
             /** @description The length of the period; null for a calendar range. */
             period: string | null;
             /** @description The first wall time of a calendar range, in the report's time zone; null for a length. */

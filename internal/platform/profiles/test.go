@@ -156,7 +156,7 @@ func (s *Service) runTest(ctx context.Context, d Document, detect bool) (TestRes
 	if err != nil {
 		return resultOf(ctx, err)
 	}
-	found, err := discovery.ListNamespaces(ctx, pf.Client, pf.Scope, at, 0)
+	found, err := discovery.ListNamespaces(ctx, pf.Client, pf.Scope, at, 0, "")
 	if err != nil {
 		return resultOf(ctx, err)
 	}
@@ -194,8 +194,9 @@ type NamespaceList struct {
 // active profile can cover. A revision that names allowed namespaces answers
 // them, sorted, and sends no request, as a collection of all namespaces runs
 // them; one that names none connects, resolves the scope, and lists the
-// namespaces with pods at the source. It writes no audit row. A failure of
-// the source is a code, not an error.
+// namespaces with pods at the source. Concurrent calls for a revision share
+// one run, and a good answer is reused for 30 seconds. It writes no audit
+// row. A failure of the source is a code, not an error.
 func (s *Service) Namespaces(ctx context.Context, actor auth.Principal, id string) (NamespaceList, error) {
 	if actor.Role != auth.RoleOperator && actor.Role != auth.RoleAdministrator {
 		return NamespaceList{}, ErrForbidden
@@ -214,9 +215,13 @@ func (s *Service) Namespaces(ctx context.Context, actor auth.Principal, id strin
 	if allowed := cur.Document.AllowedNamespaces; len(allowed) > 0 {
 		return NamespaceList{Code: CodeOK, Namespaces: slices.Sorted(slices.Values(allowed)), Limited: true}, nil
 	}
-	result, err := s.runTest(ctx, cur.Document, false)
-	if err != nil {
-		return NamespaceList{}, err
-	}
-	return NamespaceList{Code: result.Code, Namespaces: append([]string{}, result.Namespaces...)}, nil
+	// The run is shared by every caller waiting on it, so one caller that
+	// leaves does not cancel it; runTest bounds it on its own.
+	return s.namespaces.load(cur.RevisionID, s.now, func() (NamespaceList, error) {
+		result, err := s.runTest(context.WithoutCancel(ctx), cur.Document, false)
+		if err != nil {
+			return NamespaceList{}, err
+		}
+		return NamespaceList{Code: result.Code, Namespaces: append([]string{}, result.Namespaces...)}, nil
+	})
 }

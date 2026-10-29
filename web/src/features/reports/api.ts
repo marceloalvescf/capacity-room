@@ -117,6 +117,7 @@ export function useProfileNamespaces(id: string): UseQueryResult<Schemas["Profil
   const api = useApi();
   return useQuery({
     queryKey: [...profilesKey, id, "namespaces"],
+    staleTime: 0,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data } = await api.GET("/profiles/{id}/namespaces", { params: { path: { id } } });

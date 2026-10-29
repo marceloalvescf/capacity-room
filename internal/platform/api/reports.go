@@ -103,17 +103,13 @@ func failureCodeOf(code *string) *ReportFailureCode {
 	return &c
 }
 
-// namespacesOf is nil for a null selection, which the contract writes as null.
-func namespacesOf(list []string) *[]string {
-	if list == nil {
-		return nil
-	}
-	return &list
-}
-
 func reportSelectionOf(r reports.Resolved) ReportSelection {
+	namespaces := []string{}
+	if r.Namespaces != nil {
+		namespaces = r.Namespaces
+	}
 	return ReportSelection{
-		Namespaces: namespacesOf(r.Namespaces), Period: nullable(r.Period), Start: nullable(r.Start), End: nullable(r.End), Timezone: r.Timezone,
+		Namespaces: namespaces, AllNamespaces: r.Namespaces == nil, Period: nullable(r.Period), Start: nullable(r.Start), End: nullable(r.End), Timezone: r.Timezone,
 		ReportProfile: ReportProfile(r.ReportProfile),
 		Language:      Language(r.Language),
 	}

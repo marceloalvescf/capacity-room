@@ -88,7 +88,7 @@ function fromReport(
   } else {
     period = { kind: "range", start: selection.start ?? "", end: selection.end ?? "" };
   }
-  const selected = selection.namespaces ?? [];
+  const selected = selection.namespaces;
   // A profile with no limit allows every name; one that limits its namespaces no longer allows the others.
   const limit = profile.allowed_namespaces;
   const namespaces = limit.length === 0 ? selected : selected.filter((name) => limit.includes(name));
@@ -99,7 +99,7 @@ function fromReport(
   return {
     values: {
       profileId: profile.id,
-      namespaceScope: selection.namespaces === null ? "all" : "choose",
+      namespaceScope: selection.all_namespaces ? "all" : "choose",
       namespaces,
       language: selection.language,
       period,

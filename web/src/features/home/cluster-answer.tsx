@@ -123,7 +123,7 @@ function LatestAnswer({
         </p>
       ) : null}
       {view.data === undefined ? null : (
-        <ReportMeta view={view.data} createdAt={latest.created_at} owner={latest.owner_username} selection={latest.selection?.namespaces} />
+        <ReportMeta view={view.data} createdAt={latest.created_at} owner={latest.owner_username} selection={latest.selection ?? undefined} />
       )}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between xl:gap-10">
         <AnswerStrip view={shown.view} base={base} />

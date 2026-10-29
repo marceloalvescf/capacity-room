@@ -425,10 +425,10 @@ const shownNamespaces = 3;
 function ReportScope({ selection, lengthText, language }: { selection: ReportSelection; lengthText: string; language: string }) {
   const { t } = useTranslation();
   const { namespaces } = selection;
-  const rest = (namespaces?.length ?? 0) - shownNamespaces;
+  const rest = namespaces.length - shownNamespaces;
   return (
     <>
-      {namespaces === null ? (
+      {selection.all_namespaces ? (
         <>
           <span>{t("namespaces.all")}</span>
           <Separator />

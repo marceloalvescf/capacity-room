@@ -130,7 +130,11 @@ describe("home page", () => {
   });
 
   function withNamespaces(namespaces: string[] | null) {
-    const selection = { ...(payments.selection as NonNullable<Summary["selection"]>), namespaces };
+    const selection = {
+      ...(payments.selection as NonNullable<Summary["selection"]>),
+      namespaces: namespaces ?? [],
+      all_namespaces: namespaces === null,
+    };
     mock.home = { clusters: [cluster("payments", "Payments", { ...payments, selection })] };
   }
 

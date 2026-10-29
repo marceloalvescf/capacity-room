@@ -621,3 +621,95 @@ func TestNamespacesRefusals(t *testing.T) {
 		t.Fatalf("inactive: %v", err)
 	}
 }
+
+// probes counts the connection probes the source has seen: one per run of the
+// namespace list.
+func probes(server *promtest.Server) int {
+	n := 0
+	for _, seen := range server.Seen() {
+		if seen.Form.Get("query") == "vector(1)" {
+			n++
+		}
+	}
+	return n
+}
+
+func TestNamespacesReuseAGoodAnswerFor30Seconds(t *testing.T) {
+	f := newFixture(t)
+	server, endpoint, fixture := fakePrometheus(t)
+	f.createServed(t, "prod", endpoint, fixture, []string{})
+	now := fixedNow
+	f.svc.Now = func() time.Time { return now }
+
+	first := f.namespaces(t, f.root, "prod")
+	now = now.Add(29 * time.Second)
+	second := f.namespaces(t, f.root, "prod")
+	want := NamespaceList{Code: "PROFILE_OK", Namespaces: []string{"checkout", "payments", "zeta"}, Limited: false}
+	if !reflect.DeepEqual(first, want) || !reflect.DeepEqual(second, want) {
+		t.Fatalf("first %+v, second %+v, want %+v", first, second, want)
+	}
+	if n := probes(server); n != 1 {
+		t.Fatalf("%d runs reached the source, want 1", n)
+	}
+	if n := len(server.Seen()); n != 3 {
+		t.Fatalf("%d requests reached the source, want 3", n)
+	}
+}
+
+func TestNamespacesAskAgainAfter30Seconds(t *testing.T) {
+	f := newFixture(t)
+	server, endpoint, fixture := fakePrometheus(t)
+	f.createServed(t, "prod", endpoint, fixture, []string{})
+	now := fixedNow
+	f.svc.Now = func() time.Time { return now }
+
+	f.namespaces(t, f.root, "prod")
+	now = now.Add(30 * time.Second)
+	f.namespaces(t, f.root, "prod")
+	if n := probes(server); n != 2 {
+		t.Fatalf("%d runs reached the source, want 2", n)
+	}
+}
+
+func TestNamespacesDoNotKeepAFailure(t *testing.T) {
+	f := newFixture(t)
+	server, endpoint, fixture := fakePrometheusWith(t, namespacesAnswer(401))
+	f.createServed(t, "prod", endpoint, fixture, []string{})
+
+	first := f.namespaces(t, f.root, "prod")
+	if first.Code != "ENDPOINT_AUTH_REJECTED" {
+		t.Fatalf("first code = %q, want ENDPOINT_AUTH_REJECTED", first.Code)
+	}
+	f.namespaces(t, f.root, "prod")
+	if n := probes(server); n != 2 {
+		t.Fatalf("%d runs reached the source, want 2", n)
+	}
+}
+
+func TestNamespacesShareOneRunAmongConcurrentCalls(t *testing.T) {
+	f := newFixture(t)
+	server, endpoint, fixture := fakePrometheus(t)
+	f.createServed(t, "prod", endpoint, fixture, []string{})
+
+	const callers = 8
+	lists := make([]NamespaceList, callers)
+	errs := make([]error, callers)
+	var wg sync.WaitGroup
+	for i := range callers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			lists[i], errs[i] = f.svc.Namespaces(context.Background(), f.root, "prod")
+		}()
+	}
+	wg.Wait()
+	want := NamespaceList{Code: "PROFILE_OK", Namespaces: []string{"checkout", "payments", "zeta"}, Limited: false}
+	for i := range callers {
+		if errs[i] != nil || !reflect.DeepEqual(lists[i], want) {
+			t.Fatalf("caller %d: %+v, %v", i, lists[i], errs[i])
+		}
+	}
+	if n := probes(server); n != 1 {
+		t.Fatalf("%d runs reached the source, want 1", n)
+	}
+}
