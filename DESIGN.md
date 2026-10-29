@@ -356,7 +356,7 @@ Status shapes are 12px SVGs (16px in the answer strip, 10px on the data quality 
 - **Icon button:** a secondary button 36px square with a 20px Phosphor icon; its name is in `aria-label` and in a tooltip on hover and focus, drawn inside the landmark that holds the button.
 
 ### Segmented control
-A grey track (Hover) with a 2px inset and 6px corners; each option is muted text at 0.875rem 500, 32px high. The checked option is a raised chip: Panel fill, Input Border edge, Ink text. A released option turns Ink under the pointer; focus outlines the option.
+A grey track (Hover) with a 2px inset and 6px corners; each option is muted text at 0.875rem 500, 32px high. The checked option is a raised chip: Panel fill, Input Border edge, Ink text. A released option turns Ink under the pointer; focus outlines the option. An option may carry a count after its word, in mono at 0.75rem, parted from the word by a space so that its name reads as two words.
 
 ### Severity toggles
 The findings filter: one 6px-cornered toggle per severity, its status mark then its count in mono. Pressed: an Ink outline on Panel, the shape in its status colour. Released: a Hairline outline on no fill, Muted Ink, and a plain shape in the text colour (the shape and the word still name the status). Under the pointer both take Hover, and a press sinks 1px as a button does.
@@ -372,6 +372,7 @@ A 6px dot in the accent at the top right of a cluster chip, aria-hidden, with a 
 - **Select:** the browser's own `<select>`, styled like a field with its native arrow removed and a 16px Phosphor caret drawn in Muted Ink at the right.
 - **Focus:** 2px accent outline, 2px offset.
 - **Checkbox:** the native box tinted with Signal Blue.
+- **Namespace picker:** a field (Panel fill, Input Border, 6px corners) that holds the chosen namespaces as chips (Hover fill, Hairline edge, 4px corners, mono at 0.75rem, each with an icon button that removes it) and ends with "Add a namespace…" in Muted Ink. The popover hangs under the whole field at its width: a filter field with a placeholder, a list of 28px rows (the native box and the name in mono at 0.8125rem, Hover under the pointer) that scrolls past 224px, then a Hairline rule over the count line in Muted Ink at 0.75rem and Clear as a Signal Blue text button. A chosen name the source no longer shows keeps its chip with a dashed Input Border edge and the muted words "not found now", and leads the list.
 - **Period picker:** a choice is a 36px row that takes Hover under the pointer and the Signal Blue fill when chosen; the calendar's days are mono, the chosen ends filled Signal Blue and the span between them on Info Surface.
 
 ### Navigation

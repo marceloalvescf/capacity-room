@@ -120,7 +120,8 @@ chosen.
    mono and muted, then "Open report" at the right, a link to
    `/reports/<id>/overview`.
 2. **The meta line.** It is the one the report page shows: the period in
-   words, the range, the namespaces ("All namespaces" or the names in mono),
+   words, the range, the namespaces ("All namespaces" with the count it
+   covered, a button that opens their list, or the names in mono),
    the report profile, and "by <owner>". A report that covers some
    namespaces says so here, so its mark is never read as the whole cluster.
 3. **The overview's parts,** with the same view, components, and wording as

@@ -815,7 +815,7 @@ A profile describes one metric source.
 | Endpoint | Address, type, timeout, TLS verification |
 | References | Credential file name, CA bundle file name |
 | Cluster | Name, label, filter mode, node pool label, node autoscaling |
-| Namespaces | Allowed namespaces, excluded containers |
+| Namespaces | Allowed namespaces (optional: none lets a report cover every namespace the source shows; ticked from the namespaces a test found), excluded containers |
 | Choices | Permitted and default period, time zone, report profile |
 | Thresholds | The seven thresholds |
 
@@ -1163,8 +1163,15 @@ the administration.
 
 ### 12.3 New report form
 
-Profile, namespaces from the profile's allowed list, and the report
-language, as two joined buttons that start on the interface language. Below
+Profile, namespaces, and the report language, as two joined buttons that
+start on the interface language. Namespaces are two joined buttons too: All
+namespaces, the default, with the count of the list, and Choose, which opens
+a field of chips whose popover lists the namespaces under a filter. The list
+comes from `GET /profiles/{id}/namespaces`: the profile's allowed namespaces
+when it limits them, otherwise the namespaces with pods at the source. All
+namespaces is sent as a null selection and never waits for the list; the
+worker resolves it to the profile's limit, or asks the source over the whole
+period when the collection starts. Below
 them the period picker, then one line that shows the time zone and the report
 profile, taken from the profile's defaults, with a button that opens the two
 fields in place. Choosing a profile loads its defaults.

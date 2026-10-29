@@ -238,7 +238,7 @@ id = "prod"
 display_name = "Production"
 endpoint_url = "https://prometheus.example.com/api/v1"  # example: replace
 cluster_name = "prod"  # example: replace
-allowed_namespaces = ["payments", "checkout"]  # example: replace
+allowed_namespaces = ["payments", "checkout"]  # optional: leave it out to allow every namespace
 credential_file = "prometheus-bearer"
 active = true
 EOF
@@ -249,6 +249,15 @@ docker compose run --rm -T serve admin import-profiles --config /opt/capacity-ro
 Then sign in at `https://reports.example.com` as `admin`, open Profiles, and
 test the profile. A test sends the first requests of a report through the
 outbound policy and answers with one of the codes of section 6.
+
+`allowed_namespaces` is a limit, and it is optional. A profile that leaves it
+out, or leaves it empty, lets a report cover any namespace the source shows:
+the namespaces are those with pods in `kube_pod_status_phase`, which the New
+report page lists from the source, and which a report of all namespaces asks
+when its collection starts, over its whole period. A profile that names
+namespaces lets a report cover those alone; its New report page lists them
+without asking the source. A test of a profile answers the namespaces it
+found, so the web form ticks them instead of typing them.
 
 ## 6. Day to day
 

@@ -400,6 +400,16 @@ redactor the moment the settings are loaded, before the pool opens.
   400; then the permits: a profile with `permitted_periods` refuses a range
   with 422 `not_permitted` on `start`. A stored range reaches the window as
   given.
+- **A null namespace selection means all namespaces.** `POST /reports`
+  takes `namespaces` null or absent for all, and refuses `[]`; a list is
+  held against the profile's `allowed_namespaces` only when that list is not
+  empty, and an empty one limits nothing. The worker runs the request's
+  list, else the revision's limit, else an empty list, which
+  `pipeline.Collect` fills after the scope and before the collectors with
+  `discovery.ListNamespaces` over the whole period (`max_over_time` of
+  `kube_pod_status_phase` with the cluster matcher); none found is
+  `NOTHING_TO_REPORT`. The snapshot holds the resolved list, so every query
+  keeps its text. `report.toml` and the command line still require a list.
 - **A request names its language, and the worker makes that PDF alone.**
   `POST /reports` requires `language`, stored with the selection, so a key
   reused with another language is a conflict. The collect handler queues
@@ -508,7 +518,14 @@ redactor the moment the settings are loaded, before the pool opens.
   policy; it reads and writes no profile row. It writes one audit row
   `profile.test` with `{"code","draft":true}`, targeting the id when one is
   given. `ProfileTestCode` is a contract enum held equal to
-  `profiles.TestCodes` in order.
+  `profiles.TestCodes` in order. A test that passes answers the namespaces
+  with pods at the source, with no limit applied.
+- **A profile lists the namespaces a report can cover.** `GET
+  /profiles/{id}/namespaces`, for an operator or an administrator, answers
+  a profile's `allowed_namespaces`, sorted, with no request, when it limits
+  them; otherwise it connects, resolves the scope, and asks the namespaces
+  at that instant, three queries, never the capability probes. A source
+  failure is a `ProfileTestCode` in a 200 answer. It writes no audit row.
 - **Every revision of a profile is immutable** (a trigger refuses an update,
   a delete, and a truncate), and `profiles.current_revision_id` pins the
   current one, with a deferred constraint that it names a revision of the
