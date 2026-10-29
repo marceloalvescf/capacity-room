@@ -84,7 +84,6 @@
     "notPermitted": "O perfil não permite este valor.",
     "invalid": "Este valor não é válido.",
     "identifier": "Use letras minúsculas, dígitos, pontos, hífens e sublinhados, começando e terminando com uma letra ou um dígito.",
-    "namespaceList": "Informe pelo menos um namespace.",
     "timeout": "Use um número acima de 0 e até 600.",
     "caWithoutTls": "Um CA bundle exige verificar o certificado TLS.",
     "defaultNotPermitted": "Use um dos valores permitidos.",
@@ -298,7 +297,8 @@
       "profileGone": "O perfil daquele relatório não está mais disponível; o formulário começa pelo perfil {{profile}}.",
       "namespacesDropped": "Namespaces que o perfil não permite mais ficaram de fora: {{names}}.",
       "periodDropped": "O perfil não permite mais o período daquele relatório; o formulário começa por {{period}}."
-    }
+    },
+    "limited": "Este perfil permite {{names}}."
   },
   "progress": {
     "screen": "Relatório",
@@ -370,9 +370,6 @@
   },
   "report": {
     "tabs": "Seções do relatório",
-    "meta": {
-      "namespaces": "Todos os namespaces"
-    },
     "noFinding": "Sem achado",
     "chart": {
       "findings": "achados",
@@ -784,7 +781,10 @@
       "saveHintNew": "Salvar cria a revisão 1.",
       "saveHintEdit": "Salvar grava a revisão {{next}}. Relatórios já pedidos mantêm a revisão com que foram pedidos.",
       "created": "O perfil {{name}} foi criado.",
-      "saved": "O perfil {{name}} foi salvo."
+      "saved": "O perfil {{name}} foi salvo.",
+      "allowedAll": "Os relatórios podem cobrir qualquer namespace que a fonte de métricas mostra.",
+      "allowedOnly": "Os relatórios podem cobrir somente os namespaces escolhidos aqui.",
+      "testToList": "Teste a fonte de métricas para listar os seus namespaces."
     }
   },
   "profileTest": {
@@ -820,5 +820,20 @@
     "empty": "Informe pelo menos um valor.",
     "not_permitted": "Este valor não está entre os permitidos.",
     "incoherent": "Este valor não combina com outro campo."
+  },
+  "namespaces": {
+    "all": "Todos os namespaces",
+    "allCount": "Todos os namespaces ({{count}})",
+    "choose": "Escolher",
+    "onlyThese": "Somente estes",
+    "add": "Adicionar um namespace",
+    "filter": "Filtrar namespaces",
+    "count": "Encontrados: {{found}} · Selecionados: {{selected}}",
+    "clear": "Limpar",
+    "remove": "Remover {{name}}",
+    "notFound": "não encontrado agora",
+    "noMatch": "Nenhum namespace corresponde ao filtro.",
+    "loading": "Listando os namespaces da fonte…",
+    "none": "A fonte não mostra nenhum namespace com pods."
   }
 }

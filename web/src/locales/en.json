@@ -84,7 +84,6 @@
     "notPermitted": "The profile does not permit this value.",
     "invalid": "This value is not valid.",
     "identifier": "Use lowercase letters, digits, dots, hyphens, and underscores, starting and ending with a letter or a digit.",
-    "namespaceList": "Give at least one namespace.",
     "timeout": "Use a number over 0 and up to 600.",
     "caWithoutTls": "A CA bundle needs the TLS certificate verified.",
     "defaultNotPermitted": "Use one of the permitted values.",
@@ -298,7 +297,8 @@
       "profileGone": "The profile of that report is no longer available, so the form starts from {{profile}}.",
       "namespacesDropped": "Namespaces the profile no longer allows were left out: {{names}}.",
       "periodDropped": "The profile no longer permits that report's period, so the form starts from {{period}}."
-    }
+    },
+    "limited": "This profile allows {{names}}."
   },
   "progress": {
     "screen": "Report",
@@ -370,9 +370,6 @@
   },
   "report": {
     "tabs": "Report sections",
-    "meta": {
-      "namespaces": "All namespaces"
-    },
     "noFinding": "No finding",
     "chart": {
       "findings": "findings",
@@ -784,7 +781,10 @@
       "saveHintNew": "Saving creates revision 1.",
       "saveHintEdit": "Saving writes revision {{next}}. Reports already requested keep the revision they were requested with.",
       "created": "The profile {{name}} was created.",
-      "saved": "The profile {{name}} was saved."
+      "saved": "The profile {{name}} was saved.",
+      "allowedAll": "Reports can cover any namespace the metric source shows.",
+      "allowedOnly": "Reports can cover only the namespaces chosen here.",
+      "testToList": "Test the metric source to list its namespaces."
     }
   },
   "profileTest": {
@@ -820,5 +820,20 @@
     "empty": "Give at least one value.",
     "not_permitted": "This value is not among the permitted ones.",
     "incoherent": "This value does not agree with another field."
+  },
+  "namespaces": {
+    "all": "All namespaces",
+    "allCount": "All namespaces ({{count}})",
+    "choose": "Choose",
+    "onlyThese": "Only these",
+    "add": "Add a namespace",
+    "filter": "Filter namespaces",
+    "count": "Found: {{found}} · Selected: {{selected}}",
+    "clear": "Clear",
+    "remove": "Remove {{name}}",
+    "notFound": "not found now",
+    "noMatch": "No namespace matches the filter.",
+    "loading": "Listing the namespaces of the source…",
+    "none": "The source shows no namespace with pods."
   }
 }

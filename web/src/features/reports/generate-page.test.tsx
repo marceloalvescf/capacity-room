@@ -42,6 +42,8 @@ beforeEach(() => {
   window.localStorage.clear();
   mockColourScheme(false);
   mock.profiles = [prod, staging];
+  mock.profileNamespaces.set("prod", { code: "PROFILE_OK", namespaces: ["catalog", "checkout", "payments"], limited: true });
+  mock.profileNamespaces.set("staging", { code: "PROFILE_OK", namespaces: ["checkout", "web"], limited: true });
 });
 
 const reportsUrl = `${window.location.origin}/api/v1/reports`;
@@ -76,7 +78,20 @@ async function open(path = "/generate", language: Language = "en") {
 
 const submit = () => screen.getByRole("button", { name: t("generate.submit") });
 const profileSelect = () => screen.getByLabelText<HTMLSelectElement>(t("generate.profile"));
-const namespace = (name: string) => screen.getByRole("checkbox", { name });
+
+// Chooses a name: switches to Choose, opens the picker, ticks the name, and closes the picker.
+async function pick(user: ReturnType<typeof userEvent.setup>, name: string) {
+  const choose = screen.getByRole("radio", { name: t("namespaces.choose") });
+  if (!(choose as HTMLInputElement).checked) {
+    await user.click(choose);
+  }
+  await user.click(screen.getByRole("button", { name: new RegExp(t("namespaces.add")) }));
+  await user.click(await screen.findByRole("checkbox", { name }));
+  await user.keyboard("{Escape}");
+}
+
+// The chips of the picker: the names chosen.
+const chosen = () => screen.queryAllByRole("button", { name: /^Remove / }).map((button) => (button.getAttribute("aria-label") ?? "").replace("Remove ", ""));
 
 describe("new report form", () => {
   it("defaults from the profile", async () => {
@@ -84,45 +99,98 @@ describe("new report form", () => {
     await open("/generate", "pt-BR");
     expect(profileSelect().value).toBe("prod");
     expect(screen.getByText(summaryLine("America/Sao_Paulo · Detalhado"))).toBeInTheDocument();
-    expect(screen.getAllByRole("checkbox").filter((box) => (box as HTMLInputElement).checked)).toEqual([]);
+    expect(await screen.findByRole("radio", { name: t("namespaces.allCount", { count: 3 }) })).toBeChecked();
+    expect(chosen()).toEqual([]);
     expect(screen.getByRole("radio", { name: "Português (Brasil)" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "English" })).not.toBeChecked();
   });
 
   it("another profile resets", async () => {
     const { user } = await open();
-    await user.click(namespace("payments"));
-    expect(namespace("payments")).toBeChecked();
+    await pick(user, "payments");
+    expect(chosen()).toEqual(["payments"]);
     await user.selectOptions(profileSelect(), "staging");
-    expect(screen.queryByRole("checkbox", { name: "payments" })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("checkbox").filter((box) => (box as HTMLInputElement).checked)).toEqual([]);
+    expect(chosen()).toEqual([]);
+    expect(screen.getByRole("radio", { name: new RegExp(t("namespaces.all")) })).toBeChecked();
     expect(screen.getByText(summaryLine("UTC · Executive"))).toBeInTheDocument();
   });
 
   it("namespaces are shown in monospace", async () => {
+    const { user } = await open();
+    await pick(user, "payments");
+    expect(screen.getByText("payments")).toHaveClass("font-mono");
+  });
+
+  it("the default is all namespaces, sent as null, without waiting for the list", async () => {
+    server.use(http.get(`${window.location.origin}/api/v1/profiles/prod/namespaces`, () => new Promise<never>(() => undefined)));
+    const { user, router } = await open();
+    expect(screen.getByText(t("namespaces.loading"))).toBeInTheDocument();
+    await user.click(submit());
+    await waitFor(() => {
+      expect(location(router)).toMatch(/^\/jobs\//);
+    });
+    expect(posts()[0]?.body).toMatchObject({ namespaces: null });
+  });
+
+  it("sends all namespaces after the list failed", async () => {
+    mock.profileNamespaces.set("prod", { code: "ENDPOINT_UNREACHABLE", namespaces: [], limited: false });
+    const { user, router } = await open();
+    await screen.findByText(t("profileTest.ENDPOINT_UNREACHABLE"));
+    await user.click(submit());
+    await waitFor(() => {
+      expect(location(router)).toMatch(/^\/jobs\//);
+    });
+    expect(posts()[0]?.body).toMatchObject({ namespaces: null });
+  });
+
+  it("a failed list shows the code text, and Try again asks again", async () => {
+    mock.profileNamespaces.set("prod", { code: "ENDPOINT_UNREACHABLE", namespaces: [], limited: false });
+    const { user } = await open();
+    await screen.findByText(t("profileTest.ENDPOINT_UNREACHABLE"));
+    expect(screen.getByRole("radio", { name: t("namespaces.all") })).toBeChecked();
+    mock.profileNamespaces.set("prod", { code: "PROFILE_OK", namespaces: ["checkout", "payments"], limited: false });
+    await user.click(screen.getByRole("button", { name: t("reports.retry") }));
+    expect(await screen.findByRole("radio", { name: t("namespaces.allCount", { count: 2 }) })).toBeInTheDocument();
+    expect(screen.queryByText(t("profileTest.ENDPOINT_UNREACHABLE"))).not.toBeInTheDocument();
+    expect(mock.calls.filter((call) => call.path === "/profiles/prod/namespaces")).toHaveLength(2);
+  });
+
+  it("a limited profile says what it allows", async () => {
     await open();
-    expect(namespace("payments").closest("fieldset")).toHaveClass("font-mono");
+    expect(await screen.findByText(t("generate.limited", { names: "catalog, checkout, payments" }))).toBeInTheDocument();
+  });
+
+  it("a source with no namespace says so", async () => {
+    mock.profileNamespaces.set("prod", { code: "PROFILE_OK", namespaces: [], limited: false });
+    await open();
+    expect(await screen.findByText(t("namespaces.none"))).toBeInTheDocument();
   });
 
   it("needs a namespace", async () => {
     const { user } = await open();
+    await user.click(screen.getByRole("radio", { name: t("namespaces.choose") }));
     await user.click(submit());
     expect(await screen.findByText(t("validation.namespaces"))).toBeInTheDocument();
     expect(posts()).toEqual([]);
-    await user.click(namespace("payments"));
+    await pick(user, "payments");
     expect(screen.queryByText(t("validation.namespaces"))).not.toBeInTheDocument();
   });
 
   it("a submit with no namespace marks the fieldset, describes it, and focuses it", async () => {
     const { user } = await open();
+    await user.click(screen.getByRole("radio", { name: t("namespaces.choose") }));
     await user.click(submit());
-    const fieldset = namespace("payments").closest("fieldset") as HTMLElement;
+    const fieldset = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>('fieldset[aria-invalid="true"]');
+      expect(found).not.toBeNull();
+      return found as HTMLElement;
+    });
     await waitFor(() => {
       expect(fieldset).toHaveFocus();
     });
     expect(fieldset).toHaveAttribute("aria-invalid", "true");
     expect(fieldset).toHaveAccessibleDescription(t("validation.namespaces"));
-    await user.click(namespace("payments"));
+    await pick(user, "payments");
     expect(fieldset).not.toHaveAttribute("aria-invalid");
   });
 
@@ -160,8 +228,8 @@ describe("new report form", () => {
 
   it("sends the choices and goes to the job", async () => {
     const { user, router } = await open();
-    await user.click(namespace("checkout"));
-    await user.click(namespace("payments"));
+    await pick(user, "checkout");
+    await pick(user, "payments");
     await user.click(screen.getByRole("radio", { name: "Português (Brasil)" }));
     await user.click(submit());
     await waitFor(() => {
@@ -171,7 +239,7 @@ describe("new report form", () => {
     expect(posts()[0]?.body).toEqual({
       profile_id: "prod",
       language: "pt-BR",
-      namespaces: ["payments", "checkout"],
+      namespaces: ["checkout", "payments"],
       period: "24h",
       start: null,
       end: null,
@@ -184,7 +252,7 @@ describe("new report form", () => {
   describe("one report per attempt", () => {
     it("a double click sends one request", async () => {
       const { user, router } = await open();
-      await user.click(namespace("payments"));
+      await pick(user, "payments");
       await user.dblClick(submit());
       await waitFor(() => {
         expect(location(router)).toMatch(/^\/jobs\/[0-9a-f-]{36}$/);
@@ -196,7 +264,7 @@ describe("new report form", () => {
 
     it("a resend after a network failure keeps the key", async () => {
       const { user } = await open();
-      await user.click(namespace("payments"));
+      await pick(user, "payments");
       const keys = answerOnce(() => HttpResponse.error());
       await user.click(submit());
       expect(await screen.findByText(t("error.network"))).toBeInTheDocument();
@@ -210,7 +278,7 @@ describe("new report form", () => {
 
     it("a resend after a timeout keeps the key and the body", async () => {
       const { user } = await open();
-      await user.click(namespace("payments"));
+      await pick(user, "payments");
       const first: { key: string; body: unknown }[] = [];
       server.use(
         http.post(
@@ -241,7 +309,7 @@ describe("new report form", () => {
 
     it("a resend after an answer with unchanged values keeps the key", async () => {
       const { user } = await open();
-      await user.click(namespace("payments"));
+      await pick(user, "payments");
       const keys = answerOnce(() => failure(429, "ADMISSION_GLOBAL_LIMIT", { retryAfter: 30 }));
       await user.click(submit());
       await screen.findByText(t("error.ADMISSION_GLOBAL_LIMIT", { seconds: 30 }));
@@ -254,11 +322,11 @@ describe("new report form", () => {
 
     it("a changed value after an answer renews the key", async () => {
       const { user } = await open();
-      await user.click(namespace("payments"));
+      await pick(user, "payments");
       const keys = answerOnce(() => failure(429, "ADMISSION_GLOBAL_LIMIT", { retryAfter: 30 }));
       await user.click(submit());
       await screen.findByText(t("error.ADMISSION_GLOBAL_LIMIT", { seconds: 30 }));
-      await user.click(namespace("catalog"));
+      await pick(user, "catalog");
       await user.click(submit());
       await waitFor(() => {
         expect(posts()).toHaveLength(1);
@@ -271,7 +339,7 @@ describe("new report form", () => {
       [410, "REPORT_EXPIRED"],
     ] as const)("a key whose replay answered %i is renewed", async (status, code) => {
       const { user } = await open();
-      await user.click(namespace("payments"));
+      await pick(user, "payments");
       const keys = answerOnce(() => failure(status, code));
       await user.click(submit());
       expect(await screen.findByText(t(`error.${code}`))).toBeInTheDocument();
@@ -284,7 +352,7 @@ describe("new report form", () => {
 
     it("a rejected key is renewed", async () => {
       const { user } = await open();
-      await user.click(namespace("payments"));
+      await pick(user, "payments");
       const keys = answerOnce(() => failure(409, "IDEMPOTENCY_KEY_REUSED"));
       await user.click(submit());
       expect(await screen.findByText(t("error.IDEMPOTENCY_KEY_REUSED"))).toBeInTheDocument();
@@ -367,7 +435,7 @@ describe("new report form", () => {
 
   it("server fields", async () => {
     const { user } = await open();
-    await user.click(namespace("payments"));
+    await pick(user, "payments");
     server.use(
       http.post(
         `${window.location.origin}/api/v1/reports`,
@@ -391,7 +459,7 @@ describe("new report form", () => {
 
   it("a time zone problem still opens the options and focuses the time zone", async () => {
     const { user } = await open();
-    await user.click(namespace("payments"));
+    await pick(user, "payments");
     server.use(
       http.post(
         `${window.location.origin}/api/v1/reports`,
@@ -412,7 +480,7 @@ describe("new report form", () => {
 
   it("a field the form does not show falls back to the alert of the code", async () => {
     const { user } = await open();
-    await user.click(namespace("payments"));
+    await pick(user, "payments");
     server.use(
       http.post(
         `${window.location.origin}/api/v1/reports`,
@@ -429,7 +497,7 @@ describe("new report form", () => {
 
   it("an invalid namespace list is marked on the namespaces", async () => {
     const { user } = await open();
-    await user.click(namespace("payments"));
+    await pick(user, "payments");
     server.use(
       http.post(
         `${window.location.origin}/api/v1/reports`,
@@ -446,7 +514,7 @@ describe("new report form", () => {
 
   it("profile changed", async () => {
     const { user } = await open();
-    await user.click(namespace("payments"));
+    await pick(user, "payments");
     server.use(
       http.post(`${window.location.origin}/api/v1/reports`, () => failure(409, "PROFILE_INACTIVE"), { once: true }),
     );
@@ -461,7 +529,7 @@ describe("new report form", () => {
   it("a profile that is gone gives way to the first one", async () => {
     const { user } = await open();
     await user.selectOptions(profileSelect(), "staging");
-    await user.click(namespace("web"));
+    await pick(user, "web");
     mock.profiles = [prod];
     server.use(
       http.post(`${window.location.origin}/api/v1/reports`, () => failure(409, "PROFILE_INACTIVE"), { once: true }),
@@ -471,12 +539,12 @@ describe("new report form", () => {
     await waitFor(() => {
       expect(profileSelect().value).toBe("prod");
     });
-    expect(screen.getAllByRole("checkbox").filter((box) => (box as HTMLInputElement).checked)).toEqual([]);
+    expect(chosen()).toEqual([]);
   });
 
   it("admission", async () => {
     const { user } = await open();
-    await user.click(namespace("payments"));
+    await pick(user, "payments");
     server.use(
       http.post(
         `${window.location.origin}/api/v1/reports`,
@@ -508,8 +576,8 @@ describe("new report form", () => {
     mock.reports = [failed];
     await open(`/generate?from=${failed.id}`);
     expect(profileSelect().value).toBe("staging");
-    expect(namespace("checkout")).toBeChecked();
-    expect(namespace("web")).not.toBeChecked();
+    expect(chosen()).toEqual(["checkout"]);
+    expect(screen.getByRole("radio", { name: t("namespaces.choose") })).toBeChecked();
     expect(screen.getByRole("radio", { name: "Português (Brasil)" })).toBeChecked();
     expect(screen.getByText(summaryLine("America/Sao_Paulo · Detailed"))).toBeInTheDocument();
   });
@@ -609,7 +677,7 @@ describe("calendar ranges", () => {
   }
 
   async function ready(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(namespace("payments"));
+    await pick(user, "payments");
   }
 
   it("sends a calendar range resolved", async () => {
@@ -793,7 +861,7 @@ describe("calendar ranges", () => {
   it("a profile that is gone renews the key", async () => {
     const { user } = await open();
     await user.selectOptions(profileSelect(), "staging");
-    await user.click(namespace("web"));
+    await pick(user, "web");
     mock.profiles = [prod];
     const keys = answerOnce(() => failure(409, "PROFILE_INACTIVE"));
     await user.click(submit());
@@ -801,7 +869,7 @@ describe("calendar ranges", () => {
     await waitFor(() => {
       expect(profileSelect().value).toBe("prod");
     });
-    await user.click(namespace("payments"));
+    await pick(user, "payments");
     await user.click(submit());
     await waitFor(() => {
       expect(posts()).toHaveLength(1);
@@ -869,7 +937,7 @@ describe("what a copied report dropped", () => {
     const source = report({ status: "failed", selection: { ...selection, namespaces: ["payments", "retired"] } });
     mock.reports = [source];
     await open(`/generate?from=${source.id}`);
-    expect(namespace("payments")).toBeChecked();
+    expect(chosen()).toEqual(["payments"]);
     const notice = screen.getByText(/Namespaces the profile no longer allows/);
     expect(notice).toHaveTextContent("Namespaces the profile no longer allows were left out: retired.");
     expect(notice.querySelector(".font-mono")).toBeNull();
@@ -907,7 +975,9 @@ describe("what a copied report dropped", () => {
     mock.profiles = [profileSummary({ allowed_namespaces: ["payments", "retired", "catalog"] }), staging];
     mock.calls.length = 0;
     await user.click(submit());
-    await screen.findByRole("checkbox", { name: "catalog" });
+    await waitFor(() => {
+      expect(mock.calls.filter((call) => call.path === "/profiles")).toHaveLength(1);
+    });
     expect(screen.getByText(notice)).toHaveTextContent(text);
   });
 
@@ -915,14 +985,14 @@ describe("what a copied report dropped", () => {
     const source = report({ status: "failed", selection: { ...selection, namespaces: ["payments"] } });
     mock.reports = [source];
     await open(`/generate?from=${source.id}`);
-    expect(namespace("payments")).toBeChecked();
+    expect(chosen()).toEqual(["payments"]);
     expect(screen.queryByText(/no longer/)).not.toBeInTheDocument();
   });
 
   it("a selection the profile no longer permits loads the profiles again", async () => {
     mock.profiles = [profileSummary({ allowed_namespaces: ["payments", "checkout"] })];
     const { user } = await open();
-    await user.click(namespace("payments"));
+    await pick(user, "payments");
     server.use(
       http.post(
         reportsUrl,
@@ -937,8 +1007,25 @@ describe("what a copied report dropped", () => {
     await waitFor(() => {
       expect(mock.calls.filter((call) => call.path === "/profiles")).toHaveLength(1);
     });
-    expect(await screen.findByRole("checkbox", { name: "catalog" })).toBeInTheDocument();
-    expect(screen.queryByRole("checkbox", { name: "payments" })).not.toBeInTheDocument();
+  });
+
+  it("a rerun of an all-namespaces report is all", async () => {
+    const source = report({ status: "failed", selection: { ...selection, namespaces: null } });
+    mock.reports = [source];
+    await open(`/generate?from=${source.id}`);
+    expect(screen.getByRole("radio", { name: new RegExp(t("namespaces.all")) })).toBeChecked();
+    expect(chosen()).toEqual([]);
+    expect(screen.queryByText(/no longer/)).not.toBeInTheDocument();
+  });
+
+  it("an unlimited profile keeps every name of a rerun", async () => {
+    mock.profiles = [profileSummary({ allowed_namespaces: [] })];
+    const source = report({ status: "failed", selection: { ...selection, namespaces: ["alpha", "beta"] } });
+    mock.reports = [source];
+    await open(`/generate?from=${source.id}`);
+    expect(screen.getByRole("radio", { name: t("namespaces.choose") })).toBeChecked();
+    expect(chosen()).toEqual(["alpha", "beta"]);
+    expect(screen.queryByText(/no longer/)).not.toBeInTheDocument();
   });
 });
 
@@ -959,7 +1046,7 @@ describe("the send lock", () => {
     render(<Providers queryClient={queryClient} api={api} router={router} />);
     await screen.findByRole("button", { name: t("generate.submit") });
     const user = userEvent.setup();
-    await user.click(namespace("payments"));
+    await pick(user, "payments");
     await user.click(submit());
     await waitFor(() => {
       expect(posts()).toHaveLength(1);

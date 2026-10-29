@@ -129,17 +129,30 @@ describe("home page", () => {
     expect(screen.getByRole("link", { name: t("home.plan.all") })).toHaveAttribute("href", `/reports/${paymentsId}/overview`);
   });
 
-  it("names the report's namespaces", async () => {
-    mock.views.set(`${paymentsId}:en`, { ...english, report: { ...english.report, namespaces: ["billing", "payments"] } });
+  function withNamespaces(namespaces: string[] | null) {
+    const selection = { ...(payments.selection as NonNullable<Summary["selection"]>), namespaces };
+    mock.home = { clusters: [cluster("payments", "Payments", { ...payments, selection })] };
+  }
+
+  it("names the namespaces the report was requested for", async () => {
+    withNamespaces(["billing", "payments"]);
     await open();
     const meta = (await screen.findByText(english.report.period_text)).parentElement as HTMLElement;
     expect(within(meta).getByText("billing, payments")).toHaveClass("font-mono");
   });
 
-  it("says all namespaces for an empty list", async () => {
-    mock.views.set(`${paymentsId}:en`, { ...english, report: { ...english.report, namespaces: [] } });
+  it("says all namespaces with their count, and lists them in a popover", async () => {
+    withNamespaces(null);
+    mock.views.set(`${paymentsId}:en`, { ...english, report: { ...english.report, namespaces: ["billing", "payments"] } });
     await open();
-    expect(await screen.findByText(t("report.meta.namespaces"))).toBeInTheDocument();
+    const button = await screen.findByRole("button", { name: t("namespaces.allCount", { count: 2 }) });
+    await userEvent.setup().click(button);
+    const billing = await screen.findByText("billing");
+    const items = within(billing.closest("ul") as HTMLElement)
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+    expect(items).toEqual(["billing", "payments"]);
+    expect(billing.closest("ul")).toHaveClass("font-mono");
   });
 
   it("says a request is collecting, with Follow", async () => {

@@ -2,6 +2,7 @@ import { DatedText } from "@/components/dated-text";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  Controller,
   useForm,
   useWatch,
   type FieldErrors,
@@ -23,7 +24,9 @@ import { Separator } from "@/components/separator";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { NamespacePicker } from "@/components/namespace-picker";
 import { Field } from "@/components/ui/field";
+import { Segmented } from "@/components/ui/segmented";
 import { Select } from "@/components/ui/select";
 import { TextArea } from "@/components/ui/textarea";
 import { formatTime } from "@/lib/format";
@@ -95,6 +98,18 @@ function CheckGroup({
   );
 }
 
+// The fields whose value changes what the metric source answers, so a list of namespaces it gave no longer holds.
+const sourceFields: readonly string[] = [
+  "endpoint_url",
+  "timeout_seconds",
+  "tls_verify",
+  "credential_file",
+  "ca_bundle_file",
+  "cluster_name",
+  "cluster_label",
+  "filter_mode",
+];
+
 // The paths of the fields in error, so the sections that hold them can be opened.
 function errorPaths(errors: FieldErrors<ProfileValues>): string[] {
   return Object.entries(errors).flatMap(([name, error]) =>
@@ -116,6 +131,9 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
   const [stale, setStale] = useState(false);
   const [asking, setAsking] = useState(false);
   const [outcome, setOutcome] = useState<TestOutcome | null>(null);
+  // The namespaces of the last test that passed, kept apart from the result line: a change of the scope or of the
+  // selection leaves them, and only a change of what the source answers, or a test that fails, takes them away.
+  const [discovered, setDiscovered] = useState<string[] | null>(null);
   // Counts the changes of the form, so a test that answers after one does not describe the form any more.
   const changes = useRef(0);
   const [choicesOpen, setChoicesOpen] = useState(false);
@@ -176,6 +194,12 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
     setError(name, error, options);
   };
 
+  // The mark on the allowed namespaces, which neither the scope nor the selection keeps once it changes.
+  function dropListMark() {
+    marked.current.delete("allowed_namespaces");
+    clearErrors("allowed_namespaces");
+  }
+
   function clearMarks() {
     for (const name of marked.current) {
       clearErrors(name as keyof ProfileValues);
@@ -213,6 +237,9 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
       setMarks((count) => count + 1);
     }
     setOutcome(found);
+    if (found.kind === "result") {
+      setDiscovered(found.result.code === "PROFILE_OK" ? found.result.namespaces : null);
+    }
     announce(outcomeText(t, found));
   }
 
@@ -223,6 +250,7 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
       const latest = await reload?.();
       if (latest !== undefined) {
         reset(valuesOf(latest));
+        setDiscovered(null);
       }
       setStale(false);
     } catch (thrown) {
@@ -269,6 +297,9 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
           if (marked.current.delete(marker)) {
             clearErrors(marker as keyof ProfileValues);
           }
+        }
+        if (sourceFields.includes(name)) {
+          setDiscovered(null);
         }
         changes.current += 1;
         setOutcome(null);
@@ -389,13 +420,50 @@ function ProfileForm({ profile, reload }: { profile: Profile | undefined; reload
         />
       </Section>
       <Section title={t("admin.profile.section.namespaces")}>
-        <TextArea
-          label={t("admin.profile.allowed")}
-          hint={t("admin.profile.onePerLine")}
-          rows={5}
-          error={fieldError(errors.allowed_namespaces?.message)}
-          {...register("allowed_namespaces")}
-        />
+        <div className="flex flex-col gap-2">
+          <Controller
+            control={control}
+            name="namespaceScope"
+            render={({ field }) => (
+              <Segmented
+                legend={t("admin.profile.allowed")}
+                name="namespaceScope"
+                value={field.value}
+                options={[
+                  { value: "all", label: t("namespaces.all") },
+                  { value: "only", label: t("namespaces.onlyThese") },
+                ]}
+                onChange={(next) => {
+                  dropListMark();
+                  field.onChange(next);
+                }}
+              />
+            )}
+          />
+          <p className="text-sm text-muted-fg">
+            {t(values.namespaceScope === "all" ? "admin.profile.allowedAll" : "admin.profile.allowedOnly")}
+          </p>
+          {values.namespaceScope === "only" ? (
+            <Controller
+              control={control}
+              name="allowed_namespaces"
+              render={({ field }) => (
+                <NamespacePicker
+                  label={t("admin.profile.allowed")}
+                  hideLabel
+                  names={discovered}
+                  unknownText={t("admin.profile.testToList")}
+                  selected={field.value}
+                  error={fieldError(errors.allowed_namespaces?.message)}
+                  onChange={(next) => {
+                    dropListMark();
+                    field.onChange(next);
+                  }}
+                />
+              )}
+            />
+          ) : null}
+        </div>
         <TextArea
           label={t("admin.profile.excluded")}
           hint={t("admin.profile.onePerLine")}

@@ -32,7 +32,8 @@ export const thresholdKeys = [
 export type ThresholdKey = (typeof thresholdKeys)[number];
 
 // The values of the form of a profile: a typed number or list is kept as typed, so every number is a string and
-// every list of names is the text of a box with one item per line.
+// every other list of names is the text of a box with one item per line. The allowed namespaces are a list chosen
+// in a picker, with a switch for every namespace.
 export interface ProfileValues {
   id: string;
   display_name: string;
@@ -47,7 +48,8 @@ export interface ProfileValues {
   filter_mode: Schemas["FilterMode"];
   nodepool_label: string;
   node_autoscaling: Schemas["NodeAutoscaling"];
-  allowed_namespaces: string;
+  namespaceScope: "all" | "only";
+  allowed_namespaces: string[];
   excluded_containers: string;
   permitted_periods: string;
   default_period: string;
@@ -74,7 +76,8 @@ export function valuesOf(profile: Profile): ProfileValues {
     filter_mode: profile.filter_mode,
     nodepool_label: profile.nodepool_label,
     node_autoscaling: profile.node_autoscaling,
-    allowed_namespaces: fromLines(profile.allowed_namespaces),
+    namespaceScope: profile.allowed_namespaces.length === 0 ? "all" : "only",
+    allowed_namespaces: profile.allowed_namespaces,
     excluded_containers: fromLines(profile.excluded_containers),
     permitted_periods: fromLines(profile.permitted_periods),
     default_period: profile.default_period ?? "",
@@ -128,7 +131,8 @@ export function newProfileValues(): ProfileValues {
     filter_mode: "required",
     nodepool_label: "",
     node_autoscaling: "auto",
-    allowed_namespaces: "",
+    namespaceScope: "all",
+    allowed_namespaces: [],
     excluded_containers: "",
     permitted_periods: "",
     default_period: "",
@@ -168,7 +172,7 @@ export function documentOf(values: ProfileValues): ProfileDocument {
     filter_mode: values.filter_mode,
     nodepool_label: values.nodepool_label,
     node_autoscaling: values.node_autoscaling,
-    allowed_namespaces: toLines(values.allowed_namespaces),
+    allowed_namespaces: values.namespaceScope === "all" ? [] : values.allowed_namespaces,
     excluded_containers: toLines(values.excluded_containers),
     permitted_periods: toLines(values.permitted_periods),
     default_period: nullIfEmpty(values.default_period),
@@ -232,8 +236,8 @@ export function profileSchema(isNew: boolean): z.ZodType<ProfileValues, ProfileV
         refuse(field, "validation.required");
       }
     }
-    if (toLines(values.allowed_namespaces).length === 0) {
-      refuse("allowed_namespaces", "validation.namespaceList");
+    if (values.namespaceScope === "only" && values.allowed_namespaces.length === 0) {
+      refuse("allowed_namespaces", "validation.namespaces");
     }
     const timeout = numberOf(values.timeout_seconds);
     if (!(timeout > 0 && timeout <= 600)) {

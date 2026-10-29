@@ -30,7 +30,6 @@ async function fillNew() {
   await user.type(screen.getByLabelText("Display name"), "Lab");
   await user.type(screen.getByLabelText("Endpoint URL"), "https://lab.example.com");
   await user.type(screen.getByLabelText("Cluster name"), "lab-1");
-  await user.type(screen.getByLabelText("Allowed namespaces"), "payments");
   return user;
 }
 
@@ -58,7 +57,131 @@ describe("the profile form", () => {
     expect(within(thresholds).getByText("70%")).toHaveClass("font-mono");
     expect(screen.getByText("Saving creates revision 1.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Cancel" })).toHaveAttribute("href", "/profiles");
-    expect(screen.getByLabelText("Allowed namespaces")).toHaveAttribute("rows", "5");
+    expect(screen.getByRole("radio", { name: "All namespaces" })).toBeChecked();
+    expect(screen.getByText("Reports can cover any namespace the metric source shows.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Add a namespace/ })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Excluded containers")).toHaveAttribute("rows", "5");
+  });
+
+  describe("allowed namespaces", () => {
+    const listed = ["checkout", "payments", "payments-batch"];
+    const connected = "Connected. The source answers every query the report needs.";
+    const saves = () => changes().filter((call) => call.path === "/admin/profiles");
+    const addButton = () => screen.getByRole("button", { name: /Add a namespace/ });
+
+    async function testDraft(user: ReturnType<typeof userEvent.setup>) {
+      mock.profileTests.set("draft", { ok: true, code: "PROFILE_OK", capabilities: [], namespaces: listed });
+      await user.click(screen.getByRole("button", { name: "Test connection" }));
+      await findShown(connected);
+    }
+
+    it("switches between all and only these", async () => {
+      await renderApp("/profiles/new");
+      const user = userEvent.setup();
+      await screen.findByRole("heading", { level: 1, name: "New profile" });
+      await user.click(screen.getByRole("radio", { name: "Only these" }));
+      expect(screen.getByText("Reports can cover only the namespaces chosen here.")).toBeInTheDocument();
+      expect(addButton()).toBeInTheDocument();
+      await user.click(screen.getByRole("radio", { name: "All namespaces" }));
+      expect(screen.queryByRole("button", { name: /Add a namespace/ })).not.toBeInTheDocument();
+    });
+
+    it("lists the namespaces of a passing draft test in the picker", async () => {
+      await renderApp("/profiles/new");
+      const user = await fillNew();
+      await user.click(screen.getByRole("radio", { name: "Only these" }));
+      await user.click(addButton());
+      expect(await screen.findByText("Test the metric source to list its namespaces.")).toBeInTheDocument();
+      await user.keyboard("{Escape}");
+      await testDraft(user);
+      await user.click(addButton());
+      expect(await screen.findAllByRole("checkbox", { name: /^(checkout|payments)/ })).toHaveLength(3);
+    });
+
+    it("keeps the list across a namespace change and drops it when the source changes", async () => {
+      await renderApp("/profiles/new");
+      const user = await fillNew();
+      await user.click(screen.getByRole("radio", { name: "Only these" }));
+      await testDraft(user);
+      await user.click(addButton());
+      await user.click(await screen.findByRole("checkbox", { name: "checkout" }));
+      await user.keyboard("{Escape}");
+      expect(shown(connected)).toEqual([]);
+      await user.click(addButton());
+      expect(await screen.findAllByRole("checkbox", { name: /^(checkout|payments)/ })).toHaveLength(3);
+      await user.keyboard("{Escape}");
+      await user.click(screen.getByRole("radio", { name: "All namespaces" }));
+      await user.click(screen.getByRole("radio", { name: "Only these" }));
+      await user.click(addButton());
+      expect(await screen.findAllByRole("checkbox", { name: /^(checkout|payments)/ })).toHaveLength(3);
+      await user.keyboard("{Escape}");
+      await user.type(screen.getByLabelText("Endpoint URL"), "/x");
+      await user.click(addButton());
+      expect(await screen.findByText("Test the metric source to list its namespaces.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Remove checkout" })).toBeInTheDocument();
+    });
+
+    it("drops the list when a test fails", async () => {
+      await renderApp("/profiles/new");
+      const user = await fillNew();
+      await user.click(screen.getByRole("radio", { name: "Only these" }));
+      await testDraft(user);
+      mock.profileTests.set("draft", { ok: false, code: "ENDPOINT_UNREACHABLE", capabilities: [], namespaces: [] });
+      await user.click(screen.getByRole("button", { name: "Test connection" }));
+      await findShown("The source could not be reached, or did not answer.");
+      await user.click(addButton());
+      expect(await screen.findByText("Test the metric source to list its namespaces.")).toBeInTheDocument();
+    });
+
+    it("sends the chosen namespaces, sorted", async () => {
+      await renderApp("/profiles/new");
+      const user = await fillNew();
+      await user.click(screen.getByRole("radio", { name: "Only these" }));
+      await testDraft(user);
+      await user.click(addButton());
+      await user.click(await screen.findByRole("checkbox", { name: "payments" }));
+      await user.click(screen.getByRole("checkbox", { name: "checkout" }));
+      await user.keyboard("{Escape}");
+      await user.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(saves()).toHaveLength(1);
+      });
+      expect(saves()[0]?.body).toMatchObject({ allowed_namespaces: ["checkout", "payments"] });
+    });
+
+    it("refuses only these with none chosen", async () => {
+      await renderApp("/profiles/new");
+      const user = await fillNew();
+      await user.click(screen.getByRole("radio", { name: "Only these" }));
+      await user.click(screen.getByRole("button", { name: "Save" }));
+      expect(await screen.findByText("Choose at least one namespace.")).toBeInTheDocument();
+      expect(changes()).toEqual([]);
+    });
+
+    it("shows a mark of the API on the picker", async () => {
+      await renderApp("/profiles/new");
+      const user = await fillNew();
+      await user.click(screen.getByRole("radio", { name: "Only these" }));
+      await testDraft(user);
+      await user.click(addButton());
+      await user.click(await screen.findByRole("checkbox", { name: "checkout" }));
+      await user.keyboard("{Escape}");
+      mock.failures.set("POST /admin/profiles", {
+        status: 422,
+        code: "PROFILE_DOCUMENT_INVALID",
+        fields: { allowed_namespaces: "not_permitted" },
+      });
+      await user.click(screen.getByRole("button", { name: "Save" }));
+      const picker = await waitFor(() => {
+        const found = document.querySelector<HTMLElement>('fieldset[aria-invalid="true"]');
+        expect(found).not.toBeNull();
+        return found as HTMLElement;
+      });
+      expect(picker).toHaveAccessibleDescription("This value is not among the permitted ones.");
+      await waitFor(() => {
+        expect(picker).toHaveFocus();
+      });
+    });
   });
 
   it("opens and folds a section", async () => {
@@ -97,7 +220,7 @@ describe("the profile form", () => {
       filter_mode: "required",
       nodepool_label: "",
       node_autoscaling: "auto",
-      allowed_namespaces: ["payments"],
+      allowed_namespaces: [],
       excluded_containers: [],
       permitted_periods: [],
       default_period: null,
@@ -142,7 +265,6 @@ describe("the profile form", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Save" }));
     expect(await screen.findAllByText("Fill in this field.")).toHaveLength(4);
-    expect(screen.getByText("Give at least one namespace.")).toBeInTheDocument();
     expect(screen.getByLabelText("Identifier")).toHaveFocus();
     expect(changes()).toEqual([]);
   });
@@ -170,7 +292,10 @@ describe("the profile form", () => {
     expect(screen.queryByLabelText("Identifier")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Display name")).toHaveValue("Production");
     expect(screen.getByLabelText("Credential file")).toHaveValue("production-token");
-    expect(screen.getByLabelText("Allowed namespaces")).toHaveValue("payments\nbilling");
+    expect(screen.getByRole("radio", { name: "Only these" })).toBeChecked();
+    expect(screen.getByText("Reports can cover only the namespaces chosen here.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove payments" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove billing" })).toBeInTheDocument();
     expect(
       screen.getByText("Saving writes revision 4. Reports already requested keep the revision they were requested with."),
     ).toBeInTheDocument();
@@ -373,7 +498,7 @@ describe("the profile form", () => {
       display_name: "Lab",
       endpoint_url: "https://lab.example.com",
       cluster_name: "lab-1",
-      allowed_namespaces: ["payments"],
+      allowed_namespaces: [],
     });
     expect(changes().filter((call) => call.path === "/admin/profiles")).toEqual([]);
   });

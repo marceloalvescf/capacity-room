@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type SyntheticEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { useNavigate, useSearchParams } from "react-router";
@@ -8,17 +8,18 @@ import { languageValues } from "@/api/schema.gen";
 import { useScreenTitle } from "@/app/title";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { NamespacePicker } from "@/components/namespace-picker";
 import { SummaryLine, valuePart, wordPart, type Summary } from "@/components/summary-line";
 import { Segmented } from "@/components/ui/segmented";
 import { Select } from "@/components/ui/select";
 import { isLanguage, type Language } from "@/i18n/language";
-import { useProfiles, useReport, useRequestReport, type ProfileSummary, type Report } from "./api";
+import { useProfileNamespaces, useProfiles, useReport, useRequestReport, type ProfileSummary, type Report } from "./api";
 import { periodDays, periodText, resolveCalendar, type PeriodValue } from "./period";
 import { PeriodPicker } from "./period-picker";
 
 interface Values {
   profileId: string;
+  namespaceScope: "all" | "choose";
   namespaces: string[];
   language: Language;
   period: PeriodValue;
@@ -47,6 +48,7 @@ const rangeWords: Record<string, Problem | undefined> = {
 function defaultsOf(profile: ProfileSummary, language: Language): Values {
   return {
     profileId: profile.id,
+    namespaceScope: "all",
     namespaces: [],
     language,
     period: { kind: "length", period: profile.default_period },
@@ -87,7 +89,9 @@ function fromReport(
     period = { kind: "range", start: selection.start ?? "", end: selection.end ?? "" };
   }
   const selected = selection.namespaces ?? [];
-  const namespaces = selected.filter((name) => profile.allowed_namespaces.includes(name));
+  // A profile with no limit allows every name; one that limits its namespaces no longer allows the others.
+  const limit = profile.allowed_namespaces;
+  const namespaces = limit.length === 0 ? selected : selected.filter((name) => limit.includes(name));
   const dropped = selected.filter((name) => !namespaces.includes(name));
   if (dropped.length > 0) {
     notices.unshift({ kind: "namespacesDropped", names: dropped });
@@ -95,6 +99,7 @@ function fromReport(
   return {
     values: {
       profileId: profile.id,
+      namespaceScope: selection.namespaces === null ? "all" : "choose",
       namespaces,
       language: selection.language,
       period,
@@ -179,6 +184,7 @@ function GenerateForm({
   }, []);
 
   const profile = profiles.find((candidate) => candidate.id === values.profileId);
+  const listed = useProfileNamespaces(values.profileId);
 
   useEffect(() => {
     if (optionsOpen && focusTimezoneOnOpen.current) {
@@ -219,11 +225,6 @@ function GenerateForm({
     setProblems({});
   }
 
-  function toggle(name: string, on: boolean) {
-    const kept = values.namespaces.filter((other) => other !== name);
-    edit({ namespaces: on ? [...kept, name] : kept }, ["namespaces"]);
-  }
-
   function mark(error: ApiFailure): boolean {
     if (error.code !== "REQUEST_INVALID" && error.code !== "REPORT_SELECTION_NOT_PERMITTED") {
       return false;
@@ -238,7 +239,7 @@ function GenerateForm({
         } else {
           marked.period ??= word;
         }
-      } else if (markable.includes(name)) {
+      } else if (markable.includes(name) && (name !== "namespaces" || values.namespaceScope === "choose")) {
         marked[name as Marked] = reason === "not_permitted" ? "notPermitted" : "invalid";
       } else {
         rest = true;
@@ -262,8 +263,8 @@ function GenerateForm({
     if (sending.current || profile === undefined) {
       return;
     }
-    const namespaces = profile.allowed_namespaces.filter((name) => values.namespaces.includes(name));
-    if (namespaces.length === 0) {
+    const namespaces = values.namespaceScope === "all" ? null : [...values.namespaces].sort();
+    if (namespaces !== null && namespaces.length === 0) {
       setProblems({ namespaces: "required" });
       setMarks((count) => count + 1);
       return;
@@ -346,7 +347,39 @@ function GenerateForm({
     valuePart(values.timezone),
     wordPart(t(`reportProfile.${values.reportProfile}`)),
   ];
-  const namespaceProblem = problemText("namespaces");
+  const answer = listed.data;
+  const listOk = answer?.code === "PROFILE_OK";
+  const listLoading = listed.isFetching && !listOk;
+  const listFailure =
+    answer !== undefined && !listOk
+      ? t(`profileTest.${answer.code}`)
+      : listed.isError
+        ? errorText(t, toError(listed.error))
+        : "";
+  const unknownText = listLoading ? t("namespaces.loading") : listFailure;
+  let listLine: ReactNode = null;
+  if (listLoading) {
+    listLine = <p className="text-sm text-muted-fg">{t("namespaces.loading")}</p>;
+  } else if (listFailure !== "") {
+    listLine = (
+      <Alert tone="error">
+        <div className="flex flex-wrap items-center gap-3">
+          <p>{listFailure}</p>
+          <Button
+            onClick={() => {
+              void listed.refetch();
+            }}
+          >
+            {t("reports.retry")}
+          </Button>
+        </div>
+      </Alert>
+    );
+  } else if (listOk && answer.namespaces.length === 0) {
+    listLine = <p className="text-sm text-muted-fg">{t("namespaces.none")}</p>;
+  } else if (listOk && answer.limited) {
+    listLine = <p className="text-sm text-muted-fg">{t("generate.limited", { names: answer.namespaces.join(", ") })}</p>;
+  }
 
   return (
     <form
@@ -372,31 +405,34 @@ function GenerateForm({
         ))}
       </Select>
 
-      <fieldset
-        tabIndex={-1}
-        className="flex flex-col gap-1 font-mono focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        aria-invalid={namespaceProblem === undefined ? undefined : true}
-        aria-describedby={namespaceProblem === undefined ? undefined : "namespaces-problem"}
-      >
-        <legend className="mb-1 font-sans text-sm font-medium">{t("generate.namespaces")}</legend>
-        <div className="flex flex-wrap gap-x-6">
-          {profile.allowed_namespaces.map((name) => (
-            <Checkbox
-              key={name}
-              label={name}
-              checked={values.namespaces.includes(name)}
-              onChange={(event) => {
-                toggle(name, event.target.checked);
-              }}
-            />
-          ))}
-        </div>
-        {namespaceProblem === undefined ? null : (
-          <p id="namespaces-problem" className="font-sans text-sm text-critical">
-            {namespaceProblem}
-          </p>
-        )}
-      </fieldset>
+      <div className="flex flex-col gap-2">
+        <Segmented
+          legend={t("generate.namespaces")}
+          name="report-namespaces"
+          value={values.namespaceScope}
+          options={[
+            { value: "all", label: listOk ? t("namespaces.allCount", { count: answer.namespaces.length }) : t("namespaces.all") },
+            { value: "choose", label: t("namespaces.choose") },
+          ]}
+          onChange={(next) => {
+            edit({ namespaceScope: next }, ["namespaces"]);
+          }}
+        />
+        {listLine}
+        {values.namespaceScope === "choose" ? (
+          <NamespacePicker
+            label={t("generate.namespaces")}
+            hideLabel
+            names={listOk ? answer.namespaces : null}
+            unknownText={unknownText}
+            selected={values.namespaces}
+            error={problemText("namespaces")}
+            onChange={(next) => {
+              edit({ namespaces: next }, ["namespaces"]);
+            }}
+          />
+        ) : null}
+      </div>
 
       <div className="max-w-96">
         <PeriodPicker

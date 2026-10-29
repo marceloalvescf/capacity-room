@@ -111,6 +111,23 @@ export function useProfiles(): UseQueryResult<ProfileSummary[]> {
   });
 }
 
+// The namespaces the source of a profile shows. A failure of the source is an answer with a code other than
+// PROFILE_OK, so a thrown error is the call itself failing.
+export function useProfileNamespaces(id: string): UseQueryResult<Schemas["ProfileNamespaces"]> {
+  const api = useApi();
+  return useQuery({
+    queryKey: [...profilesKey, id, "namespaces"],
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const { data } = await api.GET("/profiles/{id}/namespaces", { params: { path: { id } } });
+      if (data === undefined) {
+        throw new Error("the namespaces answer is empty");
+      }
+      return data;
+    },
+  });
+}
+
 export function useRequestReport() {
   const api = useApi();
   const queryClient = useQueryClient();

@@ -60,6 +60,7 @@ type Home = Schemas["Home"];
 type AdminUser = Schemas["User"];
 type AdminProfile = Profile;
 type ProfileTestResult = Schemas["ProfileTestResult"];
+type ProfileNamespaces = Schemas["ProfileNamespaces"];
 
 export function report(overrides: Partial<Report> = {}): Report {
   return {
@@ -201,6 +202,8 @@ export interface Mock {
   adminProfiles: AdminProfile[];
   // The outcome of a test, keyed by profile id or "draft"; a profile without one is ok.
   profileTests: Map<string, ProfileTestResult>;
+  // The answer of the namespaces route, keyed by profile id; a profile without one lists three names, unlimited.
+  profileNamespaces: Map<string, ProfileNamespaces>;
   // Answers that replace the next call of a route, keyed `METHOD /path`; each is used once.
   failures: Map<string, { status: number; code: ErrorCode; fields?: Record<string, string> }>;
   // When set, the creation of a user waits for it before it answers.
@@ -220,6 +223,7 @@ export function installMockApi(initial: Session): Mock {
     adminUsers: [],
     adminProfiles: [],
     profileTests: new Map(),
+    profileNamespaces: new Map(),
     failures: new Map(),
     hold: null,
   };
@@ -446,6 +450,20 @@ export function installMockApi(initial: Session): Mock {
       await record(request);
       return HttpResponse.json({ profiles: mock.profiles });
     }),
+    http.get(api("/profiles/:id/namespaces"), async ({ request, params }) => {
+      await record(request);
+      const id = String(params["id"]);
+      return (
+        refusal("GET", `/profiles/${id}/namespaces`) ??
+        HttpResponse.json(
+          mock.profileNamespaces.get(id) ?? {
+            code: "PROFILE_OK",
+            namespaces: ["checkout", "payments", "payments-batch"],
+            limited: false,
+          },
+        )
+      );
+    }),
     http.get(api("/home"), async ({ request }) => {
       await record(request);
       return HttpResponse.json(mock.home);
@@ -548,6 +566,7 @@ export function installMockApi(initial: Session): Mock {
     mock.adminUsers = [];
     mock.adminProfiles = [];
     mock.profileTests = new Map();
+    mock.profileNamespaces = new Map();
     mock.failures = new Map();
     mock.hold = null;
     server.resetHandlers(...handlers);

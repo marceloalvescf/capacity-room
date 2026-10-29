@@ -58,7 +58,8 @@ describe("values of a profile", () => {
       filter_mode: "required",
       nodepool_label: "agentpool",
       node_autoscaling: "auto",
-      allowed_namespaces: "payments\nbilling",
+      namespaceScope: "only",
+      allowed_namespaces: ["payments", "billing"],
       excluded_containers: "istio-proxy",
       permitted_periods: "24h\n7d",
       default_period: "",
@@ -138,7 +139,8 @@ describe("new values", () => {
       filter_mode: "required",
       nodepool_label: "",
       node_autoscaling: "auto",
-      allowed_namespaces: "",
+      namespaceScope: "all",
+      allowed_namespaces: [],
       excluded_containers: "",
       permitted_periods: "",
       default_period: "",
@@ -183,10 +185,24 @@ describe("document of the values", () => {
   });
 
   it("sends numbers as numbers and lists as trimmed lines", () => {
-    const document = documentOf({ ...newProfileValues(), timeout_seconds: "45", allowed_namespaces: " a \n\nb" });
+    const document = documentOf({ ...newProfileValues(), timeout_seconds: "45", excluded_containers: " a \n\nb" });
     expect(document.timeout_seconds).toBe(45);
     expect(document.thresholds.warning_percent).toBe(70);
-    expect(document.allowed_namespaces).toEqual(["a", "b"]);
+    expect(document.excluded_containers).toEqual(["a", "b"]);
+  });
+
+  it("sends the chosen namespaces for only, and none for all", () => {
+    const chosen = { ...newProfileValues(), allowed_namespaces: ["a", "b"] };
+    expect(documentOf({ ...chosen, namespaceScope: "only" }).allowed_namespaces).toEqual(["a", "b"]);
+    expect(documentOf({ ...chosen, namespaceScope: "all" }).allowed_namespaces).toEqual([]);
+  });
+
+  it("reads an empty list as all and a list as only", () => {
+    expect(valuesOf(adminProfile({ allowed_namespaces: [] }))).toMatchObject({ namespaceScope: "all", allowed_namespaces: [] });
+    expect(valuesOf(adminProfile({ allowed_namespaces: ["a"] }))).toMatchObject({
+      namespaceScope: "only",
+      allowed_namespaces: ["a"],
+    });
   });
 });
 
@@ -197,7 +213,8 @@ describe("checks of the form", () => {
     display_name: "Lab",
     endpoint_url: "https://lab.example.com",
     cluster_name: "lab-1",
-    allowed_namespaces: "payments",
+    namespaceScope: "only",
+    allowed_namespaces: ["payments"],
   };
 
   function problems(values: ProfileValues, isNew = true): string[] {
@@ -266,7 +283,8 @@ describe("checks of the form", () => {
     expect(
       problems({ ...valid, thresholds: { ...valid.thresholds, warning_percent: "90", critical_percent: "85" } }),
     ).toEqual(["thresholds.warning_percent: validation.warningBelowCritical"]);
-    expect(problems({ ...valid, allowed_namespaces: " \n " })).toEqual(["allowed_namespaces: validation.namespaceList"]);
+    expect(problems({ ...valid, allowed_namespaces: [] })).toEqual(["allowed_namespaces: validation.namespaces"]);
+    expect(problems({ ...valid, namespaceScope: "all", allowed_namespaces: [] })).toEqual([]);
   });
 });
 

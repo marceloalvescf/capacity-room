@@ -430,7 +430,7 @@ function ReportScope({ selection, lengthText, language }: { selection: ReportSel
     <>
       {namespaces === null ? (
         <>
-          <span>{t("report.meta.namespaces")}</span>
+          <span>{t("namespaces.all")}</span>
           <Separator />
         </>
       ) : namespaces.length > 0 ? (
