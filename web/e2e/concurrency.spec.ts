@@ -60,11 +60,10 @@ async function accounts(page: Page): Promise<Account[]> {
 
 const activeAdministrators = (list: Account[]) => list.filter((account) => account.active && account.role === "administrator");
 
-// Fills the new report form for the profile in English with its one namespace.
+// Fills the new report form for the profile in English, over all its namespaces: the one it allows.
 async function fillForm(page: Page, profileName: string) {
   await expect(page.getByRole("heading", { name: en.generate.title, level: 1 })).toBeVisible();
   await page.getByLabel(en.generate.profile, { exact: true }).selectOption({ label: profileName });
-  await page.getByRole("checkbox", { name: namespace, exact: true }).check();
   await page.getByRole("radio", { name: en.language.en, exact: true }).check();
 }
 

@@ -6,7 +6,6 @@ const profile = {
   id: "e2e-lab",
   name: "Lab",
   cluster: "lab",
-  namespace: "payments",
   refused: "http://169.254.169.254/api/v1",
   unreachable: "http://fake-prometheus:9091/api/v1",
 };
@@ -71,7 +70,6 @@ test("an administrator manages users and profiles", async ({ page, browser, base
     await page.getByLabel(en.admin.profile.name, { exact: true }).fill(profile.name);
     await page.getByLabel(en.admin.profile.url, { exact: true }).fill(profile.refused);
     await page.getByLabel(en.admin.profile.clusterName, { exact: true }).fill(profile.cluster);
-    await page.getByLabel(en.admin.profile.allowed, { exact: true }).fill(profile.namespace);
     await page.getByRole("button", { name: en.admin.profiles.test, exact: true }).click();
     await expect(page.locator("#main").getByText(en.admin.profile.testRefused, { exact: true })).toBeVisible();
     await expect(page.getByLabel(en.admin.profile.url, { exact: true })).toHaveAccessibleDescription(

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import en from "../src/locales/en.json" with { type: "json" };
-import { admin, createUser, expect, expectFits, expectNoViolations, fitSizes, lastRow, openPattern, previousWeek, reportRow, secret, signIn, test, watchPolicy } from "./fixtures";
+import { admin, buttonName, createUser, expect, expectFits, expectNoViolations, fitSizes, lastRow, openPattern, previousWeek, reportRow, secret, signIn, test, watchPolicy } from "./fixtures";
 
 const operator = { username: "e2e-operator", password: secret("e2e-Operator-Pass-03!") };
 const reader = { username: "e2e-reader", password: secret("e2e-Reader-Pass-04!") };
@@ -37,7 +37,12 @@ test("an operator requests a report and a reader reads it", async ({ page, brows
     await page.getByRole("link", { name: en.nav.generate, exact: true }).first().click();
     await expect(page.getByRole("heading", { name: en.generate.title, level: 1 })).toBeVisible();
     await page.getByLabel(en.generate.profile, { exact: true }).selectOption({ label: "Production" });
+    await expect(page.getByRole("radio", { name: `${en.namespaces.all} 1`, exact: true })).toBeChecked();
+    await page.getByRole("radio", { name: en.namespaces.choose, exact: true }).check();
+    await page.getByRole("button", { name: `${en.generate.namespaces} ${en.namespaces.add}`, exact: true }).click();
     await page.getByRole("checkbox", { name: "payments", exact: true }).check();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: buttonName(en.namespaces.remove, "payments"), exact: true })).toBeVisible();
     await page.getByRole("radio", { name: en.language.en, exact: true }).check();
     await page.getByRole("button", { name: new RegExp(`^${en.generate.period}`) }).click();
     const picker = page.getByRole("dialog");

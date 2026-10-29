@@ -81,7 +81,11 @@ function ProfileRow({
           <DatedText i18nKey="admin.profiles.revisionValue" values={{ revision: profile.revision, time: formatTime(profile.created_at) }} />
         </Fact>
         <Fact label={t("admin.profiles.fact.namespaces")} wide>
-          <span className="font-mono">{profile.allowed_namespaces.join(", ")}</span>
+          {profile.allowed_namespaces.length === 0 ? (
+            <span>{t("namespaces.all")}</span>
+          ) : (
+            <span className="font-mono">{profile.allowed_namespaces.join(", ")}</span>
+          )}
         </Fact>
         <Fact label={t("admin.profiles.fact.choices")} wide>
           <SummaryLine summary={choices} />
