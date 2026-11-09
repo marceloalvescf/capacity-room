@@ -1,3 +1,12 @@
 # Advisories that make audit ignores on purpose, each with its reason and an
 # expiry, after which the advisory returns to the audit.
-vulnerabilities: []
+vulnerabilities:
+  - id: GO-2026-5932
+    paths:
+      - usr/local/bin/capacity-room
+    statement: >-
+      The advisory names golang.org/x/crypto/openpgp, which the binary does not
+      import; it builds only argon2 and blake2b of the module, and govulncheck
+      finds no call. Its fix is an untagged commit; take the release that holds
+      it and remove this entry.
+    expired_at: 2026-12-31
